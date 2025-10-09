@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUpDown, FileText } from "lucide-react";
+import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { PexlyFooter } from "@/components/pexly-footer";
 
 const currencies = [
   { symbol: "BTC", name: "Bitcoin", icon: "₿" },
@@ -26,8 +26,13 @@ export function Swap() {
   const [fromCurrency, setFromCurrency] = useState("BTC");
   const [toCurrency, setToCurrency] = useState("USDT");
 
+  useEffect(() => {
+    if (!user) {
+      setLocation("/signin");
+    }
+  }, [user, setLocation]);
+
   if (!user) {
-    setLocation("/signin");
     return null;
   }
 
