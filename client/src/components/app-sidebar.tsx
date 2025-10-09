@@ -104,7 +104,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     data-testid="nav-swap"
                   >
                     Swap
-                    <Badge variant="secondary" className="ml-auto text-xs">BEST RATE</Badge>
                   </Button>
                 </Link>
                 <Link href="/my-offers" onClick={handleLinkClick}>
@@ -158,27 +157,16 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               </CollapsibleContent>
             </Collapsible>
 
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2" data-testid="nav-giftcards-toggle">
-                  <Gift className="h-5 w-5" />
-                  <span>Gift cards</span>
-                  <ChevronDown className="ml-auto h-4 w-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/giftcards/buy" onClick={handleLinkClick}>
-                  <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-buy-giftcards">
-                    Buy Gift Cards
-                  </Button>
-                </Link>
-                <Link href="/giftcards/sell" onClick={handleLinkClick}>
-                  <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-sell-giftcards">
-                    Sell Gift Cards
-                  </Button>
-                </Link>
-              </CollapsibleContent>
-            </Collapsible>
+            <Link href="/gift-cards" onClick={handleLinkClick}>
+              <Button 
+                variant={location === "/gift-cards" ? "secondary" : "ghost"} 
+                className="w-full justify-start gap-2" 
+                data-testid="nav-gift-cards"
+              >
+                <Gift className="h-5 w-5" />
+                <span>Gift Cards</span>
+              </Button>
+            </Link>
 
             <Collapsible>
               <CollapsibleTrigger asChild>
