@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { useAuth } from "@/lib/auth-context";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { currencies } from "@/lib/currencies";
@@ -40,11 +39,8 @@ const cryptocurrencies = [
 ];
 
 export function P2P() {
-  const { user } = useAuth();
-  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
   const [selectedCrypto, setSelectedCrypto] = useState("BTC");
-  const [paymentMethod, setPaymentMethod] = useState("all");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [offerLocation, setOfferLocation] = useState("worldwide");
@@ -75,28 +71,64 @@ export function P2P() {
   ];
 
   const allPaymentMethods = [
-    { id: "arweave", name: "Arweave (AR)", icon: Bitcoin, category: "digital" },
-    { id: "2checkout", name: "2Checkout", icon: Bitcoin, category: "wallet" },
+    // Bank Transfers
+    { id: "bank-transfer", name: "Bank Transfer", icon: MapPin, category: "bank" },
+    { id: "wire", name: "Domestic Wire Transfer", icon: MapPin, category: "bank" },
+    { id: "ach", name: "ACH Transfer", icon: MapPin, category: "bank" },
+    { id: "sepa", name: "SEPA Transfer", icon: MapPin, category: "bank" },
+    { id: "swift", name: "SWIFT Transfer", icon: MapPin, category: "bank" },
+
+    // Online Wallets
+    { id: "paypal", name: "PayPal", icon: Bitcoin, category: "wallet" },
+    { id: "google-pay", name: "Google Pay", icon: Bitcoin, category: "wallet" },
+    { id: "apple-pay", name: "Apple Pay", icon: Bitcoin, category: "wallet" },
     { id: "advcash", name: "AdvCash", icon: Bitcoin, category: "wallet" },
     { id: "airtel", name: "Airtel Money", icon: Bitcoin, category: "wallet" },
     { id: "alipay", name: "Alipay", icon: Bitcoin, category: "wallet" },
-    { id: "amazon", name: "Amazon Gift Card", icon: Bitcoin, category: "gift" },
+    { id: "mtn", name: "MTN Mobile Money", icon: Bitcoin, category: "wallet" },
+    { id: "skrill", name: "Skrill", icon: Bitcoin, category: "wallet" },
+    { id: "neteller", name: "Neteller", icon: Bitcoin, category: "wallet" },
+    { id: "venmo", name: "Venmo", icon: Bitcoin, category: "wallet" },
+    { id: "cashapp", name: "Cash App", icon: Bitcoin, category: "wallet" },
+    { id: "zelle", name: "Zelle", icon: Bitcoin, category: "wallet" },
+    { id: "wechat", name: "WeChat Pay", icon: Bitcoin, category: "wallet" },
+
+    // Debit/Credit Cards
+    { id: "visa", name: "Visa", icon: Bitcoin, category: "card" },
+    { id: "mastercard", name: "Mastercard", icon: Bitcoin, category: "card" },
     { id: "amex", name: "American Express", icon: Bitcoin, category: "card" },
-    // Add more payment methods here
+    { id: "discover", name: "Discover", icon: Bitcoin, category: "card" },
+    { id: "debit", name: "Debit Card", icon: Bitcoin, category: "card" },
+    { id: "credit", name: "Credit Card", icon: Bitcoin, category: "card" },
+
+    // Gift Cards
+    { id: "amazon", name: "Amazon Gift Card", icon: Bitcoin, category: "gift" },
+    { id: "apple-gift", name: "Apple Gift Card", icon: Bitcoin, category: "gift" },
+    { id: "google-play", name: "Google Play", icon: Bitcoin, category: "gift" },
+    { id: "steam", name: "Steam", icon: Bitcoin, category: "gift" },
+    { id: "itunes", name: "iTunes Gift Card", icon: Bitcoin, category: "gift" },
+    { id: "xbox", name: "Xbox Gift Card", icon: Bitcoin, category: "gift" },
+    { id: "playstation", name: "PlayStation Gift Card", icon: Bitcoin, category: "gift" },
+    { id: "netflix", name: "Netflix Gift Card", icon: Bitcoin, category: "gift" },
+    { id: "spotify", name: "Spotify Gift Card", icon: Bitcoin, category: "gift" },
+
+    // Digital Currencies
+    { id: "bitcoin", name: "Bitcoin (BTC)", icon: Bitcoin, category: "digital" },
+    { id: "ethereum", name: "Ethereum (ETH)", icon: Bitcoin, category: "digital" },
+    { id: "usdt", name: "Tether (USDT)", icon: Bitcoin, category: "digital" },
+    { id: "usdc", name: "USD Coin (USDC)", icon: Bitcoin, category: "digital" },
+    { id: "arweave", name: "Arweave (AR)", icon: Bitcoin, category: "digital" },
+    { id: "litecoin", name: "Litecoin (LTC)", icon: Bitcoin, category: "digital" },
+
+    // Goods and Services
+    { id: "merchandise", name: "Merchandise", icon: Bitcoin, category: "goods" },
+    { id: "services", name: "Services", icon: Bitcoin, category: "goods" },
+    { id: "vouchers", name: "Vouchers", icon: Bitcoin, category: "goods" },
   ];
 
   const popularCurrencies = ["USD", "GBP", "CAD", "EUR", "INR", "KES", "NGN", "CNY"];
   const selectedCurrencyData = currencies.find(c => c.code === currency);
 
-  useEffect(() => {
-    if (!user) {
-      setLocation("/signin");
-    }
-  }, [user, setLocation]);
-
-  if (!user) {
-    return null;
-  }
 
   const selectedCryptoData = cryptocurrencies.find(c => c.symbol === selectedCrypto) || cryptocurrencies[0];
 
@@ -193,104 +225,137 @@ export function P2P() {
                   </button>
                 </div>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] p-0">
-                <div className="sticky top-0 bg-background z-10 p-4 border-b">
-                  <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      placeholder="Search"
-                      value={paymentSearchQuery}
-                      onChange={(e) => setPaymentSearchQuery(e.target.value)}
-                      className="pl-10 h-12"
-                    />
+              <DialogContent className="sm:max-w-md h-full sm:h-auto max-h-screen p-0 flex flex-col">
+                <div className="sticky top-0 bg-background z-10 border-b">
+                  {/* Search Bar with Back Arrow */}
+                  <div className="flex items-center gap-3 p-4 pb-0">
+                    <button 
+                      onClick={() => setOpenPaymentDialog(false)}
+                      className="p-1 hover:bg-muted rounded-md transition-colors"
+                    >
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        placeholder="Search"
+                        value={paymentSearchQuery}
+                        onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                        className="pl-10 h-12 border-0 focus-visible:ring-0 bg-muted"
+                      />
+                    </div>
                   </div>
 
                   {/* Category Tabs */}
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                    {paymentCategories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={cn(
-                          "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-                          selectedCategory === cat.id
-                            ? "bg-foreground text-background"
-                            : "bg-muted text-foreground hover:bg-muted/80"
-                        )}
-                      >
-                        {cat.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="overflow-y-auto p-4">
-                  {/* Popular in the USA */}
-                  <div className="mb-6">
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                      Popular in the USA
-                    </h3>
-                    <div className="space-y-2">
-                      {popularPaymentMethods
-                        .filter((method) => 
-                          method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase())
-                        )
-                        .map((method) => (
-                          <button
-                            key={method.id}
-                            onClick={() => {
-                              setSelectedPaymentMethod(method.name);
-                              setOpenPaymentDialog(false);
-                            }}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left"
-                          >
-                            <method.icon className="h-5 w-5 text-muted-foreground" />
-                            <span className="font-medium">{method.name}</span>
-                          </button>
-                        ))}
+                  <div className="overflow-x-auto px-4 pt-4">
+                    <div className="flex gap-3 pb-3 border-b">
+                      {paymentCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className={cn(
+                            "pb-2 px-1 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px",
+                            selectedCategory === cat.id
+                              ? "border-foreground text-foreground"
+                              : "border-transparent text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* All payment methods */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-muted-foreground">
-                        All payment methods (Choices: 436)
-                      </h3>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPaymentMethod("All Payment Methods");
-                          setOpenPaymentDialog(false);
-                        }}
-                      >
-                        Select All
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
-                      {allPaymentMethods
-                        .filter((method) => {
-                          const matchesSearch = method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase());
-                          const matchesCategory = selectedCategory === "all" || method.category === selectedCategory;
-                          return matchesSearch && matchesCategory;
-                        })
-                        .map((method) => (
-                          <button
-                            key={method.id}
-                            onClick={() => {
-                              setSelectedPaymentMethod(method.name);
-                              setOpenPaymentDialog(false);
-                            }}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left"
-                          >
-                            <method.icon className="h-5 w-5 text-muted-foreground" />
-                            <span className="font-medium">{method.name}</span>
-                          </button>
-                        ))}
-                    </div>
+                  {/* Select All Button */}
+                  <div className="px-4 py-3 flex justify-center">
+                    <Button
+                      variant="outline"
+                      className="rounded-full px-6"
+                      onClick={() => {
+                        setSelectedPaymentMethod("All Payment Methods");
+                        setOpenPaymentDialog(false);
+                      }}
+                    >
+                      Select All
+                    </Button>
                   </div>
                 </div>
+
+                <ScrollArea className="flex-1">
+                  <div className="px-4 py-4 space-y-6">
+                    {selectedCategory === "all" ? (
+                      // Show all categories with their methods
+                      paymentCategories.slice(1).map((category) => {
+                        const categoryMethods = allPaymentMethods.filter(
+                          (method) => 
+                            method.category === category.id &&
+                            method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase())
+                        );
+
+                        if (categoryMethods.length === 0) return null;
+
+                        return (
+                          <div key={category.id}>
+                            <h3 className="text-sm font-semibold mb-3 capitalize">
+                              {category.name}
+                            </h3>
+                            <div className="space-y-0 bg-card rounded-lg overflow-hidden border">
+                              {categoryMethods.map((method, index) => (
+                                <button
+                                  key={method.id}
+                                  onClick={() => {
+                                    setSelectedPaymentMethod(method.name);
+                                    setOpenPaymentDialog(false);
+                                  }}
+                                  className={cn(
+                                    "w-full flex items-center gap-3 p-4 hover:bg-muted transition-colors text-left",
+                                    index !== 0 && "border-t"
+                                  )}
+                                >
+                                  <method.icon className="h-5 w-5 text-muted-foreground" />
+                                  <span className="font-medium">{method.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      // Show only selected category
+                      <div>
+                        <h3 className="text-sm font-semibold mb-3 capitalize">
+                          {paymentCategories.find(c => c.id === selectedCategory)?.name}
+                        </h3>
+                        <div className="space-y-0 bg-card rounded-lg overflow-hidden border">
+                          {allPaymentMethods
+                            .filter((method) => {
+                              const matchesSearch = method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase());
+                              const matchesCategory = method.category === selectedCategory;
+                              return matchesSearch && matchesCategory;
+                            })
+                            .map((method, index) => (
+                              <button
+                                key={method.id}
+                                onClick={() => {
+                                  setSelectedPaymentMethod(method.name);
+                                  setOpenPaymentDialog(false);
+                                }}
+                                className={cn(
+                                  "w-full flex items-center gap-3 p-4 hover:bg-muted transition-colors text-left",
+                                  index !== 0 && "border-t"
+                                )}
+                              >
+                                <method.icon className="h-5 w-5 text-muted-foreground" />
+                                <span className="font-medium">{method.name}</span>
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
               </DialogContent>
             </Dialog>
           </div>
@@ -318,7 +383,7 @@ export function P2P() {
                     <Command>
                       <CommandInput placeholder="Search for your currency" />
                       <CommandEmpty>No currency found.</CommandEmpty>
-                      
+
                       <div className="max-h-[400px] overflow-y-auto">
                         <CommandGroup heading="MOST POPULAR">
                           <CommandItem
