@@ -5,6 +5,7 @@ import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Be
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -25,12 +26,13 @@ export function AppHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center gap-2 flex-1">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="icon" 
             onClick={() => setMobileMenuOpen(true)}
             data-testid="button-sidebar-toggle"
+            className="border-border"
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -38,7 +40,7 @@ export function AppHeader() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Zap className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold hidden sm:inline">Pexly</span>
+            <span className="text-xl font-extrabold">Pexly</span>
           </Link>
         </div>
 
@@ -99,11 +101,17 @@ export function AppHeader() {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    size="icon"
-                    className="h-9 w-9 sm:h-10 sm:w-10"
+                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0"
                     data-testid="button-profile"
                   >
-                    <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
+                      <AvatarImage src={user?.user_metadata?.avatar_url} alt="User avatar" />
+                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
+                        {user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ?? 
+                         user?.email?.substring(0, 2)?.toUpperCase() ?? 
+                         "JD"}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[280px] p-0">
