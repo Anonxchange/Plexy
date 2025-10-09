@@ -53,9 +53,9 @@ export function SignUp() {
     } else {
       toast({
         title: "Success!",
-        description: "Check your email to confirm your account",
+        description: "Account created successfully!",
       });
-      setLocation("/signin");
+      setLocation("/dashboard");
     }
   };
 
@@ -89,13 +89,13 @@ export function SignUp() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pr-10"
+                  className="pr-12"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
@@ -116,13 +116,13 @@ export function SignUp() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="pr-10"
+                  className="pr-12"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
