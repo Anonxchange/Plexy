@@ -20,21 +20,24 @@ export function HeroSection() {
   const [openCrypto, setOpenCrypto] = useState(false);
 
   useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        const response = await fetch('/api/crypto/prices');
-        if (response.ok) {
-          const prices = await response.json();
-          setCryptoPrices(prices);
-        }
-      } catch (error) {
-        console.error('Failed to fetch crypto prices:', error);
-      }
+    const mockPrices = {
+      BTC: 98750.50,
+      ETH: 3420.75,
+      USDT: 1.00,
+      BNB: 680.25,
+      SOL: 245.80,
+      XRP: 2.45,
+      ADA: 1.05,
+      DOGE: 0.38,
+      AVAX: 89.50,
+      DOT: 18.75,
+      MATIC: 2.15,
+      SHIB: 0.00003,
+      LTC: 165.40,
+      TRX: 0.25,
+      LINK: 28.90
     };
-
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 60000);
-    return () => clearInterval(interval);
+    setCryptoPrices(mockPrices);
   }, []);
 
   const currentPrice = cryptoPrices[crypto] || 0;
@@ -63,9 +66,9 @@ export function HeroSection() {
               </p>
             </div>
 
-            <div className="bg-card border border-card-border rounded-3xl p-8 space-y-6 shadow-2xl backdrop-blur-sm">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-3">
+            <div className="bg-card border border-card-border rounded-3xl p-8 space-y-4 shadow-2xl backdrop-blur-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">I want to</label>
                   <Select value={tradeType} onValueChange={setTradeType}>
                     <SelectTrigger className="h-12" data-testid="select-trade-type">
@@ -78,7 +81,7 @@ export function HeroSection() {
                   </Select>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Cryptocurrency</label>
                   <Popover open={openCrypto} onOpenChange={setOpenCrypto}>
                     <PopoverTrigger asChild>
@@ -130,8 +133,8 @@ export function HeroSection() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Currency</label>
                   <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
                     <PopoverTrigger asChild>
@@ -175,7 +178,7 @@ export function HeroSection() {
                   </Popover>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Payment Method</label>
                   <Popover open={openPayment} onOpenChange={setOpenPayment}>
                     <PopoverTrigger asChild>
