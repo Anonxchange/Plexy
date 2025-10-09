@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppFooter } from "@/components/app-footer";
+import { PexlyFooter } from "@/components/pexly-footer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
@@ -46,7 +46,6 @@ export function Dashboard() {
   const { user, signOut, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [welcomeOpen, setWelcomeOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState("HOME");
   const [productsModalOpen, setProductsModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
 
@@ -72,14 +71,6 @@ export function Dashboard() {
   if (!user) {
     return null;
   }
-
-  const tabs = [
-    { id: "HOME", label: "HOME", href: "/dashboard" },
-    { id: "P2P", label: "P2P", href: "/p2p" },
-    { id: "SHOP", label: "SHOP", href: "#" },
-    { id: "SWAP", label: "SWAP", href: "#" },
-    { id: "WALLET", label: "WALLET", href: "/wallet" },
-  ];
 
   const products = [
     { icon: Bitcoin, label: "P2P Trading", href: "/p2p" },
@@ -128,26 +119,6 @@ export function Dashboard() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-        {/* Top Navigation Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
-          {tabs.map((tab) => (
-            <Button
-              key={tab.id}
-              variant={activeTab === tab.id ? "default" : "outline"}
-              onClick={() => {
-                if (tab.href && tab.href !== "#") {
-                  setLocation(tab.href);
-                } else {
-                  setActiveTab(tab.id);
-                }
-              }}
-              className="min-w-fit"
-            >
-              {tab.label}
-            </Button>
-          ))}
-        </div>
-
         {/* Dashboard Title */}
         <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
@@ -422,7 +393,7 @@ export function Dashboard() {
         </div>
       </main>
       
-      <AppFooter />
+      <PexlyFooter />
     </div>
   );
 }
