@@ -17,6 +17,7 @@ import { Dashboard } from "@/pages/dashboard";
 import { P2P } from "@/pages/p2p";
 import { Swap } from "@/pages/swap";
 import { Profile } from "@/pages/profile";
+import { Shop } from "@/pages/shop";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/signin" component={SignIn} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/profile" component={Profile} />
+      <Route path="/shop" component={Shop} />
       <Route component={NotFound} />
     </Switch>
   );
