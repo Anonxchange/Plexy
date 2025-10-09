@@ -1,70 +1,115 @@
-import { Zap } from "lucide-react";
-import { SiX, SiTelegram, SiFacebook, SiInstagram } from "react-icons/si";
+import { Zap, Apple, Smartphone } from "lucide-react";
+import { SiX, SiTelegram, SiFacebook, SiInstagram, SiLinkedin, SiYoutube } from "react-icons/si";
+import { Button } from "@/components/ui/button";
 
 export function AppFooter() {
   return (
-    <footer className="bg-muted border-t border-border">
-      <div className="max-w-6xl mx-auto px-4 lg:px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-          <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Zap className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold text-foreground">Pexly</span>
+    <footer className="bg-[#1a1a1a] text-gray-300">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8 lg:py-12">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8 lg:mb-12 pb-6 lg:pb-8 border-b border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+              <Zap className="h-6 w-6 text-primary-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              The people-powered way to move money globally.
-            </p>
+            <span className="text-2xl font-bold text-white">plexy</span>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <span className="text-sm text-gray-400 sm:mr-2">Download App:</span>
             <div className="flex gap-3">
-              <a href="#" className="hover-elevate active-elevate-2 p-2 rounded-lg" data-testid="link-twitter">
-                <SiX className="h-5 w-5 text-muted-foreground" />
-              </a>
-              <a href="#" className="hover-elevate active-elevate-2 p-2 rounded-lg" data-testid="link-telegram">
-                <SiTelegram className="h-5 w-5 text-muted-foreground" />
-              </a>
-              <a href="#" className="hover-elevate active-elevate-2 p-2 rounded-lg" data-testid="link-facebook">
-                <SiFacebook className="h-5 w-5 text-muted-foreground" />
-              </a>
-              <a href="#" className="hover-elevate active-elevate-2 p-2 rounded-lg" data-testid="link-instagram">
-                <SiInstagram className="h-5 w-5 text-muted-foreground" />
-              </a>
+              <Button variant="outline" size="sm" className="bg-transparent border-gray-700 hover:bg-gray-800">
+                <Apple className="h-4 w-4 mr-1" />
+                iOS
+              </Button>
+              <Button variant="outline" size="sm" className="bg-transparent border-gray-700 hover:bg-gray-800">
+                <Smartphone className="h-4 w-4 mr-1" />
+                Android
+              </Button>
             </div>
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 lg:gap-8 mb-8 lg:mb-12">
           <div>
-            <h3 className="font-semibold text-foreground mb-4">Product</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-buy-crypto">Buy Crypto</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-sell-crypto">Sell Crypto</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-wallet-footer">Wallet</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-api">API</a></li>
+            <h3 className="font-semibold text-white mb-4">Trade crypto</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Buy Bitcoin</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Buy Ethereum</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Buy Tether</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Buy USDC</a></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold text-foreground mb-4">Company</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-about">About</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-careers">Careers</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-blog">Blog</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-support">Support</a></li>
+            <h3 className="font-semibold text-white mb-4">Trade crypto</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Sell Bitcoin</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Sell Ethereum</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Sell Tether</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Sell USDC</a></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold text-foreground mb-4">Legal</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-terms">Terms of Service</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-privacy">Privacy Policy</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-cookies">Cookie Policy</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-aml">AML Policy</a></li>
+            <h3 className="font-semibold text-white mb-4">About Plexu</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-sm hover:text-white transition-colors">About us</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Careers</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Blog</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Reviews</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-white mb-4">Useful links</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Plexu Wallet</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Support</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Bitcoin Calculator</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Peer-to-Peer Market Prices</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-white mb-4">Legal</h3>
+            <ul className="space-y-3">
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Terms & Conditions</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Vendor Reminder</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">AML Policy</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Privacy Notice</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Cookie Policy</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Restricted Countries</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">VIP Program T&C</a></li>
             </ul>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-border text-center text-sm text-muted-foreground">
-          <p>© 2024 Pexly. All rights reserved.</p>
+        <div className="flex flex-wrap justify-center gap-3 lg:gap-4 mb-6 lg:mb-8">
+          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <SiX className="h-4 w-4 text-black" />
+          </a>
+          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <SiLinkedin className="h-4 w-4 text-black" />
+          </a>
+          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <SiTelegram className="h-4 w-4 text-black" />
+          </a>
+          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <SiInstagram className="h-4 w-4 text-black" />
+          </a>
+          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <SiFacebook className="h-4 w-4 text-black" />
+          </a>
+          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <SiYoutube className="h-4 w-4 text-black" />
+          </a>
+        </div>
+
+        <div className="text-xs text-gray-500 leading-relaxed mb-4 lg:mb-6 px-2">
+          <p className="text-center sm:text-left">"PLEXY" is a registered trademark of Plexy, Inc. Copyright © 2024 Plexy, Inc. All Rights Reserved. Plexy Inc. has no relationship to MoneyGram, Western Union, Payoneer, WorldRemit, Paxum, PayPal, Amazon, OkPay, Payza, Walmart, Reloadit, Perfect Money, WebMoney, Google Wallet, BlueBird, Serve, Square Cash, NetSpend, Chase QuickPay, Skrill, Vanilla, MyVanilla, OneVanilla, Neteller, Venmo, Apple, ChimpChange or any other payment method. We make no claims about being supported by or supporting these services. Their respective wordmarks and trademarks belong to them alone.</p>
+        </div>
+
+        <div className="text-center text-sm text-gray-500">
+          <p>Copyright 2024 Plexy. All rights reserved.</p>
         </div>
       </div>
     </footer>
