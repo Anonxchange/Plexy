@@ -100,45 +100,6 @@ export function P2P() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-        {/* Navigation Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
-          <Button
-            variant={activeMode === "buy" ? "default" : "outline"}
-            onClick={() => setActiveMode("buy")}
-            className="min-w-fit"
-          >
-            HOME
-          </Button>
-          <Button
-            variant={activeMode === "buy" ? "default" : "outline"}
-            onClick={() => setActiveMode("buy")}
-            className="min-w-fit bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            P2P
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setLocation("/dashboard")}
-            className="min-w-fit"
-          >
-            SHOP
-          </Button>
-          <Button
-            variant={activeMode === "swap" ? "default" : "outline"}
-            onClick={() => setActiveMode("swap")}
-            className="min-w-fit"
-          >
-            SWAP
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setLocation("/wallet")}
-            className="min-w-fit"
-          >
-            WALLET
-          </Button>
-        </div>
-
         {activeMode === "swap" ? (
           // Swap Interface
           <div className="space-y-6">
