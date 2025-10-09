@@ -99,15 +99,16 @@ export default function Wallet() {
             <WalletIcon className="h-4 w-4 mr-2" />
             Wallet
           </Button>
-          <Button
-            variant={activeWalletTab === "spot" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveWalletTab("spot")}
-            className="whitespace-nowrap"
-          >
-            <ArrowLeftRight className="h-4 w-4 mr-2" />
-            Spot
-          </Button>
+          <Link href="/spot">
+            <Button
+              variant="outline"
+              size="sm"
+              className="whitespace-nowrap"
+            >
+              <ArrowLeftRight className="h-4 w-4 mr-2" />
+              Spot
+            </Button>
+          </Link>
           <Button
             variant={activeWalletTab === "card" ? "default" : "outline"}
             size="sm"
