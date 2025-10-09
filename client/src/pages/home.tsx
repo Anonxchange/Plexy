@@ -1,6 +1,7 @@
 import { HeroSection } from "@/components/hero-section";
 import { CryptoTicker } from "@/components/crypto-ticker";
 import { HowItWorks } from "@/components/how-it-works";
+import { CardShowcase } from "@/components/card-showcase";
 import { PaymentMethods } from "@/components/payment-methods";
 import { TrustStats } from "@/components/trust-stats";
 import { Testimonials } from "@/components/testimonials";
@@ -12,6 +13,7 @@ export default function Home() {
       <HeroSection />
       <CryptoTicker />
       <HowItWorks />
+      <CardShowcase />
       <PaymentMethods />
       <TrustStats />
       <Testimonials />
