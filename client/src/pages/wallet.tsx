@@ -18,7 +18,10 @@ import {
   Landmark,
   ShoppingBag,
   TrendingUp,
-  Gift
+  Gift,
+  CheckCircle2,
+  Clock,
+  XCircle
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -41,6 +44,122 @@ const spotPairs = [
   { symbol: "TRX", name: "Tron", price: 0.34, change: -0.12 },
   { symbol: "SOL", name: "Solana", price: 222.75, change: 0.58 },
   { symbol: "LTC", name: "Litecoin", price: 116.75, change: 0.15 },
+];
+
+const recentActivities = [
+  {
+    id: 1,
+    type: "P2P Trade",
+    action: "Buy BTC",
+    amount: "2000 USD",
+    cryptoAmount: "0.01988403 BTC",
+    status: "completed",
+    date: "Mar 12, 2025 at 6:20 PM",
+    partner: "JASON168"
+  },
+  {
+    id: 2,
+    type: "P2P Trade",
+    action: "Sell BTC",
+    amount: "500 USD",
+    cryptoAmount: "0.00495 BTC",
+    status: "completed",
+    date: "Mar 10, 2025 at 3:15 PM",
+    partner: "CryptoKing99"
+  },
+  {
+    id: 3,
+    type: "P2P Trade",
+    action: "Buy ETH",
+    amount: "1500 USD",
+    cryptoAmount: "0.34 ETH",
+    status: "pending",
+    date: "Mar 8, 2025 at 11:30 AM",
+    partner: "TraderPro"
+  }
+];
+
+const allOperations = [
+  {
+    id: 1,
+    type: "P2P Trade",
+    action: "Buy BTC",
+    amount: "2000 USD",
+    cryptoAmount: "0.01988403 BTC",
+    status: "completed",
+    date: "Mar 12, 2025 at 6:20 PM",
+    partner: "JASON168"
+  },
+  {
+    id: 2,
+    type: "P2P Trade",
+    action: "Sell BTC",
+    amount: "500 USD",
+    cryptoAmount: "0.00495 BTC",
+    status: "completed",
+    date: "Mar 10, 2025 at 3:15 PM",
+    partner: "CryptoKing99"
+  },
+  {
+    id: 3,
+    type: "Spot Trade",
+    action: "Buy BTC/USDT",
+    amount: "1000 USDT",
+    cryptoAmount: "0.00818 BTC",
+    status: "completed",
+    date: "Mar 9, 2025 at 2:45 PM",
+    partner: "Spot Exchange"
+  },
+  {
+    id: 4,
+    type: "P2P Trade",
+    action: "Buy ETH",
+    amount: "1500 USD",
+    cryptoAmount: "0.34 ETH",
+    status: "pending",
+    date: "Mar 8, 2025 at 11:30 AM",
+    partner: "TraderPro"
+  },
+  {
+    id: 5,
+    type: "Airtime Purchase",
+    action: "MTN Airtime",
+    amount: "50 NGN",
+    cryptoAmount: "0.00004 BTC",
+    status: "completed",
+    date: "Mar 7, 2025 at 9:15 AM",
+    partner: "MTN Nigeria"
+  },
+  {
+    id: 6,
+    type: "Spot Trade",
+    action: "Sell ETH/USDT",
+    amount: "2500 USDT",
+    cryptoAmount: "0.573 ETH",
+    status: "completed",
+    date: "Mar 6, 2025 at 4:30 PM",
+    partner: "Spot Exchange"
+  },
+  {
+    id: 7,
+    type: "Gift Card",
+    action: "Amazon Gift Card",
+    amount: "100 USD",
+    cryptoAmount: "0.00082 BTC",
+    status: "completed",
+    date: "Mar 5, 2025 at 1:20 PM",
+    partner: "Gift Card Store"
+  },
+  {
+    id: 8,
+    type: "Airtime Purchase",
+    action: "Airtel Data",
+    amount: "100 NGN",
+    cryptoAmount: "0.00008 BTC",
+    status: "completed",
+    date: "Mar 4, 2025 at 10:00 AM",
+    partner: "Airtel Nigeria"
+  }
 ];
 
 export default function Wallet() {
@@ -190,48 +309,139 @@ export default function Wallet() {
           ))}
         </div>
 
-        {/* Hide 0 Balance Toggle */}
-        <div className="flex items-center gap-2 mb-4">
-          <Switch 
-            checked={hideZeroBalance}
-            onCheckedChange={setHideZeroBalance}
-          />
-          <span className="text-sm text-muted-foreground">Hide 0 balance</span>
-        </div>
+        {/* Wallet Assets Tab Content */}
+        {activeAssetTab === "assets" && (
+          <>
+            {/* Hide 0 Balance Toggle */}
+            <div className="flex items-center gap-2 mb-4">
+              <Switch 
+                checked={hideZeroBalance}
+                onCheckedChange={setHideZeroBalance}
+              />
+              <span className="text-sm text-muted-foreground">Hide 0 balance</span>
+            </div>
 
-        {/* Asset List Header */}
-        <div className="hidden sm:grid grid-cols-3 gap-4 px-4 mb-2">
-          <div className="text-xs text-muted-foreground">Asset</div>
-          <div className="text-xs text-muted-foreground text-right">Balance</div>
-          <div className="text-xs text-muted-foreground text-right">Action</div>
-        </div>
+            {/* Asset List Header */}
+            <div className="hidden sm:grid grid-cols-3 gap-4 px-4 mb-2">
+              <div className="text-xs text-muted-foreground">Asset</div>
+              <div className="text-xs text-muted-foreground text-right">Balance</div>
+              <div className="text-xs text-muted-foreground text-right">Action</div>
+            </div>
 
-        {/* Asset List */}
-        <div className="space-y-2 mb-8">
-          {filteredAssets.map((asset) => (
-            <Card key={asset.symbol}>
-              <CardContent className="p-3 sm:p-4">
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 items-center">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center text-lg sm:text-xl ${asset.color}`}>
-                      {asset.icon}
+            {/* Asset List */}
+            <div className="space-y-2 mb-8">
+              {filteredAssets.map((asset) => (
+                <Card key={asset.symbol}>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 items-center">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center text-lg sm:text-xl ${asset.color}`}>
+                          {asset.icon}
+                        </div>
+                        <span className="font-medium text-sm sm:text-base">{asset.symbol}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium text-sm sm:text-base">{asset.balance.toFixed(7)}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{asset.ngnValue.toFixed(2)} NGN</div>
+                      </div>
+                      <div className="text-right">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                          <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <span className="font-medium text-sm sm:text-base">{asset.symbol}</span>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Recent Activity Tab Content */}
+        {activeAssetTab === "activity" && (
+          <div className="space-y-3 mb-8">
+            <p className="text-sm text-muted-foreground mb-4">Recent P2P trading activity</p>
+            {recentActivities.map((activity) => (
+              <Card key={activity.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm">{activity.type}</span>
+                        <Badge 
+                          variant="outline" 
+                          className={
+                            activity.status === "completed" 
+                              ? "bg-green-500/10 text-green-600 border-green-500/20" 
+                              : activity.status === "pending"
+                              ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                              : "bg-red-500/10 text-red-600 border-red-500/20"
+                          }
+                        >
+                          {activity.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                          {activity.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                          {activity.status === "failed" && <XCircle className="h-3 w-3 mr-1" />}
+                          {activity.status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm font-medium">{activity.action}</p>
+                      <p className="text-xs text-muted-foreground">with {activity.partner}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">{activity.amount}</p>
+                      <p className="text-sm text-muted-foreground">{activity.cryptoAmount}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-medium text-sm sm:text-base">{asset.balance.toFixed(7)}</div>
-                    <div className="text-xs sm:text-sm text-muted-foreground">{asset.ngnValue.toFixed(2)} NGN</div>
+                  <div className="text-xs text-muted-foreground">{activity.date}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* All Operations Tab Content */}
+        {activeAssetTab === "operations" && (
+          <div className="space-y-3 mb-8">
+            <p className="text-sm text-muted-foreground mb-4">All wallet operations including trades, purchases, and transfers</p>
+            {allOperations.map((operation) => (
+              <Card key={operation.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {operation.type}
+                        </Badge>
+                        <Badge 
+                          variant="outline" 
+                          className={
+                            operation.status === "completed" 
+                              ? "bg-green-500/10 text-green-600 border-green-500/20" 
+                              : operation.status === "pending"
+                              ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                              : "bg-red-500/10 text-red-600 border-red-500/20"
+                          }
+                        >
+                          {operation.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                          {operation.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                          {operation.status === "failed" && <XCircle className="h-3 w-3 mr-1" />}
+                          {operation.status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm font-medium">{operation.action}</p>
+                      <p className="text-xs text-muted-foreground">{operation.partner}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">{operation.amount}</p>
+                      <p className="text-sm text-muted-foreground">{operation.cryptoAmount}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                      <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <div className="text-xs text-muted-foreground">{operation.date}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Recommended Section */}
         <h2 className="text-xl font-bold mb-4">Recommended for you</h2>
