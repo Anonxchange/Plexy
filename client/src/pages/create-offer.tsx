@@ -165,7 +165,7 @@ export function CreateOffer() {
                         No security deposit required
                       </h3>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Start trading on NoOnes without a security deposit
+                        Start trading on Pexly without a security deposit
                       </p>
                       <div className="flex justify-center gap-2 text-3xl mb-4">
                         ✓ 👍 👍
@@ -260,7 +260,7 @@ export function CreateOffer() {
           {/* Fee info */}
           <Card className="bg-elevate-1 border-border">
             <CardContent className="p-4 flex items-center justify-between">
-              <span className="font-medium">NoOnes fee:</span>
+              <span className="font-medium">Pexly fee:</span>
               <span className="font-bold">0.75% for each trade</span>
             </CardContent>
           </Card>
