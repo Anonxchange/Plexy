@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { Zap, Menu, User, X } from "lucide-react";
-import { Link } from "wouter";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { AppSidebar } from "./app-sidebar";
+import { useAuth } from "@/lib/auth-context";
 
 export function AppHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const [, setLocation] = useLocation();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -31,9 +41,61 @@ export function AppHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="ghost" size="icon" data-testid="button-profile">
-            <User className="h-5 w-5" />
-          </Button>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  data-testid="button-profile"
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setLocation("/dashboard")}>
+                  <UserCircle className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation("/dashboard")}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  <span>Trade statistics</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation("/dashboard")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Account settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation("/dashboard")}>
+                  <Lightbulb className="mr-2 h-4 w-4" />
+                  <span>Submit an idea</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={async () => {
+                  await signOut();
+                  setLocation("/");
+                }}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setLocation("/signin")}
+              >
+                Sign In
+              </Button>
+              <Button 
+                size="sm"
+                onClick={() => setLocation("/signup")}
+              >
+                Sign Up
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
