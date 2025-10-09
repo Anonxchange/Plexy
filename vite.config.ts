@@ -27,14 +27,23 @@ export default defineConfig({
     },
   },
   root: path.resolve(import.meta.dirname, "client"), // 👈 index.html entry lives here
+  envDir: path.resolve(import.meta.dirname), // 👈 .env files live in project root
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"), // ✅ final build goes here
     emptyOutDir: true,
   },
   server: {
+    host: "0.0.0.0",
+    port: 5000,
+    allowedHosts: true,
     fs: {
       strict: true,
       deny: ["**/.*"],
     },
+  },
+  preview: {
+    host: "0.0.0.0",
+    port: 5000,
+    allowedHosts: true,
   },
 });
