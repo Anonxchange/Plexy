@@ -23,6 +23,9 @@ import { CreateOffer } from "@/pages/create-offer";
 import { MyOffers } from "@/pages/my-offers";
 import Spot from "@/pages/spot";
 import NotFound from "@/pages/not-found";
+import { GiftCards } from "@/pages/gift-cards";
+import { TradeHistory } from "@/pages/trade-history";
+import { AccountSettings } from "@/pages/account-settings";
 
 function Router() {
   return (
@@ -33,6 +36,9 @@ function Router() {
       <Route path="/spot" component={Spot} />
       <Route path="/swap" component={Swap} />
       <Route path="/wallet" component={Wallet} />
+      <Route path="/gift-cards" component={GiftCards} />
+      <Route path="/trade-statistics" component={TradeHistory} />
+      <Route path="/account-settings" component={AccountSettings} />
       <Route path="/signup" component={SignUp} />
       <Route path="/signin" component={SignIn} />
       <Route path="/dashboard" component={Dashboard} />
@@ -47,7 +53,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers"].includes(location);
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-statistics", "/account-settings"].includes(location);
 
   return (
     <QueryClientProvider client={queryClient}>
