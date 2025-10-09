@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowUpDown, FileText } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
+import { PexlyFooter } from "@/components/pexly-footer";
 
 const currencies = [
   { symbol: "BTC", name: "Bitcoin", icon: "₿" },
@@ -44,8 +45,8 @@ export function Swap() {
   const percentageDiff = "0.19%";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="min-h-screen flex flex-col bg-background">
+      <div className="flex-1 max-w-2xl mx-auto px-4 py-8">
         {/* Swap Interface */}
         <Card className="bg-card/50 mb-8">
           <CardContent className="p-6 space-y-6">
@@ -172,6 +173,8 @@ export function Swap() {
           </CardContent>
         </Card>
       </div>
+      
+      <PexlyFooter />
     </div>
   );
 }
