@@ -360,22 +360,27 @@ export function P2P() {
             </Dialog>
           </div>
 
-          {/* Amount Input */}
+          {/* Amount Selector */}
           <div className="space-y-2">
-            <div className="relative">
-              <Input
-                placeholder="Enter amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="pr-24 h-14 text-base"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <Dialog open={openCurrencyDialog} onOpenChange={setOpenCurrencyDialog}>
-                  <DialogTrigger asChild>
+            <Dialog open={openCurrencyDialog} onOpenChange={setOpenCurrencyDialog}>
+              <DialogTrigger asChild>
+                <div className="relative cursor-pointer">
+                  <Input
+                    placeholder="Enter amount"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="pr-24 h-14 text-base cursor-pointer"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     <Button variant="ghost" className="h-10 px-3 font-semibold">
-                      {currency}
+                      {selectedCurrencyData?.flag} {currency}
                     </Button>
-                  </DialogTrigger>
+                    <button className="p-1 hover:bg-accent rounded-md transition-colors">
+                      <Menu className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
+                </div>
+              </DialogTrigger>
                   <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Preferred currency</DialogTitle>
@@ -462,11 +467,6 @@ export function P2P() {
                     </Command>
                   </DialogContent>
                 </Dialog>
-                <button className="p-1 hover:bg-accent rounded-md transition-colors">
-                  <Menu className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Offer Location */}
