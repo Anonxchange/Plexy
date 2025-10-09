@@ -23,9 +23,9 @@ export function SignIn() {
     setLoading(true);
 
     const { error } = await signIn(email, password);
-    setLoading(false);
 
     if (error) {
+      setLoading(false);
       toast({
         title: "Error",
         description: error.message,
@@ -36,7 +36,11 @@ export function SignIn() {
         title: "Success!",
         description: "You have successfully signed in",
       });
-      setLocation("/dashboard");
+      // Small delay to ensure auth state updates
+      setTimeout(() => {
+        setLoading(false);
+        setLocation("/dashboard");
+      }, 100);
     }
   };
 
@@ -102,13 +106,13 @@ export function SignIn() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pr-10"
+                  className="pr-12"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
