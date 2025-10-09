@@ -75,34 +75,58 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/buy" onClick={handleLinkClick}>
+                <Link href="/p2p" onClick={handleLinkClick}>
                   <Button 
-                    variant={location === "/buy" ? "secondary" : "ghost"} 
+                    variant={location === "/p2p" ? "secondary" : "ghost"} 
                     className="w-full justify-start" 
                     size="sm" 
-                    data-testid="nav-buy"
+                    data-testid="nav-p2p"
                   >
-                    Buy Crypto
+                    P2P Trading
+                    <Badge variant="secondary" className="ml-auto text-xs">LOW FEES</Badge>
                   </Button>
                 </Link>
-                <Link href="/sell" onClick={handleLinkClick}>
+                <Link href="/spot" onClick={handleLinkClick}>
                   <Button 
-                    variant={location === "/sell" ? "secondary" : "ghost"} 
+                    variant={location === "/spot" ? "secondary" : "ghost"} 
                     className="w-full justify-start" 
                     size="sm" 
-                    data-testid="nav-sell"
+                    data-testid="nav-spot"
                   >
-                    Sell Crypto
+                    Spot Trading
                   </Button>
                 </Link>
-                <Link href="/offers" onClick={handleLinkClick}>
+                <Link href="/swap" onClick={handleLinkClick}>
                   <Button 
-                    variant={location === "/offers" ? "secondary" : "ghost"} 
+                    variant={location === "/swap" ? "secondary" : "ghost"} 
                     className="w-full justify-start" 
                     size="sm" 
-                    data-testid="nav-offers"
+                    data-testid="nav-swap"
                   >
+                    Swap
+                    <Badge variant="secondary" className="ml-auto text-xs">BEST RATE</Badge>
+                  </Button>
+                </Link>
+                <Link href="/my-offers" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/my-offers" ? "secondary" : "ghost"} 
+                    className="w-full justify-start gap-2" 
+                    size="sm" 
+                    data-testid="nav-my-offers"
+                  >
+                    <List className="h-4 w-4" />
                     My Offers
+                  </Button>
+                </Link>
+                <Link href="/create-offer" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/create-offer" ? "secondary" : "ghost"} 
+                    className="w-full justify-start gap-2" 
+                    size="sm" 
+                    data-testid="nav-create-offer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Offer
                   </Button>
                 </Link>
               </CollapsibleContent>
