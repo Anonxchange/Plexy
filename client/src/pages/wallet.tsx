@@ -26,6 +26,12 @@ import {
 import { Link, useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
+import { SendCryptoDialog } from "@/components/send-crypto-dialog";
+import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
+import { getUserWallets } from "@/lib/wallet-api";
+import { getCryptoPrices, convertToNGN, formatPrice } from "@/lib/crypto-prices";
+import type { Wallet } from "@/lib/wallet-api";
+import type { CryptoPrice } from "@/lib/crypto-prices";
 
 const cryptoAssets = [
   { symbol: "BTC", name: "Bitcoin", balance: 0.0000001, ngnValue: 17.99, icon: "₿", color: "text-orange-500" },
@@ -37,7 +43,7 @@ const cryptoAssets = [
   { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, icon: "ɱ", color: "text-orange-600" },
 ];
 
-const spotPairs = [
+const initialSpotPairs = [
   { symbol: "BTC", name: "Bitcoin", price: 122256.00, change: -0.58 },
   { symbol: "ETH", name: "Ethereum", price: 4362.20, change: -2.98 },
   { symbol: "BNB", name: "BNB", price: 1284.45, change: -2.19 },
@@ -170,22 +176,87 @@ export default function Wallet() {
   const [hideZeroBalance, setHideZeroBalance] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [activeSpotTab, setActiveSpotTab] = useState("hot");
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
+  const [loadingWallets, setLoadingWallets] = useState(true);
+  const [spotPairs, setSpotPairs] = useState(initialSpotPairs);
 
   useEffect(() => {
     if (!user) {
       setLocation("/signin");
+    } else {
+      loadWalletData();
+      loadCryptoPrices();
+      const priceInterval = setInterval(loadCryptoPrices, 60000);
+      return () => clearInterval(priceInterval);
     }
   }, [user, setLocation]);
+
+  const loadWalletData = async () => {
+    if (!user) return;
+    try {
+      const userWallets = await getUserWallets(user.id);
+      setWallets(userWallets);
+    } catch (error) {
+      console.error("Error loading wallets:", error);
+    } finally {
+      setLoadingWallets(false);
+    }
+  };
+
+  const loadCryptoPrices = async () => {
+    try {
+      const symbols = ['BTC', 'ETH', 'BNB', 'TRX', 'SOL', 'LTC', 'USDT', 'USDC', 'TON', 'XMR'];
+      const prices = await getCryptoPrices(symbols);
+      setCryptoPrices(prices);
+      
+      setSpotPairs(prevPairs => 
+        prevPairs.map(pair => {
+          const priceData = prices[pair.symbol];
+          return priceData ? {
+            ...pair,
+            price: priceData.current_price,
+            change: priceData.price_change_percentage_24h
+          } : pair;
+        })
+      );
+    } catch (error) {
+      console.error("Error loading crypto prices:", error);
+    }
+  };
 
   if (!user) {
     return null;
   }
 
-  const totalBalance = 19.84;
+  const mergedAssets = cryptoAssets.map(asset => {
+    const wallet = wallets.find(w => w.crypto_symbol === asset.symbol);
+    const priceData = cryptoPrices[asset.symbol];
+    const balance = wallet?.balance || asset.balance;
+    const usdValue = priceData ? balance * priceData.current_price : 0;
+    const ngnValue = convertToNGN(usdValue);
+    
+    return {
+      ...asset,
+      balance,
+      ngnValue
+    };
+  });
+
+  const totalBalance = mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0);
   
   const filteredAssets = hideZeroBalance 
-    ? cryptoAssets.filter(asset => asset.balance > 0)
-    : cryptoAssets;
+    ? mergedAssets.filter(asset => asset.balance > 0)
+    : mergedAssets;
+
+  const walletsForDialog = cryptoAssets.map(asset => ({
+    symbol: asset.symbol,
+    name: asset.name,
+    icon: asset.icon,
+    balance: mergedAssets.find(a => a.symbol === asset.symbol)?.balance || 0
+  }));
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -260,11 +331,11 @@ export default function Wallet() {
 
             {/* Action Buttons - Horizontal Layout */}
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <Button variant="outline" className="h-14">
+              <Button variant="outline" className="h-14" onClick={() => setReceiveDialogOpen(true)}>
                 <ArrowDownToLine className="mr-2 h-5 w-5" />
                 Receive
               </Button>
-              <Button variant="outline" className="h-14">
+              <Button variant="outline" className="h-14" onClick={() => setSendDialogOpen(true)}>
                 <ArrowUpFromLine className="mr-2 h-5 w-5" />
                 Send
               </Button>
@@ -584,6 +655,19 @@ export default function Wallet() {
       </div>
       
       <PexlyFooter />
+
+      <SendCryptoDialog
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        wallets={walletsForDialog}
+        onSuccess={loadWalletData}
+      />
+
+      <ReceiveCryptoDialog
+        open={receiveDialogOpen}
+        onOpenChange={setReceiveDialogOpen}
+        wallets={walletsForDialog}
+      />
     </div>
   );
 }
