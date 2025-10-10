@@ -17,7 +17,23 @@ const COINGECKO_IDS: Record<string, string> = {
   XMR: 'monero',
   BNB: 'binancecoin',
   TRX: 'tron',
-  LTC: 'litecoin'
+  LTC: 'litecoin',
+  XRP: 'ripple',
+  ADA: 'cardano',
+  DOGE: 'dogecoin',
+  AVAX: 'avalanche-2',
+  MATIC: 'matic-network',
+  DOT: 'polkadot',
+  LINK: 'chainlink',
+  UNI: 'uniswap',
+  ATOM: 'cosmos',
+  APT: 'aptos',
+  ARB: 'arbitrum',
+  OP: 'optimism',
+  NEAR: 'near',
+  FTM: 'fantom',
+  ALGO: 'algorand',
+  VET: 'vechain'
 };
 
 export async function getCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
