@@ -28,9 +28,8 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
-import { getUserWallets } from "@/lib/wallet-api";
+import { walletClient, type Wallet } from "@/lib/wallet-client";
 import { getCryptoPrices, convertToNGN, formatPrice } from "@/lib/crypto-prices";
-import type { Wallet } from "@/lib/wallet-api";
 import type { CryptoPrice } from "@/lib/crypto-prices";
 
 const cryptoAssets = [
@@ -197,8 +196,11 @@ export default function Wallet() {
   const loadWalletData = async () => {
     if (!user) return;
     try {
-      const userWallets = await getUserWallets(user.id);
-      setWallets(userWallets);
+      const response = await walletClient.getWallets();
+      console.log("Wallet API response:", response);
+      // Handle both possible response formats
+      const userWallets = response.wallets || response || [];
+      setWallets(Array.isArray(userWallets) ? userWallets : []);
     } catch (error) {
       console.error("Error loading wallets:", error);
     } finally {
@@ -211,7 +213,7 @@ export default function Wallet() {
       const symbols = ['BTC', 'ETH', 'BNB', 'TRX', 'SOL', 'LTC', 'USDT', 'USDC', 'TON', 'XMR'];
       const prices = await getCryptoPrices(symbols);
       setCryptoPrices(prices);
-      
+
       setSpotPairs(prevPairs => 
         prevPairs.map(pair => {
           const priceData = prices[pair.symbol];
@@ -232,12 +234,12 @@ export default function Wallet() {
   }
 
   const mergedAssets = cryptoAssets.map(asset => {
-    const wallet = wallets.find(w => w.crypto_symbol === asset.symbol);
+    const wallet = wallets.find(w => w.currency === asset.symbol);
     const priceData = cryptoPrices[asset.symbol];
     const balance = wallet?.balance || asset.balance;
     const usdValue = priceData ? balance * priceData.current_price : 0;
     const ngnValue = convertToNGN(usdValue);
-    
+
     return {
       ...asset,
       balance,
@@ -246,7 +248,7 @@ export default function Wallet() {
   });
 
   const totalBalance = mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0);
-  
+
   const filteredAssets = hideZeroBalance 
     ? mergedAssets.filter(asset => asset.balance > 0)
     : mergedAssets;
@@ -401,29 +403,51 @@ export default function Wallet() {
 
             {/* Asset List */}
             <div className="space-y-2 mb-8">
-              {filteredAssets.map((asset) => (
-                <Card key={asset.symbol}>
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="grid grid-cols-3 gap-2 sm:gap-4 items-center">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center text-lg sm:text-xl ${asset.color}`}>
-                          {asset.icon}
+              {filteredAssets.map((asset) => {
+                const hasWallet = wallets.some(w => w.currency === asset.symbol);
+                
+                return (
+                  <Card key={asset.symbol}>
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="grid grid-cols-3 gap-2 sm:gap-4 items-center">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center text-lg sm:text-xl ${asset.color}`}>
+                            {asset.icon}
+                          </div>
+                          <span className="font-medium text-sm sm:text-base">{asset.symbol}</span>
                         </div>
-                        <span className="font-medium text-sm sm:text-base">{asset.symbol}</span>
+                        <div className="text-right">
+                          <div className="font-medium text-sm sm:text-base">{asset.balance.toFixed(7)}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground">{asset.ngnValue.toFixed(2)} NGN</div>
+                        </div>
+                        <div className="text-right">
+                          {!hasWallet ? (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  await walletClient.generateWallet(asset.symbol);
+                                  await loadWalletData();
+                                } catch (error) {
+                                  console.error("Error generating wallet:", error);
+                                }
+                              }}
+                              className="text-xs"
+                            >
+                              Generate
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                              <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-medium text-sm sm:text-base">{asset.balance.toFixed(7)}</div>
-                        <div className="text-xs sm:text-sm text-muted-foreground">{asset.ngnValue.toFixed(2)} NGN</div>
-                      </div>
-                      <div className="text-right">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                          <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </>
         )}
@@ -528,7 +552,7 @@ export default function Wallet() {
                 </span>
               </Link>
             </div>
-            
+
             <Card className="bg-muted/50">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -653,7 +677,7 @@ export default function Wallet() {
           </CardContent>
         </Card>
       </div>
-      
+
       <PexlyFooter />
 
       <SendCryptoDialog
