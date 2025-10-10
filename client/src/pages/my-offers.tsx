@@ -1,51 +1,126 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Plus, Package, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
+import { createClient } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 
 interface Offer {
   id: string;
-  type: "buy" | "sell";
-  crypto: string;
-  amount: string;
-  paymentMethod: string;
-  currency: string;
-  rate: number;
-  status: "active" | "paused" | "inactive";
-  createdAt: Date;
+  offer_type: "buy" | "sell";
+  crypto_symbol: string;
+  available_amount: number;
+  payment_methods: string[];
+  fiat_currency: string;
+  fixed_price: number;
+  is_active: boolean;
+  min_amount: number;
+  max_amount: number;
+  created_at: string;
 }
 
 export function MyOffers() {
-  const [offers] = useState<Offer[]>([
-    {
-      id: "1",
-      type: "sell",
-      crypto: "BTC",
-      amount: "0.1",
-      paymentMethod: "Bank Transfer",
-      currency: "NGN",
-      rate: 177374519.15,
-      status: "active",
-      createdAt: new Date("2024-10-01"),
-    },
-    {
-      id: "2",
-      type: "buy",
-      crypto: "USDT",
-      amount: "5000",
-      paymentMethod: "Mobile Money",
-      currency: "NGN",
-      rate: 1580,
-      status: "paused",
-      createdAt: new Date("2024-09-28"),
-    },
-  ]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const activeOffers = offers.filter(o => o.status === "active");
-  const pausedOffers = offers.filter(o => o.status === "paused");
+  useEffect(() => {
+    if (user) {
+      fetchMyOffers();
+    }
+  }, [user]);
+
+  const fetchMyOffers = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("p2p_offers")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching offers:", error);
+        return;
+      }
+
+      setOffers(data || []);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleOfferStatus = async (offerId: string, currentStatus: boolean) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("p2p_offers")
+        .update({ is_active: !currentStatus })
+        .eq("id", offerId);
+
+      if (error) {
+        console.error("Error updating offer:", error);
+        return;
+      }
+
+      // Refresh offers
+      fetchMyOffers();
+    } catch (error) {
+      console.error("Error updating offer:", error);
+    }
+  };
+
+  const deleteOffer = async (offerId: string) => {
+    if (!confirm("Are you sure you want to delete this offer?")) return;
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("p2p_offers")
+        .delete()
+        .eq("id", offerId);
+
+      if (error) {
+        console.error("Error deleting offer:", error);
+        return;
+      }
+
+      // Refresh offers
+      fetchMyOffers();
+    } catch (error) {
+      console.error("Error deleting offer:", error);
+    }
+  };
+
+  const activeOffers = offers.filter(o => o.is_active);
+  const pausedOffers = offers.filter(o => !o.is_active);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
+          <Card className="bg-card border-border">
+            <CardContent className="p-12 text-center">
+              <h3 className="text-xl font-semibold mb-2">Please sign in</h3>
+              <p className="text-muted-foreground mb-6">
+                You need to be signed in to view your offers
+              </p>
+              <Link href="/signin">
+                <Button>Sign In</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </main>
+        <PexlyFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -98,7 +173,13 @@ export function MyOffers() {
         </div>
 
         {/* Offers List */}
-        {offers.length === 0 ? (
+        {loading ? (
+          <Card className="bg-card border-border">
+            <CardContent className="p-12 text-center">
+              <p className="text-muted-foreground">Loading your offers...</p>
+            </CardContent>
+          </Card>
+        ) : offers.length === 0 ? (
           <Card className="bg-card border-border">
             <CardContent className="p-12 text-center">
               <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
@@ -123,45 +204,49 @@ export function MyOffers() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
                         <Badge 
-                          variant={offer.type === "buy" ? "default" : "secondary"}
-                          className={offer.type === "buy" ? "bg-primary" : ""}
+                          variant={offer.offer_type === "buy" ? "default" : "secondary"}
+                          className={offer.offer_type === "buy" ? "bg-primary" : ""}
                         >
-                          {offer.type === "buy" ? "BUY" : "SELL"}
+                          {offer.offer_type.toUpperCase()}
                         </Badge>
                         <h3 className="text-xl font-bold">
-                          {offer.amount} {offer.crypto}
+                          {offer.available_amount} {offer.crypto_symbol}
                         </h3>
                         <Badge 
                           variant="outline"
                           className={
-                            offer.status === "active" 
+                            offer.is_active 
                               ? "border-primary text-primary" 
                               : "border-muted-foreground text-muted-foreground"
                           }
                         >
-                          {offer.status.toUpperCase()}
+                          {offer.is_active ? "ACTIVE" : "PAUSED"}
                         </Badge>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Payment Method</p>
-                          <p className="font-medium">{offer.paymentMethod}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Currency</p>
-                          <p className="font-medium">{offer.currency}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Rate</p>
                           <p className="font-medium">
-                            {offer.rate.toLocaleString()} {offer.currency}
+                            {Array.isArray(offer.payment_methods) 
+                              ? offer.payment_methods.join(", ") 
+                              : offer.payment_methods}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Created</p>
+                          <p className="text-sm text-muted-foreground">Currency</p>
+                          <p className="font-medium">{offer.fiat_currency}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Price</p>
                           <p className="font-medium">
-                            {offer.createdAt.toLocaleDateString()}
+                            {offer.fixed_price?.toLocaleString()} {offer.fiat_currency}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Limits</p>
+                          <p className="font-medium">
+                            {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
                           </p>
                         </div>
                       </div>
@@ -173,11 +258,17 @@ export function MyOffers() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className={offer.status === "active" ? "text-destructive" : "text-primary"}
+                          className={offer.is_active ? "text-destructive" : "text-primary"}
+                          onClick={() => toggleOfferStatus(offer.id, offer.is_active)}
                         >
-                          {offer.status === "active" ? "Pause" : "Activate"}
+                          {offer.is_active ? "Pause" : "Activate"}
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive"
+                          onClick={() => deleteOffer(offer.id)}
+                        >
                           Delete
                         </Button>
                       </div>
