@@ -10,7 +10,12 @@ import {
   HeadphonesIcon,
   ChevronDown,
   Smartphone,
-  Zap
+  Zap,
+  Bitcoin,
+  ArrowDownToLine,
+  CreditCard,
+  ShoppingBag,
+  Banknote
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +44,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           </div>
           <span className="text-2xl font-bold">Pexly</span>
         </Link>
-        
+
         <div className="mt-6 space-y-2">
           <Button className="w-full justify-start gap-2" size="sm" variant="outline" data-testid="button-download-android">
             <Smartphone className="h-4 w-4" />
@@ -180,16 +185,99 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 <Link href="/wallet" onClick={handleLinkClick}>
                   <Button 
                     variant={location === "/wallet" ? "secondary" : "ghost"} 
-                    className="w-full justify-start" 
+                    className="w-full justify-start gap-3 h-auto py-3" 
                     size="sm" 
-                    data-testid="nav-my-wallet"
+                    data-testid="nav-wallet-assets"
                   >
-                    My Wallet
+                    <Bitcoin className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Assets</span>
+                      <span className="text-xs text-muted-foreground leading-tight">My assets in the NoOnes wallet</span>
+                    </div>
                   </Button>
                 </Link>
-                <Link href="/wallet/transactions" onClick={handleLinkClick}>
-                  <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-transactions">
-                    Transactions
+                <Link href="/wallet/receive" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/wallet/receive" ? "secondary" : "ghost"} 
+                    className="w-full justify-start gap-3 h-auto py-3" 
+                    size="sm" 
+                    data-testid="nav-wallet-receive"
+                  >
+                    <ArrowDownToLine className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Receive</span>
+                      <span className="text-xs text-muted-foreground leading-tight">Receive crypto or deposit using fiat</span>
+                    </div>
+                  </Button>
+                </Link>
+                <Link href="/wallet/visa-card" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/wallet/visa-card" ? "secondary" : "ghost"} 
+                    className="w-full justify-start gap-3 h-auto py-3" 
+                    size="sm" 
+                    data-testid="nav-wallet-visa-card"
+                  >
+                    <CreditCard className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Visa card</span>
+                      <span className="text-xs text-muted-foreground leading-tight">Spend your crypto</span>
+                    </div>
+                  </Button>
+                </Link>
+                <Link href="/wallet/buy-crypto" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/wallet/buy-crypto" ? "default" : "ghost"} 
+                    className="w-full justify-start gap-3 h-auto py-3" 
+                    size="sm" 
+                    data-testid="nav-wallet-buy-crypto"
+                  >
+                    <ShoppingBag className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Buy crypto</span>
+                      <span className="text-xs text-muted-foreground leading-tight">Pay using card, bank, or mobile money</span>
+                    </div>
+                  </Button>
+                </Link>
+                <Link href="/wallet/crypto-to-bank" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/wallet/crypto-to-bank" ? "default" : "ghost"} 
+                    className="w-full justify-start gap-3 h-auto py-3" 
+                    size="sm" 
+                    data-testid="nav-wallet-crypto-to-bank"
+                  >
+                    <Banknote className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Crypto to Bank</span>
+                      <span className="text-xs text-muted-foreground leading-tight">Cash out your crypto to a bank or MoMo wallet</span>
+                    </div>
+                  </Button>
+                </Link>
+                <Link href="/wallet/lightning" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/wallet/lightning" ? "secondary" : "ghost"} 
+                    className="w-full justify-start gap-3 h-auto py-3" 
+                    size="sm" 
+                    data-testid="nav-wallet-lightning"
+                  >
+                    <Zap className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Lightning</span>
+                      <span className="text-xs text-muted-foreground leading-tight">Send Bitcoin ultra fast</span>
+                    </div>
+                  </Button>
+                </Link>
+                <Link href="/wallet/mobile-topup" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/wallet/mobile-topup" ? "secondary" : "ghost"} 
+                    className="w-full justify-start gap-3 h-auto py-3" 
+                    size="sm" 
+                    data-testid="nav-wallet-mobile-topup"
+                  >
+                    <Smartphone className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Mobile top-up</span>
+                      <span className="text-xs text-muted-foreground leading-tight">Recharge your phone using crypto</span>
+                    </div>
                   </Button>
                 </Link>
               </CollapsibleContent>
