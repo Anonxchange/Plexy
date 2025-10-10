@@ -28,14 +28,34 @@ import {
   Search,
   RotateCw,
   Menu,
-  TrendingUp
+  TrendingUp,
+  Coins,
+  Wallet,
+  CreditCard,
+  Gift,
+  Building2,
+  Smartphone
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 
+// Custom icon components for crypto
+const EthIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+    <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
+  </svg>
+);
+
+const UsdtIcon = () => (
+  <svg viewBox="0 0 2000 2000" fill="currentColor" className="h-6 w-6">
+    <path d="M1000,0c552.26,0,1000,447.74,1000,1000S1552.24,2000,1000,2000,0,1552.38,0,1000,447.68,0,1000,0" fill="#53ae94"/>
+    <path d="M1123.42,866.76V718h340.18V491.34H537.28V718H877.5V866.64C601,879.34,393.1,934.1,393.1,999.7s208,120.36,484.4,133.14v476.5h246V1132.8c276-12.74,483.48-67.46,483.48-133s-207.48-120.26-483.48-133m0,225.64v-0.12c-6.94.44-42.6,2.58-122,2.58-63.48,0-108.14-1.8-123.88-2.62v0.2C633.34,1081.66,451,1039.12,451,988.22S633.36,894.84,877.62,884V1050.1c16,1.1,61.76,3.8,124.92,3.8,75.86,0,114-3.16,121-3.8V884c243.8,10.86,425.72,53.44,425.72,104.16s-182,93.32-425.72,104.18" fill="#fff"/>
+  </svg>
+);
+
 const cryptocurrencies = [
   { symbol: "BTC", name: "Bitcoin", icon: Bitcoin, price: 123592.33 },
-  { symbol: "ETH", name: "Ethereum", icon: Bitcoin, price: 5789.12 },
-  { symbol: "USDT", name: "Tether", icon: Bitcoin, price: 1.00 },
+  { symbol: "ETH", name: "Ethereum", icon: EthIcon, price: 5789.12 },
+  { symbol: "USDT", name: "Tether", icon: UsdtIcon, price: 1.00 },
 ];
 
 export function P2P() {
@@ -62,68 +82,68 @@ export function P2P() {
   ];
 
   const popularPaymentMethods = [
-    { id: "bank-transfer", name: "Bank Transfer", icon: MapPin, category: "bank" },
-    { id: "google-pay", name: "Google Pay", icon: Bitcoin, category: "wallet" },
-    { id: "apple-pay", name: "ApplePay", icon: Bitcoin, category: "wallet" },
-    { id: "paypal", name: "PayPal", icon: Bitcoin, category: "wallet" },
-    { id: "mtn", name: "MTN Mobile Money", icon: Bitcoin, category: "wallet" },
-    { id: "wire", name: "Domestic Wire Transfer", icon: MapPin, category: "bank" },
+    { id: "bank-transfer", name: "Bank Transfer", icon: Building2, category: "bank" },
+    { id: "google-pay", name: "Google Pay", icon: Smartphone, category: "wallet" },
+    { id: "apple-pay", name: "ApplePay", icon: Smartphone, category: "wallet" },
+    { id: "paypal", name: "PayPal", icon: Wallet, category: "wallet" },
+    { id: "mtn", name: "MTN Mobile Money", icon: Smartphone, category: "wallet" },
+    { id: "wire", name: "Domestic Wire Transfer", icon: Building2, category: "bank" },
   ];
 
   const allPaymentMethods = [
     // Bank Transfers
-    { id: "bank-transfer", name: "Bank Transfer", icon: MapPin, category: "bank" },
-    { id: "wire", name: "Domestic Wire Transfer", icon: MapPin, category: "bank" },
-    { id: "ach", name: "ACH Transfer", icon: MapPin, category: "bank" },
-    { id: "sepa", name: "SEPA Transfer", icon: MapPin, category: "bank" },
-    { id: "swift", name: "SWIFT Transfer", icon: MapPin, category: "bank" },
+    { id: "bank-transfer", name: "Bank Transfer", icon: Building2, category: "bank" },
+    { id: "wire", name: "Domestic Wire Transfer", icon: Building2, category: "bank" },
+    { id: "ach", name: "ACH Transfer", icon: Building2, category: "bank" },
+    { id: "sepa", name: "SEPA Transfer", icon: Building2, category: "bank" },
+    { id: "swift", name: "SWIFT Transfer", icon: Building2, category: "bank" },
 
     // Online Wallets
-    { id: "paypal", name: "PayPal", icon: Bitcoin, category: "wallet" },
-    { id: "google-pay", name: "Google Pay", icon: Bitcoin, category: "wallet" },
-    { id: "apple-pay", name: "Apple Pay", icon: Bitcoin, category: "wallet" },
-    { id: "advcash", name: "AdvCash", icon: Bitcoin, category: "wallet" },
-    { id: "airtel", name: "Airtel Money", icon: Bitcoin, category: "wallet" },
-    { id: "alipay", name: "Alipay", icon: Bitcoin, category: "wallet" },
-    { id: "mtn", name: "MTN Mobile Money", icon: Bitcoin, category: "wallet" },
-    { id: "skrill", name: "Skrill", icon: Bitcoin, category: "wallet" },
-    { id: "neteller", name: "Neteller", icon: Bitcoin, category: "wallet" },
-    { id: "venmo", name: "Venmo", icon: Bitcoin, category: "wallet" },
-    { id: "cashapp", name: "Cash App", icon: Bitcoin, category: "wallet" },
-    { id: "zelle", name: "Zelle", icon: Bitcoin, category: "wallet" },
-    { id: "wechat", name: "WeChat Pay", icon: Bitcoin, category: "wallet" },
+    { id: "paypal", name: "PayPal", icon: Wallet, category: "wallet" },
+    { id: "google-pay", name: "Google Pay", icon: Smartphone, category: "wallet" },
+    { id: "apple-pay", name: "Apple Pay", icon: Smartphone, category: "wallet" },
+    { id: "advcash", name: "AdvCash", icon: Wallet, category: "wallet" },
+    { id: "airtel", name: "Airtel Money", icon: Smartphone, category: "wallet" },
+    { id: "alipay", name: "Alipay", icon: Smartphone, category: "wallet" },
+    { id: "mtn", name: "MTN Mobile Money", icon: Smartphone, category: "wallet" },
+    { id: "skrill", name: "Skrill", icon: Wallet, category: "wallet" },
+    { id: "neteller", name: "Neteller", icon: Wallet, category: "wallet" },
+    { id: "venmo", name: "Venmo", icon: Smartphone, category: "wallet" },
+    { id: "cashapp", name: "Cash App", icon: Smartphone, category: "wallet" },
+    { id: "zelle", name: "Zelle", icon: Smartphone, category: "wallet" },
+    { id: "wechat", name: "WeChat Pay", icon: Smartphone, category: "wallet" },
 
     // Debit/Credit Cards
-    { id: "visa", name: "Visa", icon: Bitcoin, category: "card" },
-    { id: "mastercard", name: "Mastercard", icon: Bitcoin, category: "card" },
-    { id: "amex", name: "American Express", icon: Bitcoin, category: "card" },
-    { id: "discover", name: "Discover", icon: Bitcoin, category: "card" },
-    { id: "debit", name: "Debit Card", icon: Bitcoin, category: "card" },
-    { id: "credit", name: "Credit Card", icon: Bitcoin, category: "card" },
+    { id: "visa", name: "Visa", icon: CreditCard, category: "card" },
+    { id: "mastercard", name: "Mastercard", icon: CreditCard, category: "card" },
+    { id: "amex", name: "American Express", icon: CreditCard, category: "card" },
+    { id: "discover", name: "Discover", icon: CreditCard, category: "card" },
+    { id: "debit", name: "Debit Card", icon: CreditCard, category: "card" },
+    { id: "credit", name: "Credit Card", icon: CreditCard, category: "card" },
 
     // Gift Cards
-    { id: "amazon", name: "Amazon Gift Card", icon: Bitcoin, category: "gift" },
-    { id: "apple-gift", name: "Apple Gift Card", icon: Bitcoin, category: "gift" },
-    { id: "google-play", name: "Google Play", icon: Bitcoin, category: "gift" },
-    { id: "steam", name: "Steam", icon: Bitcoin, category: "gift" },
-    { id: "itunes", name: "iTunes Gift Card", icon: Bitcoin, category: "gift" },
-    { id: "xbox", name: "Xbox Gift Card", icon: Bitcoin, category: "gift" },
-    { id: "playstation", name: "PlayStation Gift Card", icon: Bitcoin, category: "gift" },
-    { id: "netflix", name: "Netflix Gift Card", icon: Bitcoin, category: "gift" },
-    { id: "spotify", name: "Spotify Gift Card", icon: Bitcoin, category: "gift" },
+    { id: "amazon", name: "Amazon Gift Card", icon: Gift, category: "gift" },
+    { id: "apple-gift", name: "Apple Gift Card", icon: Gift, category: "gift" },
+    { id: "google-play", name: "Google Play", icon: Gift, category: "gift" },
+    { id: "steam", name: "Steam", icon: Gift, category: "gift" },
+    { id: "itunes", name: "iTunes Gift Card", icon: Gift, category: "gift" },
+    { id: "xbox", name: "Xbox Gift Card", icon: Gift, category: "gift" },
+    { id: "playstation", name: "PlayStation Gift Card", icon: Gift, category: "gift" },
+    { id: "netflix", name: "Netflix Gift Card", icon: Gift, category: "gift" },
+    { id: "spotify", name: "Spotify Gift Card", icon: Gift, category: "gift" },
 
     // Digital Currencies
     { id: "bitcoin", name: "Bitcoin (BTC)", icon: Bitcoin, category: "digital" },
-    { id: "ethereum", name: "Ethereum (ETH)", icon: Bitcoin, category: "digital" },
-    { id: "usdt", name: "Tether (USDT)", icon: Bitcoin, category: "digital" },
-    { id: "usdc", name: "USD Coin (USDC)", icon: Bitcoin, category: "digital" },
-    { id: "arweave", name: "Arweave (AR)", icon: Bitcoin, category: "digital" },
-    { id: "litecoin", name: "Litecoin (LTC)", icon: Bitcoin, category: "digital" },
+    { id: "ethereum", name: "Ethereum (ETH)", icon: EthIcon, category: "digital" },
+    { id: "usdt", name: "Tether (USDT)", icon: UsdtIcon, category: "digital" },
+    { id: "usdc", name: "USD Coin (USDC)", icon: Coins, category: "digital" },
+    { id: "arweave", name: "Arweave (AR)", icon: Coins, category: "digital" },
+    { id: "litecoin", name: "Litecoin (LTC)", icon: Coins, category: "digital" },
 
     // Goods and Services
-    { id: "merchandise", name: "Merchandise", icon: Bitcoin, category: "goods" },
-    { id: "services", name: "Services", icon: Bitcoin, category: "goods" },
-    { id: "vouchers", name: "Vouchers", icon: Bitcoin, category: "goods" },
+    { id: "merchandise", name: "Merchandise", icon: MapPin, category: "goods" },
+    { id: "services", name: "Services", icon: MapPin, category: "goods" },
+    { id: "vouchers", name: "Vouchers", icon: Gift, category: "goods" },
   ];
 
   const popularCurrencies = ["USD", "GBP", "CAD", "EUR", "INR", "KES", "NGN", "CNY"];
