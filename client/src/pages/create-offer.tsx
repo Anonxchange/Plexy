@@ -88,11 +88,12 @@ export function CreateOffer() {
         crypto_symbol: crypto,
         payment_methods: [paymentMethod],
         fiat_currency: currency,
-        price_type: priceOffset[0] === 0 ? "fixed" : "floating",
+        price_type: priceOffset[0] === 0 ? "market" : "floating",
         fixed_price: priceOffset[0] === 0 ? yourRate : null,
         floating_margin: priceOffset[0] !== 0 ? priceOffset[0] : null,
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
+        available_amount: maxAmountNum,
         country_restrictions: country ? [country] : null,
         is_active: true,
       });
