@@ -15,6 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ArrowDownUp, Edit } from "lucide-react";
+import { createClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export function CreateOffer() {
   const [priceOffset, setPriceOffset] = useState([0]);
@@ -24,9 +27,94 @@ export function CreateOffer() {
   const [country, setCountry] = useState("");
   const [minAmount, setMinAmount] = useState("14777");
   const [maxAmount, setMaxAmount] = useState("147769");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const marketRate = 177374519.15;
   const yourRate = marketRate * (1 + priceOffset[0] / 100);
+
+  const handleCreateOffer = async () => {
+    if (!paymentMethod || !currency) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a payment method and currency",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const minAmountNum = parseFloat(minAmount);
+    const maxAmountNum = parseFloat(maxAmount);
+
+    if (isNaN(minAmountNum) || isNaN(maxAmountNum) || minAmountNum <= 0 || maxAmountNum <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter valid minimum and maximum amounts",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (minAmountNum > maxAmountNum) {
+      toast({
+        title: "Invalid Range",
+        description: "Minimum amount cannot be greater than maximum amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const supabase = createClient();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setIsSubmitting(false);
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to create an offer",
+          variant: "destructive",
+        });
+        setLocation("/signin");
+        return;
+      }
+
+      const { error } = await supabase.from("p2p_offers").insert({
+        user_id: user.id,
+        offer_type: "sell",
+        crypto_symbol: crypto,
+        payment_methods: [paymentMethod],
+        fiat_currency: currency,
+        price_type: priceOffset[0] === 0 ? "fixed" : "floating",
+        fixed_price: priceOffset[0] === 0 ? yourRate : null,
+        floating_margin: priceOffset[0] !== 0 ? priceOffset[0] : null,
+        min_amount: minAmountNum,
+        max_amount: maxAmountNum,
+        country_restrictions: country ? [country] : null,
+        is_active: true,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Offer Created!",
+        description: "Your offer has been successfully listed on the P2P marketplace",
+      });
+
+      setLocation("/p2p");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create offer",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -74,16 +162,21 @@ export function CreateOffer() {
           <div>
             <Label className="text-sm text-muted-foreground mb-2 block">I want</Label>
             <div className="space-y-3">
-              <Card className="bg-elevate-1 border-border">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <span className="text-muted-foreground">
-                    {paymentMethod || "Payment method"}
-                  </span>
-                  <Button variant="ghost" size="icon">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="h-12 bg-elevate-1">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Mobile Money">Mobile Money</SelectItem>
+                  <SelectItem value="PayPal">PayPal</SelectItem>
+                  <SelectItem value="Cash App">Cash App</SelectItem>
+                  <SelectItem value="Zelle">Zelle</SelectItem>
+                  <SelectItem value="Venmo">Venmo</SelectItem>
+                  <SelectItem value="Google Pay">Google Pay</SelectItem>
+                  <SelectItem value="Apple Pay">Apple Pay</SelectItem>
+                </SelectContent>
+              </Select>
 
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger className="h-12 bg-elevate-1">
@@ -273,8 +366,10 @@ export function CreateOffer() {
           {/* Submit button */}
           <Button 
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6"
+            onClick={handleCreateOffer}
+            disabled={isSubmitting}
           >
-            Place an offer
+            {isSubmitting ? "Creating offer..." : "Place an offer"}
           </Button>
         </div>
       </main>
