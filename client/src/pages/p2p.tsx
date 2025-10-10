@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
+import { OfferCard, OfferCardProps } from "@/components/offer-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -70,6 +72,111 @@ export function P2P() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("All Payment Methods");
   const [paymentSearchQuery, setPaymentSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [offers, setOffers] = useState<OfferCardProps[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchOffers();
+  }, [activeTab, selectedCrypto]);
+
+  const fetchOffers = async () => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      
+      // Fetch offers with user profiles using the foreign key relationship
+      const { data: offersData, error: offersError } = await supabase
+        .from("p2p_offers")
+        .select(`
+          *,
+          user_profiles!p2p_offers_user_id_fkey (
+            id,
+            username,
+            display_name,
+            avatar_url,
+            positive_ratings,
+            total_trades,
+            response_time_avg
+          )
+        `)
+        .eq("crypto_symbol", selectedCrypto)
+        .eq("offer_type", activeTab)
+        .eq("is_active", true);
+
+      if (offersError) {
+        console.error("Error fetching offers:", offersError);
+        // If the join fails, fall back to fetching without user data
+        const { data: basicOffersData, error: basicError } = await supabase
+          .from("p2p_offers")
+          .select("*")
+          .eq("crypto_symbol", selectedCrypto)
+          .eq("offer_type", activeTab)
+          .eq("is_active", true);
+
+        if (basicError) throw basicError;
+
+        const formattedOffers: OfferCardProps[] = (basicOffersData || []).map((offer) => ({
+          id: offer.id,
+          vendor: {
+            name: "Trader",
+            avatar: undefined,
+            isVerified: false,
+            trades: 0,
+            responseTime: "5 min"
+          },
+          paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
+          pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
+          currency: offer.fiat_currency,
+          availableRange: { 
+            min: offer.min_amount, 
+            max: offer.available_amount || offer.max_amount 
+          },
+          limits: { 
+            min: offer.min_amount, 
+            max: offer.max_amount 
+          },
+          type: offer.offer_type
+        }));
+
+        setOffers(formattedOffers);
+        return;
+      }
+
+      const formattedOffers: OfferCardProps[] = (offersData || []).map((offer: any) => {
+        const user = offer.user_profiles;
+        return {
+          id: offer.id,
+          vendor: {
+            name: user?.username || user?.display_name || "Trader",
+            avatar: user?.avatar_url,
+            isVerified: (user?.positive_ratings || 0) > 10,
+            trades: user?.total_trades || 0,
+            responseTime: user?.response_time_avg 
+              ? `${Math.floor(user.response_time_avg / 60)} min` 
+              : "5 min"
+          },
+          paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
+          pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
+          currency: offer.fiat_currency,
+          availableRange: { 
+            min: offer.min_amount, 
+            max: offer.available_amount || offer.max_amount 
+          },
+          limits: { 
+            min: offer.min_amount, 
+            max: offer.max_amount 
+          },
+          type: offer.offer_type
+        };
+      });
+
+      setOffers(formattedOffers);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const paymentCategories = [
     { id: "all", name: "All payment methods" },
@@ -545,10 +652,44 @@ export function P2P() {
           {/* Find Offers Button */}
           <Button 
             className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
+            onClick={fetchOffers}
           >
             Find Offers
-            <RotateCw className="ml-2 h-5 w-5" />
+            <RotateCw className={`ml-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
+
+          {/* Offers List */}
+          {offers.length > 0 && (
+            <div className="mt-8 space-y-4">
+              <h2 className="text-2xl font-bold">
+                {activeTab === "buy" ? "Buy" : "Sell"} Offers ({offers.length})
+              </h2>
+              <div className="grid gap-4">
+                {offers.map((offer) => (
+                  <OfferCard key={offer.id} {...offer} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && offers.length === 0 && (
+            <Card className="mt-8">
+              <CardContent className="p-12 text-center">
+                <h3 className="text-xl font-semibold mb-2">No offers found</h3>
+                <p className="text-muted-foreground">
+                  Try adjusting your filters or create your own offer to {activeTab === "buy" ? "sell" : "buy"} {selectedCrypto}.
+                </p>
+                <Button 
+                  className="mt-6" 
+                  variant="outline"
+                  onClick={() => window.location.href = '/create-offer'}
+                >
+                  Create an Offer
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Educational Content */}
           <Card className="mt-8">
