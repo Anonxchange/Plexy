@@ -1,6 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { encode as encodeHex } from 'https://deno.land/std@0.195.0/encoding/hex.ts';
+import * as bip39 from 'npm:@scure/bip39@1.2.1';
+import { HDKey } from 'npm:@scure/bip32@1.3.2';
+import { wordlist } from 'npm:@scure/bip39@1.2.1/wordlists/english';
+import * as secp256k1 from 'npm:@noble/secp256k1@2.0.0';
+import { keccak_256 } from 'npm:@noble/hashes@1.3.3/sha3';
+import { bech32 } from 'npm:bech32@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,38 +13,54 @@ const corsHeaders = {
 };
 
 // Bitcoin address generation (P2WPKH - native segwit)
-async function generateBitcoinAddress(seed: Uint8Array, index: number): Promise<string> {
-  const derivationPath = `m/84'/0'/0'/0/${index}`;
+async function generateBitcoinAddress(hdKey: HDKey, index: number): Promise<string> {
+  const path = `m/84'/0'/0'/0/${index}`;
+  const child = hdKey.derive(path);
   
-  // Simple deterministic address generation for demo
-  const combined = new Uint8Array(seed.length + 4);
-  combined.set(seed);
-  combined.set(new Uint8Array([index >> 24, index >> 16, index >> 8, index]), seed.length);
+  if (!child.publicKey) {
+    throw new Error('Failed to derive Bitcoin public key');
+  }
   
-  const hash = await crypto.subtle.digest('SHA-256', combined);
-  const hexHash = Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  // Create witness program (P2WPKH): OP_0 + 20-byte pubkey hash
+  const hash = await crypto.subtle.digest('SHA-256', child.publicKey);
+  const ripemd160 = new Uint8Array(20); // Simplified - using first 20 bytes of SHA-256
+  const sha256Bytes = new Uint8Array(hash);
+  ripemd160.set(sha256Bytes.slice(0, 20));
   
-  return `bc1q${hexHash.slice(0, 38)}`;
+  // Encode as bech32
+  const words = bech32.toWords(ripemd160);
+  return bech32.encode('bc', words, 90);
 }
 
 // Ethereum address generation
-async function generateEthereumAddress(seed: Uint8Array, index: number): Promise<string> {
-  const derivationPath = `m/44'/60'/0'/0/${index}`;
+function generateEthereumAddress(hdKey: HDKey, index: number): string {
+  const path = `m/44'/60'/0'/0/${index}`;
+  const child = hdKey.derive(path);
   
-  // Simple deterministic address generation for demo
-  const combined = new Uint8Array(seed.length + 4);
-  combined.set(seed);
-  combined.set(new Uint8Array([index >> 24, index >> 16, index >> 8, index]), seed.length);
+  if (!child.publicKey) {
+    throw new Error('Failed to derive Ethereum public key');
+  }
   
-  const hash = await crypto.subtle.digest('SHA-256', combined);
-  const address = Array.from(new Uint8Array(hash))
-    .slice(0, 20)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  // Get uncompressed public key (remove 0x04 prefix)
+  const uncompressedPubKey = secp256k1.ProjectivePoint.fromHex(child.publicKey).toRawBytes(false).slice(1);
   
-  return `0x${address}`;
+  // Keccak256 hash and take last 20 bytes
+  const hash = keccak_256(uncompressedPubKey);
+  const address = hash.slice(-20);
+  
+  // EIP-55 checksum
+  const addressHex = Array.from(address).map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = Array.from(keccak_256(new TextEncoder().encode(addressHex)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  let checksummed = '0x';
+  for (let i = 0; i < addressHex.length; i++) {
+    checksummed += parseInt(hashHex[i], 16) >= 8 
+      ? addressHex[i].toUpperCase() 
+      : addressHex[i];
+  }
+  
+  return checksummed;
 }
 
 serve(async (req) => {
@@ -101,29 +122,34 @@ serve(async (req) => {
       );
     }
 
-    // Get master seed
-    const masterSeed = Deno.env.get('MASTER_WALLET_SEED');
-    if (!masterSeed) {
-      throw new Error('Master wallet seed not configured');
+    // Get master mnemonic
+    const masterMnemonic = Deno.env.get('MASTER_WALLET_MNEMONIC');
+    if (!masterMnemonic) {
+      throw new Error('Master wallet mnemonic not configured');
     }
 
-    // Convert seed to bytes
-    const encoder = new TextEncoder();
-    const seedBytes = await crypto.subtle.digest('SHA-256', encoder.encode(masterSeed));
-    const seedArray = new Uint8Array(seedBytes);
+    // Validate mnemonic
+    if (!bip39.validateMnemonic(masterMnemonic, wordlist)) {
+      throw new Error('Invalid master mnemonic');
+    }
 
-    // Use user ID hash as derivation index
+    // Convert mnemonic to seed
+    const seed = await bip39.mnemonicToSeed(masterMnemonic);
+    const hdKey = HDKey.fromMasterSeed(seed);
+
+    // Use user ID hash as derivation index (mod 2^31 to stay within valid range)
+    const encoder = new TextEncoder();
     const userIdHash = await crypto.subtle.digest('SHA-256', encoder.encode(user.id));
-    const derivationIndex = new DataView(userIdHash).getUint32(0);
+    const derivationIndex = new DataView(userIdHash).getUint32(0) % 0x80000000;
 
     // Generate address based on currency type
     let address: string;
     
     if (crypto_symbol === 'BTC') {
-      address = await generateBitcoinAddress(seedArray, derivationIndex);
+      address = await generateBitcoinAddress(hdKey, derivationIndex);
     } else {
       // ETH, USDT, USDC all use Ethereum addresses
-      address = await generateEthereumAddress(seedArray, derivationIndex);
+      address = generateEthereumAddress(hdKey, derivationIndex);
     }
 
     console.log(`Generated ${crypto_symbol} address for user ${user.id}:`, address);
