@@ -129,37 +129,26 @@ export async function getDepositAddress(userId: string, cryptoSymbol: string): P
     return wallet.deposit_address;
   }
 
-  const address = generateDepositAddress(cryptoSymbol);
-  
-  await supabase
-    .from('wallets')
-    .update({ deposit_address: address })
-    .eq('id', wallet.id);
+  // Call Supabase edge function to generate real address
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
 
-  return address;
-}
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wallet-generate`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ crypto_symbol: cryptoSymbol }),
+  });
 
-function generateDepositAddress(cryptoSymbol: string): string {
-  const prefixes: Record<string, string> = {
-    BTC: '1',
-    ETH: '0x',
-    USDT: '0x',
-    USDC: '0x',
-    SOL: '',
-    TON: 'EQ',
-    XMR: '4'
-  };
-  
-  const prefix = prefixes[cryptoSymbol] || '0x';
-  const randomPart = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  
-  if (cryptoSymbol === 'BTC') {
-    return prefix + randomPart.substring(0, 33).toUpperCase();
-  } else if (cryptoSymbol === 'ETH' || cryptoSymbol.includes('USD')) {
-    return prefix + randomPart.substring(0, 40);
-  } else {
-    return prefix + randomPart.substring(0, 32);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to generate deposit address');
   }
+
+  const result = await response.json();
+  return result.wallet.deposit_address;
 }
 
 export async function getWalletTransactions(
