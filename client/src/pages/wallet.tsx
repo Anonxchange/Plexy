@@ -33,12 +33,12 @@ import { getCryptoPrices, convertToNGN, formatPrice } from "@/lib/crypto-prices"
 import type { CryptoPrice } from "@/lib/crypto-prices";
 
 const cryptoAssets = [
-  { symbol: "BTC", name: "Bitcoin", balance: 0.0000001, ngnValue: 17.99, icon: "₿", color: "text-orange-500" },
+  { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, icon: "₿", color: "text-orange-500" },
   { symbol: "ETH", name: "Ethereum", balance: 0, ngnValue: 0, icon: "Ξ", color: "text-blue-500" },
   { symbol: "SOL", name: "Solana", balance: 0, ngnValue: 0, icon: "◎", color: "text-purple-500" },
   { symbol: "TON", name: "Toncoin", balance: 0, ngnValue: 0, icon: "💎", color: "text-blue-400" },
   { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, icon: "⊙", color: "text-blue-600" },
-  { symbol: "USDT", name: "Tether", balance: 0.001259, ngnValue: 1.85, icon: "₮", color: "text-green-500" },
+  { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, icon: "₮", color: "text-green-500" },
   { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, icon: "ɱ", color: "text-orange-600" },
 ];
 
@@ -403,10 +403,7 @@ export default function Wallet() {
 
             {/* Asset List */}
             <div className="space-y-2 mb-8">
-              {filteredAssets.map((asset) => {
-                const hasWallet = wallets.some(w => w.currency === asset.symbol);
-                
-                return (
+              {filteredAssets.map((asset) => (
                   <Card key={asset.symbol}>
                     <CardContent className="p-3 sm:p-4">
                       <div className="grid grid-cols-3 gap-2 sm:gap-4 items-center">
@@ -421,33 +418,14 @@ export default function Wallet() {
                           <div className="text-xs sm:text-sm text-muted-foreground">{asset.ngnValue.toFixed(2)} NGN</div>
                         </div>
                         <div className="text-right">
-                          {!hasWallet ? (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={async () => {
-                                try {
-                                  await walletClient.generateWallet(asset.symbol);
-                                  await loadWalletData();
-                                } catch (error) {
-                                  console.error("Error generating wallet:", error);
-                                }
-                              }}
-                              className="text-xs"
-                            >
-                              Generate
-                            </Button>
-                          ) : (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                              <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </Button>
-                          )}
+                          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                            <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                );
-              })}
+              ))}
             </div>
           </>
         )}
