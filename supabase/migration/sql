@@ -1,0 +1,536 @@
+-- =====================================================
+-- PEXLY P2P MARKETPLACE & WALLET - COMPLETE DATABASE SCHEMA
+-- Run this SQL directly in your Supabase SQL Editor
+-- =====================================================
+
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- =====================================================
+-- 1. USER PROFILES & VERIFICATION
+-- =====================================================
+
+-- User profiles (extends Supabase auth.users)
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    username TEXT UNIQUE NOT NULL,
+    display_name TEXT,
+    avatar_url TEXT,
+    phone_number TEXT,
+    country_code TEXT,
+    verification_level INTEGER DEFAULT 1 CHECK (verification_level BETWEEN 1 AND 3),
+    kyc_status TEXT DEFAULT 'pending' CHECK (kyc_status IN ('pending', 'verified', 'rejected')),
+    is_trader BOOLEAN DEFAULT false,
+    total_trades INTEGER DEFAULT 0,
+    completed_trades INTEGER DEFAULT 0,
+    positive_ratings INTEGER DEFAULT 0,
+    negative_ratings INTEGER DEFAULT 0,
+    response_time_avg INTEGER, -- in seconds
+    last_seen_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- KYC documents
+CREATE TABLE IF NOT EXISTS public.kyc_documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    document_type TEXT NOT NULL CHECK (document_type IN ('id_card', 'passport', 'drivers_license', 'proof_of_address')),
+    document_url TEXT NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    rejection_reason TEXT,
+    submitted_at TIMESTAMPTZ DEFAULT NOW(),
+    reviewed_at TIMESTAMPTZ,
+    reviewer_id UUID REFERENCES public.user_profiles(id)
+);
+
+-- =====================================================
+-- 2. WALLET SYSTEM
+-- =====================================================
+
+-- User wallets (one per cryptocurrency)
+CREATE TABLE IF NOT EXISTS public.wallets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    crypto_symbol TEXT NOT NULL CHECK (crypto_symbol IN ('BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'TON', 'XMR')),
+    balance DECIMAL(20, 8) DEFAULT 0 CHECK (balance >= 0),
+    locked_balance DECIMAL(20, 8) DEFAULT 0 CHECK (locked_balance >= 0), -- for escrow
+    deposit_address TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, crypto_symbol)
+);
+
+-- Wallet transactions
+CREATE TABLE IF NOT EXISTS public.wallet_transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'swap', 'p2p_buy', 'p2p_sell', 'escrow_lock', 'escrow_release', 'fee')),
+    crypto_symbol TEXT NOT NULL,
+    amount DECIMAL(20, 8) NOT NULL,
+    fee DECIMAL(20, 8) DEFAULT 0,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
+    tx_hash TEXT, -- blockchain transaction hash
+    from_address TEXT,
+    to_address TEXT,
+    reference_id UUID, -- reference to trade, swap, etc.
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+-- Crypto swap history
+CREATE TABLE IF NOT EXISTS public.crypto_swaps (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    from_crypto TEXT NOT NULL,
+    to_crypto TEXT NOT NULL,
+    from_amount DECIMAL(20, 8) NOT NULL,
+    to_amount DECIMAL(20, 8) NOT NULL,
+    exchange_rate DECIMAL(20, 8) NOT NULL,
+    fee DECIMAL(20, 8) DEFAULT 0,
+    status TEXT DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- 3. P2P MARKETPLACE
+-- =====================================================
+
+-- Payment methods
+CREATE TABLE IF NOT EXISTS public.payment_methods (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    method_type TEXT NOT NULL, -- 'bank_transfer', 'paypal', 'gift_card', etc.
+    method_name TEXT NOT NULL,
+    details JSONB NOT NULL, -- account number, email, etc. (encrypted in production)
+    is_verified BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- P2P offers (listings)
+CREATE TABLE IF NOT EXISTS public.p2p_offers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    offer_type TEXT NOT NULL CHECK (offer_type IN ('buy', 'sell')),
+    crypto_symbol TEXT NOT NULL,
+    fiat_currency TEXT NOT NULL,
+    price_type TEXT DEFAULT 'fixed' CHECK (price_type IN ('fixed', 'floating')),
+    fixed_price DECIMAL(20, 8),
+    floating_margin DECIMAL(5, 2), -- percentage above/below market
+    min_amount DECIMAL(20, 8) NOT NULL,
+    max_amount DECIMAL(20, 8) NOT NULL,
+    payment_methods TEXT[] NOT NULL, -- array of payment method IDs
+    payment_time_limit INTEGER DEFAULT 30, -- minutes
+    terms_conditions TEXT,
+    auto_reply TEXT,
+    country_restrictions TEXT[], -- array of country codes
+    min_buyer_verification INTEGER DEFAULT 1,
+    is_active BOOLEAN DEFAULT true,
+    total_available DECIMAL(20, 8), -- total crypto available for this offer
+    total_traded DECIMAL(20, 8) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- P2P trades
+CREATE TABLE IF NOT EXISTS public.p2p_trades (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    offer_id UUID REFERENCES public.p2p_offers(id) ON DELETE CASCADE,
+    buyer_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    seller_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    crypto_symbol TEXT NOT NULL,
+    crypto_amount DECIMAL(20, 8) NOT NULL,
+    fiat_currency TEXT NOT NULL,
+    fiat_amount DECIMAL(20, 8) NOT NULL,
+    price_per_unit DECIMAL(20, 8) NOT NULL,
+    payment_method TEXT NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN (
+        'pending', 'payment_sent', 'completed', 'disputed', 'cancelled', 'expired'
+    )),
+    escrow_id UUID, -- reference to escrow record
+    payment_deadline TIMESTAMPTZ,
+    payment_proof_url TEXT,
+    buyer_paid_at TIMESTAMPTZ,
+    seller_released_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ
+);
+
+-- Escrow system
+CREATE TABLE IF NOT EXISTS public.escrow (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trade_id UUID REFERENCES public.p2p_trades(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    crypto_symbol TEXT NOT NULL,
+    amount DECIMAL(20, 8) NOT NULL,
+    fee DECIMAL(20, 8) DEFAULT 0,
+    status TEXT DEFAULT 'locked' CHECK (status IN ('locked', 'released', 'refunded')),
+    locked_at TIMESTAMPTZ DEFAULT NOW(),
+    released_at TIMESTAMPTZ,
+    released_to UUID REFERENCES public.user_profiles(id),
+    notes TEXT
+);
+
+-- Trade chat messages
+CREATE TABLE IF NOT EXISTS public.trade_messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trade_id UUID REFERENCES public.p2p_trades(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    message_type TEXT DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'file', 'system')),
+    content TEXT NOT NULL,
+    file_url TEXT,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- 4. DISPUTE SYSTEM
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.disputes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trade_id UUID REFERENCES public.p2p_trades(id) ON DELETE CASCADE,
+    initiated_by UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    reason TEXT NOT NULL,
+    description TEXT NOT NULL,
+    evidence_urls TEXT[],
+    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'under_review', 'resolved', 'appealed')),
+    assigned_moderator UUID REFERENCES public.user_profiles(id),
+    resolution TEXT,
+    winner_id UUID REFERENCES public.user_profiles(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+
+-- Dispute messages
+CREATE TABLE IF NOT EXISTS public.dispute_messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    dispute_id UUID REFERENCES public.disputes(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    attachments TEXT[],
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- 5. RATINGS & REPUTATION
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.trade_ratings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trade_id UUID REFERENCES public.p2p_trades(id) ON DELETE CASCADE,
+    rated_user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    rated_by_user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    rating_type TEXT CHECK (rating_type IN ('positive', 'negative')),
+    comment TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(trade_id, rated_by_user_id)
+);
+
+-- =====================================================
+-- 6. INDEXES FOR PERFORMANCE
+-- =====================================================
+
+-- User profiles indexes
+CREATE INDEX IF NOT EXISTS idx_user_profiles_username ON public.user_profiles(username);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_verification ON public.user_profiles(verification_level);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_country ON public.user_profiles(country_code);
+
+-- Wallet indexes
+CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON public.wallets(user_id);
+CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_id ON public.wallet_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_wallet_transactions_status ON public.wallet_transactions(status);
+CREATE INDEX IF NOT EXISTS idx_wallet_transactions_type ON public.wallet_transactions(type);
+
+-- P2P indexes
+CREATE INDEX IF NOT EXISTS idx_p2p_offers_user_id ON public.p2p_offers(user_id);
+CREATE INDEX IF NOT EXISTS idx_p2p_offers_active ON public.p2p_offers(is_active);
+CREATE INDEX IF NOT EXISTS idx_p2p_offers_crypto ON public.p2p_offers(crypto_symbol);
+CREATE INDEX IF NOT EXISTS idx_p2p_trades_buyer ON public.p2p_trades(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_p2p_trades_seller ON public.p2p_trades(seller_id);
+CREATE INDEX IF NOT EXISTS idx_p2p_trades_status ON public.p2p_trades(status);
+CREATE INDEX IF NOT EXISTS idx_trade_messages_trade_id ON public.trade_messages(trade_id);
+
+-- Dispute indexes
+CREATE INDEX IF NOT EXISTS idx_disputes_trade_id ON public.disputes(trade_id);
+CREATE INDEX IF NOT EXISTS idx_disputes_status ON public.disputes(status);
+
+-- =====================================================
+-- 7. ROW LEVEL SECURITY (RLS) POLICIES
+-- =====================================================
+
+-- Enable RLS on all tables
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crypto_swaps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.p2p_offers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.p2p_trades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.escrow ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trade_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.disputes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.dispute_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trade_ratings ENABLE ROW LEVEL SECURITY;
+
+-- User profiles policies
+CREATE POLICY "Users can view all profiles" ON public.user_profiles FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile" ON public.user_profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON public.user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Wallets policies
+CREATE POLICY "Users can view own wallets" ON public.wallets FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own wallets" ON public.wallets FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own wallets" ON public.wallets FOR UPDATE USING (auth.uid() = user_id);
+
+-- Wallet transactions policies
+CREATE POLICY "Users can view own transactions" ON public.wallet_transactions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own transactions" ON public.wallet_transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Payment methods policies
+CREATE POLICY "Users can view own payment methods" ON public.payment_methods FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own payment methods" ON public.payment_methods FOR ALL USING (auth.uid() = user_id);
+
+-- P2P offers policies
+CREATE POLICY "Anyone can view active offers" ON public.p2p_offers FOR SELECT USING (is_active = true);
+CREATE POLICY "Users can manage own offers" ON public.p2p_offers FOR ALL USING (auth.uid() = user_id);
+
+-- P2P trades policies
+CREATE POLICY "Users can view trades they're part of" ON public.p2p_trades FOR SELECT 
+    USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
+CREATE POLICY "Users can create trades" ON public.p2p_trades FOR INSERT WITH CHECK (auth.uid() = buyer_id);
+CREATE POLICY "Users can update trades they're part of" ON public.p2p_trades FOR UPDATE 
+    USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
+
+-- Trade messages policies
+CREATE POLICY "Users can view messages from their trades" ON public.trade_messages FOR SELECT 
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.p2p_trades 
+            WHERE id = trade_id AND (buyer_id = auth.uid() OR seller_id = auth.uid())
+        )
+    );
+CREATE POLICY "Users can send messages in their trades" ON public.trade_messages FOR INSERT 
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.p2p_trades 
+            WHERE id = trade_id AND (buyer_id = auth.uid() OR seller_id = auth.uid())
+        )
+    );
+
+-- Disputes policies
+CREATE POLICY "Users can view disputes for their trades" ON public.disputes FOR SELECT 
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.p2p_trades 
+            WHERE id = trade_id AND (buyer_id = auth.uid() OR seller_id = auth.uid())
+        )
+    );
+CREATE POLICY "Users can create disputes for their trades" ON public.disputes FOR INSERT 
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.p2p_trades 
+            WHERE id = trade_id AND (buyer_id = auth.uid() OR seller_id = auth.uid())
+        )
+    );
+
+-- =====================================================
+-- 8. FUNCTIONS & TRIGGERS
+-- =====================================================
+
+-- Function to update user stats after trade completion
+CREATE OR REPLACE FUNCTION update_user_trade_stats()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        -- Update seller stats
+        UPDATE public.user_profiles
+        SET 
+            total_trades = total_trades + 1,
+            completed_trades = completed_trades + 1,
+            updated_at = NOW()
+        WHERE id = NEW.seller_id;
+        
+        -- Update buyer stats
+        UPDATE public.user_profiles
+        SET 
+            total_trades = total_trades + 1,
+            completed_trades = completed_trades + 1,
+            updated_at = NOW()
+        WHERE id = NEW.buyer_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trade_completed_stats
+    AFTER UPDATE ON public.p2p_trades
+    FOR EACH ROW
+    EXECUTE FUNCTION update_user_trade_stats();
+
+-- Function to update user ratings
+CREATE OR REPLACE FUNCTION update_user_ratings()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE public.user_profiles
+    SET 
+        positive_ratings = (
+            SELECT COUNT(*) FROM public.trade_ratings 
+            WHERE rated_user_id = NEW.rated_user_id AND rating_type = 'positive'
+        ),
+        negative_ratings = (
+            SELECT COUNT(*) FROM public.trade_ratings 
+            WHERE rated_user_id = NEW.rated_user_id AND rating_type = 'negative'
+        ),
+        updated_at = NOW()
+    WHERE id = NEW.rated_user_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER rating_added_update_stats
+    AFTER INSERT ON public.trade_ratings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_user_ratings();
+
+-- Function to auto-expire trades
+CREATE OR REPLACE FUNCTION check_expired_trades()
+RETURNS void AS $$
+BEGIN
+    UPDATE public.p2p_trades
+    SET status = 'expired'
+    WHERE status = 'pending' 
+    AND expires_at < NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to lock funds in escrow
+CREATE OR REPLACE FUNCTION lock_escrow_funds(
+    p_trade_id UUID,
+    p_user_id UUID,
+    p_crypto_symbol TEXT,
+    p_amount DECIMAL,
+    p_fee DECIMAL
+)
+RETURNS UUID AS $$
+DECLARE
+    v_escrow_id UUID;
+    v_wallet_id UUID;
+BEGIN
+    -- Get wallet ID
+    SELECT id INTO v_wallet_id
+    FROM public.wallets
+    WHERE user_id = p_user_id AND crypto_symbol = p_crypto_symbol;
+    
+    -- Check if user has sufficient balance
+    IF NOT EXISTS (
+        SELECT 1 FROM public.wallets
+        WHERE id = v_wallet_id AND balance >= (p_amount + p_fee)
+    ) THEN
+        RAISE EXCEPTION 'Insufficient balance';
+    END IF;
+    
+    -- Lock funds in wallet
+    UPDATE public.wallets
+    SET 
+        balance = balance - (p_amount + p_fee),
+        locked_balance = locked_balance + (p_amount + p_fee)
+    WHERE id = v_wallet_id;
+    
+    -- Create escrow record
+    INSERT INTO public.escrow (trade_id, user_id, crypto_symbol, amount, fee, status)
+    VALUES (p_trade_id, p_user_id, p_crypto_symbol, p_amount, p_fee, 'locked')
+    RETURNING id INTO v_escrow_id;
+    
+    RETURN v_escrow_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to release escrow funds
+CREATE OR REPLACE FUNCTION release_escrow_funds(
+    p_escrow_id UUID,
+    p_recipient_id UUID
+)
+RETURNS void AS $$
+DECLARE
+    v_escrow RECORD;
+    v_recipient_wallet_id UUID;
+BEGIN
+    -- Get escrow details
+    SELECT * INTO v_escrow FROM public.escrow WHERE id = p_escrow_id;
+    
+    IF v_escrow.status != 'locked' THEN
+        RAISE EXCEPTION 'Escrow is not in locked status';
+    END IF;
+    
+    -- Get recipient wallet
+    SELECT id INTO v_recipient_wallet_id
+    FROM public.wallets
+    WHERE user_id = p_recipient_id AND crypto_symbol = v_escrow.crypto_symbol;
+    
+    -- Create wallet if doesn't exist
+    IF v_recipient_wallet_id IS NULL THEN
+        INSERT INTO public.wallets (user_id, crypto_symbol, balance)
+        VALUES (p_recipient_id, v_escrow.crypto_symbol, 0)
+        RETURNING id INTO v_recipient_wallet_id;
+    END IF;
+    
+    -- Unlock and deduct from seller
+    UPDATE public.wallets
+    SET locked_balance = locked_balance - (v_escrow.amount + v_escrow.fee)
+    WHERE user_id = v_escrow.user_id AND crypto_symbol = v_escrow.crypto_symbol;
+    
+    -- Add to recipient
+    UPDATE public.wallets
+    SET balance = balance + v_escrow.amount
+    WHERE id = v_recipient_wallet_id;
+    
+    -- Update escrow status
+    UPDATE public.escrow
+    SET 
+        status = 'released',
+        released_at = NOW(),
+        released_to = p_recipient_id
+    WHERE id = p_escrow_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================
+-- 9. INITIAL DATA SETUP
+-- =====================================================
+
+-- Create a function to initialize user wallet on signup
+CREATE OR REPLACE FUNCTION create_user_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.user_profiles (id, username, created_at)
+    VALUES (NEW.id, COALESCE(NEW.email, 'user_' || NEW.id::text), NOW());
+    
+    -- Create default wallets for major cryptocurrencies
+    INSERT INTO public.wallets (user_id, crypto_symbol, balance)
+    VALUES 
+        (NEW.id, 'BTC', 0),
+        (NEW.id, 'ETH', 0),
+        (NEW.id, 'USDT', 0),
+        (NEW.id, 'USDC', 0)
+    ON CONFLICT (user_id, crypto_symbol) DO NOTHING;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to create profile when user signs up
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION create_user_profile();
+
+-- =====================================================
+-- DONE! Your database is ready for P2P trading
+-- =====================================================
