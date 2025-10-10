@@ -1,6 +1,6 @@
 
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,33 +37,30 @@ import {
   DollarSign,
   Activity,
 } from "lucide-react";
+import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 
-const tradingPairs = [
-  { pair: "BTC/USDT", price: 120791.60, change: -2.11, volume: "1.27B", high: 123500, low: 119800, favorite: true, leverage: "10x" },
-  { pair: "ETH/USDT", price: 4314.72, change: -4.59, volume: "761.03M", high: 4500, low: 4280, favorite: true, leverage: "10x" },
-  { pair: "MNT/USDT", price: 2.3389, change: -12.96, volume: "362.05M", high: 2.70, low: 2.30, favorite: false, leverage: "10x" },
-  { pair: "ZORA/USDT", price: 0.085155, change: 52.19, volume: "23.77M", high: 0.09, low: 0.055, favorite: false, leverage: "5x" },
-  { pair: "SOL/USDT", price: 217.73, change: -4.76, volume: "227.35M", high: 230, low: 215, favorite: true, leverage: "10x" },
-  { pair: "BNB/USDT", price: 1241.30, change: -5.72, volume: "137.06M", high: 1320, low: 1235, favorite: true, leverage: "10x" },
-  { pair: "ASTER/USDT", price: 1.6786, change: -15.80, volume: "117.30M", high: 2.00, low: 1.65, favorite: false, leverage: "5x" },
-  { pair: "USDC/USDT", price: 0.9993, change: -0.03, volume: "224.63M", high: 1.001, low: 0.998, favorite: false, leverage: "3x" },
-  { pair: "XRP/USDT", price: 3.45, change: 1.23, volume: "1.9B", high: 3.50, low: 3.40, favorite: false, leverage: "10x" },
-  { pair: "ADA/USDT", price: 1.15, change: -0.87, volume: "890M", high: 1.18, low: 1.14, favorite: false, leverage: "10x" },
-  { pair: "DOGE/USDT", price: 0.42, change: 2.15, volume: "1.2B", high: 0.43, low: 0.41, favorite: true, leverage: "10x" },
-  { pair: "AVAX/USDT", price: 52.30, change: -1.45, volume: "650M", high: 53.50, low: 51.80, favorite: false, leverage: "10x" },
-  { pair: "MATIC/USDT", price: 1.24, change: 3.45, volume: "456M", high: 1.28, low: 1.20, favorite: false, leverage: "10x" },
-  { pair: "DOT/USDT", price: 18.45, change: -2.34, volume: "345M", high: 19.00, low: 18.20, favorite: false, leverage: "10x" },
-  { pair: "LINK/USDT", price: 28.90, change: 1.87, volume: "567M", high: 29.50, low: 28.30, favorite: false, leverage: "10x" },
-  { pair: "UNI/USDT", price: 15.67, change: -3.21, volume: "234M", high: 16.20, low: 15.50, favorite: false, leverage: "10x" },
-  { pair: "ATOM/USDT", price: 12.34, change: 0.98, volume: "189M", high: 12.50, low: 12.10, favorite: false, leverage: "10x" },
-  { pair: "LTC/USDT", price: 117.42, change: 1.75, volume: "423M", high: 119.00, low: 115.80, favorite: false, leverage: "10x" },
-  { pair: "APT/USDT", price: 24.56, change: 5.43, volume: "298M", high: 25.00, low: 23.20, favorite: false, leverage: "10x" },
-  { pair: "ARB/USDT", price: 2.89, change: -1.23, volume: "178M", high: 2.95, low: 2.85, favorite: false, leverage: "10x" },
-  { pair: "OP/USDT", price: 4.23, change: 2.34, volume: "156M", high: 4.30, low: 4.10, favorite: false, leverage: "10x" },
-  { pair: "NEAR/USDT", price: 7.89, change: -0.56, volume: "134M", high: 8.00, low: 7.80, favorite: false, leverage: "10x" },
-  { pair: "FTM/USDT", price: 1.45, change: 3.21, volume: "112M", high: 1.50, low: 1.40, favorite: false, leverage: "10x" },
-  { pair: "ALGO/USDT", price: 0.67, change: -2.45, volume: "98M", high: 0.69, low: 0.66, favorite: false, leverage: "5x" },
-  { pair: "VET/USDT", price: 0.089, change: 1.12, volume: "87M", high: 0.091, low: 0.088, favorite: false, leverage: "5x" },
+interface TradingPair {
+  pair: string;
+  price: number;
+  change: number;
+  volume: string;
+  high: number;
+  low: number;
+  favorite: boolean;
+  leverage: string;
+  symbol: string;
+}
+
+const initialTradingPairs: TradingPair[] = [
+  { pair: "BTC/USDT", symbol: "BTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "ETH/USDT", symbol: "ETH", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "SOL/USDT", symbol: "SOL", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "BNB/USDT", symbol: "BNB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "USDC/USDT", symbol: "USDC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "3x" },
+  { pair: "XRP/USDT", symbol: "XRP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "TON/USDT", symbol: "TON", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "TRX/USDT", symbol: "TRX", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "LTC/USDT", symbol: "LTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
 ];
 
 const orderBook = {
@@ -92,7 +89,8 @@ const recentTrades = [
 ];
 
 export default function Spot() {
-  const [selectedPair, setSelectedPair] = useState(tradingPairs[0]);
+  const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
+  const [selectedPair, setSelectedPair] = useState(initialTradingPairs[0]);
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [buyAmount, setBuyAmount] = useState("");
   const [buyPrice, setBuyPrice] = useState("");
@@ -103,6 +101,49 @@ export default function Spot() {
   const [searchPair, setSearchPair] = useState("");
   const [showMarketList, setShowMarketList] = useState(false);
   const [activeMarketTab, setActiveMarketTab] = useState("hot");
+  const [chartInterval, setChartInterval] = useState("60");
+
+  // Fetch real-time prices
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const symbols = tradingPairs.map(p => p.symbol);
+        const prices = await getCryptoPrices(symbols);
+        
+        setTradingPairs(prevPairs => 
+          prevPairs.map(pair => {
+            const priceData = prices[pair.symbol];
+            if (priceData) {
+              return {
+                ...pair,
+                price: priceData.current_price,
+                change: priceData.price_change_percentage_24h,
+                volume: `${(priceData.total_volume / 1e9).toFixed(2)}B`,
+                high: priceData.current_price * 1.02,
+                low: priceData.current_price * 0.98,
+              };
+            }
+            return pair;
+          })
+        );
+      } catch (error) {
+        console.error('Error fetching crypto prices:', error);
+      }
+    };
+
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update selected pair when trading pairs change
+  useEffect(() => {
+    const updatedPair = tradingPairs.find(p => p.pair === selectedPair.pair);
+    if (updatedPair) {
+      setSelectedPair(updatedPair);
+    }
+  }, [tradingPairs]);
 
   const getFilteredPairs = (type: string) => {
     let filtered = tradingPairs.filter(pair =>
@@ -373,12 +414,48 @@ export default function Spot() {
             <div className="flex-1 p-4 border-r border-border">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">1m</Button>
-                  <Button variant="outline" size="sm">5m</Button>
-                  <Button variant="outline" size="sm">15m</Button>
-                  <Button variant="default" size="sm">1H</Button>
-                  <Button variant="outline" size="sm">4H</Button>
-                  <Button variant="outline" size="sm">1D</Button>
+                  <Button 
+                    variant={chartInterval === "1" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setChartInterval("1")}
+                  >
+                    1m
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "5" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setChartInterval("5")}
+                  >
+                    5m
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "15" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setChartInterval("15")}
+                  >
+                    15m
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "60" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setChartInterval("60")}
+                  >
+                    1H
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "240" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setChartInterval("240")}
+                  >
+                    4H
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "D" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setChartInterval("D")}
+                  >
+                    1D
+                  </Button>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="icon">
@@ -388,12 +465,10 @@ export default function Spot() {
               </div>
               <div className="h-[500px] bg-background rounded-lg overflow-hidden">
                 <iframe
-                  src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${selectedPair.pair.replace('/', '')}&interval=60&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${selectedPair.pair.replace('/', '')}`}
+                  key={`${selectedPair.pair}-${chartInterval}`}
+                  src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${selectedPair.pair.replace('/', '')}&interval=${chartInterval}&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${selectedPair.pair.replace('/', '')}`}
                   className="w-full h-full"
-                  frameBorder="0"
-                  allowTransparency={true}
-                  scrolling="no"
-                  allowFullScreen={true}
+                  title="TradingView Chart"
                 ></iframe>
               </div>
             </div>
