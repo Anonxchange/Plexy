@@ -67,7 +67,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-statistics", "/account-settings"].includes(location);
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-statistics", "/account-settings"].includes(location) || location.startsWith("/trade/");
 
   return (
     <QueryClientProvider client={queryClient}>
