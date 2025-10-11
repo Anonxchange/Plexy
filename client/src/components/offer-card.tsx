@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ThumbsUp, Circle, Bitcoin } from "lucide-react";
+import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign } from "lucide-react";
 import { TradeDialog } from "./trade-dialog";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 export interface OfferCardProps {
   id: string;
@@ -48,8 +51,20 @@ export function OfferCard({
   ...offer
 }: OfferCardProps) {
   const [showTradeDialog, setShowTradeDialog] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const handleTrade = () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to start trading",
+        variant: "destructive",
+      });
+      setLocation("/signin");
+      return;
+    }
     setShowTradeDialog(true);
   };
 
@@ -62,9 +77,9 @@ export function OfferCard({
         onOpenChange={setShowTradeDialog}
         offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, ...offer } as OfferCardProps}
       />
-      <Card className="bg-card border-border hover:border-primary/50 transition-colors" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
-        <CardContent className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
+      <Card className="hover:shadow-lg transition-shadow" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
+        <CardContent className="p-4 space-y-3">
+          {/* Vendor Info Row */}
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage src={vendor.avatar} />
@@ -72,8 +87,8 @@ export function OfferCard({
                 {vendor.name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-sm">{vendor.name}</span>
                 {vendor.isVerified && (
                   <span className="text-xs font-medium text-green-600 flex items-center gap-1">
@@ -82,7 +97,7 @@ export function OfferCard({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                 <ThumbsUp className="h-3 w-3" />
                 <span>100%</span>
                 <span>{vendor.trades} Trades</span>
@@ -91,59 +106,60 @@ export function OfferCard({
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-xs text-muted-foreground mb-1">
-              {type === "buy" ? "Pay" : "Receive"} <span className="text-primary">{paymentMethod}</span>
-            </div>
-            <div className="text-lg font-bold">
-              {limits.min.toLocaleString()} {currency}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground mb-1">
-              {type === "buy" ? "Receive" : "Pay"} ({cryptoSymbol})
-            </div>
-            <div className="text-lg font-bold">
-              {cryptoAmount.toLocaleString('en-US', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 8 
-              })} {cryptoSymbol}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="flex items-center gap-2">
-            {getCryptoIcon(cryptoSymbol)}
+          {/* Pay and Receive Row */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-sm font-bold">
-                {pricePerBTC.toLocaleString('en-US', { 
+              <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                {type === "buy" ? "Pay" : "Receive"} {paymentMethod}
+                {currency === "NGN" && " 🇳🇬"}
+                {currency === "USD" && " 🇺🇸"}
+                {currency === "EUR" && " 🇪🇺"}
+                {currency === "GBP" && " 🇬🇧"}
+                {currency === "CAD" && " 🇨🇦"}
+                {currency === "RON" && " 🇷🇴"}
+                {currency === "KES" && " 🇰🇪"}
+                {currency === "INR" && " 🇮🇳"}
+              </div>
+              <div className="text-xl font-bold">
+                {limits.min.toLocaleString()} {currency}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">
+                {type === "buy" ? "Receive" : "Pay"} ({cryptoSymbol})
+              </div>
+              <div className="text-xl font-bold">
+                {cryptoAmount.toLocaleString('en-US', { 
                   minimumFractionDigits: 2, 
-                  maximumFractionDigits: 2 
-                })} {currency}
+                  maximumFractionDigits: 8 
+                })} {cryptoSymbol}
+              </div>
+            </div>
+          </div>
+
+          {/* Price and Button Row */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-primary flex items-center gap-1">
+                <DollarSign className="h-4 w-4" />
+                {pricePerBTC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
               </div>
               <div className="text-xs text-muted-foreground">
                 {limits.min.toLocaleString()} - {limits.max.toLocaleString()} {currency}
               </div>
             </div>
+            <Button 
+              className="bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold gap-2 shrink-0"
+              onClick={handleTrade}
+              data-testid={`button-trade-${type}`}
+            >
+              {type === "sell" ? "Sell" : "Buy"} {cryptoSymbol}
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
-          <Button 
-            className={`${
-              type === "sell" 
-                ? "bg-green-600 hover:bg-green-700" 
-                : "bg-blue-600 hover:bg-blue-700"
-            } text-white font-bold px-6`}
-            onClick={handleTrade}
-            data-testid={`button-trade-${type}`}
-          >
-            {type === "sell" ? "Sell" : "Buy"} {cryptoSymbol}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
     </>
   );
 }
