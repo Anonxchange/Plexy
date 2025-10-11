@@ -32,6 +32,7 @@ import MobileTopup from "@/pages/mobile-topup";
 import CryptoToBank from "@/pages/crypto-to-bank";
 import Lightning from "@/pages/lightning";
 import BuyCrypto from "@/pages/buy-crypto";
+import ActiveTrade from "@/pages/active-trade";
 
 function Router() {
   return (
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/shop" component={Shop} />
       <Route path="/create-offer" component={CreateOffer} />
       <Route path="/my-offers" component={MyOffers} />
+      <Route path="/trade/:tradeId" component={ActiveTrade} />
       <Route component={NotFound} />
     </Switch>
   );
