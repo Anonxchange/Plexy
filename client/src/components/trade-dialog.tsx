@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -28,11 +27,98 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
   const cryptoAmount = amount ? parseFloat(amount) / offer.pricePerBTC : 0;
   const receiveAmount = amount ? parseFloat(amount) / offer.pricePerBTC : 0;
 
-  const handleProceed = () => {
-    // Generate a trade ID (in production, this would come from your backend)
-    const tradeId = `trade_${Date.now()}`;
-    onOpenChange(false);
-    setLocation(`/trade/${tradeId}`);
+  const handleProceed = async () => {
+    if (!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max) {
+      return;
+    }
+
+    try {
+      const { createClient } = await import("@/lib/supabase");
+      const supabase = createClient();
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("User not authenticated");
+        alert("Please sign in to create a trade");
+        return;
+      }
+
+      const fiatAmount = parseFloat(amount);
+      const cryptoAmount = fiatAmount / offer.pricePerBTC;
+
+      // Determine buyer and seller based on offer type
+      const isBuyOffer = offer.type === "buy";
+      const buyerId = isBuyOffer ? user.id : (offer.vendor?.id || user.id);
+      const sellerId = isBuyOffer ? (offer.vendor?.id || user.id) : user.id;
+
+      // First, create or get the offer record
+      let offerId = offer.id;
+      
+      if (!offerId) {
+        const { data: newOffer, error: offerError } = await supabase
+          .from("p2p_offers")
+          .insert({
+            user_id: offer.vendor?.id || user.id,
+            type: offer.type,
+            crypto_symbol: offer.cryptoSymbol,
+            fiat_currency: offer.currency,
+            price_per_unit: offer.pricePerBTC,
+            min_amount: offer.limits.min,
+            max_amount: offer.limits.max,
+            payment_method: offer.paymentMethod,
+            status: "active",
+          })
+          .select()
+          .single();
+
+        if (offerError) {
+          console.error("Error creating offer:", offerError);
+          alert(`Failed to create offer: ${offerError.message}`);
+          return;
+        }
+
+        offerId = newOffer.id;
+      }
+
+      // Now create the trade with the valid offer_id
+      const { data: trade, error } = await supabase
+        .from("p2p_trades")
+        .insert({
+          offer_id: offerId,
+          buyer_id: buyerId,
+          seller_id: sellerId,
+          crypto_symbol: offer.cryptoSymbol,
+          crypto_amount: cryptoAmount,
+          fiat_currency: offer.currency,
+          fiat_amount: fiatAmount,
+          price: offer.pricePerBTC,
+          payment_method: offer.paymentMethod,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating trade:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        alert(`Failed to create trade: ${error.message || 'Unknown error'}`);
+        return;
+      }
+
+      if (!trade) {
+        console.error("No trade data returned");
+        alert("Failed to create trade: No data returned");
+        return;
+      }
+
+      console.log("Trade created successfully:", trade);
+      onOpenChange(false);
+      setLocation(`/trade/${trade.id}`);
+    } catch (error) {
+      console.error("Error in handleProceed:", error);
+      alert(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   return (
