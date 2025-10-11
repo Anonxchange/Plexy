@@ -135,7 +135,8 @@ export function P2P() {
             min: offer.min_amount, 
             max: offer.max_amount 
           },
-          type: offer.offer_type
+          type: offer.offer_type,
+          cryptoSymbol: offer.crypto_symbol
         }));
 
         setOffers(formattedOffers);
@@ -166,7 +167,8 @@ export function P2P() {
             min: offer.min_amount, 
             max: offer.max_amount 
           },
-          type: offer.offer_type
+          type: offer.offer_type,
+          cryptoSymbol: offer.crypto_symbol
         };
       });
 
