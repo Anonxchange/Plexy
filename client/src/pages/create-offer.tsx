@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ArrowDownUp, Edit } from "lucide-react";
+import { ArrowDownUp, Edit, Bitcoin } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -22,6 +22,7 @@ import { useLocation } from "wouter";
 export function CreateOffer() {
   const [priceOffset, setPriceOffset] = useState([0]);
   const [crypto, setCrypto] = useState("BTC");
+  const [offerType, setOfferType] = useState<"buy" | "sell">("sell");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [currency, setCurrency] = useState("");
   const [country, setCountry] = useState("");
@@ -84,7 +85,7 @@ export function CreateOffer() {
 
       const { error } = await supabase.from("p2p_offers").insert({
         user_id: user.id,
-        offer_type: "sell",
+        offer_type: offerType,
         crypto_symbol: crypto,
         payment_methods: [paymentMethod],
         fiat_currency: currency,
@@ -131,37 +132,66 @@ export function CreateOffer() {
         </p>
 
         <div className="space-y-6">
-          {/* I have section */}
+          {/* Offer Type Selection */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">I have</Label>
-            <Card className="bg-elevate-1 border-border">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">
-                    ₿
-                  </div>
-                  <span className="font-bold text-lg">{crypto}</span>
-                </div>
-                <Button variant="ghost" size="icon">
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
+            <Label className="text-sm text-muted-foreground mb-2 block">Offer Type</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={offerType === "buy" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferType("buy")}
+              >
+                Buy
+              </Button>
+              <Button
+                type="button"
+                variant={offerType === "sell" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferType("sell")}
+              >
+                Sell
+              </Button>
+            </div>
           </div>
 
-          {/* Swap button */}
-          <div className="flex justify-center">
-            <Button 
-              size="icon"
-              className="rounded-lg bg-primary hover:bg-primary/90"
-            >
-              <ArrowDownUp className="h-5 w-5" />
-            </Button>
+          {/* Cryptocurrency Selection */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">
+              {offerType === "buy" ? "I want to buy" : "I have"}
+            </Label>
+            <Select value={crypto} onValueChange={setCrypto}>
+              <SelectTrigger className="h-12 bg-elevate-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BTC">
+                  <div className="flex items-center gap-3">
+                    <Bitcoin className="h-5 w-5 text-orange-500" />
+                    <span>Bitcoin (BTC)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="ETH">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">Ξ</span>
+                    <span>Ethereum (ETH)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="USDT">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-green-600">₮</span>
+                    <span>Tether (USDT)</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* I want section */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">I want</Label>
+            <Label className="text-sm text-muted-foreground mb-2 block">
+              {offerType === "buy" ? "I will pay with" : "I want"}
+            </Label>
             <div className="space-y-3">
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger className="h-12 bg-elevate-1">
