@@ -9,13 +9,14 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 
 export interface OfferCardProps {
-  id: string;
+  id?: string;
   vendor: {
     name: string;
     avatar?: string;
     isVerified: boolean;
     trades: number;
     responseTime: string;
+    id?: string;
   };
   paymentMethod: string;
   pricePerBTC: number;
