@@ -115,29 +115,32 @@ export function P2P() {
 
         if (basicError) throw basicError;
 
-        const formattedOffers: OfferCardProps[] = (basicOffersData || []).map((offer) => ({
-          id: offer.id,
-          vendor: {
-            name: "Trader",
-            avatar: undefined,
-            isVerified: false,
-            trades: 0,
-            responseTime: "5 min"
-          },
-          paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
-          pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
-          currency: offer.fiat_currency,
-          availableRange: { 
-            min: offer.min_amount, 
-            max: offer.available_amount || offer.max_amount 
-          },
-          limits: { 
-            min: offer.min_amount, 
-            max: offer.max_amount 
-          },
-          type: offer.offer_type,
-          cryptoSymbol: offer.crypto_symbol
-        }));
+        const formattedOffers: OfferCardProps[] = (basicOffersData || []).map((offer) => {
+          const traderName = `Trader${Math.floor(Math.random() * 10000)}`;
+          return {
+            id: offer.id,
+            vendor: {
+              name: traderName,
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${traderName}`,
+              isVerified: false,
+              trades: 0,
+              responseTime: "5 min"
+            },
+            paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
+            pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
+            currency: offer.fiat_currency,
+            availableRange: { 
+              min: offer.min_amount, 
+              max: offer.available_amount || offer.max_amount 
+            },
+            limits: { 
+              min: offer.min_amount, 
+              max: offer.max_amount 
+            },
+            type: offer.offer_type,
+            cryptoSymbol: offer.crypto_symbol
+          };
+        });
 
         setOffers(formattedOffers);
         return;
@@ -145,11 +148,12 @@ export function P2P() {
 
       const formattedOffers: OfferCardProps[] = (offersData || []).map((offer: any) => {
         const user = offer.user_profiles;
+        const vendorName = user?.username || user?.display_name || "Trader";
         return {
           id: offer.id,
           vendor: {
-            name: user?.username || user?.display_name || "Trader",
-            avatar: user?.avatar_url,
+            name: vendorName,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`,
             isVerified: (user?.positive_ratings || 0) > 10,
             trades: user?.total_trades || 0,
             responseTime: user?.response_time_avg 
