@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ShieldCheck, Clock, TrendingUp } from "lucide-react";
+import { ThumbsUp, Circle, Bitcoin } from "lucide-react";
+import { TradeDialog } from "./trade-dialog";
 
 export interface OfferCardProps {
   id: string;
@@ -19,86 +20,130 @@ export interface OfferCardProps {
   availableRange: { min: number; max: number };
   limits: { min: number; max: number };
   type: "buy" | "sell";
+  cryptoSymbol?: string;
 }
 
-export function OfferCard({ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type }: OfferCardProps) {
+const getCryptoIcon = (symbol: string) => {
+  switch (symbol) {
+    case "BTC":
+      return <Bitcoin className="h-5 w-5 text-orange-500" />;
+    case "ETH":
+      return <span className="text-xl text-blue-400">Ξ</span>;
+    case "USDT":
+      return <span className="text-xl text-green-600">₮</span>;
+    default:
+      return <Bitcoin className="h-5 w-5 text-orange-500" />;
+  }
+};
+
+export function OfferCard({ 
+  vendor, 
+  paymentMethod, 
+  pricePerBTC, 
+  currency, 
+  availableRange, 
+  limits, 
+  type,
+  cryptoSymbol = "BTC",
+  ...offer
+}: OfferCardProps) {
+  const [showTradeDialog, setShowTradeDialog] = useState(false);
+
   const handleTrade = () => {
-    console.log(`Initiating ${type} trade with ${vendor.name}`);
+    setShowTradeDialog(true);
   };
 
+  const cryptoAmount = limits.min / pricePerBTC;
+
   return (
-    <Card className="hover-elevate border-2 shadow-lg" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
-      <CardContent className="p-8 space-y-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-14 w-14 border-2 border-primary/20">
+    <>
+      <TradeDialog 
+        open={showTradeDialog} 
+        onOpenChange={setShowTradeDialog}
+        offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, ...offer } as OfferCardProps}
+      />
+      <Card className="bg-card border-border hover:border-primary/50 transition-colors" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
+        <CardContent className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
               <AvatarImage src={vendor.avatar} />
-              <AvatarFallback className="text-lg font-semibold">{vendor.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+              <AvatarFallback className="text-sm font-semibold bg-primary/10">
+                {vendor.name.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
             </Avatar>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-bold text-lg text-foreground">{vendor.name}</span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">{vendor.name}</span>
                 {vendor.isVerified && (
-                  <ShieldCheck className="h-5 w-5 text-green-600" />
+                  <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                    <Circle className="h-2 w-2 fill-green-600" />
+                    POWER
+                  </span>
                 )}
               </div>
-              <div className="text-sm font-medium text-muted-foreground">
-                {vendor.trades.toLocaleString()} trades completed
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <ThumbsUp className="h-3 w-3" />
+                <span>100%</span>
+                <span>{vendor.trades} Trades</span>
+                <Circle className="h-1 w-1 fill-green-500" />
+                <span className="text-green-500">Active now</span>
               </div>
             </div>
           </div>
-          <Badge variant={type === "buy" ? "default" : "secondary"} className="text-sm px-3 py-1">
-            {type === "buy" ? "Buy" : "Sell"}
-          </Badge>
         </div>
 
-        <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
-          <div className="text-sm font-medium text-muted-foreground mb-2">Payment Method</div>
-          <div className="font-bold text-lg text-foreground">{paymentMethod}</div>
-        </div>
-
-        <div className="flex items-baseline gap-3">
-          <span className="text-4xl font-bold tabular-nums text-foreground">
-            ${pricePerBTC.toLocaleString()}
-          </span>
-          <span className="text-lg text-muted-foreground font-medium">/ BTC</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-6 py-4 border-y-2 border-border">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="text-sm font-semibold text-muted-foreground mb-2">Available</div>
-            <div className="text-base font-bold text-foreground">
-              {availableRange.min.toLocaleString()} - {availableRange.max.toLocaleString()} {currency}
+            <div className="text-xs text-muted-foreground mb-1">
+              {type === "buy" ? "Pay" : "Receive"} <span className="text-primary">{paymentMethod}</span>
+            </div>
+            <div className="text-lg font-bold">
+              {limits.min.toLocaleString()} {currency}
             </div>
           </div>
           <div>
-            <div className="text-sm font-semibold text-muted-foreground mb-2">Limits</div>
-            <div className="text-base font-bold text-foreground">
-              {limits.min.toLocaleString()} - {limits.max.toLocaleString()} {currency}
+            <div className="text-xs text-muted-foreground mb-1">
+              {type === "buy" ? "Receive" : "Pay"} ({cryptoSymbol})
+            </div>
+            <div className="text-lg font-bold">
+              {cryptoAmount.toLocaleString('en-US', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 8 
+              })} {cryptoSymbol}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6 text-sm">
+        <div className="flex items-center justify-between pt-2 border-t border-border">
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            <span className="font-medium text-foreground">{vendor.responseTime}</span>
+            {getCryptoIcon(cryptoSymbol)}
+            <div>
+              <div className="text-sm font-bold">
+                {pricePerBTC.toLocaleString('en-US', { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })} {currency}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {limits.min.toLocaleString()} - {limits.max.toLocaleString()} {currency}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            <span className="font-medium text-green-600">High volume</span>
-          </div>
+          <Button 
+            className={`${
+              type === "sell" 
+                ? "bg-green-600 hover:bg-green-700" 
+                : "bg-blue-600 hover:bg-blue-700"
+            } text-white font-bold px-6`}
+            onClick={handleTrade}
+            data-testid={`button-trade-${type}`}
+          >
+            {type === "sell" ? "Sell" : "Buy"} {cryptoSymbol}
+          </Button>
         </div>
-
-        <Button 
-          className="w-full h-12 text-base font-bold shadow-lg" 
-          variant={type === "buy" ? "default" : "secondary"}
-          onClick={handleTrade}
-          data-testid={`button-trade-${type}`}
-        >
-          {type === "buy" ? "Buy BTC" : "Sell BTC"}
-        </Button>
       </CardContent>
     </Card>
+    </>
   );
 }
