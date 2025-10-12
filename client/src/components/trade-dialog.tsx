@@ -47,19 +47,45 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       const fiatAmount = parseFloat(amount);
       const cryptoAmount = fiatAmount / offer.pricePerBTC;
 
+      // Get the vendor ID from the offer
+      const vendorId = offer.vendor?.id;
+      
+      if (!vendorId) {
+        console.error("No vendor ID found in offer:", offer);
+        alert("Could not find the offer vendor");
+        return;
+      }
+      
+      if (vendorId === user.id) {
+        alert("Cannot trade with yourself");
+        return;
+      }
+
       // Determine buyer and seller based on offer type
+      // The current user is ALWAYS the one initiating the trade
+      // If vendor posted a "buy" offer, they want to buy, so current user is seller
+      // If vendor posted a "sell" offer, they want to sell, so current user is buyer
       const isBuyOffer = offer.type === "buy";
-      const buyerId = isBuyOffer ? user.id : (offer.vendor?.id || user.id);
-      const sellerId = isBuyOffer ? (offer.vendor?.id || user.id) : user.id;
+      const buyerId = isBuyOffer ? vendorId : user.id;  // vendor buys OR user buys
+      const sellerId = isBuyOffer ? user.id : vendorId;  // user sells OR vendor sells
+
+      console.log("Trade creation:", {
+        offerType: offer.type,
+        currentUserId: user.id,
+        vendorId,
+        buyerId,
+        sellerId,
+        offerVendor: offer.vendor
+      });
 
       // First, create or get the offer record
       let offerId = offer.id;
-      
+
       if (!offerId) {
         const { data: newOffer, error: offerError } = await supabase
           .from("p2p_offers")
           .insert({
-            user_id: offer.vendor?.id || user.id,
+            user_id: offer.vendor?.id || user.id, // This line might need adjustment if offer.vendor is unreliable
             type: offer.type,
             crypto_symbol: offer.cryptoSymbol,
             fiat_currency: offer.currency,
