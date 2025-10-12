@@ -7,6 +7,10 @@ export interface CryptoPrice {
   total_volume: number;
 }
 
+export interface ExchangeRates {
+  [key: string]: number;
+}
+
 const COINGECKO_IDS: Record<string, string> = {
   BTC: 'bitcoin',
   ETH: 'ethereum',
@@ -89,6 +93,54 @@ export function formatPrice(price: number): string {
   }
 }
 
+// Cache for exchange rates
+let exchangeRatesCache: ExchangeRates | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+
+export async function getExchangeRates(): Promise<ExchangeRates> {
+  const now = Date.now();
+  
+  // Return cached rates if still valid
+  if (exchangeRatesCache && (now - lastFetchTime) < CACHE_DURATION) {
+    return exchangeRatesCache;
+  }
+  
+  try {
+    // Using exchangerate-api.com free tier (no API key needed)
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch exchange rates');
+    }
+    
+    const data = await response.json();
+    exchangeRatesCache = data.rates;
+    lastFetchTime = now;
+    
+    return data.rates;
+  } catch (error) {
+    console.error('Error fetching exchange rates:', error);
+    // Return fallback rates if API fails
+    return {
+      USD: 1,
+      NGN: 1470,
+      EUR: 0.92,
+      GBP: 0.79,
+      GHS: 15.50,
+      KES: 129.50,
+      ZAR: 18.50,
+    };
+  }
+}
+
+export async function convertCurrency(usdAmount: number, toCurrency: string): Promise<number> {
+  const rates = await getExchangeRates();
+  const rate = rates[toCurrency] || 1;
+  return usdAmount * rate;
+}
+
+// Legacy function for backward compatibility
 export function convertToNGN(usdAmount: number, usdToNgnRate: number = 1470): number {
   return usdAmount * usdToNgnRate;
 }
