@@ -35,6 +35,7 @@ export function CreateOfferAdvanced() {
   const [country, setCountry] = useState("");
   const [minAmount, setMinAmount] = useState("14777");
   const [maxAmount, setMaxAmount] = useState("147769");
+  const [totalQuantity, setTotalQuantity] = useState("");
   const [offerTerms, setOfferTerms] = useState("");
   const [offerLabel, setOfferLabel] = useState("");
   const [timeLimit, setTimeLimit] = useState("30");
@@ -160,6 +161,8 @@ export function CreateOfferAdvanced() {
         return;
       }
 
+      const totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
+
       const { error } = await supabase.from("p2p_offers").insert({
         user_id: user.id,
         offer_type: offerType,
@@ -172,6 +175,7 @@ export function CreateOfferAdvanced() {
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
         available_amount: maxAmountNum,
+        total_quantity: totalQuantityNum,
         country_restrictions: country ? [country] : null,
         offer_terms: offerTerms,
         offer_label: offerLabel,
@@ -438,6 +442,38 @@ export function CreateOfferAdvanced() {
               {offerStatus === "online" 
                 ? "Your offer will be visible to all users" 
                 : "Your offer will only be visible to users you share the link with"}
+            </p>
+          </div>
+
+          {/* Total Quantity */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm text-muted-foreground">
+                {offerType === "buy" 
+                  ? `Total amount you plan to buy (${crypto})` 
+                  : `Total amount of ${crypto} you intend to sell`}
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto py-1 px-2 text-primary hover:text-primary/80"
+                onClick={() => setTotalQuantity(maxAmount)}
+              >
+                Max
+              </Button>
+            </div>
+            <Input 
+              type="number"
+              value={totalQuantity}
+              onChange={(e) => setTotalQuantity(e.target.value)}
+              placeholder={offerType === "buy" ? "Enter total amount to buy" : "Enter total amount to sell"}
+              className="bg-elevate-1 text-lg font-bold"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              {offerType === "buy" 
+                ? "The total amount of cryptocurrency you want to purchase" 
+                : "The total amount from your wallet you're willing to sell"}
             </p>
           </div>
 
