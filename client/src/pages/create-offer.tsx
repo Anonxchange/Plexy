@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,22 +18,47 @@ import { ArrowDownUp, Edit, Bitcoin } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { getCryptoPrices, convertToNGN } from "@/lib/crypto-prices";
 
 export function CreateOffer() {
+  const [priceType, setPriceType] = useState<"fixed" | "floating">("floating");
+  const [fixedPrice, setFixedPrice] = useState("");
   const [priceOffset, setPriceOffset] = useState([0]);
   const [crypto, setCrypto] = useState("BTC");
   const [offerType, setOfferType] = useState<"buy" | "sell">("sell");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [currency, setCurrency] = useState("");
+  const [currency, setCurrency] = useState("NGN");
   const [country, setCountry] = useState("");
   const [minAmount, setMinAmount] = useState("14777");
   const [maxAmount, setMaxAmount] = useState("147769");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [marketRate, setMarketRate] = useState(0);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const marketRate = 177374519.15;
-  const yourRate = marketRate * (1 + priceOffset[0] / 100);
+  useEffect(() => {
+    const fetchLivePrices = async () => {
+      setLoading(true);
+      const prices = await getCryptoPrices([crypto]);
+      if (prices[crypto]) {
+        const priceInNGN = currency === "NGN" 
+          ? convertToNGN(prices[crypto].current_price)
+          : prices[crypto].current_price;
+        setMarketRate(priceInNGN);
+      }
+      setLoading(false);
+    };
+    
+    fetchLivePrices();
+    const interval = setInterval(fetchLivePrices, 30000);
+    
+    return () => clearInterval(interval);
+  }, [crypto, currency]);
+
+  const yourRate = priceType === "fixed" 
+    ? parseFloat(fixedPrice) || marketRate
+    : marketRate * (1 + priceOffset[0] / 100);
 
   const handleCreateOffer = async () => {
     if (!paymentMethod || !currency) {
@@ -89,9 +114,9 @@ export function CreateOffer() {
         crypto_symbol: crypto,
         payment_methods: [paymentMethod],
         fiat_currency: currency,
-        price_type: priceOffset[0] === 0 ? "market" : "floating",
-        fixed_price: priceOffset[0] === 0 ? yourRate : null,
-        floating_margin: priceOffset[0] !== 0 ? priceOffset[0] : null,
+        price_type: priceType,
+        fixed_price: priceType === "fixed" ? parseFloat(fixedPrice) : null,
+        floating_margin: priceType === "floating" ? priceOffset[0] : null,
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
         available_amount: maxAmountNum,
@@ -128,7 +153,12 @@ export function CreateOffer() {
 
         <p className="text-muted-foreground mb-8">
           List your ad in our P2P marketplace. More settings in the{" "}
-          <a href="#" className="underline">advanced version</a>.
+          <button 
+            onClick={() => setLocation("/create-offer-advanced")} 
+            className="underline text-primary hover:text-primary/80"
+          >
+            advanced version
+          </button>.
         </p>
 
         <div className="space-y-6">
@@ -304,39 +334,95 @@ export function CreateOffer() {
             </div>
           </div>
 
+          {/* Price Type Selection */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">Price Type</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={priceType === "fixed" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setPriceType("fixed")}
+              >
+                Fixed Price
+              </Button>
+              <Button
+                type="button"
+                variant={priceType === "floating" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setPriceType("floating")}
+              >
+                Floating Price
+              </Button>
+            </div>
+          </div>
+
           {/* Price section */}
           <div>
             <Label className="text-sm text-muted-foreground mb-4 block">Set price</Label>
             <Card className="bg-elevate-1 border-border">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Button variant="outline" size="sm">-10%</Button>
-                  <span className="text-lg font-bold">
-                    {priceOffset[0] > 0 ? "+" : ""}{priceOffset[0]}%
-                  </span>
-                  <Button variant="outline" size="sm">+100%</Button>
-                </div>
-                <Slider
-                  value={priceOffset}
-                  onValueChange={setPriceOffset}
-                  min={-10}
-                  max={100}
-                  step={1}
-                  className="mb-6"
-                />
+                {priceType === "fixed" ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm mb-2 block">Fixed Price</Label>
+                      <Input
+                        type="number"
+                        value={fixedPrice}
+                        onChange={(e) => setFixedPrice(e.target.value)}
+                        placeholder="Enter fixed price"
+                        className="bg-background"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setPriceOffset([Math.max(-10, priceOffset[0] - 1)])}
+                      >
+                        -1%
+                      </Button>
+                      <span className="text-lg font-bold">
+                        {priceOffset[0] > 0 ? "+" : ""}{priceOffset[0]}%
+                      </span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setPriceOffset([Math.min(100, priceOffset[0] + 1)])}
+                      >
+                        +1%
+                      </Button>
+                    </div>
+                    <Slider
+                      value={priceOffset}
+                      onValueChange={setPriceOffset}
+                      min={-10}
+                      max={100}
+                      step={0.1}
+                      className="mb-6"
+                    />
+                  </>
+                )}
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Market rate ({crypto}):</span>
-                    <span>{marketRate.toFixed(2)} NGN</span>
+                    <span className="font-mono">
+                      {loading ? "Loading..." : `${marketRate.toFixed(2)} ${currency}`}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Your rate ({crypto}):</span>
-                    <span className="font-bold">{yourRate.toFixed(2)} NGN</span>
+                    <span className="font-bold font-mono">{yourRate.toFixed(2)} {currency}</span>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-4">
-                  *You will sell at <span className="font-bold">market price</span>
-                </p>
+                {priceType === "floating" && (
+                  <p className="text-xs text-muted-foreground mt-4">
+                    *You will sell at <span className="font-bold">market price {priceOffset[0] > 0 ? "+" : ""}{priceOffset[0]}%</span>
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
