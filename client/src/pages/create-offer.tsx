@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ArrowDownUp, Edit, Bitcoin } from "lucide-react";
+import { ArrowDownUp, Edit, Bitcoin, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -31,9 +31,12 @@ export function CreateOffer() {
   const [country, setCountry] = useState("");
   const [minAmount, setMinAmount] = useState("14777");
   const [maxAmount, setMaxAmount] = useState("147769");
+  const [totalQuantity, setTotalQuantity] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marketRate, setMarketRate] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -56,6 +59,31 @@ export function CreateOffer() {
     return () => clearInterval(interval);
   }, [crypto, currency]);
 
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data, error } = await supabase
+            .from('payment_methods')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('payment_type', 'Bank Transfer');
+
+          if (!error && data) {
+            setPaymentMethods(data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
+      }
+    };
+
+    fetchPaymentMethods();
+  }, []);
+
   const yourRate = priceType === "fixed" 
     ? parseFloat(fixedPrice) || marketRate
     : marketRate * (1 + priceOffset[0] / 100);
@@ -65,6 +93,15 @@ export function CreateOffer() {
       toast({
         title: "Missing Information",
         description: "Please select a payment method and currency",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (paymentMethod === "Bank Transfer" && !selectedPaymentMethodId) {
+      toast({
+        title: "Bank Account Required",
+        description: "Please select a bank account for Bank Transfer payments",
         variant: "destructive",
       });
       return;
@@ -108,6 +145,8 @@ export function CreateOffer() {
         return;
       }
 
+      const totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
+
       const { error } = await supabase.from("p2p_offers").insert({
         user_id: user.id,
         offer_type: offerType,
@@ -120,7 +159,9 @@ export function CreateOffer() {
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
         available_amount: maxAmountNum,
+        total_quantity: totalQuantityNum,
         country_restrictions: country ? [country] : null,
+        payment_method_id: paymentMethod === "Bank Transfer" ? selectedPaymentMethodId : null,
         is_active: true,
       });
 
@@ -252,84 +293,16 @@ export function CreateOffer() {
               </Select>
 
               {paymentMethod === "Bank Transfer" && (
-                <>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="h-12 bg-elevate-1">
-                      <SelectValue placeholder="🌍 Nigeria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NG">🇳🇬 Nigeria</SelectItem>
-                      <SelectItem value="US">🇺🇸 United States</SelectItem>
-                      <SelectItem value="GB">🇬🇧 United Kingdom</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select>
-                    <SelectTrigger className="h-12 bg-elevate-1">
-                      <SelectValue placeholder="🏦 Choose a bank account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="account1">Bank Account 1</SelectItem>
-                      <SelectItem value="account2">Bank Account 2</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Card className="bg-elevate-1 border-border">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <Checkbox id="auto-share" />
-                        <Label htmlFor="auto-share" className="text-sm leading-relaxed">
-                          I agree to automatically share my bank account details with buyers in incoming trades
-                        </Label>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <div>
-                    <Label className="text-sm text-muted-foreground mb-2 block">
-                      Accepted bank names
-                    </Label>
-                    <Input 
-                      placeholder="John Doe international bank"
-                      className="bg-elevate-1"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      The bank names you can receive transfers from will appear with your offer. 
-                      List multiple banks using spaces—for example: CBS SEB METROPOLITAN ALFA
-                    </p>
-                  </div>
-
-                  <Card className="bg-elevate-1 border-border">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <Checkbox id="verify-identity" defaultChecked />
-                        <Label htmlFor="verify-identity" className="text-sm">
-                          Require your trade partner to verify their identity
-                        </Label>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-card border-border">
-                    <CardContent className="p-6 text-center">
-                      <div className="text-6xl mb-4">
-                        ⭐👍👍
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">
-                        No security deposit required
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Start trading on Pexly without a security deposit
-                      </p>
-                      <div className="flex justify-center gap-2 text-3xl mb-4">
-                        ✓ 👍 👍
-                      </div>
-                      <Button variant="outline" size="sm">
-                        AT A PRICE OF
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </>
+                <Select value={country} onValueChange={setCountry}>
+                  <SelectTrigger className="h-12 bg-elevate-1">
+                    <SelectValue placeholder="🌍 Nigeria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NG">🇳🇬 Nigeria</SelectItem>
+                    <SelectItem value="US">🇺🇸 United States</SelectItem>
+                    <SelectItem value="GB">🇬🇧 United Kingdom</SelectItem>
+                  </SelectContent>
+                </Select>
               )}
             </div>
           </div>
@@ -426,6 +399,85 @@ export function CreateOffer() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Total Quantity */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm text-muted-foreground">
+                {offerType === "buy" 
+                  ? `Total amount you plan to buy (${crypto})` 
+                  : `Total amount of ${crypto} you intend to sell`}
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto py-1 px-2 text-primary hover:text-primary/80"
+                onClick={() => setTotalQuantity(maxAmount)}
+              >
+                Max
+              </Button>
+            </div>
+            <Input 
+              type="number"
+              value={totalQuantity}
+              onChange={(e) => setTotalQuantity(e.target.value)}
+              placeholder={offerType === "buy" ? "Enter total amount to buy" : "Enter total amount to sell"}
+              className="bg-elevate-1 text-lg font-bold"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              {offerType === "buy" 
+                ? "The total amount of cryptocurrency you want to purchase" 
+                : "The total amount from your wallet you're willing to sell"}
+            </p>
+          </div>
+
+          {/* Bank Payment Method Selection (only for Bank Transfer) */}
+          {paymentMethod === "Bank Transfer" && (
+            <Card className="bg-elevate-1 border-border">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold">Bank Payment Method</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setLocation("/account-settings")}
+                  >
+                    Add New Bank
+                  </Button>
+                </div>
+                
+                {paymentMethods.length > 0 ? (
+                  <div>
+                    <Label className="text-sm mb-2 block">Select Bank Account</Label>
+                    <Select value={selectedPaymentMethodId} onValueChange={setSelectedPaymentMethodId}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Choose a bank account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentMethods.map((method) => (
+                          <SelectItem key={method.id} value={method.id}>
+                            {method.bank_name} - {method.account_number} ({method.account_name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No bank accounts added yet</p>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setLocation("/account-settings")}
+                    >
+                      Add Bank Account in Settings
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Limit section */}
           <div>
