@@ -86,19 +86,50 @@ export default function ActiveTrade() {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [activeTab, setActiveTab] = useState<"actions" | "chat">("actions");
+  const [currentUserProfileId, setCurrentUserProfileId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const supabase = createClient();
-  const isUserBuyer = user?.id === trade?.buyer_id;
-  const isUserSeller = user?.id === trade?.seller_id;
-  const counterparty = isUserBuyer ? trade?.seller_profile : trade?.buyer_profile;
+  
+  const isUserBuyer = currentUserProfileId && trade?.buyer_id === currentUserProfileId;
+  const isUserSeller = currentUserProfileId && trade?.seller_id === currentUserProfileId;
+  
+  const counterparty = isUserBuyer 
+    ? trade?.seller_profile 
+    : isUserSeller 
+      ? trade?.buyer_profile 
+      : null;
 
   useEffect(() => {
-    if (tradeId) {
+    if (user?.id) {
+      fetchCurrentUserProfile();
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (tradeId && currentUserProfileId) {
       fetchTradeData();
       subscribeToMessages();
     }
-  }, [tradeId]);
+  }, [tradeId, currentUserProfileId]);
+
+  const fetchCurrentUserProfile = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("id", user.id)
+        .single();
+      
+      if (!error && data) {
+        setCurrentUserProfileId(data.id);
+      }
+    } catch (error) {
+      console.error("Error fetching current user profile:", error);
+    }
+  };
 
   useEffect(() => {
     const calculateTimeRemaining = () => {
@@ -145,11 +176,13 @@ export default function ActiveTrade() {
         .eq("id", tradeData.seller_id)
         .single();
 
-      setTrade({
+      const fullTradeData = {
         ...tradeData,
         buyer_profile: buyerProfile,
         seller_profile: sellerProfile,
-      } as Trade);
+      } as Trade;
+      
+      setTrade(fullTradeData);
 
       const { data: messagesData, error: messagesError } = await supabase
         .from("trade_messages")
@@ -159,7 +192,6 @@ export default function ActiveTrade() {
 
       if (messagesError) throw messagesError;
 
-      // Check if we need to add the initial instructions message
       const hasInstructions = messagesData?.some(msg => msg.content.includes("is selling you"));
       
       if (!hasInstructions && messagesData) {
@@ -474,37 +506,32 @@ export default function ActiveTrade() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="bg-card border-b border-border p-4">
-        {/* Timer Bar - Show in chat tab */}
-        {activeTab === "chat" && (
-          <div className="flex items-center justify-between mb-3 bg-muted rounded-lg p-2">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-muted-foreground">Active now</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span className="text-sm font-mono">{formatTime(timeRemaining)}</span>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-green-500">
+      {/* Header with Counterparty Info */}
+      <div className="bg-card border-b border-border sticky top-0 z-10">
+        <div className="p-3 sm:p-4">
+          {/* Top Row: Back + User + Timer */}
+          <div className="flex items-center gap-2 sm:gap-3 mb-3">
+            <button 
+              onClick={() => setLocation("/p2p")} 
+              className="p-2 hover:bg-muted rounded-lg transition-colors lg:hidden"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            
+            <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-primary flex-shrink-0">
               <AvatarImage src={counterparty?.avatar_url || ""} />
-              <AvatarFallback className="bg-green-500/20 text-green-600 font-bold">
-                {counterparty?.username.substring(0, 2).toUpperCase()}
+              <AvatarFallback className="bg-primary/20 text-primary font-bold text-sm sm:text-base">
+                {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{counterparty?.username}</span>
-                <span className="text-lg">🇳🇬</span>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                <span className="font-semibold text-base sm:text-lg truncate">{counterparty?.username || "Unknown"}</span>
+                <span className="text-base sm:text-lg flex-shrink-0">🇳🇬</span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <span className="text-green-500 flex items-center gap-1">
+              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm flex-wrap">
+                <span className="text-primary flex items-center gap-1">
                   <ThumbsUp className="h-3 w-3" />
                   {counterparty?.positive_ratings || 0}
                 </span>
@@ -512,185 +539,173 @@ export default function ActiveTrade() {
                   <ThumbsDown className="h-3 w-3" />
                   {counterparty?.negative_ratings || 0}
                 </span>
+                <div className="flex items-center gap-1 text-green-500">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="hidden sm:inline">Active</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Current User Avatar */}
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-border flex-shrink-0">
+              <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+              <AvatarFallback className="bg-muted text-foreground font-bold text-xs sm:text-sm">
+                {user?.user_metadata?.username?.substring(0, 2).toUpperCase() || "ME"}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex flex-col items-end flex-shrink-0">
+              <div className="flex items-center gap-1 text-muted-foreground text-xs sm:text-sm">
+                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="font-mono text-xs sm:text-sm">{formatTime(timeRemaining)}</span>
               </div>
             </div>
           </div>
-          {activeTab === "actions" && (
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground">Status</div>
-              <div className="flex items-center gap-2 text-yellow-500">
-                <Clock className="h-4 w-4" />
-                <span className="font-semibold">Active now</span>
-              </div>
+
+          {/* Trade Summary */}
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 sm:p-3">
+            <div className="text-xs sm:text-sm font-semibold break-words">
+              {isUserBuyer ? "BUYING" : "SELLING"} {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} FOR {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
             </div>
-          )}
+            <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">{trade.payment_method}</div>
+          </div>
         </div>
 
-        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-          <div className="text-sm font-semibold mb-1">
-            {isUserBuyer ? "Buying" : "Selling"} {trade.crypto_amount} {trade.crypto_symbol} FOR {trade.fiat_amount} {trade.fiat_currency}
+        {/* Moderator Status */}
+        <div className="px-3 sm:px-4 pb-3 flex items-center justify-between border-t border-border pt-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full"></div>
+            <span className="text-xs sm:text-sm text-muted-foreground">Moderator unavailable</span>
           </div>
-          <div className="text-xs text-muted-foreground">{trade.payment_method}</div>
+          <button className="text-primary text-xs sm:text-sm font-semibold flex items-center gap-1">
+            Translate 🌐
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="p-4">
+      {/* Main Content Area */}
+      <div className="p-3 sm:p-4">
         {activeTab === "actions" && (
-          <div className="space-y-4 pb-4">
-            {/* Status Card */}
-            <Card className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <h3 className="font-semibold text-lg">Trade Started</h3>
-              </div>
+          <div className="space-y-3 sm:space-y-4">
+            {/* Payment Instruction Card */}
+            {isUserBuyer && trade.status === "pending" && (
+              <Card className="p-3 sm:p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <h3 className="font-semibold text-sm sm:text-base mb-2 sm:mb-3">Payment Instructions</h3>
+                <div className="space-y-2 text-xs sm:text-sm mb-3 sm:mb-4">
+                  <p>Please make a payment of <span className="font-bold text-primary">{trade.fiat_amount.toLocaleString()} {trade.fiat_currency}</span> using <span className="font-semibold">{trade.payment_method}</span>.</p>
+                  <p className="text-muted-foreground">{trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} will be added to your wallet</p>
+                </div>
+                
+                <div className="bg-background/50 rounded-lg p-2.5 sm:p-3 mb-3 sm:mb-4">
+                  <p className="text-xs sm:text-sm mb-2">
+                    <span className="font-semibold">Once you've made the payment</span>, be sure to click <span className="font-semibold text-green-600">Paid</span> within the given time limit. Otherwise the trade will be automatically cancelled and the {trade.crypto_symbol} will be returned to the seller's wallet.
+                  </p>
+                </div>
 
-              <div className="bg-muted rounded-lg p-4 mb-4">
-                <p className="text-sm mb-2">
-                  Please make a payment of <span className="text-green-500 font-semibold">{trade.fiat_amount} {trade.fiat_currency}</span> using{" "}
-                  <span className="text-primary">{trade.payment_method}</span>.
+                <Button
+                  onClick={markAsPaid}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold h-11 sm:h-12 text-sm sm:text-base"
+                >
+                  <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                  Paid
+                  <span className="ml-auto text-xs sm:text-sm opacity-90">Time left {formatTime(timeRemaining)}</span>
+                </Button>
+              </Card>
+            )}
+
+            {/* Release Funds Card */}
+            {isUserSeller && trade.status === "payment_sent" && (
+              <Card className="p-3 sm:p-4 bg-gradient-to-br from-orange-500/10 to-amber-500/5 border-orange-500/20">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+                  <h3 className="font-semibold text-sm sm:text-base">Confirm Payment</h3>
+                </div>
+                <p className="text-xs sm:text-sm mb-3 sm:mb-4">
+                  Buyer has marked payment as sent. Verify and release {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {trade.crypto_amount} {trade.crypto_symbol} will be added to your wallet
-                </p>
-              </div>
-
-              <div className="bg-muted rounded-lg p-4">
-                <p className="text-sm mb-3">
-                  <span className="font-semibold">Once you've made the payment,</span> be sure to click{" "}
-                  <span className="text-green-500 font-semibold">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
-                </p>
-
-                {isUserBuyer && trade.status === "pending" && (
-                  <>
-                    <Button
-                      onClick={markAsPaid}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-between px-4"
-                    >
-                      <span>Paid</span>
-                      {trade.status === "payment_sent" && <CheckCircle2 className="h-5 w-5" />}
-                    </Button>
-                    <div className="text-center text-sm text-muted-foreground mt-2">
-                      Time left {formatTime(timeRemaining)}
-                    </div>
-                  </>
-                )}
-              </div>
-            </Card>
-
-            {/* Report Button */}
-            <Button variant="outline" className="w-full" onClick={openDispute}>
-              <Flag className="h-4 w-4 mr-2" />
-              Report Bad Behaviour
-            </Button>
-
-            {/* Warning Message */}
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 relative">
-              <button 
-                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-                onClick={() => {}}
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <p className="text-sm text-foreground pr-6">
-                Keep trades within NoOnes. Some users may ask you to trade outside the NoOnes platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within NoOnes. If you choose to proceed outside NoOnes, note that we cannot help or support you if you are scammed during such trades.
-              </p>
-            </div>
-
-            {/* Cancel Trade Button */}
-            <Button 
-              variant="outline" 
-              className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10 hover:text-red-500"
-              onClick={cancelTrade}
-            >
-              Cancel Trade
-            </Button>
-
-            {/* Info Message */}
-            <div className="bg-muted rounded-lg p-3 flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-              <p className="text-xs text-muted-foreground">You haven't paid yet</p>
-            </div>
+                <Button onClick={releaseFunds} className="w-full bg-orange-600 hover:bg-orange-700 h-11 sm:h-12 text-sm sm:text-base font-semibold">
+                  Release Crypto
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
+                </Button>
+              </Card>
+            )}
 
             {/* Trade Information */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-4">Trade Information</h3>
+            <Card className="p-3 sm:p-4">
+              <h3 className="font-semibold text-sm sm:text-base mb-3 sm:mb-4 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                Trade Details
+              </h3>
 
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">RATE</span>
-                  <span className="text-sm font-semibold">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="text-xs sm:text-sm text-muted-foreground">RATE</span>
+                  <span className="text-xs sm:text-sm font-bold">
                     {trade.price.toLocaleString()} {trade.fiat_currency}/{trade.crypto_symbol}
                   </span>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">TRADE ID</span>
-                    <AlertCircle className="h-3 w-3 text-muted-foreground" />
-                  </div>
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="text-xs sm:text-sm text-muted-foreground">TRADE ID</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-mono">{trade.id.slice(0, 11)}</span>
+                    <span className="text-xs sm:text-sm font-mono truncate max-w-[120px] sm:max-w-none">{trade.id.slice(0, 11)}</span>
                     <button
                       onClick={() => copyToClipboard(trade.id)}
-                      className="text-muted-foreground hover:text-foreground transition"
+                      className="text-muted-foreground hover:text-foreground transition flex-shrink-0"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">STARTED</span>
-                  <span className="text-sm">{formatDate(trade.created_at)}</span>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-xs sm:text-sm text-muted-foreground">STARTED</span>
+                  <span className="text-xs sm:text-sm">{formatDate(trade.created_at)}</span>
                 </div>
               </div>
             </Card>
 
-            {isUserSeller && trade.status === "payment_sent" && (
-              <Button onClick={releaseFunds} className="w-full bg-green-600 hover:bg-green-700">
-                <Shield className="h-4 w-4 mr-2" />
-                Release Crypto
+            {/* Security Warning */}
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 sm:p-4">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs sm:text-sm font-semibold mb-1">Keep Trades Secure</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Always communicate within the platform. Never share sensitive information or move trades outside our system.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <Button variant="outline" onClick={openDispute} className="h-10 sm:h-11 text-xs sm:text-sm">
+                <Flag className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                Report Bad Behaviour
               </Button>
-            )}
-
-            {/* View Offer Button */}
-            <Button variant="outline" className="w-full">
-              View Offer
-            </Button>
-
-            {/* Take a Tour Button */}
-            <Button variant="outline" className="w-full">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              Take a Tour
-            </Button>
+              <Button variant="outline" onClick={cancelTrade} className="h-10 sm:h-11 border-red-500/50 text-red-500 hover:bg-red-500/10 text-xs sm:text-sm">
+                Cancel Trade
+              </Button>
+            </div>
           </div>
         )}
 
         {activeTab === "chat" && (
-          <div className="flex flex-col" style={{ height: "calc(100vh - 280px)" }}>
-            {/* Moderator Bar */}
-            <div className="bg-card border-b border-border px-4 py-2 mb-3 flex items-center justify-between rounded-t-lg">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
-                <span className="text-sm text-muted-foreground">Moderator unavailable</span>
-              </div>
-              <button className="text-primary text-sm font-semibold">Translate 🌐</button>
-            </div>
-
+          <div className="flex flex-col" style={{ height: "calc(100vh - 260px)" }}>
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto space-y-3 mb-4 px-2">
+            <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-3 mb-3 sm:mb-4">
               {messages.map((message) => {
                 const isMine = message.sender_id === user?.id;
                 const isSystem = message.message_type === "system";
 
                 if (isSystem) {
                   return (
-                    <div key={message.id} className="mb-3">
-                      <div className="bg-amber-800/80 px-4 py-3 rounded-lg text-sm text-white max-w-full whitespace-pre-line">
+                    <div key={message.id} className="mb-2 sm:mb-3">
+                      <div className="bg-amber-800/80 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm text-white whitespace-pre-line">
                         {message.content}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1 uppercase">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 uppercase">
                         {new Date(message.created_at).toLocaleDateString('en-US', { 
                           month: 'long', 
                           day: 'numeric', 
@@ -706,12 +721,12 @@ export default function ActiveTrade() {
                 }
 
                 return (
-                  <div key={message.id}>
+                  <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className={`rounded-lg p-3 max-w-[80%] ${
+                      className={`rounded-lg p-2.5 sm:p-3 max-w-[85%] sm:max-w-[75%] ${
                         isMine
-                          ? "ml-auto bg-green-500/20 border border-green-500/30"
-                          : "bg-amber-800/80"
+                          ? "bg-primary text-black"
+                          : "bg-muted"
                       }`}
                     >
                       {message.message_type === "image" && message.file_url && (
@@ -721,8 +736,8 @@ export default function ActiveTrade() {
                           className="rounded mb-2 max-w-full"
                         />
                       )}
-                      <p className="text-sm whitespace-pre-line">{message.content}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs sm:text-sm whitespace-pre-line break-words">{message.content}</p>
+                      <p className={`text-[10px] sm:text-xs mt-1 ${isMine ? 'text-black/70' : 'text-muted-foreground'}`}>
                         {new Date(message.created_at).toLocaleTimeString()}
                       </p>
                     </div>
@@ -733,19 +748,13 @@ export default function ActiveTrade() {
             </div>
 
             {/* Quick Replies */}
-            <div className="px-2 mb-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">SELECT A MESSAGE:</span>
-                <button className="bg-primary hover:opacity-90 px-4 py-2 rounded text-sm font-semibold flex items-center gap-1 text-primary-foreground">
-                  ⋮ OPTIONS
-                </button>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="mb-2 sm:mb-3">
+              <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 {quickReplies.map((reply) => (
                   <button
                     key={reply}
                     onClick={() => setNewMessage(reply)}
-                    className="bg-muted hover:bg-accent px-4 py-2 rounded-lg text-sm whitespace-nowrap transition"
+                    className="bg-muted hover:bg-accent px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-colors flex-shrink-0"
                   >
                     {reply}
                   </button>
@@ -754,58 +763,50 @@ export default function ActiveTrade() {
             </div>
 
             {/* Message Input */}
-            <div className="bg-card border-t border-border px-4 py-3 rounded-b-lg">
-              <div className="flex gap-2 items-center">
-                <button className="text-muted-foreground hover:text-foreground p-2">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 5v14M5 12h14"/>
-                  </svg>
-                </button>
-                <Input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                  placeholder="Write a message..."
-                  className="flex-1"
-                />
-                <button
-                  onClick={sendMessage}
-                  className="text-primary hover:opacity-80 p-2"
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                  </svg>
-                </button>
-              </div>
+            <div className="flex gap-1.5 sm:gap-2 items-center bg-muted rounded-lg p-1.5 sm:p-2">
+              <Input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                placeholder="Type your message..."
+                className="flex-1 bg-background border-0 text-xs sm:text-sm h-9 sm:h-10"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!newMessage.trim()}
+                className="bg-primary text-black hover:opacity-90 p-2 sm:p-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0"
+              >
+                <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Tab Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex z-50">
         <button
           onClick={() => setActiveTab("actions")}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 font-semibold transition-colors ${
+          className={`flex-1 py-3 sm:py-4 flex items-center justify-center gap-1.5 sm:gap-2 font-semibold transition-all ${
             activeTab === "actions"
-              ? "bg-green-600 text-white"
+              ? "bg-primary text-black"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <CheckCircle2 className="h-5 w-5" />
-          Actions
+          <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
+          <span className="text-sm sm:text-base">Actions</span>
         </button>
         <button
           onClick={() => setActiveTab("chat")}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 font-semibold transition-colors ${
+          className={`flex-1 py-3 sm:py-4 flex items-center justify-center gap-1.5 sm:gap-2 font-semibold transition-all ${
             activeTab === "chat"
-              ? "bg-green-600 text-white"
+              ? "bg-primary text-black"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <MessageCircle className="h-5 w-5" />
-          Chat
+          <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+          <span className="text-sm sm:text-base">Chat</span>
         </button>
       </div>
     </div>
