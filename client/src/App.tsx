@@ -20,6 +20,7 @@ import { Swap } from "@/pages/swap";
 import { Profile } from "@/pages/profile";
 import { Shop } from "@/pages/shop";
 import { CreateOffer } from "@/pages/create-offer";
+import { CreateOfferAdvanced } from "@/pages/create-offer-advanced";
 import { MyOffers } from "@/pages/my-offers";
 import Spot from "@/pages/spot";
 import NotFound from "@/pages/not-found";
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/shop" component={Shop} />
       <Route path="/create-offer" component={CreateOffer} />
+      <Route path="/create-offer-advanced" component={CreateOfferAdvanced} />
       <Route path="/my-offers" component={MyOffers} />
       <Route path="/trade/:tradeId" component={ActiveTrade} />
       <Route component={NotFound} />
