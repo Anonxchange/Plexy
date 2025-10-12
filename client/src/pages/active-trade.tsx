@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -5,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   ArrowLeft, 
   ThumbsUp, 
@@ -17,7 +17,11 @@ import {
   AlertTriangle,
   CheckCircle2,
   File,
-  X
+  X,
+  Copy,
+  Flag,
+  MessageCircle,
+  AlertCircle
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -42,7 +46,7 @@ interface Trade {
   seller_released_at: string | null;
   created_at: string;
   completed_at: string | null;
-  expires_at: string | null; // This field is no longer used in the UI logic but kept for schema compatibility if needed elsewhere.
+  expires_at: string | null;
   buyer_profile?: {
     username: string;
     avatar_url: string | null;
@@ -81,6 +85,7 @@ export default function ActiveTrade() {
   const [loading, setLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [activeTab, setActiveTab] = useState<"actions" | "chat">("actions");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const supabase = createClient();
@@ -101,7 +106,7 @@ export default function ActiveTrade() {
 
       const now = Date.now();
       const createdTime = new Date(trade.created_at).getTime();
-      const expiryTime = createdTime + (60 * 60 * 1000); // 1 hour from creation
+      const expiryTime = createdTime + (60 * 60 * 1000);
       const remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
 
       setTimeRemaining(remaining);
@@ -128,7 +133,6 @@ export default function ActiveTrade() {
 
       if (tradeError) throw tradeError;
 
-      // Fetch buyer and seller profiles separately
       const { data: buyerProfile } = await supabase
         .from("user_profiles")
         .select("username, avatar_url, positive_ratings, negative_ratings")
@@ -154,6 +158,24 @@ export default function ActiveTrade() {
         .order("created_at", { ascending: true });
 
       if (messagesError) throw messagesError;
+
+      // Check if we need to add the initial instructions message
+      const hasInstructions = messagesData?.some(msg => msg.content.includes("is selling you"));
+      
+      if (!hasInstructions && messagesData) {
+        const sellerUsername = sellerProfile?.username || "Seller";
+        const instructionsMessage: TradeMessage = {
+          id: `instructions-${tradeId}`,
+          trade_id: tradeId,
+          sender_id: "system",
+          message_type: "system",
+          content: `${sellerUsername} is selling you ${tradeData.crypto_amount} ${tradeData.crypto_symbol}\n\n1. You must pay ${tradeData.fiat_amount.toLocaleString()} ${tradeData.fiat_currency} via ${tradeData.payment_method}\n\n2. They will share their bank details below\n\n3. When you have sent the money, please mark the trade as "paid"\n\n4. (It really helps if you upload a screenshot or PDF as a receipt of payment too)\n\n5. Then wait for ${sellerUsername} to confirm they have received payment\n\n6. When they do, they will release your ${tradeData.crypto_symbol} and the trade will be complete`,
+          file_url: null,
+          is_read: false,
+          created_at: tradeData.created_at,
+        };
+        messagesData.unshift(instructionsMessage);
+      }
 
       setMessages(messagesData || []);
     } catch (error) {
@@ -406,16 +428,21 @@ export default function ActiveTrade() {
   };
 
   const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: "Trade ID copied to clipboard",
+    });
   };
 
   if (loading) {
@@ -443,313 +470,343 @@ export default function ActiveTrade() {
     );
   }
 
+  const quickReplies = ["Hi", "Are you online?", "How can I pay?", "I paid"];
+
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-background border-b border-border">
-        <div className="container max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setLocation("/p2p")}
-                className="p-2 hover:bg-muted rounded-lg transition"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <div>
-                <h1 className="font-bold text-lg">Trade #{trade.id.slice(0, 8)}</h1>
-                <p className="text-sm text-muted-foreground">
-                  {trade.fiat_amount} {trade.fiat_currency} ⇄ {trade.crypto_amount}{" "}
-                  {trade.crypto_symbol}
-                </p>
-              </div>
+      <div className="bg-card border-b border-border p-4">
+        {/* Timer Bar - Show in chat tab */}
+        {activeTab === "chat" && (
+          <div className="flex items-center justify-between mb-3 bg-muted rounded-lg p-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-muted-foreground">Active now</span>
             </div>
-            <div className="flex items-center gap-4">
-              {timeRemaining > 0 ? (
-                <div className="flex items-center gap-2 bg-amber-500/10 text-amber-600 px-4 py-2 rounded-lg">
-                  <Clock className="h-4 w-4" />
-                  <span className="font-mono font-bold">{formatTime(timeRemaining)}</span>
-                </div>
-              ) : (
-                <Badge variant="destructive">Expired</Badge>
-              )}
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span className="text-sm font-mono">{formatTime(timeRemaining)}</span>
             </div>
           </div>
+        )}
+
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border-2 border-green-500">
+              <AvatarImage src={counterparty?.avatar_url || ""} />
+              <AvatarFallback className="bg-green-500/20 text-green-600 font-bold">
+                {counterparty?.username.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">{counterparty?.username}</span>
+                <span className="text-lg">🇳🇬</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-green-500 flex items-center gap-1">
+                  <ThumbsUp className="h-3 w-3" />
+                  {counterparty?.positive_ratings || 0}
+                </span>
+                <span className="text-red-500 flex items-center gap-1">
+                  <ThumbsDown className="h-3 w-3" />
+                  {counterparty?.negative_ratings || 0}
+                </span>
+              </div>
+            </div>
+          </div>
+          {activeTab === "actions" && (
+            <div className="text-right">
+              <div className="text-sm text-muted-foreground">Status</div>
+              <div className="flex items-center gap-2 text-yellow-500">
+                <Clock className="h-4 w-4" />
+                <span className="font-semibold">Active now</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+          <div className="text-sm font-semibold mb-1">
+            {isUserBuyer ? "Buying" : "Selling"} {trade.crypto_amount} {trade.crypto_symbol} FOR {trade.fiat_amount} {trade.fiat_currency}
+          </div>
+          <div className="text-xs text-muted-foreground">{trade.payment_method}</div>
         </div>
       </div>
 
-      <div className="container max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Trade Info */}
-          <div className="lg:col-span-1 space-y-4">
-            {/* Counterparty Card */}
+      {/* Main Content */}
+      <div className="p-4">
+        {activeTab === "actions" && (
+          <div className="space-y-4 pb-4">
+            {/* Status Card */}
             <Card className="p-4">
-              <div className="flex items-center gap-3 mb-4">
-                <Avatar className="h-14 w-14 border-2 border-green-500">
-                  <AvatarImage src={counterparty?.avatar_url || ""} />
-                  <AvatarFallback className="bg-green-500/20 text-green-600 font-bold text-lg">
-                    {counterparty?.username.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg">{counterparty?.username}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex items-center gap-1 bg-green-500/10 text-green-600 px-2 py-0.5 rounded text-sm">
-                      <ThumbsUp className="h-3 w-3" />
-                      <span>{counterparty?.positive_ratings || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1 bg-red-500/10 text-red-600 px-2 py-0.5 rounded text-sm">
-                      <ThumbsDown className="h-3 w-3" />
-                      <span>{counterparty?.negative_ratings || 0}</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <h3 className="font-semibold text-lg">Trade Started</h3>
               </div>
-            </Card>
 
-            {/* Trade Details Card */}
-            <Card className="p-4">
-              <h3 className="font-bold mb-3 flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
-                Trade Details
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-semibold">
-                    {trade.crypto_amount} {trade.crypto_symbol}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price</span>
-                  <span className="font-semibold">
-                    {trade.fiat_amount} {trade.fiat_currency}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rate</span>
-                  <span className="font-semibold">
-                    {trade.price.toLocaleString()} {trade.fiat_currency}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Payment</span>
-                  <span className="font-semibold">{trade.payment_method}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status</span>
-                  <Badge
-                    variant={
-                      trade.status === "completed"
-                        ? "default"
-                        : trade.status === "payment_sent"
-                        ? "secondary"
-                        : "outline"
-                    }
-                  >
-                    {trade.status.replace("_", " ").toUpperCase()}
-                  </Badge>
-                </div>
-              </div>
-            </Card>
-
-            {/* Escrow Status */}
-            {trade.escrow_id && (
-              <Card className="p-4 bg-green-500/10 border-green-500/20">
-                <div className="flex items-center gap-3">
-                  <div className="bg-green-500/20 p-2 rounded-full">
-                    <Shield className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-green-600">Escrow Protected</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Funds are safely held in escrow
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Instructions */}
-            <Card className="p-4 bg-blue-500/10 border-blue-500/20">
-              <h3 className="font-bold mb-3 text-blue-600">
-                {isUserBuyer ? "How to Buy" : "How to Sell"}
-              </h3>
-              <ol className="space-y-2 text-sm">
-                {isUserBuyer ? (
-                  <>
-                    <li>1. Send {trade.fiat_amount} {trade.fiat_currency} via {trade.payment_method}</li>
-                    <li>2. Upload payment proof below</li>
-                    <li>3. Click "I Have Paid" button</li>
-                    <li>4. Wait for seller to release crypto</li>
-                  </>
-                ) : (
-                  <>
-                    <li>1. Share your payment details in chat</li>
-                    <li>2. Wait for buyer to send payment</li>
-                    <li>3. Verify payment received</li>
-                    <li>4. Click "Release Crypto" to complete</li>
-                  </>
-                )}
-              </ol>
-            </Card>
-
-            {/* Payment Proof Upload */}
-            {isUserBuyer && trade.status === "pending" && (
-              <Card className="p-4">
-                <h3 className="font-bold mb-3">Upload Payment Proof</h3>
-                <label className="block">
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition cursor-pointer">
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      {uploadingProof ? "Uploading..." : "Click to upload receipt"}
-                    </p>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) uploadPaymentProof(file);
-                    }}
-                    disabled={uploadingProof}
-                  />
-                </label>
-                {trade.payment_proof_url && (
-                  <div className="mt-3 flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Proof uploaded</span>
-                  </div>
-                )}
-              </Card>
-            )}
-          </div>
-
-          {/* Right Column - Chat */}
-          <div className="lg:col-span-2">
-            <Card className="h-[calc(100vh-180px)] flex flex-col">
-              {/* Chat Header */}
-              <div className="p-4 border-b border-border">
-                <h3 className="font-bold">Trade Chat</h3>
-                <p className="text-sm text-muted-foreground">
-                  All messages are monitored for your safety
+              <div className="bg-muted rounded-lg p-4 mb-4">
+                <p className="text-sm mb-2">
+                  Please make a payment of <span className="text-green-500 font-semibold">{trade.fiat_amount} {trade.fiat_currency}</span> using{" "}
+                  <span className="text-primary">{trade.payment_method}</span>.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {trade.crypto_amount} {trade.crypto_symbol} will be added to your wallet
                 </p>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => {
-                  const isMine = message.sender_id === user?.id;
-                  const isSystem = message.message_type === "system";
+              <div className="bg-muted rounded-lg p-4">
+                <p className="text-sm mb-3">
+                  <span className="font-semibold">Once you've made the payment,</span> be sure to click{" "}
+                  <span className="text-green-500 font-semibold">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
+                </p>
 
-                  if (isSystem) {
-                    return (
-                      <div key={message.id} className="flex justify-center">
-                        <div className="bg-muted px-4 py-2 rounded-lg text-sm text-muted-foreground max-w-md text-center">
-                          {message.content}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                {isUserBuyer && trade.status === "pending" && (
+                  <>
+                    <Button
+                      onClick={markAsPaid}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-between px-4"
                     >
-                      <div className={`max-w-md ${isMine ? "order-2" : "order-1"}`}>
-                        <div
-                          className={`rounded-lg p-3 ${
-                            isMine
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
-                        >
-                          {message.message_type === "image" && message.file_url && (
-                            <img
-                              src={message.file_url}
-                              alt="Payment proof"
-                              className="rounded mb-2 max-w-full"
-                            />
-                          )}
-                          <p className="text-sm">{message.content}</p>
-                          <p
-                            className={`text-xs mt-1 ${
-                              isMine ? "text-primary-foreground/70" : "text-muted-foreground"
-                            }`}
-                          >
-                            {new Date(message.created_at).toLocaleTimeString()}
-                          </p>
-                        </div>
+                      <span>Paid</span>
+                      {trade.status === "payment_sent" && <CheckCircle2 className="h-5 w-5" />}
+                    </Button>
+                    <div className="text-center text-sm text-muted-foreground mt-2">
+                      Time left {formatTime(timeRemaining)}
+                    </div>
+                  </>
+                )}
+              </div>
+            </Card>
+
+            {/* Report Button */}
+            <Button variant="outline" className="w-full" onClick={openDispute}>
+              <Flag className="h-4 w-4 mr-2" />
+              Report Bad Behaviour
+            </Button>
+
+            {/* Warning Message */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 relative">
+              <button 
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                onClick={() => {}}
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <p className="text-sm text-foreground pr-6">
+                Keep trades within NoOnes. Some users may ask you to trade outside the NoOnes platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within NoOnes. If you choose to proceed outside NoOnes, note that we cannot help or support you if you are scammed during such trades.
+              </p>
+            </div>
+
+            {/* Cancel Trade Button */}
+            <Button 
+              variant="outline" 
+              className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+              onClick={cancelTrade}
+            >
+              Cancel Trade
+            </Button>
+
+            {/* Info Message */}
+            <div className="bg-muted rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+              <p className="text-xs text-muted-foreground">You haven't paid yet</p>
+            </div>
+
+            {/* Trade Information */}
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4">Trade Information</h3>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">RATE</span>
+                  <span className="text-sm font-semibold">
+                    {trade.price.toLocaleString()} {trade.fiat_currency}/{trade.crypto_symbol}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground">TRADE ID</span>
+                    <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono">{trade.id.slice(0, 11)}</span>
+                    <button
+                      onClick={() => copyToClipboard(trade.id)}
+                      className="text-muted-foreground hover:text-foreground transition"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">STARTED</span>
+                  <span className="text-sm">{formatDate(trade.created_at)}</span>
+                </div>
+              </div>
+            </Card>
+
+            {isUserSeller && trade.status === "payment_sent" && (
+              <Button onClick={releaseFunds} className="w-full bg-green-600 hover:bg-green-700">
+                <Shield className="h-4 w-4 mr-2" />
+                Release Crypto
+              </Button>
+            )}
+
+            {/* View Offer Button */}
+            <Button variant="outline" className="w-full">
+              View Offer
+            </Button>
+
+            {/* Take a Tour Button */}
+            <Button variant="outline" className="w-full">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Take a Tour
+            </Button>
+          </div>
+        )}
+
+        {activeTab === "chat" && (
+          <div className="flex flex-col" style={{ height: "calc(100vh - 280px)" }}>
+            {/* Moderator Bar */}
+            <div className="bg-card border-b border-border px-4 py-2 mb-3 flex items-center justify-between rounded-t-lg">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
+                <span className="text-sm text-muted-foreground">Moderator unavailable</span>
+              </div>
+              <button className="text-primary text-sm font-semibold">Translate 🌐</button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-3 mb-4 px-2">
+              {messages.map((message) => {
+                const isMine = message.sender_id === user?.id;
+                const isSystem = message.message_type === "system";
+
+                if (isSystem) {
+                  return (
+                    <div key={message.id} className="mb-3">
+                      <div className="bg-amber-800/80 px-4 py-3 rounded-lg text-sm text-white max-w-full whitespace-pre-line">
+                        {message.content}
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1 uppercase">
+                        {new Date(message.created_at).toLocaleDateString('en-US', { 
+                          month: 'long', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        }).toUpperCase()} AT {new Date(message.created_at).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
                     </div>
                   );
-                })}
-                <div ref={messagesEndRef} />
-              </div>
+                }
 
-              {/* Message Input */}
-              <div className="p-4 border-t border-border">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Type your message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                    className="flex-1"
-                  />
-                  <Button onClick={sendMessage} size="icon">
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
+                return (
+                  <div key={message.id}>
+                    <div
+                      className={`rounded-lg p-3 max-w-[80%] ${
+                        isMine
+                          ? "ml-auto bg-green-500/20 border border-green-500/30"
+                          : "bg-amber-800/80"
+                      }`}
+                    >
+                      {message.message_type === "image" && message.file_url && (
+                        <img
+                          src={message.file_url}
+                          alt="Payment proof"
+                          className="rounded mb-2 max-w-full"
+                        />
+                      )}
+                      <p className="text-sm whitespace-pre-line">{message.content}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Quick Replies */}
+            <div className="px-2 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground">SELECT A MESSAGE:</span>
+                <button className="bg-primary hover:opacity-90 px-4 py-2 rounded text-sm font-semibold flex items-center gap-1 text-primary-foreground">
+                  ⋮ OPTIONS
+                </button>
               </div>
-            </Card>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {quickReplies.map((reply) => (
+                  <button
+                    key={reply}
+                    onClick={() => setNewMessage(reply)}
+                    className="bg-muted hover:bg-accent px-4 py-2 rounded-lg text-sm whitespace-nowrap transition"
+                  >
+                    {reply}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-card border-t border-border px-4 py-3 rounded-b-lg">
+              <div className="flex gap-2 items-center">
+                <button className="text-muted-foreground hover:text-foreground p-2">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 5v14M5 12h14"/>
+                  </svg>
+                </button>
+                <Input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                  placeholder="Write a message..."
+                  className="flex-1"
+                />
+                <button
+                  onClick={sendMessage}
+                  className="text-primary hover:opacity-80 p-2"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 z-40">
-        <div className="container max-w-7xl mx-auto flex flex-wrap gap-3 justify-center">
-          {isUserBuyer && trade.status === "pending" && (
-            <Button
-              onClick={markAsPaid}
-              className="bg-green-600 hover:bg-green-700"
-              disabled={!trade.payment_proof_url}
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              I Have Paid
-            </Button>
-          )}
-
-          {isUserSeller && trade.status === "payment_sent" && (
-            <Button onClick={releaseFunds} className="bg-green-600 hover:bg-green-700">
-              <Shield className="h-4 w-4 mr-2" />
-              Release Crypto
-            </Button>
-          )}
-
-          {trade.status !== "completed" && trade.status !== "cancelled" && (
-            <>
-              <Button onClick={openDispute} variant="outline">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Open Dispute
-              </Button>
-              <Button onClick={cancelTrade} variant="destructive">
-                <X className="h-4 w-4 mr-2" />
-                Cancel Trade
-              </Button>
-            </>
-          )}
-
-          {trade.status === "completed" && (
-            <div className="flex items-center gap-2 text-green-600 font-semibold">
-              <CheckCircle2 className="h-5 w-5" />
-              <span>Trade Completed Successfully!</span>
-            </div>
-          )}
-        </div>
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex z-50">
+        <button
+          onClick={() => setActiveTab("actions")}
+          className={`flex-1 py-4 flex items-center justify-center gap-2 font-semibold transition-colors ${
+            activeTab === "actions"
+              ? "bg-green-600 text-white"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <CheckCircle2 className="h-5 w-5" />
+          Actions
+        </button>
+        <button
+          onClick={() => setActiveTab("chat")}
+          className={`flex-1 py-4 flex items-center justify-center gap-2 font-semibold transition-colors ${
+            activeTab === "chat"
+              ? "bg-green-600 text-white"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <MessageCircle className="h-5 w-5" />
+          Chat
+        </button>
       </div>
     </div>
   );
