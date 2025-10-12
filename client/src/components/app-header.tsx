@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard } from "lucide-react";
@@ -16,12 +16,58 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppSidebar } from "./app-sidebar";
 import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
 
 export function AppHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const { user, signOut } = useAuth();
   const [, setLocation] = useLocation();
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
+  const supabase = createClient();
+
+  const avatarTypes = [
+    { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
+    { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
+    { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
+    { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
+    { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
+    { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
+    { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
+    { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
+  ];
+
+  useEffect(() => {
+    if (user) {
+      fetchProfileAvatar();
+    }
+  }, [user]);
+
+  const fetchProfileAvatar = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('avatar_url, avatar_type')
+        .eq('id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile avatar:', error);
+        return;
+      }
+
+      if (data?.avatar_url) {
+        setProfileAvatar(data.avatar_url);
+      } else if (data?.avatar_type) {
+        const selectedAvatar = avatarTypes.find(a => a.id === data.avatar_type);
+        if (selectedAvatar) {
+          setProfileAvatar(selectedAvatar.image);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching profile avatar:', error);
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -105,7 +151,7 @@ export function AppHeader() {
                     data-testid="button-profile"
                   >
                     <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
-                      <AvatarImage src={user?.user_metadata?.avatar_url} alt="User avatar" />
+                      <AvatarImage src={profileAvatar || user?.user_metadata?.avatar_url} alt="User avatar" />
                       <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
                         {user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ?? 
                          user?.email?.substring(0, 2)?.toUpperCase() ?? 
