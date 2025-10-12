@@ -121,6 +121,7 @@ export function P2P() {
           return {
             id: offer.id,
             vendor: {
+              id: offer.user_id,
               name: traderName,
               avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${traderName}`,
               isVerified: false,
@@ -178,6 +179,7 @@ export function P2P() {
         return {
           id: offer.id,
           vendor: {
+            id: user?.id || offer.user_id,
             name: vendorName,
             avatar: avatarUrl,
             isVerified: (user?.positive_ratings || 0) > 10,
