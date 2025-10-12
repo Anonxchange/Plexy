@@ -25,6 +25,25 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import {
   User,
@@ -41,7 +60,8 @@ import {
   Check,
   HelpCircle,
   Menu,
-  X
+  X,
+  ChevronsUpDown
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 
@@ -90,6 +110,51 @@ export function AccountSettings() {
   const [priceAlerts, setPriceAlerts] = useState(true);
   const [newOffers, setNewOffers] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
+
+  // Payment method dialog
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentBankName, setPaymentBankName] = useState("");
+  const [paymentAccountNumber, setPaymentAccountNumber] = useState("");
+  const [paymentAccountName, setPaymentAccountName] = useState("");
+  const [paymentBankCode, setPaymentBankCode] = useState("");
+  const [customBankName, setCustomBankName] = useState("");
+  const [bankAddress, setBankAddress] = useState("");
+  const [openBankSelect, setOpenBankSelect] = useState(false);
+
+  // Nigerian Banks List
+  const nigerianBanks = [
+    { name: "Access Bank", code: "044" },
+    { name: "Guaranty Trust Bank (GTBank)", code: "058" },
+    { name: "First Bank of Nigeria", code: "011" },
+    { name: "United Bank for Africa (UBA)", code: "033" },
+    { name: "Zenith Bank", code: "057" },
+    { name: "Fidelity Bank", code: "070" },
+    { name: "Union Bank of Nigeria", code: "032" },
+    { name: "Sterling Bank", code: "232" },
+    { name: "Stanbic IBTC Bank", code: "221" },
+    { name: "Polaris Bank", code: "076" },
+    { name: "Wema Bank", code: "035" },
+    { name: "Ecobank Nigeria", code: "050" },
+    { name: "Keystone Bank", code: "082" },
+    { name: "FCMB (First City Monument Bank)", code: "214" },
+    { name: "Providus Bank", code: "101" },
+    { name: "Jaiz Bank", code: "301" },
+    { name: "Citibank Nigeria", code: "023" },
+    { name: "Heritage Bank", code: "030" },
+    { name: "Kuda Bank", code: "090267" },
+    { name: "ALAT by Wema", code: "035A" },
+    { name: "Opay", code: "999992" },
+    { name: "Palmpay", code: "999991" },
+    { name: "Moniepoint", code: "50515" },
+    { name: "VFD Microfinance Bank", code: "566" },
+    { name: "Standard Chartered Bank", code: "068" },
+    { name: "Titan Trust Bank", code: "102" },
+    { name: "Unity Bank", code: "215" },
+    { name: "Suntrust Bank", code: "100" },
+    { name: "Globus Bank", code: "103" },
+    { name: "Rubies Bank", code: "125" },
+    { name: "Custom Bank (Enter manually)", code: "CUSTOM" },
+  ];
 
   useEffect(() => {
     if (!loading && !user) {
@@ -227,6 +292,55 @@ export function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to update password",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSavePaymentMethod = async () => {
+    const finalBankName = paymentBankName === "Custom Bank (Enter manually)" ? customBankName : paymentBankName;
+    
+    if (!finalBankName || !paymentAccountNumber || !paymentAccountName) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .insert({
+          user_id: user?.id,
+          payment_type: 'Bank Transfer',
+          bank_name: finalBankName,
+          account_number: paymentAccountNumber,
+          account_name: paymentAccountName,
+          bank_code: paymentBankCode || null,
+          bank_address: bankAddress || null,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Payment method added successfully"
+      });
+
+      setShowPaymentDialog(false);
+      setPaymentBankName("");
+      setPaymentAccountNumber("");
+      setPaymentAccountName("");
+      setPaymentBankCode("");
+      setCustomBankName("");
+      setBankAddress("");
+    } catch (error) {
+      console.error('Error saving payment method:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save payment method",
         variant: "destructive"
       });
     }
@@ -561,7 +675,7 @@ export function AccountSettings() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Payment Methods</h3>
-        <Button>Add Payment Method</Button>
+        <Button onClick={() => setShowPaymentDialog(true)}>Add Payment Method</Button>
       </div>
       <Card>
         <CardContent className="p-6">
@@ -572,6 +686,138 @@ export function AccountSettings() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Add Bank Payment Method</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-1">
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Bank Name *</Label>
+                <Popover open={openBankSelect} onOpenChange={setOpenBankSelect}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openBankSelect}
+                      className="w-full justify-between"
+                    >
+                      {paymentBankName || "Select bank..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search bank..." />
+                      <CommandEmpty>
+                        <div className="py-6 text-center text-sm">
+                          <p className="text-muted-foreground mb-2">No bank found.</p>
+                          <p className="text-xs text-muted-foreground">
+                            Try selecting "Custom Bank (Enter manually)" to add your bank
+                          </p>
+                        </div>
+                      </CommandEmpty>
+                      <CommandGroup className="max-h-[300px] overflow-auto">
+                        {nigerianBanks.map((bank) => (
+                          <CommandItem
+                            key={bank.code}
+                            value={bank.name}
+                            onSelect={(currentValue) => {
+                              setPaymentBankName(currentValue === paymentBankName ? "" : currentValue);
+                              const selectedBank = nigerianBanks.find(b => b.name.toLowerCase() === currentValue.toLowerCase());
+                              if (selectedBank && selectedBank.code !== "CUSTOM") {
+                                setPaymentBankCode(selectedBank.code);
+                              } else {
+                                setPaymentBankCode("");
+                              }
+                              setOpenBankSelect(false);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                paymentBankName === bank.name ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {bank.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Can't find your bank? Select "Custom Bank (Enter manually)" from the list
+                </p>
+              </div>
+
+              {paymentBankName === "Custom Bank (Enter manually)" && (
+                <div className="space-y-2">
+                  <Label htmlFor="custom-bank-name">Custom Bank Name *</Label>
+                  <Input
+                    id="custom-bank-name"
+                    value={customBankName}
+                    onChange={(e) => setCustomBankName(e.target.value)}
+                    placeholder="Enter your bank name"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="account-number">Account Number *</Label>
+                <Input
+                  id="account-number"
+                  value={paymentAccountNumber}
+                  onChange={(e) => setPaymentAccountNumber(e.target.value)}
+                  placeholder="e.g., 1234567890"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="account-name">Account Name *</Label>
+                <Input
+                  id="account-name"
+                  value={paymentAccountName}
+                  onChange={(e) => setPaymentAccountName(e.target.value)}
+                  placeholder="e.g., John Doe"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bank-code">
+                  Bank Code {paymentBankName !== "Custom Bank (Enter manually)" && paymentBankName && "(Auto-filled)"}
+                </Label>
+                <Input
+                  id="bank-code"
+                  value={paymentBankCode}
+                  onChange={(e) => setPaymentBankCode(e.target.value)}
+                  placeholder="e.g., 011"
+                  disabled={paymentBankName !== "Custom Bank (Enter manually)" && paymentBankName !== ""}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bank-address">Bank Address (Optional)</Label>
+                <Input
+                  id="bank-address"
+                  value={bankAddress}
+                  onChange={(e) => setBankAddress(e.target.value)}
+                  placeholder="e.g., 123 Main Street, Lagos"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSavePaymentMethod}>
+              Save Payment Method
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
