@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   User, 
   Copy,
@@ -14,6 +14,9 @@ import {
   CheckCircle2,
   Users,
   ChevronDown,
+  Share2,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   Select,
@@ -22,20 +25,205 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { createClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+
+interface UserProfile {
+  id: string;
+  username: string;
+  country: string;
+  bio: string | null;
+  languages: string[];
+  created_at: string;
+  positive_feedback: number;
+  negative_feedback: number;
+  total_trades: number;
+  trade_partners: number;
+  is_verified: boolean;
+  phone_verified: boolean;
+  avatar_type: string | null;
+  avatar_url: string | null;
+}
+
+interface Offer {
+  id: string;
+  crypto_symbol: string;
+  fiat_currency: string;
+  payment_method: string;
+  price: number;
+  min_amount: number;
+  max_amount: number;
+  type: 'buy' | 'sell';
+}
+
+interface Feedback {
+  id: string;
+  from_user: string;
+  rating: 'positive' | 'negative';
+  comment: string;
+  created_at: string;
+  payment_method: string;
+  trade_count: number;
+}
 
 export function Profile() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const supabase = createClient();
+
   const [offerFilter, setOfferFilter] = useState("buying");
   const [feedbackFilter, setFeedbackFilter] = useState("buyers");
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    username: '',
+    bio: '',
+    languages: [] as string[],
+    avatar_type: 'default' as string,
+    avatar_url: null as string | null,
+  });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const avatarTypes = [
+    { id: 'default', label: 'Default', emoji: '👤' },
+    { id: 'trader', label: 'Trader', emoji: '💼' },
+    { id: 'crypto', label: 'Crypto', emoji: '₿' },
+    { id: 'robot', label: 'Robot', emoji: '🤖' },
+    { id: 'ninja', label: 'Ninja', emoji: '🥷' },
+    { id: 'astronaut', label: 'Astronaut', emoji: '👨‍🚀' },
+    { id: 'developer', label: 'Developer', emoji: '👨‍💻' },
+    { id: 'artist', label: 'Artist', emoji: '🎨' },
+  ];
 
   useEffect(() => {
     if (!loading && !user) {
       setLocation("/signin");
+    } else if (user) {
+      fetchProfileData();
+      fetchOffers();
+      fetchFeedbacks();
     }
   }, [user, loading, setLocation]);
 
-  if (loading) {
+  const fetchProfileData = async () => {
+    try {
+      setLoadingProfile(true);
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setProfileData(data);
+      } else {
+        // Create default profile if doesn't exist
+        const defaultProfile = {
+          id: user?.id, // Use id for the primary key
+          username: user?.email?.split('@')[0] || 'User',
+          country: 'Nigeria',
+          bio: null,
+          languages: ['English'],
+          positive_feedback: 0, // Default to 0
+          negative_feedback: 0, // Default to 0
+          total_trades: 0, // Default to 0
+          trade_partners: 0, // Default to 0
+          is_verified: false, // Default to false
+          phone_verified: false // Default to false
+        };
+
+        const { data: newProfile, error: createError } = await supabase
+          .from('user_profiles')
+          .insert(defaultProfile)
+          .select()
+          .single();
+
+        if (!createError && newProfile) {
+          setProfileData(newProfile);
+        } else if (createError) {
+          console.error('Error creating default profile:', createError);
+          toast({
+            title: "Error",
+            description: "Failed to create default profile",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load profile data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  const fetchOffers = async () => {
+    try {
+      const type = offerFilter === "buying" ? "buy" : "sell";
+      const { data, error } = await supabase
+        .from('p2p_offers') // Changed table name
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setOffers(data || []);
+    } catch (error) {
+      console.error('Error fetching offers:', error);
+    }
+  };
+
+  const fetchFeedbacks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('trade_feedback') // Changed table name
+        .select('*')
+        .eq('to_user_id', user?.id) // Changed column name
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setFeedbacks(data || []);
+    } catch (error) {
+      console.error('Error fetching feedbacks:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchOffers();
+    }
+  }, [offerFilter]);
+
+  useEffect(() => {
+    if (user) {
+      fetchFeedbacks();
+    }
+  }, [feedbackFilter]);
+
+  if (loading || loadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Loading...</p>
@@ -47,7 +235,130 @@ export function Profile() {
     return null;
   }
 
-  const username = user.email?.split('@')[0] || 'User';
+  const username = profileData?.username || user.email?.split('@')[0] || 'User';
+
+  const copyUsername = () => {
+    navigator.clipboard.writeText(`@${username}`);
+    toast({
+      title: "Copied!",
+      description: "Username copied to clipboard"
+    });
+  };
+
+  const handleEditProfile = () => {
+    setEditForm({
+      username: profileData?.username || '',
+      bio: profileData?.bio || '',
+      languages: profileData?.languages || ['English'],
+      avatar_type: profileData?.avatar_type || 'default',
+      avatar_url: profileData?.avatar_url || null,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingAvatar(true);
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+
+      setEditForm({
+        ...editForm,
+        avatar_type: 'custom',
+        avatar_url: data.publicUrl,
+      });
+
+      toast({
+        title: "Success!",
+        description: "Avatar uploaded successfully"
+      });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload avatar",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          username: editForm.username,
+          bio: editForm.bio,
+          languages: editForm.languages,
+          avatar_type: editForm.avatar_type,
+          avatar_url: editForm.avatar_url,
+        })
+        .eq('id', user?.id); // Use id for the primary key
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Profile updated successfully"
+      });
+
+      setEditDialogOpen(false);
+      fetchProfileData();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleShareProfile = async () => {
+    const profileUrl = `${window.location.origin}/profile/${user?.id}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `@${username}'s Profile`,
+          text: `Check out @${username}'s trading profile on Pexly`,
+          url: profileUrl,
+        });
+      } catch (error) {
+        // User cancelled or share failed
+        if (error instanceof Error && error.name !== 'AbortError') {
+          copyProfileLink(profileUrl);
+        }
+      }
+    } else {
+      copyProfileLink(profileUrl);
+    }
+  };
+
+  const copyProfileLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link Copied!",
+      description: "Profile link copied to clipboard"
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -70,12 +381,15 @@ export function Profile() {
 
               <div className="flex items-start gap-6 mb-6">
                 <div className="relative">
-                  <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center" 
-                       style={{
-                         clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)'
-                       }}>
-                    <User className="w-12 h-12 text-primary-foreground" />
-                  </div>
+                  <Avatar className="w-24 h-24">
+                    {profileData?.avatar_url ? (
+                      <AvatarImage src={profileData.avatar_url} alt={username} />
+                    ) : (
+                      <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
+                        {avatarTypes.find(a => a.id === profileData?.avatar_type)?.emoji || '👤'}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
                 </div>
 
                 <div className="flex-1">
@@ -85,15 +399,16 @@ export function Profile() {
                       variant="ghost" 
                       size="icon" 
                       className="h-8 w-8 text-primary hover:text-primary/80"
-                      onClick={() => navigator.clipboard.writeText(`@${username}`)}
+                      onClick={copyUsername}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-muted-foreground mb-4">Nigeria</p>
+                  <p className="text-muted-foreground mb-4">{profileData?.country || 'Nigeria'}</p>
                   <Button 
                     variant="ghost" 
                     className="text-primary hover:text-primary/80 font-medium"
+                    onClick={handleEditProfile}
                   >
                     Edit Profile
                   </Button>
@@ -106,29 +421,32 @@ export function Profile() {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1 text-primary">
                       <ThumbsUp className="h-4 w-4" />
-                      <span className="font-bold text-lg">345</span>
+                      <span className="font-bold text-lg">{profileData?.positive_feedback || 0}</span>
                     </div>
                     <div className="flex items-center gap-1 text-destructive">
                       <ThumbsDown className="h-4 w-4" />
-                      <span className="font-bold text-lg">0</span>
+                      <span className="font-bold text-lg">{profileData?.negative_feedback || 0}</span>
                     </div>
                   </div>
                 </div>
                 <div>
                   <p className="text-muted-foreground uppercase text-xs mb-2">Languages:</p>
-                  <p className="font-medium">English (English)</p>
+                  <p className="font-medium">{profileData?.languages?.join(', ') || 'English'}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground uppercase text-xs mb-2">Joined:</p>
-                  <p className="font-medium">2 years ago</p>
-                  <p className="text-muted-foreground text-xs">Apr 04, 2023</p>
+                  <p className="font-medium">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6 mb-6">
+        <Button 
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6 mb-6"
+          onClick={handleShareProfile}
+        >
+          <Share2 className="h-5 w-5 mr-2" />
           Share Profile
         </Button>
 
@@ -137,27 +455,31 @@ export function Profile() {
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-elevate-1 rounded-lg p-4 text-center">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
-                <p className="text-3xl font-bold">780</p>
+                <p className="text-3xl font-bold">{profileData?.total_trades || 0}</p>
               </div>
               <div className="bg-elevate-1 rounded-lg p-4 text-center">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trade Partners</p>
-                <p className="text-3xl font-bold">121</p>
+                <p className="text-3xl font-bold">{profileData?.trade_partners || 0}</p>
               </div>
             </div>
 
             <div className="mb-6">
               <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span className="text-sm">🇳🇬</span>
-                  <span className="font-medium">ID verified</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span className="text-sm">🇳🇬</span>
-                  <span className="font-medium">Phone verified</span>
-                </div>
+                {profileData?.is_verified && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm">🇳🇬</span>
+                    <span className="font-medium">ID verified</span>
+                  </div>
+                )}
+                {profileData?.phone_verified && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm">🇳🇬</span>
+                    <span className="font-medium">Phone verified</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -259,11 +581,36 @@ export function Profile() {
             </Select>
           </div>
 
-          <Card className="mb-4 bg-card border-border">
-            <CardContent className="p-8 text-center">
-              <p className="text-lg">No offers from active users.</p>
-            </CardContent>
-          </Card>
+          {offers.length === 0 ? (
+            <Card className="mb-4 bg-card border-border">
+              <CardContent className="p-8 text-center">
+                <p className="text-lg">No offers from active users.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            offers.map((offer) => (
+              <Card key={offer.id} className="mb-4 bg-card border-border">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-lg mb-2">
+                        {offer.type === 'buy' ? 'Buying' : 'Selling'} {offer.crypto_symbol}
+                      </h3>
+                      <Badge variant="secondary" className="mb-2">
+                        {offer.payment_method}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Price: {offer.price} {offer.fiat_currency}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Limits: {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
 
           <Button 
             variant="ghost" 
@@ -287,88 +634,155 @@ export function Profile() {
             </Select>
           </div>
 
-          <Card className="mb-4 bg-elevate-1 border-border">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-bold mb-1">BODE_OBA 🇳🇬</h3>
-                  <div className="flex items-center gap-2 mb-3">
-                    <ThumbsUp className="h-4 w-4 text-primary" />
-                    <span className="text-primary font-bold">Positive</span>
-                    <span className="text-muted-foreground ml-4">October 09, 2023</span>
+          {feedbacks.length === 0 ? (
+            <Card className="mb-4 bg-elevate-1 border-border">
+              <CardContent className="p-8 text-center">
+                <p className="text-lg">No feedback yet.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            feedbacks.map((feedback) => (
+              <Card key={feedback.id} className="mb-4 bg-elevate-1 border-border">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold mb-1">{feedback.from_user} 🇳🇬</h3>
+                      <div className="flex items-center gap-2 mb-3">
+                        {feedback.rating === 'positive' ? (
+                          <>
+                            <ThumbsUp className="h-4 w-4 text-primary" />
+                            <span className="text-primary font-bold">Positive</span>
+                          </>
+                        ) : (
+                          <>
+                            <ThumbsDown className="h-4 w-4 text-destructive" />
+                            <span className="text-destructive font-bold">Negative</span>
+                          </>
+                        )}
+                        <span className="text-muted-foreground ml-4">
+                          {new Date(feedback.created_at).toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="mb-3">
+                        {feedback.payment_method}
+                      </Badge>
+                      <p className="text-lg mb-2">"{feedback.comment}"</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-sm">Trades:</span>
+                        <Badge className="bg-primary/20 text-primary">{feedback.trade_count}</Badge>
+                      </div>
+                    </div>
                   </div>
-                  <Badge variant="secondary" className="mb-3">
-                    Bank Transfer NGN
-                  </Badge>
-                  <p className="text-lg mb-2">"HONEST"</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">Trades:</span>
-                    <Badge className="bg-primary/20 text-primary">6</Badge>
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="1" />
-                    <circle cx="12" cy="5" r="1" />
-                    <circle cx="12" cy="19" r="1" />
-                  </svg>
-                </Button>
-              </div>
-              <Button 
-                variant="outline" 
-                className="w-full"
-              >
-                View offer details →
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4 bg-elevate-1 border-border">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-bold mb-1">2minmax_pro 🇳🇬</h3>
-                  <div className="flex items-center gap-2 mb-3">
-                    <ThumbsUp className="h-4 w-4 text-primary" />
-                    <span className="text-primary font-bold">Positive</span>
-                    <span className="text-muted-foreground ml-4">September 28, 2023</span>
-                  </div>
-                  <Badge variant="secondary" className="mb-3">
-                    Bank Transfer NGN
-                  </Badge>
-                  <p className="text-lg mb-2">"Fast and reliable"</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">Trades:</span>
-                    <Badge className="bg-primary/20 text-primary">12</Badge>
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="1" />
-                    <circle cx="12" cy="5" r="1" />
-                    <circle cx="12" cy="19" r="1" />
-                  </svg>
-                </Button>
-              </div>
-              <Button 
-                variant="outline" 
-                className="w-full"
-              >
-                View offer details →
-              </Button>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </main>
-      
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your profile information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Avatar</Label>
+              <div className="flex items-center gap-4 mb-4">
+                <Avatar className="w-20 h-20">
+                  {editForm.avatar_url ? (
+                    <AvatarImage src={editForm.avatar_url} alt="Avatar preview" />
+                  ) : (
+                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                      {avatarTypes.find(a => a.id === editForm.avatar_type)?.emoji || '👤'}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="flex-1">
+                  <Label htmlFor="avatar-upload" className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 border border-border rounded-md hover:bg-muted transition-colors">
+                      <Upload className="h-4 w-4" />
+                      <span className="text-sm">Upload Image</span>
+                    </div>
+                    <Input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingAvatar}
+                    />
+                  </Label>
+                  {uploadingAvatar && <p className="text-xs text-muted-foreground mt-1">Uploading...</p>}
+                </div>
+              </div>
+              <div>
+                <Label className="mb-2 block">Or choose an avatar type:</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {avatarTypes.map((avatar) => (
+                    <button
+                      key={avatar.id}
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, avatar_type: avatar.id, avatar_url: null })}
+                      className={`p-3 border rounded-lg flex flex-col items-center gap-1 transition-colors ${
+                        editForm.avatar_type === avatar.id && !editForm.avatar_url
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:bg-muted'
+                      }`}
+                    >
+                      <span className="text-2xl">{avatar.emoji}</span>
+                      <span className="text-xs">{avatar.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                value={editForm.username}
+                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                placeholder="Enter username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                value={editForm.bio}
+                onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                placeholder="Tell us about yourself"
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="languages">Languages (comma-separated)</Label>
+              <Input
+                id="languages"
+                value={editForm.languages.join(', ')}
+                onChange={(e) => setEditForm({ 
+                  ...editForm, 
+                  languages: e.target.value.split(',').map(l => l.trim()).filter(l => l) 
+                })}
+                placeholder="e.g., English, Spanish, French"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveProfile}>
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <PexlyFooter />
     </div>
   );
