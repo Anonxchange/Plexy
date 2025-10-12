@@ -17,6 +17,9 @@ import {
   Share2,
   Upload,
   Image as ImageIcon,
+  Trophy,
+  Flag,
+  Wallet,
 } from "lucide-react";
 import {
   Select,
@@ -99,14 +102,14 @@ export function Profile() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const avatarTypes = [
-    { id: 'default', label: 'Default', emoji: '👤' },
-    { id: 'trader', label: 'Trader', emoji: '💼' },
-    { id: 'crypto', label: 'Crypto', emoji: '₿' },
-    { id: 'robot', label: 'Robot', emoji: '🤖' },
-    { id: 'ninja', label: 'Ninja', emoji: '🥷' },
-    { id: 'astronaut', label: 'Astronaut', emoji: '👨‍🚀' },
-    { id: 'developer', label: 'Developer', emoji: '👨‍💻' },
-    { id: 'artist', label: 'Artist', emoji: '🎨' },
+    { id: 'default', label: 'Default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
+    { id: 'trader', label: 'Trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
+    { id: 'crypto', label: 'Crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
+    { id: 'robot', label: 'Robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
+    { id: 'ninja', label: 'Ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
+    { id: 'astronaut', label: 'Astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
+    { id: 'developer', label: 'Developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
+    { id: 'artist', label: 'Artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
   ];
 
   useEffect(() => {
@@ -114,7 +117,6 @@ export function Profile() {
       setLocation("/signin");
     } else if (user) {
       fetchProfileData();
-      fetchOffers();
       fetchFeedbacks();
     }
   }, [user, loading, setLocation]);
@@ -138,7 +140,7 @@ export function Profile() {
         // Create default profile if doesn't exist
         const defaultProfile = {
           id: user?.id, // Use id for the primary key
-          username: user?.email?.split('@')[0] || 'User',
+          username: `user_${user?.id?.substring(0, 8)}`, // Temporary username, user should change it
           country: 'Nigeria',
           bio: null,
           languages: ['English'],
@@ -197,17 +199,35 @@ export function Profile() {
 
   const fetchFeedbacks = async () => {
     try {
+      // Check if trade_feedback table exists by trying to query it
       const { data, error } = await supabase
-        .from('trade_feedback') // Changed table name
+        .from('trade_feedback')
         .select('*')
-        .eq('to_user_id', user?.id) // Changed column name
+        .eq('to_user_id', user?.id)
+        .limit(1);
+
+      if (error) {
+        // Table doesn't exist yet, just set empty array
+        if (error.code === 'PGRST205') {
+          setFeedbacks([]);
+          return;
+        }
+        throw error;
+      }
+
+      // Now fetch all feedbacks
+      const { data: allFeedbacks, error: fetchError } = await supabase
+        .from('trade_feedback')
+        .select('*')
+        .eq('to_user_id', user?.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
-      setFeedbacks(data || []);
+      if (fetchError) throw fetchError;
+      setFeedbacks(allFeedbacks || []);
     } catch (error) {
       console.error('Error fetching feedbacks:', error);
+      setFeedbacks([]);
     }
   };
 
@@ -235,7 +255,7 @@ export function Profile() {
     return null;
   }
 
-  const username = profileData?.username || user.email?.split('@')[0] || 'User';
+  const username = profileData?.username || 'User';
 
   const copyUsername = () => {
     navigator.clipboard.writeText(`@${username}`);
@@ -301,18 +321,64 @@ export function Profile() {
 
   const handleSaveProfile = async () => {
     try {
+      // Validate username
+      if (!editForm.username || editForm.username.trim().length < 3) {
+        toast({
+          title: "Invalid Username",
+          description: "Username must be at least 3 characters long",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if username already exists (for other users)
+      const { data: existingUser } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('username', editForm.username)
+        .neq('id', user?.id)
+        .single();
+
+      if (existingUser) {
+        toast({
+          title: "Username Taken",
+          description: "This username is already in use. Please choose another.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const updateData: any = {
+        username: editForm.username.trim(),
+        bio: editForm.bio,
+        avatar_type: editForm.avatar_type,
+        avatar_url: editForm.avatar_url,
+      };
+
+      // Only include languages if the column exists (will be added by migration)
+      if (editForm.languages && editForm.languages.length > 0) {
+        updateData.languages = editForm.languages;
+      }
+
       const { error } = await supabase
         .from('user_profiles')
-        .update({
-          username: editForm.username,
-          bio: editForm.bio,
-          languages: editForm.languages,
-          avatar_type: editForm.avatar_type,
-          avatar_url: editForm.avatar_url,
-        })
-        .eq('id', user?.id); // Use id for the primary key
+        .update(updateData)
+        .eq('id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        // If languages column doesn't exist yet, try without it
+        if (error.code === 'PGRST204' && error.message.includes('languages')) {
+          delete updateData.languages;
+          const { error: retryError } = await supabase
+            .from('user_profiles')
+            .update(updateData)
+            .eq('id', user?.id);
+
+          if (retryError) throw retryError;
+        } else {
+          throw error;
+        }
+      }
 
       toast({
         title: "Success!",
@@ -325,7 +391,7 @@ export function Profile() {
       console.error('Error updating profile:', error);
       toast({
         title: "Error",
-        description: "Failed to update profile",
+        description: "Failed to update profile. Please check your database schema.",
         variant: "destructive"
       });
     }
@@ -362,16 +428,21 @@ export function Profile() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-6 text-primary">
-          {username} 🇳🇬 Profile
-        </h1>
+      <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-primary break-words flex items-center gap-2 flex-wrap">
+            {username} <span className="text-2xl">🇳🇬</span> Profile
+          </h1>
+        </div>
 
         <Card className="mb-6 bg-card border-border overflow-hidden">
           <CardContent className="p-0">
             <div className="bg-elevate-1 p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="text-3xl">1🏆</div>
+                <div className="flex items-center gap-2 text-primary">
+                  <Trophy className="h-8 w-8" />
+                  <span className="text-3xl font-bold">1</span>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 mb-6">
@@ -379,35 +450,43 @@ export function Profile() {
                 <span className="text-primary font-medium">Active now</span>
               </div>
 
-              <div className="flex items-start gap-6 mb-6">
-                <div className="relative">
-                  <Avatar className="w-24 h-24">
+              <div className="flex flex-col sm:flex-row items-start gap-6 mb-6">
+                <div className="relative mx-auto sm:mx-0">
+                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24">
                     {profileData?.avatar_url ? (
                       <AvatarImage src={profileData.avatar_url} alt={username} />
                     ) : (
-                      <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
-                        {avatarTypes.find(a => a.id === profileData?.avatar_type)?.emoji || '👤'}
-                      </AvatarFallback>
+                      <>
+                        <AvatarImage 
+                          src={avatarTypes.find(a => a.id === profileData?.avatar_type)?.image || avatarTypes[0].image} 
+                          alt={username} 
+                        />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          <User className="h-10 w-10 sm:h-12 sm:w-12" />
+                        </AvatarFallback>
+                      </>
                     )}
                   </Avatar>
                 </div>
 
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h2 className="text-2xl font-bold">@{username} 🇳🇬</h2>
+                <div className="flex-1 text-center sm:text-left w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row items-center gap-2 mb-2">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold break-all flex items-center gap-2">
+                      @{username} <span className="text-lg">🇳🇬</span>
+                    </h2>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8 text-primary hover:text-primary/80"
+                      className="h-8 w-8 text-primary hover:text-primary/80 flex-shrink-0"
                       onClick={copyUsername}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-muted-foreground mb-4">{profileData?.country || 'Nigeria'}</p>
+                  <p className="text-sm text-muted-foreground mb-4">{profileData?.country || 'Nigeria'}</p>
                   <Button 
                     variant="ghost" 
-                    className="text-primary hover:text-primary/80 font-medium"
+                    className="text-primary hover:text-primary/80 font-medium w-full sm:w-auto"
                     onClick={handleEditProfile}
                   >
                     Edit Profile
@@ -415,10 +494,17 @@ export function Profile() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 text-sm pt-6 border-t border-border">
+              {profileData?.bio && (
+                <div className="mb-4 pb-4 border-b border-border">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
+                  <p className="text-sm leading-relaxed">{profileData.bio}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm pt-6 border-t border-border">
                 <div>
                   <p className="text-muted-foreground uppercase text-xs mb-2">Feedback:</p>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 justify-center sm:justify-start">
                     <div className="flex items-center gap-1 text-primary">
                       <ThumbsUp className="h-4 w-4" />
                       <span className="font-bold text-lg">{profileData?.positive_feedback || 0}</span>
@@ -429,11 +515,11 @@ export function Profile() {
                     </div>
                   </div>
                 </div>
-                <div>
+                <div className="text-center sm:text-left">
                   <p className="text-muted-foreground uppercase text-xs mb-2">Languages:</p>
                   <p className="font-medium">{profileData?.languages?.join(', ') || 'English'}</p>
                 </div>
-                <div>
+                <div className="text-center sm:text-left">
                   <p className="text-muted-foreground uppercase text-xs mb-2">Joined:</p>
                   <p className="font-medium">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
@@ -452,14 +538,14 @@ export function Profile() {
 
         <Card className="mb-6 bg-card border-border">
           <CardContent className="p-6">
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="bg-elevate-1 rounded-lg p-4 text-center">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
-                <p className="text-3xl font-bold">{profileData?.total_trades || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold">{profileData?.total_trades || 0}</p>
               </div>
               <div className="bg-elevate-1 rounded-lg p-4 text-center">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trade Partners</p>
-                <p className="text-3xl font-bold">{profileData?.trade_partners || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold">{profileData?.trade_partners || 0}</p>
               </div>
             </div>
 
@@ -546,20 +632,20 @@ export function Profile() {
               For 30 days range
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="text-center sm:text-left">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trades Success</p>
                 <p className="text-xl">—</p>
               </div>
-              <div>
+              <div className="text-center sm:text-left">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Payment</p>
                 <p className="text-xl">—</p>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2 text-center sm:text-left">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Release</p>
                 <p className="text-xl">—</p>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2 text-center sm:text-left">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trades Volume</p>
                 <p className="text-xl">&lt; 100USD</p>
               </div>
@@ -644,9 +730,18 @@ export function Profile() {
             feedbacks.map((feedback) => (
               <Card key={feedback.id} className="mb-4 bg-elevate-1 border-border">
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold mb-1">{feedback.from_user} 🇳🇬</h3>
+                  <div className="flex items-start gap-4 mb-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${feedback.from_user}`} />
+                      <AvatarFallback>
+                        <User className="h-6 w-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
+                        {feedback.from_user}
+                        <span className="text-base">🇳🇬</span>
+                      </h3>
                       <div className="flex items-center gap-2 mb-3">
                         {feedback.rating === 'positive' ? (
                           <>
@@ -696,9 +791,15 @@ export function Profile() {
                   {editForm.avatar_url ? (
                     <AvatarImage src={editForm.avatar_url} alt="Avatar preview" />
                   ) : (
-                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                      {avatarTypes.find(a => a.id === editForm.avatar_type)?.emoji || '👤'}
-                    </AvatarFallback>
+                    <>
+                      <AvatarImage 
+                        src={avatarTypes.find(a => a.id === editForm.avatar_type)?.image || avatarTypes[0].image} 
+                        alt="Avatar preview" 
+                      />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        <User className="h-10 w-10" />
+                      </AvatarFallback>
+                    </>
                   )}
                 </Avatar>
                 <div className="flex-1">
@@ -733,7 +834,12 @@ export function Profile() {
                           : 'border-border hover:bg-muted'
                       }`}
                     >
-                      <span className="text-2xl">{avatar.emoji}</span>
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={avatar.image} alt={avatar.label} />
+                        <AvatarFallback>
+                          <User className="h-6 w-6" />
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="text-xs">{avatar.label}</span>
                     </button>
                   ))}
@@ -746,8 +852,12 @@ export function Profile() {
                 id="username"
                 value={editForm.username}
                 onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                placeholder="Enter username"
+                placeholder="Enter username (min 3 characters)"
+                minLength={3}
               />
+              <p className="text-xs text-muted-foreground">
+                Your username is different from your email and will be visible to other users
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="bio">Bio</Label>
@@ -755,9 +865,13 @@ export function Profile() {
                 id="bio"
                 value={editForm.bio}
                 onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                placeholder="Tell us about yourself"
-                rows={4}
+                placeholder="Tell us about yourself..."
+                className="min-h-24 resize-none"
+                maxLength={180}
               />
+              <p className="text-xs text-muted-foreground">
+                Maximum 180 characters ({editForm.bio.length}/180)
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="languages">Languages (comma-separated)</Label>
