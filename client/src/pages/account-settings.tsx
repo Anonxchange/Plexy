@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import {
   Select,
   SelectContent,
@@ -55,10 +59,178 @@ const settingsSections = [
 ];
 
 export function AccountSettings() {
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const supabase = createClient();
+  
   const [activeSection, setActiveSection] = useState("profile");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [nameDisplay, setNameDisplay] = useState("hide");
   const [phoneVerified, setPhoneVerified] = useState(true);
+  
+  // Profile data
+  const [profileData, setProfileData] = useState<any>(null);
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [phone, setPhone] = useState("");
+  const [currency, setCurrency] = useState("ngn");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  
+  // Security settings
+  const [smsAuth, setSmsAuth] = useState(false);
+  const [appAuth, setAppAuth] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Notification settings
+  const [tradeUpdates, setTradeUpdates] = useState(true);
+  const [priceAlerts, setPriceAlerts] = useState(true);
+  const [newOffers, setNewOffers] = useState(true);
+  const [marketingEmails, setMarketingEmails] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      setLocation("/signin");
+    } else if (user) {
+      fetchProfileData();
+    }
+  }, [user, loading]);
+
+  const fetchProfileData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data) {
+        setProfileData(data);
+        setUsername(data.username || '');
+        setBio(data.bio || '');
+        setPhone(data.phone || '');
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const updateData: any = {
+        username: username.trim(),
+        bio: bio,
+        phone: phone,
+      };
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(updateData)
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Profile updated successfully"
+      });
+
+      fetchProfileData();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingAvatar(true);
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ avatar_url: data.publicUrl })
+        .eq('id', user?.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Success!",
+        description: "Avatar uploaded successfully"
+      });
+
+      fetchProfileData();
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload avatar",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Password updated successfully"
+      });
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      console.error('Error updating password:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update password",
+        variant: "destructive"
+      });
+    }
+  };
 
   const SidebarContent = () => (
     <div className="p-4 space-y-2">
@@ -91,10 +263,12 @@ export function AccountSettings() {
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">(curieswapo@gmail.com)</span>
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-              ID verified
-            </Badge>
+            <span className="text-muted-foreground">({user?.email})</span>
+            {profileData?.is_verified && (
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                ID verified
+              </Badge>
+            )}
           </div>
           <button className="text-primary hover:underline text-sm">
             Change Email
@@ -151,7 +325,7 @@ export function AccountSettings() {
       {/* Preferred Currency */}
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Preferred currency</Label>
-        <Select defaultValue="ngn">
+        <Select value={currency} onValueChange={setCurrency}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -170,6 +344,7 @@ export function AccountSettings() {
       {/* Profile Avatar */}
       <div className="flex justify-center py-6">
         <Avatar className="h-32 w-32">
+          <AvatarImage src={profileData?.avatar_url} alt="Profile" />
           <AvatarFallback className="bg-muted">
             <User className="h-16 w-16 text-muted-foreground" />
           </AvatarFallback>
@@ -180,8 +355,17 @@ export function AccountSettings() {
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Username</Label>
         <div className="flex gap-2">
-          <Input defaultValue="OlamideBS" className="flex-1" />
-          <Button className="bg-primary hover:bg-primary/90">Save</Button>
+          <Input 
+            value={username} 
+            onChange={(e) => setUsername(e.target.value)}
+            className="flex-1" 
+          />
+          <Button 
+            className="bg-primary hover:bg-primary/90"
+            onClick={handleSaveProfile}
+          >
+            Save
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground">
           You can change your username <span className="font-semibold">only once</span>
@@ -189,10 +373,20 @@ export function AccountSettings() {
       </div>
 
       {/* Upload Image */}
-      <Button variant="outline" className="w-full justify-between h-14">
-        <span>Upload image</span>
-        <Upload className="h-5 w-5" />
-      </Button>
+      <Label htmlFor="avatar-upload" className="cursor-pointer">
+        <Button variant="outline" className="w-full justify-between h-14" disabled={uploadingAvatar}>
+          <span>{uploadingAvatar ? "Uploading..." : "Upload image"}</span>
+          <Upload className="h-5 w-5" />
+        </Button>
+        <Input
+          id="avatar-upload"
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarUpload}
+          disabled={uploadingAvatar}
+        />
+      </Label>
       <p className="text-sm text-muted-foreground">
         Upload a nice picture, preferably of yourself. If you upload any explicit or otherwise
         inappropriate image, we'll remove it immediately.
@@ -214,7 +408,8 @@ export function AccountSettings() {
             </SelectContent>
           </Select>
           <Input 
-            defaultValue="+2348134478949" 
+            value={phone} 
+            onChange={(e) => setPhone(e.target.value)}
             className="flex-1" 
             disabled={phoneVerified}
           />
@@ -253,11 +448,14 @@ export function AccountSettings() {
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Bio</Label>
         <Textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
           placeholder="Your bio appears on your public profile"
           className="min-h-32 resize-none"
+          maxLength={180}
         />
         <p className="text-sm text-muted-foreground">
-          Maximum 3 lines and 180 characters
+          Maximum 3 lines and 180 characters ({bio.length}/180)
         </p>
       </div>
     </div>
@@ -274,14 +472,14 @@ export function AccountSettings() {
                 <p className="font-medium">SMS Authentication</p>
                 <p className="text-sm text-muted-foreground">Receive codes via SMS</p>
               </div>
-              <Switch />
+              <Switch checked={smsAuth} onCheckedChange={setSmsAuth} />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Authenticator App</p>
                 <p className="text-sm text-muted-foreground">Use Google Authenticator or similar</p>
               </div>
-              <Switch />
+              <Switch checked={appAuth} onCheckedChange={setAppAuth} />
             </div>
           </CardContent>
         </Card>
@@ -293,17 +491,29 @@ export function AccountSettings() {
           <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
               <Label>Current Password</Label>
-              <Input type="password" />
+              <Input 
+                type="password" 
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>New Password</Label>
-              <Input type="password" />
+              <Input 
+                type="password" 
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>Confirm New Password</Label>
-              <Input type="password" />
+              <Input 
+                type="password" 
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
-            <Button className="w-full">Update Password</Button>
+            <Button className="w-full" onClick={handleUpdatePassword}>Update Password</Button>
           </CardContent>
         </Card>
       </div>
@@ -319,28 +529,28 @@ export function AccountSettings() {
               <p className="font-medium">Trade Updates</p>
               <p className="text-sm text-muted-foreground">Notifications about your trades</p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={tradeUpdates} onCheckedChange={setTradeUpdates} />
           </div>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Price Alerts</p>
               <p className="text-sm text-muted-foreground">Get notified of price changes</p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={priceAlerts} onCheckedChange={setPriceAlerts} />
           </div>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">New Offers</p>
               <p className="text-sm text-muted-foreground">Notifications about new trading offers</p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={newOffers} onCheckedChange={setNewOffers} />
           </div>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Marketing Emails</p>
               <p className="text-sm text-muted-foreground">Promotional content and updates</p>
             </div>
-            <Switch />
+            <Switch checked={marketingEmails} onCheckedChange={setMarketingEmails} />
           </div>
         </CardContent>
       </Card>
