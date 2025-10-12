@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -110,12 +112,71 @@ const mockTrades = [
 ];
 
 export function TradeHistory() {
+  const { user } = useAuth();
+  const supabase = createClient();
   const [selectedAccount, setSelectedAccount] = useState("all");
   const [expandedTrade, setExpandedTrade] = useState<number | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [completedTradesOpen, setCompletedTradesOpen] = useState(false);
+  const [tradeVolumes, setTradeVolumes] = useState({
+    BTC: 0,
+    USDT: 0,
+    ETH: 0,
+    USDC: 0,
+    SOL: 0,
+    TON: 0,
+    XMR: 0
+  });
+  const [completedCount, setCompletedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      fetchTradeStatistics();
+    }
+  }, [user]);
+
+  const fetchTradeStatistics = async () => {
+    try {
+      // Fetch all user trades
+      const { data: trades, error } = await supabase
+        .from('p2p_trades')
+        .select('*')
+        .or(`buyer_id.eq.${user?.id},seller_id.eq.${user?.id}`);
+
+      if (error) throw error;
+
+      if (trades) {
+        setTotalCount(trades.length);
+        const completed = trades.filter(t => t.status === 'completed');
+        setCompletedCount(completed.length);
+
+        // Calculate volumes by crypto
+        const volumes: any = {
+          BTC: 0,
+          USDT: 0,
+          ETH: 0,
+          USDC: 0,
+          SOL: 0,
+          TON: 0,
+          XMR: 0
+        };
+
+        completed.forEach(trade => {
+          const symbol = trade.crypto_symbol;
+          if (volumes.hasOwnProperty(symbol)) {
+            volumes[symbol] += parseFloat(trade.crypto_amount) || 0;
+          }
+        });
+
+        setTradeVolumes(volumes);
+      }
+    } catch (error) {
+      console.error('Error fetching trade statistics:', error);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -143,9 +204,7 @@ export function TradeHistory() {
     }
   };
 
-  const completedTrades = mockTrades.filter(t => t.status === "completed").length;
-  const totalTrades = mockTrades.length;
-  const completionRate = totalTrades > 0 ? Math.round((completedTrades / totalTrades) * 100) : 0;
+  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -401,7 +460,7 @@ export function TradeHistory() {
                 className="w-full justify-between h-14 px-6"
               >
                 <span className="font-semibold">
-                  Completed Trades: {completionRate}% (trades {completedTrades} out of {totalTrades})
+                  Completed Trades: {completionRate}% (trades {completedCount} out of {totalCount})
                 </span>
                 <ChevronDown className={`h-5 w-5 transition-transform ${completedTradesOpen ? 'rotate-180' : ''}`} />
               </Button>
@@ -415,7 +474,7 @@ export function TradeHistory() {
                       <Bitcoin className="h-5 w-5 text-orange-500" />
                     </div>
                     <div>
-                      <div className="font-semibold">0 BTC</div>
+                      <div className="font-semibold">{tradeVolumes.BTC.toFixed(8)} BTC</div>
                       <div className="text-xs text-muted-foreground">Bitcoin Trade Volume</div>
                     </div>
                   </div>
@@ -428,7 +487,7 @@ export function TradeHistory() {
                       <span className="text-lg">₮</span>
                     </div>
                     <div>
-                      <div className="font-semibold">0 USDT</div>
+                      <div className="font-semibold">{tradeVolumes.USDT.toFixed(2)} USDT</div>
                       <div className="text-xs text-muted-foreground">Tether Trade Volume</div>
                     </div>
                   </div>
@@ -441,7 +500,7 @@ export function TradeHistory() {
                       <span className="text-lg">◆</span>
                     </div>
                     <div>
-                      <div className="font-semibold">0 ETH</div>
+                      <div className="font-semibold">{tradeVolumes.ETH.toFixed(6)} ETH</div>
                       <div className="text-xs text-muted-foreground">Ethereum Trade Volume</div>
                     </div>
                   </div>
@@ -454,7 +513,7 @@ export function TradeHistory() {
                       <span className="text-lg">$</span>
                     </div>
                     <div>
-                      <div className="font-semibold">0 USDC</div>
+                      <div className="font-semibold">{tradeVolumes.USDC.toFixed(2)} USDC</div>
                       <div className="text-xs text-muted-foreground">USD Coin Trade Volume</div>
                     </div>
                   </div>
@@ -467,7 +526,7 @@ export function TradeHistory() {
                       <span className="text-lg">◎</span>
                     </div>
                     <div>
-                      <div className="font-semibold">0 SOL</div>
+                      <div className="font-semibold">{tradeVolumes.SOL.toFixed(4)} SOL</div>
                       <div className="text-xs text-muted-foreground">Solana Trade Volume</div>
                     </div>
                   </div>
@@ -480,7 +539,7 @@ export function TradeHistory() {
                       <span className="text-lg">Ɱ</span>
                     </div>
                     <div>
-                      <div className="font-semibold">0 XMR</div>
+                      <div className="font-semibold">{tradeVolumes.XMR.toFixed(6)} XMR</div>
                       <div className="text-xs text-muted-foreground">Monero Trade Volume</div>
                     </div>
                   </div>
@@ -493,7 +552,7 @@ export function TradeHistory() {
                       <span className="text-lg">💎</span>
                     </div>
                     <div>
-                      <div className="font-semibold">0 TON</div>
+                      <div className="font-semibold">{tradeVolumes.TON.toFixed(4)} TON</div>
                       <div className="text-xs text-muted-foreground">TON Trade Volume</div>
                     </div>
                   </div>
