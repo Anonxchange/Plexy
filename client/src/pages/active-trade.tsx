@@ -160,25 +160,28 @@ export default function ActiveTrade() {
     try {
       await supabase
         .from("p2p_trades")
-        .update({ status: "expired" })
+        .update({ status: "cancelled" })
         .eq("id", tradeId);
 
       await supabase.from("trade_messages").insert({
         trade_id: tradeId,
         sender_id: "system",
         message_type: "system",
-        content: "Trade expired due to payment timeout",
+        content: "Trade cancelled due to payment timeout",
       });
 
       toast({
-        title: "Trade Expired",
+        title: "Trade Cancelled",
         description: "Payment time limit exceeded. Trade has been cancelled.",
         variant: "destructive",
       });
 
-      fetchTradeData();
+      // Redirect to P2P page after 2 seconds
+      setTimeout(() => {
+        setLocation("/p2p");
+      }, 2000);
     } catch (error) {
-      console.error("Error expiring trade:", error);
+      console.error("Error cancelling trade:", error);
     }
   };
 
