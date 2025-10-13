@@ -26,6 +26,7 @@ export interface OfferCardProps {
   limits: { min: number; max: number };
   type: "buy" | "sell";
   cryptoSymbol?: string;
+  time_limit_minutes?: number;
 }
 
 const getCryptoIcon = (symbol: string) => {
@@ -50,6 +51,7 @@ export function OfferCard({
   limits, 
   type,
   cryptoSymbol = "BTC",
+  time_limit_minutes = 30,
   ...offer
 }: OfferCardProps) {
   const [showTradeDialog, setShowTradeDialog] = useState(false);
@@ -77,7 +79,7 @@ export function OfferCard({
       <TradeDialog 
         open={showTradeDialog} 
         onOpenChange={setShowTradeDialog}
-        offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, ...offer } as OfferCardProps}
+        offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, time_limit_minutes, ...offer } as OfferCardProps}
       />
       <Card className="hover:shadow-lg transition-shadow border-2 border-primary/50" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
         <CardContent className="p-4 space-y-3">
@@ -150,8 +152,9 @@ export function OfferCard({
                 <DollarSign className="h-4 w-4" />
                 {pricePerBTC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
               </div>
-              <div className="text-xs text-muted-foreground">
-                {limits.min.toLocaleString()} - {limits.max.toLocaleString()} {currency}
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                <span>{limits.min.toLocaleString()} - {limits.max.toLocaleString()} {currency}</span>
+                <span className="text-primary font-medium">| {time_limit_minutes} min</span>
               </div>
             </div>
             <Button 
