@@ -51,7 +51,7 @@ function Router() {
       <Route path="/wallet/lightning" component={Lightning} />
       <Route path="/wallet/buy-crypto" component={BuyCrypto} />
       <Route path="/gift-cards" component={GiftCards} />
-      <Route path="/trade-statistics" component={TradeHistory} />
+      <Route path="/trade-history" component={TradeHistory} />
       <Route path="/account-settings" component={AccountSettings} />
       <Route path="/signup" component={SignUp} />
       <Route path="/signin" component={SignIn} />
@@ -69,7 +69,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-statistics", "/account-settings"].includes(location) || location.startsWith("/trade/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings"].includes(location) || location.startsWith("/trade/");
 
   return (
     <QueryClientProvider client={queryClient}>
