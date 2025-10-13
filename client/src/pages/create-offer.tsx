@@ -32,6 +32,7 @@ export function CreateOffer() {
   const [minAmount, setMinAmount] = useState("14777");
   const [maxAmount, setMaxAmount] = useState("147769");
   const [totalQuantity, setTotalQuantity] = useState("");
+  const [timeLimit, setTimeLimit] = useState("30");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marketRate, setMarketRate] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -162,6 +163,7 @@ export function CreateOffer() {
         total_quantity: totalQuantityNum,
         country_restrictions: country ? [country] : null,
         payment_method_id: paymentMethod === "Bank Transfer" ? selectedPaymentMethodId : null,
+        time_limit_minutes: parseInt(timeLimit),
         is_active: true,
       });
 
@@ -398,6 +400,25 @@ export function CreateOffer() {
                 )}
               </CardContent>
             </Card>
+          </div>
+
+          {/* Payment Time Limit */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">Payment Time Limit</Label>
+            <Select value={timeLimit} onValueChange={setTimeLimit}>
+              <SelectTrigger className="h-12 bg-elevate-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 minutes</SelectItem>
+                <SelectItem value="30">30 minutes</SelectItem>
+                <SelectItem value="45">45 minutes</SelectItem>
+                <SelectItem value="60">60 minutes</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-2">
+              Time allowed for the buyer to complete payment
+            </p>
           </div>
 
           {/* Total Quantity */}
