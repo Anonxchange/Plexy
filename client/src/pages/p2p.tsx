@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase";
 import { OfferCard, OfferCardProps } from "@/components/offer-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
@@ -39,6 +41,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { Separator } from "@/components/ui/separator";
 
 // Custom icon components for crypto
 const EthIcon = () => (
@@ -61,6 +64,7 @@ const cryptocurrencies = [
 ];
 
 export function P2P() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
   const [selectedCrypto, setSelectedCrypto] = useState("BTC");
   const [amount, setAmount] = useState("");
@@ -74,16 +78,71 @@ export function P2P() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [offers, setOffers] = useState<OfferCardProps[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTrades, setActiveTrades] = useState<any[]>([]);
 
   useEffect(() => {
     fetchOffers();
+    fetchActiveTrades();
   }, [activeTab, selectedCrypto]);
+
+  const fetchActiveTrades = async () => {
+    if (!user?.id) return;
+
+    try {
+      const supabase = createClient();
+
+      const { data: userProfile } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("id", user.id)
+        .single();
+
+      if (!userProfile) return;
+
+      // Fetch active trades where user is buyer or seller
+      const { data: trades, error } = await supabase
+        .from("p2p_trades")
+        .select("*")
+        .or(`buyer_id.eq.${userProfile.id},seller_id.eq.${userProfile.id}`)
+        .in("status", ["pending", "payment_sent"])
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch user profiles separately for each trade
+      const tradesWithProfiles = await Promise.all(
+        (trades || []).map(async (trade) => {
+          const { data: buyerProfile } = await supabase
+            .from("user_profiles")
+            .select("username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg")
+            .eq("id", trade.buyer_id)
+            .single();
+
+          const { data: sellerProfile } = await supabase
+            .from("user_profiles")
+            .select("username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg")
+            .eq("id", trade.seller_id)
+            .single();
+
+          return {
+            ...trade,
+            buyer_profile: buyerProfile,
+            seller_profile: sellerProfile,
+          };
+        })
+      );
+
+      setActiveTrades(tradesWithProfiles);
+    } catch (error) {
+      console.error("Error fetching active trades:", error);
+    }
+  };
 
   const fetchOffers = async () => {
     setLoading(true);
     try {
       const supabase = createClient();
-      
+
       // Fetch offers with user profiles using the foreign key relationship
       const { data: offersData, error: offersError } = await supabase
         .from("p2p_offers")
@@ -151,10 +210,10 @@ export function P2P() {
       const formattedOffers: OfferCardProps[] = (offersData || []).map((offer: any) => {
         const user = offer.user_profiles;
         const vendorName = user?.username || user?.display_name || "Trader";
-        
+
         // Use the user's actual avatar from profile
         let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`;
-        
+
         if (user?.avatar_url) {
           // User has uploaded a custom avatar
           avatarUrl = user.avatar_url;
@@ -175,7 +234,7 @@ export function P2P() {
             avatarUrl = selectedAvatar.image;
           }
         }
-        
+
         return {
           id: offer.id,
           vendor: {
@@ -692,9 +751,92 @@ export function P2P() {
             <RotateCw className={`ml-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
 
+          {/* Active Trades Section - Always show if there are active trades */}
+          {activeTrades.length > 0 && (
+            <div className="space-y-4 mb-8">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                Active Trades ({activeTrades.length})
+              </h2>
+              <div className="grid gap-4">
+                {activeTrades.map((trade) => {
+                  const isUserBuyer = trade.buyer_id === user?.id;
+                  const counterparty = isUserBuyer ? trade.seller_profile : trade.buyer_profile;
+                  const avatarUrl = counterparty?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${counterparty?.username}`;
+
+                  return (
+                    <Card 
+                      key={trade.id} 
+                      className="hover:shadow-lg transition-shadow border-2 border-primary/50 cursor-pointer"
+                      onClick={() => window.location.href = `/trade/${trade.id}`}
+                    >
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-14 w-14">
+                              <AvatarImage src={avatarUrl} />
+                              <AvatarFallback className="text-base font-semibold bg-primary/10">
+                                {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-semibold text-sm">{counterparty?.username || "Unknown"}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {isUserBuyer ? "Selling to you" : "Buying from you"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-green-500">ACTIVE</div>
+                            <div className="text-xs text-muted-foreground">
+                              {trade.buyer_paid_at ? "Waiting for release" : "Awaiting payment"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator className="my-1" />
+
+                      <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-1">Amount</div>
+                            <div className="text-xl font-bold">
+                              {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-1">Crypto</div>
+                            <div className="text-xl font-bold">
+                              {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator className="my-1" />
+
+                      <div className="flex items-center justify-between pt-2">
+                          <div className="text-sm text-muted-foreground">{trade.payment_method}</div>
+                          <Button 
+                            size="sm" 
+                            className="bg-green-500 hover:bg-green-500/90"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = `/trade/${trade.id}`;
+                            }}
+                          >
+                            View Trade →
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Offers List */}
           {offers.length > 0 && (
-            <div className="mt-8 space-y-4">
+            <div className={activeTrades.length > 0 ? "space-y-4" : "mt-8 space-y-4"}>
               <h2 className="text-2xl font-bold">
                 {activeTab === "buy" ? "Buy" : "Sell"} Offers ({offers.length})
               </h2>
