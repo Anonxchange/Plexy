@@ -207,7 +207,7 @@ export function P2P() {
             vendor: {
               id: offer.user_id,
               name: traderName,
-              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${traderName}`,
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${offer.user_id}`,
               isVerified: false,
               trades: 0,
               responseTime: "5 min"
@@ -224,7 +224,8 @@ export function P2P() {
               max: offer.max_amount 
             },
             type: offer.offer_type,
-            cryptoSymbol: offer.crypto_symbol
+            cryptoSymbol: offer.crypto_symbol,
+            time_limit_minutes: offer.time_limit_minutes || 30
           };
         });
 
@@ -284,7 +285,8 @@ export function P2P() {
             max: offer.max_amount 
           },
           type: offer.offer_type,
-          cryptoSymbol: offer.crypto_symbol
+          cryptoSymbol: offer.crypto_symbol,
+          time_limit_minutes: offer.time_limit_minutes || 30
         };
       });
 
