@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign } from "lucide-react";
 import { TradeDialog } from "./trade-dialog";
 import { useAuth } from "@/lib/auth-context";
@@ -78,19 +79,20 @@ export function OfferCard({
         onOpenChange={setShowTradeDialog}
         offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, ...offer } as OfferCardProps}
       />
-      <Card className="hover:shadow-lg transition-shadow" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
+      <Card className="hover:shadow-lg transition-shadow border-2 border-primary/50" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
         <CardContent className="p-4 space-y-3">
           {/* Vendor Info Row */}
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-14 w-14">
               <AvatarImage src={vendor.avatar} />
-              <AvatarFallback className="text-sm font-semibold bg-primary/10">
+              <AvatarFallback className="text-base font-semibold bg-primary/10">
                 {vendor.name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm">{vendor.name}</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-base">{vendor.name}</span>
+                <span className="text-base">🇳🇬</span>
                 {vendor.isVerified && (
                   <span className="text-xs font-medium text-green-600 flex items-center gap-1">
                     <Circle className="h-2 w-2 fill-green-600" />
@@ -107,6 +109,8 @@ export function OfferCard({
               </div>
             </div>
           </div>
+
+          <Separator className="my-1" />
 
           {/* Pay and Receive Row */}
           <div className="grid grid-cols-2 gap-4">
