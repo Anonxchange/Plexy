@@ -257,7 +257,7 @@ export function TradeHistory() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="absolute right-0 top-12 z-50 w-full max-w-md">
-              <Card className="shadow-lg border-2">
+              <Card className="shadow-lg border">
                 <CardContent className="p-6 space-y-4">
                   {/* Account Level */}
                   <div className="bg-muted/30 rounded-lg p-4">
@@ -487,19 +487,19 @@ export function TradeHistory() {
 
         {/* Trade Statistics */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="p-4">
+          <Card className="p-4 shadow-lg border">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-500">{activeCount}</div>
               <div className="text-sm text-muted-foreground">Active Trades</div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="p-4 shadow-lg border">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-500">{completedCount}</div>
               <div className="text-sm text-muted-foreground">Completed</div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="p-4 shadow-lg border">
             <div className="text-center">
               <div className="text-2xl font-bold text-red-500">{canceledCount}</div>
               <div className="text-sm text-muted-foreground">Canceled</div>
@@ -509,7 +509,7 @@ export function TradeHistory() {
 
         {/* Completion Stats with Crypto Volumes */}
         <Collapsible open={completedTradesOpen} onOpenChange={setCompletedTradesOpen} className="mb-6">
-          <Card>
+          <Card className="shadow-lg border">
             <CollapsibleTrigger asChild>
               <Button 
                 variant="ghost" 
@@ -620,15 +620,17 @@ export function TradeHistory() {
 
         {/* My Past Trades Section */}
         <div className="mb-4">
-          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-            <div>
-              <h2 className="text-lg font-semibold">My Past Trades</h2>
-              <p className="text-sm text-muted-foreground">Mar 1, 2025 - Mar 31, 2025</p>
+          <Card className="shadow-lg border">
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <h2 className="text-lg font-semibold">My Past Trades</h2>
+                <p className="text-sm text-muted-foreground">Mar 1, 2025 - Mar 31, 2025</p>
+              </div>
+              <Button variant="ghost" size="icon">
+                <Copy className="h-5 w-5" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon">
-              <Copy className="h-5 w-5" />
-            </Button>
-          </div>
+          </Card>
         </div>
 
         {/* Trade List */}
@@ -647,7 +649,7 @@ export function TradeHistory() {
               const type = isUserBuyer ? "buy" : "sell";
 
               return (
-                <Card key={trade.id} className="overflow-hidden">
+                <Card key={trade.id} className="overflow-hidden shadow-lg border">
                   <Collapsible
                     open={expandedTrade === trade.id}
                     onOpenChange={() => setExpandedTrade(expandedTrade === trade.id ? null : trade.id)}
@@ -736,7 +738,7 @@ export function TradeHistory() {
 
         {/* Empty State (when no trades) */}
         {!loading && trades.length === 0 && (
-          <Card className="p-12 text-center">
+          <Card className="p-12 text-center shadow-lg border">
             <div className="flex flex-col items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                 <Bitcoin className="h-8 w-8 text-muted-foreground" />
