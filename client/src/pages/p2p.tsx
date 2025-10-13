@@ -38,7 +38,10 @@ import {
   CreditCard,
   Gift,
   Building2,
-  Smartphone
+  Smartphone,
+  Circle,
+  ArrowRight,
+  ThumbsUp
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Separator } from "@/components/ui/separator";
@@ -754,15 +757,27 @@ export function P2P() {
           {/* Active Trades Section - Always show if there are active trades */}
           {activeTrades.length > 0 && (
             <div className="space-y-4 mb-8">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-                Active Trades ({activeTrades.length})
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                  Active Trades ({activeTrades.length})
+                </h2>
+                <Button 
+                  variant="ghost" 
+                  className="text-primary hover:text-primary/90 font-semibold"
+                  onClick={() => window.location.href = '/trade-history'}
+                >
+                  View All →
+                </Button>
+              </div>
               <div className="grid gap-4">
-                {activeTrades.map((trade) => {
+                {activeTrades.slice(0, 3).map((trade) => {
                   const isUserBuyer = trade.buyer_id === user?.id;
                   const counterparty = isUserBuyer ? trade.seller_profile : trade.buyer_profile;
-                  const avatarUrl = counterparty?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${counterparty?.username}`;
+
+                  // Use the current user's avatar
+                  const userProfile = isUserBuyer ? trade.buyer_profile : trade.seller_profile;
+                  const userAvatarUrl = userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'user'}`;
 
                   return (
                     <Card 
@@ -771,59 +786,81 @@ export function P2P() {
                       onClick={() => window.location.href = `/trade/${trade.id}`}
                     >
                       <CardContent className="p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-14 w-14">
-                              <AvatarImage src={avatarUrl} />
-                              <AvatarFallback className="text-base font-semibold bg-primary/10">
-                                {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-semibold text-sm">{counterparty?.username || "Unknown"}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {isUserBuyer ? "Selling to you" : "Buying from you"}
-                              </div>
+                        {/* User Info Row */}
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-14 w-14">
+                            <AvatarImage src={userAvatarUrl} />
+                            <AvatarFallback className="text-base font-semibold bg-primary/10">
+                              {userProfile?.username?.substring(0, 2).toUpperCase() || user?.email?.substring(0, 2).toUpperCase() || "ME"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-base">{userProfile?.username || "You"}</span>
+                              <span className="text-base">🇳🇬</span>
+                              {(userProfile?.positive_ratings || 0) > 10 && (
+                                <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                                  <Circle className="h-2 w-2 fill-green-600" />
+                                  POWER
+                                </span>
+                              )}
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-bold text-green-500">ACTIVE</div>
-                            <div className="text-xs text-muted-foreground">
-                              {trade.buyer_paid_at ? "Waiting for release" : "Awaiting payment"}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                              <ThumbsUp className="h-3 w-3" />
+                              <span>100%</span>
+                              <span>{userProfile?.total_trades || 0} Trades</span>
+                              <Circle className="h-1 w-1 fill-green-500" />
+                              <span className="text-green-500">Active now</span>
                             </div>
                           </div>
                         </div>
 
                         <Separator className="my-1" />
 
-                      <div className="grid grid-cols-2 gap-4">
+                        {/* Pay and Receive Row */}
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <div className="text-sm text-muted-foreground mb-1">Amount</div>
+                            <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                              {isUserBuyer ? "Pay" : "Receive"} {trade.payment_method}
+                              {trade.fiat_currency === "NGN" && " 🇳🇬"}
+                              {trade.fiat_currency === "USD" && " 🇺🇸"}
+                              {trade.fiat_currency === "EUR" && " 🇪🇺"}
+                              {trade.fiat_currency === "GBP" && " 🇬🇧"}
+                            </div>
                             <div className="text-xl font-bold">
                               {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground mb-1">Crypto</div>
+                            <div className="text-sm text-muted-foreground mb-1">
+                              {isUserBuyer ? "Receive" : "Pay"} ({trade.crypto_symbol})
+                            </div>
                             <div className="text-xl font-bold">
                               {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
                             </div>
                           </div>
                         </div>
 
-                        <Separator className="my-1" />
-
-                      <div className="flex items-center justify-between pt-2">
-                          <div className="text-sm text-muted-foreground">{trade.payment_method}</div>
+                        {/* Status and Button Row */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-green-600 flex items-center gap-1">
+                              <Circle className="h-2 w-2 fill-green-600 animate-pulse" />
+                              {trade.buyer_paid_at ? "Waiting for release" : "Awaiting payment"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Trade ID: {trade.id.substring(0, 8)}...
+                            </div>
+                          </div>
                           <Button 
-                            size="sm" 
-                            className="bg-green-500 hover:bg-green-500/90"
+                            className="bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold gap-2 shrink-0"
                             onClick={(e) => {
                               e.stopPropagation();
                               window.location.href = `/trade/${trade.id}`;
                             }}
                           >
-                            View Trade →
+                            View Trade
+                            <ArrowRight className="h-4 w-4" />
                           </Button>
                         </div>
                       </CardContent>
