@@ -82,17 +82,40 @@ export function P2P() {
   const [offers, setOffers] = useState<OfferCardProps[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTrades, setActiveTrades] = useState<any[]>([]);
+  const supabase = createClient();
 
   useEffect(() => {
     fetchOffers();
     fetchActiveTrades();
-  }, [activeTab, selectedCrypto]);
+
+    // Subscribe to trade status changes
+    if (user?.id) {
+      const channel = supabase
+        .channel('active-trades-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'p2p_trades',
+          },
+          () => {
+            // Refresh active trades when any trade is updated
+            fetchActiveTrades();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        channel.unsubscribe();
+      };
+    }
+  }, [activeTab, selectedCrypto, user?.id]);
 
   const fetchActiveTrades = async () => {
     if (!user?.id) return;
 
     try {
-      const supabase = createClient();
 
       const { data: userProfile } = await supabase
         .from("user_profiles")
@@ -102,7 +125,7 @@ export function P2P() {
 
       if (!userProfile) return;
 
-      // Fetch active trades where user is buyer or seller
+      // Fetch active trades where user is buyer or seller (only pending and payment_sent)
       const { data: trades, error } = await supabase
         .from("p2p_trades")
         .select("*")
@@ -144,7 +167,6 @@ export function P2P() {
   const fetchOffers = async () => {
     setLoading(true);
     try {
-      const supabase = createClient();
 
       // Fetch offers with user profiles using the foreign key relationship
       const { data: offersData, error: offersError } = await supabase
