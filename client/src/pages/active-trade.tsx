@@ -87,6 +87,7 @@ export default function ActiveTrade() {
   const [uploadingProof, setUploadingProof] = useState(false);
   const [activeTab, setActiveTab] = useState<"actions" | "chat">("actions");
   const [currentUserProfileId, setCurrentUserProfileId] = useState<string | null>(null);
+  const [sellerBankDetails, setSellerBankDetails] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const supabase = createClient();
@@ -219,6 +220,26 @@ export default function ActiveTrade() {
       
       setTrade(fullTradeData);
 
+      // Fetch seller's payment method details if Bank Transfer
+      const paymentMethod = tradeData.payment_method?.toLowerCase();
+      if (paymentMethod && (paymentMethod === "bank transfer" || paymentMethod.includes("bank"))) {
+        const { data: offer } = await supabase
+          .from("p2p_offers")
+          .select("payment_method_id")
+          .eq("id", tradeData.offer_id)
+          .single();
+
+        if (offer?.payment_method_id) {
+          const { data: paymentMethodDetails } = await supabase
+            .from("payment_methods")
+            .select("*")
+            .eq("id", offer.payment_method_id)
+            .single();
+
+          setSellerBankDetails(paymentMethodDetails);
+        }
+      }
+
       const { data: messagesData, error: messagesError } = await supabase
         .from("trade_messages")
         .select("*")
@@ -229,7 +250,7 @@ export default function ActiveTrade() {
 
       const hasInstructions = messagesData?.some(msg => msg.content.includes("is selling you"));
       
-      if (!hasInstructions && messagesData) {
+      if (!hasInstructions && messagesData && tradeId) {
         const sellerUsername = sellerProfile?.username || "Seller";
         const instructionsMessage: TradeMessage = {
           id: `instructions-${tradeId}`,
@@ -242,6 +263,21 @@ export default function ActiveTrade() {
           created_at: tradeData.created_at,
         };
         messagesData.unshift(instructionsMessage);
+      }
+
+      // Add bank details message in chat for buyers
+      if (sellerBankDetails && !messagesData?.some(msg => msg.content.includes("Bank Details"))) {
+        const bankDetailsMessage: TradeMessage = {
+          id: `bank-details-${tradeId}`,
+          trade_id: tradeId,
+          sender_id: "system",
+          message_type: "system",
+          content: `💳 SELLER'S BANK DETAILS\n\nBank Name: ${sellerBankDetails.bank_name}\nAccount Name: ${sellerBankDetails.account_name}\nAccount Number: ${sellerBankDetails.account_number}${sellerBankDetails.bank_code ? `\nBank Code: ${sellerBankDetails.bank_code}` : ''}\n\nPlease transfer ${tradeData.fiat_amount.toLocaleString()} ${tradeData.fiat_currency} to this account.`,
+          file_url: null,
+          is_read: false,
+          created_at: tradeData.created_at,
+        };
+        messagesData.push(bankDetailsMessage);
       }
 
       setMessages(messagesData || []);
@@ -574,25 +610,25 @@ export default function ActiveTrade() {
               <ArrowLeft className="h-5 w-5" />
             </button>
             
-            <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-primary flex-shrink-0">
+            <Avatar className="h-12 w-12 sm:h-14 sm:w-14 border-2 border-primary flex-shrink-0">
               <AvatarImage src={counterparty?.avatar_url || ""} />
-              <AvatarFallback className="bg-primary/20 text-primary font-bold text-sm sm:text-base">
-                {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
+              <AvatarFallback className="bg-primary/20 text-primary font-bold text-lg sm:text-xl">
+                {counterparty?.username?.substring(0, 2).toUpperCase() || "AN"}
               </AvatarFallback>
             </Avatar>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-                <span className="font-semibold text-base sm:text-lg truncate">{counterparty?.username || "Unknown"}</span>
-                <span className="text-base sm:text-lg flex-shrink-0">🇳🇬</span>
+                <span className="font-semibold text-lg sm:text-xl truncate">{counterparty?.username || "Unknown"}</span>
+                <span className="text-lg sm:text-xl flex-shrink-0">🇳🇬</span>
               </div>
-              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm flex-wrap">
+              <div className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base flex-wrap">
                 <span className="text-primary flex items-center gap-1">
-                  <ThumbsUp className="h-3 w-3" />
+                  <ThumbsUp className="h-4 w-4" />
                   {counterparty?.positive_ratings || 0}
                 </span>
                 <span className="text-red-500 flex items-center gap-1">
-                  <ThumbsDown className="h-3 w-3" />
+                  <ThumbsDown className="h-4 w-4" />
                   {counterparty?.negative_ratings || 0}
                 </span>
                 <div className="flex items-center gap-1 text-green-500">
@@ -602,38 +638,30 @@ export default function ActiveTrade() {
               </div>
             </div>
 
-            {/* Current User Avatar */}
-            <Avatar className="h-14 w-14 border-2 border-border flex-shrink-0">
-              <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
-              <AvatarFallback className="bg-muted text-foreground font-bold text-base">
-                {user?.user_metadata?.username?.substring(0, 2).toUpperCase() || "ME"}
-              </AvatarFallback>
-            </Avatar>
-
             <div className="flex flex-col items-end flex-shrink-0">
-              <div className="flex items-center gap-1 text-muted-foreground text-xs sm:text-sm">
-                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="font-mono text-xs sm:text-sm">{formatTime(timeRemaining)}</span>
+              <div className="flex items-center gap-1 text-muted-foreground text-sm sm:text-base">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="font-mono text-sm sm:text-base">{formatTime(timeRemaining)}</span>
               </div>
             </div>
           </div>
 
           {/* Trade Summary */}
-          <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 sm:p-3">
-            <div className="text-xs sm:text-sm font-semibold break-words">
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 sm:p-4">
+            <div className="text-sm sm:text-base font-semibold break-words">
               {isUserBuyer ? "BUYING" : "SELLING"} {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} FOR {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
             </div>
-            <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">{trade.payment_method}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">{trade.payment_method}</div>
           </div>
         </div>
 
         {/* Moderator Status */}
         <div className="px-3 sm:px-4 pb-3 flex items-center justify-between border-t border-border pt-3">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full"></div>
-            <span className="text-xs sm:text-sm text-muted-foreground">Moderator unavailable</span>
+            <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-muted-foreground rounded-full"></div>
+            <span className="text-sm sm:text-base text-muted-foreground">Moderator unavailable</span>
           </div>
-          <button className="text-primary text-xs sm:text-sm font-semibold flex items-center gap-1">
+          <button className="text-primary text-sm sm:text-base font-semibold flex items-center gap-1">
             Translate 🌐
           </button>
         </div>
@@ -649,8 +677,8 @@ export default function ActiveTrade() {
               <span className="text-base sm:text-lg font-semibold">Trade Started</span>
             </div>
 
-            {/* Payment Instruction Card */}
-            {isUserBuyer && trade.status === "pending" && (
+            {/* Buyer: Payment Instruction Card - Show only if NOT paid yet */}
+            {isUserBuyer && trade.status === "pending" && !trade.buyer_paid_at && (
               <>
                 <Card className="p-4 sm:p-5 bg-[#1a1a1a] border border-border">
                   <p className="text-base sm:text-lg font-medium mb-2">
@@ -659,6 +687,44 @@ export default function ActiveTrade() {
                   <p className="text-sm text-muted-foreground mb-6">
                     {trade.crypto_amount} {trade.crypto_symbol} will be added to your {trade.crypto_symbol === 'USDT' ? 'Tether' : trade.crypto_symbol} wallet
                   </p>
+
+                  {/* Bank Details Display */}
+                  {sellerBankDetails && (
+                    <div className="bg-muted/50 rounded-lg p-3 mb-4">
+                      <p className="text-sm font-semibold mb-3 text-primary">Seller's Bank Details</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Bank Name:</span>
+                          <span className="font-medium">{sellerBankDetails.bank_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Account Name:</span>
+                          <span className="font-medium">{sellerBankDetails.account_name}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Account Number:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium font-mono">{sellerBankDetails.account_number}</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(sellerBankDetails.account_number);
+                                toast({ title: "Copied!", description: "Account number copied to clipboard" });
+                              }}
+                              className="text-primary hover:text-primary/80 transition"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        {sellerBankDetails.bank_code && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Bank Code:</span>
+                            <span className="font-medium">{sellerBankDetails.bank_code}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="border-t border-border pt-4 mb-4">
                     <p className="text-sm sm:text-base mb-4">
@@ -689,7 +755,17 @@ export default function ActiveTrade() {
               </>
             )}
 
-            {/* Seller: Waiting for Payment */}
+            {/* Buyer: Waiting for Seller to Release - Show after buyer paid */}
+            {isUserBuyer && trade.status === "pending" && trade.buyer_paid_at && (
+              <Card className="p-4 sm:p-5 bg-green-900/20 border border-green-600/30">
+                <div className="flex items-center justify-center gap-2 py-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <span className="text-sm sm:text-base">Payment marked as sent. Waiting for seller to release crypto...</span>
+                </div>
+              </Card>
+            )}
+
+            {/* Seller: Waiting for Payment - Show only if buyer hasn't paid */}
             {isUserSeller && trade.status === "pending" && !trade.buyer_paid_at && (
               <Card className="p-4 sm:p-5 bg-[#1a1a1a] border border-border">
                 <p className="text-base sm:text-lg font-medium mb-2">
@@ -708,17 +784,17 @@ export default function ActiveTrade() {
               </Card>
             )}
 
-            {/* Seller: Release Funds Card */}
+            {/* Seller: Release Funds Card - Show only after buyer paid */}
             {isUserSeller && trade.status === "pending" && trade.buyer_paid_at && (
-              <Card className="p-3 sm:p-4 bg-gradient-to-br from-orange-500/10 to-amber-500/5 border-orange-500/20">
+              <Card className="p-3 sm:p-4 bg-gradient-to-br from-lime-500/10 to-green-500/5 border-lime-500/20">
                 <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-lime-500" />
                   <h3 className="font-semibold text-sm sm:text-base">Confirm Payment</h3>
                 </div>
                 <p className="text-xs sm:text-sm mb-3 sm:mb-4">
                   Buyer has marked payment as sent. Verify and release {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
                 </p>
-                <Button onClick={releaseFunds} className="w-full bg-orange-600 hover:bg-orange-700 h-11 sm:h-12 text-sm sm:text-base font-semibold">
+                <Button onClick={releaseFunds} className="w-full bg-lime-500 hover:bg-lime-600 text-black h-11 sm:h-12 text-sm sm:text-base font-semibold">
                   Release Crypto
                   <Shield className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
                 </Button>
@@ -776,7 +852,7 @@ export default function ActiveTrade() {
             )}
 
             {/* Cancel Trade Button */}
-            {isUserBuyer && trade.status === "pending" && (
+            {isUserBuyer && trade.status === "pending" && !trade.buyer_paid_at && (
               <Button
                 variant="outline"
                 onClick={cancelTrade}
@@ -784,24 +860,6 @@ export default function ActiveTrade() {
               >
                 Cancel Trade
               </Button>
-            )}
-
-            {/* Payment Status Indicator */}
-            {isUserBuyer && trade.status === "pending" && !trade.buyer_paid_at && (
-              <div className="flex items-center justify-center gap-2 py-3 text-sm sm:text-base text-muted-foreground">
-                <AlertCircle className="h-5 w-5" />
-                <span>You haven't paid yet</span>
-              </div>
-            )}
-
-            {/* Waiting for Seller to Release */}
-            {isUserBuyer && trade.status === "pending" && trade.buyer_paid_at && (
-              <Card className="p-4 sm:p-5 bg-green-900/20 border border-green-600/30">
-                <div className="flex items-center justify-center gap-2 py-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  <span className="text-sm sm:text-base">Payment marked as sent. Waiting for seller to release crypto...</span>
-                </div>
-              </Card>
             )}
           </div>
         )}
@@ -816,11 +874,11 @@ export default function ActiveTrade() {
 
                 if (isSystem) {
                   return (
-                    <div key={message.id} className="mb-2 sm:mb-3">
-                      <div className="bg-amber-800/80 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm text-white whitespace-pre-line">
+                    <div key={message.id} className="mb-3 sm:mb-4">
+                      <div className="bg-amber-800/80 px-4 sm:px-5 py-3 sm:py-4 rounded-lg text-sm sm:text-base text-white whitespace-pre-line leading-relaxed">
                         {message.content}
                       </div>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 uppercase">
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 uppercase">
                         {new Date(message.created_at).toLocaleDateString('en-US', { 
                           month: 'long', 
                           day: 'numeric', 
