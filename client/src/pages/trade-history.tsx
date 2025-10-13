@@ -40,76 +40,28 @@ import {
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 
-const mockTrades = [
-  {
-    id: 1,
-    paymentMethod: "Cash app",
-    tradingPartner: {
-      name: "JASON168",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=JASON168",
-      status: "Active now"
-    },
-    type: "buy",
-    date: "Mar 12, 2025 at 6:20 PM",
-    amount: 2000,
-    currency: "USD",
-    cryptoAmount: 0.01988403,
-    cryptoCurrency: "BTC",
-    rate: 100583.25,
-    status: "expired"
-  },
-  {
-    id: 2,
-    paymentMethod: "PayPal",
-    tradingPartner: {
-      name: "CryptoKing99",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=CryptoKing99",
-      status: "Seen 2h ago"
-    },
-    type: "sell",
-    date: "Mar 10, 2025 at 3:15 PM",
-    amount: 500,
-    currency: "USD",
-    cryptoAmount: 0.00495,
-    cryptoCurrency: "BTC",
-    rate: 101010.10,
-    status: "completed"
-  },
-  {
-    id: 3,
-    paymentMethod: "Bank Transfer",
-    tradingPartner: {
-      name: "TraderPro",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=TraderPro",
-      status: "Active now"
-    },
-    type: "buy",
-    date: "Mar 8, 2025 at 11:30 AM",
-    amount: 1500,
-    currency: "USD",
-    cryptoAmount: 0.01485,
-    cryptoCurrency: "BTC",
-    rate: 101010.10,
-    status: "completed"
-  },
-  {
-    id: 4,
-    paymentMethod: "Amazon Gift Card",
-    tradingPartner: {
-      name: "GiftCardGuru",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=GiftCardGuru",
-      status: "Seen 1d ago"
-    },
-    type: "sell",
-    date: "Mar 5, 2025 at 9:45 AM",
-    amount: 250,
-    currency: "USD",
-    cryptoAmount: 0.00248,
-    cryptoCurrency: "BTC",
-    rate: 100806.45,
-    status: "cancelled"
-  }
-];
+interface Trade {
+  id: string;
+  buyer_id: string;
+  seller_id: string;
+  crypto_symbol: string;
+  crypto_amount: number;
+  fiat_currency: string;
+  fiat_amount: number;
+  price: number;
+  payment_method: string;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+  buyer_profile?: {
+    username: string;
+    avatar_url: string | null;
+  };
+  seller_profile?: {
+    username: string;
+    avatar_url: string | null;
+  };
+}
 
 export function TradeHistory() {
   const { user } = useAuth();
@@ -129,29 +81,67 @@ export function TradeHistory() {
     TON: 0,
     XMR: 0
   });
+  const [activeCount, setActiveCount] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
+  const [canceledCount, setCanceledCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUserProfileId, setCurrentUserProfileId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      fetchTradeStatistics();
+    if (user?.id) {
+      fetchCurrentUserProfile();
     }
-  }, [user]);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (currentUserProfileId) {
+      fetchTradeStatistics();
+      fetchAllTrades();
+    }
+  }, [currentUserProfileId]);
+
+  const fetchCurrentUserProfile = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("id", user.id)
+        .single();
+      
+      if (!error && data) {
+        setCurrentUserProfileId(data.id);
+      }
+    } catch (error) {
+      console.error("Error fetching current user profile:", error);
+    }
+  };
 
   const fetchTradeStatistics = async () => {
+    if (!currentUserProfileId) return;
+
     try {
       // Fetch all user trades
-      const { data: trades, error } = await supabase
+      const { data: tradesData, error } = await supabase
         .from('p2p_trades')
         .select('*')
-        .or(`buyer_id.eq.${user?.id},seller_id.eq.${user?.id}`);
+        .or(`buyer_id.eq.${currentUserProfileId},seller_id.eq.${currentUserProfileId}`);
 
       if (error) throw error;
 
-      if (trades) {
-        setTotalCount(trades.length);
-        const completed = trades.filter(t => t.status === 'completed');
+      if (tradesData) {
+        setTotalCount(tradesData.length);
+        
+        const active = tradesData.filter(t => t.status === 'active' || t.status === 'pending' || t.status === 'payment_made');
+        const completed = tradesData.filter(t => t.status === 'completed');
+        const canceled = tradesData.filter(t => t.status === 'cancelled' || t.status === 'expired');
+        
+        setActiveCount(active.length);
         setCompletedCount(completed.length);
+        setCanceledCount(canceled.length);
 
         // Calculate volumes by crypto
         const volumes: any = {
@@ -175,6 +165,50 @@ export function TradeHistory() {
       }
     } catch (error) {
       console.error('Error fetching trade statistics:', error);
+    }
+  };
+
+  const fetchAllTrades = async () => {
+    if (!currentUserProfileId) return;
+
+    setLoading(true);
+    try {
+      const { data: tradesData, error } = await supabase
+        .from('p2p_trades')
+        .select('*')
+        .or(`buyer_id.eq.${currentUserProfileId},seller_id.eq.${currentUserProfileId}`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch user profiles for each trade
+      const tradesWithProfiles = await Promise.all(
+        (tradesData || []).map(async (trade) => {
+          const { data: buyerProfile } = await supabase
+            .from("user_profiles")
+            .select("username, avatar_url")
+            .eq("id", trade.buyer_id)
+            .single();
+
+          const { data: sellerProfile } = await supabase
+            .from("user_profiles")
+            .select("username, avatar_url")
+            .eq("id", trade.seller_id)
+            .single();
+
+          return {
+            ...trade,
+            buyer_profile: buyerProfile,
+            seller_profile: sellerProfile,
+          };
+        })
+      );
+
+      setTrades(tradesWithProfiles);
+    } catch (error) {
+      console.error('Error fetching trades:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -451,6 +485,28 @@ export function TradeHistory() {
           </Dialog>
         </div>
 
+        {/* Trade Statistics */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <Card className="p-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-500">{activeCount}</div>
+              <div className="text-sm text-muted-foreground">Active Trades</div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-500">{completedCount}</div>
+              <div className="text-sm text-muted-foreground">Completed</div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-500">{canceledCount}</div>
+              <div className="text-sm text-muted-foreground">Canceled</div>
+            </div>
+          </Card>
+        </div>
+
         {/* Completion Stats with Crypto Volumes */}
         <Collapsible open={completedTradesOpen} onOpenChange={setCompletedTradesOpen} className="mb-6">
           <Card>
@@ -576,98 +632,110 @@ export function TradeHistory() {
         </div>
 
         {/* Trade List */}
-        <div className="space-y-4">
-          {mockTrades.map((trade) => (
-            <Card key={trade.id} className="overflow-hidden">
-              <Collapsible
-                open={expandedTrade === trade.id}
-                onOpenChange={() => setExpandedTrade(expandedTrade === trade.id ? null : trade.id)}
-              >
-                <CollapsibleTrigger asChild>
-                  <div className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        {/* Avatar */}
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={trade.tradingPartner.avatar} />
-                          <AvatarFallback>
-                            {trade.tradingPartner.name.substring(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading trade history...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {trades.map((trade) => {
+              const isUserBuyer = currentUserProfileId === trade.buyer_id;
+              const counterparty = isUserBuyer ? trade.seller_profile : trade.buyer_profile;
+              const type = isUserBuyer ? "buy" : "sell";
 
-                        {/* Trade Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold">{trade.paymentMethod}</h3>
+              return (
+                <Card key={trade.id} className="overflow-hidden">
+                  <Collapsible
+                    open={expandedTrade === trade.id}
+                    onOpenChange={() => setExpandedTrade(expandedTrade === trade.id ? null : trade.id)}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <div className="cursor-pointer hover:bg-muted/50 transition-colors">
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4">
+                            {/* Avatar */}
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={counterparty?.avatar_url || ""} />
+                              <AvatarFallback>
+                                {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            {/* Trade Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold">{trade.payment_method}</h3>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm mb-2">
+                                <span className="font-medium">{counterparty?.username || "Unknown"}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Bitcoin className="h-4 w-4 text-orange-500" />
+                                <span className="capitalize">{type}</span>
+                                <span>•</span>
+                                <span>{new Date(trade.created_at).toLocaleString()}</span>
+                              </div>
+                            </div>
+
+                            {/* Expand Arrow */}
+                            <ChevronDown className={`h-5 w-5 transition-transform ${expandedTrade === trade.id ? "rotate-180" : ""}`} />
                           </div>
-                          <div className="flex items-center gap-2 text-sm mb-2">
-                            <span className="font-medium">{trade.tradingPartner.name}</span>
-                            <span className="flex items-center gap-1 text-xs text-green-500">
-                              <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                              {trade.tradingPartner.status}
-                            </span>
+                        </CardContent>
+                      </div>
+                    </CollapsibleTrigger>
+
+                    <CollapsibleContent>
+                      <CardContent className="pt-0 pb-6 px-6 border-t">
+                        <div className="space-y-4 pt-4">
+                          {/* Amount Details */}
+                          <div>
+                            <div className="text-2xl font-bold mb-1">
+                              {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
+                            </div>
+                            <div className="text-sm text-muted-foreground mb-2">
+                              {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Rate: {trade.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {trade.fiat_currency} / {trade.crypto_symbol}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Bitcoin className="h-4 w-4 text-orange-500" />
-                            <span className="capitalize">{trade.type}</span>
-                            <span>•</span>
-                            <span>{trade.date}</span>
+
+                          {/* Status Badge */}
+                          <div>
+                            <Badge 
+                              variant="outline" 
+                              className={`${getStatusColor(trade.status)} flex items-center gap-1 w-fit`}
+                            >
+                              {getStatusIcon(trade.status)}
+                              <span className="capitalize">{trade.status}</span>
+                            </Badge>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 pt-2">
+                            <Button 
+                              variant="outline" 
+                              className="flex-1"
+                              onClick={() => window.location.href = `/trade/${trade.id}`}
+                            >
+                              View Details
+                            </Button>
                           </div>
                         </div>
-
-                        {/* Expand Arrow */}
-                        <ChevronDown className={`h-5 w-5 transition-transform ${expandedTrade === trade.id ? "rotate-180" : ""}`} />
-                      </div>
-                    </CardContent>
-                  </div>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent>
-                  <CardContent className="pt-0 pb-6 px-6 border-t">
-                    <div className="space-y-4 pt-4">
-                      {/* Amount Details */}
-                      <div>
-                        <div className="text-2xl font-bold mb-1">
-                          {trade.amount.toLocaleString()} {trade.currency}
-                        </div>
-                        <div className="text-sm text-muted-foreground mb-2">
-                          {trade.cryptoAmount} {trade.cryptoCurrency}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Rate: {trade.rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {trade.currency} / {trade.cryptoCurrency}
-                        </div>
-                      </div>
-
-                      {/* Status Badge */}
-                      <div>
-                        <Badge 
-                          variant="outline" 
-                          className={`${getStatusColor(trade.status)} flex items-center gap-1 w-fit`}
-                        >
-                          {getStatusIcon(trade.status)}
-                          <span className="capitalize">{trade.status}</span>
-                        </Badge>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 pt-2">
-                        <Button variant="outline" className="flex-1">
-                          View Details
-                        </Button>
-                        <Button variant="outline" className="flex-1">
-                          Contact Trader
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          ))}
-        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              );
+            })}
+          </div>
+        )}
 
         {/* Empty State (when no trades) */}
-        {mockTrades.length === 0 && (
+        {!loading && trades.length === 0 && (
           <Card className="p-12 text-center">
             <div className="flex flex-col items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
@@ -678,7 +746,7 @@ export function TradeHistory() {
                 <p className="text-muted-foreground mb-4">
                   Start trading to see your history here
                 </p>
-                <Button>Start Trading</Button>
+                <Button onClick={() => window.location.href = '/p2p'}>Start Trading</Button>
               </div>
             </div>
           </Card>
