@@ -178,7 +178,7 @@ export function AppHeader() {
                   <div className="text-xs text-muted-foreground">Your public profile</div>
                 </div>
               </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/trade-statistics")}>
+                  <DropdownMenuItem onClick={() => setLocation("/trade-history")}>
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <div className="flex flex-col">
                       <span>Trade statistics</span>
