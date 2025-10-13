@@ -49,13 +49,13 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
       // Get the vendor ID from the offer
       const vendorId = offer.vendor?.id;
-      
+
       if (!vendorId) {
         console.error("No vendor ID found in offer:", offer);
         alert("Could not find the offer vendor");
         return;
       }
-      
+
       if (vendorId === user.id) {
         alert("Cannot trade with yourself");
         return;
@@ -93,6 +93,7 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
             min_amount: offer.limits.min,
             max_amount: offer.limits.max,
             payment_method: offer.paymentMethod,
+            time_limit_minutes: 30,
             status: "active",
           })
           .select()
@@ -107,38 +108,73 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
         offerId = newOffer.id;
       }
 
+      // Calculate payment deadline based on offer's time limit
+      const timeLimitMinutes = offer.time_limit_minutes || 30; // Default to 30 minutes if not specified
+      const paymentDeadline = new Date(Date.now() + timeLimitMinutes * 60000);
+
       // Now create the trade with the valid offer_id
-      const { data: trade, error } = await supabase
+      const { data: trade, error: tradeError } = await supabase
         .from("p2p_trades")
         .insert({
           offer_id: offerId,
           buyer_id: buyerId,
           seller_id: sellerId,
           crypto_symbol: offer.cryptoSymbol,
-          crypto_amount: cryptoAmount,
           fiat_currency: offer.currency,
+          crypto_amount: cryptoAmount,
           fiat_amount: fiatAmount,
           price: offer.pricePerBTC,
           payment_method: offer.paymentMethod,
           status: "pending",
+          payment_deadline: paymentDeadline.toISOString(),
         })
         .select()
         .single();
 
-      if (error) {
-        console.error("Error creating trade:", error);
-        console.error("Error details:", JSON.stringify(error, null, 2));
-        alert(`Failed to create trade: ${error.message || 'Unknown error'}`);
-        return;
-      }
-
-      if (!trade) {
-        console.error("No trade data returned");
-        alert("Failed to create trade: No data returned");
-        return;
-      }
+      if (tradeError) throw tradeError;
 
       console.log("Trade created successfully:", trade);
+
+      // Create escrow to lock seller's crypto
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session && offer.type === "sell") {
+          // Only create escrow if the offer is a sell offer (seller needs to lock funds)
+          const escrowResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/escrow-create`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              trade_id: trade.id,
+              buyer_id: buyerId,
+              amount: cryptoAmount,
+              currency: offer.cryptoSymbol,
+              expires_in_hours: Math.ceil(timeLimitMinutes / 60),
+            }),
+          });
+
+          if (escrowResponse.ok) {
+            const { escrow } = await escrowResponse.json();
+
+            // Update trade with escrow_id
+            await supabase
+              .from("p2p_trades")
+              .update({ escrow_id: escrow.id })
+              .eq("id", trade.id);
+
+            console.log("Escrow created:", escrow);
+          } else {
+            console.error("Failed to create escrow:", await escrowResponse.text());
+          }
+        }
+      } catch (escrowError) {
+        console.error("Escrow creation error:", escrowError);
+        // Don't fail the trade creation, just log the error
+      }
+
       onOpenChange(false);
       setLocation(`/trade/${trade.id}`);
     } catch (error) {
