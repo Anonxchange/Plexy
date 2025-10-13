@@ -133,22 +133,54 @@ export default function ActiveTrade() {
 
   useEffect(() => {
     const calculateTimeRemaining = () => {
-      if (!trade?.created_at) return;
+      if (!trade?.payment_deadline) return;
 
       const now = Date.now();
-      const createdTime = new Date(trade.created_at).getTime();
-      const expiryTime = createdTime + (60 * 60 * 1000);
-      const remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
+      const deadline = new Date(trade.payment_deadline).getTime();
+      const remaining = Math.max(0, Math.floor((deadline - now) / 1000));
 
       setTimeRemaining(remaining);
+
+      // Auto-expire trade if time runs out
+      if (remaining === 0 && trade.status === "pending" && !trade.buyer_paid_at) {
+        handleTradeExpiry();
+      }
     };
 
-    if (trade?.created_at) {
+    if (trade?.payment_deadline) {
       calculateTimeRemaining();
       const interval = setInterval(calculateTimeRemaining, 1000);
       return () => clearInterval(interval);
     }
-  }, [trade?.created_at]);
+  }, [trade?.payment_deadline, trade?.status, trade?.buyer_paid_at]);
+
+  const handleTradeExpiry = async () => {
+    if (!tradeId) return;
+
+    try {
+      await supabase
+        .from("p2p_trades")
+        .update({ status: "expired" })
+        .eq("id", tradeId);
+
+      await supabase.from("trade_messages").insert({
+        trade_id: tradeId,
+        sender_id: "system",
+        message_type: "system",
+        content: "Trade expired due to payment timeout",
+      });
+
+      toast({
+        title: "Trade Expired",
+        description: "Payment time limit exceeded. Trade has been cancelled.",
+        variant: "destructive",
+      });
+
+      fetchTradeData();
+    } catch (error) {
+      console.error("Error expiring trade:", error);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -272,10 +304,10 @@ export default function ActiveTrade() {
     if (!tradeId) return;
 
     try {
+      // Just update the buyer_paid_at timestamp, keep status as pending
       const { error } = await supabase
         .from("p2p_trades")
         .update({
-          status: "payment_sent",
           buyer_paid_at: new Date().toISOString(),
         })
         .eq("id", tradeId);
@@ -286,12 +318,12 @@ export default function ActiveTrade() {
         trade_id: tradeId,
         sender_id: user!.id,
         message_type: "system",
-        content: "Buyer marked payment as sent",
+        content: "Buyer marked payment as sent. Waiting for seller confirmation.",
       });
 
       toast({
         title: "Success",
-        description: "Trade marked as paid. Waiting for seller to release.",
+        description: "Payment marked as sent. Waiting for seller to release.",
       });
 
       fetchTradeData();
@@ -306,9 +338,30 @@ export default function ActiveTrade() {
   };
 
   const releaseFunds = async () => {
-    if (!tradeId) return;
+    if (!tradeId || !trade?.escrow_id) return;
 
     try {
+      // Release escrow first
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const escrowResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/escrow-release`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            escrow_id: trade.escrow_id,
+          }),
+        });
+
+        if (!escrowResponse.ok) {
+          throw new Error("Failed to release escrow");
+        }
+      }
+
+      // Update trade status
       const { error } = await supabase
         .from("p2p_trades")
         .update({
@@ -547,9 +600,9 @@ export default function ActiveTrade() {
             </div>
 
             {/* Current User Avatar */}
-            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-border flex-shrink-0">
+            <Avatar className="h-14 w-14 border-2 border-border flex-shrink-0">
               <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
-              <AvatarFallback className="bg-muted text-foreground font-bold text-xs sm:text-sm">
+              <AvatarFallback className="bg-muted text-foreground font-bold text-base">
                 {user?.user_metadata?.username?.substring(0, 2).toUpperCase() || "ME"}
               </AvatarFallback>
             </Avatar>
@@ -587,34 +640,73 @@ export default function ActiveTrade() {
       <div className="p-3 sm:p-4">
         {activeTab === "actions" && (
           <div className="space-y-3 sm:space-y-4">
+            {/* Trade Started Status */}
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2.5 h-2.5 bg-green-500 rounded-full"></div>
+              <span className="text-base sm:text-lg font-semibold">Trade Started</span>
+            </div>
+
             {/* Payment Instruction Card */}
             {isUserBuyer && trade.status === "pending" && (
-              <Card className="p-3 sm:p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                <h3 className="font-semibold text-sm sm:text-base mb-2 sm:mb-3">Payment Instructions</h3>
-                <div className="space-y-2 text-xs sm:text-sm mb-3 sm:mb-4">
-                  <p>Please make a payment of <span className="font-bold text-primary">{trade.fiat_amount.toLocaleString()} {trade.fiat_currency}</span> using <span className="font-semibold">{trade.payment_method}</span>.</p>
-                  <p className="text-muted-foreground">{trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} will be added to your wallet</p>
-                </div>
-                
-                <div className="bg-background/50 rounded-lg p-2.5 sm:p-3 mb-3 sm:mb-4">
-                  <p className="text-xs sm:text-sm mb-2">
-                    <span className="font-semibold">Once you've made the payment</span>, be sure to click <span className="font-semibold text-green-600">Paid</span> within the given time limit. Otherwise the trade will be automatically cancelled and the {trade.crypto_symbol} will be returned to the seller's wallet.
+              <>
+                <Card className="p-4 sm:p-5 bg-[#1a1a1a] border border-border">
+                  <p className="text-base sm:text-lg font-medium mb-2">
+                    Please make a payment of {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} using {trade.payment_method}.
                   </p>
-                </div>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    {trade.crypto_amount} {trade.crypto_symbol} will be added to your {trade.crypto_symbol === 'USDT' ? 'Tether' : trade.crypto_symbol} wallet
+                  </p>
+
+                  <div className="border-t border-border pt-4 mb-4">
+                    <p className="text-sm sm:text-base mb-4">
+                      <span className="font-semibold">Once you've made the payment</span>, be sure to click{' '}
+                      <span className="font-semibold">Paid</span> within the given time limit. Otherwise the trade will be automatically cancelled and the {trade.crypto_symbol} will be returned to the seller's wallet.
+                    </p>
+
+                    <Button
+                      onClick={markAsPaid}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold h-14 sm:h-16 text-base sm:text-lg flex items-center justify-between"
+                    >
+                      <span>Paid</span>
+                      <div className="flex flex-col items-end">
+                        <CheckCircle2 className="h-6 w-6 mb-1" />
+                        <span className="text-xs font-normal">Time left {formatTime(timeRemaining)}</span>
+                      </div>
+                    </Button>
+                  </div>
+                </Card>
 
                 <Button
-                  onClick={markAsPaid}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold h-11 sm:h-12 text-sm sm:text-base"
+                  variant="outline"
+                  onClick={openDispute}
+                  className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium bg-muted/50 border-muted-foreground/30"
                 >
-                  <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                  Paid
-                  <span className="ml-auto text-xs sm:text-sm opacity-90">Time left {formatTime(timeRemaining)}</span>
+                  Report Bad Behaviour
                 </Button>
+              </>
+            )}
+
+            {/* Seller: Waiting for Payment */}
+            {isUserSeller && trade.status === "pending" && !trade.buyer_paid_at && (
+              <Card className="p-4 sm:p-5 bg-[#1a1a1a] border border-border">
+                <p className="text-base sm:text-lg font-medium mb-2">
+                  Waiting for buyer to pay {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} via {trade.payment_method}
+                </p>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Your {trade.crypto_amount} {trade.crypto_symbol} is in escrow and will be released when buyer marks payment as sent.
+                </p>
+
+                <div className="border-t border-border pt-4">
+                  <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground">
+                    <Clock className="h-5 w-5" />
+                    <span>Waiting for buyer payment</span>
+                  </div>
+                </div>
               </Card>
             )}
 
-            {/* Release Funds Card */}
-            {isUserSeller && trade.status === "payment_sent" && (
+            {/* Seller: Release Funds Card */}
+            {isUserSeller && trade.status === "pending" && trade.buyer_paid_at && (
               <Card className="p-3 sm:p-4 bg-gradient-to-br from-orange-500/10 to-amber-500/5 border-orange-500/20">
                 <div className="flex items-center gap-2 mb-2 sm:mb-3">
                   <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
@@ -666,28 +758,48 @@ export default function ActiveTrade() {
             </Card>
 
             {/* Security Warning */}
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 sm:p-4">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-xs sm:text-sm font-semibold mb-1">Keep Trades Secure</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Always communicate within the platform. Never share sensitive information or move trades outside our system.
-                  </p>
-                </div>
-              </div>
-            </div>
+            {isUserBuyer && trade.status === "pending" && (
+              <Card className="p-4 sm:p-5 bg-green-900/20 border border-green-600/30 relative">
+                <button
+                  onClick={() => {/* Close warning */}}
+                  className="absolute top-3 right-3 text-foreground/60 hover:text-foreground"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <p className="text-sm sm:text-base pr-8">
+                  Keep trades within NoOnes. Some users may ask you to trade outside the NoOnes platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within NoOnes. If you choose to proceed outside NoOnes, note that we cannot help or support you if you are scammed during such trades.
+                </p>
+              </Card>
+            )}
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <Button variant="outline" onClick={openDispute} className="h-10 sm:h-11 text-xs sm:text-sm">
-                <Flag className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                Report Bad Behaviour
-              </Button>
-              <Button variant="outline" onClick={cancelTrade} className="h-10 sm:h-11 border-red-500/50 text-red-500 hover:bg-red-500/10 text-xs sm:text-sm">
+            {/* Cancel Trade Button */}
+            {isUserBuyer && trade.status === "pending" && (
+              <Button
+                variant="outline"
+                onClick={cancelTrade}
+                className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium border-red-500/50 text-red-500 hover:bg-red-500/10"
+              >
                 Cancel Trade
               </Button>
-            </div>
+            )}
+
+            {/* Payment Status Indicator */}
+            {isUserBuyer && trade.status === "pending" && !trade.buyer_paid_at && (
+              <div className="flex items-center justify-center gap-2 py-3 text-sm sm:text-base text-muted-foreground">
+                <AlertCircle className="h-5 w-5" />
+                <span>You haven't paid yet</span>
+              </div>
+            )}
+
+            {/* Waiting for Seller to Release */}
+            {isUserBuyer && trade.status === "pending" && trade.buyer_paid_at && (
+              <Card className="p-4 sm:p-5 bg-green-900/20 border border-green-600/30">
+                <div className="flex items-center justify-center gap-2 py-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <span className="text-sm sm:text-base">Payment marked as sent. Waiting for seller to release crypto...</span>
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
