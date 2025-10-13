@@ -775,9 +775,27 @@ export function P2P() {
                   const isUserBuyer = trade.buyer_id === user?.id;
                   const counterparty = isUserBuyer ? trade.seller_profile : trade.buyer_profile;
 
-                  // Use the current user's avatar
-                  const userProfile = isUserBuyer ? trade.buyer_profile : trade.seller_profile;
-                  const userAvatarUrl = userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'user'}`;
+                  // Use the vendor's (counterparty's) avatar with proper type handling
+                  let vendorAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${counterparty?.username || 'vendor'}`;
+
+                  if (counterparty?.avatar_url) {
+                    vendorAvatarUrl = counterparty.avatar_url;
+                  } else if (counterparty?.avatar_type) {
+                    const avatarTypes = [
+                      { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
+                      { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
+                      { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
+                      { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
+                      { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
+                      { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
+                      { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
+                      { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
+                    ];
+                    const selectedAvatar = avatarTypes.find(a => a.id === counterparty.avatar_type);
+                    if (selectedAvatar) {
+                      vendorAvatarUrl = selectedAvatar.image;
+                    }
+                  }
 
                   return (
                     <Card 
@@ -786,19 +804,19 @@ export function P2P() {
                       onClick={() => window.location.href = `/trade/${trade.id}`}
                     >
                       <CardContent className="p-4 space-y-3">
-                        {/* User Info Row */}
+                        {/* Vendor Info Row */}
                         <div className="flex items-center gap-3">
                           <Avatar className="h-14 w-14">
-                            <AvatarImage src={userAvatarUrl} />
+                            <AvatarImage src={vendorAvatarUrl} />
                             <AvatarFallback className="text-base font-semibold bg-primary/10">
-                              {userProfile?.username?.substring(0, 2).toUpperCase() || user?.email?.substring(0, 2).toUpperCase() || "ME"}
+                              {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-semibold text-base">{userProfile?.username || "You"}</span>
+                              <span className="font-semibold text-base">{counterparty?.username || "Vendor"}</span>
                               <span className="text-base">🇳🇬</span>
-                              {(userProfile?.positive_ratings || 0) > 10 && (
+                              {(counterparty?.positive_ratings || 0) > 10 && (
                                 <span className="text-xs font-medium text-green-600 flex items-center gap-1">
                                   <Circle className="h-2 w-2 fill-green-600" />
                                   POWER
@@ -808,7 +826,7 @@ export function P2P() {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                               <ThumbsUp className="h-3 w-3" />
                               <span>100%</span>
-                              <span>{userProfile?.total_trades || 0} Trades</span>
+                              <span>{counterparty?.total_trades || 0} Trades</span>
                               <Circle className="h-1 w-1 fill-green-500" />
                               <span className="text-green-500">Active now</span>
                             </div>
