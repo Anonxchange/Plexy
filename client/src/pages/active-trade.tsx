@@ -97,9 +97,9 @@ export default function ActiveTrade() {
   const isUserSeller = currentUserProfileId && trade?.buyer_id === currentUserProfileId;
   
   const counterparty = isUserBuyer 
-    ? trade?.seller_profile 
+    ? trade?.buyer_profile 
     : isUserSeller 
-      ? trade?.buyer_profile 
+      ? trade?.seller_profile 
       : null;
 
   useEffect(() => {
@@ -267,21 +267,6 @@ export default function ActiveTrade() {
           };
           messagesData.unshift(instructionsMessage);
         }
-      }
-
-      // Add bank details message in chat for buyers only
-      if (sellerBankDetails && tradeId && tradeData.buyer_id === currentUserProfileId && !messagesData?.some(msg => msg.content.includes("Bank Details"))) {
-        const bankDetailsMessage: TradeMessage = {
-          id: `bank-details-${tradeId}`,
-          trade_id: tradeId,
-          sender_id: "system",
-          message_type: "system",
-          content: `💳 SELLER'S BANK DETAILS\n\nBank Name: ${sellerBankDetails.bank_name}\nAccount Name: ${sellerBankDetails.account_name}\nAccount Number: ${sellerBankDetails.account_number}${sellerBankDetails.bank_code ? `\nBank Code: ${sellerBankDetails.bank_code}` : ''}\n\nPlease transfer ${tradeData.fiat_amount.toLocaleString()} ${tradeData.fiat_currency} to this account.`,
-          file_url: null,
-          is_read: false,
-          created_at: tradeData.created_at,
-        };
-        messagesData.push(bankDetailsMessage);
       }
 
       setMessages(messagesData || []);
