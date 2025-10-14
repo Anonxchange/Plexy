@@ -10,15 +10,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ArrowDownUp, Edit, Bitcoin, Building2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { getCryptoPrices, convertToNGN } from "@/lib/crypto-prices";
+import { cn } from "@/lib/utils";
 
 export function CreateOffer() {
   const [priceType, setPriceType] = useState<"fixed" | "floating">("floating");
@@ -38,8 +45,14 @@ export function CreateOffer() {
   const [loading, setLoading] = useState(true);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
+  const [paymentSearchQuery, setPaymentSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [, params] = useRoute("/edit-offer/:offerId");
+  const offerId = params?.offerId;
+  const isEditMode = !!offerId;
 
   useEffect(() => {
     const fetchLivePrices = async () => {
@@ -53,10 +66,10 @@ export function CreateOffer() {
       }
       setLoading(false);
     };
-    
+
     fetchLivePrices();
     const interval = setInterval(fetchLivePrices, 30000);
-    
+
     return () => clearInterval(interval);
   }, [crypto, currency]);
 
@@ -65,7 +78,7 @@ export function CreateOffer() {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (user) {
           const { data, error } = await supabase
             .from('payment_methods')
@@ -85,9 +98,135 @@ export function CreateOffer() {
     fetchPaymentMethods();
   }, []);
 
+  // Load existing offer when in edit mode
+  useEffect(() => {
+    if (isEditMode && offerId) {
+      const loadOffer = async () => {
+        try {
+          setLoading(true);
+          const supabase = createClient();
+          const { data, error } = await supabase
+            .from("p2p_offers")
+            .select("*")
+            .eq("id", offerId)
+            .single();
+
+          if (error) {
+            console.error("Error loading offer:", error);
+            toast({
+              title: "Error",
+              description: "Failed to load offer",
+              variant: "destructive",
+            });
+            setLocation("/my-offers");
+            return;
+          }
+
+          if (data) {
+            // Pre-fill form with existing offer data
+            setOfferType(data.offer_type);
+            setCrypto(data.crypto_symbol);
+            setPaymentMethod(Array.isArray(data.payment_methods) ? data.payment_methods[0] : data.payment_methods);
+            setCurrency(data.fiat_currency);
+            setCountry(data.country || "");
+            setMinAmount(data.min_amount.toString());
+            setMaxAmount(data.max_amount.toString());
+            setTotalQuantity(data.available_amount.toString());
+            setTimeLimit(data.time_limit?.toString() || "30");
+
+            if (data.fixed_price) {
+              setPriceType("fixed");
+              setFixedPrice(data.fixed_price.toString());
+            } else if (data.price_offset !== undefined) {
+              setPriceType("floating");
+              setPriceOffset([data.price_offset]);
+            }
+          }
+        } catch (error) {
+          console.error("Error loading offer:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load offer",
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      loadOffer();
+    }
+  }, [isEditMode, offerId]);
+
   const yourRate = priceType === "fixed" 
     ? parseFloat(fixedPrice) || marketRate
     : marketRate * (1 + priceOffset[0] / 100);
+
+  const paymentCategories = [
+    { id: "all", name: "All payment methods" },
+    { id: "bank", name: "Bank transfers" },
+    { id: "wallet", name: "Online wallets" },
+    { id: "card", name: "Debit/credit cards" },
+    { id: "gift", name: "Gift cards" },
+    { id: "digital", name: "Digital currencies" },
+    { id: "goods", name: "Goods and services" },
+  ];
+
+  const allPaymentMethods = [
+    // Bank Transfers
+    { id: "bank-transfer", name: "Bank Transfer", icon: Building2, category: "bank" },
+    { id: "wire", name: "Domestic Wire Transfer", icon: Building2, category: "bank" },
+    { id: "ach", name: "ACH Transfer", icon: Building2, category: "bank" },
+    { id: "sepa", name: "SEPA Transfer", icon: Building2, category: "bank" },
+    { id: "swift", name: "SWIFT Transfer", icon: Building2, category: "bank" },
+
+    // Online Wallets
+    { id: "paypal", name: "PayPal", icon: Wallet, category: "wallet" },
+    { id: "google-pay", name: "Google Pay", icon: Smartphone, category: "wallet" },
+    { id: "apple-pay", name: "Apple Pay", icon: Smartphone, category: "wallet" },
+    { id: "advcash", name: "AdvCash", icon: Wallet, category: "wallet" },
+    { id: "airtel", name: "Airtel Money", icon: Smartphone, category: "wallet" },
+    { id: "alipay", name: "Alipay", icon: Smartphone, category: "wallet" },
+    { id: "mtn", name: "MTN Mobile Money", icon: Smartphone, category: "wallet" },
+    { id: "skrill", name: "Skrill", icon: Wallet, category: "wallet" },
+    { id: "neteller", name: "Neteller", icon: Wallet, category: "wallet" },
+    { id: "venmo", name: "Venmo", icon: Smartphone, category: "wallet" },
+    { id: "cashapp", name: "Cash App", icon: Smartphone, category: "wallet" },
+    { id: "zelle", name: "Zelle", icon: Smartphone, category: "wallet" },
+    { id: "wechat", name: "WeChat Pay", icon: Smartphone, category: "wallet" },
+
+    // Debit/Credit Cards
+    { id: "visa", name: "Visa", icon: CreditCard, category: "card" },
+    { id: "mastercard", name: "Mastercard", icon: CreditCard, category: "card" },
+    { id: "amex", name: "American Express", icon: CreditCard, category: "card" },
+    { id: "discover", name: "Discover", icon: CreditCard, category: "card" },
+    { id: "debit", name: "Debit Card", icon: CreditCard, category: "card" },
+    { id: "credit", name: "Credit Card", icon: CreditCard, category: "card" },
+
+    // Gift Cards
+    { id: "amazon", name: "Amazon Gift Card", icon: Gift, category: "gift" },
+    { id: "apple-gift", name: "Apple Gift Card", icon: Gift, category: "gift" },
+    { id: "google-play", name: "Google Play", icon: Gift, category: "gift" },
+    { id: "steam", name: "Steam", icon: Gift, category: "gift" },
+    { id: "itunes", name: "iTunes Gift Card", icon: Gift, category: "gift" },
+    { id: "xbox", name: "Xbox Gift Card", icon: Gift, category: "gift" },
+    { id: "playstation", name: "PlayStation Gift Card", icon: Gift, category: "gift" },
+    { id: "netflix", name: "Netflix Gift Card", icon: Gift, category: "gift" },
+    { id: "spotify", name: "Spotify Gift Card", icon: Gift, category: "gift" },
+
+    // Digital Currencies
+    { id: "bitcoin", name: "Bitcoin (BTC)", icon: Bitcoin, category: "digital" },
+    { id: "ethereum", name: "Ethereum (ETH)", icon: Coins, category: "digital" },
+    { id: "usdt", name: "Tether (USDT)", icon: Coins, category: "digital" },
+    { id: "usdc", name: "USD Coin (USDC)", icon: Coins, category: "digital" },
+    { id: "arweave", name: "Arweave (AR)", icon: Coins, category: "digital" },
+    { id: "litecoin", name: "Litecoin (LTC)", icon: Coins, category: "digital" },
+
+    // Goods and Services
+    { id: "merchandise", name: "Merchandise", icon: MapPin, category: "goods" },
+    { id: "services", name: "Services", icon: MapPin, category: "goods" },
+    { id: "vouchers", name: "Vouchers", icon: Gift, category: "goods" },
+  ];
 
   const handleCreateOffer = async () => {
     if (!paymentMethod || !currency) {
@@ -99,10 +238,10 @@ export function CreateOffer() {
       return;
     }
 
-    if (paymentMethod === "Bank Transfer" && !selectedPaymentMethodId) {
+    if (paymentMethod && !selectedPaymentMethodId && paymentMethods.length > 0) {
       toast({
         title: "Bank Account Required",
-        description: "Please select a bank account for Bank Transfer payments",
+        description: "Please select a bank account for your payment method",
         variant: "destructive",
       });
       return;
@@ -132,9 +271,9 @@ export function CreateOffer() {
     setIsSubmitting(true);
     try {
       const supabase = createClient();
-      
+
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         setIsSubmitting(false);
         toast({
@@ -148,7 +287,7 @@ export function CreateOffer() {
 
       const totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
 
-      const { error } = await supabase.from("p2p_offers").insert({
+      const offerData = {
         user_id: user.id,
         offer_type: offerType,
         crypto_symbol: crypto,
@@ -162,19 +301,35 @@ export function CreateOffer() {
         available_amount: maxAmountNum,
         total_quantity: totalQuantityNum,
         country_restrictions: country ? [country] : null,
-        payment_method_id: paymentMethod === "Bank Transfer" ? selectedPaymentMethodId : null,
+        payment_method_id: selectedPaymentMethodId || null,
         time_limit_minutes: parseInt(timeLimit),
         is_active: true,
-      });
+      };
+
+      let error;
+      if (isEditMode && offerId) {
+        // Update existing offer
+        const result = await supabase
+          .from("p2p_offers")
+          .update(offerData)
+          .eq("id", offerId);
+        error = result.error;
+      } else {
+        // Create new offer
+        const result = await supabase.from("p2p_offers").insert(offerData);
+        error = result.error;
+      }
 
       if (error) throw error;
 
       toast({
-        title: "Offer Created!",
-        description: "Your offer has been successfully listed on the P2P marketplace",
+        title: isEditMode ? "Offer Updated!" : "Offer Created!",
+        description: isEditMode 
+          ? "Your offer has been successfully updated" 
+          : "Your offer has been successfully listed on the P2P marketplace",
       });
 
-      setLocation("/p2p");
+      setLocation("/my-offers");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -190,18 +345,21 @@ export function CreateOffer() {
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-2xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-4xl font-bold">Create an offer</h1>
+          <h1 className="text-4xl font-bold">{isEditMode ? "Edit offer" : "Create an offer"}</h1>
           <Badge variant="outline">LITE</Badge>
         </div>
 
         <p className="text-muted-foreground mb-8">
-          List your ad in our P2P marketplace. More settings in the{" "}
-          <button 
-            onClick={() => setLocation("/create-offer-advanced")} 
-            className="underline text-primary hover:text-primary/80"
-          >
-            advanced version
-          </button>.
+          {isEditMode 
+            ? "Update your offer details below." 
+            : <>List your ad in our P2P marketplace. More settings in the{" "}
+                <button 
+                  onClick={() => setLocation("/create-offer-advanced")} 
+                  className="underline text-primary hover:text-primary/80"
+                >
+                  advanced version
+                </button>.</>
+          }
         </p>
 
         <div className="space-y-6">
@@ -266,50 +424,213 @@ export function CreateOffer() {
               {offerType === "buy" ? "I will pay with" : "I want"}
             </Label>
             <div className="space-y-3">
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="h-12 bg-elevate-1">
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="Mobile Money">Mobile Money</SelectItem>
-                  <SelectItem value="PayPal">PayPal</SelectItem>
-                  <SelectItem value="Cash App">Cash App</SelectItem>
-                  <SelectItem value="Zelle">Zelle</SelectItem>
-                  <SelectItem value="Venmo">Venmo</SelectItem>
-                  <SelectItem value="Google Pay">Google Pay</SelectItem>
-                  <SelectItem value="Apple Pay">Apple Pay</SelectItem>
-                </SelectContent>
-              </Select>
+              <Dialog open={openPaymentDialog} onOpenChange={setOpenPaymentDialog}>
+                <DialogTrigger asChild>
+                  <div className="relative cursor-pointer">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      placeholder={paymentMethod || "Select payment method"}
+                      className="pl-10 pr-12 h-12 bg-elevate-1 text-base cursor-pointer"
+                      readOnly
+                    />
+                    <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-accent rounded-md transition-colors">
+                      <Menu className="h-5 w-5 text-muted-foreground" />
+                    </button>
+                  </div>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md h-full sm:h-auto max-h-screen p-0 flex flex-col">
+                  <div className="sticky top-0 bg-background z-10 border-b">
+                    <div className="flex items-center gap-3 p-4 pb-0">
+                      <button 
+                        onClick={() => setOpenPaymentDialog(false)}
+                        className="p-1 hover:bg-muted rounded-md transition-colors"
+                      >
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                          placeholder="Search"
+                          value={paymentSearchQuery}
+                          onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                          className="pl-10 h-12 border-0 focus-visible:ring-0 bg-muted"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto px-4 pt-4">
+                      <div className="flex gap-3 pb-3 border-b">
+                        {paymentCategories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={cn(
+                              "pb-2 px-1 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px",
+                              selectedCategory === cat.id
+                                ? "border-foreground text-foreground"
+                                : "border-transparent text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="px-4 py-3 flex justify-center">
+                      <Button
+                        variant="outline"
+                        className="rounded-full px-6"
+                        onClick={() => {
+                          setPaymentSearchQuery("");
+                          setSelectedCategory("all");
+                        }}
+                      >
+                        Clear Filter
+                      </Button>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="flex-1">
+                    <div className="px-4 py-4 space-y-6">
+                      {selectedCategory === "all" ? (
+                        paymentCategories.slice(1).map((category) => {
+                          const categoryMethods = allPaymentMethods.filter(
+                            (method) => 
+                              method.category === category.id &&
+                              method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase())
+                          );
+
+                          if (categoryMethods.length === 0) return null;
+
+                          return (
+                            <div key={category.id}>
+                              <h3 className="text-sm font-semibold mb-3 capitalize">
+                                {category.name}
+                              </h3>
+                              <div className="grid grid-cols-2 gap-2">
+                                {categoryMethods.map((method) => (
+                                  <button
+                                    key={method.id}
+                                    onClick={() => {
+                                      setPaymentMethod(method.name);
+                                      setOpenPaymentDialog(false);
+                                    }}
+                                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors text-left"
+                                  >
+                                    <method.icon className="h-5 w-5 text-muted-foreground shrink-0" />
+                                    <span className="text-sm">{method.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {allPaymentMethods
+                            .filter(
+                              (method) => 
+                                method.category === selectedCategory &&
+                                method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase())
+                            )
+                            .map((method) => (
+                              <button
+                                key={method.id}
+                                onClick={() => {
+                                  setPaymentMethod(method.name);
+                                  setOpenPaymentDialog(false);
+                                }}
+                                className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors text-left"
+                              >
+                                <method.icon className="h-5 w-5 text-muted-foreground shrink-0" />
+                                <span className="text-sm">{method.name}</span>
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </DialogContent>
+              </Dialog>
 
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger className="h-12 bg-elevate-1">
                   <SelectValue placeholder="Currency" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="NGN">Nigerian Nairas (NGN)</SelectItem>
-                  <SelectItem value="USD">US Dollar (USD)</SelectItem>
-                  <SelectItem value="EUR">Euro (EUR)</SelectItem>
-                  <SelectItem value="GBP">British Pound (GBP)</SelectItem>
+                  <SelectItem value="NGN">🇳🇬 Nigerian Naira (NGN)</SelectItem>
+                  <SelectItem value="USD">🇺🇸 US Dollar (USD)</SelectItem>
+                  <SelectItem value="GBP">🇬🇧 British Pound (GBP)</SelectItem>
+                  <SelectItem value="EUR">🇪🇺 Euro (EUR)</SelectItem>
+                  <SelectItem value="CAD">🇨🇦 Canadian Dollar (CAD)</SelectItem>
+                  <SelectItem value="INR">🇮🇳 Indian Rupee (INR)</SelectItem>
+                  <SelectItem value="KES">🇰🇪 Kenyan Shilling (KES)</SelectItem>
+                  <SelectItem value="GHS">🇬🇭 Ghanaian Cedi (GHS)</SelectItem>
+                  <SelectItem value="ZAR">🇿🇦 South African Rand (ZAR)</SelectItem>
+                  <SelectItem value="AUD">🇦🇺 Australian Dollar (AUD)</SelectItem>
+                  <SelectItem value="CNY">🇨🇳 Chinese Yuan (CNY)</SelectItem>
+                  <SelectItem value="JPY">🇯🇵 Japanese Yen (JPY)</SelectItem>
+                  <SelectItem value="PHP">🇵🇭 Philippine Peso (PHP)</SelectItem>
+                  <SelectItem value="IDR">🇮🇩 Indonesian Rupiah (IDR)</SelectItem>
+                  <SelectItem value="MYR">🇲🇾 Malaysian Ringgit (MYR)</SelectItem>
+                  <SelectItem value="SGD">🇸🇬 Singapore Dollar (SGD)</SelectItem>
+                  <SelectItem value="THB">🇹🇭 Thai Baht (THB)</SelectItem>
+                  <SelectItem value="VND">🇻🇳 Vietnamese Dong (VND)</SelectItem>
+                  <SelectItem value="AED">🇦🇪 UAE Dirham (AED)</SelectItem>
+                  <SelectItem value="SAR">🇸🇦 Saudi Riyal (SAR)</SelectItem>
+                  <SelectItem value="EGP">🇪🇬 Egyptian Pound (EGP)</SelectItem>
+                  <SelectItem value="DZD">🇩🇿 Algerian Dinar (DZD)</SelectItem>
+                  <SelectItem value="ETB">🇪🇹 Ethiopian Birr (ETB)</SelectItem>
+                  <SelectItem value="BRL">🇧🇷 Brazilian Real (BRL)</SelectItem>
+                  <SelectItem value="MXN">🇲🇽 Mexican Peso (MXN)</SelectItem>
+                  <SelectItem value="ARS">🇦🇷 Argentine Peso (ARS)</SelectItem>
+                  <SelectItem value="DOP">🇩🇴 Dominican Peso (DOP)</SelectItem>
                 </SelectContent>
               </Select>
 
-              {paymentMethod === "Bank Transfer" && (
-                <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger className="h-12 bg-elevate-1">
-                    <SelectValue placeholder="🌍 Nigeria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NG">🇳🇬 Nigeria</SelectItem>
-                    <SelectItem value="US">🇺🇸 United States</SelectItem>
-                    <SelectItem value="GB">🇬🇧 United Kingdom</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger className="h-12 bg-elevate-1">
+                  <SelectValue placeholder="Country (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">🌍 Worldwide</SelectItem>
+                  <SelectItem value="NG">🇳🇬 Nigeria</SelectItem>
+                  <SelectItem value="US">🇺🇸 United States</SelectItem>
+                  <SelectItem value="GB">🇬🇧 United Kingdom</SelectItem>
+                  <SelectItem value="GH">🇬🇭 Ghana</SelectItem>
+                  <SelectItem value="KE">🇰🇪 Kenya</SelectItem>
+                  <SelectItem value="ZA">🇿🇦 South Africa</SelectItem>
+                  <SelectItem value="CA">🇨🇦 Canada</SelectItem>
+                  <SelectItem value="AU">🇦🇺 Australia</SelectItem>
+                  <SelectItem value="IN">🇮🇳 India</SelectItem>
+                  <SelectItem value="PH">🇵🇭 Philippines</SelectItem>
+                  <SelectItem value="ID">🇮🇩 Indonesia</SelectItem>
+                  <SelectItem value="MY">🇲🇾 Malaysia</SelectItem>
+                  <SelectItem value="SG">🇸🇬 Singapore</SelectItem>
+                  <SelectItem value="TH">🇹🇭 Thailand</SelectItem>
+                  <SelectItem value="VN">🇻🇳 Vietnam</SelectItem>
+                  <SelectItem value="AE">🇦🇪 UAE</SelectItem>
+                  <SelectItem value="SA">🇸🇦 Saudi Arabia</SelectItem>
+                  <SelectItem value="EG">🇪🇬 Egypt</SelectItem>
+                  <SelectItem value="DZ">🇩🇿 Algeria</SelectItem>
+                  <SelectItem value="ET">🇪🇹 Ethiopia</SelectItem>
+                  <SelectItem value="FR">🇫🇷 France</SelectItem>
+                  <SelectItem value="DE">🇩🇪 Germany</SelectItem>
+                  <SelectItem value="IT">🇮🇹 Italy</SelectItem>
+                  <SelectItem value="ES">🇪🇸 Spain</SelectItem>
+                  <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
+                  <SelectItem value="MX">🇲🇽 Mexico</SelectItem>
+                  <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
+                  <SelectItem value="DO">🇩🇴 Dominican Republic</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Price Type Selection */}
+          {/* Offer Type Selection */}
           <div>
             <Label className="text-sm text-muted-foreground mb-2 block">Price Type</Label>
             <div className="grid grid-cols-2 gap-3">
@@ -453,8 +774,8 @@ export function CreateOffer() {
             </p>
           </div>
 
-          {/* Bank Payment Method Selection (only for Bank Transfer) */}
-          {paymentMethod === "Bank Transfer" && (
+          {/* Bank Payment Method Selection */}
+          {paymentMethod && (
             <Card className="bg-elevate-1 border-border">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -467,7 +788,7 @@ export function CreateOffer() {
                     Add New Bank
                   </Button>
                 </div>
-                
+
                 {paymentMethods.length > 0 ? (
                   <div>
                     <Label className="text-sm mb-2 block">Select Bank Account</Label>
@@ -559,7 +880,9 @@ export function CreateOffer() {
             onClick={handleCreateOffer}
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Creating offer..." : "Place an offer"}
+            {isSubmitting 
+              ? (isEditMode ? "Updating offer..." : "Creating offer...") 
+              : (isEditMode ? "Update offer" : "Place an offer")}
           </Button>
         </div>
       </main>
