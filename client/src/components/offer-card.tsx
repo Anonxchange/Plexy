@@ -18,6 +18,7 @@ export interface OfferCardProps {
     trades: number;
     responseTime: string;
     id?: string;
+    country?: string;
   };
   paymentMethod: string;
   pricePerBTC: number;
@@ -27,6 +28,7 @@ export interface OfferCardProps {
   type: "buy" | "sell";
   cryptoSymbol?: string;
   time_limit_minutes?: number;
+  country_restrictions?: string[] | null;
 }
 
 const getCryptoIcon = (symbol: string) => {
@@ -42,6 +44,77 @@ const getCryptoIcon = (symbol: string) => {
   }
 };
 
+const getCountryFlag = (country: string) => {
+  // Map of country codes to flags
+  const flagsByCode: Record<string, string> = {
+    "NG": "🇳🇬",
+    "US": "🇺🇸",
+    "GB": "🇬🇧",
+    "GH": "🇬🇭",
+    "KE": "🇰🇪",
+    "ZA": "🇿🇦",
+    "CA": "🇨🇦",
+    "AU": "🇦🇺",
+    "IN": "🇮🇳",
+    "PH": "🇵🇭",
+    "ID": "🇮🇩",
+    "MY": "🇲🇾",
+    "SG": "🇸🇬",
+    "TH": "🇹🇭",
+    "VN": "🇻🇳",
+    "AE": "🇦🇪",
+    "SA": "🇸🇦",
+    "EG": "🇪🇬",
+    "DZ": "🇩🇿",
+    "ET": "🇪🇹",
+    "FR": "🇫🇷",
+    "DE": "🇩🇪",
+    "IT": "🇮🇹",
+    "ES": "🇪🇸",
+    "BR": "🇧🇷",
+    "MX": "🇲🇽",
+    "AR": "🇦🇷",
+    "DO": "🇩🇴",
+    "EU": "🇪🇺",
+    "ALL": "🌍",
+  };
+  
+  // Map of country names to flags
+  const flagsByName: Record<string, string> = {
+    "Nigeria": "🇳🇬",
+    "United States": "🇺🇸",
+    "United Kingdom": "🇬🇧",
+    "Ghana": "🇬🇭",
+    "Kenya": "🇰🇪",
+    "South Africa": "🇿🇦",
+    "Canada": "🇨🇦",
+    "Australia": "🇦🇺",
+    "India": "🇮🇳",
+    "Philippines": "🇵🇭",
+    "Indonesia": "🇮🇩",
+    "Malaysia": "🇲🇾",
+    "Singapore": "🇸🇬",
+    "Thailand": "🇹🇭",
+    "Vietnam": "🇻🇳",
+    "UAE": "🇦🇪",
+    "Saudi Arabia": "🇸🇦",
+    "Egypt": "🇪🇬",
+    "Algeria": "🇩🇿",
+    "Ethiopia": "🇪🇹",
+    "France": "🇫🇷",
+    "Germany": "🇩🇪",
+    "Italy": "🇮🇹",
+    "Spain": "🇪🇸",
+    "Brazil": "🇧🇷",
+    "Mexico": "🇲🇽",
+    "Argentina": "🇦🇷",
+    "Dominican Republic": "🇩🇴",
+  };
+  
+  // Try country code first, then country name
+  return flagsByCode[country] || flagsByName[country] || "🌍";
+};
+
 export function OfferCard({ 
   vendor, 
   paymentMethod, 
@@ -52,6 +125,7 @@ export function OfferCard({
   type,
   cryptoSymbol = "BTC",
   time_limit_minutes = 30,
+  country_restrictions,
   ...offer
 }: OfferCardProps) {
   const [showTradeDialog, setShowTradeDialog] = useState(false);
@@ -73,13 +147,20 @@ export function OfferCard({
   };
 
   const cryptoAmount = limits.min / pricePerBTC;
+  
+  // Get the country flag - use vendor's country, or first country from restrictions, or worldwide
+  const countryFlag = vendor.country 
+    ? getCountryFlag(vendor.country)
+    : (country_restrictions && country_restrictions.length > 0 
+      ? getCountryFlag(country_restrictions[0])
+      : "🌍");
 
   return (
     <>
       <TradeDialog 
         open={showTradeDialog} 
         onOpenChange={setShowTradeDialog}
-        offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, time_limit_minutes, ...offer } as OfferCardProps}
+        offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, time_limit_minutes, country_restrictions, ...offer } as OfferCardProps}
       />
       <Card className="hover:shadow-lg transition-shadow border-2 border-primary/50" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
         <CardContent className="p-4 space-y-3">
@@ -94,7 +175,7 @@ export function OfferCard({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-semibold text-base">{vendor.name}</span>
-                <span className="text-base">🇳🇬</span>
+                <span className="text-base">{countryFlag}</span>
                 {vendor.isVerified && (
                   <span className="text-xs font-medium text-green-600 flex items-center gap-1">
                     <Circle className="h-2 w-2 fill-green-600" />
@@ -149,7 +230,7 @@ export function OfferCard({
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-primary flex items-center gap-1">
-                <DollarSign className="h-4 w-4" />
+                {getCryptoIcon(cryptoSymbol)}
                 {pricePerBTC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
               </div>
               <div className="text-xs text-muted-foreground flex items-center gap-2">
