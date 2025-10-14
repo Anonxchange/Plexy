@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,7 +46,7 @@ export function CreateOfferAdvanced() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marketRate, setMarketRate] = useState(0);
   const [loading, setLoading] = useState(true);
-  
+
   // Counterparty requirements
   const [completedOrders, setCompletedOrders] = useState("60");
   const [completionRate, setCompletionRate] = useState("95");
@@ -57,11 +56,11 @@ export function CreateOfferAdvanced() {
   const [maxOrdersPerUser, setMaxOrdersPerUser] = useState("1");
   const [registeredFor, setRegisteredFor] = useState("15");
   const [regionRestrictions, setRegionRestrictions] = useState<string[]>([]);
-  
+
   // Payment method selection
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-  
+
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -77,10 +76,10 @@ export function CreateOfferAdvanced() {
       }
       setLoading(false);
     };
-    
+
     fetchLivePrices();
     const interval = setInterval(fetchLivePrices, 30000); // Update every 30 seconds
-    
+
     return () => clearInterval(interval);
   }, [crypto, currency]);
 
@@ -89,7 +88,7 @@ export function CreateOfferAdvanced() {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (user) {
           const { data, error } = await supabase
             .from('payment_methods')
@@ -147,9 +146,9 @@ export function CreateOfferAdvanced() {
     setIsSubmitting(true);
     try {
       const supabase = createClient();
-      
+
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         setIsSubmitting(false);
         toast({
@@ -176,26 +175,9 @@ export function CreateOfferAdvanced() {
         max_amount: maxAmountNum,
         available_amount: maxAmountNum,
         total_quantity: totalQuantityNum,
-        country_restrictions: country ? [country] : null,
-        offer_terms: offerTerms,
-        offer_label: offerLabel,
-        offer_status: offerStatus,
-        time_limit_minutes: parseInt(timeLimit),
-        require_verification: requireVerification,
-        auto_reply_message: autoReply,
-        min_trade_count: parseInt(minTradeCount),
-        allow_new_traders: allowNewTraders,
-        // Counterparty requirements
-        min_completed_orders: parseInt(completedOrders),
-        min_completion_rate: parseInt(completionRate),
-        require_mobile: requireMobile,
-        require_email: requireEmail,
-        no_trades_with_others: noTradesWithOthers,
-        max_orders_per_user: parseInt(maxOrdersPerUser),
-        min_registered_days: parseInt(registeredFor),
-        region_restrictions: regionRestrictions.length > 0 ? regionRestrictions : null,
+        country_restrictions: country && country !== "ALL" ? [country] : null,
         // Payment method reference
-        payment_method_id: paymentMethod === "Bank Transfer" ? selectedPaymentMethodId : null,
+        payment_method_id: selectedPaymentMethodId || null,
         is_active: true,
       });
 
@@ -309,10 +291,33 @@ export function CreateOfferAdvanced() {
                   <SelectValue placeholder="Currency" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="NGN">Nigerian Nairas (NGN)</SelectItem>
-                  <SelectItem value="USD">US Dollar (USD)</SelectItem>
-                  <SelectItem value="EUR">Euro (EUR)</SelectItem>
-                  <SelectItem value="GBP">British Pound (GBP)</SelectItem>
+                  <SelectItem value="NGN">🇳🇬 Nigerian Naira (NGN)</SelectItem>
+                  <SelectItem value="USD">🇺🇸 US Dollar (USD)</SelectItem>
+                  <SelectItem value="GBP">🇬🇧 British Pound (GBP)</SelectItem>
+                  <SelectItem value="EUR">🇪🇺 Euro (EUR)</SelectItem>
+                  <SelectItem value="CAD">🇨🇦 Canadian Dollar (CAD)</SelectItem>
+                  <SelectItem value="INR">🇮🇳 Indian Rupee (INR)</SelectItem>
+                  <SelectItem value="KES">🇰🇪 Kenyan Shilling (KES)</SelectItem>
+                  <SelectItem value="GHS">🇬🇭 Ghanaian Cedi (GHS)</SelectItem>
+                  <SelectItem value="ZAR">🇿🇦 South African Rand (ZAR)</SelectItem>
+                  <SelectItem value="AUD">🇦🇺 Australian Dollar (AUD)</SelectItem>
+                  <SelectItem value="CNY">🇨🇳 Chinese Yuan (CNY)</SelectItem>
+                  <SelectItem value="JPY">🇯🇵 Japanese Yen (JPY)</SelectItem>
+                  <SelectItem value="PHP">🇵🇭 Philippine Peso (PHP)</SelectItem>
+                  <SelectItem value="IDR">🇮🇩 Indonesian Rupiah (IDR)</SelectItem>
+                  <SelectItem value="MYR">🇲🇾 Malaysian Ringgit (MYR)</SelectItem>
+                  <SelectItem value="SGD">🇸🇬 Singapore Dollar (SGD)</SelectItem>
+                  <SelectItem value="THB">🇹🇭 Thai Baht (THB)</SelectItem>
+                  <SelectItem value="VND">🇻🇳 Vietnamese Dong (VND)</SelectItem>
+                  <SelectItem value="AED">🇦🇪 UAE Dirham (AED)</SelectItem>
+                  <SelectItem value="SAR">🇸🇦 Saudi Riyal (SAR)</SelectItem>
+                  <SelectItem value="EGP">🇪🇬 Egyptian Pound (EGP)</SelectItem>
+                  <SelectItem value="DZD">🇩🇿 Algerian Dinar (DZD)</SelectItem>
+                  <SelectItem value="ETB">🇪🇹 Ethiopian Birr (ETB)</SelectItem>
+                  <SelectItem value="BRL">🇧🇷 Brazilian Real (BRL)</SelectItem>
+                  <SelectItem value="MXN">🇲🇽 Mexican Peso (MXN)</SelectItem>
+                  <SelectItem value="ARS">🇦🇷 Argentine Peso (ARS)</SelectItem>
+                  <SelectItem value="DOP">🇩🇴 Dominican Peso (DOP)</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -321,9 +326,35 @@ export function CreateOfferAdvanced() {
                   <SelectValue placeholder="Country (optional)" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ALL">🌍 Worldwide</SelectItem>
                   <SelectItem value="NG">🇳🇬 Nigeria</SelectItem>
                   <SelectItem value="US">🇺🇸 United States</SelectItem>
                   <SelectItem value="GB">🇬🇧 United Kingdom</SelectItem>
+                  <SelectItem value="GH">🇬🇭 Ghana</SelectItem>
+                  <SelectItem value="KE">🇰🇪 Kenya</SelectItem>
+                  <SelectItem value="ZA">🇿🇦 South Africa</SelectItem>
+                  <SelectItem value="CA">🇨🇦 Canada</SelectItem>
+                  <SelectItem value="AU">🇦🇺 Australia</SelectItem>
+                  <SelectItem value="IN">🇮🇳 India</SelectItem>
+                  <SelectItem value="PH">🇵🇭 Philippines</SelectItem>
+                  <SelectItem value="ID">🇮🇩 Indonesia</SelectItem>
+                  <SelectItem value="MY">🇲🇾 Malaysia</SelectItem>
+                  <SelectItem value="SG">🇸🇬 Singapore</SelectItem>
+                  <SelectItem value="TH">🇹🇭 Thailand</SelectItem>
+                  <SelectItem value="VN">🇻🇳 Vietnam</SelectItem>
+                  <SelectItem value="AE">🇦🇪 UAE</SelectItem>
+                  <SelectItem value="SA">🇸🇦 Saudi Arabia</SelectItem>
+                  <SelectItem value="EG">🇪🇬 Egypt</SelectItem>
+                  <SelectItem value="DZ">🇩🇿 Algeria</SelectItem>
+                  <SelectItem value="ET">🇪🇹 Ethiopia</SelectItem>
+                  <SelectItem value="FR">🇫🇷 France</SelectItem>
+                  <SelectItem value="DE">🇩🇪 Germany</SelectItem>
+                  <SelectItem value="IT">🇮🇹 Italy</SelectItem>
+                  <SelectItem value="ES">🇪🇸 Spain</SelectItem>
+                  <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
+                  <SelectItem value="MX">🇲🇽 Mexico</SelectItem>
+                  <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
+                  <SelectItem value="DO">🇩🇴 Dominican Republic</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -504,8 +535,8 @@ export function CreateOfferAdvanced() {
             </div>
           </div>
 
-          {/* Bank Payment Method Selection (only for Bank Transfer) */}
-          {paymentMethod === "Bank Transfer" && (
+          {/* Bank Payment Method Selection */}
+          {paymentMethod && (
             <Card className="bg-elevate-1 border-border">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -518,7 +549,7 @@ export function CreateOfferAdvanced() {
                     Add New Bank
                   </Button>
                 </div>
-                
+
                 {paymentMethods.length > 0 ? (
                   <div>
                     <Label className="text-sm mb-2 block">Select Bank Account</Label>
@@ -614,7 +645,7 @@ export function CreateOfferAdvanced() {
                 <p className="text-xs text-muted-foreground">
                   This setting allows you to screen out credible counterparties but may also reduce the exposure of your advertisements.
                 </p>
-                
+
                 <div className="flex items-center gap-3">
                   <Checkbox 
                     id="completed-orders"
@@ -779,11 +810,34 @@ export function CreateOfferAdvanced() {
                           <SelectValue placeholder="Please Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="NG">Nigeria</SelectItem>
-                          <SelectItem value="US">United States</SelectItem>
-                          <SelectItem value="GB">United Kingdom</SelectItem>
-                          <SelectItem value="GH">Ghana</SelectItem>
-                          <SelectItem value="KE">Kenya</SelectItem>
+                          <SelectItem value="NG">🇳🇬 Nigeria</SelectItem>
+                          <SelectItem value="US">🇺🇸 United States</SelectItem>
+                          <SelectItem value="GB">🇬🇧 United Kingdom</SelectItem>
+                          <SelectItem value="GH">🇬🇭 Ghana</SelectItem>
+                          <SelectItem value="KE">🇰🇪 Kenya</SelectItem>
+                          <SelectItem value="ZA">🇿🇦 South Africa</SelectItem>
+                          <SelectItem value="CA">🇨🇦 Canada</SelectItem>
+                          <SelectItem value="AU">🇦🇺 Australia</SelectItem>
+                          <SelectItem value="IN">🇮🇳 India</SelectItem>
+                          <SelectItem value="PH">🇵🇭 Philippines</SelectItem>
+                          <SelectItem value="ID">🇮🇩 Indonesia</SelectItem>
+                          <SelectItem value="MY">🇲🇾 Malaysia</SelectItem>
+                          <SelectItem value="SG">🇸🇬 Singapore</SelectItem>
+                          <SelectItem value="TH">🇹🇭 Thailand</SelectItem>
+                          <SelectItem value="VN">🇻🇳 Vietnam</SelectItem>
+                          <SelectItem value="AE">🇦🇪 UAE</SelectItem>
+                          <SelectItem value="SA">🇸🇦 Saudi Arabia</SelectItem>
+                          <SelectItem value="EG">🇪🇬 Egypt</SelectItem>
+                          <SelectItem value="DZ">🇩🇿 Algeria</SelectItem>
+                          <SelectItem value="ET">🇪🇹 Ethiopia</SelectItem>
+                          <SelectItem value="FR">🇫🇷 France</SelectItem>
+                          <SelectItem value="DE">🇩🇪 Germany</SelectItem>
+                          <SelectItem value="IT">🇮🇹 Italy</SelectItem>
+                          <SelectItem value="ES">🇪🇸 Spain</SelectItem>
+                          <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
+                          <SelectItem value="MX">🇲🇽 Mexico</SelectItem>
+                          <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
+                          <SelectItem value="DO">🇩🇴 Dominican Republic</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
