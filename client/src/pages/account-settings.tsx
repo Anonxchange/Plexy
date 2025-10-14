@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -83,12 +83,16 @@ export function AccountSettings() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
-  
+
   const [activeSection, setActiveSection] = useState("profile");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [nameDisplay, setNameDisplay] = useState("hide");
   const [phoneVerified, setPhoneVerified] = useState(true);
-  
+
+  // Verification Data
+  const [verificationLevel, setVerificationLevel] = useState(0);
+  const [loadingVerification, setLoadingVerification] = useState(true);
+
   // Profile data
   const [profileData, setProfileData] = useState<any>(null);
   const [username, setUsername] = useState("");
@@ -97,14 +101,14 @@ export function AccountSettings() {
   const [currency, setCurrency] = useState("ngn");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  
+
   // Security settings
   const [smsAuth, setSmsAuth] = useState(false);
   const [appAuth, setAppAuth] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
+
   // Notification settings
   const [tradeUpdates, setTradeUpdates] = useState(true);
   const [priceAlerts, setPriceAlerts] = useState(true);
@@ -163,6 +167,7 @@ export function AccountSettings() {
     } else if (user) {
       fetchProfileData();
       fetchPaymentMethods();
+      fetchVerificationLevel();
     }
   }, [user, loading]);
 
@@ -186,6 +191,31 @@ export function AccountSettings() {
       console.error('Error fetching profile:', error);
     }
   };
+
+  const fetchVerificationLevel = async () => {
+    setLoadingVerification(true);
+    try {
+      const { data, error } = await supabase
+        .from('verification_levels')
+        .select('level')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data && data.level !== undefined) {
+        setVerificationLevel(data.level);
+      } else {
+        setVerificationLevel(0); // Default to Level 0 if no record found
+      }
+    } catch (error) {
+      console.error('Error fetching verification level:', error);
+      setVerificationLevel(0); // Default to Level 0 on error
+    } finally {
+      setLoadingVerification(false);
+    }
+  };
+
 
   const fetchPaymentMethods = async () => {
     try {
@@ -316,7 +346,7 @@ export function AccountSettings() {
 
   const handleSavePaymentMethod = async () => {
     const finalBankName = paymentBankName === "Custom Bank (Enter manually)" ? customBankName : paymentBankName;
-    
+
     if (!finalBankName || !paymentAccountNumber || !paymentAccountName) {
       toast({
         title: "Error",
@@ -487,12 +517,12 @@ export function AccountSettings() {
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Username</Label>
         <div className="flex gap-2">
-          <Input 
-            value={username} 
+          <Input
+            value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="flex-1" 
+            className="flex-1"
           />
-          <Button 
+          <Button
             className="bg-primary hover:bg-primary/90"
             onClick={handleSaveProfile}
           >
@@ -539,10 +569,10 @@ export function AccountSettings() {
               <SelectItem value="ca">🇨🇦</SelectItem>
             </SelectContent>
           </Select>
-          <Input 
-            value={phone} 
+          <Input
+            value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="flex-1" 
+            className="flex-1"
             disabled={phoneVerified}
           />
           {phoneVerified && (
@@ -623,24 +653,24 @@ export function AccountSettings() {
           <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
               <Label>Current Password</Label>
-              <Input 
-                type="password" 
+              <Input
+                type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label>New Password</Label>
-              <Input 
-                type="password" 
+              <Input
+                type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label>Confirm New Password</Label>
-              <Input 
-                type="password" 
+              <Input
+                type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
@@ -889,49 +919,107 @@ export function AccountSettings() {
 
   const VerificationSection = () => (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="p-6 space-y-4">
+      {/* Verification Status Card */}
+      <Card className="mb-6 border-2 border-primary/20">
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Email Verified</p>
-                <p className="text-sm text-muted-foreground">curieswapo@gmail.com</p>
-              </div>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Account Verification</CardTitle>
             </div>
-            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-              Verified
+            <Badge variant={verificationLevel >= 2 ? "default" : "secondary"} className="text-xs">
+              Level {verificationLevel}
             </Badge>
           </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Smartphone className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Phone Verified</p>
-                <p className="text-sm text-muted-foreground">+234 813 447 8949</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-              Verified
-            </Badge>
-          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingVerification ? (
+            <p className="text-sm text-muted-foreground">Loading verification status...</p>
+          ) : (
+            <div className="space-y-3">
+              {verificationLevel === 0 && (
+                <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                  <p className="text-sm font-semibold text-orange-800 dark:text-orange-200 mb-1">
+                    Limited Access - Level 0
+                  </p>
+                  <p className="text-xs text-orange-700 dark:text-orange-300 mb-2">
+                    You can invite friends and earn rewards, but cannot trade yet. Complete age verification to start trading.
+                  </p>
+                </div>
+              )}
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                <User className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium">Identity Verification</p>
-                <p className="text-sm text-muted-foreground">Verify your identity</p>
-              </div>
+              {verificationLevel === 1 && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                    Basic Trading - Level 1
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                    Daily limit: $1,000 | Lifetime: $10,000 | Cannot create offers
+                  </p>
+                </div>
+              )}
+
+              {verificationLevel === 1.5 && (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">
+                    Offer Creator - Level 1 Plus
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-300 mb-2">
+                    Can create offers | Same limits as Level 1
+                  </p>
+                </div>
+              )}
+
+              {verificationLevel === 2 && (
+                <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                  <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 mb-1">
+                    Unlimited Trading - Level 2
+                  </p>
+                  <p className="text-xs text-purple-700 dark:text-purple-300 mb-2">
+                    No daily/lifetime limits | Per-trade: $100,000
+                  </p>
+                </div>
+              )}
+
+              {verificationLevel === 3 && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                    VIP Status - Level 3
+                  </p>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
+                    Maximum per-trade: $1,000,000 | Priority support
+                  </p>
+                </div>
+              )}
+
+              <Button
+                onClick={() => setLocation("/verification")}
+                className="w-full"
+                variant={verificationLevel >= 3 ? "outline" : "default"}
+              >
+                {verificationLevel >= 3 ? "View Verification Details" : "Upgrade Verification Level"}
+              </Button>
             </div>
-            <Button variant="outline" size="sm">Verify</Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <div className="flex gap-3">
+            <Info className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p className="text-sm">
+                Increase your verification level to unlock higher trading limits and additional features.
+              </p>
+              <Button
+                variant="link"
+                className="h-auto p-0 text-primary"
+                onClick={() => setLocation('/verification')}
+              >
+                View Verification Levels →
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
