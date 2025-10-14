@@ -34,6 +34,9 @@ import CryptoToBank from "@/pages/crypto-to-bank";
 import Lightning from "@/pages/lightning";
 import BuyCrypto from "@/pages/buy-crypto";
 import ActiveTrade from "@/pages/active-trade";
+import VerificationPage from "@/pages/verification";
+import AdminPage from "@/pages/admin";
+import AdminVerificationsPage from "@/pages/admin-verifications";
 
 function Router() {
   return (
@@ -53,6 +56,9 @@ function Router() {
       <Route path="/gift-cards" component={GiftCards} />
       <Route path="/trade-history" component={TradeHistory} />
       <Route path="/account-settings" component={AccountSettings} />
+      <Route path="/verification" component={VerificationPage} />
+      <Route path="/admin" component={AdminPage} />
+      <Route path="/admin/verifications" component={AdminVerificationsPage} />
       <Route path="/signup" component={SignUp} />
       <Route path="/signin" component={SignIn} />
       <Route path="/dashboard" component={Dashboard} />
@@ -69,7 +75,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings"].includes(location) || location.startsWith("/trade/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications"].includes(location) || location.startsWith("/trade/");
 
   return (
     <QueryClientProvider client={queryClient}>
