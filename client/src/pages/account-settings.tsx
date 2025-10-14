@@ -120,6 +120,7 @@ export function AccountSettings() {
   const [customBankName, setCustomBankName] = useState("");
   const [bankAddress, setBankAddress] = useState("");
   const [openBankSelect, setOpenBankSelect] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
   // Nigerian Banks List
   const nigerianBanks = [
@@ -161,6 +162,7 @@ export function AccountSettings() {
       setLocation("/signin");
     } else if (user) {
       fetchProfileData();
+      fetchPaymentMethods();
     }
   }, [user, loading]);
 
@@ -182,6 +184,21 @@ export function AccountSettings() {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  };
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setPaymentMethods(data || []);
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
     }
   };
 
@@ -336,6 +353,7 @@ export function AccountSettings() {
       setPaymentBankCode("");
       setCustomBankName("");
       setBankAddress("");
+      fetchPaymentMethods(); // Refresh the list
     } catch (error) {
       console.error('Error saving payment method:', error);
       toast({
@@ -679,11 +697,59 @@ export function AccountSettings() {
       </div>
       <Card>
         <CardContent className="p-6">
-          <div className="text-center py-8 text-muted-foreground">
-            <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No payment methods added yet</p>
-            <p className="text-sm mt-2">Add a payment method to start trading</p>
-          </div>
+          {paymentMethods.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No payment methods added yet</p>
+              <p className="text-sm mt-2">Add a payment method to start trading</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {paymentMethods.map((method) => (
+                <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{method.bank_name}</p>
+                      <p className="text-sm text-muted-foreground">{method.account_name}</p>
+                      <p className="text-sm text-muted-foreground">{method.account_number}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase
+                          .from('payment_methods')
+                          .delete()
+                          .eq('id', method.id);
+
+                        if (error) throw error;
+
+                        toast({
+                          title: "Success!",
+                          description: "Payment method removed"
+                        });
+
+                        fetchPaymentMethods();
+                      } catch (error) {
+                        toast({
+                          title: "Error",
+                          description: "Failed to remove payment method",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
