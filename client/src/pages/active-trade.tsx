@@ -92,8 +92,9 @@ export default function ActiveTrade() {
 
   const supabase = createClient();
   
-  const isUserBuyer = currentUserProfileId && trade?.buyer_id === currentUserProfileId;
-  const isUserSeller = currentUserProfileId && trade?.seller_id === currentUserProfileId;
+  // Determine user role - swap the logic so buyer sees seller flow and vice versa
+  const isUserBuyer = currentUserProfileId && trade?.seller_id === currentUserProfileId;
+  const isUserSeller = currentUserProfileId && trade?.buyer_id === currentUserProfileId;
   
   const counterparty = isUserBuyer 
     ? trade?.seller_profile 
@@ -248,25 +249,28 @@ export default function ActiveTrade() {
 
       if (messagesError) throw messagesError;
 
-      const hasInstructions = messagesData?.some(msg => msg.content.includes("is selling you"));
-      
-      if (!hasInstructions && messagesData && tradeId) {
-        const sellerUsername = sellerProfile?.username || "Seller";
-        const instructionsMessage: TradeMessage = {
-          id: `instructions-${tradeId}`,
-          trade_id: tradeId,
-          sender_id: "system",
-          message_type: "system",
-          content: `${sellerUsername} is selling you ${tradeData.crypto_amount} ${tradeData.crypto_symbol}\n\n1. You must pay ${tradeData.fiat_amount.toLocaleString()} ${tradeData.fiat_currency} via ${tradeData.payment_method}\n\n2. They will share their bank details below\n\n3. When you have sent the money, please mark the trade as "paid"\n\n4. (It really helps if you upload a screenshot or PDF as a receipt of payment too)\n\n5. Then wait for ${sellerUsername} to confirm they have received payment\n\n6. When they do, they will release your ${tradeData.crypto_symbol} and the trade will be complete`,
-          file_url: null,
-          is_read: false,
-          created_at: tradeData.created_at,
-        };
-        messagesData.unshift(instructionsMessage);
+      // Only show instructions for buyers
+      if (tradeData.buyer_id === currentUserProfileId) {
+        const hasInstructions = messagesData?.some(msg => msg.content.includes("is selling you"));
+        
+        if (!hasInstructions && messagesData && tradeId) {
+          const sellerUsername = sellerProfile?.username || "Seller";
+          const instructionsMessage: TradeMessage = {
+            id: `instructions-${tradeId}`,
+            trade_id: tradeId,
+            sender_id: "system",
+            message_type: "system",
+            content: `${sellerUsername} is selling you ${tradeData.crypto_amount} ${tradeData.crypto_symbol}\n\n1. You must pay ${tradeData.fiat_amount.toLocaleString()} ${tradeData.fiat_currency} via ${tradeData.payment_method}\n\n2. They will share their bank details below\n\n3. When you have sent the money, please mark the trade as "paid"\n\n4. (It really helps if you upload a screenshot or PDF as a receipt of payment too)\n\n5. Then wait for ${sellerUsername} to confirm they have received payment\n\n6. When they do, they will release your ${tradeData.crypto_symbol} and the trade will be complete`,
+            file_url: null,
+            is_read: false,
+            created_at: tradeData.created_at,
+          };
+          messagesData.unshift(instructionsMessage);
+        }
       }
 
-      // Add bank details message in chat for buyers
-      if (sellerBankDetails && !messagesData?.some(msg => msg.content.includes("Bank Details"))) {
+      // Add bank details message in chat for buyers only
+      if (sellerBankDetails && tradeId && tradeData.buyer_id === currentUserProfileId && !messagesData?.some(msg => msg.content.includes("Bank Details"))) {
         const bankDetailsMessage: TradeMessage = {
           id: `bank-details-${tradeId}`,
           trade_id: tradeId,
@@ -658,8 +662,17 @@ export default function ActiveTrade() {
         {/* Moderator Status */}
         <div className="px-3 sm:px-4 pb-3 flex items-center justify-between border-t border-border pt-3">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-muted-foreground rounded-full"></div>
-            <span className="text-sm sm:text-base text-muted-foreground">Moderator unavailable</span>
+            {trade.buyer_paid_at ? (
+              <>
+                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm sm:text-base text-green-500">Moderator available</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-muted-foreground rounded-full"></div>
+                <span className="text-sm sm:text-base text-muted-foreground">Moderator unavailable</span>
+              </>
+            )}
           </div>
           <button className="text-primary text-sm sm:text-base font-semibold flex items-center gap-1">
             Translate 🌐
@@ -677,12 +690,33 @@ export default function ActiveTrade() {
               <span className="text-base sm:text-lg font-semibold">Trade Started</span>
             </div>
 
+            {/* Seller: Waiting for Payment - Show only if buyer hasn't paid */}
+            {isUserSeller && trade.status === "pending" && !trade.buyer_paid_at && (
+              <>
+                <Card className="p-4 sm:p-5 bg-[#1a1a1a] border border-border">
+                  <p className="text-base sm:text-lg font-medium mb-2">
+                    Waiting for buyer to pay {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} via {trade.payment_method}
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Your {trade.crypto_amount} {trade.crypto_symbol} is in escrow and will be released when buyer marks payment as sent.
+                  </p>
+
+                  <div className="border-t border-border pt-4">
+                    <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground">
+                      <Clock className="h-5 w-5" />
+                      <span>Waiting for buyer payment</span>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
+
             {/* Buyer: Payment Instruction Card - Show only if NOT paid yet */}
             {isUserBuyer && trade.status === "pending" && !trade.buyer_paid_at && (
               <>
                 <Card className="p-4 sm:p-5 bg-[#1a1a1a] border border-border">
                   <p className="text-base sm:text-lg font-medium mb-2">
-                    Please make a payment of {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} using {trade.payment_method}.
+                    Please make a payment of {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} to {counterparty?.username || "the vendor"} using {trade.payment_method}.
                   </p>
                   <p className="text-sm text-muted-foreground mb-6">
                     {trade.crypto_amount} {trade.crypto_symbol} will be added to your {trade.crypto_symbol === 'USDT' ? 'Tether' : trade.crypto_symbol} wallet
@@ -745,60 +779,66 @@ export default function ActiveTrade() {
                   </div>
                 </Card>
 
+                {/* Cancel Trade Button for Buyer - at the bottom */}
                 <Button
                   variant="outline"
-                  onClick={openDispute}
-                  className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium bg-muted/50 border-muted-foreground/30"
+                  onClick={cancelTrade}
+                  className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium border-red-500/50 text-red-500 hover:bg-red-500/10"
                 >
-                  Report Bad Behaviour
+                  Cancel Trade
                 </Button>
               </>
             )}
 
             {/* Buyer: Waiting for Seller to Release - Show after buyer paid */}
             {isUserBuyer && trade.status === "pending" && trade.buyer_paid_at && (
-              <Card className="p-4 sm:p-5 bg-green-900/20 border border-green-600/30">
-                <div className="flex items-center justify-center gap-2 py-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  <span className="text-sm sm:text-base">Payment marked as sent. Waiting for seller to release crypto...</span>
-                </div>
-              </Card>
-            )}
-
-            {/* Seller: Waiting for Payment - Show only if buyer hasn't paid */}
-            {isUserSeller && trade.status === "pending" && !trade.buyer_paid_at && (
-              <Card className="p-4 sm:p-5 bg-[#1a1a1a] border border-border">
-                <p className="text-base sm:text-lg font-medium mb-2">
-                  Waiting for buyer to pay {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} via {trade.payment_method}
-                </p>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Your {trade.crypto_amount} {trade.crypto_symbol} is in escrow and will be released when buyer marks payment as sent.
-                </p>
-
-                <div className="border-t border-border pt-4">
-                  <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground">
-                    <Clock className="h-5 w-5" />
-                    <span>Waiting for buyer payment</span>
+              <>
+                <Card className="p-4 sm:p-5 bg-green-900/20 border border-green-600/30">
+                  <div className="flex items-center justify-center gap-2 py-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <span className="text-sm sm:text-base">Payment marked as sent. Waiting for seller to release crypto...</span>
                   </div>
-                </div>
-              </Card>
+                </Card>
+
+                {/* Buyer can now dispute if seller won't release */}
+                <Button
+                  variant="outline"
+                  onClick={openDispute}
+                  className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium bg-red-900/20 border-red-500/50 text-red-400 hover:bg-red-900/30 hover:text-red-300 flex items-center justify-center gap-2"
+                >
+                  <Flag className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Contact Moderator (Seller Won't Release)
+                </Button>
+              </>
             )}
 
             {/* Seller: Release Funds Card - Show only after buyer paid */}
             {isUserSeller && trade.status === "pending" && trade.buyer_paid_at && (
-              <Card className="p-3 sm:p-4 bg-gradient-to-br from-lime-500/10 to-green-500/5 border-lime-500/20">
-                <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-lime-500" />
-                  <h3 className="font-semibold text-sm sm:text-base">Confirm Payment</h3>
-                </div>
-                <p className="text-xs sm:text-sm mb-3 sm:mb-4">
-                  Buyer has marked payment as sent. Verify and release {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
-                </p>
-                <Button onClick={releaseFunds} className="w-full bg-lime-500 hover:bg-lime-600 text-black h-11 sm:h-12 text-sm sm:text-base font-semibold">
-                  Release Crypto
-                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
+              <>
+                <Card className="p-3 sm:p-4 bg-gradient-to-br from-lime-500/10 to-green-500/5 border-lime-500/20">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-lime-500" />
+                    <h3 className="font-semibold text-sm sm:text-base">Confirm Payment</h3>
+                  </div>
+                  <p className="text-xs sm:text-sm mb-3 sm:mb-4">
+                    Buyer has marked payment as sent. Verify payment in your bank account and release {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                  </p>
+                  <Button onClick={releaseFunds} className="w-full bg-lime-500 hover:bg-lime-600 text-black h-11 sm:h-12 text-sm sm:text-base font-semibold">
+                    Release Crypto
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
+                  </Button>
+                </Card>
+
+                {/* Seller can dispute if buyer marked paid but no payment received */}
+                <Button
+                  variant="outline"
+                  onClick={openDispute}
+                  className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium bg-red-900/20 border-red-500/50 text-red-400 hover:bg-red-900/30 hover:text-red-300 flex items-center justify-center gap-2"
+                >
+                  <Flag className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Contact Moderator (No Payment Received)
                 </Button>
-              </Card>
+              </>
             )}
 
             {/* Trade Information */}
@@ -846,20 +886,9 @@ export default function ActiveTrade() {
                   <X className="h-5 w-5" />
                 </button>
                 <p className="text-sm sm:text-base pr-8">
-                  Keep trades within NoOnes. Some users may ask you to trade outside the NoOnes platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within NoOnes. If you choose to proceed outside NoOnes, note that we cannot help or support you if you are scammed during such trades.
+                  Keep trades within the platform. Some users may ask you to trade outside. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within the platform. If you choose to proceed outside, note that we cannot help or support you if you are scammed during such trades.
                 </p>
               </Card>
-            )}
-
-            {/* Cancel Trade Button */}
-            {isUserBuyer && trade.status === "pending" && !trade.buyer_paid_at && (
-              <Button
-                variant="outline"
-                onClick={cancelTrade}
-                className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium border-red-500/50 text-red-500 hover:bg-red-500/10"
-              >
-                Cancel Trade
-              </Button>
             )}
           </div>
         )}
