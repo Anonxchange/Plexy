@@ -66,6 +66,21 @@ const cryptocurrencies = [
   { symbol: "USDT", name: "Tether", icon: UsdtIcon, price: 1.00 },
 ];
 
+// Helper function to get country flag emoji
+const getCountryFlag = (countryName: string | undefined | null): string => {
+  if (!countryName) return '🌍';
+  switch (countryName.toLowerCase()) {
+    case 'united states': return '🇺🇸';
+    case 'nigeria': return '🇳🇬';
+    case 'united kingdom': return '🇬🇧';
+    case 'canada': return '🇨🇦';
+    case 'ghana': return '🇬🇭';
+    case 'kenya': return '🇰🇪';
+    case 'south africa': return '🇿🇦';
+    default: return '🌍';
+  }
+};
+
 export function P2P() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
@@ -140,13 +155,13 @@ export function P2P() {
         (trades || []).map(async (trade) => {
           const { data: buyerProfile } = await supabase
             .from("user_profiles")
-            .select("username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg")
+            .select("username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
             .eq("id", trade.buyer_id)
             .single();
 
           const { data: sellerProfile } = await supabase
             .from("user_profiles")
-            .select("username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg")
+            .select("username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
             .eq("id", trade.seller_id)
             .single();
 
@@ -181,7 +196,8 @@ export function P2P() {
             avatar_type,
             positive_ratings,
             total_trades,
-            response_time_avg
+            response_time_avg,
+            country
           )
         `)
         .eq("crypto_symbol", selectedCrypto)
@@ -210,7 +226,8 @@ export function P2P() {
               avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${offer.user_id}`,
               isVerified: false,
               trades: 0,
-              responseTime: "5 min"
+              responseTime: "5 min",
+              country: undefined, // Default to undefined if not fetched
             },
             paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
             pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
@@ -271,7 +288,8 @@ export function P2P() {
             trades: user?.total_trades || 0,
             responseTime: user?.response_time_avg 
               ? `${Math.floor(user.response_time_avg / 60)} min` 
-              : "5 min"
+              : "5 min",
+            country: user?.country || undefined, // Pass the country from user profiles
           },
           paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
           pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
@@ -839,7 +857,11 @@ export function P2P() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-semibold text-base">{counterparty?.username || "Vendor"}</span>
-                              <span className="text-base">🇳🇬</span>
+                              {counterparty?.country && (
+                                <span className="text-base">
+                                  {getCountryFlag(counterparty.country)}
+                                </span>
+                              )}
                               {(counterparty?.positive_ratings || 0) > 10 && (
                                 <span className="text-xs font-medium text-green-600 flex items-center gap-1">
                                   <Circle className="h-2 w-2 fill-green-600" />
