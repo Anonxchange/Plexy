@@ -29,27 +29,46 @@ export default function AdminVerificationsPage() {
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    // Check if admin session exists in localStorage
-    const adminSession = localStorage.getItem('admin_session');
-    if (adminSession) {
-      try {
-        const session = JSON.parse(adminSession);
-        // Check if session is still valid (not expired)
-        if (session.expiresAt > Date.now()) {
+    const checkAdminAccess = async () => {
+      // First check if admin session exists in localStorage
+      const adminSession = localStorage.getItem('admin_session');
+      if (adminSession) {
+        try {
+          const session = JSON.parse(adminSession);
+          // Check if session is still valid (not expired)
+          if (session.expiresAt > Date.now()) {
+            setIsAdmin(true);
+            setCheckingSession(false);
+            return;
+          } else {
+            localStorage.removeItem('admin_session');
+          }
+        } catch (e) {
+          localStorage.removeItem('admin_session');
+        }
+      }
+
+      // Check if user has admin role in database
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.is_admin) {
           setIsAdmin(true);
           setCheckingSession(false);
           return;
-        } else {
-          localStorage.removeItem('admin_session');
         }
-      } catch (e) {
-        localStorage.removeItem('admin_session');
       }
-    }
 
-    setIsAdmin(false);
-    setCheckingSession(false);
-  }, []);
+      setIsAdmin(false);
+      setCheckingSession(false);
+    };
+
+    checkAdminAccess();
+  }, [user]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,53 +132,41 @@ export default function AdminVerificationsPage() {
     mutationFn: async (verificationId: string) => {
       console.log("=== APPROVE MUTATION STARTED ===");
       console.log("Verification ID:", verificationId);
-      console.log("All verifications:", verifications);
       
       const verification = verifications?.find(v => v.id === verificationId);
-      console.log("Found verification:", verification);
       
       if (!verification) {
-        console.error("Verification not found!");
         throw new Error("Verification not found");
       }
 
-      console.log("Current user:", user);
-      console.log("Updating verification status to approved...");
-
       // Update verification status
-      const { data: verifyData, error: verifyError } = await supabase
+      const { error: verifyError } = await supabase
         .from("verifications")
         .update({
           status: "approved",
           reviewed_at: new Date().toISOString(),
-          reviewed_by: user?.id || "admin"
+          reviewed_by: user?.id || null
         })
-        .eq("id", verificationId)
-        .select();
+        .eq("id", verificationId);
 
       if (verifyError) {
         console.error("Error updating verification:", verifyError);
         throw verifyError;
       }
 
-      console.log("Verification updated successfully:", verifyData);
-
       // Update user's verification level
-      console.log("Updating user profile verification level to:", verification.requested_level);
-      const { data: userData, error: userError } = await supabase
+      const { error: userError } = await supabase
         .from("user_profiles")
-        .update({ verification_level: String(verification.requested_level) })
-        .eq("id", verification.user_id)
-        .select();
+        .update({ verification_level: verification.requested_level })
+        .eq("id", verification.user_id);
 
       if (userError) {
         console.error("Error updating user profile:", userError);
         throw userError;
       }
 
-      console.log("User profile updated successfully:", userData);
       console.log("=== APPROVE MUTATION COMPLETED ===");
-      return { verifyData, userData };
+      return { success: true };
     },
     onSuccess: () => {
       console.log("✅ Approve mutation successful - invalidating queries");
@@ -177,30 +184,29 @@ export default function AdminVerificationsPage() {
     mutationFn: async (verificationId: string) => {
       console.log("Rejecting verification:", verificationId);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("verifications")
         .update({
           status: "rejected",
           reviewed_at: new Date().toISOString(),
-          reviewed_by: user?.id || "admin",
+          reviewed_by: user?.id || null,
           rejection_reason: rejectionReason || "No reason provided"
         })
-        .eq("id", verificationId)
-        .select();
+        .eq("id", verificationId);
 
       if (error) {
         console.error("Error rejecting verification:", error);
         throw error;
       }
 
-      console.log("Verification rejected:", data);
-      return data;
+      return { success: true };
     },
     onSuccess: () => {
       console.log("Reject mutation successful");
       queryClient.invalidateQueries({ queryKey: ["admin-verifications"] });
       setSelectedVerification(null);
       setRejectionReason("");
+      alert("Verification rejected successfully!");
     },
     onError: (error) => {
       console.error("Reject mutation error:", error);
