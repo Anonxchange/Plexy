@@ -9,7 +9,7 @@ export interface UploadResult {
 }
 
 // Temporary direct R2 credentials for testing
-const R2_ACCOUNT_ID = '1d1c072ba4084950addc61f4dd8d95a3';
+const R2_ACCOUNT_ID = 'b2888a3d8376e00697353928a2efef5e';
 const R2_ENDPOINT = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 const BUCKET_NAME = 'pexly';
 
