@@ -1,25 +1,86 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, Users, FileCheck, Settings, BarChart3 } from "lucide-react";
+import { createClient } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 
 export default function AdminPage() {
+  const supabase = createClient();
+  const { user } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      // Check if admin session exists in localStorage
+      const adminSession = localStorage.getItem('admin_session');
+      if (adminSession) {
+        try {
+          const session = JSON.parse(adminSession);
+          if (session.expiresAt > Date.now()) {
+            setIsAuthenticated(true);
+            setCheckingSession(false);
+            return;
+          } else {
+            localStorage.removeItem('admin_session');
+          }
+        } catch (e) {
+          localStorage.removeItem('admin_session');
+        }
+      }
+
+      // Check if user has admin role in database
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.is_admin) {
+          setIsAuthenticated(true);
+          setCheckingSession(false);
+          return;
+        }
+      }
+
+      setCheckingSession(false);
+    };
+
+    checkAdminAccess();
+  }, [user]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === "PexlyAdmin2024!") {
+      const session = {
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+      };
+      localStorage.setItem('admin_session', JSON.stringify(session));
       setIsAuthenticated(true);
     } else {
       alert("Incorrect password");
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">Checking access...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
