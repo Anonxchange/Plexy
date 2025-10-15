@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,24 +16,75 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield, CheckCircle, XCircle, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 
 export default function AdminVerificationsPage() {
   const supabase = createClient();
   const queryClient = useQueryClient();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
+  const { user } = useAuth();
   const [selectedVerification, setSelectedVerification] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [password, setPassword] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    // Check if admin session exists in localStorage
+    const adminSession = localStorage.getItem('admin_session');
+    if (adminSession) {
+      try {
+        const session = JSON.parse(adminSession);
+        // Check if session is still valid (not expired)
+        if (session.expiresAt > Date.now()) {
+          setIsAdmin(true);
+          setCheckingSession(false);
+          return;
+        } else {
+          localStorage.removeItem('admin_session');
+        }
+      } catch (e) {
+        localStorage.removeItem('admin_session');
+      }
+    }
+
+    setIsAdmin(false);
+    setCheckingSession(false);
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === "PexlyAdmin2024!") {
+      // Store admin session in localStorage (expires in 24 hours)
+      const session = {
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+      };
+      localStorage.setItem('admin_session', JSON.stringify(session));
+      setIsAdmin(true);
+    } else {
+      alert("Incorrect password");
+    }
+  };
 
   // Fetch all pending verifications
-  const { data: verifications, isLoading } = useQuery({
+  const { data: verifications, isLoading, error: queryError } = useQuery({
     queryKey: ["admin-verifications"],
     queryFn: async () => {
+      console.log("Fetching verifications...");
+      
+      // First, let's try a simple query without joins to see if we can access the table
+      const { data: simpleData, error: simpleError } = await supabase
+        .from("verifications")
+        .select("*")
+        .order("submitted_at", { ascending: false });
+
+      console.log("Simple query result:", { data: simpleData, error: simpleError });
+
+      // Now try the full query with join
       const { data, error } = await supabase
         .from("verifications")
         .select(`
           *,
-          user_profiles (
+          user_profiles!verifications_user_id_fkey (
             id,
             username,
             email,
@@ -42,74 +93,134 @@ export default function AdminVerificationsPage() {
         `)
         .order("submitted_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching verifications:", error);
+        throw error;
+      }
+      console.log("Full verifications data:", data);
+      console.log("Number of verifications:", data?.length || 0);
       return data;
     },
-    enabled: isAuthenticated,
+    enabled: isAdmin,
   });
+
+  // Log any query errors
+  if (queryError) {
+    console.error("Query error:", queryError);
+  }
 
   const approveVerification = useMutation({
     mutationFn: async (verificationId: string) => {
+      console.log("=== APPROVE MUTATION STARTED ===");
+      console.log("Verification ID:", verificationId);
+      console.log("All verifications:", verifications);
+      
       const verification = verifications?.find(v => v.id === verificationId);
-      if (!verification) throw new Error("Verification not found");
+      console.log("Found verification:", verification);
+      
+      if (!verification) {
+        console.error("Verification not found!");
+        throw new Error("Verification not found");
+      }
+
+      console.log("Current user:", user);
+      console.log("Updating verification status to approved...");
 
       // Update verification status
-      const { error: verifyError } = await supabase
+      const { data: verifyData, error: verifyError } = await supabase
         .from("verifications")
         .update({
           status: "approved",
           reviewed_at: new Date().toISOString(),
-          reviewed_by: "admin"
+          reviewed_by: user?.id || "admin"
         })
-        .eq("id", verificationId);
+        .eq("id", verificationId)
+        .select();
 
-      if (verifyError) throw verifyError;
+      if (verifyError) {
+        console.error("Error updating verification:", verifyError);
+        throw verifyError;
+      }
+
+      console.log("Verification updated successfully:", verifyData);
 
       // Update user's verification level
-      const { error: userError } = await supabase
+      console.log("Updating user profile verification level to:", verification.requested_level);
+      const { data: userData, error: userError } = await supabase
         .from("user_profiles")
         .update({ verification_level: String(verification.requested_level) })
-        .eq("id", verification.user_id);
+        .eq("id", verification.user_id)
+        .select();
 
-      if (userError) throw userError;
+      if (userError) {
+        console.error("Error updating user profile:", userError);
+        throw userError;
+      }
+
+      console.log("User profile updated successfully:", userData);
+      console.log("=== APPROVE MUTATION COMPLETED ===");
+      return { verifyData, userData };
     },
     onSuccess: () => {
+      console.log("✅ Approve mutation successful - invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["admin-verifications"] });
       setSelectedVerification(null);
+      alert("Verification approved successfully!");
     },
+    onError: (error) => {
+      console.error("❌ Approve mutation error:", error);
+      alert("Failed to approve verification: " + error.message);
+    }
   });
 
   const rejectVerification = useMutation({
     mutationFn: async (verificationId: string) => {
-      const { error } = await supabase
+      console.log("Rejecting verification:", verificationId);
+
+      const { data, error } = await supabase
         .from("verifications")
         .update({
           status: "rejected",
           reviewed_at: new Date().toISOString(),
-          reviewed_by: "admin",
-          rejection_reason: rejectionReason
+          reviewed_by: user?.id || "admin",
+          rejection_reason: rejectionReason || "No reason provided"
         })
-        .eq("id", verificationId);
+        .eq("id", verificationId)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error rejecting verification:", error);
+        throw error;
+      }
+
+      console.log("Verification rejected:", data);
+      return data;
     },
     onSuccess: () => {
+      console.log("Reject mutation successful");
       queryClient.invalidateQueries({ queryKey: ["admin-verifications"] });
       setSelectedVerification(null);
       setRejectionReason("");
     },
+    onError: (error) => {
+      console.error("Reject mutation error:", error);
+      alert("Failed to reject verification: " + error.message);
+    }
   });
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === "PexlyAdmin2024!") {
-      setIsAuthenticated(true);
-    } else {
-      alert("Incorrect password");
-    }
-  };
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">Checking access...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  if (!isAuthenticated) {
+  if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -226,7 +337,10 @@ export default function AdminVerificationsPage() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      onClick={() => setSelectedVerification(verification)}
+                      onClick={() => {
+                        console.log("Review button clicked for verification:", verification.id);
+                        setSelectedVerification(verification);
+                      }}
                       variant="outline"
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -234,18 +348,23 @@ export default function AdminVerificationsPage() {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => approveVerification.mutate(verification.id)}
+                      onClick={() => {
+                        console.log("🚀 Quick approve button clicked!");
+                        console.log("Verification ID:", verification.id);
+                        console.log("Verification data:", verification);
+                        approveVerification.mutate(verification.id);
+                      }}
                       disabled={approveVerification.isPending}
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Approve
+                      {approveVerification.isPending ? "Approving..." : "Approve"}
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => {
+                        console.log("Reject button clicked, opening dialog for:", verification.id);
                         setSelectedVerification(verification);
-                        // Will show rejection dialog
                       }}
                     >
                       <XCircle className="h-4 w-4 mr-2" />
@@ -332,21 +451,31 @@ export default function AdminVerificationsPage() {
 
             <div className="flex gap-2">
               <Button
-                onClick={() => approveVerification.mutate(selectedVerification.id)}
+                onClick={() => {
+                  console.log("Approve button clicked for:", selectedVerification.id);
+                  approveVerification.mutate(selectedVerification.id);
+                }}
                 disabled={approveVerification.isPending}
                 className="flex-1"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Approve
+                {approveVerification.isPending ? "Approving..." : "Approve"}
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => rejectVerification.mutate(selectedVerification.id)}
-                disabled={rejectVerification.isPending || !rejectionReason}
+                onClick={() => {
+                  if (!rejectionReason) {
+                    alert("Please provide a rejection reason");
+                    return;
+                  }
+                  console.log("Reject button clicked for:", selectedVerification.id);
+                  rejectVerification.mutate(selectedVerification.id);
+                }}
+                disabled={rejectVerification.isPending}
                 className="flex-1"
               >
                 <XCircle className="h-4 w-4 mr-2" />
-                Reject
+                {rejectVerification.isPending ? "Rejecting..." : "Reject"}
               </Button>
             </div>
           </div>
