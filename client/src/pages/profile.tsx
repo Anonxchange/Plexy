@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { uploadToR2 } from "@/lib/r2-storage";
 
 interface UserProfile {
   id: string;
@@ -329,24 +330,17 @@ export function Profile() {
     try {
       setUploadingAvatar(true);
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      // Upload to R2 storage
+      const uploadResult = await uploadToR2(file, 'profile-pictures', user?.id || '');
 
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(filePath);
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
 
       setEditForm({
         ...editForm,
         avatar_type: 'custom',
-        avatar_url: data.publicUrl,
+        avatar_url: uploadResult.url,
       });
 
       toast({
@@ -355,9 +349,12 @@ export function Profile() {
       });
     } catch (error) {
       console.error('Error uploading avatar:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload avatar';
       toast({
-        title: "Error",
-        description: "Failed to upload avatar",
+        title: "Upload Failed",
+        description: errorMessage.includes('Bucket not found') 
+          ? "Storage not configured. Please contact support." 
+          : errorMessage,
         variant: "destructive"
       });
     } finally {
