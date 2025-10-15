@@ -24,6 +24,9 @@ const s3Client = new S3Client({
     accessKeyId: R2_ACCESS_KEY_ID,
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
+  requestHandler: {
+    requestTimeout: 30000, // 30 seconds
+  },
 });
 
 export async function uploadToR2(
@@ -49,8 +52,8 @@ export async function uploadToR2(
 
     await s3Client.send(command);
 
-    // Use the public R2 domain for accessing uploaded files
-    const publicUrl = `https://pub-${R2_ACCOUNT_ID}.r2.dev/${key}`;
+    // Use the correct public R2 domain for accessing uploaded files
+    const publicUrl = `https://pub-1d1c072ba4084950addc61f4dd8d95a3.r2.dev/${key}`;
 
     return {
       success: true,
