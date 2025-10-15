@@ -196,15 +196,15 @@ export function AccountSettings() {
     setLoadingVerification(true);
     try {
       const { data, error } = await supabase
-        .from('verification_levels')
-        .select('level')
-        .eq('user_id', user?.id)
+        .from('user_profiles')
+        .select('verification_level')
+        .eq('id', user?.id)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
 
-      if (data && data.level !== undefined) {
-        setVerificationLevel(data.level);
+      if (data && data.verification_level !== undefined) {
+        setVerificationLevel(Number(data.verification_level));
       } else {
         setVerificationLevel(0); // Default to Level 0 if no record found
       }
@@ -955,17 +955,6 @@ export function AccountSettings() {
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
                     Daily limit: $1,000 | Lifetime: $10,000 | Cannot create offers
-                  </p>
-                </div>
-              )}
-
-              {verificationLevel === 1.5 && (
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <p className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">
-                    Offer Creator - Level 1 Plus
-                  </p>
-                  <p className="text-xs text-green-700 dark:text-green-300 mb-2">
-                    Can create offers | Same limits as Level 1
                   </p>
                 </div>
               )}
