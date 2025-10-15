@@ -20,6 +20,7 @@ export default function VerificationPage() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [addressFile, setAddressFile] = useState<File | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null); // Added state for video file
 
   // Fetch current user
   const { data: user } = useQuery({
@@ -27,13 +28,13 @@ export default function VerificationPage() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      
+
       const { data, error } = await supabase
         .from("user_profiles")
         .select("*")
         .eq("id", user.id)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -49,7 +50,7 @@ export default function VerificationPage() {
         .select("*")
         .eq("user_id", user.id)
         .order("submitted_at", { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -65,7 +66,7 @@ export default function VerificationPage() {
   const submitDateOfBirth = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("Not authenticated");
-      
+
       // Calculate age from date of birth
       const birthDate = new Date(dateOfBirth);
       const today = new Date();
@@ -78,12 +79,12 @@ export default function VerificationPage() {
       if (age < 18) {
         throw new Error("You must be at least 18 years old to use this platform");
       }
-      
+
       const { error } = await supabase
         .from("user_profiles")
         .update({ date_of_birth: dateOfBirth, verification_level: "1" })
         .eq("id", user.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -95,11 +96,12 @@ export default function VerificationPage() {
   const submitVerification = useMutation({
     mutationFn: async (requestedLevel: number) => {
       if (!user?.id) throw new Error("Not authenticated");
-      
+
       // In a real app, upload files to storage first
       const documentUrl = documentFile ? "uploaded_document_url" : null;
       const addressUrl = addressFile ? "uploaded_address_url" : null;
-      
+      const videoUrl = videoFile ? "uploaded_video_url" : null; // Placeholder for video URL
+
       const { error } = await supabase
         .from("verifications")
         .insert({
@@ -108,15 +110,17 @@ export default function VerificationPage() {
           document_type: "government_id",
           document_url: documentUrl,
           address_proof: addressUrl,
+          video_url: videoUrl, // Add video URL
           status: "pending",
         });
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["verifications"] });
       setDocumentFile(null);
       setAddressFile(null);
+      setVideoFile(null); // Clear video file state
     },
   });
 
@@ -149,9 +153,6 @@ export default function VerificationPage() {
               <span className={currentLevel >= 1 ? "text-primary font-semibold" : "text-muted-foreground"}>
                 Level 1
               </span>
-              <span className={currentLevel >= 1.5 ? "text-primary font-semibold" : "text-muted-foreground"}>
-                Level 1+
-              </span>
               <span className={currentLevel >= 2 ? "text-primary font-semibold" : "text-muted-foreground"}>
                 Level 2
               </span>
@@ -177,7 +178,7 @@ export default function VerificationPage() {
               <h3 className="font-semibold text-lg">{currentLevelConfig.name}</h3>
               <p className="text-sm text-muted-foreground">{currentLevelConfig.description}</p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-2">Trading Limits</h4>
               <div className="space-y-1 text-sm">
@@ -222,7 +223,7 @@ export default function VerificationPage() {
                 <h3 className="font-semibold text-lg">{nextLevelConfig.name}</h3>
                 <p className="text-sm text-muted-foreground">{nextLevelConfig.description}</p>
               </div>
-              
+
               <div>
                 <h4 className="font-semibold mb-2">Requirements</h4>
                 <ul className="space-y-1 text-sm">
@@ -280,12 +281,12 @@ export default function VerificationPage() {
                   Complete Level 1 verification to start trading.
                 </p>
               </div>
-              
+
               <h3 className="font-semibold text-lg">Step 1: Verify Your Age (Level 1)</h3>
               <p className="text-sm text-muted-foreground">
                 Confirm your age to unlock basic trading features with a $1,000 daily limit.
               </p>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="dob">Date of Birth (Must be 18 or older)</Label>
                 <Input
@@ -296,7 +297,7 @@ export default function VerificationPage() {
                   max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
                 />
               </div>
-              
+
               <Button 
                 onClick={() => submitDateOfBirth.mutate()}
                 disabled={!dateOfBirth || submitDateOfBirth.isPending}
@@ -304,7 +305,7 @@ export default function VerificationPage() {
               >
                 {submitDateOfBirth.isPending ? "Verifying..." : "Verify Age & Reach Level 1"}
               </Button>
-              
+
               {submitDateOfBirth.isError && (
                 <Alert variant="destructive">
                   <AlertDescription>
@@ -315,23 +316,31 @@ export default function VerificationPage() {
             </div>
           )}
 
-          {/* Level 1 -> Level 1 Plus */}
+          {/* Level 1 -> Level 2 */}
           {currentLevel === 1 && !pendingVerification && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Step 2: Flexible Verification (Level 1 Plus)</h3>
+              <h3 className="font-semibold text-lg">Step 2: Full Verification (Level 2)</h3>
               <p className="text-sm text-muted-foreground">
-                Upload any valid government-issued document to unlock the ability to create and publish offers.
-                Your trading limits remain the same as Level 1.
+                Upload a valid government-issued ID and complete a live video verification to unlock unlimited daily/lifetime trading.
               </p>
-              
-              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  ✓ Accepted documents: Driver's license, National ID, Passport, or any valid government ID
+
+              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 mb-1">
+                  Level 2 Benefits:
                 </p>
+                <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1">
+                  <li>✓ Remove daily limits</li>
+                  <li>✓ Remove lifetime limits</li>
+                  <li>✓ Per Trade Limit: $100,000</li>
+                  <li>✓ Access to more payment methods</li>
+                </ul>
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="document">Upload Document (JPG, PNG, or PDF)</Label>
+                <Label htmlFor="document">Government-Issued Photo ID (JPG, PNG, or PDF)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Upload a clear photo of your passport, driver's license, or national ID card
+                </p>
                 <Input
                   id="document"
                   type="file"
@@ -339,62 +348,33 @@ export default function VerificationPage() {
                   onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
                 />
                 {documentFile && (
-                  <p className="text-xs text-green-600">Selected: {documentFile.name}</p>
+                  <p className="text-xs text-green-600">✓ Selected: {documentFile.name}</p>
                 )}
               </div>
-              
-              <Button 
-                onClick={() => submitVerification.mutate(1.5)}
-                disabled={!documentFile || submitVerification.isPending}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {submitVerification.isPending ? "Submitting..." : "Submit for Level 1 Plus"}
-              </Button>
-            </div>
-          )}
 
-          {/* Level 1+ -> Level 2 */}
-          {currentLevel === 1.5 && !pendingVerification && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Step 3: Full ID Verification (Level 2)</h3>
-              <p className="text-sm text-muted-foreground">
-                Complete full ID verification to remove all daily and lifetime limits. 
-                Unlock per-trade limit of $100,000 and access to more payment methods.
-              </p>
-              
-              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <p className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">
-                  Level 2 Benefits:
-                </p>
-                <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                  <li>✓ No daily or lifetime limits</li>
-                  <li>✓ Per-trade limit: $100,000</li>
-                  <li>✓ Access to all payment methods</li>
-                  <li>✓ Create unlimited offers</li>
-                </ul>
-              </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="id">Government-Issued Photo ID</Label>
+                <Label htmlFor="video">Live Video Verification</Label>
+                <p className="text-xs text-muted-foreground">
+                  Record a short video: nod your head, turn left and right for liveness detection
+                </p>
                 <Input
-                  id="id"
+                  id="video"
                   type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                  accept="video/*"
+                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
                 />
-                {documentFile && (
-                  <p className="text-xs text-green-600">Selected: {documentFile.name}</p>
+                {videoFile && (
+                  <p className="text-xs text-green-600">✓ Selected: {videoFile.name}</p>
                 )}
               </div>
-              
+
               <Button 
                 onClick={() => submitVerification.mutate(2)}
-                disabled={!documentFile || submitVerification.isPending}
+                disabled={!documentFile || !videoFile || submitVerification.isPending}
                 className="w-full"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {submitVerification.isPending ? "Submitting..." : "Submit for Level 2"}
+                {submitVerification.isPending ? "Submitting..." : "Submit for Level 2 Verification"}
               </Button>
             </div>
           )}
@@ -402,11 +382,11 @@ export default function VerificationPage() {
           {/* Level 2 -> Level 3 */}
           {currentLevel === 2 && !pendingVerification && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Step 4: Enhanced Due Diligence (Level 3)</h3>
+              <h3 className="font-semibold text-lg">Step 3: Enhanced Due Diligence (Level 3)</h3>
               <p className="text-sm text-muted-foreground">
                 Complete address verification to unlock maximum trading power with $1,000,000 per-trade limit.
               </p>
-              
+
               <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                 <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 mb-1">
                   Level 3 Benefits:
@@ -418,7 +398,7 @@ export default function VerificationPage() {
                   <li>✓ VIP status badge</li>
                 </ul>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="address">Address Proof (Utility Bill or Bank Statement)</Label>
@@ -436,7 +416,7 @@ export default function VerificationPage() {
                   )}
                 </div>
               </div>
-              
+
               <Button 
                 onClick={() => submitVerification.mutate(3)}
                 disabled={!addressFile || submitVerification.isPending}
