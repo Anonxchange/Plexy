@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { VERIFICATION_LEVELS, getVerificationLevel, getNextLevel } from "@shared/verification-levels";
 import { createClient } from "@/lib/supabase";
+import LivenessCheck from "@/components/liveness-check";
+import { LivenessResult } from "@/lib/liveness-api";
 
 export default function VerificationPage() {
   const supabase = createClient();
@@ -20,7 +22,9 @@ export default function VerificationPage() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [addressFile, setAddressFile] = useState<File | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null); // Added state for video file
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [livenessResult, setLivenessResult] = useState<LivenessResult | null>(null);
+  const [showLivenessCheck, setShowLivenessCheck] = useState(false);
 
   // Fetch current user
   const { data: user } = useQuery({
@@ -66,6 +70,9 @@ export default function VerificationPage() {
   const submitDateOfBirth = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("Not authenticated");
+      if (!livenessResult || !livenessResult.isLive) {
+        throw new Error("Please complete liveness verification first");
+      }
 
       // Calculate age from date of birth
       const birthDate = new Date(dateOfBirth);
@@ -82,13 +89,20 @@ export default function VerificationPage() {
 
       const { error } = await supabase
         .from("user_profiles")
-        .update({ date_of_birth: dateOfBirth, verification_level: "1" })
+        .update({ 
+          date_of_birth: dateOfBirth, 
+          verification_level: "1",
+          last_liveness_check: new Date().toISOString(),
+          liveness_verified: true
+        })
         .eq("id", user.id);
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      setLivenessResult(null);
+      setShowLivenessCheck(false);
     },
   });
 
@@ -96,11 +110,14 @@ export default function VerificationPage() {
   const submitVerification = useMutation({
     mutationFn: async (requestedLevel: number) => {
       if (!user?.id) throw new Error("Not authenticated");
+      if (requestedLevel >= 2 && (!livenessResult || !livenessResult.isLive)) {
+        throw new Error("Please complete liveness verification first");
+      }
 
       // In a real app, upload files to storage first
       const documentUrl = documentFile ? "uploaded_document_url" : null;
       const addressUrl = addressFile ? "uploaded_address_url" : null;
-      const videoUrl = videoFile ? "uploaded_video_url" : null; // Placeholder for video URL
+      const videoUrl = videoFile ? "uploaded_video_url" : null;
 
       const { error } = await supabase
         .from("verifications")
@@ -110,7 +127,10 @@ export default function VerificationPage() {
           document_type: "government_id",
           document_url: documentUrl,
           address_proof: addressUrl,
-          video_url: videoUrl, // Add video URL
+          video_url: videoUrl,
+          liveness_check_passed: livenessResult ? String(livenessResult.isLive) : null,
+          liveness_confidence: livenessResult ? String(livenessResult.confidence) : null,
+          liveness_checked_at: livenessResult ? new Date().toISOString() : null,
           status: "pending",
         });
 
@@ -120,7 +140,9 @@ export default function VerificationPage() {
       queryClient.invalidateQueries({ queryKey: ["verifications"] });
       setDocumentFile(null);
       setAddressFile(null);
-      setVideoFile(null); // Clear video file state
+      setVideoFile(null);
+      setLivenessResult(null);
+      setShowLivenessCheck(false);
     },
   });
 
@@ -284,7 +306,7 @@ export default function VerificationPage() {
 
               <h3 className="font-semibold text-lg">Step 1: Verify Your Age (Level 1)</h3>
               <p className="text-sm text-muted-foreground">
-                Confirm your age to unlock basic trading features with a $1,000 daily limit.
+                Confirm your age and complete liveness verification to unlock basic trading features with a $1,000 daily limit.
               </p>
 
               <div className="space-y-2">
@@ -298,13 +320,41 @@ export default function VerificationPage() {
                 />
               </div>
 
-              <Button 
-                onClick={() => submitDateOfBirth.mutate()}
-                disabled={!dateOfBirth || submitDateOfBirth.isPending}
-                className="w-full"
-              >
-                {submitDateOfBirth.isPending ? "Verifying..." : "Verify Age & Reach Level 1"}
-              </Button>
+              {showLivenessCheck ? (
+                <LivenessCheck
+                  onSuccess={(result) => setLivenessResult(result)}
+                  onError={(error) => console.error("Liveness check error:", error)}
+                />
+              ) : (
+                livenessResult?.isLive && (
+                  <Alert>
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      ✓ Liveness verified! Confidence: {(livenessResult.confidence * 100).toFixed(0)}%
+                    </AlertDescription>
+                  </Alert>
+                )
+              )}
+
+              {!showLivenessCheck && !livenessResult && dateOfBirth && (
+                <Button 
+                  onClick={() => setShowLivenessCheck(true)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Continue to Liveness Check
+                </Button>
+              )}
+
+              {livenessResult?.isLive && (
+                <Button 
+                  onClick={() => submitDateOfBirth.mutate()}
+                  disabled={!dateOfBirth || submitDateOfBirth.isPending}
+                  className="w-full"
+                >
+                  {submitDateOfBirth.isPending ? "Verifying..." : "Complete Level 1 Verification"}
+                </Button>
+              )}
 
               {submitDateOfBirth.isError && (
                 <Alert variant="destructive">
@@ -321,7 +371,7 @@ export default function VerificationPage() {
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Step 2: Full Verification (Level 2)</h3>
               <p className="text-sm text-muted-foreground">
-                Upload a valid government-issued ID and complete a live video verification to unlock unlimited daily/lifetime trading.
+                Upload a valid government-issued ID and complete liveness verification to unlock unlimited daily/lifetime trading.
               </p>
 
               <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
@@ -352,30 +402,42 @@ export default function VerificationPage() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="video">Live Video Verification</Label>
-                <p className="text-xs text-muted-foreground">
-                  Record a short video: nod your head, turn left and right for liveness detection
-                </p>
-                <Input
-                  id="video"
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+              {showLivenessCheck ? (
+                <LivenessCheck
+                  onSuccess={(result) => setLivenessResult(result)}
+                  onError={(error) => console.error("Liveness check error:", error)}
                 />
-                {videoFile && (
-                  <p className="text-xs text-green-600">✓ Selected: {videoFile.name}</p>
-                )}
-              </div>
+              ) : (
+                livenessResult?.isLive && (
+                  <Alert>
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      ✓ Liveness verified! Confidence: {(livenessResult.confidence * 100).toFixed(0)}%
+                    </AlertDescription>
+                  </Alert>
+                )
+              )}
 
-              <Button 
-                onClick={() => submitVerification.mutate(2)}
-                disabled={!documentFile || !videoFile || submitVerification.isPending}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {submitVerification.isPending ? "Submitting..." : "Submit for Level 2 Verification"}
-              </Button>
+              {!showLivenessCheck && !livenessResult && documentFile && (
+                <Button 
+                  onClick={() => setShowLivenessCheck(true)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Continue to Liveness Check
+                </Button>
+              )}
+
+              {livenessResult?.isLive && (
+                <Button 
+                  onClick={() => submitVerification.mutate(2)}
+                  disabled={!documentFile || submitVerification.isPending}
+                  className="w-full"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {submitVerification.isPending ? "Submitting..." : "Submit for Level 2 Verification"}
+                </Button>
+              )}
             </div>
           )}
 
