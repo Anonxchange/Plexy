@@ -1,3 +1,4 @@
+
 export const VERIFICATION_LEVELS = {
   LEVEL_0: {
     level: 0,
@@ -15,30 +16,16 @@ export const VERIFICATION_LEVELS = {
     level: 1,
     name: "Level 1 - Basic",
     description: "Confirm your age to start trading",
-    requirements: ["Date of birth verification"],
+    requirements: ["Date of birth verification (must be 18+)"],
     permissions: [
       "Receive crypto",
       "Deposit funds",
       "Convert crypto",
       "Buy crypto",
       "Sell crypto",
-    ],
-    restrictions: ["Cannot create offers"],
-    dailyLimit: 1000,
-    lifetimeTradeLimit: 10000,
-    lifetimeSendLimit: 5000,
-    perTradeLimit: 1000,
-  },
-  LEVEL_1_PLUS: {
-    level: 1.5,
-    name: "Level 1 Plus - Flexible Verification",
-    description: "Upload any valid document for flexible verification",
-    requirements: ["Any valid government ID or document"],
-    permissions: [
-      "All Level 1 permissions",
       "Create and publish offers",
     ],
-    restrictions: ["Same trading limits as Level 1"],
+    restrictions: [],
     dailyLimit: 1000,
     lifetimeTradeLimit: 10000,
     lifetimeSendLimit: 5000,
@@ -47,13 +34,16 @@ export const VERIFICATION_LEVELS = {
   LEVEL_2: {
     level: 2,
     name: "Level 2 - Full Verification",
-    description: "Complete ID verification for unlimited trading",
-    requirements: ["Government-issued photo ID", "Selfie verification"],
+    description: "Complete ID and live video verification for unlimited trading",
+    requirements: [
+      "Government-issued photo ID", 
+      "Live video verification (nod your head, turn head for liveness detection)"
+    ],
     permissions: [
       "Remove daily limits",
       "Remove lifetime limits",
       "Access more payment methods",
-      "Create and publish offers freely",
+      "Create and publish offers",
     ],
     restrictions: [],
     dailyLimit: null,
@@ -82,12 +72,11 @@ export const VERIFICATION_LEVELS = {
   },
 } as const;
 
-export type VerificationLevel = 0 | 1 | 1.5 | 2 | 3;
+export type VerificationLevel = 0 | 1 | 2 | 3;
 
 export function getVerificationLevel(level: number) {
   if (level === 0) return VERIFICATION_LEVELS.LEVEL_0;
   if (level === 1) return VERIFICATION_LEVELS.LEVEL_1;
-  if (level === 1.5) return VERIFICATION_LEVELS.LEVEL_1_PLUS;
   if (level === 2) return VERIFICATION_LEVELS.LEVEL_2;
   if (level === 3) return VERIFICATION_LEVELS.LEVEL_3;
   return VERIFICATION_LEVELS.LEVEL_0;
@@ -95,34 +84,33 @@ export function getVerificationLevel(level: number) {
 
 export function getNextLevel(currentLevel: number) {
   if (currentLevel === 0) return VERIFICATION_LEVELS.LEVEL_1;
-  if (currentLevel === 1) return VERIFICATION_LEVELS.LEVEL_1_PLUS;
-  if (currentLevel === 1.5) return VERIFICATION_LEVELS.LEVEL_2;
+  if (currentLevel === 1) return VERIFICATION_LEVELS.LEVEL_2;
   if (currentLevel === 2) return VERIFICATION_LEVELS.LEVEL_3;
   return null;
 }
 
 export function canTrade(level: number, amount: number, lifetimeVolume: number = 0) {
   const levelConfig = getVerificationLevel(level);
-  
+
   if (level === 0) return { allowed: false, reason: "Level 0 users cannot trade" };
-  
+
   if (levelConfig.dailyLimit && amount > levelConfig.dailyLimit) {
     return { allowed: false, reason: `Daily limit is $${levelConfig.dailyLimit}` };
   }
-  
+
   if (levelConfig.lifetimeTradeLimit && lifetimeVolume >= levelConfig.lifetimeTradeLimit) {
     return { allowed: false, reason: `Lifetime trade limit of $${levelConfig.lifetimeTradeLimit} reached` };
   }
-  
+
   if (levelConfig.perTradeLimit && amount > levelConfig.perTradeLimit) {
     return { allowed: false, reason: `Per-trade limit is $${levelConfig.perTradeLimit}` };
   }
-  
+
   return { allowed: true };
 }
 
 export function canCreateOffer(level: number) {
-  return level >= 1.5;
+  return level >= 1;
 }
 
 export function getVerificationRequirements(currentLevel: number) {
@@ -131,22 +119,17 @@ export function getVerificationRequirements(currentLevel: number) {
       nextLevel: 1,
       description: "Verify your age with date of birth to start trading",
       requirements: ["Date of birth confirmation", "Must be 18 years or older"],
-      benefits: ["Start trading", "$1,000 daily limit", "$10,000 lifetime trade limit"]
+      benefits: ["Start trading", "Create offers", "$1,000 daily limit", "$10,000 lifetime trade limit"]
     };
   }
   if (currentLevel === 1) {
     return {
-      nextLevel: 1.5,
-      description: "Upload any valid document for flexible verification",
-      requirements: ["Any valid government-issued document"],
-      benefits: ["Create and publish offers", "Same trading limits as Level 1"]
-    };
-  }
-  if (currentLevel === 1.5) {
-    return {
       nextLevel: 2,
-      description: "Complete full ID verification to remove limits",
-      requirements: ["Government-issued photo ID", "Identity verification"],
+      description: "Complete ID and live video verification for unlimited trading",
+      requirements: [
+        "Government-issued photo ID", 
+        "Live video verification (nod your head, turn head)"
+      ],
       benefits: ["Remove daily/lifetime limits", "$100,000 per-trade limit", "More payment methods"]
     };
   }
