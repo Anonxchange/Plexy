@@ -138,29 +138,6 @@ export default function LivenessCheck({ onSuccess, onError }: LivenessCheckProps
     setIsCapturing(false);
   }, [stream, pendingStream]);
 
-  // Countdown timer effect
-  useEffect(() => {
-    if (!stream || !isCapturing || countdown === 0 || isChecking) return;
-    
-    const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, [stream, isCapturing, countdown, isChecking]);
-
-  // Trigger photo capture when countdown reaches 0
-  useEffect(() => {
-    if (countdown === 0 && stream && isCapturing && !isChecking) {
-      capturePhoto();
-    }
-  }, [countdown, stream, isCapturing, isChecking]);
-
   const capturePhoto = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current || !stream) return;
 
@@ -185,7 +162,7 @@ export default function LivenessCheck({ onSuccess, onError }: LivenessCheckProps
     try {
       const livenessResult = await checkLiveness(imageBase64);
       
-      if (livenessResult.isLive && livenessResult.confidence >= 0.7) {
+      if (livenessResult.isLive && livenessResult.confidence >= 0.65) {
         // Move to next action
         const currentIndex = actionSequence.indexOf(currentAction);
         const nextAction = actionSequence[currentIndex + 1];
@@ -204,11 +181,11 @@ export default function LivenessCheck({ onSuccess, onError }: LivenessCheckProps
             }, 1500);
           }
         }
-      } else if (livenessResult.confidence < 0.7) {
-        setError(`Low confidence (${(livenessResult.confidence * 100).toFixed(0)}%). Please follow the instruction carefully.`);
+      } else if (livenessResult.confidence < 0.65) {
+        setError(livenessResult.message || `Low confidence (${(livenessResult.confidence * 100).toFixed(0)}%). Please follow the instruction carefully.`);
         setCountdown(3); // Reset countdown to try again
       } else {
-        setError("Face not detected. Please ensure your face is clearly visible.");
+        setError(livenessResult.message || "Face not detected. Please ensure your face is clearly visible.");
         setCountdown(3); // Reset countdown to try again
       }
     } catch (err) {
@@ -220,6 +197,29 @@ export default function LivenessCheck({ onSuccess, onError }: LivenessCheckProps
       setIsChecking(false);
     }
   }, [onSuccess, onError, stopCamera, stream, currentAction, actionSequence]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!stream || !isCapturing || countdown === 0 || isChecking) return;
+    
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [stream, isCapturing, countdown, isChecking]);
+
+  // Trigger photo capture when countdown reaches 0
+  useEffect(() => {
+    if (countdown === 0 && stream && isCapturing && !isChecking) {
+      capturePhoto();
+    }
+  }, [countdown, stream, isCapturing, isChecking, capturePhoto]);
 
   return (
     <Card>
