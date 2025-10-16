@@ -32,9 +32,20 @@ export function SignIn() {
     e.preventDefault();
     setLoading(true);
 
-    // If phone number, combine with country code
-    const loginValue = isPhoneNumber ? `${countryCode}${inputValue}@phone.temp` : inputValue;
-    const { error } = await signIn(loginValue, password);
+    // For phone numbers, use phone authentication
+    if (isPhoneNumber) {
+      const fullPhoneNumber = `${countryCode}${inputValue}`;
+      toast({
+        title: "Phone Sign-In Not Yet Implemented",
+        description: "Please use email to sign in, or sign up with phone verification",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Email sign-in
+    const { error } = await signIn(inputValue, password);
 
     if (error) {
       setLoading(false);
