@@ -22,6 +22,7 @@ export default function VerificationPage() {
   const queryClient = useQueryClient();
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentBackFile, setDocumentBackFile] = useState<File | null>(null);
   const [addressFile, setAddressFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [livenessResult, setLivenessResult] = useState<LivenessResult | null>(null);
@@ -115,17 +116,18 @@ export default function VerificationPage() {
       console.log("Requested Level:", requestedLevel);
       
       if (!user?.id) throw new Error("Not authenticated");
-      if (requestedLevel >= 2 && (!livenessResult || !livenessResult.isLive)) {
+      if (requestedLevel === 2 && (!livenessResult || !livenessResult.isLive)) {
         throw new Error("Please complete liveness verification first");
       }
 
       // Upload files to R2 storage
       let documentUrl = null;
+      let documentBackUrl = null;
       let addressUrl = null;
       let livenessImageUrl = null;
 
       if (documentFile) {
-        console.log("Uploading document file...");
+        console.log("Uploading document front file...");
         
         // Add a timeout wrapper to prevent hanging
         const uploadPromise = uploadToR2(documentFile, 'verification-documents', user.id);
@@ -134,12 +136,30 @@ export default function VerificationPage() {
         );
         
         const result = await Promise.race([uploadPromise, timeoutPromise]);
-        console.log("Document upload result:", result);
+        console.log("Document front upload result:", result);
         
         if (result.success && result.url) {
           documentUrl = result.url;
         } else {
-          throw new Error(`Document upload failed: ${result.error || 'Unknown error'}`);
+          throw new Error(`Document front upload failed: ${result.error || 'Unknown error'}`);
+        }
+      }
+
+      if (documentBackFile) {
+        console.log("Uploading document back file...");
+        
+        const uploadPromise = uploadToR2(documentBackFile, 'verification-documents', user.id);
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
+        );
+        
+        const result = await Promise.race([uploadPromise, timeoutPromise]);
+        console.log("Document back upload result:", result);
+        
+        if (result.success && result.url) {
+          documentBackUrl = result.url;
+        } else {
+          throw new Error(`Document back upload failed: ${result.error || 'Unknown error'}`);
         }
       }
 
@@ -178,6 +198,7 @@ export default function VerificationPage() {
           requested_level: requestedLevel,
           document_type: "government_id",
           document_url: documentUrl,
+          document_back_url: documentBackUrl,
           address_proof: addressUrl,
           liveness_image_url: livenessImageUrl,
           liveness_check_passed: livenessResult ? String(livenessResult.isLive) : null,
@@ -202,6 +223,7 @@ export default function VerificationPage() {
       queryClient.invalidateQueries({ queryKey: ["verifications"] });
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       setDocumentFile(null);
+      setDocumentBackFile(null);
       setAddressFile(null);
       setVideoFile(null);
       setLivenessResult(null);
@@ -215,6 +237,8 @@ export default function VerificationPage() {
   });
 
   const pendingVerification = verifications?.find(v => v.status === "pending");
+  const rejectedVerifications = verifications?.filter(v => v.status === "rejected") || [];
+  const latestRejection = rejectedVerifications.length > 0 ? rejectedVerifications[0] : null;
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
@@ -361,6 +385,23 @@ export default function VerificationPage() {
             </Alert>
           )}
 
+          {latestRejection && !pendingVerification && (
+            <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
+              <XCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800 dark:text-red-200">
+                <p className="font-semibold mb-1">
+                  Your Level {latestRejection.requested_level} verification was rejected
+                </p>
+                <p className="text-sm mb-2">
+                  Reason: {latestRejection.rejection_reason || "Documents did not meet requirements"}
+                </p>
+                <p className="text-sm">
+                  Please review the requirements below and resubmit your verification.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Level 0 -> Level 1 */}
           {currentLevel === 0 && !pendingVerification && (
             <div className="space-y-4">
@@ -372,7 +413,9 @@ export default function VerificationPage() {
                 </p>
               </div>
 
-              <h3 className="font-semibold text-lg">Step 1: Verify Your Age (Level 1)</h3>
+              <h3 className="font-semibold text-lg">
+                {latestRejection?.requested_level === 1 ? "Resubmit Level 1 Verification" : "Step 1: Verify Your Age (Level 1)"}
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Confirm your age and complete liveness verification to unlock basic trading features with a $1,000 daily limit.
               </p>
@@ -437,7 +480,9 @@ export default function VerificationPage() {
           {/* Level 1 -> Level 2 */}
           {currentLevel === 1 && !pendingVerification && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Step 2: Full Verification (Level 2)</h3>
+              <h3 className="font-semibold text-lg">
+                {latestRejection?.requested_level === 2 ? "Resubmit Level 2 Verification" : "Step 2: Full Verification (Level 2)"}
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Upload a valid government-issued ID and complete liveness verification to unlock unlimited daily/lifetime trading.
               </p>
@@ -454,20 +499,38 @@ export default function VerificationPage() {
                 </ul>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="document">Government-Issued Photo ID (JPG, PNG, or PDF)</Label>
-                <p className="text-xs text-muted-foreground">
-                  Upload a clear photo of your passport, driver's license, or national ID card
-                </p>
-                <Input
-                  id="document"
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
-                />
-                {documentFile && (
-                  <p className="text-xs text-green-600">✓ Selected: {documentFile.name}</p>
-                )}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="document-front">ID Document - Front Side</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Upload clear photo of the front of your ID
+                  </p>
+                  <Input
+                    id="document-front"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                  />
+                  {documentFile && (
+                    <p className="text-xs text-green-600">✓ Selected: {documentFile.name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="document-back">ID Document - Back Side</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Upload clear photo of the back of your ID
+                  </p>
+                  <Input
+                    id="document-back"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setDocumentBackFile(e.target.files?.[0] || null)}
+                  />
+                  {documentBackFile && (
+                    <p className="text-xs text-green-600">✓ Selected: {documentBackFile.name}</p>
+                  )}
+                </div>
               </div>
 
               {showLivenessCheck ? (
@@ -499,7 +562,7 @@ export default function VerificationPage() {
               {livenessResult?.isLive && (
                 <Button 
                   onClick={() => submitVerification.mutate(2)}
-                  disabled={!documentFile || submitVerification.isPending}
+                  disabled={!documentFile || !documentBackFile || submitVerification.isPending}
                   className="w-full"
                 >
                   <Upload className="h-4 w-4 mr-2" />
@@ -512,7 +575,9 @@ export default function VerificationPage() {
           {/* Level 2 -> Level 3 */}
           {currentLevel === 2 && !pendingVerification && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Step 3: Enhanced Due Diligence (Level 3)</h3>
+              <h3 className="font-semibold text-lg">
+                {latestRejection?.requested_level === 3 ? "Resubmit Level 3 Verification" : "Step 3: Enhanced Due Diligence (Level 3)"}
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Complete address verification to unlock maximum trading power with $1,000,000 per-trade limit.
               </p>
@@ -579,11 +644,16 @@ export default function VerificationPage() {
             <div className="space-y-3">
               {verifications.map((verification) => (
                 <div key={verification.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
+                  <div className="flex-1">
                     <p className="font-semibold">Level {verification.requested_level}</p>
                     <p className="text-sm text-muted-foreground">
                       Submitted: {new Date(verification.submitted_at).toLocaleDateString()}
                     </p>
+                    {verification.status === "rejected" && verification.rejection_reason && (
+                      <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                        Reason: {verification.rejection_reason}
+                      </p>
+                    )}
                   </div>
                   <Badge variant={
                     verification.status === "approved" ? "default" :
