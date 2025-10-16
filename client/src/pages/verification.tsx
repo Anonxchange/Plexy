@@ -110,6 +110,10 @@ export default function VerificationPage() {
   // Submit document verification
   const submitVerification = useMutation({
     mutationFn: async (requestedLevel: number) => {
+      console.log("=== SUBMIT VERIFICATION STARTED ===");
+      console.log("User ID:", user?.id);
+      console.log("Requested Level:", requestedLevel);
+      
       if (!user?.id) throw new Error("Not authenticated");
       if (requestedLevel >= 2 && (!livenessResult || !livenessResult.isLive)) {
         throw new Error("Please complete liveness verification first");
@@ -121,16 +125,28 @@ export default function VerificationPage() {
       let livenessImageUrl = null;
 
       if (documentFile) {
-        const result = await uploadToR2(documentFile, 'verification-documents', user.id);
+        console.log("Uploading document file...");
+        
+        // Add a timeout wrapper to prevent hanging
+        const uploadPromise = uploadToR2(documentFile, 'verification-documents', user.id);
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
+        );
+        
+        const result = await Promise.race([uploadPromise, timeoutPromise]);
+        console.log("Document upload result:", result);
+        
         if (result.success && result.url) {
           documentUrl = result.url;
         } else {
-          throw new Error(`Document upload failed: ${result.error}`);
+          throw new Error(`Document upload failed: ${result.error || 'Unknown error'}`);
         }
       }
 
       if (addressFile) {
+        console.log("Uploading address proof...");
         const result = await uploadToR2(addressFile, 'verification-documents', user.id);
+        console.log("Address proof upload result:", result);
         if (result.success && result.url) {
           addressUrl = result.url;
         } else {
@@ -139,13 +155,23 @@ export default function VerificationPage() {
       }
 
       if (livenessResult?.capturedImage) {
-        const result = await uploadToR2(livenessResult.capturedImage, 'liveness-captures', user.id);
+        console.log("Uploading liveness image...");
+        
+        const uploadPromise = uploadToR2(livenessResult.capturedImage, 'liveness-captures', user.id);
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
+        );
+        
+        const result = await Promise.race([uploadPromise, timeoutPromise]);
+        console.log("Liveness image upload result:", result);
+        
         if (result.success && result.url) {
           livenessImageUrl = result.url;
         }
       }
 
-      const { error } = await supabase
+      console.log("Inserting verification record...");
+      const { data, error } = await supabase
         .from("verifications")
         .insert({
           user_id: user.id,
@@ -158,18 +184,34 @@ export default function VerificationPage() {
           liveness_confidence: livenessResult ? String(livenessResult.confidence) : null,
           liveness_checked_at: livenessResult ? new Date().toISOString() : null,
           status: "pending",
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      console.log("Verification insert result:", { data, error });
+
+      if (error) {
+        console.error("Verification insert error:", error);
+        throw new Error(`Failed to submit verification: ${error.message}`);
+      }
+      
+      console.log("=== SUBMIT VERIFICATION COMPLETED ===");
+      return { success: true };
     },
     onSuccess: () => {
+      console.log("Verification submitted successfully");
       queryClient.invalidateQueries({ queryKey: ["verifications"] });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       setDocumentFile(null);
       setAddressFile(null);
       setVideoFile(null);
       setLivenessResult(null);
       setShowLivenessCheck(false);
+      alert("Verification submitted successfully! We'll review it within 1-2 business days.");
     },
+    onError: (error) => {
+      console.error("Verification submission error:", error);
+      alert(`Failed to submit verification: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   });
 
   const pendingVerification = verifications?.find(v => v.status === "pending");
