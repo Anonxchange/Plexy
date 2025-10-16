@@ -438,6 +438,22 @@ export function AccountSettings() {
         </div>
       </div>
 
+      {/* Personal Information */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 border rounded-lg">
+          <p className="text-sm text-muted-foreground mb-1">Full Name</p>
+          <p className="font-semibold">{profileData?.full_name || "Not set"}</p>
+        </div>
+        <div className="p-4 border rounded-lg">
+          <p className="text-sm text-muted-foreground mb-1">Date of Birth</p>
+          <p className="font-semibold">{profileData?.date_of_birth || "Not set"}</p>
+        </div>
+        <div className="p-4 border rounded-lg">
+          <p className="text-sm text-muted-foreground mb-1">Country</p>
+          <p className="font-semibold">{profileData?.country || "Not set"}</p>
+        </div>
+      </div>
+
       {/* Your Name */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
@@ -456,9 +472,17 @@ export function AccountSettings() {
                 First name and initial
               </Label>
             </div>
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-              Oluwaseyi Ezekiel O.
-            </Badge>
+            {profileData?.full_name && (
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                {(() => {
+                  const names = profileData.full_name.split(' ');
+                  if (names.length >= 2) {
+                    return `${names[0]} ${names[names.length - 1].charAt(0)}.`;
+                  }
+                  return profileData.full_name;
+                })()}
+              </Badge>
+            )}
           </div>
 
           <div className="flex items-center justify-between py-3 border-b">
@@ -468,9 +492,11 @@ export function AccountSettings() {
                 Full name
               </Label>
             </div>
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-              Oluwaseyi Ezekiel Oluwole
-            </Badge>
+            {profileData?.full_name && (
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                {profileData.full_name}
+              </Badge>
+            )}
           </div>
 
           <div className="flex items-center justify-between py-3">
