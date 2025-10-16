@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   ChevronDown,
+  ChevronUp,
   MoreVertical,
   ChevronRight,
   CreditCard,
@@ -31,6 +32,8 @@ import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
 import { walletClient, type Wallet } from "@/lib/wallet-client";
 import { getCryptoPrices, convertToNGN, formatPrice } from "@/lib/crypto-prices";
 import type { CryptoPrice } from "@/lib/crypto-prices";
+import { getVerificationLevel, getVerificationRequirements } from "@shared/verification-levels";
+import { createClient } from "@/lib/supabase";
 
 const cryptoAssets = [
   { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, icon: "₿", color: "text-orange-500" },
@@ -181,17 +184,63 @@ export default function Wallet() {
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
   const [loadingWallets, setLoadingWallets] = useState(true);
   const [spotPairs, setSpotPairs] = useState(initialSpotPairs);
+  const [limitsExpanded, setLimitsExpanded] = useState(false);
+  const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
+  const [lifetimeTradeVolume, setLifetimeTradeVolume] = useState<number>(0);
+  const [lifetimeSendVolume, setLifetimeSendVolume] = useState<number>(0);
 
   useEffect(() => {
     if (!user) {
       setLocation("/signin");
     } else {
+      loadUserProfile();
       loadWalletData();
       loadCryptoPrices();
       const priceInterval = setInterval(loadCryptoPrices, 60000);
       return () => clearInterval(priceInterval);
     }
   }, [user, setLocation]);
+
+  const loadUserProfile = async () => {
+    if (!user) return;
+    try {
+      const supabase = createClient();
+      
+      // First try to get from user metadata
+      const metadata = user.user_metadata || {};
+      if (metadata.verification_level !== undefined) {
+        setUserVerificationLevel(Number(metadata.verification_level) || 0);
+        setLifetimeTradeVolume(Number(metadata.lifetime_trade_volume) || 0);
+        setLifetimeSendVolume(Number(metadata.lifetime_send_volume) || 0);
+        console.log("Loaded user level from metadata:", metadata.verification_level);
+        return;
+      }
+
+      // Try to fetch from database table
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('verification_level, lifetime_trade_volume, lifetime_send_volume')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error("Error loading user profile from DB:", error);
+        // Default to Level 0 if no data found
+        setUserVerificationLevel(0);
+        return;
+      }
+
+      if (data) {
+        setUserVerificationLevel(Number(data.verification_level) || 0);
+        setLifetimeTradeVolume(Number(data.lifetime_trade_volume) || 0);
+        setLifetimeSendVolume(Number(data.lifetime_send_volume) || 0);
+        console.log("Loaded user level from DB:", data.verification_level);
+      }
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+      setUserVerificationLevel(0);
+    }
+  };
 
   const loadWalletData = async () => {
     if (!user) return;
@@ -269,14 +318,112 @@ export default function Wallet() {
         {/* Withdraw Limits Card */}
         <Card className="mb-4">
           <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
+            <div 
+              className="flex items-center justify-between flex-wrap gap-2 cursor-pointer"
+              onClick={() => setLimitsExpanded(!limitsExpanded)}
+            >
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm sm:text-base">Withdraw limits</span>
-                <Badge variant="default" className="text-xs">Level 3</Badge>
-                <span className="text-xs sm:text-sm text-primary cursor-pointer hover:underline">Learn more</span>
+                <Badge variant="default" className="text-xs">
+                  Level {userVerificationLevel}
+                </Badge>
+                <Link href="/verification">
+                  <span className="text-xs sm:text-sm text-primary cursor-pointer hover:underline">
+                    {userVerificationLevel < 3 ? "Upgrade" : "Learn more"}
+                  </span>
+                </Link>
               </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              {limitsExpanded ? (
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              )}
             </div>
+
+            {limitsExpanded && (
+              <div className="mt-4 pt-4 border-t space-y-4">
+                {/* Current Level Details */}
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">
+                    {getVerificationLevel(userVerificationLevel).name}
+                  </h4>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {getVerificationLevel(userVerificationLevel).description}
+                  </p>
+                  
+                  {/* Limits Grid */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-muted/50 p-2 rounded">
+                      <div className="text-muted-foreground mb-1">Daily Limit</div>
+                      <div className="font-medium">
+                        {getVerificationLevel(userVerificationLevel).dailyLimit !== null
+                          ? `$${getVerificationLevel(userVerificationLevel).dailyLimit?.toLocaleString()}` 
+                          : "Unlimited"}
+                      </div>
+                    </div>
+                    <div className="bg-muted/50 p-2 rounded">
+                      <div className="text-muted-foreground mb-1">Per Trade</div>
+                      <div className="font-medium">
+                        {getVerificationLevel(userVerificationLevel).perTradeLimit !== null
+                          ? `$${getVerificationLevel(userVerificationLevel).perTradeLimit?.toLocaleString()}`
+                          : "Unlimited"}
+                      </div>
+                    </div>
+                    <div className="bg-muted/50 p-2 rounded">
+                      <div className="text-muted-foreground mb-1">Lifetime Trade</div>
+                      <div className="font-medium">
+                        {getVerificationLevel(userVerificationLevel).lifetimeTradeLimit !== null
+                          ? `$${lifetimeTradeVolume.toLocaleString()} / $${getVerificationLevel(userVerificationLevel).lifetimeTradeLimit?.toLocaleString()}`
+                          : "Unlimited"}
+                      </div>
+                    </div>
+                    <div className="bg-muted/50 p-2 rounded">
+                      <div className="text-muted-foreground mb-1">Lifetime Send</div>
+                      <div className="font-medium">
+                        {getVerificationLevel(userVerificationLevel).lifetimeSendLimit !== null
+                          ? `$${lifetimeSendVolume.toLocaleString()} / $${getVerificationLevel(userVerificationLevel).lifetimeSendLimit?.toLocaleString()}`
+                          : "Unlimited"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Next Level Progress */}
+                {userVerificationLevel < 3 && getVerificationRequirements(userVerificationLevel) && (
+                  <div className="bg-primary/5 p-3 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-sm">
+                        Next: Level {getVerificationRequirements(userVerificationLevel)?.nextLevel}
+                      </h4>
+                      <Link href="/verification">
+                        <Button size="sm" variant="default">Upgrade Now</Button>
+                      </Link>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {getVerificationRequirements(userVerificationLevel)?.description}
+                    </p>
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium mb-1">Requirements:</div>
+                      {getVerificationRequirements(userVerificationLevel)?.requirements.map((req, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="w-1 h-1 rounded-full bg-primary" />
+                          {req}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      <div className="text-xs font-medium mb-1">Benefits:</div>
+                      {getVerificationRequirements(userVerificationLevel)?.benefits.map((benefit, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-green-600">
+                          <CheckCircle2 className="h-3 w-3" />
+                          {benefit}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
