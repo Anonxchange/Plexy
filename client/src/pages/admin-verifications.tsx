@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Eye, User } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 
@@ -30,6 +30,14 @@ export default function AdminVerificationsPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [fullName, setFullName] = useState("");
   const [country, setCountry] = useState("");
+
+  useEffect(() => {
+    if (selectedVerification) {
+      setFullName("");
+      setCountry("");
+      setRejectionReason("");
+    }
+  }, [selectedVerification]);
 
   useEffect(() => {
     const checkAdminAccess = async () => {
@@ -73,17 +81,28 @@ export default function AdminVerificationsPage() {
     checkAdminAccess();
   }, [user]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === "PexlyAdmin2024!") {
-      // Store admin session in localStorage (expires in 24 hours)
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('is_admin')
+        .eq('id', user?.id)
+        .single();
+      
+      if (error || !data?.is_admin) {
+        alert("Access denied. You don't have admin privileges.");
+        return;
+      }
+      
       const session = {
         expiresAt: Date.now() + (24 * 60 * 60 * 1000)
       };
       localStorage.setItem('admin_session', JSON.stringify(session));
       setIsAdmin(true);
-    } else {
-      alert("Incorrect password");
+    } catch (error) {
+      alert("Authentication failed");
     }
   };
 
@@ -283,26 +302,22 @@ export default function AdminVerificationsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-6 w-6" />
-              Admin Access
+              Admin Access Required
             </CardTitle>
             <CardDescription>
-              Enter the admin password to access verification management
+              You need admin privileges to access this page
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Admin Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password"
-                />
-              </div>
+              <Alert>
+                <AlertDescription>
+                  Only users with admin privileges can access verification management.
+                  Click the button below to verify your access.
+                </AlertDescription>
+              </Alert>
               <Button type="submit" className="w-full">
-                Login
+                Check Admin Access
               </Button>
             </form>
           </CardContent>
@@ -457,6 +472,20 @@ export default function AdminVerificationsPage() {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to remove this verification for @${verification.user_profiles.username}?`)) {
+                        console.log("Removing verification:", verification.id);
+                        setRejectionReason("Removed by admin");
+                        rejectVerification.mutate(verification.id);
+                      }
+                    }}
+                    disabled={rejectVerification.isPending}
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
                   <Badge variant={verification.status === "approved" ? "default" : "destructive"}>
                     {verification.status}
                   </Badge>
@@ -469,7 +498,7 @@ export default function AdminVerificationsPage() {
 
       {/* Review Dialog */}
       <Dialog open={!!selectedVerification} onOpenChange={() => setSelectedVerification(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-3xl max-h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Review Verification Request</DialogTitle>
             <DialogDescription>
@@ -477,125 +506,165 @@ export default function AdminVerificationsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="font-semibold">Current Level</p>
-                <p>{selectedVerification?.user_profiles?.verification_level}</p>
-              </div>
-              <div>
-                <p className="font-semibold">Requested Level</p>
-                <p>{selectedVerification?.requested_level}</p>
-              </div>
-              <div>
-                <p className="font-semibold">Document Type</p>
-                <p>{selectedVerification?.document_type || "N/A"}</p>
-              </div>
-              <div>
-                <p className="font-semibold">Submitted</p>
-                <p>{selectedVerification && new Date(selectedVerification.submitted_at).toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="font-semibold">Status</p>
-                <div>
-                  <Badge variant={selectedVerification?.status === "approved" ? "default" : selectedVerification?.status === "rejected" ? "destructive" : "secondary"}>
-                    {selectedVerification?.status}
-                  </Badge>
+          <ScrollArea className="flex-1 overflow-auto pr-4" style={{ maxHeight: 'calc(95vh - 200px)' }}>
+            <div className="space-y-6">
+              {/* Verification Summary */}
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <h3 className="font-semibold mb-3">Verification Summary</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Current Level:</span>
+                    <Badge variant="outline">{selectedVerification?.user_profiles?.verification_level}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Requested Level:</span>
+                    <Badge>{selectedVerification?.requested_level}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Document Type:</span>
+                    <span className="font-medium">{selectedVerification?.document_type || "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant={selectedVerification?.status === "approved" ? "default" : selectedVerification?.status === "rejected" ? "destructive" : "secondary"}>
+                      {selectedVerification?.status}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Submitted:</span>
+                    <span className="text-xs">{selectedVerification && new Date(selectedVerification.submitted_at).toLocaleString()}</span>
+                  </div>
+                  {selectedVerification?.liveness_check_passed && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Liveness Check:</span>
+                      <span className={selectedVerification.liveness_check_passed === "true" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                        {selectedVerification.liveness_check_passed === "true" ? "✓ Passed" : "✗ Failed"} 
+                        ({selectedVerification.liveness_confidence ? `${(parseFloat(selectedVerification.liveness_confidence) * 100).toFixed(0)}%` : "N/A"})
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
-              {selectedVerification?.liveness_check_passed && (
+
+              {/* Submitted Documents */}
+              <div>
+                <h3 className="font-semibold mb-3">Submitted Documents</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedVerification?.document_url && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">ID Document - Front</p>
+                      <img 
+                        src={selectedVerification.document_url} 
+                        alt="Identity document front" 
+                        className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
+                        onClick={() => window.open(selectedVerification.document_url, '_blank')}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {selectedVerification?.document_back_url && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">ID Document - Back</p>
+                      <img 
+                        src={selectedVerification.document_back_url} 
+                        alt="Identity document back" 
+                        className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
+                        onClick={() => window.open(selectedVerification.document_back_url, '_blank')}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {selectedVerification?.liveness_image_url && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Liveness Capture</p>
+                      <img 
+                        src={selectedVerification.liveness_image_url} 
+                        alt="Liveness capture" 
+                        className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
+                        onClick={() => window.open(selectedVerification.liveness_image_url, '_blank')}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {selectedVerification?.address_proof && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Address Proof</p>
+                      <img 
+                        src={selectedVerification.address_proof} 
+                        alt="Address proof" 
+                        className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
+                        onClick={() => window.open(selectedVerification.address_proof, '_blank')}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* User Information Update Form (only for pending verifications) */}
+              {selectedVerification?.status === "pending" && (
+                <div className="border rounded-lg p-4 bg-primary/5">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Update User Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <Input
+                        id="fullName"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Enter user's full name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="country">Country</Label>
+                      <Input
+                        id="country"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        placeholder="Enter user's country"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Rejection Reason */}
+              {selectedVerification?.status === "pending" && (
                 <div>
-                  <p className="font-semibold">Liveness Check</p>
-                  <p>{selectedVerification.liveness_check_passed === "true" ? "✓ Passed" : "✗ Failed"} ({selectedVerification.liveness_confidence ? `${(parseFloat(selectedVerification.liveness_confidence) * 100).toFixed(0)}%` : "N/A"})</p>
+                  <Label htmlFor="rejection">Rejection Reason (optional)</Label>
+                  <Textarea
+                    id="rejection"
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Provide a reason if rejecting..."
+                    className="mt-2"
+                  />
                 </div>
               )}
             </div>
+          </ScrollArea>
 
-            {/* Document Images */}
-            {selectedVerification?.document_url && (
-              <div>
-                <p className="font-semibold mb-2">Identity Document</p>
-                <img 
-                  src={selectedVerification.document_url} 
-                  alt="Identity document" 
-                  className="w-full max-w-md rounded-lg border"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
-                  }}
-                />
-              </div>
-            )}
-
-            {selectedVerification?.liveness_image_url && (
-              <div>
-                <p className="font-semibold mb-2">Liveness Capture</p>
-                <img 
-                  src={selectedVerification.liveness_image_url} 
-                  alt="Liveness capture" 
-                  className="w-full max-w-md rounded-lg border"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
-                  }}
-                />
-              </div>
-            )}
-
-            {selectedVerification?.address_proof && (
-              <div>
-                <p className="font-semibold mb-2">Address Proof</p>
-                <img 
-                  src={selectedVerification.address_proof} 
-                  alt="Address proof" 
-                  className="w-full max-w-md rounded-lg border"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
-                  }}
-                />
-              </div>
-            )}
-
-            {/* User Information Update Form (only for pending verifications) */}
-            {selectedVerification?.status === "pending" && (
-              <div className="border-t pt-4 mt-4">
-                <h3 className="font-semibold mb-3">Update User Information</h3>
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Enter user's full name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                      id="country"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      placeholder="Enter user's country"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="rejection">Rejection Reason (optional)</Label>
-              <Textarea
-                id="rejection"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Provide a reason if rejecting..."
-              />
-            </div>
-
-            <div className="flex gap-2">
+          {/* Action Buttons */}
+          {selectedVerification?.status === "pending" && (
+            <div className="flex gap-2 pt-4 border-t">
               <Button
                 onClick={() => {
                   console.log("Approve button clicked for:", selectedVerification.id);
@@ -624,8 +693,7 @@ export default function AdminVerificationsPage() {
                 {rejectVerification.isPending ? "Rejecting..." : "Reject"}
               </Button>
             </div>
-            </div>
-          </ScrollArea>
+          )}
         </DialogContent>
       </Dialog>
     </div>
