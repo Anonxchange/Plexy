@@ -24,6 +24,7 @@ export const verifications = pgTable("verifications", {
   requestedLevel: numeric("requested_level", { precision: 3, scale: 1 }).notNull(),
   documentType: text("document_type"),
   documentUrl: text("document_url"),
+  documentBackUrl: text("document_back_url"),
   addressProof: text("address_proof"),
   livenessImageUrl: text("liveness_image_url"),
   livenessCheckPassed: text("liveness_check_passed"),
