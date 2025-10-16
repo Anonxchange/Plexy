@@ -3,6 +3,8 @@ export interface LivenessResult {
   isLive: boolean;
   confidence: number;
   message: string;
+  capturedImage?: File;
+  imageBase64?: string;
   details?: {
     faceDetected: boolean;
     faceQuality: number;
