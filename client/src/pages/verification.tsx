@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { VERIFICATION_LEVELS, getVerificationLevel, getNextLevel } from "@shared/verification-levels";
 import { createClient } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 import LivenessCheck from "@/components/liveness-check";
 import { LivenessResult } from "@/lib/liveness-api";
 import { uploadToR2 } from "@/lib/r2-storage";
@@ -20,6 +21,7 @@ import { uploadToR2 } from "@/lib/r2-storage";
 export default function VerificationPage() {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const { user: authUser } = useAuth(); // Get auth user with ID
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentBackFile, setDocumentBackFile] = useState<File | null>(null);
@@ -28,42 +30,50 @@ export default function VerificationPage() {
   const [livenessResult, setLivenessResult] = useState<LivenessResult | null>(null);
   const [showLivenessCheck, setShowLivenessCheck] = useState(false);
 
-  // Fetch current user
-  const { data: user } = useQuery({
-    queryKey: ["currentUser"],
+  // Fetch current user profile
+  const { data: userProfile } = useQuery({
+    queryKey: ["currentUser", authUser?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!authUser?.id) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
         .from("user_profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", authUser.id)
         .single();
 
       if (error) throw error;
       return data;
     },
+    enabled: !!authUser?.id,
   });
 
-  // Fetch pending verifications
+  // Fetch verifications for the CURRENT USER ONLY - using auth user ID
   const { data: verifications } = useQuery({
-    queryKey: ["verifications", user?.id],
+    queryKey: ["verifications", authUser?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!authUser?.id) return [];
+      
+      console.log("Fetching verifications for user:", authUser.id, userProfile?.username);
+      
       const { data, error } = await supabase
         .from("verifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", authUser.id)
         .order("submitted_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching user verifications:", error);
+        throw error;
+      }
+      
+      console.log(`Found ${data?.length || 0} verifications for user ${userProfile?.username || authUser.id}`);
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!authUser?.id,
   });
 
-  const currentLevel = Number(user?.verification_level) || 0;
+  const currentLevel = Number(userProfile?.verification_level) || 0;
   const currentLevelConfig = getVerificationLevel(currentLevel);
   const nextLevelConfig = getNextLevel(currentLevel);
   const progress = (currentLevel / 3) * 100;
@@ -71,7 +81,7 @@ export default function VerificationPage() {
   // Submit date of birth for Level 1
   const submitDateOfBirth = useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!authUser?.id) throw new Error("Not authenticated");
       if (!livenessResult || !livenessResult.isLive) {
         throw new Error("Please complete liveness verification first");
       }
@@ -97,7 +107,7 @@ export default function VerificationPage() {
           last_liveness_check: new Date().toISOString(),
           liveness_verified: true
         })
-        .eq("id", user.id);
+        .eq("id", authUser.id);
 
       if (error) throw error;
     },
@@ -112,10 +122,10 @@ export default function VerificationPage() {
   const submitVerification = useMutation({
     mutationFn: async (requestedLevel: number) => {
       console.log("=== SUBMIT VERIFICATION STARTED ===");
-      console.log("User ID:", user?.id);
+      console.log("User ID:", authUser?.id);
       console.log("Requested Level:", requestedLevel);
-      
-      if (!user?.id) throw new Error("Not authenticated");
+
+      if (!authUser?.id) throw new Error("Not authenticated");
       if (requestedLevel === 2 && (!livenessResult || !livenessResult.isLive)) {
         throw new Error("Please complete liveness verification first");
       }
@@ -128,16 +138,16 @@ export default function VerificationPage() {
 
       if (documentFile) {
         console.log("Uploading document front file...");
-        
+
         // Add a timeout wrapper to prevent hanging
-        const uploadPromise = uploadToR2(documentFile, 'verification-documents', user.id);
+        const uploadPromise = uploadToR2(documentFile, 'verification-documents', authUser.id);
         const timeoutPromise = new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
         );
-        
+
         const result = await Promise.race([uploadPromise, timeoutPromise]);
         console.log("Document front upload result:", result);
-        
+
         if (result.success && result.url) {
           documentUrl = result.url;
         } else {
@@ -147,15 +157,15 @@ export default function VerificationPage() {
 
       if (documentBackFile) {
         console.log("Uploading document back file...");
-        
-        const uploadPromise = uploadToR2(documentBackFile, 'verification-documents', user.id);
+
+        const uploadPromise = uploadToR2(documentBackFile, 'verification-documents', authUser.id);
         const timeoutPromise = new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
         );
-        
+
         const result = await Promise.race([uploadPromise, timeoutPromise]);
         console.log("Document back upload result:", result);
-        
+
         if (result.success && result.url) {
           documentBackUrl = result.url;
         } else {
@@ -165,7 +175,7 @@ export default function VerificationPage() {
 
       if (addressFile) {
         console.log("Uploading address proof...");
-        const result = await uploadToR2(addressFile, 'verification-documents', user.id);
+        const result = await uploadToR2(addressFile, 'verification-documents', authUser.id);
         console.log("Address proof upload result:", result);
         if (result.success && result.url) {
           addressUrl = result.url;
@@ -176,15 +186,15 @@ export default function VerificationPage() {
 
       if (livenessResult?.capturedImage) {
         console.log("Uploading liveness image...");
-        
-        const uploadPromise = uploadToR2(livenessResult.capturedImage, 'liveness-captures', user.id);
+
+        const uploadPromise = uploadToR2(livenessResult.capturedImage, 'liveness-captures', authUser.id);
         const timeoutPromise = new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
         );
-        
+
         const result = await Promise.race([uploadPromise, timeoutPromise]);
         console.log("Liveness image upload result:", result);
-        
+
         if (result.success && result.url) {
           livenessImageUrl = result.url;
         }
@@ -194,7 +204,7 @@ export default function VerificationPage() {
       const { data, error } = await supabase
         .from("verifications")
         .insert({
-          user_id: user.id,
+          user_id: authUser.id,
           requested_level: requestedLevel,
           document_type: "government_id",
           document_url: documentUrl,
@@ -214,7 +224,7 @@ export default function VerificationPage() {
         console.error("Verification insert error:", error);
         throw new Error(`Failed to submit verification: ${error.message}`);
       }
-      
+
       console.log("=== SUBMIT VERIFICATION COMPLETED ===");
       return { success: true };
     },
@@ -237,19 +247,53 @@ export default function VerificationPage() {
   });
 
   const pendingVerification = verifications?.find(v => v.status === "pending");
-  const rejectedVerifications = verifications?.filter(v => v.status === "rejected") || [];
-  const latestRejection = rejectedVerifications.length > 0 ? rejectedVerifications[0] : null;
   
+  // Find the latest rejection for each level, but only if there's no approved verification for that level that came after it
+  const getLatestRelevantRejection = () => {
+    if (!verifications) return null;
+    
+    for (const rejection of verifications.filter(v => v.status === "rejected")) {
+      const level = Number(rejection.requested_level);
+      
+      // Check if there's an approved verification for this level that came after this rejection
+      const hasNewerApproval = verifications.some(v => 
+        v.status === "approved" && 
+        Number(v.requested_level) === level &&
+        new Date(v.submitted_at) > new Date(rejection.submitted_at)
+      );
+      
+      // If there's no newer approval, this rejection is still relevant
+      if (!hasNewerApproval) {
+        return rejection;
+      }
+    }
+    
+    return null;
+  };
+  
+  const latestRejection = getLatestRelevantRejection();
+
   // Check if user needs to resubmit for their current level (was approved then rejected)
   const needsResubmitForCurrentLevel = latestRejection && 
     Number(latestRejection.requested_level) === currentLevel && 
     !pendingVerification;
-  
+
   // Check if user needs to resubmit for a lower level that was rejected
   const needsResubmitForLevel2 = latestRejection && 
     Number(latestRejection.requested_level) === 2 && 
     currentLevel === 3 && 
     !pendingVerification;
+
+  // Only show rejection if ALL these conditions are met:
+  // 1. There's a rejection
+  // 2. The rejection is for the immediate next level (currentLevel + 1)
+  // 3. No pending verification
+  // 4. User doesn't need to resubmit for current level
+  // This prevents showing Level 2 rejections to Level 0 users
+  const shouldShowRejection = latestRejection && 
+    Number(latestRejection.requested_level) === (currentLevel + 1) && 
+    !pendingVerification && 
+    !needsResubmitForCurrentLevel;
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
@@ -258,6 +302,11 @@ export default function VerificationPage() {
         <p className="text-muted-foreground">
           Unlock trading limits and features by verifying your account
         </p>
+        {authUser && userProfile && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Viewing verification for: <span className="font-semibold">{userProfile.username}</span> (ID: {authUser.id.slice(0, 8)}...)
+          </p>
+        )}
       </div>
 
       {/* Progress Bar */}
@@ -307,16 +356,22 @@ export default function VerificationPage() {
             <div>
               <h4 className="font-semibold mb-2">Trading Limits</h4>
               <div className="space-y-1 text-sm">
-                {currentLevelConfig.dailyLimit ? (
-                  <p>Daily Limit: ${currentLevelConfig.dailyLimit.toLocaleString()}</p>
+                {currentLevel === 0 ? (
+                  <p className="text-muted-foreground">Trading Disabled</p>
                 ) : (
-                  <p>Daily Limit: Unlimited</p>
-                )}
-                {currentLevelConfig.perTradeLimit && (
-                  <p>Per Trade: ${currentLevelConfig.perTradeLimit.toLocaleString()}</p>
-                )}
-                {currentLevelConfig.lifetimeTradeLimit && (
-                  <p>Lifetime Trade: ${currentLevelConfig.lifetimeTradeLimit.toLocaleString()}</p>
+                  <>
+                    {currentLevelConfig.dailyLimit !== null ? (
+                      <p>Daily Limit: ${currentLevelConfig.dailyLimit.toLocaleString()}</p>
+                    ) : (
+                      <p>Daily Limit: Unlimited</p>
+                    )}
+                    {currentLevelConfig.perTradeLimit !== null && currentLevelConfig.perTradeLimit > 0 && (
+                      <p>Per Trade: ${currentLevelConfig.perTradeLimit.toLocaleString()}</p>
+                    )}
+                    {currentLevelConfig.lifetimeTradeLimit !== null && currentLevelConfig.lifetimeTradeLimit > 0 && (
+                      <p>Lifetime Trade: ${currentLevelConfig.lifetimeTradeLimit.toLocaleString()}</p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -412,7 +467,7 @@ export default function VerificationPage() {
               </AlertDescription>
             </Alert>
           )}
-          
+
           {needsResubmitForLevel2 && (
             <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
               <XCircle className="h-4 w-4 text-red-600" />
@@ -429,8 +484,8 @@ export default function VerificationPage() {
               </AlertDescription>
             </Alert>
           )}
-          
-          {latestRejection && !needsResubmitForCurrentLevel && !pendingVerification && (
+
+          {shouldShowRejection && (
             <Alert variant="destructive" className="border-orange-500/50 bg-orange-500/10">
               <XCircle className="h-4 w-4 text-orange-600" />
               <AlertDescription className="text-orange-800 dark:text-orange-200">
@@ -693,7 +748,7 @@ export default function VerificationPage() {
               {verifications.map((verification) => {
                 const isRejectedCurrentLevel = verification.status === "rejected" && 
                   Number(verification.requested_level) === currentLevel;
-                
+
                 return (
                   <div 
                     key={verification.id} 
