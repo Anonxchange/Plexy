@@ -135,6 +135,16 @@ export default function AdminVerificationsPage() {
     mutationFn: async (verificationId: string) => {
       console.log("=== APPROVE MUTATION STARTED ===");
       console.log("Verification ID:", verificationId);
+      console.log("Current user ID:", user?.id);
+      
+      // Check admin status
+      const { data: adminCheck, error: adminError } = await supabase
+        .from("user_profiles")
+        .select("is_admin")
+        .eq("id", user?.id)
+        .single();
+
+      console.log("Admin check result:", { adminCheck, adminError });
       
       const verification = verifications?.find(v => v.id === verificationId);
       
@@ -143,14 +153,17 @@ export default function AdminVerificationsPage() {
       }
 
       // Update verification status
-      const { error: verifyError } = await supabase
+      const { data: verifyData, error: verifyError } = await supabase
         .from("verifications")
         .update({
           status: "approved",
           reviewed_at: new Date().toISOString(),
           reviewed_by: user?.id || null
         })
-        .eq("id", verificationId);
+        .eq("id", verificationId)
+        .select();
+
+      console.log("Verification update result:", { data: verifyData, error: verifyError });
 
       if (verifyError) {
         console.error("Error updating verification:", verifyError);
@@ -167,10 +180,13 @@ export default function AdminVerificationsPage() {
         updateData.country = country;
       }
 
-      const { error: userError } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from("user_profiles")
         .update(updateData)
-        .eq("id", verification.user_id);
+        .eq("id", verification.user_id)
+        .select();
+
+      console.log("User profile update result:", { data: userData, error: userError });
 
       if (userError) {
         console.error("Error updating user profile:", userError);
@@ -194,9 +210,21 @@ export default function AdminVerificationsPage() {
 
   const rejectVerification = useMutation({
     mutationFn: async (verificationId: string) => {
-      console.log("Rejecting verification:", verificationId);
+      console.log("=== REJECT MUTATION STARTED ===");
+      console.log("Verification ID:", verificationId);
+      console.log("Current user ID:", user?.id);
+      console.log("Rejection reason:", rejectionReason);
 
-      const { error } = await supabase
+      // Check admin status
+      const { data: adminCheck, error: adminError } = await supabase
+        .from("user_profiles")
+        .select("is_admin")
+        .eq("id", user?.id)
+        .single();
+
+      console.log("Admin check result:", { adminCheck, adminError });
+
+      const { data, error } = await supabase
         .from("verifications")
         .update({
           status: "rejected",
@@ -204,13 +232,23 @@ export default function AdminVerificationsPage() {
           reviewed_by: user?.id || null,
           rejection_reason: rejectionReason || "No reason provided"
         })
-        .eq("id", verificationId);
+        .eq("id", verificationId)
+        .select();
+
+      console.log("Reject update result:", { data, error });
 
       if (error) {
         console.error("Error rejecting verification:", error);
-        throw error;
+        // Provide more detailed error message
+        throw new Error(`Database error: ${error.message || 'Unknown error'}`);
       }
 
+      if (!data || data.length === 0) {
+        console.error("No rows updated - verification might not exist or no permissions");
+        throw new Error("Failed to update verification status - check admin permissions");
+      }
+
+      console.log("=== REJECT MUTATION COMPLETED ===");
       return { success: true };
     },
     onSuccess: () => {
@@ -460,9 +498,11 @@ export default function AdminVerificationsPage() {
               </div>
               <div>
                 <p className="font-semibold">Status</p>
-                <Badge variant={selectedVerification?.status === "approved" ? "default" : selectedVerification?.status === "rejected" ? "destructive" : "secondary"}>
-                  {selectedVerification?.status}
-                </Badge>
+                <div>
+                  <Badge variant={selectedVerification?.status === "approved" ? "default" : selectedVerification?.status === "rejected" ? "destructive" : "secondary"}>
+                    {selectedVerification?.status}
+                  </Badge>
+                </div>
               </div>
               {selectedVerification?.liveness_check_passed && (
                 <div>
