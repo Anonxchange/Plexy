@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
-import { FaGoogle, FaApple } from "react-icons/fa";
+import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
 import { createClient } from "@/lib/supabase";
+import { CountryCodeSelector } from "@/components/country-code-selector";
 
 export function SignUp() {
   const [signupMethod, setSignupMethod] = useState<"email" | "phone">("email");
@@ -74,7 +74,7 @@ export function SignUp() {
 
     // Use email for signup (phone will be stored separately)
     const signupEmail = signupMethod === "email" ? email : `${countryCode}${phoneNumber}@phone.temp`;
-    const { error } = await signUp(signupEmail, password, fullName);
+    const { error } = await signUp(signupEmail, password);
     setLoading(false);
 
     if (error) {
@@ -161,20 +161,28 @@ export function SignUp() {
 
                 <div className="flex items-center justify-center gap-4 my-6">
                   <Button 
-                    variant="ghost" 
+                    variant="outline" 
                     size="icon" 
-                    className="w-12 h-12 rounded-full"
+                    className="w-12 h-12 rounded-full border-2"
                     onClick={() => toast({ title: "Coming soon", description: "Google sign-in will be available soon" })}
                   >
-                    <FaGoogle className="h-8 w-8" />
+                    <FaGoogle className="h-6 w-6" />
                   </Button>
                   <Button 
-                    variant="ghost" 
+                    variant="outline" 
                     size="icon" 
-                    className="w-12 h-12 rounded-full"
+                    className="w-12 h-12 rounded-full border-2"
+                    onClick={() => toast({ title: "Coming soon", description: "Facebook sign-in will be available soon" })}
+                  >
+                    <FaFacebook className="h-6 w-6" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="w-12 h-12 rounded-full border-2"
                     onClick={() => toast({ title: "Coming soon", description: "Apple sign-in will be available soon" })}
                   >
-                    <FaApple className="h-8 w-8" />
+                    <FaApple className="h-6 w-6" />
                   </Button>
                 </div>
 
@@ -212,174 +220,12 @@ export function SignUp() {
                   <>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Country</Label>
-                      <Select value={countryCode} onValueChange={setCountryCode}>
-                        <SelectTrigger className="w-full h-12">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          <SelectItem value="+234">🇳🇬 Nigeria +234</SelectItem>
-                          <SelectItem value="+1">🇺🇸 United States +1</SelectItem>
-                          <SelectItem value="+44">🇬🇧 United Kingdom +44</SelectItem>
-                          <SelectItem value="+93">🇦🇫 Afghanistan +93</SelectItem>
-                          <SelectItem value="+355">🇦🇱 Albania +355</SelectItem>
-                          <SelectItem value="+213">🇩🇿 Algeria +213</SelectItem>
-                          <SelectItem value="+376">🇦🇩 +376</SelectItem>
-                          <SelectItem value="+244">🇦🇴 +244</SelectItem>
-                          <SelectItem value="+54">🇦🇷 +54</SelectItem>
-                          <SelectItem value="+374">🇦🇲 +374</SelectItem>
-                          <SelectItem value="+61">🇦🇺 +61</SelectItem>
-                          <SelectItem value="+43">🇦🇹 +43</SelectItem>
-                          <SelectItem value="+994">🇦🇿 +994</SelectItem>
-                          <SelectItem value="+973">🇧🇭 +973</SelectItem>
-                          <SelectItem value="+880">🇧🇩 +880</SelectItem>
-                          <SelectItem value="+375">🇧🇾 +375</SelectItem>
-                          <SelectItem value="+32">🇧🇪 +32</SelectItem>
-                          <SelectItem value="+229">🇧🇯 +229</SelectItem>
-                          <SelectItem value="+975">🇧🇹 +975</SelectItem>
-                          <SelectItem value="+591">🇧🇴 +591</SelectItem>
-                          <SelectItem value="+387">🇧🇦 +387</SelectItem>
-                          <SelectItem value="+267">🇧🇼 +267</SelectItem>
-                          <SelectItem value="+55">🇧🇷 +55</SelectItem>
-                          <SelectItem value="+673">🇧🇳 +673</SelectItem>
-                          <SelectItem value="+359">🇧🇬 +359</SelectItem>
-                          <SelectItem value="+226">🇧🇫 +226</SelectItem>
-                          <SelectItem value="+257">🇧🇮 +257</SelectItem>
-                          <SelectItem value="+855">🇰🇭 +855</SelectItem>
-                          <SelectItem value="+237">🇨🇲 Cameroon +237</SelectItem>
-                          <SelectItem value="+238">🇨🇻 Cape Verde +238</SelectItem>
-                          <SelectItem value="+236">🇨🇫 +236</SelectItem>
-                          <SelectItem value="+235">🇹🇩 +235</SelectItem>
-                          <SelectItem value="+56">🇨🇱 +56</SelectItem>
-                          <SelectItem value="+86">🇨🇳 +86</SelectItem>
-                          <SelectItem value="+57">🇨🇴 +57</SelectItem>
-                          <SelectItem value="+243">🇨🇩 +243</SelectItem>
-                          <SelectItem value="+506">🇨🇷 +506</SelectItem>
-                          <SelectItem value="+385">🇭🇷 +385</SelectItem>
-                          <SelectItem value="+53">🇨🇺 +53</SelectItem>
-                          <SelectItem value="+357">🇨🇾 +357</SelectItem>
-                          <SelectItem value="+420">🇨🇿 +420</SelectItem>
-                          <SelectItem value="+45">🇩🇰 +45</SelectItem>
-                          <SelectItem value="+253">🇩🇯 +253</SelectItem>
-                          <SelectItem value="+593">🇪🇨 +593</SelectItem>
-                          <SelectItem value="+20">🇪🇬 +20</SelectItem>
-                          <SelectItem value="+503">🇸🇻 +503</SelectItem>
-                          <SelectItem value="+372">🇪🇪 +372</SelectItem>
-                          <SelectItem value="+251">🇪🇹 +251</SelectItem>
-                          <SelectItem value="+358">🇫🇮 +358</SelectItem>
-                          <SelectItem value="+33">🇫🇷 +33</SelectItem>
-                          <SelectItem value="+241">🇬🇦 +241</SelectItem>
-                          <SelectItem value="+220">🇬🇲 +220</SelectItem>
-                          <SelectItem value="+995">🇬🇪 +995</SelectItem>
-                          <SelectItem value="+49">🇩🇪 +49</SelectItem>
-                          <SelectItem value="+233">🇬🇭 +233</SelectItem>
-                          <SelectItem value="+30">🇬🇷 +30</SelectItem>
-                          <SelectItem value="+502">🇬🇹 +502</SelectItem>
-                          <SelectItem value="+224">🇬🇳 +224</SelectItem>
-                          <SelectItem value="+509">🇭🇹 +509</SelectItem>
-                          <SelectItem value="+504">🇭🇳 +504</SelectItem>
-                          <SelectItem value="+852">🇭🇰 +852</SelectItem>
-                          <SelectItem value="+36">🇭🇺 +36</SelectItem>
-                          <SelectItem value="+354">🇮🇸 +354</SelectItem>
-                          <SelectItem value="+91">🇮🇳 +91</SelectItem>
-                          <SelectItem value="+62">🇮🇩 +62</SelectItem>
-                          <SelectItem value="+98">🇮🇷 +98</SelectItem>
-                          <SelectItem value="+964">🇮🇶 +964</SelectItem>
-                          <SelectItem value="+353">🇮🇪 +353</SelectItem>
-                          <SelectItem value="+972">🇮🇱 +972</SelectItem>
-                          <SelectItem value="+39">🇮🇹 +39</SelectItem>
-                          <SelectItem value="+225">🇨🇮 +225</SelectItem>
-                          <SelectItem value="+81">🇯🇵 Japan +81</SelectItem>
-                          <SelectItem value="+962">🇯🇴 Jordan +962</SelectItem>
-                          <SelectItem value="+76">🇰🇿 Kazakhstan +76</SelectItem>
-                          <SelectItem value="+254">🇰🇪 Kenya +254</SelectItem>
-                          <SelectItem value="+965">🇰🇼 +965</SelectItem>
-                          <SelectItem value="+996">🇰🇬 +996</SelectItem>
-                          <SelectItem value="+856">🇱🇦 +856</SelectItem>
-                          <SelectItem value="+371">🇱🇻 +371</SelectItem>
-                          <SelectItem value="+961">🇱🇧 +961</SelectItem>
-                          <SelectItem value="+266">🇱🇸 +266</SelectItem>
-                          <SelectItem value="+231">🇱🇷 +231</SelectItem>
-                          <SelectItem value="+218">🇱🇾 +218</SelectItem>
-                          <SelectItem value="+370">🇱🇹 +370</SelectItem>
-                          <SelectItem value="+352">🇱🇺 +352</SelectItem>
-                          <SelectItem value="+389">🇲🇰 +389</SelectItem>
-                          <SelectItem value="+261">🇲🇬 +261</SelectItem>
-                          <SelectItem value="+265">🇲🇼 +265</SelectItem>
-                          <SelectItem value="+60">🇲🇾 +60</SelectItem>
-                          <SelectItem value="+960">🇲🇻 +960</SelectItem>
-                          <SelectItem value="+223">🇲🇱 +223</SelectItem>
-                          <SelectItem value="+356">🇲🇹 +356</SelectItem>
-                          <SelectItem value="+222">🇲🇷 +222</SelectItem>
-                          <SelectItem value="+230">🇲🇺 +230</SelectItem>
-                          <SelectItem value="+52">🇲🇽 +52</SelectItem>
-                          <SelectItem value="+373">🇲🇩 +373</SelectItem>
-                          <SelectItem value="+377">🇲🇨 +377</SelectItem>
-                          <SelectItem value="+976">🇲🇳 +976</SelectItem>
-                          <SelectItem value="+382">🇲🇪 +382</SelectItem>
-                          <SelectItem value="+212">🇲🇦 +212</SelectItem>
-                          <SelectItem value="+258">🇲🇿 +258</SelectItem>
-                          <SelectItem value="+95">🇲🇲 +95</SelectItem>
-                          <SelectItem value="+264">🇳🇦 +264</SelectItem>
-                          <SelectItem value="+977">🇳🇵 +977</SelectItem>
-                          <SelectItem value="+31">🇳🇱 +31</SelectItem>
-                          <SelectItem value="+64">🇳🇿 +64</SelectItem>
-                          <SelectItem value="+505">🇳🇮 +505</SelectItem>
-                          <SelectItem value="+227">🇳🇪 +227</SelectItem>
-                          <SelectItem value="+850">🇰🇵 +850</SelectItem>
-                          <SelectItem value="+47">🇳🇴 +47</SelectItem>
-                          <SelectItem value="+968">🇴🇲 +968</SelectItem>
-                          <SelectItem value="+92">🇵🇰 +92</SelectItem>
-                          <SelectItem value="+970">🇵🇸 +970</SelectItem>
-                          <SelectItem value="+507">🇵🇦 +507</SelectItem>
-                          <SelectItem value="+595">🇵🇾 +595</SelectItem>
-                          <SelectItem value="+51">🇵🇪 +51</SelectItem>
-                          <SelectItem value="+63">🇵🇭 +63</SelectItem>
-                          <SelectItem value="+48">🇵🇱 +48</SelectItem>
-                          <SelectItem value="+351">🇵🇹 +351</SelectItem>
-                          <SelectItem value="+974">🇶🇦 +974</SelectItem>
-                          <SelectItem value="+40">🇷🇴 Romania +40</SelectItem>
-                          <SelectItem value="+250">🇷🇼 Rwanda +250</SelectItem>
-                          <SelectItem value="+966">🇸🇦 +966</SelectItem>
-                          <SelectItem value="+221">🇸🇳 +221</SelectItem>
-                          <SelectItem value="+381">🇷🇸 +381</SelectItem>
-                          <SelectItem value="+65">🇸🇬 +65</SelectItem>
-                          <SelectItem value="+421">🇸🇰 +421</SelectItem>
-                          <SelectItem value="+386">🇸🇮 +386</SelectItem>
-                          <SelectItem value="+252">🇸🇴 +252</SelectItem>
-                          <SelectItem value="+27">🇿🇦 +27</SelectItem>
-                          <SelectItem value="+82">🇰🇷 +82</SelectItem>
-                          <SelectItem value="+211">🇸🇸 +211</SelectItem>
-                          <SelectItem value="+34">🇪🇸 +34</SelectItem>
-                          <SelectItem value="+94">🇱🇰 +94</SelectItem>
-                          <SelectItem value="+249">🇸🇩 +249</SelectItem>
-                          <SelectItem value="+46">🇸🇪 +46</SelectItem>
-                          <SelectItem value="+41">🇨🇭 +41</SelectItem>
-                          <SelectItem value="+963">🇸🇾 +963</SelectItem>
-                          <SelectItem value="+886">🇹🇼 +886</SelectItem>
-                          <SelectItem value="+992">🇹🇯 +992</SelectItem>
-                          <SelectItem value="+255">🇹🇿 +255</SelectItem>
-                          <SelectItem value="+66">🇹🇭 +66</SelectItem>
-                          <SelectItem value="+228">🇹🇬 +228</SelectItem>
-                          <SelectItem value="+216">🇹🇳 +216</SelectItem>
-                          <SelectItem value="+90">🇹🇷 +90</SelectItem>
-                          <SelectItem value="+993">🇹🇲 +993</SelectItem>
-                          <SelectItem value="+256">🇺🇬 +256</SelectItem>
-                          <SelectItem value="+380">🇺🇦 +380</SelectItem>
-                          <SelectItem value="+971">🇦🇪 +971</SelectItem>
-                          <SelectItem value="+598">🇺🇾 +598</SelectItem>
-                          <SelectItem value="+998">🇺🇿 +998</SelectItem>
-                          <SelectItem value="+58">🇻🇪 +58</SelectItem>
-                          <SelectItem value="+84">🇻🇳 +84</SelectItem>
-                          <SelectItem value="+967">🇾🇪 +967</SelectItem>
-                          <SelectItem value="+260">🇿🇲 +260</SelectItem>
-                          <SelectItem value="+263">🇿🇼 +263</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <CountryCodeSelector value={countryCode} onChange={setCountryCode} />
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <Label htmlFor="phone" className="text-sm font-medium">Phone number</Label>
-                        <Button variant="link" className="text-primary text-sm p-0 h-auto">
+                        <Button variant="ghost" className="text-primary text-sm p-0 h-auto">
                           Send code
                         </Button>
                       </div>
