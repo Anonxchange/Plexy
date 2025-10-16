@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FaGoogle, FaFacebook, FaApple } from "react-icons/fa";
-import { Zap, Eye, EyeOff } from "lucide-react";
+import { FaGoogle, FaApple } from "react-icons/fa";
+import { Eye, EyeOff } from "lucide-react";
 
 export function SignIn() {
   const [email, setEmail] = useState("");
@@ -45,103 +45,98 @@ export function SignIn() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-lg bg-primary flex items-center justify-center">
-              <Zap className="h-8 w-8 text-primary-foreground" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl">Welcome to Pexly</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Social Login Buttons */}
-          <div className="flex justify-center gap-4">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="w-12 h-12 rounded-full"
-              onClick={() => toast({ title: "Coming soon", description: "Google sign-in will be available soon" })}
-            >
-              <FaGoogle className="h-5 w-5" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="w-12 h-12 rounded-full"
-              onClick={() => toast({ title: "Coming soon", description: "Facebook sign-in will be available soon" })}
-            >
-              <FaFacebook className="h-5 w-5" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="w-12 h-12 rounded-full"
-              onClick={() => toast({ title: "Coming soon", description: "Apple sign-in will be available soon" })}
-            >
-              <FaApple className="h-5 w-5" />
-            </Button>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#1a1a1a] p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-primary mb-8">
+            Pexly
+          </h1>
+          <h2 className="text-2xl font-semibold text-white mb-6">
+            Welcome to Pexly
+          </h2>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email/Phone number</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Email/Phone"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+        <Card className="bg-[#2a2a2a] border-0 shadow-xl">
+          <CardContent className="pt-6 space-y-6">
+            {/* Social Login Buttons */}
+            <div className="flex justify-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-12 h-12 rounded-full bg-transparent hover:bg-[#3a3a3a]"
+                onClick={() => toast({ title: "Coming soon", description: "Google sign-in will be available soon" })}
+              >
+                <FaGoogle className="h-6 w-6 text-white" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-12 h-12 rounded-full bg-transparent hover:bg-[#3a3a3a]"
+                onClick={() => toast({ title: "Coming soon", description: "Apple sign-in will be available soon" })}
+              >
+                <FaApple className="h-6 w-6 text-white" />
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-300">Email/Phone number</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Email/Phone"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pr-12"
+                  className="h-12 bg-[#3a3a3a] border-[#4a4a4a] text-white placeholder:text-gray-500"
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
               </div>
-              <div className="text-right">
-                <a href="#" className="text-sm text-primary hover:underline">
-                  Forgot password?
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-300">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-12 bg-[#3a3a3a] border-[#4a4a4a] text-white placeholder:text-gray-500 pr-12"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
+                </div>
+                <div className="text-right">
+                  <a href="#" className="text-sm text-primary hover:underline">
+                    Forgot password?
+                  </a>
+                </div>
+              </div>
+              <Button type="submit" className="w-full h-14 bg-primary hover:bg-primary/90 text-black font-semibold text-base" size="lg" disabled={loading}>
+                {loading ? "Signing in..." : "Log in"}
+              </Button>
+
+              <p className="text-center text-sm text-gray-400 mt-4">
+                No account yet?{" "}
+                <a href="/signup" className="text-primary hover:underline font-medium">
+                  Sign up
                 </a>
-              </div>
-            </div>
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? "Signing in..." : "Log in"}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
-            No account yet?{" "}
-            <a href="/signup" className="text-primary hover:underline font-semibold">
-              Sign up
-            </a>
-          </p>
-        </CardFooter>
-      </Card>
+              </p>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
