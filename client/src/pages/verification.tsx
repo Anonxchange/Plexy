@@ -15,6 +15,7 @@ import { VERIFICATION_LEVELS, getVerificationLevel, getNextLevel } from "@shared
 import { createClient } from "@/lib/supabase";
 import LivenessCheck from "@/components/liveness-check";
 import { LivenessResult } from "@/lib/liveness-api";
+import { uploadToR2 } from "@/lib/r2-storage";
 
 export default function VerificationPage() {
   const supabase = createClient();
@@ -114,10 +115,35 @@ export default function VerificationPage() {
         throw new Error("Please complete liveness verification first");
       }
 
-      // In a real app, upload files to storage first
-      const documentUrl = documentFile ? "uploaded_document_url" : null;
-      const addressUrl = addressFile ? "uploaded_address_url" : null;
-      const videoUrl = videoFile ? "uploaded_video_url" : null;
+      // Upload files to R2 storage
+      let documentUrl = null;
+      let addressUrl = null;
+      let livenessImageUrl = null;
+
+      if (documentFile) {
+        const result = await uploadToR2(documentFile, 'verification-documents', user.id);
+        if (result.success && result.url) {
+          documentUrl = result.url;
+        } else {
+          throw new Error(`Document upload failed: ${result.error}`);
+        }
+      }
+
+      if (addressFile) {
+        const result = await uploadToR2(addressFile, 'verification-documents', user.id);
+        if (result.success && result.url) {
+          addressUrl = result.url;
+        } else {
+          throw new Error(`Address proof upload failed: ${result.error}`);
+        }
+      }
+
+      if (livenessResult?.capturedImage) {
+        const result = await uploadToR2(livenessResult.capturedImage, 'liveness-captures', user.id);
+        if (result.success && result.url) {
+          livenessImageUrl = result.url;
+        }
+      }
 
       const { error } = await supabase
         .from("verifications")
@@ -127,7 +153,7 @@ export default function VerificationPage() {
           document_type: "government_id",
           document_url: documentUrl,
           address_proof: addressUrl,
-          video_url: videoUrl,
+          liveness_image_url: livenessImageUrl,
           liveness_check_passed: livenessResult ? String(livenessResult.isLive) : null,
           liveness_confidence: livenessResult ? String(livenessResult.confidence) : null,
           liveness_checked_at: livenessResult ? new Date().toISOString() : null,
