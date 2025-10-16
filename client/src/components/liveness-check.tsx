@@ -163,6 +163,20 @@ export default function LivenessCheck({ onSuccess, onError }: LivenessCheckProps
       const livenessResult = await checkLiveness(imageBase64);
       
       if (livenessResult.isLive && livenessResult.confidence >= 0.65) {
+        // Convert base64 to File for upload
+        const base64Data = imageBase64.split(',')[1];
+        const binaryData = atob(base64Data);
+        const bytes = new Uint8Array(binaryData.length);
+        for (let i = 0; i < binaryData.length; i++) {
+          bytes[i] = binaryData.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'image/jpeg' });
+        const capturedImageFile = new File([blob], `liveness-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        // Attach captured image to result
+        livenessResult.capturedImage = capturedImageFile;
+        livenessResult.imageBase64 = imageBase64;
+        
         // Move to next action
         const currentIndex = actionSequence.indexOf(currentAction);
         const nextAction = actionSequence[currentIndex + 1];
