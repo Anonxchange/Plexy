@@ -239,6 +239,17 @@ export default function VerificationPage() {
   const pendingVerification = verifications?.find(v => v.status === "pending");
   const rejectedVerifications = verifications?.filter(v => v.status === "rejected") || [];
   const latestRejection = rejectedVerifications.length > 0 ? rejectedVerifications[0] : null;
+  
+  // Check if user needs to resubmit for their current level (was approved then rejected)
+  const needsResubmitForCurrentLevel = latestRejection && 
+    Number(latestRejection.requested_level) === currentLevel && 
+    !pendingVerification;
+  
+  // Check if user needs to resubmit for a lower level that was rejected
+  const needsResubmitForLevel2 = latestRejection && 
+    Number(latestRejection.requested_level) === 2 && 
+    currentLevel === 3 && 
+    !pendingVerification;
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
@@ -385,7 +396,7 @@ export default function VerificationPage() {
             </Alert>
           )}
 
-          {latestRejection && !pendingVerification && (
+          {needsResubmitForCurrentLevel && (
             <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
               <XCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800 dark:text-red-200">
@@ -396,14 +407,48 @@ export default function VerificationPage() {
                   Reason: {latestRejection.rejection_reason || "Documents did not meet requirements"}
                 </p>
                 <p className="text-sm">
-                  Please review the requirements below and resubmit your verification.
+                  Your account has been downgraded. Please review the requirements below and resubmit your verification to restore your access.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {needsResubmitForLevel2 && (
+            <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
+              <XCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800 dark:text-red-200">
+                <p className="font-semibold mb-1">
+                  Your Level 2 verification was rejected
+                </p>
+                <p className="text-sm mb-2">
+                  Reason: {latestRejection.rejection_reason || "Documents did not meet requirements"}
+                </p>
+                <p className="text-sm">
+                  Please resubmit your Level 2 verification below to maintain compliance.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {latestRejection && !needsResubmitForCurrentLevel && !pendingVerification && (
+            <Alert variant="destructive" className="border-orange-500/50 bg-orange-500/10">
+              <XCircle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800 dark:text-orange-200">
+                <p className="font-semibold mb-1">
+                  Your previous Level {latestRejection.requested_level} verification was rejected
+                </p>
+                <p className="text-sm mb-2">
+                  Reason: {latestRejection.rejection_reason || "Documents did not meet requirements"}
+                </p>
+                <p className="text-sm">
+                  Please review the requirements and try again when ready.
                 </p>
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Level 0 -> Level 1 */}
-          {currentLevel === 0 && !pendingVerification && (
+          {/* Level 0 -> Level 1 OR Resubmit Level 1 */}
+          {(currentLevel === 0 || (currentLevel === 1 && needsResubmitForCurrentLevel)) && !pendingVerification && (
             <div className="space-y-4">
               <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg mb-4">
                 <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">Level 0 - Limited Access</h4>
@@ -414,7 +459,7 @@ export default function VerificationPage() {
               </div>
 
               <h3 className="font-semibold text-lg">
-                {latestRejection?.requested_level === 1 ? "Resubmit Level 1 Verification" : "Step 1: Verify Your Age (Level 1)"}
+                {needsResubmitForCurrentLevel && currentLevel === 1 ? "Resubmit Level 1 Verification" : "Step 1: Verify Your Age (Level 1)"}
               </h3>
               <p className="text-sm text-muted-foreground">
                 Confirm your age and complete liveness verification to unlock basic trading features with a $1,000 daily limit.
@@ -477,11 +522,11 @@ export default function VerificationPage() {
             </div>
           )}
 
-          {/* Level 1 -> Level 2 */}
-          {currentLevel === 1 && !pendingVerification && (
+          {/* Level 1 -> Level 2 OR Resubmit Level 2 */}
+          {((currentLevel === 1 && !needsResubmitForCurrentLevel) || (currentLevel === 2 && (needsResubmitForCurrentLevel || latestRejection)) || needsResubmitForLevel2) && !pendingVerification && (
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">
-                {latestRejection?.requested_level === 2 ? "Resubmit Level 2 Verification" : "Step 2: Full Verification (Level 2)"}
+                {(needsResubmitForCurrentLevel && currentLevel === 2) || needsResubmitForLevel2 ? "Resubmit Level 2 Verification" : "Step 2: Full Verification (Level 2)"}
               </h3>
               <p className="text-sm text-muted-foreground">
                 Upload a valid government-issued ID and complete liveness verification to unlock unlimited daily/lifetime trading.
@@ -572,11 +617,11 @@ export default function VerificationPage() {
             </div>
           )}
 
-          {/* Level 2 -> Level 3 */}
-          {currentLevel === 2 && !pendingVerification && (
+          {/* Level 2 -> Level 3 OR Resubmit Level 3 */}
+          {((currentLevel === 2 && !needsResubmitForCurrentLevel) || (currentLevel === 3 && needsResubmitForCurrentLevel)) && !pendingVerification && (
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">
-                {latestRejection?.requested_level === 3 ? "Resubmit Level 3 Verification" : "Step 3: Enhanced Due Diligence (Level 3)"}
+                {needsResubmitForCurrentLevel && currentLevel === 3 ? "Resubmit Level 3 Verification" : "Step 3: Enhanced Due Diligence (Level 3)"}
               </h3>
               <p className="text-sm text-muted-foreground">
                 Complete address verification to unlock maximum trading power with $1,000,000 per-trade limit.
@@ -623,7 +668,7 @@ export default function VerificationPage() {
             </div>
           )}
 
-          {currentLevel === 3 && (
+          {currentLevel === 3 && !needsResubmitForCurrentLevel && !pendingVerification && !latestRejection && (
             <Alert>
               <CheckCircle className="h-4 w-4 text-green-500" />
               <AlertDescription>
@@ -639,31 +684,56 @@ export default function VerificationPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Verification History</CardTitle>
+            <CardDescription>
+              Track all your verification submissions and their status
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {verifications.map((verification) => (
-                <div key={verification.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-semibold">Level {verification.requested_level}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Submitted: {new Date(verification.submitted_at).toLocaleDateString()}
-                    </p>
-                    {verification.status === "rejected" && verification.rejection_reason && (
-                      <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                        Reason: {verification.rejection_reason}
+              {verifications.map((verification) => {
+                const isRejectedCurrentLevel = verification.status === "rejected" && 
+                  Number(verification.requested_level) === currentLevel;
+                
+                return (
+                  <div 
+                    key={verification.id} 
+                    className={`flex items-center justify-between p-3 border rounded-lg ${
+                      isRejectedCurrentLevel ? 'border-red-500/50 bg-red-500/5' : ''
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">Level {verification.requested_level}</p>
+                        {isRejectedCurrentLevel && (
+                          <Badge variant="outline" className="text-red-600 border-red-600">
+                            Resubmit Required
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Submitted: {new Date(verification.submitted_at).toLocaleDateString()}
                       </p>
-                    )}
+                      {verification.status === "rejected" && verification.rejection_reason && (
+                        <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                          Reason: {verification.rejection_reason}
+                        </p>
+                      )}
+                      {isRejectedCurrentLevel && (
+                        <p className="text-sm font-medium text-red-600 dark:text-red-400 mt-1">
+                          ⚠️ Your access was revoked. Please resubmit verification above to restore access.
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant={
+                      verification.status === "approved" ? "default" :
+                      verification.status === "rejected" ? "destructive" :
+                      "secondary"
+                    }>
+                      {verification.status}
+                    </Badge>
                   </div>
-                  <Badge variant={
-                    verification.status === "approved" ? "default" :
-                    verification.status === "rejected" ? "destructive" :
-                    "secondary"
-                  }>
-                    {verification.status}
-                  </Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
