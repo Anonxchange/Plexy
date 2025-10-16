@@ -72,51 +72,82 @@ export function SignUp() {
 
     setLoading(true);
 
-    // Use email for signup (phone will be stored separately)
-    const signupEmail = signupMethod === "email" ? email : `${countryCode}${phoneNumber}@phone.temp`;
-    const { error } = await signUp(signupEmail, password);
-    setLoading(false);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    if (signupMethod === "phone") {
+      // For phone signup, we need to verify the phone first, then create account
+      // Store the signup data and move to phone verification
+      setUserId("pending"); // Temporary ID to indicate pending verification
+      setLoading(false);
+      setStep("phone");
     } else {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        setUserId(data.user.id);
+      // Email signup - create account with email/password
+      const { error } = await signUp(email, password);
+      setLoading(false);
 
-        // Save phone number if signing up with phone (it will be verified in next step)
-        if (signupMethod === "phone" && phoneNumber) {
-          const fullPhoneNumber = countryCode + phoneNumber;
-          await supabase.from('user_profiles').update({
-            phone_number: fullPhoneNumber,
-            phone_verified: false, // Not verified yet
-          }).eq('id', data.user.id);
-          setStep("phone"); // Go to phone verification step
-        } else {
-          // Email signup - skip phone verification or make it optional
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          setUserId(data.user.id);
+          // Optional phone verification for email signups
           setStep("phone");
         }
       }
     }
   };
 
-  const handlePhoneVerified = async (phoneNumber: string) => {
-    if (!userId) return;
+  const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
+    // For phone signups, create the account now that phone is verified
+    if (signupMethod === "phone" && userId === "pending") {
+      setLoading(true);
+      
+      // Create account with email/password (use phone as email identifier)
+      const tempEmail = `${verifiedPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
+      const { error } = await signUp(tempEmail, password);
+      
+      if (error) {
+        setLoading(false);
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    await supabase.from('user_profiles').update({
-      phone_number: phoneNumber,
-      phone_verified: true,
-    }).eq('id', userId);
+      // Get the new user and update their profile with verified phone
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        await supabase.from('user_profiles').update({
+          phone_number: verifiedPhoneNumber,
+          phone_verified: true,
+          full_name: fullName,
+        }).eq('id', data.user.id);
 
-    toast({
-      title: "Success!",
-      description: "Phone verified! Account created successfully!",
-    });
-    setLocation("/dashboard");
+        toast({
+          title: "Success!",
+          description: "Phone verified! Account created successfully!",
+        });
+        setLocation("/dashboard");
+      }
+      setLoading(false);
+    } else if (userId && userId !== "pending") {
+      // For email signups, just update the phone number
+      await supabase.from('user_profiles').update({
+        phone_number: verifiedPhoneNumber,
+        phone_verified: true,
+      }).eq('id', userId);
+
+      toast({
+        title: "Success!",
+        description: "Phone verified successfully!",
+      });
+      setLocation("/dashboard");
+    }
   };
 
   const handleSkipPhone = () => {
@@ -223,12 +254,7 @@ export function SignUp() {
                       <CountryCodeSelector value={countryCode} onChange={setCountryCode} />
                     </div>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <Label htmlFor="phone" className="text-sm font-medium">Phone number</Label>
-                        <Button variant="ghost" className="text-primary text-sm p-0 h-auto">
-                          Send code
-                        </Button>
-                      </div>
+                      <Label htmlFor="phone" className="text-sm font-medium">Phone number</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -337,6 +363,8 @@ export function SignUp() {
                   <PhoneVerification
                     onVerified={handlePhoneVerified}
                     onSkip={signupMethod === "email" ? handleSkipPhone : undefined}
+                    initialPhone={phoneNumber}
+                    initialCountryCode={countryCode}
                   />
                 </CardContent>
               </Card>
