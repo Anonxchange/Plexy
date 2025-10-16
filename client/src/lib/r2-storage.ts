@@ -25,7 +25,8 @@ const s3Client = new S3Client({
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
   requestHandler: {
-    requestTimeout: 30000, // 30 seconds
+    requestTimeout: 60000, // 60 seconds
+    connectionTimeout: 10000, // 10 seconds
   },
 });
 
@@ -35,12 +36,18 @@ export async function uploadToR2(
   userId: string
 ): Promise<UploadResult> {
   try {
+    console.log(`[R2] Starting upload - File: ${file.name}, Size: ${file.size} bytes, Type: ${file.type}`);
+    
     const fileExtension = file.name.split('.').pop() || 'jpg';
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(7);
     const key = `${folder}/${userId}/${timestamp}-${randomString}.${fileExtension}`;
 
+    console.log(`[R2] Generated key: ${key}`);
+
     const arrayBuffer = await file.arrayBuffer();
+    console.log(`[R2] File converted to buffer, size: ${arrayBuffer.byteLength} bytes`);
+    
     const buffer = new Uint8Array(arrayBuffer);
 
     const command = new PutObjectCommand({
@@ -50,10 +57,18 @@ export async function uploadToR2(
       ContentType: file.type,
     });
 
+    console.log(`[R2] Sending upload command to R2...`);
+    const startTime = Date.now();
+    
     await s3Client.send(command);
+    
+    const uploadTime = Date.now() - startTime;
+    console.log(`[R2] Upload completed in ${uploadTime}ms`);
 
     // Use the correct public R2 domain for accessing uploaded files
     const publicUrl = `https://pub-1d1c072ba4084950addc61f4dd8d95a3.r2.dev/${key}`;
+
+    console.log(`[R2] Public URL: ${publicUrl}`);
 
     return {
       success: true,
@@ -61,15 +76,20 @@ export async function uploadToR2(
       key: key,
     };
   } catch (error) {
-    console.error('R2 upload error:', error);
-    console.error('Full error details:', JSON.stringify(error, null, 2));
+    console.error('[R2] Upload error:', error);
+    console.error('[R2] Full error details:', JSON.stringify(error, null, 2));
     
     let errorMessage = 'Upload failed';
     
     if (error instanceof Error) {
       errorMessage = error.message;
-      console.error('Error name:', error.name);
-      console.error('Error stack:', error.stack);
+      console.error('[R2] Error name:', error.name);
+      console.error('[R2] Error stack:', error.stack);
+      
+      // Check for timeout errors
+      if (error.name === 'TimeoutError' || errorMessage.includes('timeout')) {
+        errorMessage = 'Upload timed out - please try again with a smaller file';
+      }
     }
     
     return {
