@@ -8,6 +8,7 @@ import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign } from "lucide-react"
 import { TradeDialog } from "./trade-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { useVerificationGuard } from "@/hooks/use-verification-guard";
 
 export interface OfferCardProps {
   id?: string;
@@ -132,6 +133,7 @@ export function OfferCard({
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { checkCanTrade, isLevel0 } = useVerificationGuard();
 
   const handleTrade = () => {
     if (!user) {
@@ -143,6 +145,30 @@ export function OfferCard({
       setLocation("/signin");
       return;
     }
+
+    if (isLevel0) {
+      toast({
+        title: "Verification Required",
+        description: "Level 0 users cannot trade. Please complete verification to start trading.",
+        variant: "destructive",
+      });
+      setLocation("/verification");
+      return;
+    }
+
+    const tradeAmount = limits.min;
+    const tradeCheck = checkCanTrade(tradeAmount);
+    
+    if (!tradeCheck.allowed) {
+      toast({
+        title: "Trade Limit Exceeded",
+        description: tradeCheck.reason,
+        variant: "destructive",
+      });
+      setLocation("/verification");
+      return;
+    }
+
     setShowTradeDialog(true);
   };
 
