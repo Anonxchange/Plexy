@@ -9,6 +9,7 @@ import { TradeDialog } from "./trade-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 export interface OfferCardProps {
   id?: string;
@@ -33,16 +34,13 @@ export interface OfferCardProps {
 }
 
 const getCryptoIcon = (symbol: string) => {
-  switch (symbol) {
-    case "BTC":
-      return <Bitcoin className="h-5 w-5 text-orange-500" />;
-    case "ETH":
-      return <span className="text-xl text-blue-400">Ξ</span>;
-    case "USDT":
-      return <span className="text-xl text-green-600">₮</span>;
-    default:
-      return <Bitcoin className="h-5 w-5 text-orange-500" />;
-  }
+  return (
+    <img 
+      src={cryptoIconUrls[symbol] || `https://ui-avatars.com/api/?name=${symbol}&background=random`} 
+      alt={symbol}
+      className="h-5 w-5 rounded-full"
+    />
+  );
 };
 
 const getCountryFlag = (country: string) => {
