@@ -23,6 +23,7 @@ export default function VerificationPage() {
   const queryClient = useQueryClient();
   const { user: authUser } = useAuth(); // Get auth user with ID
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [fullName, setFullName] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentBackFile, setDocumentBackFile] = useState<File | null>(null);
   const [addressFile, setAddressFile] = useState<File | null>(null);
@@ -78,12 +79,14 @@ export default function VerificationPage() {
   const nextLevelConfig = getNextLevel(currentLevel);
   const progress = (currentLevel / 3) * 100;
 
-  // Submit date of birth for Level 1
+  // Submit date of birth and full name for Level 1
   const submitDateOfBirth = useMutation({
     mutationFn: async () => {
       if (!authUser?.id) throw new Error("Not authenticated");
-      if (!livenessResult || !livenessResult.isLive) {
-        throw new Error("Please complete liveness verification first");
+
+      const nameToUse = fullName || userProfile?.full_name;
+      if (!nameToUse || nameToUse.trim().length < 2) {
+        throw new Error("Please enter your full name");
       }
 
       // Calculate age from date of birth
@@ -102,10 +105,9 @@ export default function VerificationPage() {
       const { error } = await supabase
         .from("user_profiles")
         .update({ 
+          full_name: nameToUse,
           date_of_birth: dateOfBirth, 
-          verification_level: "1",
-          last_liveness_check: new Date().toISOString(),
-          liveness_verified: true
+          verification_level: "1"
         })
         .eq("id", authUser.id);
 
@@ -113,8 +115,7 @@ export default function VerificationPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
-      setLivenessResult(null);
-      setShowLivenessCheck(false);
+      setFullName("");
     },
   });
 
@@ -514,11 +515,26 @@ export default function VerificationPage() {
               </div>
 
               <h3 className="font-semibold text-lg">
-                {needsResubmitForCurrentLevel && currentLevel === 1 ? "Resubmit Level 1 Verification" : "Step 1: Verify Your Age (Level 1)"}
+                {needsResubmitForCurrentLevel && currentLevel === 1 ? "Resubmit Level 1 Verification" : "Step 1: Verify Your Identity (Level 1)"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Confirm your age and complete liveness verification to unlock basic trading features with a $1,000 daily limit.
+                Provide your full name and confirm your age to unlock basic trading features with a $1,000 daily limit.
               </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={fullName || userProfile?.full_name || ""}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={!!userProfile?.full_name}
+                />
+                {userProfile?.full_name && (
+                  <p className="text-xs text-green-600">✓ Full name already set</p>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="dob">Date of Birth (Must be 18 or older)</Label>
@@ -531,41 +547,13 @@ export default function VerificationPage() {
                 />
               </div>
 
-              {showLivenessCheck ? (
-                <LivenessCheck
-                  onSuccess={(result) => setLivenessResult(result)}
-                  onError={(error) => console.error("Liveness check error:", error)}
-                />
-              ) : (
-                livenessResult?.isLive && (
-                  <Alert>
-                    <CheckCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      ✓ Liveness verified! Confidence: {(livenessResult.confidence * 100).toFixed(0)}%
-                    </AlertDescription>
-                  </Alert>
-                )
-              )}
-
-              {!showLivenessCheck && !livenessResult && dateOfBirth && (
-                <Button 
-                  onClick={() => setShowLivenessCheck(true)}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Continue to Liveness Check
-                </Button>
-              )}
-
-              {livenessResult?.isLive && (
-                <Button 
-                  onClick={() => submitDateOfBirth.mutate()}
-                  disabled={!dateOfBirth || submitDateOfBirth.isPending}
-                  className="w-full"
-                >
-                  {submitDateOfBirth.isPending ? "Verifying..." : "Complete Level 1 Verification"}
-                </Button>
-              )}
+              <Button 
+                onClick={() => submitDateOfBirth.mutate()}
+                disabled={!dateOfBirth || (!fullName && !userProfile?.full_name) || submitDateOfBirth.isPending}
+                className="w-full"
+              >
+                {submitDateOfBirth.isPending ? "Verifying..." : "Complete Level 1 Verification"}
+              </Button>
 
               {submitDateOfBirth.isError && (
                 <Alert variant="destructive">
