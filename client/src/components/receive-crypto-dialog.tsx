@@ -21,19 +21,7 @@ import { Copy, CheckCircle2, Loader2, ArrowLeft, X } from "lucide-react";
 import { getDepositAddress } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { QRCodeSVG } from "qrcode.react";
-
-const cryptoIcons: Record<string, string> = {
-  BTC: "₿",
-  ETH: "Ξ",
-  SOL: "◎",
-  TON: "💎",
-  USDC: "$",
-  USDT: "₮",
-  XMR: "ɱ",
-  LTC: "Ł",
-  BNB: "🔸",
-  TRX: "⚡"
-};
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 interface ReceiveCryptoDialogProps {
   open: boolean;
@@ -243,9 +231,14 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                     }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-2xl font-bold">
-                        {cryptoIcons[wallet.symbol] || wallet.icon}
-                      </div>
+                      <img 
+                        src={cryptoIconUrls[wallet.symbol]} 
+                        alt={wallet.symbol}
+                        className="w-10 h-10 rounded-full"
+                        onError={(e) => {
+                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
+                        }}
+                      />
                       <div className="text-left">
                         <div className="font-semibold">{wallet.symbol}</div>
                         <div className="text-xs text-muted-foreground">{wallet.name}</div>
@@ -277,7 +270,11 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                       {wallets.map((wallet) => (
                         <SelectItem key={wallet.symbol} value={wallet.symbol}>
                           <span className="flex items-center gap-2">
-                            <span>{wallet.icon}</span>
+                            <img 
+                              src={cryptoIconUrls[wallet.symbol]} 
+                              alt={wallet.symbol}
+                              className="w-5 h-5 rounded-full"
+                            />
                             <span>{wallet.symbol}</span>
                           </span>
                         </SelectItem>
