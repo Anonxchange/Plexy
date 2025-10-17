@@ -12,19 +12,20 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/hooks/use-toast";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 const cryptoData: Record<string, { name: string; icon: string; color: string; iconUrl?: string }> = {
-  BTC: { name: "Bitcoin", icon: "₿", color: "text-orange-500", iconUrl: "https://cryptologos.cc/logos/bitcoin-btc-logo.png" },
-  ETH: { name: "Ethereum", icon: "Ξ", color: "text-blue-500", iconUrl: "https://cryptologos.cc/logos/ethereum-eth-logo.png" },
-  SOL: { name: "Solana", icon: "◎", color: "text-purple-500", iconUrl: "https://cryptologos.cc/logos/solana-sol-logo.png" },
-  TON: { name: "Toncoin", icon: "💎", color: "text-blue-400", iconUrl: "https://cryptologos.cc/logos/toncoin-ton-logo.png" },
-  USDC: { name: "USD Coin", icon: "⊙", color: "text-blue-600", iconUrl: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png" },
-  USDT: { name: "Tether", icon: "₮", color: "text-green-500", iconUrl: "https://cryptologos.cc/logos/tether-usdt-logo.png" },
-  XMR: { name: "Monero", icon: "ɱ", color: "text-orange-600", iconUrl: "https://cryptologos.cc/logos/monero-xmr-logo.png" },
-  BNB: { name: "Binance Coin", icon: "⬡", color: "text-yellow-500", iconUrl: "https://cryptologos.cc/logos/bnb-bnb-logo.png" },
-  TRX: { name: "TRON", icon: "◬", color: "text-red-500", iconUrl: "https://cryptologos.cc/logos/tron-trx-logo.png" },
-  LTC: { name: "Litecoin", icon: "Ł", color: "text-gray-400", iconUrl: "https://cryptologos.cc/logos/litecoin-ltc-logo.png" },
-  XRP: { name: "Ripple", icon: "✕", color: "text-blue-400", iconUrl: "https://cryptologos.cc/logos/xrp-xrp-logo.png" },
+  BTC: { name: "Bitcoin", icon: "₿", color: "text-orange-500", iconUrl: cryptoIconUrls.BTC },
+  ETH: { name: "Ethereum", icon: "Ξ", color: "text-blue-500", iconUrl: cryptoIconUrls.ETH },
+  SOL: { name: "Solana", icon: "◎", color: "text-purple-500", iconUrl: cryptoIconUrls.SOL },
+  TON: { name: "Toncoin", icon: "💎", color: "text-blue-400", iconUrl: cryptoIconUrls.TON },
+  USDC: { name: "USD Coin", icon: "⊙", color: "text-blue-600", iconUrl: cryptoIconUrls.USDC },
+  USDT: { name: "Tether", icon: "₮", color: "text-green-500", iconUrl: cryptoIconUrls.USDT },
+  XMR: { name: "Monero", icon: "ɱ", color: "text-orange-600", iconUrl: cryptoIconUrls.XMR },
+  BNB: { name: "Binance Coin", icon: "⬡", color: "text-yellow-500", iconUrl: cryptoIconUrls.BNB },
+  TRX: { name: "TRON", icon: "◬", color: "text-red-500", iconUrl: cryptoIconUrls.TRX },
+  LTC: { name: "Litecoin", icon: "Ł", color: "text-gray-400", iconUrl: cryptoIconUrls.LTC },
+  XRP: { name: "Ripple", icon: "✕", color: "text-blue-400", iconUrl: `https://ui-avatars.com/api/?name=XRP&background=random` },
 };
 
 export default function AssetDetail() {
