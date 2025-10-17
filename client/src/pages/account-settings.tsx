@@ -98,7 +98,7 @@ export function AccountSettings() {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [phone, setPhone] = useState("");
-  const [currency, setCurrency] = useState("ngn");
+  const [currency, setCurrency] = useState("usd");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -186,6 +186,7 @@ export function AccountSettings() {
         setUsername(data.username || '');
         setBio(data.bio || '');
         setPhone(data.phone || '');
+        setCurrency(data.preferred_currency || 'usd');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -238,14 +239,22 @@ export function AccountSettings() {
         username: username.trim(),
         bio: bio,
         phone: phone,
+        preferred_currency: currency,
       };
+
+      console.log("Saving profile with currency:", currency, "updateData:", updateData);
 
       const { error } = await supabase
         .from('user_profiles')
         .update(updateData)
         .eq('id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error saving profile:", error);
+        throw error;
+      }
+
+      console.log("Profile saved successfully with currency:", currency);
 
       toast({
         title: "Success!",
@@ -513,17 +522,34 @@ export function AccountSettings() {
       {/* Preferred Currency */}
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Preferred currency</Label>
-        <Select value={currency} onValueChange={setCurrency}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ngn">Nigerian Naira (NGN)</SelectItem>
-            <SelectItem value="usd">US Dollar (USD)</SelectItem>
-            <SelectItem value="eur">Euro (EUR)</SelectItem>
-            <SelectItem value="gbp">British Pound (GBP)</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger className="flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="usd">🇺🇸 US Dollar (USD)</SelectItem>
+              <SelectItem value="eur">🇪🇺 Euro (EUR)</SelectItem>
+              <SelectItem value="gbp">🇬🇧 British Pound (GBP)</SelectItem>
+              <SelectItem value="ngn">🇳🇬 Nigerian Naira (NGN)</SelectItem>
+              <SelectItem value="cad">🇨🇦 Canadian Dollar (CAD)</SelectItem>
+              <SelectItem value="aud">🇦🇺 Australian Dollar (AUD)</SelectItem>
+              <SelectItem value="jpy">🇯🇵 Japanese Yen (JPY)</SelectItem>
+              <SelectItem value="chf">🇨🇭 Swiss Franc (CHF)</SelectItem>
+              <SelectItem value="cny">🇨🇳 Chinese Yuan (CNY)</SelectItem>
+              <SelectItem value="inr">🇮🇳 Indian Rupee (INR)</SelectItem>
+              <SelectItem value="kes">🇰🇪 Kenyan Shilling (KES)</SelectItem>
+              <SelectItem value="ghs">🇬🇭 Ghanaian Cedi (GHS)</SelectItem>
+              <SelectItem value="zar">🇿🇦 South African Rand (ZAR)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            className="bg-primary hover:bg-primary/90"
+            onClick={handleSaveProfile}
+          >
+            Save
+          </Button>
+        </div>
         <p className="text-sm text-muted-foreground">
           Select which currency your wallet will use
         </p>
