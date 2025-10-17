@@ -37,6 +37,7 @@ import ActiveTrade from "@/pages/active-trade";
 import VerificationPage from "@/pages/verification";
 import AdminPage from "@/pages/admin";
 import AdminVerificationsPage from "@/pages/admin-verifications";
+import AssetDetail from "@/pages/asset-detail";
 
 function Router() {
   return (
@@ -47,8 +48,9 @@ function Router() {
       <Route path="/spot" component={Spot} />
       <Route path="/swap" component={Swap} />
       <Route path="/wallet" component={Wallet} />
-      <Route path="/wallet/visa-card/details" component={VisaCardDetails} />
       <Route path="/wallet/visa-card" component={VisaCard} />
+      <Route path="/wallet/visa-card/details" component={VisaCardDetails} />
+      <Route path="/wallet/asset/:symbol" component={AssetDetail} />
       <Route path="/wallet/mobile-topup" component={MobileTopup} />
       <Route path="/wallet/crypto-to-bank" component={CryptoToBank} />
       <Route path="/wallet/lightning" component={Lightning} />
