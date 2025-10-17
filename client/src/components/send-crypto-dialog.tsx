@@ -20,19 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, Loader2, CheckCircle2, X, Copy } from "lucide-react";
 import { sendCrypto } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
-
-const cryptoIcons: Record<string, string> = {
-  BTC: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
-  ETH: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
-  SOL: "https://cryptologos.cc/logos/solana-sol-logo.png",
-  TON: "https://cryptologos.cc/logos/toncoin-ton-logo.png",
-  USDC: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
-  USDT: "https://cryptologos.cc/logos/tether-usdt-logo.png",
-  XMR: "https://cryptologos.cc/logos/monero-xmr-logo.png",
-  LTC: "https://cryptologos.cc/logos/litecoin-ltc-logo.png",
-  BNB: "https://cryptologos.cc/logos/bnb-bnb-logo.png",
-  TRX: "https://cryptologos.cc/logos/tron-trx-logo.png"
-};
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 interface SendCryptoDialogProps {
   open: boolean;
@@ -175,7 +163,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                 >
                   <div className="flex items-center gap-3 w-full">
                     <img 
-                      src={cryptoIcons[wallet.symbol]} 
+                      src={cryptoIconUrls[wallet.symbol]} 
                       alt={wallet.symbol}
                       className="w-10 h-10 rounded-full"
                       onError={(e) => {
@@ -206,7 +194,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                     {selectedWallet && (
                       <>
                         <img 
-                          src={cryptoIcons[selectedCrypto]} 
+                          src={cryptoIconUrls[selectedCrypto]} 
                           alt={selectedCrypto}
                           className="w-6 h-6 rounded-full"
                           onError={(e) => {
@@ -223,7 +211,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                     <SelectItem key={wallet.symbol} value={wallet.symbol}>
                       <div className="flex items-center gap-2">
                         <img 
-                          src={cryptoIcons[wallet.symbol]} 
+                          src={cryptoIconUrls[wallet.symbol]} 
                           alt={wallet.symbol}
                           className="w-6 h-6 rounded-full"
                           onError={(e) => {
