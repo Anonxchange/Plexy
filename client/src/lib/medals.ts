@@ -1,4 +1,4 @@
-import medalTheOg from '@assets/generated_images/Golden_1_with_laurel_medal_icon_da8f22e7.png';
+import medalTheOg from '@assets/generated_images/IMG_1432.png';
 import medalInitiate from '@assets/generated_images/Military_chevron_rank_medal_icon_b880fdfb.png';
 import medalDecaDealer from '@assets/generated_images/Money_bags_trading_volume_icon_8b31dde5.png';
 import medalGiftCard from '@assets/generated_images/Gift_card_with_star_icon_56942569.png';
