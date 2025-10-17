@@ -10,12 +10,13 @@ import { ArrowUpDown, FileText } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 const currencies = [
-  { symbol: "BTC", name: "Bitcoin", icon: "₿" },
-  { symbol: "USDT", name: "Tether", icon: "₮" },
-  { symbol: "ETH", name: "Ethereum", icon: "Ξ" },
-  { symbol: "USDC", name: "USD Coin", icon: "⊙" },
+  { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC },
+  { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT },
+  { symbol: "ETH", name: "Ethereum", iconUrl: cryptoIconUrls.ETH },
+  { symbol: "USDC", name: "USD Coin", iconUrl: cryptoIconUrls.USDC },
 ];
 
 export function Swap() {
@@ -78,7 +79,11 @@ export function Swap() {
                     {currencies.map((curr) => (
                       <SelectItem key={curr.symbol} value={curr.symbol}>
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{curr.icon}</span>
+                          <img 
+                            src={curr.iconUrl} 
+                            alt={curr.symbol}
+                            className="w-5 h-5 rounded-full"
+                          />
                           {curr.symbol}
                         </div>
                       </SelectItem>
@@ -123,7 +128,11 @@ export function Swap() {
                     {currencies.map((curr) => (
                       <SelectItem key={curr.symbol} value={curr.symbol}>
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{curr.icon}</span>
+                          <img 
+                            src={curr.iconUrl} 
+                            alt={curr.symbol}
+                            className="w-5 h-5 rounded-full"
+                          />
                           {curr.symbol}
                         </div>
                       </SelectItem>
