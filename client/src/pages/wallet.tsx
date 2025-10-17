@@ -36,13 +36,13 @@ import { getVerificationLevel, getVerificationRequirements } from "@shared/verif
 import { createClient } from "@/lib/supabase";
 
 const cryptoAssets = [
-  { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, icon: "₿", color: "text-orange-500", avgCost: 0 },
-  { symbol: "ETH", name: "Ethereum", balance: 0, ngnValue: 0, icon: "Ξ", color: "text-blue-500", avgCost: 0 },
-  { symbol: "SOL", name: "Solana", balance: 0, ngnValue: 0, icon: "◎", color: "text-purple-500", avgCost: 0 },
-  { symbol: "TON", name: "Toncoin", balance: 0, ngnValue: 0, icon: "💎", color: "text-blue-400", avgCost: 0 },
-  { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, icon: "⊙", color: "text-blue-600", avgCost: 0 },
-  { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, icon: "₮", color: "text-green-500", avgCost: 0 },
-  { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, icon: "ɱ", color: "text-orange-600", avgCost: 0 },
+  { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, icon: "₿", iconUrl: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=26", color: "text-orange-500", avgCost: 0 },
+  { symbol: "ETH", name: "Ethereum", balance: 0, ngnValue: 0, icon: "Ξ", iconUrl: "https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=26", color: "text-blue-500", avgCost: 0 },
+  { symbol: "SOL", name: "Solana", balance: 0, ngnValue: 0, icon: "◎", iconUrl: "https://cryptologos.cc/logos/solana-sol-logo.svg?v=26", color: "text-purple-500", avgCost: 0 },
+  { symbol: "TON", name: "Toncoin", balance: 0, ngnValue: 0, icon: "💎", iconUrl: "https://cryptologos.cc/logos/toncoin-ton-logo.svg?v=26", color: "text-blue-400", avgCost: 0 },
+  { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, icon: "⊙", iconUrl: "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg?v=26", color: "text-blue-600", avgCost: 0 },
+  { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, icon: "₮", iconUrl: "https://cryptologos.cc/logos/tether-usdt-logo.svg?v=26", color: "text-green-500", avgCost: 0 },
+  { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, icon: "ɱ", iconUrl: "https://cryptologos.cc/logos/monero-xmr-logo.svg?v=26", color: "text-orange-600", avgCost: 0 },
 ];
 
 const initialSpotPairs = [
@@ -293,7 +293,7 @@ export default function Wallet() {
     const currentPrice = priceData?.current_price || 0;
     const usdValue = balance * currentPrice;
     const ngnValue = convertToNGN(usdValue);
-    
+
     // Calculate PnL (using a mock avg cost for now - this should come from trade history)
     const avgCost = asset.avgCost || currentPrice * 0.95; // Mock: assume bought 5% lower
     const costBasis = balance * avgCost;
@@ -569,11 +569,26 @@ export default function Wallet() {
             {/* Asset List */}
             <div className="space-y-2 mb-8">
               {filteredAssets.map((asset) => (
-                  <Card key={asset.symbol} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setLocation(`/wallet/asset/${asset.symbol}`)}>
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="grid grid-cols-[1fr_auto_auto] gap-2 sm:gap-4 items-center">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center text-lg sm:text-xl ${asset.color}`}>
+                  <Card 
+                    key={asset.symbol} 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setLocation(`/wallet/asset/${asset.symbol}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          {asset.iconUrl ? (
+                            <img 
+                              src={asset.iconUrl} 
+                              alt={asset.symbol}
+                              className="w-10 h-10 rounded-full"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xl ${asset.color} ${asset.iconUrl ? 'hidden' : ''}`}>
                             {asset.icon}
                           </div>
                           <div>
