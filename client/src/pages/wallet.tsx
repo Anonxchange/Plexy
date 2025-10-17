@@ -36,13 +36,13 @@ import { getVerificationLevel, getVerificationRequirements } from "@shared/verif
 import { createClient } from "@/lib/supabase";
 
 const cryptoAssets = [
-  { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, icon: "₿", color: "text-orange-500" },
-  { symbol: "ETH", name: "Ethereum", balance: 0, ngnValue: 0, icon: "Ξ", color: "text-blue-500" },
-  { symbol: "SOL", name: "Solana", balance: 0, ngnValue: 0, icon: "◎", color: "text-purple-500" },
-  { symbol: "TON", name: "Toncoin", balance: 0, ngnValue: 0, icon: "💎", color: "text-blue-400" },
-  { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, icon: "⊙", color: "text-blue-600" },
-  { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, icon: "₮", color: "text-green-500" },
-  { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, icon: "ɱ", color: "text-orange-600" },
+  { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, icon: "₿", color: "text-orange-500", avgCost: 0 },
+  { symbol: "ETH", name: "Ethereum", balance: 0, ngnValue: 0, icon: "Ξ", color: "text-blue-500", avgCost: 0 },
+  { symbol: "SOL", name: "Solana", balance: 0, ngnValue: 0, icon: "◎", color: "text-purple-500", avgCost: 0 },
+  { symbol: "TON", name: "Toncoin", balance: 0, ngnValue: 0, icon: "💎", color: "text-blue-400", avgCost: 0 },
+  { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, icon: "⊙", color: "text-blue-600", avgCost: 0 },
+  { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, icon: "₮", color: "text-green-500", avgCost: 0 },
+  { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, icon: "ɱ", color: "text-orange-600", avgCost: 0 },
 ];
 
 const initialSpotPairs = [
@@ -290,13 +290,26 @@ export default function Wallet() {
     const wallet = wallets.find(w => w.currency === asset.symbol);
     const priceData = cryptoPrices[asset.symbol];
     const balance = wallet?.balance || asset.balance;
-    const usdValue = priceData ? balance * priceData.current_price : 0;
+    const currentPrice = priceData?.current_price || 0;
+    const usdValue = balance * currentPrice;
     const ngnValue = convertToNGN(usdValue);
+    
+    // Calculate PnL (using a mock avg cost for now - this should come from trade history)
+    const avgCost = asset.avgCost || currentPrice * 0.95; // Mock: assume bought 5% lower
+    const costBasis = balance * avgCost;
+    const pnlUsd = usdValue - costBasis;
+    const pnlPercentage = costBasis > 0 ? ((usdValue - costBasis) / costBasis) * 100 : 0;
 
     return {
       ...asset,
       balance,
-      ngnValue
+      ngnValue,
+      usdValue,
+      currentPrice,
+      avgCost,
+      pnlUsd,
+      pnlPercentage,
+      priceChange24h: priceData?.price_change_percentage_24h || 0
     };
   });
 
@@ -556,27 +569,33 @@ export default function Wallet() {
             {/* Asset List */}
             <div className="space-y-2 mb-8">
               {filteredAssets.map((asset) => (
-                  <Card key={asset.symbol}>
+                  <Card key={asset.symbol} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setLocation(`/wallet/asset/${asset.symbol}`)}>
                     <CardContent className="p-3 sm:p-4">
-                      <div className="grid grid-cols-3 gap-2 sm:gap-4 items-center">
+                      <div className="grid grid-cols-[1fr_auto_auto] gap-2 sm:gap-4 items-center">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center text-lg sm:text-xl ${asset.color}`}>
                             {asset.icon}
                           </div>
-                          <span className="font-medium text-sm sm:text-base">{asset.symbol}</span>
+                          <div>
+                            <div className="font-medium text-sm sm:text-base">{asset.symbol}</div>
+                            <div className="text-xs text-muted-foreground">{asset.name}</div>
+                          </div>
                         </div>
                         <div className="text-right">
                           <div className="font-medium text-sm sm:text-base">
                             {balanceVisible ? asset.balance.toFixed(7) : "••••••"}
                           </div>
                           <div className="text-xs sm:text-sm text-muted-foreground">
-                            {balanceVisible ? `${asset.ngnValue.toFixed(2)} ${preferredCurrency}` : "••••••"}
+                            {balanceVisible ? `≈ ${asset.usdValue.toFixed(2)} USD` : "••••••"}
                           </div>
                         </div>
                         <div className="text-right">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                            <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          </Button>
+                          <div className={`font-medium text-sm ${asset.pnlUsd >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {balanceVisible ? (asset.pnlUsd >= 0 ? '+' : '') + asset.pnlUsd.toFixed(2) : "••••"}
+                          </div>
+                          <div className={`text-xs ${asset.pnlPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {balanceVisible ? (asset.pnlPercentage >= 0 ? '+' : '') + asset.pnlPercentage.toFixed(2) + '%' : "••••"}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
