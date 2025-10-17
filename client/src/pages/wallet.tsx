@@ -3,10 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { 
-  ArrowDownToLine, 
-  ArrowUpFromLine, 
-  ArrowLeftRight, 
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ArrowLeftRight,
   Smartphone,
   Eye,
   EyeOff,
@@ -188,6 +188,7 @@ export default function Wallet() {
   const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
   const [lifetimeTradeVolume, setLifetimeTradeVolume] = useState<number>(0);
   const [lifetimeSendVolume, setLifetimeSendVolume] = useState<number>(0);
+  const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
 
   useEffect(() => {
     if (!user) {
@@ -205,7 +206,7 @@ export default function Wallet() {
     if (!user) return;
     try {
       const supabase = createClient();
-      
+
       // First try to get from user metadata
       const metadata = user.user_metadata || {};
       if (metadata.verification_level !== undefined) {
@@ -219,7 +220,7 @@ export default function Wallet() {
       // Try to fetch from database table
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('verification_level, lifetime_trade_volume, lifetime_send_volume')
+        .select('verification_level, lifetime_trade_volume, lifetime_send_volume, preferred_currency')
         .eq('id', user.id)
         .single();
 
@@ -234,7 +235,10 @@ export default function Wallet() {
         setUserVerificationLevel(Number(data.verification_level) || 0);
         setLifetimeTradeVolume(Number(data.lifetime_trade_volume) || 0);
         setLifetimeSendVolume(Number(data.lifetime_send_volume) || 0);
+        const currency = data.preferred_currency?.toUpperCase() || 'USD';
+        setPreferredCurrency(currency);
         console.log("Loaded user level from DB:", data.verification_level);
+        console.log("Loaded preferred currency:", data.preferred_currency, "=>", currency);
       }
     } catch (error) {
       console.error("Error loading user profile:", error);
@@ -263,7 +267,7 @@ export default function Wallet() {
       const prices = await getCryptoPrices(symbols);
       setCryptoPrices(prices);
 
-      setSpotPairs(prevPairs => 
+      setSpotPairs(prevPairs =>
         prevPairs.map(pair => {
           const priceData = prices[pair.symbol];
           return priceData ? {
@@ -298,7 +302,7 @@ export default function Wallet() {
 
   const totalBalance = mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0);
 
-  const filteredAssets = hideZeroBalance 
+  const filteredAssets = hideZeroBalance
     ? mergedAssets.filter(asset => asset.balance > 0)
     : mergedAssets;
 
@@ -318,7 +322,7 @@ export default function Wallet() {
         {/* Withdraw Limits Card */}
         <Card className="mb-4">
           <CardContent className="p-3 sm:p-4">
-            <div 
+            <div
               className="flex items-center justify-between flex-wrap gap-2 cursor-pointer"
               onClick={() => setLimitsExpanded(!limitsExpanded)}
             >
@@ -350,14 +354,14 @@ export default function Wallet() {
                   <p className="text-xs text-muted-foreground mb-3">
                     {getVerificationLevel(userVerificationLevel).description}
                   </p>
-                  
+
                   {/* Limits Grid */}
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div className="bg-muted/50 p-2 rounded">
                       <div className="text-muted-foreground mb-1">Daily Limit</div>
                       <div className="font-medium">
                         {getVerificationLevel(userVerificationLevel).dailyLimit !== null
-                          ? `$${getVerificationLevel(userVerificationLevel).dailyLimit?.toLocaleString()}` 
+                          ? `$${getVerificationLevel(userVerificationLevel).dailyLimit?.toLocaleString()}`
                           : "Unlimited"}
                       </div>
                     </div>
@@ -448,15 +452,16 @@ export default function Wallet() {
               Spot
             </Button>
           </Link>
-          <Button
-            variant={activeWalletTab === "card" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveWalletTab("card")}
-            className="whitespace-nowrap"
-          >
-            <CreditCard className="h-4 w-4 mr-2" />
-            Visa card
-          </Button>
+          <Link href="/wallet/visa-card">
+            <Button
+              variant="outline"
+              size="sm"
+              className="whitespace-nowrap"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              Visa card
+            </Button>
+          </Link>
         </div>
 
         {/* Wallet Balance Card */}
@@ -464,7 +469,7 @@ export default function Wallet() {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-muted-foreground">Wallet balance</span>
-              <Button 
+              <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setBalanceVisible(!balanceVisible)}
@@ -475,7 +480,7 @@ export default function Wallet() {
             </div>
 
             <div className="text-3xl sm:text-4xl font-bold text-primary mb-6">
-              {balanceVisible ? `${totalBalance.toFixed(2)} NGN` : "••••••"}
+              {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
             </div>
 
             {/* Action Buttons - Horizontal Layout */}
@@ -534,7 +539,7 @@ export default function Wallet() {
           <>
             {/* Hide 0 Balance Toggle */}
             <div className="flex items-center gap-2 mb-4">
-              <Switch 
+              <Switch
                 checked={hideZeroBalance}
                 onCheckedChange={setHideZeroBalance}
               />
@@ -561,8 +566,12 @@ export default function Wallet() {
                           <span className="font-medium text-sm sm:text-base">{asset.symbol}</span>
                         </div>
                         <div className="text-right">
-                          <div className="font-medium text-sm sm:text-base">{asset.balance.toFixed(7)}</div>
-                          <div className="text-xs sm:text-sm text-muted-foreground">{asset.ngnValue.toFixed(2)} NGN</div>
+                          <div className="font-medium text-sm sm:text-base">
+                            {balanceVisible ? asset.balance.toFixed(7) : "••••••"}
+                          </div>
+                          <div className="text-xs sm:text-sm text-muted-foreground">
+                            {balanceVisible ? `${asset.ngnValue.toFixed(2)} ${preferredCurrency}` : "••••••"}
+                          </div>
                         </div>
                         <div className="text-right">
                           <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
@@ -588,11 +597,11 @@ export default function Wallet() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-sm">{activity.type}</span>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={
-                            activity.status === "completed" 
-                              ? "bg-green-500/10 text-green-600 border-green-500/20" 
+                            activity.status === "completed"
+                              ? "bg-green-500/10 text-green-600 border-green-500/20"
                               : activity.status === "pending"
                               ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
                               : "bg-red-500/10 text-red-600 border-red-500/20"
@@ -632,11 +641,11 @@ export default function Wallet() {
                         <Badge variant="secondary" className="text-xs">
                           {operation.type}
                         </Badge>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={
-                            operation.status === "completed" 
-                              ? "bg-green-500/10 text-green-600 border-green-500/20" 
+                            operation.status === "completed"
+                              ? "bg-green-500/10 text-green-600 border-green-500/20"
                               : operation.status === "pending"
                               ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
                               : "bg-red-500/10 text-red-600 border-red-500/20"
@@ -759,7 +768,7 @@ export default function Wallet() {
             {/* Spot Pairs List */}
             <div className="space-y-2">
               {spotPairs.map((pair) => (
-                <div 
+                <div
                   key={pair.symbol}
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
                 >
@@ -801,7 +810,8 @@ export default function Wallet() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+
+        </div>
 
       <PexlyFooter />
 
