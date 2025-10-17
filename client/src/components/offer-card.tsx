@@ -45,42 +45,40 @@ const getCryptoIcon = (symbol: string) => {
   );
 };
 
-const getCountryCode = (country: string) => {
-  // Map of country names to codes
-  const codesByName: Record<string, string> = {
-    "Nigeria": "NG",
-    "United States": "US",
-    "United Kingdom": "GB",
-    "Ghana": "GH",
-    "Kenya": "KE",
-    "South Africa": "ZA",
-    "Canada": "CA",
-    "Australia": "AU",
-    "India": "IN",
-    "Philippines": "PH",
-    "Indonesia": "ID",
-    "Malaysia": "MY",
-    "Singapore": "SG",
-    "Thailand": "TH",
-    "Vietnam": "VN",
-    "UAE": "AE",
-    "Saudi Arabia": "SA",
-    "Egypt": "EG",
-    "Algeria": "DZ",
-    "Ethiopia": "ET",
-    "France": "FR",
-    "Germany": "DE",
-    "Italy": "IT",
-    "Spain": "ES",
-    "Brazil": "BR",
-    "Mexico": "MX",
-    "Argentina": "AR",
-    "Dominican Republic": "DO",
+const getCountryFlag = (country: string) => {
+  // Map of country names to flag emojis
+  const flagsByName: Record<string, string> = {
+    "Nigeria": "🇳🇬",
+    "United States": "🇺🇸",
+    "United Kingdom": "🇬🇧",
+    "Ghana": "🇬🇭",
+    "Kenya": "🇰🇪",
+    "South Africa": "🇿🇦",
+    "Canada": "🇨🇦",
+    "Australia": "🇦🇺",
+    "India": "🇮🇳",
+    "Philippines": "🇵🇭",
+    "Indonesia": "🇮🇩",
+    "Malaysia": "🇲🇾",
+    "Singapore": "🇸🇬",
+    "Thailand": "🇹🇭",
+    "Vietnam": "🇻🇳",
+    "UAE": "🇦🇪",
+    "Saudi Arabia": "🇸🇦",
+    "Egypt": "🇪🇬",
+    "Algeria": "🇩🇿",
+    "Ethiopia": "🇪🇹",
+    "France": "🇫🇷",
+    "Germany": "🇩🇪",
+    "Italy": "🇮🇹",
+    "Spain": "🇪🇸",
+    "Brazil": "🇧🇷",
+    "Mexico": "🇲🇽",
+    "Argentina": "🇦🇷",
+    "Dominican Republic": "🇩🇴",
   };
   
-  // If already a code, return it; otherwise look it up
-  if (country.length === 2) return country;
-  return codesByName[country] || null;
+  return flagsByName[country] || "🌍";
 };
 
 export function OfferCard({ 
@@ -158,11 +156,11 @@ export function OfferCard({
 
   const cryptoAmount = limits.min / pricePerBTC;
   
-  // Get the country code - use vendor's country, or first country from restrictions
-  const countryCode = vendor.country 
-    ? getCountryCode(vendor.country)
+  // Get the country flag - use vendor's country, or first country from restrictions
+  const countryFlag = vendor.country 
+    ? getCountryFlag(vendor.country)
     : (country_restrictions && country_restrictions.length > 0 
-      ? getCountryCode(country_restrictions[0])
+      ? getCountryFlag(country_restrictions[0])
       : null);
 
   return (
@@ -185,9 +183,9 @@ export function OfferCard({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-semibold text-base">{vendor.name}</span>
-                {countryCode ? (
-                  <span className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                    {countryCode}
+                {countryFlag ? (
+                  <span className="text-base">
+                    {countryFlag}
                   </span>
                 ) : (
                   <Globe className="h-3.5 w-3.5 text-muted-foreground" />
