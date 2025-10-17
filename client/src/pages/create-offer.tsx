@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -20,14 +21,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin } from "lucide-react";
+import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin, Lock, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useRoute } from "wouter";
 import { getCryptoPrices, convertToNGN } from "@/lib/crypto-prices";
 import { cn } from "@/lib/utils";
+import { useVerificationGuard } from "@/hooks/use-verification-guard";
 
 export function CreateOffer() {
+  const { 
+    checkCanCreateOffer, 
+    isLevel0, 
+    verificationLevel,
+    levelConfig 
+  } = useVerificationGuard();
   const [priceType, setPriceType] = useState<"fixed" | "floating">("floating");
   const [fixedPrice, setFixedPrice] = useState("");
   const [priceOffset, setPriceOffset] = useState([0]);
@@ -229,6 +237,16 @@ export function CreateOffer() {
   ];
 
   const handleCreateOffer = async () => {
+    if (!checkCanCreateOffer()) {
+      toast({
+        title: "Verification Required",
+        description: `You need to be at least Level 1 to create offers. Please complete verification first.`,
+        variant: "destructive",
+      });
+      setLocation("/verification");
+      return;
+    }
+
     if (!paymentMethod || !currency) {
       toast({
         title: "Missing Information",
@@ -361,6 +379,38 @@ export function CreateOffer() {
                 </button>.</>
           }
         </p>
+
+        {/* Verification Alert */}
+        {isLevel0 && (
+          <Alert className="mb-6 border-orange-500/50 bg-orange-500/10">
+            <Lock className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800 dark:text-orange-200">
+              <p className="font-semibold mb-1">Cannot Create Offers</p>
+              <p className="text-sm">
+                Level 0 users cannot create offers. Please{" "}
+                <button 
+                  onClick={() => setLocation("/verification")}
+                  className="underline font-semibold hover:text-orange-900"
+                >
+                  complete verification
+                </button>{" "}
+                to Level 1 or higher to start creating offers.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!isLevel0 && levelConfig && (
+          <Alert className="mb-6 border-green-500/50 bg-green-500/10">
+            <Shield className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800 dark:text-green-200">
+              <p className="font-semibold mb-1">You can create offers - {levelConfig.name}</p>
+              <p className="text-sm">
+                Your verification level allows you to create and publish offers on the P2P marketplace.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-6">
           {/* Offer Type Selection */}
