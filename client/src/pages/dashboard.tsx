@@ -41,7 +41,8 @@ import {
   LayoutDashboard,
   MessageSquare,
   HelpCircle,
-  User
+  User,
+  Trophy
 } from "lucide-react";
 
 export function Dashboard() {
@@ -384,6 +385,55 @@ export function Dashboard() {
           </Dialog>
         </div>
 
+        {/* Medals Section */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <Award className="h-5 w-5 text-yellow-500" />
+              Your Medals
+            </h2>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-primary"
+              onClick={() => setLocation("/medals")}
+            >
+              View all →
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="text-center p-3 rounded-lg bg-primary/5">
+                  <div className="text-3xl mb-2">🥇</div>
+                  <div className="text-sm font-medium">The OG</div>
+                  <div className="text-xs text-muted-foreground mt-1">Early Adopter</div>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <div className="text-3xl mb-2 grayscale opacity-50">🎖️</div>
+                  <div className="text-sm font-medium text-muted-foreground">Pexly Initiate</div>
+                  <div className="text-xs text-muted-foreground mt-1">5/10 trades</div>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <div className="text-3xl mb-2 grayscale opacity-50">💰</div>
+                  <div className="text-sm font-medium text-muted-foreground">Deca Dealer</div>
+                  <div className="text-xs text-muted-foreground mt-1">$0/$10k volume</div>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <div className="text-3xl mb-2 grayscale opacity-50">📅</div>
+                  <div className="text-sm font-medium text-muted-foreground">Every Damn Day</div>
+                  <div className="text-xs text-muted-foreground mt-1">0/30 day streak</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <Trophy className="h-4 w-4 text-yellow-500" />
+                <span className="text-sm font-medium">1 Medal Earned</span>
+                <span className="text-xs text-muted-foreground">• Keep trading to unlock more!</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Spot Exchange */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -440,7 +490,7 @@ export function Dashboard() {
           </Button>
         </div>
       </main>
-      
+
       <PexlyFooter />
     </div>
   );
