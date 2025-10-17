@@ -22,6 +22,9 @@ import {
   Flag,
   Wallet,
 } from "lucide-react";
+import medalTheOg from '@assets/generated_images/IMG_1432.png';
+import medalInitiate from '@assets/generated_images/IMG_1430.png';
+import medalTop1 from '@assets/generated_images/IMG_1425.png';
 import {
   Select,
   SelectContent,
@@ -483,9 +486,32 @@ export function Profile() {
           <CardContent className="p-0">
             <div className="bg-elevate-1 p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <Trophy className="h-8 w-8" />
-                  <span className="text-3xl font-bold">1</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Trophy className="h-8 w-8" />
+                    <span className="text-3xl font-bold">1</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src={medalTheOg} 
+                      alt="The OG" 
+                      className="h-8 w-8 object-contain"
+                    />
+                    {profileData && profileData.total_trades >= 10 && (
+                      <img 
+                        src={medalInitiate} 
+                        alt="Pexly Initiate" 
+                        className="h-8 w-8 object-contain"
+                      />
+                    )}
+                    {profileData && profileData.total_trades >= 100 && (
+                      <img 
+                        src={medalTop1} 
+                        alt="Top 1% Club" 
+                        className="h-8 w-8 object-contain"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
