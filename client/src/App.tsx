@@ -41,6 +41,7 @@ import AssetDetail from "@/pages/asset-detail";
 import { Profile as ProfilePage } from "@/pages/profile";
 import { AccountSettings as AccountSettingsPage } from "@/pages/account-settings";
 import MedalsPage from "@/pages/medals";
+import { Fees } from "@/pages/fees";
 
 function Router() {
   return (
@@ -76,6 +77,7 @@ function Router() {
       <Route path="/profile/:userId" component={ProfilePage} />
       <Route path="/account-settings" component={AccountSettingsPage} />
       <Route path="/medals" component={MedalsPage} />
+      <Route path="/fees" component={Fees} />
       <Route path="*" component={NotFound} />
     </Switch>
   );
