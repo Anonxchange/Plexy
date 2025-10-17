@@ -38,6 +38,9 @@ import VerificationPage from "@/pages/verification";
 import AdminPage from "@/pages/admin";
 import AdminVerificationsPage from "@/pages/admin-verifications";
 import AssetDetail from "@/pages/asset-detail";
+import { Profile as ProfilePage } from "@/pages/profile";
+import { AccountSettings as AccountSettingsPage } from "@/pages/account-settings";
+import MedalsPage from "@/pages/medals";
 
 function Router() {
   return (
@@ -70,7 +73,10 @@ function Router() {
       <Route path="/create-offer-advanced" component={CreateOfferAdvanced} />
       <Route path="/my-offers" component={MyOffers} />
       <Route path="/trade/:tradeId" component={ActiveTrade} />
-      <Route component={NotFound} />
+      <Route path="/profile/:userId" component={ProfilePage} />
+      <Route path="/account-settings" component={AccountSettingsPage} />
+      <Route path="/medals" component={MedalsPage} />
+      <Route path="*" component={NotFound} />
     </Switch>
   );
 }
