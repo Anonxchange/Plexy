@@ -12,6 +12,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { createClient } from "@/lib/supabase";
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -48,12 +50,53 @@ export function Dashboard() {
   const [welcomeOpen, setWelcomeOpen] = useState(true);
   const [productsModalOpen, setProductsModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [profileAvatar, setProfileAvatar] = useState<string>("");
+  const supabase = createClient();
+
+  const avatarTypes = [
+    { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
+    { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
+    { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
+    { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
+    { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
+    { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
+    { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
+    { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
+  ];
 
   useEffect(() => {
     if (!loading && !user) {
       setLocation("/signin");
+    } else if (user) {
+      fetchProfileAvatar();
     }
   }, [user, loading, setLocation]);
+
+  const fetchProfileAvatar = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('avatar_url, avatar_type')
+        .eq('id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile avatar:', error);
+        return;
+      }
+
+      if (data?.avatar_url) {
+        setProfileAvatar(data.avatar_url);
+      } else if (data?.avatar_type) {
+        const selectedAvatar = avatarTypes.find(a => a.id === data.avatar_type);
+        if (selectedAvatar) {
+          setProfileAvatar(selectedAvatar.image);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching profile avatar:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -128,9 +171,14 @@ export function Dashboard() {
             <CollapsibleTrigger className="w-full">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-2xl">👤</span>
-                  </div>
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={profileAvatar || user?.user_metadata?.avatar_url} alt="User avatar" />
+                    <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                      {user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ?? 
+                       user?.email?.substring(0, 2)?.toUpperCase() ?? 
+                       "U"}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="text-left">
                     <CardTitle>Welcome,</CardTitle>
                     <CardDescription>{user.email?.split('@')[0] || 'User'}</CardDescription>
