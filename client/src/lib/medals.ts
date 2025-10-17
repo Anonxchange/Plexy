@@ -1,5 +1,5 @@
 import medalTheOg from '@assets/generated_images/IMG_1432.png';
-import medalInitiate from '@assets/generated_images/Military_chevron_rank_medal_icon_b880fdfb.png';
+import medalInitiate from '@assets/generated_images/IMG_1430.png';
 import medalDecaDealer from '@assets/generated_images/Money_bags_trading_volume_icon_8b31dde5.png';
 import medalGiftCard from '@assets/generated_images/Gift_card_with_star_icon_56942569.png';
 import medalBankTransfer from '@assets/generated_images/Money_bag_with_crown_icon_ba87dcf5.png';
