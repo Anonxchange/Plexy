@@ -1,13 +1,13 @@
 import medalTheOg from '@assets/generated_images/IMG_1432.png';
 import medalInitiate from '@assets/generated_images/IMG_1430.png';
 import medalDecaDealer from '@assets/generated_images/IMG_1431.png';
-import medalGiftCard from '@assets/generated_images/Gift_card_with_star_icon_56942569.png';
-import medalBankTransfer from '@assets/generated_images/Money_bag_with_crown_icon_ba87dcf5.png';
-import medalMoMo from '@assets/generated_images/Mobile_payment_cards_icon_25a07f21.png';
-import medalEveryDay from '@assets/generated_images/Calendar_30_day_streak_icon_2b86d28c.png';
-import medalCleanSheet from '@assets/generated_images/Shield_with_crown_icon_fc6d7536.png';
-import medalNoSlip from '@assets/generated_images/Bronze_star_badge_icon_c33b3fa3.png';
-import medalTop1 from '@assets/generated_images/Diamond_with_star_icon_fe87fa91.png';
+import medalGiftCard from '@assets/generated_images/IMG_1424.png';
+import medalBankTransfer from '@assets/generated_images/IMG_1422.png';
+import medalMoMo from '@assets/generated_images/IMG_1428.png';
+import medalEveryDay from '@assets/generated_images/IMG_1426.png';
+import medalCleanSheet from '@assets/generated_images/IMG_1423.png';
+import medalNoSlip from '@assets/generated_images/IMG_1427.png';
+import medalTop1 from '@assets/generated_images/IMG_1425.png';
 
 export interface Medal {
   id: string;
