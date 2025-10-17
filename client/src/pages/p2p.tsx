@@ -169,52 +169,79 @@ export function P2P() {
   const fetchOffers = async () => {
     setLoading(true);
     try {
-
-      // Fetch offers with user profiles using the foreign key relationship
-      const { data: offersData, error: offersError } = await supabase
+      // Fetch offers first
+      const { data: basicOffersData, error: basicError } = await supabase
         .from("p2p_offers")
-        .select(`
-          *,
-          user_profiles!p2p_offers_user_id_fkey (
-            id,
-            username,
-            display_name,
-            avatar_url,
-            avatar_type,
-            positive_ratings,
-            total_trades,
-            response_time_avg,
-            country
-          )
-        `)
+        .select("*")
         .eq("crypto_symbol", selectedCrypto)
         .eq("offer_type", activeTab)
         .eq("is_active", true);
 
-      if (offersError) {
-        console.error("Error fetching offers:", offersError);
-        // If the join fails, fall back to fetching without user data
-        const { data: basicOffersData, error: basicError } = await supabase
-          .from("p2p_offers")
-          .select("*")
-          .eq("crypto_symbol", selectedCrypto)
-          .eq("offer_type", activeTab)
-          .eq("is_active", true);
+      if (basicError) {
+        console.error("Error fetching offers:", basicError);
+        setOffers([]);
+        setLoading(false);
+        return;
+      }
 
-        if (basicError) throw basicError;
+      // If we have offers, fetch user profiles for each one
+      if (basicOffersData && basicOffersData.length > 0) {
+        const offersWithProfiles = await Promise.all(
+          basicOffersData.map(async (offer: any) => {
+            const { data: userProfile } = await supabase
+              .from("user_profiles")
+              .select("id, username, display_name, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
+              .eq("id", offer.user_id)
+              .single();
 
-        const formattedOffers: OfferCardProps[] = (basicOffersData || []).map((offer) => {
-          const traderName = `Trader${Math.floor(Math.random() * 10000)}`;
+            return {
+              ...offer,
+              user_profiles: userProfile
+            };
+          })
+        );
+
+        // Format offers with user profile data
+        const formattedOffers: OfferCardProps[] = offersWithProfiles.map((offer: any) => {
+          const user = offer.user_profiles;
+          const vendorName = user?.username || user?.display_name || "Trader";
+
+          // Use the user's actual avatar from profile
+          let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`;
+
+          if (user?.avatar_url) {
+            // User has uploaded a custom avatar
+            avatarUrl = user.avatar_url;
+          } else if (user?.avatar_type) {
+            // User has selected an avatar type
+            const avatarTypes = [
+              { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
+              { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
+              { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
+              { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
+              { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
+              { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
+              { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
+              { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
+            ];
+            const selectedAvatar = avatarTypes.find(a => a.id === user.avatar_type);
+            if (selectedAvatar) {
+              avatarUrl = selectedAvatar.image;
+            }
+          }
+
           return {
             id: offer.id,
             vendor: {
-              id: offer.user_id,
-              name: traderName,
-              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${offer.user_id}`,
-              isVerified: false,
-              trades: 0,
-              responseTime: "5 min",
-              country: undefined, // Default to undefined if not fetched
+              id: user?.id || offer.user_id,
+              name: vendorName,
+              avatar: avatarUrl,
+              isVerified: (user?.positive_ratings || 0) > 10,
+              trades: user?.total_trades || 0,
+              responseTime: user?.response_time_avg 
+                ? `${Math.floor(user.response_time_avg / 60)} min` 
+                : "5 min",
+              country: user?.country || undefined,
             },
             paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
             pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
@@ -234,70 +261,13 @@ export function P2P() {
         });
 
         setOffers(formattedOffers);
-        return;
+      } else {
+        // No offers found
+        setOffers([]);
       }
-
-      const formattedOffers: OfferCardProps[] = (offersData || []).map((offer: any) => {
-        const user = offer.user_profiles;
-        const vendorName = user?.username || user?.display_name || "Trader";
-
-        // Use the user's actual avatar from profile
-        let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`;
-
-        if (user?.avatar_url) {
-          // User has uploaded a custom avatar
-          avatarUrl = user.avatar_url;
-        } else if (user?.avatar_type) {
-          // User has selected an avatar type
-          const avatarTypes = [
-            { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
-            { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
-            { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
-            { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
-            { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
-            { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
-            { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
-            { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
-          ];
-          const selectedAvatar = avatarTypes.find(a => a.id === user.avatar_type);
-          if (selectedAvatar) {
-            avatarUrl = selectedAvatar.image;
-          }
-        }
-
-        return {
-          id: offer.id,
-          vendor: {
-            id: user?.id || offer.user_id,
-            name: vendorName,
-            avatar: avatarUrl,
-            isVerified: (user?.positive_ratings || 0) > 10,
-            trades: user?.total_trades || 0,
-            responseTime: user?.response_time_avg 
-              ? `${Math.floor(user.response_time_avg / 60)} min` 
-              : "5 min",
-            country: user?.country || undefined, // Pass the country from user profiles
-          },
-          paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
-          pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
-          currency: offer.fiat_currency,
-          availableRange: { 
-            min: offer.min_amount, 
-            max: offer.available_amount || offer.max_amount 
-          },
-          limits: { 
-            min: offer.min_amount, 
-            max: offer.max_amount 
-          },
-          type: offer.offer_type,
-          cryptoSymbol: offer.crypto_symbol,
-          time_limit_minutes: offer.time_limit_minutes || 30
-        };
-      });
-
-      setOffers(formattedOffers);
     } catch (error) {
       console.error("Error fetching offers:", error);
+      setOffers([]);
     } finally {
       setLoading(false);
     }
