@@ -39,10 +39,14 @@ export default function MedalsPage() {
   const earnedMedals = medals.filter(medal => isMedalEarned(medal, userStats));
   const lockedMedals = medals.filter(medal => !isMedalEarned(medal, userStats));
 
-  const getMedalIcon = (iconEmoji: string, earned: boolean) => {
+  const getMedalIcon = (iconPath: string, earned: boolean) => {
     return (
-      <div className={`text-4xl ${!earned ? 'grayscale opacity-50' : ''}`}>
-        {iconEmoji}
+      <div className={`${!earned ? 'opacity-50 grayscale' : ''}`}>
+        <img 
+          src={iconPath} 
+          alt="medal icon"
+          className="h-16 w-16 object-contain"
+        />
       </div>
     );
   };
