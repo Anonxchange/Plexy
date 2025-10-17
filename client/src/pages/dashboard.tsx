@@ -44,6 +44,9 @@ import {
   User,
   Trophy
 } from "lucide-react";
+import { medals, isMedalEarned } from "@/lib/medals";
+import { getUserMedalStats } from "@/lib/medals-api";
+
 
 export function Dashboard() {
   const { user, signOut, loading } = useAuth();
@@ -52,6 +55,7 @@ export function Dashboard() {
   const [productsModalOpen, setProductsModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [profileAvatar, setProfileAvatar] = useState<string>("");
+  const [medalStats, setMedalStats] = useState<any>(null);
   const supabase = createClient();
 
   const avatarTypes = [
@@ -70,6 +74,7 @@ export function Dashboard() {
       setLocation("/signin");
     } else if (user) {
       fetchProfileAvatar();
+      fetchMedals();
     }
   }, [user, loading, setLocation]);
 
@@ -96,6 +101,15 @@ export function Dashboard() {
       }
     } catch (error) {
       console.error('Error fetching profile avatar:', error);
+    }
+  };
+
+  const fetchMedals = async () => {
+    try {
+      const stats = await getUserMedalStats(user?.id);
+      setMedalStats(stats);
+    } catch (error) {
+      console.error('Error fetching medal stats:', error);
     }
   };
 
@@ -130,8 +144,8 @@ export function Dashboard() {
     { icon: BarChart3, label: "OTC Desk", href: "#" },
     { icon: Scan, label: "Gift card checker", href: "#" },
     { icon: Gift, label: "Pexly gift card", href: "#" },
-    { icon: DollarSign, label: "Fees", href: "#" },
-    { icon: Award, label: "Medals", href: "#" },
+    { icon: DollarSign, label: "Fees", href: "/fees" },
+    { icon: Award, label: "Medals", href: "/medals" },
     { icon: Rocket, label: "Quick start", href: "#" },
     { icon: Users, label: "Invite and earn", href: "#" },
   ];
@@ -201,7 +215,12 @@ export function Dashboard() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Current badge</span>
                   <span className="text-sm flex items-center gap-1">
-                    🆕 NEWBIE
+                    {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? (
+                      <img src={medals.find(m => m.id === medalStats.earnedMedals[0])?.icon} alt="Medal Icon" className="w-5 h-5" />
+                    ) : (
+                      <Award className="h-5 w-5 text-yellow-500" />
+                    )}
+                    {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? medals.find(m => m.id === medalStats.earnedMedals[0])?.name.toUpperCase() : "NEWBIE"}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -404,30 +423,42 @@ export function Dashboard() {
           <Card>
             <CardContent className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="text-center p-3 rounded-lg bg-primary/5">
-                  <div className="text-3xl mb-2">🥇</div>
-                  <div className="text-sm font-medium">The OG</div>
-                  <div className="text-xs text-muted-foreground mt-1">Early Adopter</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <div className="text-3xl mb-2 grayscale opacity-50">🎖️</div>
-                  <div className="text-sm font-medium text-muted-foreground">Pexly Initiate</div>
-                  <div className="text-xs text-muted-foreground mt-1">5/10 trades</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <div className="text-3xl mb-2 grayscale opacity-50">💰</div>
-                  <div className="text-sm font-medium text-muted-foreground">Deca Dealer</div>
-                  <div className="text-xs text-muted-foreground mt-1">$0/$10k volume</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <div className="text-3xl mb-2 grayscale opacity-50">📅</div>
-                  <div className="text-sm font-medium text-muted-foreground">Every Damn Day</div>
-                  <div className="text-xs text-muted-foreground mt-1">0/30 day streak</div>
-                </div>
+                {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? (
+                  medalStats.earnedMedals.slice(0, 4).map((medalId: string) => {
+                    const medal = medals.find(m => m.id === medalId);
+                    if (!medal) return null;
+                    return (
+                      <div key={medal.id} className="text-center p-3 rounded-lg bg-primary/5">
+                        <img src={medal.icon} alt={medal.name} className="text-3xl mb-2 w-10 h-10 mx-auto" />
+                        <div className="text-sm font-medium">{medal.name.toUpperCase()}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{medal.description}</div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center p-3 rounded-lg bg-muted/50 col-span-4">
+                    <div className="text-3xl mb-2">
+                      <Award className="h-8 w-8 mx-auto text-muted-foreground" />
+                    </div>
+                    <div className="text-sm font-medium text-muted-foreground">No Medals Yet</div>
+                    <div className="text-xs text-muted-foreground mt-1">Start trading to unlock them!</div>
+                  </div>
+                )}
+                {medalStats?.earnedMedals && medalStats.earnedMedals.length < 4 && (
+                  Array.from({ length: 4 - medalStats.earnedMedals.length }).map((_, index) => (
+                    <div key={`placeholder-${index}`} className="text-center p-3 rounded-lg bg-muted/50">
+                      <div className="text-3xl mb-2 grayscale opacity-50">
+                        <Award className="h-8 w-8 mx-auto text-muted-foreground" />
+                      </div>
+                      <div className="text-sm font-medium text-muted-foreground">Locked</div>
+                      <div className="text-xs text-muted-foreground mt-1">...</div>
+                    </div>
+                  ))
+                )}
               </div>
               <div className="flex items-center justify-center gap-2 pt-2">
                 <Trophy className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm font-medium">1 Medal Earned</span>
+                <span className="text-sm font-medium">{medalStats?.earnedMedals?.length || 0} Medal{medalStats?.earnedMedals?.length !== 1 ? 's' : ''} Earned</span>
                 <span className="text-xs text-muted-foreground">• Keep trading to unlock more!</span>
               </div>
             </CardContent>
