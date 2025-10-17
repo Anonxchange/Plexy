@@ -34,15 +34,16 @@ import { getCryptoPrices, convertToNGN, formatPrice } from "@/lib/crypto-prices"
 import type { CryptoPrice } from "@/lib/crypto-prices";
 import { getVerificationLevel, getVerificationRequirements } from "@shared/verification-levels";
 import { createClient } from "@/lib/supabase";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 const cryptoAssets = [
-  { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, icon: "₿", iconUrl: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=26", color: "text-orange-500", avgCost: 0 },
-  { symbol: "ETH", name: "Ethereum", balance: 0, ngnValue: 0, icon: "Ξ", iconUrl: "https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=26", color: "text-blue-500", avgCost: 0 },
-  { symbol: "SOL", name: "Solana", balance: 0, ngnValue: 0, icon: "◎", iconUrl: "https://cryptologos.cc/logos/solana-sol-logo.svg?v=26", color: "text-purple-500", avgCost: 0 },
-  { symbol: "TON", name: "Toncoin", balance: 0, ngnValue: 0, icon: "💎", iconUrl: "https://cryptologos.cc/logos/toncoin-ton-logo.svg?v=26", color: "text-blue-400", avgCost: 0 },
-  { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, icon: "⊙", iconUrl: "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg?v=26", color: "text-blue-600", avgCost: 0 },
-  { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, icon: "₮", iconUrl: "https://cryptologos.cc/logos/tether-usdt-logo.svg?v=26", color: "text-green-500", avgCost: 0 },
-  { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, icon: "ɱ", iconUrl: "https://cryptologos.cc/logos/monero-xmr-logo.svg?v=26", color: "text-orange-600", avgCost: 0 },
+  { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.BTC, color: "text-orange-500", avgCost: 0 },
+  { symbol: "ETH", name: "Ethereum", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.ETH, color: "text-blue-500", avgCost: 0 },
+  { symbol: "SOL", name: "Solana", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.SOL, color: "text-purple-500", avgCost: 0 },
+  { symbol: "TON", name: "Toncoin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.TON, color: "text-blue-400", avgCost: 0 },
+  { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.USDC, color: "text-blue-600", avgCost: 0 },
+  { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.USDT, color: "text-green-500", avgCost: 0 },
+  { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.XMR, color: "text-orange-600", avgCost: 0 },
 ];
 
 const initialSpotPairs = [
@@ -322,7 +323,7 @@ export default function Wallet() {
   const walletsForDialog = cryptoAssets.map(asset => ({
     symbol: asset.symbol,
     name: asset.name,
-    icon: asset.icon,
+    icon: asset.symbol,
     balance: mergedAssets.find(a => a.symbol === asset.symbol)?.balance || 0
   }));
 
@@ -577,20 +578,14 @@ export default function Wallet() {
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          {asset.iconUrl ? (
-                            <img 
-                              src={asset.iconUrl} 
-                              alt={asset.symbol}
-                              className="w-10 h-10 rounded-full"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                              }}
-                            />
-                          ) : null}
-                          <div className={`w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xl ${asset.color} ${asset.iconUrl ? 'hidden' : ''}`}>
-                            {asset.icon}
-                          </div>
+                          <img 
+                            src={asset.iconUrl} 
+                            alt={asset.symbol}
+                            className="w-10 h-10 rounded-full"
+                            onError={(e) => {
+                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
+                            }}
+                          />
                           <div>
                             <div className="font-medium text-sm sm:text-base">{asset.symbol}</div>
                             <div className="text-xs text-muted-foreground">{asset.name}</div>
