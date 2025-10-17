@@ -17,6 +17,7 @@ import {
 import { AppSidebar } from "./app-sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
+import { useVerificationGuard } from "@/hooks/use-verification-guard";
 
 export function AppHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -25,6 +26,7 @@ export function AppHeader() {
   const [, setLocation] = useLocation();
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const supabase = createClient();
+  const { verificationLevel, levelConfig } = useVerificationGuard();
 
   const avatarTypes = [
     { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
@@ -212,24 +214,48 @@ export function AppHeader() {
                 <DropdownMenuSeparator className="my-0" />
 
                 <div className="p-4 bg-muted/30">
-                  <div className="flex items-center gap-2 mb-3 text-sm font-medium text-primary">
-                    <Wallet className="h-4 w-4" />
-                    <span>Your limits: Level 3</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                      <Wallet className="h-4 w-4" />
+                      <span>Your limits: Level {verificationLevel}</span>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => setLocation("/verification")}
+                    >
+                      {verificationLevel === 0 ? "Verify Now" : "Upgrade"}
+                    </Button>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Daily</span>
-                      <span className="font-medium">Unlimited</span>
+                  {levelConfig && (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Daily</span>
+                        <span className="font-medium">
+                          {levelConfig.dailyLimit 
+                            ? `$${levelConfig.dailyLimit.toLocaleString()}` 
+                            : "Unlimited"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Per Trade</span>
+                        <span className="font-medium">
+                          {levelConfig.perTradeLimit 
+                            ? `$${levelConfig.perTradeLimit.toLocaleString()}` 
+                            : "Unlimited"}
+                        </span>
+                      </div>
+                      {levelConfig.lifetimeTradeLimit && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Lifetime</span>
+                          <span className="font-medium">
+                            ${levelConfig.lifetimeTradeLimit.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Buy/Sell</span>
-                      <span className="font-medium">Unlimited</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Send</span>
-                      <span className="font-medium">Unlimited</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
