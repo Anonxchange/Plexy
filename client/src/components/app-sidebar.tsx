@@ -1,12 +1,12 @@
-import { 
-  Home, 
-  ShoppingCart, 
-  Store, 
-  List, 
-  Plus, 
-  Gift, 
-  Wallet, 
-  TrendingUp, 
+import {
+  Home,
+  ShoppingCart,
+  Store,
+  List,
+  Plus,
+  Gift,
+  Wallet,
+  TrendingUp,
   HeadphonesIcon,
   ChevronDown,
   Smartphone,
@@ -15,7 +15,8 @@ import {
   ArrowDownToLine,
   CreditCard,
   ShoppingBag,
-  Banknote
+  Banknote,
+  Trophy
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -61,9 +62,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         <div className="p-2">
           <nav className="flex flex-col gap-1">
             <Link href="/" onClick={handleLinkClick}>
-              <Button 
-                variant={location === "/" ? "secondary" : "ghost"} 
-                className="w-full justify-start gap-2" 
+              <Button
+                variant={location === "/" ? "secondary" : "ghost"}
+                className="w-full justify-start gap-2"
                 data-testid="nav-home"
               >
                 <Home className="h-5 w-5" />
@@ -81,10 +82,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
                 <Link href="/p2p" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/p2p" ? "secondary" : "ghost"} 
-                    className="w-full justify-start" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/p2p" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    size="sm"
                     data-testid="nav-p2p"
                   >
                     P2P Trading
@@ -92,30 +93,30 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   </Button>
                 </Link>
                 <Link href="/spot" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/spot" ? "secondary" : "ghost"} 
-                    className="w-full justify-start" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/spot" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    size="sm"
                     data-testid="nav-spot"
                   >
                     Spot Trading
                   </Button>
                 </Link>
                 <Link href="/swap" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/swap" ? "secondary" : "ghost"} 
-                    className="w-full justify-start" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/swap" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    size="sm"
                     data-testid="nav-swap"
                   >
                     Swap
                   </Button>
                 </Link>
                 <Link href="/my-offers" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/my-offers" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-2" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/my-offers" ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-2"
+                    size="sm"
                     data-testid="nav-my-offers"
                   >
                     <List className="h-4 w-4" />
@@ -123,14 +124,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   </Button>
                 </Link>
                 <Link href="/create-offer" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/create-offer" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-2" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/create-offer" ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-2"
+                    size="sm"
                     data-testid="nav-create-offer"
                   >
                     <Plus className="h-4 w-4" />
-                    Create Offer
+                    <span>Create Offer</span>
                   </Button>
                 </Link>
               </CollapsibleContent>
@@ -163,9 +164,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </Collapsible>
 
             <Link href="/gift-cards" onClick={handleLinkClick}>
-              <Button 
-                variant={location === "/gift-cards" ? "secondary" : "ghost"} 
-                className="w-full justify-start gap-2" 
+              <Button
+                variant={location === "/gift-cards" ? "secondary" : "ghost"}
+                className="w-full justify-start gap-2"
                 data-testid="nav-gift-cards"
               >
                 <Gift className="h-5 w-5" />
@@ -183,10 +184,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
                 <Link href="/wallet" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/wallet" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-3 h-auto py-3" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/wallet" ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    size="sm"
                     data-testid="nav-wallet-assets"
                   >
                     <Bitcoin className="h-5 w-5 flex-shrink-0" />
@@ -197,10 +198,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   </Button>
                 </Link>
                 <Link href="/wallet/receive" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/wallet/receive" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-3 h-auto py-3" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/wallet/receive" ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    size="sm"
                     data-testid="nav-wallet-receive"
                   >
                     <ArrowDownToLine className="h-5 w-5 flex-shrink-0" />
@@ -211,10 +212,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   </Button>
                 </Link>
                 <Link href="/wallet/visa-card" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/wallet/visa-card" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-3 h-auto py-3" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/wallet/visa-card" ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    size="sm"
                     data-testid="nav-wallet-visa-card"
                   >
                     <CreditCard className="h-5 w-5 flex-shrink-0" />
@@ -225,10 +226,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   </Button>
                 </Link>
                 <Link href="/wallet/buy-crypto" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/wallet/buy-crypto" ? "default" : "ghost"} 
-                    className="w-full justify-start gap-3 h-auto py-3" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/wallet/buy-crypto" ? "default" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    size="sm"
                     data-testid="nav-wallet-buy-crypto"
                   >
                     <ShoppingBag className="h-5 w-5 flex-shrink-0" />
@@ -239,10 +240,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   </Button>
                 </Link>
                 <Link href="/wallet/crypto-to-bank" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/wallet/crypto-to-bank" ? "default" : "ghost"} 
-                    className="w-full justify-start gap-3 h-auto py-3" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/wallet/crypto-to-bank" ? "default" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    size="sm"
                     data-testid="nav-wallet-crypto-to-bank"
                   >
                     <Banknote className="h-5 w-5 flex-shrink-0" />
@@ -253,10 +254,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   </Button>
                 </Link>
                 <Link href="/wallet/lightning" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/wallet/lightning" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-3 h-auto py-3" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/wallet/lightning" ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    size="sm"
                     data-testid="nav-wallet-lightning"
                   >
                     <Zap className="h-5 w-5 flex-shrink-0" />
@@ -267,10 +268,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   </Button>
                 </Link>
                 <Link href="/wallet/mobile-topup" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/wallet/mobile-topup" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-3 h-auto py-3" 
-                    size="sm" 
+                  <Button
+                    variant={location === "/wallet/mobile-topup" ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    size="sm"
                     data-testid="nav-wallet-mobile-topup"
                   >
                     <Smartphone className="h-5 w-5 flex-shrink-0" />
@@ -326,6 +327,17 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Link>
               </CollapsibleContent>
             </Collapsible>
+            
+            <Link href="/medals" onClick={handleLinkClick}>
+              <Button
+                variant={location === "/medals" ? "secondary" : "ghost"}
+                className="w-full justify-start gap-2"
+                data-testid="nav-medals"
+              >
+                <Trophy className="h-5 w-5" />
+                <span>Medals</span>
+              </Button>
+            </Link>
           </nav>
         </div>
       </div>
