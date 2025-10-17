@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign } from "lucide-react";
+import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign, Globe } from "lucide-react";
 import { TradeDialog } from "./trade-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { medals, isMedalEarned } from "@/lib/medals";
+import { getUserMedalStats } from "@/lib/medals-api";
 
 export interface OfferCardProps {
   id?: string;
@@ -43,75 +45,42 @@ const getCryptoIcon = (symbol: string) => {
   );
 };
 
-const getCountryFlag = (country: string) => {
-  // Map of country codes to flags
-  const flagsByCode: Record<string, string> = {
-    "NG": "🇳🇬",
-    "US": "🇺🇸",
-    "GB": "🇬🇧",
-    "GH": "🇬🇭",
-    "KE": "🇰🇪",
-    "ZA": "🇿🇦",
-    "CA": "🇨🇦",
-    "AU": "🇦🇺",
-    "IN": "🇮🇳",
-    "PH": "🇵🇭",
-    "ID": "🇮🇩",
-    "MY": "🇲🇾",
-    "SG": "🇸🇬",
-    "TH": "🇹🇭",
-    "VN": "🇻🇳",
-    "AE": "🇦🇪",
-    "SA": "🇸🇦",
-    "EG": "🇪🇬",
-    "DZ": "🇩🇿",
-    "ET": "🇪🇹",
-    "FR": "🇫🇷",
-    "DE": "🇩🇪",
-    "IT": "🇮🇹",
-    "ES": "🇪🇸",
-    "BR": "🇧🇷",
-    "MX": "🇲🇽",
-    "AR": "🇦🇷",
-    "DO": "🇩🇴",
-    "EU": "🇪🇺",
-    "ALL": "🌍",
+const getCountryCode = (country: string) => {
+  // Map of country names to codes
+  const codesByName: Record<string, string> = {
+    "Nigeria": "NG",
+    "United States": "US",
+    "United Kingdom": "GB",
+    "Ghana": "GH",
+    "Kenya": "KE",
+    "South Africa": "ZA",
+    "Canada": "CA",
+    "Australia": "AU",
+    "India": "IN",
+    "Philippines": "PH",
+    "Indonesia": "ID",
+    "Malaysia": "MY",
+    "Singapore": "SG",
+    "Thailand": "TH",
+    "Vietnam": "VN",
+    "UAE": "AE",
+    "Saudi Arabia": "SA",
+    "Egypt": "EG",
+    "Algeria": "DZ",
+    "Ethiopia": "ET",
+    "France": "FR",
+    "Germany": "DE",
+    "Italy": "IT",
+    "Spain": "ES",
+    "Brazil": "BR",
+    "Mexico": "MX",
+    "Argentina": "AR",
+    "Dominican Republic": "DO",
   };
   
-  // Map of country names to flags
-  const flagsByName: Record<string, string> = {
-    "Nigeria": "🇳🇬",
-    "United States": "🇺🇸",
-    "United Kingdom": "🇬🇧",
-    "Ghana": "🇬🇭",
-    "Kenya": "🇰🇪",
-    "South Africa": "🇿🇦",
-    "Canada": "🇨🇦",
-    "Australia": "🇦🇺",
-    "India": "🇮🇳",
-    "Philippines": "🇵🇭",
-    "Indonesia": "🇮🇩",
-    "Malaysia": "🇲🇾",
-    "Singapore": "🇸🇬",
-    "Thailand": "🇹🇭",
-    "Vietnam": "🇻🇳",
-    "UAE": "🇦🇪",
-    "Saudi Arabia": "🇸🇦",
-    "Egypt": "🇪🇬",
-    "Algeria": "🇩🇿",
-    "Ethiopia": "🇪🇹",
-    "France": "🇫🇷",
-    "Germany": "🇩🇪",
-    "Italy": "🇮🇹",
-    "Spain": "🇪🇸",
-    "Brazil": "🇧🇷",
-    "Mexico": "🇲🇽",
-    "Argentina": "🇦🇷",
-    "Dominican Republic": "🇩🇴",
-  };
-  
-  // Try country code first, then country name
-  return flagsByCode[country] || flagsByName[country] || "🌍";
+  // If already a code, return it; otherwise look it up
+  if (country.length === 2) return country;
+  return codesByName[country] || null;
 };
 
 export function OfferCard({ 
@@ -132,6 +101,23 @@ export function OfferCard({
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { checkCanTrade, isLevel0 } = useVerificationGuard();
+  const [userMedals, setUserMedals] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchUserMedals = async () => {
+      if (vendor.id) {
+        try {
+          const stats = await getUserMedalStats(vendor.id);
+          const earnedMedals = medals.filter(medal => isMedalEarned(medal, stats));
+          setUserMedals(earnedMedals);
+        } catch (error) {
+          console.error('Error fetching medals:', error);
+        }
+      }
+    };
+
+    fetchUserMedals();
+  }, [vendor.id]);
 
   const handleTrade = () => {
     if (!user) {
@@ -172,12 +158,12 @@ export function OfferCard({
 
   const cryptoAmount = limits.min / pricePerBTC;
   
-  // Get the country flag - use vendor's country, or first country from restrictions, or worldwide
-  const countryFlag = vendor.country 
-    ? getCountryFlag(vendor.country)
+  // Get the country code - use vendor's country, or first country from restrictions
+  const countryCode = vendor.country 
+    ? getCountryCode(vendor.country)
     : (country_restrictions && country_restrictions.length > 0 
-      ? getCountryFlag(country_restrictions[0])
-      : "🌍");
+      ? getCountryCode(country_restrictions[0])
+      : null);
 
   return (
     <>
@@ -199,12 +185,34 @@ export function OfferCard({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-semibold text-base">{vendor.name}</span>
-                <span className="text-base">{countryFlag}</span>
+                {countryCode ? (
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    {countryCode}
+                  </span>
+                ) : (
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
                 {vendor.isVerified && (
                   <span className="text-xs font-medium text-green-600 flex items-center gap-1">
                     <Circle className="h-2 w-2 fill-green-600" />
                     POWER
                   </span>
+                )}
+                {userMedals.length > 0 && (
+                  <>
+                    {userMedals.slice(0, 3).map((medal) => (
+                      <img 
+                        key={medal.id}
+                        src={medal.icon} 
+                        alt={medal.name}
+                        className="h-5 w-5 object-contain"
+                        title={medal.name}
+                      />
+                    ))}
+                    {userMedals.length > 3 && (
+                      <span className="text-xs text-muted-foreground">+{userMedals.length - 3}</span>
+                    )}
+                  </>
                 )}
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
@@ -222,16 +230,8 @@ export function OfferCard({
           {/* Pay and Receive Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+              <div className="text-sm text-muted-foreground mb-1">
                 {type === "buy" ? "Pay" : "Receive"} {paymentMethod}
-                {currency === "NGN" && " 🇳🇬"}
-                {currency === "USD" && " 🇺🇸"}
-                {currency === "EUR" && " 🇪🇺"}
-                {currency === "GBP" && " 🇬🇧"}
-                {currency === "CAD" && " 🇨🇦"}
-                {currency === "RON" && " 🇷🇴"}
-                {currency === "KES" && " 🇰🇪"}
-                {currency === "INR" && " 🇮🇳"}
               </div>
               <div className="text-xl font-bold">
                 {limits.min.toLocaleString()} {currency}
