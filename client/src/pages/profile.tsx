@@ -42,6 +42,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToR2 } from "@/lib/r2-storage";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 interface UserProfile {
   id: string;
@@ -126,12 +127,12 @@ export function Profile() {
   const fetchProfileData = async () => {
     try {
       setLoadingProfile(true);
-      
+
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 5000)
       );
-      
+
       const fetchPromise = supabase
         .from('user_profiles')
         .select('*')
@@ -206,12 +207,12 @@ export function Profile() {
       // Profile page shows YOUR OWN offers
       // "Buying Crypto" = your buy offers, "Selling Crypto" = your sell offers
       const type = offerFilter === "buying" ? "buy" : "sell";
-      
+
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 3000)
       );
-      
+
       const fetchPromise = supabase
         .from('p2p_offers')
         .select('*')
@@ -227,7 +228,7 @@ export function Profile() {
         setOffers([]);
         return;
       }
-      
+
       // Map the data to match expected schema
       const mappedOffers = (data || []).map((offer: any) => ({
         id: offer.id,
@@ -241,7 +242,7 @@ export function Profile() {
         max_amount: offer.max_amount || 0,
         type: offer.offer_type,
       }));
-      
+
       setOffers(mappedOffers);
     } catch (error) {
       console.error('Error fetching offers:', error);
@@ -255,7 +256,7 @@ export function Profile() {
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 3000)
       );
-      
+
       const fetchPromise = supabase
         .from('trade_feedback')
         .select('*')
@@ -593,6 +594,29 @@ export function Profile() {
             </div>
 
             <div className="mb-6">
+              <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="h-5 w-5 text-yellow-500" />
+                <span className="text-sm">🥇</span>
+                <span className="font-medium">The OG - Early Adopter</span>
+              </div>
+              {profileData && profileData.total_trades >= 10 && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <span className="text-sm">🎖️</span>
+                  <span className="font-medium">Pexly Initiate</span>
+                </div>
+              )}
+              {profileData && profileData.total_trades >= 100 && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <span className="text-sm">💎</span>
+                  <span className="font-medium">Top 1% Club</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6">
               <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
               <div className="space-y-2">
                 {profileData?.is_verified && (
@@ -616,27 +640,27 @@ export function Profile() {
               <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-primary">₿</span>
+                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
                   <span>&lt; 10 BTC</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-primary">◎</span>
+                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
                   <span>&lt; 10K SOL</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-primary">₮</span>
+                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
                   <span>&lt; 10K USDT</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-primary">$</span>
+                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
                   <span>&lt; 10K USDC</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-primary">◆</span>
+                  <img src={cryptoIconUrls.TON} alt="TON" className="h-5 w-5" />
                   <span>&lt; 10K TON</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-primary">Ɱ</span>
+                  <img src={cryptoIconUrls.XMR} alt="XMR" className="h-5 w-5" />
                   <span>&lt; 10K XMR</span>
                 </div>
               </div>
