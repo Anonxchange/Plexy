@@ -57,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Track device on session restore
+      if (session?.user) {
+        trackDevice(session.user.id);
+      }
     });
 
     const {
@@ -81,20 +86,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const deviceInfo = getDeviceInfo();
       
-      await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
+      // Fetch IP address
+      let ipAddress = 'Unknown';
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        ipAddress = ipData.ip;
+      } catch (ipError) {
+        console.error('Error fetching IP:', ipError);
+      }
       
-      const { error } = await supabase.from('user_devices').insert({
-        user_id: userId,
-        device_name: deviceInfo.deviceName,
-        browser: deviceInfo.browser,
-        os: deviceInfo.os,
-        user_agent: deviceInfo.userAgent,
-        is_current: true,
-        last_active: new Date().toISOString(),
-      });
+      // Check if this device already exists (match by user_agent and ip_address)
+      const { data: existingDevices } = await supabase
+        .from('user_devices')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('user_agent', deviceInfo.userAgent)
+        .eq('ip_address', ipAddress);
 
-      if (error) {
-        console.error('Error tracking device:', error);
+      if (existingDevices && existingDevices.length > 0) {
+        // Update existing device
+        const deviceId = existingDevices[0].id;
+        
+        // Mark all other devices as not current
+        await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
+        
+        // Update this device
+        await supabase.from('user_devices')
+          .update({ 
+            is_current: true, 
+            last_active: new Date().toISOString() 
+          })
+          .eq('id', deviceId);
+      } else {
+        // New device - mark all others as not current and insert new one
+        await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
+        
+        const { error } = await supabase.from('user_devices').insert({
+          user_id: userId,
+          device_name: deviceInfo.deviceName,
+          browser: deviceInfo.browser,
+          os: deviceInfo.os,
+          ip_address: ipAddress,
+          user_agent: deviceInfo.userAgent,
+          is_current: true,
+          last_active: new Date().toISOString(),
+        });
+
+        if (error) {
+          console.error('Error tracking device:', error);
+        }
       }
     } catch (error) {
       console.error('Error in trackDevice:', error);
