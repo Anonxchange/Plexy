@@ -727,64 +727,347 @@ export function AccountSettings() {
     </div>
   );
 
-  const SecuritySection = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Two-Factor Authentication</h3>
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">SMS Authentication</p>
-                <p className="text-sm text-muted-foreground">Receive codes via SMS</p>
-              </div>
-              <Switch checked={smsAuth} onCheckedChange={setSmsAuth} />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Authenticator App</p>
-                <p className="text-sm text-muted-foreground">Use Google Authenticator or similar</p>
-              </div>
-              <Switch checked={appAuth} onCheckedChange={setAppAuth} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+  const SecuritySection = () => {
+    const [loginNotifications, setLoginNotifications] = useState(true);
+    const [suspiciousActivity, setSuspiciousActivity] = useState(true);
+    const [showPasswordChange, setShowPasswordChange] = useState(false);
 
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Password</h3>
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <Label>Current Password</Label>
-              <Input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-2xl font-bold mb-2">Security</h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            Manage your account security settings and preferences
+          </p>
+        </div>
+
+        {/* Two-Factor Authentication */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4">Two-Factor Authentication (2FA)</h4>
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-medium">SMS Authentication</p>
+                  <p className="text-sm text-muted-foreground">
+                    Receive verification codes via SMS to your registered phone number
+                  </p>
+                </div>
+                <Switch checked={smsAuth} onCheckedChange={setSmsAuth} />
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex-1">
+                  <p className="font-medium">Authenticator App</p>
+                  <p className="text-sm text-muted-foreground">
+                    Use Google Authenticator, Authy, or similar apps for enhanced security
+                  </p>
+                </div>
+                <Switch checked={appAuth} onCheckedChange={setAppAuth} />
+              </div>
+              {!smsAuth && !appAuth && (
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mt-4">
+                  <div className="flex gap-3">
+                    <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                        Enable 2FA for Better Security
+                      </p>
+                      <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                        Two-factor authentication adds an extra layer of security to your account
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Password Management */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4">Password</h4>
+          <Card>
+            <CardContent className="p-6">
+              {!showPasswordChange ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Change Password</p>
+                      <p className="text-sm text-muted-foreground">
+                        Last changed: Never
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setShowPasswordChange(true)}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Current Password</Label>
+                    <Input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter your current password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>New Password</Label>
+                    <Input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Must be at least 8 characters with uppercase, lowercase, and numbers
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirm New Password</Label>
+                    <Input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleUpdatePassword}
+                    >
+                      Update Password
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setShowPasswordChange(false);
+                        setCurrentPassword("");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Login Alerts & Notifications */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4">Security Alerts</h4>
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-medium">Login Notifications</p>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified when someone logs into your account
+                  </p>
+                </div>
+                <Switch checked={loginNotifications} onCheckedChange={setLoginNotifications} />
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex-1">
+                  <p className="font-medium">Suspicious Activity Alerts</p>
+                  <p className="text-sm text-muted-foreground">
+                    Receive alerts about unusual account activity
+                  </p>
+                </div>
+                <Switch checked={suspiciousActivity} onCheckedChange={setSuspiciousActivity} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Active Sessions */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-semibold">Active Login Sessions</h4>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setActiveSection("devices")}
+            >
+              View All Devices
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm text-muted-foreground">
+                You can view and manage all devices logged into your account in the Devices section
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Security Recommendations */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex gap-3">
+              <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Security Recommendations</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Enable two-factor authentication for enhanced security
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Use a strong, unique password that you don't use elsewhere
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Regularly review your active devices and sessions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Keep your email and phone number up to date
+                  </li>
+                </ul>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>New Password</Label>
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Confirm New Password</Label>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-            <Button className="w-full" onClick={handleUpdatePassword}>Update Password</Button>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const LocalizationSection = () => {
+    const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['English (English)']);
+    const [timezone, setTimezone] = useState('(GMT+01:00) Africa, Lagos - 10:25 PM');
+
+    const availableLanguages = [
+      'English (English)',
+      'Spanish (Español)',
+      'French (Français)',
+      'German (Deutsch)',
+      'Portuguese (Português)',
+      'Chinese (中文)',
+      'Japanese (日本語)',
+      'Korean (한국어)',
+      'Arabic (العربية)',
+      'Hindi (हिन्दी)',
+      'Russian (Русский)',
+      'Italian (Italiano)',
+    ];
+
+    const timezones = [
+      '(GMT+01:00) Africa, Lagos - 10:25 PM',
+      '(GMT+00:00) UTC - 09:25 PM',
+      '(GMT-05:00) America, New York - 04:25 PM',
+      '(GMT-08:00) America, Los Angeles - 01:25 PM',
+      '(GMT+01:00) Europe, London - 09:25 PM',
+      '(GMT+02:00) Europe, Paris - 10:25 PM',
+      '(GMT+03:00) Europe, Moscow - 12:25 AM',
+      '(GMT+08:00) Asia, Shanghai - 05:25 AM',
+      '(GMT+09:00) Asia, Tokyo - 06:25 AM',
+      '(GMT+05:30) Asia, Mumbai - 02:55 AM',
+    ];
+
+    const handleRemoveLanguage = (lang: string) => {
+      if (selectedLanguages.length > 1) {
+        setSelectedLanguages(selectedLanguages.filter(l => l !== lang));
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-2xl font-bold mb-6">Account localization settings</h3>
+
+          <div className="space-y-6">
+            {/* Languages Section */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Languages</Label>
+              
+              {/* Selected Languages */}
+              <div className="space-y-2">
+                {selectedLanguages.map((lang, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center justify-between px-4 py-3 border border-primary/50 bg-primary/5 rounded-lg">
+                      <span className="text-sm font-medium">{lang}</span>
+                      {selectedLanguages.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveLanguage(lang)}
+                          className="h-auto p-1 hover:bg-destructive/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                    >
+                      <ChevronsUpDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                Languages you can use while trading
+              </p>
+
+              {/* Add Language Select */}
+              <Select
+                onValueChange={(value) => {
+                  if (!selectedLanguages.includes(value)) {
+                    setSelectedLanguages([...selectedLanguages, value]);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Add another language..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLanguages
+                    .filter(lang => !selectedLanguages.includes(lang))
+                    .map((lang) => (
+                      <SelectItem key={lang} value={lang}>
+                        {lang}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Timezone Section */}
+            <div className="space-y-3 pt-6 border-t">
+              <Label className="text-base font-semibold">Your Time Zone</Label>
+              
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const NotificationsSection = () => (
     <div className="space-y-6">
@@ -1151,6 +1434,144 @@ export function AccountSettings() {
     );
   };
 
+  const ConnectedAppsSection = () => {
+    const [connectedApps, setConnectedApps] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchConnectedApps = async () => {
+        if (!user) return;
+        
+        try {
+          const { data, error } = await supabase
+            .from('connected_apps')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('last_used', { ascending: false });
+
+          if (error) {
+            console.error('Error fetching connected apps:', error);
+          } else {
+            setConnectedApps(data || []);
+          }
+        } catch (error) {
+          console.error('Error fetching connected apps:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchConnectedApps();
+    }, [user]);
+
+    const handleDisconnect = async (appId: string) => {
+      try {
+        const { error } = await supabase
+          .from('connected_apps')
+          .delete()
+          .eq('id', appId);
+
+        if (error) {
+          console.error('Error disconnecting app:', error);
+        } else {
+          setConnectedApps(connectedApps.filter(app => app.id !== appId));
+        }
+      } catch (error) {
+        console.error('Error disconnecting app:', error);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-2xl font-bold mb-4">Connected Apps & Websites</h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            Below you can find the complete list of apps and websites you've used Noones to sign in with. 
+            These apps and websites will automatically have access to parts of your information. In case you 
+            remove any of these, they will still have access to the information you shared with them previously, 
+            yet they can't collect anything new.
+          </p>
+        </div>
+
+        {loading ? (
+          <Card>
+            <CardContent className="p-12">
+              <div className="flex flex-col items-center justify-center">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : connectedApps.length > 0 ? (
+          <div className="space-y-3">
+            {connectedApps.map((app) => (
+              <Card key={app.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {app.app_icon_url ? (
+                        <img src={app.app_icon_url} alt={app.app_name} className="h-10 w-10 rounded" />
+                      ) : (
+                        <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center">
+                          <Link2 className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium">{app.app_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Connected {new Date(app.connected_at).toLocaleDateString()}
+                        </p>
+                        {app.scope && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Access: {app.scope}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDisconnect(app.id)}
+                    >
+                      Disconnect
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-12">
+              <div className="flex flex-col items-center justify-center text-center space-y-4">
+                <div className="relative">
+                  <Link2 className="h-16 w-16 text-primary opacity-20" />
+                  <HelpCircle className="h-8 w-8 text-primary absolute -bottom-1 -right-1" />
+                </div>
+                <p className="text-muted-foreground">
+                  You haven't connected to any app or website
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex gap-3">
+              <Info className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p className="text-sm">
+                  When you connect to apps or websites using your Noones account, they will appear here. 
+                  You can manage their access and revoke permissions at any time.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   const VerificationSection = () => (
     <div className="space-y-6">
       {/* Verification Status Card */}
@@ -1253,6 +1674,8 @@ export function AccountSettings() {
     switch (activeSection) {
       case "profile":
         return <ProfileSection />;
+      case "localization":
+        return <LocalizationSection />;
       case "security":
         return <SecuritySection />;
       case "notifications":
@@ -1263,6 +1686,8 @@ export function AccountSettings() {
         return <DevicesSection />;
       case "verification":
         return <VerificationSection />;
+      case "connected":
+        return <ConnectedAppsSection />;
       default:
         return (
           <Card>
