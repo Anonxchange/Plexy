@@ -231,7 +231,31 @@ export function OfferCard({
               <div className="text-sm text-muted-foreground mb-1">
                 {type === "buy" ? "Pay" : "Receive"} {paymentMethod}
               </div>
-              <div className="text-xl font-bold">
+              <div className="text-xl font-bold flex items-center gap-1.5">
+                {currency === "NGN" && "🇳🇬"}
+                {currency === "USD" && "🇺🇸"}
+                {currency === "EUR" && "🇪🇺"}
+                {currency === "GBP" && "🇬🇧"}
+                {currency === "CAD" && "🇨🇦"}
+                {currency === "AUD" && "🇦🇺"}
+                {currency === "INR" && "🇮🇳"}
+                {currency === "KES" && "🇰🇪"}
+                {currency === "GHS" && "🇬🇭"}
+                {currency === "ZAR" && "🇿🇦"}
+                {currency === "EGP" && "🇪🇬"}
+                {currency === "DZD" && "🇩🇿"}
+                {currency === "ETB" && "🇪🇹"}
+                {currency === "BRL" && "🇧🇷"}
+                {currency === "MXN" && "🇲🇽"}
+                {currency === "ARS" && "🇦🇷"}
+                {currency === "JPY" && "🇯🇵"}
+                {currency === "CNY" && "🇨🇳"}
+                {currency === "KRW" && "🇰🇷"}
+                {currency === "SGD" && "🇸🇬"}
+                {currency === "THB" && "🇹🇭"}
+                {currency === "VND" && "🇻🇳"}
+                {currency === "AED" && "🇦🇪"}
+                {currency === "SAR" && "🇸🇦"}
                 {limits.min.toLocaleString()} {currency}
               </div>
             </div>
