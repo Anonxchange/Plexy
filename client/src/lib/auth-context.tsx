@@ -13,6 +13,39 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let browser = 'Unknown Browser';
+  let os = 'Unknown OS';
+  let deviceName = 'Desktop';
+
+  if (ua.includes('Chrome') && !ua.includes('Edg')) {
+    browser = 'Chrome';
+  } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+    browser = 'Safari';
+  } else if (ua.includes('Firefox')) {
+    browser = 'Firefox';
+  } else if (ua.includes('Edg')) {
+    browser = 'Edge';
+  }
+
+  if (ua.includes('Windows')) {
+    os = 'Windows';
+  } else if (ua.includes('Mac')) {
+    os = 'macOS';
+  } else if (ua.includes('Linux')) {
+    os = 'Linux';
+  } else if (ua.includes('Android')) {
+    os = 'Android';
+    deviceName = 'Mobile';
+  } else if (ua.includes('iPhone') || ua.includes('iPad')) {
+    os = 'iOS';
+    deviceName = ua.includes('iPad') ? 'Tablet' : 'Mobile';
+  }
+
+  return { browser, os, deviceName, userAgent: ua };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -44,11 +77,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
+  const trackDevice = async (userId: string) => {
+    try {
+      const deviceInfo = getDeviceInfo();
+      
+      await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
+      
+      const { error } = await supabase.from('user_devices').insert({
+        user_id: userId,
+        device_name: deviceInfo.deviceName,
+        browser: deviceInfo.browser,
+        os: deviceInfo.os,
+        user_agent: deviceInfo.userAgent,
+        is_current: true,
+        last_active: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error('Error tracking device:', error);
+      }
+    } catch (error) {
+      console.error('Error in trackDevice:', error);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    if (!error && data.user) {
+      await trackDevice(data.user.id);
+    }
+    
     return { error };
   };
 
