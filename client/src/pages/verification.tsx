@@ -30,6 +30,7 @@ export default function VerificationPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [livenessResult, setLivenessResult] = useState<LivenessResult | null>(null);
   const [showLivenessCheck, setShowLivenessCheck] = useState(false);
+  const [documentType, setDocumentType] = useState<string>("government_id"); // Default document type
 
   // Fetch current user profile
   const { data: userProfile } = useQuery({
@@ -54,9 +55,9 @@ export default function VerificationPage() {
     queryKey: ["verifications", authUser?.id],
     queryFn: async () => {
       if (!authUser?.id) return [];
-      
+
       console.log("Fetching verifications for user:", authUser.id, userProfile?.username);
-      
+
       const { data, error } = await supabase
         .from("verifications")
         .select("*")
@@ -67,7 +68,7 @@ export default function VerificationPage() {
         console.error("Error fetching user verifications:", error);
         throw error;
       }
-      
+
       console.log(`Found ${data?.length || 0} verifications for user ${userProfile?.username || authUser.id}`);
       return data;
     },
@@ -119,114 +120,143 @@ export default function VerificationPage() {
     },
   });
 
-  // Submit document verification
   const submitVerification = useMutation({
-    mutationFn: async (requestedLevel: number) => {
-      console.log("=== SUBMIT VERIFICATION STARTED ===");
-      console.log("User ID:", authUser?.id);
-      console.log("Requested Level:", requestedLevel);
+    mutationFn: async (level: number) => {
+      console.log("=== VERIFICATION SUBMISSION STARTED ===");
+      console.log("Auth user:", authUser);
+      console.log("Requested level:", level);
 
-      if (!authUser?.id) throw new Error("Not authenticated");
-      if (requestedLevel === 2 && (!livenessResult || !livenessResult.isLive)) {
-        throw new Error("Please complete liveness verification first");
+      if (!authUser?.id) {
+        throw new Error("Not authenticated");
       }
 
-      // Upload files to R2 storage
-      let documentUrl = null;
-      let documentBackUrl = null;
-      let addressUrl = null;
-      let livenessImageUrl = null;
+      let documentUrl = "";
+      let documentBackUrl = "";
+      let addressProofUrl = "";
+      let livenessImageUrl = "";
 
+      // Upload document to R2
       if (documentFile) {
-        console.log("Uploading document front file...");
+        console.log("Uploading front document...");
+        const formData = new FormData();
+        formData.append("file", documentFile);
+        formData.append("userId", authUser.id);
+        formData.append("fileType", "document_front");
 
-        // Add a timeout wrapper to prevent hanging
-        const uploadPromise = uploadToR2(documentFile, 'verification-documents', authUser.id);
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
-        );
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-        const result = await Promise.race([uploadPromise, timeoutPromise]);
-        console.log("Document front upload result:", result);
-
-        if (result.success && result.url) {
-          documentUrl = result.url;
-        } else {
-          throw new Error(`Document front upload failed: ${result.error || 'Unknown error'}`);
+        if (!response.ok) {
+          throw new Error("Failed to upload document");
         }
+
+        const data = await response.json();
+        documentUrl = data.url;
+        console.log("Front document uploaded:", documentUrl);
       }
 
+      // Upload document back if available
       if (documentBackFile) {
-        console.log("Uploading document back file...");
+        console.log("Uploading back document...");
+        const formData = new FormData();
+        formData.append("file", documentBackFile);
+        formData.append("userId", authUser.id);
+        formData.append("fileType", "document_back");
 
-        const uploadPromise = uploadToR2(documentBackFile, 'verification-documents', authUser.id);
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
-        );
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-        const result = await Promise.race([uploadPromise, timeoutPromise]);
-        console.log("Document back upload result:", result);
-
-        if (result.success && result.url) {
-          documentBackUrl = result.url;
-        } else {
-          throw new Error(`Document back upload failed: ${result.error || 'Unknown error'}`);
+        if (!response.ok) {
+          throw new Error("Failed to upload document back");
         }
+
+        const data = await response.json();
+        documentBackUrl = data.url;
+        console.log("Back document uploaded:", documentBackUrl);
       }
 
-      if (addressFile) {
+      // Upload address proof if level 3
+      if (level === 3 && addressFile) {
         console.log("Uploading address proof...");
-        const result = await uploadToR2(addressFile, 'verification-documents', authUser.id);
-        console.log("Address proof upload result:", result);
-        if (result.success && result.url) {
-          addressUrl = result.url;
-        } else {
-          throw new Error(`Address proof upload failed: ${result.error}`);
+        const formData = new FormData();
+        formData.append("file", addressFile);
+        formData.append("userId", authUser.id);
+        formData.append("fileType", "address_proof");
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to upload address proof");
         }
+
+        const data = await response.json();
+        addressProofUrl = data.url;
+        console.log("Address proof uploaded:", addressProofUrl);
       }
 
-      if (livenessResult?.capturedImage) {
+      // Upload liveness image if available
+      if (livenessResult?.imageDataUrl) {
         console.log("Uploading liveness image...");
+        // Convert base64 to blob
+        const response = await fetch(livenessResult.imageDataUrl);
+        const blob = await response.blob();
 
-        const uploadPromise = uploadToR2(livenessResult.capturedImage, 'liveness-captures', authUser.id);
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Upload timeout after 90 seconds')), 90000)
-        );
+        const formData = new FormData();
+        formData.append("file", new File([blob], "liveness.jpg", { type: "image/jpeg" }));
+        formData.append("userId", authUser.id);
+        formData.append("fileType", "liveness");
 
-        const result = await Promise.race([uploadPromise, timeoutPromise]);
-        console.log("Liveness image upload result:", result);
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-        if (result.success && result.url) {
-          livenessImageUrl = result.url;
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload liveness image");
         }
+
+        const data = await uploadResponse.json();
+        livenessImageUrl = data.url;
+        console.log("Liveness image uploaded:", livenessImageUrl);
       }
 
-      console.log("Inserting verification record...");
-      const { data, error } = await supabase
+      // Submit verification to database
+      const verificationData = {
+        user_id: authUser.id,
+        requested_level: level.toString(),
+        document_type: documentType,
+        document_url: documentUrl || null,
+        document_back_url: documentBackUrl || null,
+        address_proof: addressProofUrl || null,
+        liveness_image_url: livenessImageUrl || null,
+        liveness_check_passed: livenessResult?.isLive ? "true" : "false",
+        liveness_confidence: livenessResult?.confidence?.toString() || null,
+        liveness_checked_at: livenessResult ? new Date().toISOString() : null,
+        status: "pending",
+      };
+
+      console.log("Submitting verification data to Supabase:", verificationData);
+
+      const { data: insertedData, error } = await supabase
         .from("verifications")
-        .insert({
-          user_id: authUser.id,
-          requested_level: requestedLevel,
-          document_type: "government_id",
-          document_url: documentUrl,
-          document_back_url: documentBackUrl,
-          address_proof: addressUrl,
-          liveness_image_url: livenessImageUrl,
-          liveness_check_passed: livenessResult ? String(livenessResult.isLive) : null,
-          liveness_confidence: livenessResult ? String(livenessResult.confidence) : null,
-          liveness_checked_at: livenessResult ? new Date().toISOString() : null,
-          status: "pending",
-        })
+        .insert(verificationData)
         .select();
 
-      console.log("Verification insert result:", { data, error });
-
       if (error) {
-        console.error("Verification insert error:", error);
-        throw new Error(`Failed to submit verification: ${error.message}`);
+        console.error("❌ Error submitting verification:", error);
+        throw error;
       }
 
-      console.log("=== SUBMIT VERIFICATION COMPLETED ===");
+      console.log("✅ Verification submitted successfully:", insertedData);
+      console.log("=== VERIFICATION SUBMISSION COMPLETED ===");
+
       return { success: true };
     },
     onSuccess: () => {
@@ -247,31 +277,32 @@ export default function VerificationPage() {
     }
   });
 
+
   const pendingVerification = verifications?.find(v => v.status === "pending");
-  
+
   // Find the latest rejection for each level, but only if there's no approved verification for that level that came after it
   const getLatestRelevantRejection = () => {
     if (!verifications) return null;
-    
+
     for (const rejection of verifications.filter(v => v.status === "rejected")) {
       const level = Number(rejection.requested_level);
-      
+
       // Check if there's an approved verification for this level that came after this rejection
       const hasNewerApproval = verifications.some(v => 
         v.status === "approved" && 
         Number(v.requested_level) === level &&
         new Date(v.submitted_at) > new Date(rejection.submitted_at)
       );
-      
+
       // If there's no newer approval, this rejection is still relevant
       if (!hasNewerApproval) {
         return rejection;
       }
     }
-    
+
     return null;
   };
-  
+
   const latestRejection = getLatestRelevantRejection();
 
   // Check if user needs to resubmit for their current level (was approved then rejected)
