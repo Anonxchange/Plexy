@@ -43,6 +43,11 @@ import { AccountSettings as AccountSettingsPage } from "@/pages/account-settings
 import MedalsPage from "@/pages/medals";
 import { Fees } from "@/pages/fees";
 import PexlyPay from "@/pages/pexly-pay";
+import PexlyPayHistory from "@/pages/pexly-pay-history";
+import PexlyPaySettings from "@/pages/pexly-pay-settings";
+import PexlyPayPaymentLimits from "@/pages/pexly-pay-payment-limits";
+import PexlyPayPasswordFree from "@/pages/pexly-pay-password-free";
+import PexlyPayHelp from "@/pages/pexly-pay-help";
 
 function Router() {
   return (
@@ -61,6 +66,11 @@ function Router() {
       <Route path="/wallet/lightning" component={Lightning} />
       <Route path="/wallet/buy-crypto" component={BuyCrypto} />
       <Route path="/wallet/pexly-pay" component={PexlyPay} />
+          <Route path="/wallet/pexly-pay/history" component={PexlyPayHistory} />
+          <Route path="/wallet/pexly-pay/settings" component={PexlyPaySettings} />
+          <Route path="/wallet/pexly-pay/payment-limits" component={PexlyPayPaymentLimits} />
+          <Route path="/wallet/pexly-pay/password-free" component={PexlyPayPasswordFree} />
+          <Route path="/wallet/pexly-pay/help" component={PexlyPayHelp} />
       <Route path="/gift-cards" component={GiftCards} />
       <Route path="/trade-history" component={TradeHistory} />
       <Route path="/account-settings" component={AccountSettings} />
