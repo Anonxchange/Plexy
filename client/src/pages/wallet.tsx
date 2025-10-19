@@ -22,7 +22,8 @@ import {
   Gift,
   CheckCircle2,
   Clock,
-  XCircle
+  XCircle,
+  Send
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
