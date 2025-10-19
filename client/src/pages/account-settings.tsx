@@ -32,18 +32,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import { Switch } from "@/components/ui/switch";
 import {
   User,
@@ -57,16 +46,25 @@ import {
   Link2,
   Info,
   Upload,
-  Check,
   HelpCircle,
   Menu,
   X,
-  ChevronsUpDown,
   Monitor,
   Laptop,
-  Tablet
+  Tablet,
+  Wallet,
+  Search,
+  Check,
+  ChevronsUpDown
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { cn } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const settingsSections = [
   { id: "profile", label: "Profile", icon: User },
@@ -120,52 +118,71 @@ export function AccountSettings() {
 
   // Payment method dialog
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showOnlineWalletDialog, setShowOnlineWalletDialog] = useState(false);
+  const [showMobileMoneyDialog, setShowMobileMoneyDialog] = useState(false);
+  const [bankDialogStep, setBankDialogStep] = useState(1);
+  const [accountType, setAccountType] = useState("Personal");
+  const [accountCountry, setAccountCountry] = useState("Nigeria");
+  const [accountCurrency, setAccountCurrency] = useState("Nigerian Naira");
   const [paymentBankName, setPaymentBankName] = useState("");
   const [paymentAccountNumber, setPaymentAccountNumber] = useState("");
   const [paymentAccountName, setPaymentAccountName] = useState("");
   const [paymentBankCode, setPaymentBankCode] = useState("");
   const [customBankName, setCustomBankName] = useState("");
   const [bankAddress, setBankAddress] = useState("");
-  const [openBankSelect, setOpenBankSelect] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [onlineWallets, setOnlineWallets] = useState<any[]>([]);
+  const [mobileMoneyWallets, setMobileMoneyWallets] = useState<any[]>([]);
+
+  // Online wallet fields
+  const [walletProvider, setWalletProvider] = useState("");
+  const [walletEmail, setWalletEmail] = useState("");
+  const [walletUsername, setWalletUsername] = useState("");
+
+  // Mobile money fields
+  const [mobileMoneyProvider, setMobileMoneyProvider] = useState("");
+  const [mobileMoneyNumber, setMobileMoneyNumber] = useState("");
+  const [mobileMoneyName, setMobileMoneyName] = useState("");
 
   // Devices state
   const [devices, setDevices] = useState<any[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(true);
 
-  // Nigerian Banks List
-  const nigerianBanks = [
-    { name: "Access Bank", code: "044" },
-    { name: "Guaranty Trust Bank (GTBank)", code: "058" },
-    { name: "First Bank of Nigeria", code: "011" },
-    { name: "United Bank for Africa (UBA)", code: "033" },
-    { name: "Zenith Bank", code: "057" },
-    { name: "Fidelity Bank", code: "070" },
-    { name: "Union Bank of Nigeria", code: "032" },
-    { name: "Sterling Bank", code: "232" },
-    { name: "Stanbic IBTC Bank", code: "221" },
-    { name: "Polaris Bank", code: "076" },
-    { name: "Wema Bank", code: "035" },
-    { name: "Ecobank Nigeria", code: "050" },
-    { name: "Keystone Bank", code: "082" },
-    { name: "FCMB (First City Monument Bank)", code: "214" },
-    { name: "Providus Bank", code: "101" },
-    { name: "Jaiz Bank", code: "301" },
-    { name: "Citibank Nigeria", code: "023" },
-    { name: "Heritage Bank", code: "030" },
-    { name: "Kuda Bank", code: "090267" },
-    { name: "ALAT by Wema", code: "035A" },
-    { name: "Opay", code: "999992" },
-    { name: "Palmpay", code: "999991" },
-    { name: "Moniepoint", code: "50515" },
-    { name: "VFD Microfinance Bank", code: "566" },
-    { name: "Standard Chartered Bank", code: "068" },
-    { name: "Titan Trust Bank", code: "102" },
-    { name: "Unity Bank", code: "215" },
-    { name: "Suntrust Bank", code: "100" },
-    { name: "Globus Bank", code: "103" },
-    { name: "Rubies Bank", code: "125" },
-    { name: "Custom Bank (Enter manually)", code: "CUSTOM" },
+  
+
+  // Online Wallet Providers
+  const onlineWalletProviders = [
+    "PayPal",
+    "Venmo",
+    "Cash App",
+    "Zelle",
+    "Wise (TransferWise)",
+    "Revolut",
+    "Skrill",
+    "Neteller",
+    "Perfect Money",
+    "WebMoney",
+    "Payoneer",
+    "Apple Pay",
+    "Google Pay",
+    "Other"
+  ];
+
+  // Mobile Money Providers
+  const mobileMoneyProviders = [
+    "M-Pesa",
+    "Airtel Money",
+    "MTN Mobile Money",
+    "Vodacom M-Pesa",
+    "Orange Money",
+    "Tigo Pesa",
+    "GCash",
+    "PayMaya",
+    "Paytm",
+    "PhonePe",
+    "Alipay",
+    "WeChat Pay",
+    "Other"
   ];
 
   useEffect(() => {
@@ -235,7 +252,12 @@ export function AccountSettings() {
 
       if (error) throw error;
 
-      setPaymentMethods(data || []);
+      const allMethods = data || [];
+
+      // Separate by payment type
+      setPaymentMethods(allMethods.filter(m => m.payment_type === 'Bank Transfer'));
+      setOnlineWallets(allMethods.filter(m => m.payment_type === 'Online Wallet'));
+      setMobileMoneyWallets(allMethods.filter(m => m.payment_type === 'Mobile Money'));
     } catch (error) {
       console.error('Error fetching payment methods:', error);
     }
@@ -406,9 +428,7 @@ export function AccountSettings() {
   };
 
   const handleSavePaymentMethod = async () => {
-    const finalBankName = paymentBankName === "Custom Bank (Enter manually)" ? customBankName : paymentBankName;
-
-    if (!finalBankName || !paymentAccountNumber || !paymentAccountName) {
+    if (!paymentBankName || !paymentAccountNumber || !paymentAccountName) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -423,7 +443,7 @@ export function AccountSettings() {
         .insert({
           user_id: user?.id,
           payment_type: 'Bank Transfer',
-          bank_name: finalBankName,
+          bank_name: paymentBankName,
           account_number: paymentAccountNumber,
           account_name: paymentAccountName,
           bank_code: paymentBankCode || null,
@@ -438,18 +458,105 @@ export function AccountSettings() {
       });
 
       setShowPaymentDialog(false);
+      setBankDialogStep(1);
       setPaymentBankName("");
       setPaymentAccountNumber("");
       setPaymentAccountName("");
       setPaymentBankCode("");
       setCustomBankName("");
       setBankAddress("");
-      fetchPaymentMethods(); // Refresh the list
+      fetchPaymentMethods();
     } catch (error) {
       console.error('Error saving payment method:', error);
       toast({
         title: "Error",
         description: "Failed to save payment method",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSaveOnlineWallet = async () => {
+    if (!walletProvider || !walletEmail) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .insert({
+          user_id: user?.id,
+          payment_type: 'Online Wallet',
+          bank_name: walletProvider,
+          account_number: walletEmail,
+          account_name: walletUsername || walletEmail,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Online wallet added successfully"
+      });
+
+      setShowOnlineWalletDialog(false);
+      setWalletProvider("");
+      setWalletEmail("");
+      setWalletUsername("");
+      fetchPaymentMethods();
+    } catch (error) {
+      console.error('Error saving online wallet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save online wallet",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSaveMobileMoneyWallet = async () => {
+    if (!mobileMoneyProvider || !mobileMoneyNumber || !mobileMoneyName) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .insert({
+          user_id: user?.id,
+          payment_type: 'Mobile Money',
+          bank_name: mobileMoneyProvider,
+          account_number: mobileMoneyNumber,
+          account_name: mobileMoneyName,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Mobile money wallet added successfully"
+      });
+
+      setShowMobileMoneyDialog(false);
+      setMobileMoneyProvider("");
+      setMobileMoneyNumber("");
+      setMobileMoneyName("");
+      fetchPaymentMethods();
+    } catch (error) {
+      console.error('Error saving mobile money wallet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save mobile money wallet",
         variant: "destructive"
       });
     }
@@ -579,20 +686,56 @@ export function AccountSettings() {
             <SelectTrigger className="flex-1">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px]">
               <SelectItem value="usd">🇺🇸 US Dollar (USD)</SelectItem>
               <SelectItem value="eur">🇪🇺 Euro (EUR)</SelectItem>
               <SelectItem value="gbp">🇬🇧 British Pound (GBP)</SelectItem>
               <SelectItem value="ngn">🇳🇬 Nigerian Naira (NGN)</SelectItem>
+              <SelectItem value="ghs">🇬🇭 Ghanaian Cedi (GHS)</SelectItem>
+              <SelectItem value="kes">🇰🇪 Kenyan Shilling (KES)</SelectItem>
+              <SelectItem value="zar">🇿🇦 South African Rand (ZAR)</SelectItem>
+              <SelectItem value="egp">🇪🇬 Egyptian Pound (EGP)</SelectItem>
+              <SelectItem value="etb">🇪🇹 Ethiopian Birr (ETB)</SelectItem>
+              <SelectItem value="tzs">🇹🇿 Tanzanian Shilling (TZS)</SelectItem>
+              <SelectItem value="ugx">🇺🇬 Ugandan Shilling (UGX)</SelectItem>
+              <SelectItem value="mad">🇲🇦 Moroccan Dirham (MAD)</SelectItem>
+              <SelectItem value="dzd">🇩🇿 Algerian Dinar (DZD)</SelectItem>
+              <SelectItem value="xof">🇸🇳 West African CFA Franc (XOF)</SelectItem>
+              <SelectItem value="rwf">🇷🇼 Rwandan Franc (RWF)</SelectItem>
+              <SelectItem value="zmw">🇿🇲 Zambian Kwacha (ZMW)</SelectItem>
               <SelectItem value="cad">🇨🇦 Canadian Dollar (CAD)</SelectItem>
               <SelectItem value="aud">🇦🇺 Australian Dollar (AUD)</SelectItem>
               <SelectItem value="jpy">🇯🇵 Japanese Yen (JPY)</SelectItem>
               <SelectItem value="chf">🇨🇭 Swiss Franc (CHF)</SelectItem>
               <SelectItem value="cny">🇨🇳 Chinese Yuan (CNY)</SelectItem>
               <SelectItem value="inr">🇮🇳 Indian Rupee (INR)</SelectItem>
-              <SelectItem value="kes">🇰🇪 Kenyan Shilling (KES)</SelectItem>
-              <SelectItem value="ghs">🇬🇭 Ghanaian Cedi (GHS)</SelectItem>
-              <SelectItem value="zar">🇿🇦 South African Rand (ZAR)</SelectItem>
+              <SelectItem value="krw">🇰🇷 South Korean Won (KRW)</SelectItem>
+              <SelectItem value="sgd">🇸🇬 Singapore Dollar (SGD)</SelectItem>
+              <SelectItem value="hkd">🇭🇰 Hong Kong Dollar (HKD)</SelectItem>
+              <SelectItem value="myr">🇲🇾 Malaysian Ringgit (MYR)</SelectItem>
+              <SelectItem value="thb">🇹🇭 Thai Baht (THB)</SelectItem>
+              <SelectItem value="php">🇵🇭 Philippine Peso (PHP)</SelectItem>
+              <SelectItem value="idr">🇮🇩 Indonesian Rupiah (IDR)</SelectItem>
+              <SelectItem value="vnd">🇻🇳 Vietnamese Dong (VND)</SelectItem>
+              <SelectItem value="pkr">🇵🇰 Pakistani Rupee (PKR)</SelectItem>
+              <SelectItem value="bdt">🇧🇩 Bangladeshi Taka (BDT)</SelectItem>
+              <SelectItem value="brl">🇧🇷 Brazilian Real (BRL)</SelectItem>
+              <SelectItem value="mxn">🇲🇽 Mexican Peso (MXN)</SelectItem>
+              <SelectItem value="ars">🇦🇷 Argentine Peso (ARS)</SelectItem>
+              <SelectItem value="cop">🇨🇴 Colombian Peso (COP)</SelectItem>
+              <SelectItem value="clp">🇨🇱 Chilean Peso (CLP)</SelectItem>
+              <SelectItem value="pen">🇵🇪 Peruvian Sol (PEN)</SelectItem>
+              <SelectItem value="aed">🇦🇪 UAE Dirham (AED)</SelectItem>
+              <SelectItem value="sar">🇸🇦 Saudi Riyal (SAR)</SelectItem>
+              <SelectItem value="try">🇹🇷 Turkish Lira (TRY)</SelectItem>
+              <SelectItem value="ils">🇮🇱 Israeli Shekel (ILS)</SelectItem>
+              <SelectItem value="rub">🇷🇺 Russian Ruble (RUB)</SelectItem>
+              <SelectItem value="uah">🇺🇦 Ukrainian Hryvnia (UAH)</SelectItem>
+              <SelectItem value="nzd">🇳🇿 New Zealand Dollar (NZD)</SelectItem>
+              <SelectItem value="sek">🇸🇪 Swedish Krona (SEK)</SelectItem>
+              <SelectItem value="nok">🇳🇴 Norwegian Krone (NOK)</SelectItem>
+              <SelectItem value="dkk">🇩🇰 Danish Krone (DKK)</SelectItem>
+              <SelectItem value="pln">🇵🇱 Polish Zloty (PLN)</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -797,7 +940,7 @@ export function AccountSettings() {
                         Last changed: Never
                       </p>
                     </div>
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={() => setShowPasswordChange(true)}
                     >
@@ -838,13 +981,13 @@ export function AccountSettings() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      className="flex-1" 
+                    <Button
+                      className="flex-1"
                       onClick={handleUpdatePassword}
                     >
                       Update Password
                     </Button>
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={() => {
                         setShowPasswordChange(false);
@@ -893,8 +1036,8 @@ export function AccountSettings() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold">Active Login Sessions</h4>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setActiveSection("devices")}
             >
@@ -959,7 +1102,7 @@ export function AccountSettings() {
       'Arabic (العربية)',
       'Hindi (हिन्दी)',
       'Russian (Русский)',
-      'Italian (Italiano)',
+      'Italiano (Italiano)',
     ];
 
     const timezones = [
@@ -990,7 +1133,7 @@ export function AccountSettings() {
             {/* Languages Section */}
             <div className="space-y-3">
               <Label className="text-base font-semibold">Languages</Label>
-              
+
               {/* Selected Languages */}
               <div className="space-y-2">
                 {selectedLanguages.map((lang, index) => (
@@ -1049,7 +1192,7 @@ export function AccountSettings() {
             {/* Timezone Section */}
             <div className="space-y-3 pt-6 border-t">
               <Label className="text-base font-semibold">Your Time Zone</Label>
-              
+
               <Select value={timezone} onValueChange={setTimezone}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -1108,61 +1251,89 @@ export function AccountSettings() {
 
   const PaymentSection = () => (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Payment Methods</h3>
-        <Button onClick={() => setShowPaymentDialog(true)}>Add Payment Method</Button>
-      </div>
+      {/* Bank Accounts Section */}
       <Card>
-        <CardContent className="p-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Bank Accounts</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add your bank account details below. You can share these details with your trade partner via trade chat, for bank transfer trades.
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Button
+            onClick={() => setShowPaymentDialog(true)}
+            className="bg-primary hover:bg-primary/90 mb-4"
+          >
+            <span className="mr-2">+</span> Add account
+          </Button>
+
           {paymentMethods.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No payment methods added yet</p>
-              <p className="text-sm mt-2">Add a payment method to start trading</p>
+            <div className="text-center py-6 text-muted-foreground">
+              <Building2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No bank accounts added yet</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {paymentMethods.map((method) => (
-                <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-primary" />
+                <div key={method.id} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                        <Building2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">{method.account_name}</p>
+                        <div className="mt-2 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground uppercase bg-muted px-2 py-0.5 rounded">
+                              {method.payment_type || 'Bank Transfer'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-normal">
+                              {method.bank_name}
+                            </Badge>
+                            <span className="text-muted-foreground">{method.account_number}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold">{method.bank_name}</p>
-                      <p className="text-sm text-muted-foreground">{method.account_name}</p>
-                      <p className="text-sm text-muted-foreground">{method.account_number}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const { error } = await supabase
+                              .from('payment_methods')
+                              .delete()
+                              .eq('id', method.id);
+
+                            if (error) throw error;
+
+                            toast({
+                              title: "Success!",
+                              description: "Payment method removed"
+                            });
+
+                            fetchPaymentMethods();
+                          } catch (error) {
+                            toast({
+                              title: "Error",
+                              description: "Failed to remove payment method",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        const { error } = await supabase
-                          .from('payment_methods')
-                          .delete()
-                          .eq('id', method.id);
-
-                        if (error) throw error;
-
-                        toast({
-                          title: "Success!",
-                          description: "Payment method removed"
-                        });
-
-                        fetchPaymentMethods();
-                      } catch (error) {
-                        toast({
-                          title: "Error",
-                          description: "Failed to remove payment method",
-                          variant: "destructive"
-                        });
-                      }
-                    }}
-                  >
-                    Remove
-                  </Button>
                 </div>
               ))}
             </div>
@@ -1170,133 +1341,611 @@ export function AccountSettings() {
         </CardContent>
       </Card>
 
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Add Bank Payment Method</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-1">
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Bank Name *</Label>
-                <Popover open={openBankSelect} onOpenChange={setOpenBankSelect}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openBankSelect}
-                      className="w-full justify-between"
-                    >
-                      {paymentBankName || "Select bank..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                    <Command>
-                      <CommandInput placeholder="Search bank..." />
-                      <CommandEmpty>
-                        <div className="py-6 text-center text-sm">
-                          <p className="text-muted-foreground mb-2">No bank found.</p>
-                          <p className="text-xs text-muted-foreground">
-                            Try selecting "Custom Bank (Enter manually)" to add your bank
-                          </p>
-                        </div>
-                      </CommandEmpty>
-                      <CommandGroup className="max-h-[300px] overflow-auto">
-                        {nigerianBanks.map((bank) => (
-                          <CommandItem
-                            key={bank.code}
-                            value={bank.name}
-                            onSelect={(currentValue) => {
-                              setPaymentBankName(currentValue === paymentBankName ? "" : currentValue);
-                              const selectedBank = nigerianBanks.find(b => b.name.toLowerCase() === currentValue.toLowerCase());
-                              if (selectedBank && selectedBank.code !== "CUSTOM") {
-                                setPaymentBankCode(selectedBank.code);
-                              } else {
-                                setPaymentBankCode("");
-                              }
-                              setOpenBankSelect(false);
-                            }}
-                          >
-                            <Check
-                              className={`mr-2 h-4 w-4 ${
-                                paymentBankName === bank.name ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            {bank.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <p className="text-xs text-muted-foreground">
-                  Can't find your bank? Select "Custom Bank (Enter manually)" from the list
-                </p>
-              </div>
-
-              {paymentBankName === "Custom Bank (Enter manually)" && (
-                <div className="space-y-2">
-                  <Label htmlFor="custom-bank-name">Custom Bank Name *</Label>
-                  <Input
-                    id="custom-bank-name"
-                    value={customBankName}
-                    onChange={(e) => setCustomBankName(e.target.value)}
-                    placeholder="Enter your bank name"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="account-number">Account Number *</Label>
-                <Input
-                  id="account-number"
-                  value={paymentAccountNumber}
-                  onChange={(e) => setPaymentAccountNumber(e.target.value)}
-                  placeholder="e.g., 1234567890"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="account-name">Account Name *</Label>
-                <Input
-                  id="account-name"
-                  value={paymentAccountName}
-                  onChange={(e) => setPaymentAccountName(e.target.value)}
-                  placeholder="e.g., John Doe"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bank-code">
-                  Bank Code {paymentBankName !== "Custom Bank (Enter manually)" && paymentBankName && "(Auto-filled)"}
-                </Label>
-                <Input
-                  id="bank-code"
-                  value={paymentBankCode}
-                  onChange={(e) => setPaymentBankCode(e.target.value)}
-                  placeholder="e.g., 011"
-                  disabled={paymentBankName !== "Custom Bank (Enter manually)" && paymentBankName !== ""}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bank-address">Bank Address (Optional)</Label>
-                <Input
-                  id="bank-address"
-                  value={bankAddress}
-                  onChange={(e) => setBankAddress(e.target.value)}
-                  placeholder="e.g., 123 Main Street, Lagos"
-                />
-              </div>
+      {/* Online Wallets Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Online Wallets</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add your online wallets below.
+              </p>
             </div>
           </div>
-          <DialogFooter className="pt-4 border-t">
-            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Button
+            onClick={() => setShowOnlineWalletDialog(true)}
+            className="bg-primary hover:bg-primary/90 mb-4"
+          >
+            <span className="mr-2">+</span> Add New
+          </Button>
+
+          {onlineWallets.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <Wallet className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <Search className="h-6 w-6 mx-auto mb-2 opacity-50" />
+              <p className="text-sm font-medium">No Online Wallets</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {onlineWallets.map((wallet) => (
+                <div key={wallet.id} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                        <Wallet className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">{wallet.bank_name}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{wallet.account_number}</p>
+                        {wallet.account_name && wallet.account_name !== wallet.account_number && (
+                          <p className="text-sm text-muted-foreground">@{wallet.account_name}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const { error } = await supabase
+                            .from('payment_methods')
+                            .delete()
+                            .eq('id', wallet.id);
+
+                          if (error) throw error;
+
+                          toast({
+                            title: "Success!",
+                            description: "Online wallet removed"
+                          });
+
+                          fetchPaymentMethods();
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to remove online wallet",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Mobile Money Wallets Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Mobile Money Wallets</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add your Mobile Money wallets below.
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Button
+            onClick={() => setShowMobileMoneyDialog(true)}
+            className="bg-primary hover:bg-primary/90 mb-4"
+          >
+            <span className="mr-2">+</span> Add New
+          </Button>
+
+          {mobileMoneyWallets.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <Smartphone className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <Search className="h-6 w-6 mx-auto mb-2 opacity-50" />
+              <p className="text-sm font-medium">No Mobile Money Wallets</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {mobileMoneyWallets.map((wallet) => (
+                <div key={wallet.id} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                        <Smartphone className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">{wallet.bank_name}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{wallet.account_number}</p>
+                        {wallet.account_name && (
+                          <p className="text-sm text-muted-foreground">{wallet.account_name}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const { error } = await supabase
+                            .from('payment_methods')
+                            .delete()
+                            .eq('id', wallet.id);
+
+                          if (error) throw error;
+
+                          toast({
+                            title: "Success!",
+                            description: "Mobile money wallet removed"
+                          });
+
+                          fetchPaymentMethods();
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to remove mobile money wallet",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Bank Account Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={(open) => {
+        setShowPaymentDialog(open);
+        if (!open) {
+          setBankDialogStep(1);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add account</DialogTitle>
+          </DialogHeader>
+
+          {bankDialogStep === 1 ? (
+            <div className="space-y-6 py-4">
+              {/* Account Type */}
+              <div className="space-y-3">
+                <Label className="text-base">Account type</Label>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setAccountType("Personal")}
+                    className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
+                      accountType === "Personal"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        accountType === "Personal" ? "border-primary" : "border-muted-foreground"
+                      }`}>
+                        {accountType === "Personal" && (
+                          <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                        )}
+                      </div>
+                      <span className="font-medium">Personal</span>
+                    </div>
+                    <User className="h-6 w-6 text-primary" />
+                  </button>
+
+                  <button
+                    onClick={() => setAccountType("Business")}
+                    className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
+                      accountType === "Business"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        accountType === "Business" ? "border-primary" : "border-muted-foreground"
+                      }`}>
+                        {accountType === "Business" && (
+                          <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                        )}
+                      </div>
+                      <span className="font-medium">Business</span>
+                    </div>
+                    <Building2 className="h-6 w-6 text-primary" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Bank Account Country */}
+              <div className="space-y-2">
+                <Label className="text-base">Bank account country</Label>
+                <Select value={accountCountry} onValueChange={setAccountCountry}>
+                  <SelectTrigger className="h-12">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="Nigeria">🇳🇬 Nigeria</SelectItem>
+                    <SelectItem value="Ghana">🇬🇭 Ghana</SelectItem>
+                    <SelectItem value="Kenya">🇰🇪 Kenya</SelectItem>
+                    <SelectItem value="South Africa">🇿🇦 South Africa</SelectItem>
+                    <SelectItem value="Egypt">🇪🇬 Egypt</SelectItem>
+                    <SelectItem value="Ethiopia">🇪🇹 Ethiopia</SelectItem>
+                    <SelectItem value="Tanzania">🇹🇿 Tanzania</SelectItem>
+                    <SelectItem value="Uganda">🇺🇬 Uganda</SelectItem>
+                    <SelectItem value="Morocco">🇲🇦 Morocco</SelectItem>
+                    <SelectItem value="Algeria">🇩🇿 Algeria</SelectItem>
+                    <SelectItem value="Senegal">🇸🇳 Senegal</SelectItem>
+                    <SelectItem value="Ivory Coast">🇨🇮 Ivory Coast</SelectItem>
+                    <SelectItem value="Cameroon">🇨🇲 Cameroon</SelectItem>
+                    <SelectItem value="Rwanda">🇷🇼 Rwanda</SelectItem>
+                    <SelectItem value="Zambia">🇿🇲 Zambia</SelectItem>
+                    <SelectItem value="Zimbabwe">🇿🇼 Zimbabwe</SelectItem>
+                    <SelectItem value="United States">🇺🇸 United States</SelectItem>
+                    <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
+                    <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
+                    <SelectItem value="Australia">🇦🇺 Australia</SelectItem>
+                    <SelectItem value="France">🇫🇷 France</SelectItem>
+                    <SelectItem value="Germany">🇩🇪 Germany</SelectItem>
+                    <SelectItem value="Spain">🇪🇸 Spain</SelectItem>
+                    <SelectItem value="Italy">🇮🇹 Italy</SelectItem>
+                    <SelectItem value="Netherlands">🇳🇱 Netherlands</SelectItem>
+                    <SelectItem value="Belgium">🇧🇪 Belgium</SelectItem>
+                    <SelectItem value="Switzerland">🇨🇭 Switzerland</SelectItem>
+                    <SelectItem value="Sweden">🇸🇪 Sweden</SelectItem>
+                    <SelectItem value="Norway">🇳🇴 Norway</SelectItem>
+                    <SelectItem value="Denmark">🇩🇰 Denmark</SelectItem>
+                    <SelectItem value="Poland">🇵🇱 Poland</SelectItem>
+                    <SelectItem value="India">🇮🇳 India</SelectItem>
+                    <SelectItem value="China">🇨🇳 China</SelectItem>
+                    <SelectItem value="Japan">🇯🇵 Japan</SelectItem>
+                    <SelectItem value="South Korea">🇰🇷 South Korea</SelectItem>
+                    <SelectItem value="Singapore">🇸🇬 Singapore</SelectItem>
+                    <SelectItem value="Malaysia">🇲🇾 Malaysia</SelectItem>
+                    <SelectItem value="Thailand">🇹🇭 Thailand</SelectItem>
+                    <SelectItem value="Philippines">🇵🇭 Philippines</SelectItem>
+                    <SelectItem value="Indonesia">🇮🇩 Indonesia</SelectItem>
+                    <SelectItem value="Vietnam">🇻🇳 Vietnam</SelectItem>
+                    <SelectItem value="Pakistan">🇵🇰 Pakistan</SelectItem>
+                    <SelectItem value="Bangladesh">🇧🇩 Bangladesh</SelectItem>
+                    <SelectItem value="Brazil">🇧🇷 Brazil</SelectItem>
+                    <SelectItem value="Mexico">🇲🇽 Mexico</SelectItem>
+                    <SelectItem value="Argentina">🇦🇷 Argentina</SelectItem>
+                    <SelectItem value="Colombia">🇨🇴 Colombia</SelectItem>
+                    <SelectItem value="Chile">🇨🇱 Chile</SelectItem>
+                    <SelectItem value="Peru">🇵🇪 Peru</SelectItem>
+                    <SelectItem value="UAE">🇦🇪 United Arab Emirates</SelectItem>
+                    <SelectItem value="Saudi Arabia">🇸🇦 Saudi Arabia</SelectItem>
+                    <SelectItem value="Turkey">🇹🇷 Turkey</SelectItem>
+                    <SelectItem value="Israel">🇮🇱 Israel</SelectItem>
+                    <SelectItem value="Other">🌍 Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Currency */}
+              <div className="space-y-2">
+                <Label className="text-base">Currency</Label>
+                <Select value={accountCurrency} onValueChange={setAccountCurrency}>
+                  <SelectTrigger className="h-12">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="Nigerian Naira">🇳🇬 Nigerian Naira (NGN)</SelectItem>
+                    <SelectItem value="Ghanaian Cedi">🇬🇭 Ghanaian Cedi (GHS)</SelectItem>
+                    <SelectItem value="Kenyan Shilling">🇰🇪 Kenyan Shilling (KES)</SelectItem>
+                    <SelectItem value="South African Rand">🇿🇦 South African Rand (ZAR)</SelectItem>
+                    <SelectItem value="Egyptian Pound">🇪🇬 Egyptian Pound (EGP)</SelectItem>
+                    <SelectItem value="Ethiopian Birr">🇪🇹 Ethiopian Birr (ETB)</SelectItem>
+                    <SelectItem value="Tanzanian Shilling">🇹🇿 Tanzanian Shilling (TZS)</SelectItem>
+                    <SelectItem value="Ugandan Shilling">🇺🇬 Ugandan Shilling (UGX)</SelectItem>
+                    <SelectItem value="Moroccan Dirham">🇲🇦 Moroccan Dirham (MAD)</SelectItem>
+                    <SelectItem value="Algerian Dinar">🇩🇿 Algerian Dinar (DZD)</SelectItem>
+                    <SelectItem value="West African CFA Franc">🇸🇳 West African CFA Franc (XOF)</SelectItem>
+                    <SelectItem value="Rwandan Franc">🇷🇼 Rwandan Franc (RWF)</SelectItem>
+                    <SelectItem value="Zambian Kwacha">🇿🇲 Zambian Kwacha (ZMW)</SelectItem>
+                    <SelectItem value="US Dollar">🇺🇸 US Dollar (USD)</SelectItem>
+                    <SelectItem value="Euro">🇪🇺 Euro (EUR)</SelectItem>
+                    <SelectItem value="British Pound">🇬🇧 British Pound (GBP)</SelectItem>
+                    <SelectItem value="Canadian Dollar">🇨🇦 Canadian Dollar (CAD)</SelectItem>
+                    <SelectItem value="Australian Dollar">🇦🇺 Australian Dollar (AUD)</SelectItem>
+                    <SelectItem value="Swiss Franc">🇨🇭 Swiss Franc (CHF)</SelectItem>
+                    <SelectItem value="Swedish Krona">🇸🇪 Swedish Krona (SEK)</SelectItem>
+                    <SelectItem value="Norwegian Krone">🇳🇴 Norwegian Krone (NOK)</SelectItem>
+                    <SelectItem value="Danish Krone">🇩🇰 Danish Krone (DKK)</SelectItem>
+                    <SelectItem value="Polish Zloty">🇵🇱 Polish Zloty (PLN)</SelectItem>
+                    <SelectItem value="Japanese Yen">🇯🇵 Japanese Yen (JPY)</SelectItem>
+                    <SelectItem value="Chinese Yuan">🇨🇳 Chinese Yuan (CNY)</SelectItem>
+                    <SelectItem value="Indian Rupee">🇮🇳 Indian Rupee (INR)</SelectItem>
+                    <SelectItem value="South Korean Won">🇰🇷 South Korean Won (KRW)</SelectItem>
+                    <SelectItem value="Singapore Dollar">🇸🇬 Singapore Dollar (SGD)</SelectItem>
+                    <SelectItem value="Hong Kong Dollar">🇭🇰 Hong Kong Dollar (HKD)</SelectItem>
+                    <SelectItem value="Malaysian Ringgit">🇲🇾 Malaysian Ringgit (MYR)</SelectItem>
+                    <SelectItem value="Thai Baht">🇹🇭 Thai Baht (THB)</SelectItem>
+                    <SelectItem value="Philippine Peso">🇵🇭 Philippine Peso (PHP)</SelectItem>
+                    <SelectItem value="Indonesian Rupiah">🇮🇩 Indonesian Rupiah (IDR)</SelectItem>
+                    <SelectItem value="Vietnamese Dong">🇻🇳 Vietnamese Dong (VND)</SelectItem>
+                    <SelectItem value="Pakistani Rupee">🇵🇰 Pakistani Rupee (PKR)</SelectItem>
+                    <SelectItem value="Bangladeshi Taka">🇧🇩 Bangladeshi Taka (BDT)</SelectItem>
+                    <SelectItem value="Brazilian Real">🇧🇷 Brazilian Real (BRL)</SelectItem>
+                    <SelectItem value="Mexican Peso">🇲🇽 Mexican Peso (MXN)</SelectItem>
+                    <SelectItem value="Argentine Peso">🇦🇷 Argentine Peso (ARS)</SelectItem>
+                    <SelectItem value="Colombian Peso">🇨🇴 Colombian Peso (COP)</SelectItem>
+                    <SelectItem value="Chilean Peso">🇨🇱 Chilean Peso (CLP)</SelectItem>
+                    <SelectItem value="Peruvian Sol">🇵🇪 Peruvian Sol (PEN)</SelectItem>
+                    <SelectItem value="UAE Dirham">🇦🇪 UAE Dirham (AED)</SelectItem>
+                    <SelectItem value="Saudi Riyal">🇸🇦 Saudi Riyal (SAR)</SelectItem>
+                    <SelectItem value="Turkish Lira">🇹🇷 Turkish Lira (TRY)</SelectItem>
+                    <SelectItem value="Israeli Shekel">🇮🇱 Israeli Shekel (ILS)</SelectItem>
+                    <SelectItem value="Russian Ruble">🇷🇺 Russian Ruble (RUB)</SelectItem>
+                    <SelectItem value="Ukrainian Hryvnia">🇺🇦 Ukrainian Hryvnia (UAH)</SelectItem>
+                    <SelectItem value="New Zealand Dollar">🇳🇿 New Zealand Dollar (NZD)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto px-1">
+              {/* Bank Name */}
+              <div className="space-y-2">
+                <Label className="text-base">Bank name</Label>
+                <Input
+                  value={paymentBankName}
+                  onChange={(e) => setPaymentBankName(e.target.value)}
+                  placeholder="Enter bank name"
+                  className="h-12"
+                />
+              </div>
+
+              {/* Account Holder's Name */}
+              <div className="space-y-2">
+                <Label className="text-base">Account holder's name</Label>
+                <Input
+                  value={paymentAccountName}
+                  onChange={(e) => setPaymentAccountName(e.target.value)}
+                  placeholder="Enter account holder's name"
+                  className="h-12"
+                />
+              </div>
+
+              {/* Account Number */}
+              <div className="space-y-2">
+                <Label className="text-base">Account number</Label>
+                <Input
+                  value={paymentAccountNumber}
+                  onChange={(e) => setPaymentAccountNumber(e.target.value)}
+                  placeholder="Enter account number"
+                  className="h-12"
+                />
+              </div>
+
+              {/* Custom Bank Details - Optional */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base">Custom bank details</Label>
+                  <span className="text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded">Optional</span>
+                </div>
+                <Textarea
+                  value={bankAddress}
+                  onChange={(e) => setBankAddress(e.target.value)}
+                  placeholder="Add any other bank account details here, if needed."
+                  className="min-h-[100px] resize-none"
+                />
+                <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                  <p>Add any other bank account details here, if needed.</p>
+                </div>
+              </div>
+
+              {/* International Transfer Details - Expandable */}
+              <Accordion type="single" collapsible className="border rounded-lg">
+                <AccordionItem value="international" className="border-0">
+                  <AccordionTrigger className="px-4 hover:no-underline">
+                    <span className="text-base">International transfer details</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="space-y-4">
+                      {/* Info Banner */}
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <p className="text-sm">
+                            If you want to receive international payments, additional details about <span className="font-semibold">Account Holder</span> are necessary.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Country of residency */}
+                      <div className="space-y-2">
+                        <Label>Country of residency</Label>
+                        <Input
+                          placeholder="Enter country"
+                          className="h-12"
+                        />
+                      </div>
+
+                      {/* State/Region */}
+                      <div className="space-y-2">
+                        <Label>State/Region</Label>
+                        <Input
+                          placeholder="Enter state or region"
+                          className="h-12"
+                        />
+                      </div>
+
+                      {/* City */}
+                      <div className="space-y-2">
+                        <Label>City</Label>
+                        <Input
+                          placeholder="Enter city"
+                          className="h-12"
+                        />
+                      </div>
+
+                      {/* Zip Code */}
+                      <div className="space-y-2">
+                        <Label>Zip Code</Label>
+                        <Input
+                          placeholder="Enter zip code"
+                          className="h-12"
+                        />
+                      </div>
+
+                      {/* Address */}
+                      <div className="space-y-2">
+                        <Label>Address</Label>
+                        <Input
+                          placeholder="Enter address"
+                          className="h-12"
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-col gap-2">
+            {bankDialogStep === 1 ? (
+              <Button
+                onClick={() => setBankDialogStep(2)}
+                className="w-full h-12"
+              >
+                Next
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setBankDialogStep(1)}
+                  className="w-full h-12 order-2 sm:order-2"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleSavePaymentMethod}
+                  className="w-full h-12 bg-primary hover:bg-primary/90 order-1 sm:order-1"
+                >
+                  Add account
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Online Wallet Dialog */}
+      <Dialog open={showOnlineWalletDialog} onOpenChange={setShowOnlineWalletDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Online Wallet</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Wallet Provider *</Label>
+              <Select value={walletProvider} onValueChange={setWalletProvider}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select wallet provider..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {onlineWalletProviders.map((provider) => (
+                    <SelectItem key={provider} value={provider}>
+                      {provider}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wallet-email">Email/Account ID *</Label>
+              <Input
+                id="wallet-email"
+                type="email"
+                value={walletEmail}
+                onChange={(e) => setWalletEmail(e.target.value)}
+                placeholder="e.g., user@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wallet-username">Username (Optional)</Label>
+              <Input
+                id="wallet-username"
+                value={walletUsername}
+                onChange={(e) => setWalletUsername(e.target.value)}
+                placeholder="e.g., @username"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOnlineWalletDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSavePaymentMethod}>
-              Save Payment Method
+            <Button onClick={handleSaveOnlineWallet}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mobile Money Wallet Dialog */}
+      <Dialog open={showMobileMoneyDialog} onOpenChange={setShowMobileMoneyDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Mobile Money Wallet</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Mobile Money Provider *</Label>
+              <Select value={mobileMoneyProvider} onValueChange={setMobileMoneyProvider}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select provider..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {mobileMoneyProviders.map((provider) => (
+                    <SelectItem key={provider} value={provider}>
+                      {provider}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mobile-money-number">Mobile Number *</Label>
+              <Input
+                id="mobile-money-number"
+                type="tel"
+                value={mobileMoneyNumber}
+                onChange={(e) => setMobileMoneyNumber(e.target.value)}
+                placeholder="e.g., +1234567890"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mobile-money-name">Account Name *</Label>
+              <Input
+                id="mobile-money-name"
+                value={mobileMoneyName}
+                onChange={(e) => setMobileMoneyName(e.target.value)}
+                placeholder="e.g., John Doe"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMobileMoneyDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveMobileMoneyWallet}>
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1308,7 +1957,7 @@ export function AccountSettings() {
     const getDeviceIcon = (deviceName: string, browser: string) => {
       const name = deviceName?.toLowerCase() || '';
       const browserLower = browser?.toLowerCase() || '';
-      
+
       if (name.includes('mobile') || name.includes('phone') || browserLower.includes('mobile')) {
         return Smartphone;
       } else if (name.includes('tablet') || name.includes('ipad')) {
@@ -1441,7 +2090,7 @@ export function AccountSettings() {
     useEffect(() => {
       const fetchConnectedApps = async () => {
         if (!user) return;
-        
+
         try {
           const { data, error } = await supabase
             .from('connected_apps')
@@ -1486,9 +2135,9 @@ export function AccountSettings() {
         <div>
           <h3 className="text-2xl font-bold mb-4">Connected Apps & Websites</h3>
           <p className="text-sm text-muted-foreground mb-6">
-            Below you can find the complete list of apps and websites you've used Noones to sign in with. 
-            These apps and websites will automatically have access to parts of your information. In case you 
-            remove any of these, they will still have access to the information you shared with them previously, 
+            Below you can find the complete list of apps and websites you've used Noones to sign in with.
+            These apps and websites will automatically have access to parts of your information. In case you
+            remove any of these, they will still have access to the information you shared with them previously,
             yet they can't collect anything new.
           </p>
         </div>
@@ -1527,8 +2176,8 @@ export function AccountSettings() {
                         )}
                       </div>
                     </div>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => handleDisconnect(app.id)}
                     >
@@ -1561,7 +2210,7 @@ export function AccountSettings() {
               <Info className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="space-y-2">
                 <p className="text-sm">
-                  When you connect to apps or websites using your Noones account, they will appear here. 
+                  When you connect to apps or websites using your Noones account, they will appear here.
                   You can manage their access and revoke permissions at any time.
                 </p>
               </div>
