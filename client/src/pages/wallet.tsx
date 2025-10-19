@@ -477,6 +477,16 @@ export default function Wallet() {
               Visa card
             </Button>
           </Link>
+          <Link href="/wallet/pexly-pay">
+            <Button
+              variant="outline"
+              size="sm"
+              className="whitespace-nowrap"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Pexly Pay
+            </Button>
+          </Link>
         </div>
 
         {/* Wallet Balance Card */}
