@@ -65,6 +65,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { TwoFactorSetupDialog } from "@/components/two-factor-setup-dialog";
 
 const settingsSections = [
   { id: "profile", label: "Profile", icon: User },
@@ -109,6 +110,8 @@ export function AccountSettings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   // Notification settings
   const [tradeUpdates, setTradeUpdates] = useState(true);
@@ -193,6 +196,7 @@ export function AccountSettings() {
       fetchPaymentMethods();
       fetchVerificationLevel();
       fetchDevices();
+      fetch2FAStatus();
     }
   }, [user, loading]);
 
@@ -279,6 +283,59 @@ export function AccountSettings() {
       console.error('Error fetching devices:', error);
     } finally {
       setLoadingDevices(false);
+    }
+  };
+
+  const fetch2FAStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('two_factor_enabled')
+        .eq('id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data) {
+        setTwoFactorEnabled(data.two_factor_enabled || false);
+        setAppAuth(data.two_factor_enabled || false);
+      }
+    } catch (error) {
+      console.error('Error fetching 2FA status:', error);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          two_factor_enabled: false,
+          two_factor_secret: null,
+          two_factor_backup_codes: null,
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      setTwoFactorEnabled(false);
+      setAppAuth(false);
+
+      toast({
+        title: "2FA Disabled",
+        description: "Two-factor authentication has been disabled for your account.",
+      });
+    } catch (error) {
+      console.error('Error disabling 2FA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disable 2FA. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -904,9 +961,44 @@ export function AccountSettings() {
                   <p className="text-sm text-muted-foreground">
                     Use Google Authenticator, Authy, or similar apps for enhanced security
                   </p>
+                  {twoFactorEnabled && (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 mt-2">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Enabled
+                    </Badge>
+                  )}
                 </div>
-                <Switch checked={appAuth} onCheckedChange={setAppAuth} />
+                {twoFactorEnabled ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDisable2FA}
+                  >
+                    Disable
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShow2FADialog(true)}
+                  >
+                    Enable
+                  </Button>
+                )}
               </div>
+              {show2FADialog && user?.email && (
+                <TwoFactorSetupDialog
+                  open={show2FADialog}
+                  onOpenChange={setShow2FADialog}
+                  userEmail={user.email}
+                  userId={user.id}
+                  onSuccess={() => {
+                    setTwoFactorEnabled(true);
+                    setAppAuth(true);
+                    fetch2FAStatus();
+                  }}
+                />
+              )}
               {!smsAuth && !appAuth && (
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mt-4">
                   <div className="flex gap-3">
