@@ -42,6 +42,7 @@ import { Profile as ProfilePage } from "@/pages/profile";
 import { AccountSettings as AccountSettingsPage } from "@/pages/account-settings";
 import MedalsPage from "@/pages/medals";
 import { Fees } from "@/pages/fees";
+import PexlyPay from "@/pages/pexly-pay";
 
 function Router() {
   return (
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/wallet/crypto-to-bank" component={CryptoToBank} />
       <Route path="/wallet/lightning" component={Lightning} />
       <Route path="/wallet/buy-crypto" component={BuyCrypto} />
+      <Route path="/wallet/pexly-pay" component={PexlyPay} />
       <Route path="/gift-cards" component={GiftCards} />
       <Route path="/trade-history" component={TradeHistory} />
       <Route path="/account-settings" component={AccountSettings} />
@@ -86,7 +88,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications"].includes(location) || location.startsWith("/trade/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications"].includes(location) || location.startsWith("/trade/");
 
   return (
     <QueryClientProvider client={queryClient}>
