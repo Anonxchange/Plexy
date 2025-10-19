@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -9,6 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -16,209 +17,184 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Loader2, CheckCircle2, X, Copy } from "lucide-react";
-import { sendCrypto } from "@/lib/wallet-api";
+import { Info, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 
-interface SendCryptoDialogProps {
+interface SendPexlyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  wallets: Array<{ symbol: string; balance: number; name: string; icon: string }>;
-  onSuccess?: () => void;
 }
 
-type Step = "select" | "details";
+const currencies = [
+  { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC },
+  { symbol: "ETH", name: "Ethereum", iconUrl: cryptoIconUrls.ETH },
+  { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT },
+  { symbol: "USDC", name: "USD Coin", iconUrl: cryptoIconUrls.USDC },
+  { symbol: "SOL", name: "Solana", iconUrl: cryptoIconUrls.SOL },
+  { symbol: "TON", name: "Toncoin", iconUrl: cryptoIconUrls.TON },
+  { symbol: "XMR", name: "Monero", iconUrl: cryptoIconUrls.XMR },
+];
 
-export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: SendCryptoDialogProps) {
+export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
   const { user } = useAuth();
-  const [step, setStep] = useState<Step>("select");
-  const [selectedCrypto, setSelectedCrypto] = useState<string>("");
-  const [toAddress, setToAddress] = useState<string>("");
-  const [amount, setAmount] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
-  const [selectedNetwork, setSelectedNetwork] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState(false);
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("pexly-id");
+  const [recipientValue, setRecipientValue] = useState("");
+  const [amount, setAmount] = useState("");
+  const [selectedCurrency, setSelectedCurrency] = useState("USDT");
+  const [step, setStep] = useState<"recipient" | "amount" | "confirm">("recipient");
 
-  const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
-  const fee = parseFloat(amount) * 0.001 || 0;
-  const total = parseFloat(amount) + fee || 0;
-
-  const networkMap: Record<string, string[]> = {
-    BTC: ["Bitcoin (SegWit)", "Bitcoin (Legacy)", "Bitcoin (Taproot)"],
-    ETH: ["Ethereum (ERC-20)"],
-    SOL: ["Solana"],
-    TON: ["TON"],
-    USDC: ["Ethereum (ERC-20)", "Solana (SPL)", "Polygon"],
-    USDT: ["Ethereum (ERC-20)", "Tron (TRC-20)", "Binance Smart Chain (BEP-20)"],
-    XMR: ["Monero"],
-  };
-
-  const handleSelectCrypto = (symbol: string) => {
-    setSelectedCrypto(symbol);
-    const networks = networkMap[symbol] || [];
-    setSelectedNetwork(networks[0] || "");
-    setStep("details");
-  };
-
-  const handleSend = async () => {
-    if (!user) return;
-    if (!selectedCrypto || !toAddress || !amount) {
-      setError("Please fill in all required fields");
-      return;
+  const handleNext = () => {
+    if (step === "recipient") {
+      if (!recipientValue) {
+        toast({
+          title: "Error",
+          description: "Please enter a recipient",
+          variant: "destructive",
+        });
+        return;
+      }
+      setStep("amount");
+    } else if (step === "amount") {
+      if (!amount || parseFloat(amount) <= 0) {
+        toast({
+          title: "Error",
+          description: "Please enter a valid amount",
+          variant: "destructive",
+        });
+        return;
+      }
+      setStep("confirm");
+    } else {
+      toast({
+        title: "Success",
+        description: "Transfer initiated successfully",
+      });
+      handleClose();
     }
-
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
-    if (selectedWallet && total > selectedWallet.balance) {
-      setError("Insufficient balance");
-      return;
-    }
-
-    setError("");
-    setLoading(true);
-
-    try {
-      await sendCrypto(user.id, selectedCrypto, toAddress, amountNum, notes);
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        onOpenChange(false);
-        resetForm();
-        onSuccess?.();
-      }, 2000);
-    } catch (err: any) {
-      setError(err.message || "Failed to send crypto");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setToAddress(text);
-    } catch (err) {
-      console.error("Failed to paste:", err);
-    }
-  };
-
-  const resetForm = () => {
-    setStep("select");
-    setSelectedCrypto("");
-    setToAddress("");
-    setAmount("");
-    setNotes("");
-    setSelectedNetwork("");
-    setError("");
-    setSuccess(false);
   };
 
   const handleClose = () => {
+    setRecipientValue("");
+    setAmount("");
+    setSelectedCurrency("USDT");
+    setStep("recipient");
     onOpenChange(false);
-    resetForm();
   };
+
+  const selectedCurrencyData = currencies.find(c => c.symbol === selectedCurrency);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-background">
-        <DialogHeader className="flex flex-row items-center justify-between">
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
           <DialogTitle>
-            {step === "select" ? "Select an asset" : `Send ${selectedCrypto}`}
+            {step === "recipient" && "Send to Pexly user"}
+            {step === "amount" && "Enter amount"}
+            {step === "confirm" && "Confirm transfer"}
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            className="h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
 
-        {success ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Transaction Initiated!</h3>
-            <p className="text-sm text-muted-foreground text-center">
-              Your crypto is being sent. Check your transactions for status.
-            </p>
-          </div>
-        ) : step === "select" ? (
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-2 pr-4">
-              {wallets.map((wallet) => (
-                <Button
-                  key={wallet.symbol}
-                  variant="ghost"
-                  className="w-full h-auto py-4 px-4 justify-start hover:bg-primary/10"
-                  onClick={() => handleSelectCrypto(wallet.symbol)}
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    <img 
-                      src={cryptoIconUrls[wallet.symbol]} 
-                      alt={wallet.symbol}
-                      className="w-10 h-10 rounded-full"
-                      onError={(e) => {
-                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
-                      }}
-                    />
-                    <div className="text-left flex-1">
-                      <div className="font-semibold">{wallet.symbol}</div>
-                      <div className="text-xs text-muted-foreground">{wallet.name}</div>
-                    </div>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
-        ) : (
-          <ScrollArea className="max-h-[500px] pr-4">
+        {step === "recipient" && (
           <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Asset</Label>
-              <Select value={selectedCrypto} onValueChange={(value) => {
-                setSelectedCrypto(value);
-                const networks = networkMap[value] || [];
-                setSelectedNetwork(networks[0] || "");
-              }}>
-                <SelectTrigger className="h-12 bg-muted">
-                  <div className="flex items-center gap-2">
-                    {selectedWallet && (
-                      <>
-                        <img 
-                          src={cryptoIconUrls[selectedCrypto]} 
-                          alt={selectedCrypto}
-                          className="w-6 h-6 rounded-full"
-                          onError={(e) => {
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCrypto}&background=random`;
-                          }}
-                        />
-                        <span>{selectedCrypto}</span>
-                      </>
-                    )}
-                  </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="pexly-id">Pexly ID</TabsTrigger>
+                <TabsTrigger value="email">Email</TabsTrigger>
+                <TabsTrigger value="phone">Phone</TabsTrigger>
+              </TabsList>
+              <TabsContent value="pexly-id" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pexly-id">Pexly ID</Label>
+                  <Input
+                    id="pexly-id"
+                    placeholder="Enter Pexly ID"
+                    value={recipientValue}
+                    onChange={(e) => setRecipientValue(e.target.value)}
+                  />
+                </div>
+              </TabsContent>
+              <TabsContent value="email" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="user@example.com"
+                    value={recipientValue}
+                    onChange={(e) => setRecipientValue(e.target.value)}
+                  />
+                </div>
+              </TabsContent>
+              <TabsContent value="phone" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+1234567890"
+                    value={recipientValue}
+                    onChange={(e) => setRecipientValue(e.target.value)}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Your friends haven't activated Pexly Pay yet? Invite them now and earn up to 250 USDT!{" "}
+                <span className="text-primary font-medium cursor-pointer">Refer Now</span>
+              </AlertDescription>
+            </Alert>
+
+            <Button onClick={handleNext} className="w-full">
+              Next
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        )}
+
+        {step === "amount" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currency">Select Currency</Label>
+              <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      {selectedCurrencyData && (
+                        <>
+                          <img 
+                            src={selectedCurrencyData.iconUrl} 
+                            alt={selectedCurrencyData.symbol}
+                            className="w-5 h-5 rounded-full"
+                            onError={(e) => {
+                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCurrencyData.symbol}&background=random`;
+                            }}
+                          />
+                          <span>{selectedCurrencyData.symbol}</span>
+                        </>
+                      )}
+                    </div>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {wallets.map((wallet) => (
-                    <SelectItem key={wallet.symbol} value={wallet.symbol}>
+                  {currencies.map((currency) => (
+                    <SelectItem key={currency.symbol} value={currency.symbol}>
                       <div className="flex items-center gap-2">
                         <img 
-                          src={cryptoIconUrls[wallet.symbol]} 
-                          alt={wallet.symbol}
-                          className="w-6 h-6 rounded-full"
+                          src={currency.iconUrl} 
+                          alt={currency.symbol}
+                          className="w-5 h-5 rounded-full"
                           onError={(e) => {
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${currency.symbol}&background=random`;
                           }}
                         />
-                        <span>{wallet.symbol}</span>
+                        <span>{currency.name}</span>
+                        <span className="text-muted-foreground">({currency.symbol})</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -226,125 +202,109 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
               </Select>
             </div>
 
-            <div>
-              <Label className="text-sm font-medium mb-2 block">
-                Receiver address or NoOnes username
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
               <div className="relative">
                 <Input
-                  placeholder="Enter address or username"
-                  value={toAddress}
-                  onChange={(e) => setToAddress(e.target.value)}
-                  className="h-12 pr-20 bg-muted"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePaste}
-                  className="absolute right-2 top-2 h-8"
-                >
-                  Paste
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Network</Label>
-              <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-                <SelectTrigger className="h-12 bg-muted">
-                  <SelectValue placeholder="Select a network" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(networkMap[selectedCrypto] || []).map((network) => (
-                    <SelectItem key={network} value={network}>
-                      {network}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm font-medium">Enter amount in</Label>
-                <Select defaultValue="NGN">
-                  <SelectTrigger className="w-24 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NGN">NGN</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="text-center py-4">
-                <Input
+                  id="amount"
                   type="number"
-                  step="0.00000001"
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="text-4xl font-bold text-center border-0 bg-transparent h-auto p-0"
+                  min="0"
+                  step="0.01"
+                  className="pr-16"
                 />
-                {selectedWallet && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Available: {selectedWallet.balance.toFixed(8)} {selectedCrypto}
-                  </p>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => selectedWallet && setAmount(selectedWallet.balance.toString())}
-                  className="mt-2"
-                >
-                  Max
-                </Button>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  {selectedCurrency}
+                </span>
               </div>
             </div>
 
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Remarks (optional)</Label>
-              <Input
-                placeholder="Add a note"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="h-12 bg-muted"
-              />
+            <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Recipient</span>
+                <span className="font-medium">{recipientValue}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Network Fee</span>
+                <span className="font-medium">Free</span>
+              </div>
             </div>
 
-            {error && (
-              <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
-                <AlertCircle className="h-4 w-4" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                className="flex-1 h-12"
-                disabled={loading}
-              >
-                Cancel
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setStep("recipient")} className="flex-1">
+                Back
               </Button>
-              <Button
-                onClick={handleSend}
-                className="flex-1 h-12"
-                disabled={loading || !selectedCrypto || !toAddress || !amount}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  "Continue"
-                )}
+              <Button onClick={handleNext} className="flex-1">
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
           </div>
-          </ScrollArea>
+        )}
+
+        {step === "confirm" && (
+          <div className="space-y-4">
+            <div className="bg-muted p-4 rounded-lg space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">To</span>
+                <span className="font-medium">{recipientValue}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-sm">Amount</span>
+                <div className="flex items-center gap-2">
+                  {selectedCurrencyData && (
+                    <img 
+                      src={selectedCurrencyData.iconUrl} 
+                      alt={selectedCurrencyData.symbol}
+                      className="w-6 h-6 rounded-full"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCurrencyData.symbol}&background=random`;
+                      }}
+                    />
+                  )}
+                  <span className="text-2xl font-bold">{amount} {selectedCurrency}</span>
+                </div>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Fee</span>
+                <span className="font-medium text-green-600">Free</span>
+              </div>
+              <div className="pt-3 border-t flex justify-between items-center">
+                <span className="font-medium">Total</span>
+                <div className="flex items-center gap-2">
+                  {selectedCurrencyData && (
+                    <img 
+                      src={selectedCurrencyData.iconUrl} 
+                      alt={selectedCurrencyData.symbol}
+                      className="w-5 h-5 rounded-full"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCurrencyData.symbol}&background=random`;
+                      }}
+                    />
+                  )}
+                  <span className="text-xl font-bold">{amount} {selectedCurrency}</span>
+                </div>
+              </div>
+            </div>
+
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                This transfer will be instant and free of charge.
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setStep("amount")} className="flex-1">
+                Back
+              </Button>
+              <Button onClick={handleNext} className="flex-1">
+                Confirm Transfer
+              </Button>
+            </div>
+          </div>
         )}
       </DialogContent>
     </Dialog>
