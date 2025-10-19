@@ -1694,34 +1694,43 @@ export function AccountSettings() {
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto px-1">
               {/* Bank Name */}
               <div className="space-y-2">
-                <Label className="text-base">Bank name</Label>
-                <Input
+                <Label htmlFor="bank-name" className="text-base">Bank name</Label>
+                <input
+                  id="bank-name"
+                  type="text"
                   value={paymentBankName}
                   onChange={(e) => setPaymentBankName(e.target.value)}
-                  placeholder="Enter bank name"
-                  className="h-12"
+                  placeholder="Enter bank name (e.g., Chase, GTBank, etc.)"
+                  className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  autoComplete="off"
                 />
               </div>
 
               {/* Account Holder's Name */}
               <div className="space-y-2">
-                <Label className="text-base">Account holder's name</Label>
-                <Input
+                <Label htmlFor="account-holder-name" className="text-base">Account holder's name</Label>
+                <input
+                  id="account-holder-name"
+                  type="text"
                   value={paymentAccountName}
                   onChange={(e) => setPaymentAccountName(e.target.value)}
                   placeholder="Enter account holder's name"
-                  className="h-12"
+                  className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  autoComplete="name"
                 />
               </div>
 
               {/* Account Number */}
               <div className="space-y-2">
-                <Label className="text-base">Account number</Label>
-                <Input
+                <Label htmlFor="account-number" className="text-base">Account number</Label>
+                <input
+                  id="account-number"
+                  type="text"
                   value={paymentAccountNumber}
                   onChange={(e) => setPaymentAccountNumber(e.target.value)}
                   placeholder="Enter account number"
-                  className="h-12"
+                  className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  autoComplete="off"
                 />
               </div>
 
