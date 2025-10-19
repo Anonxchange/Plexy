@@ -12,7 +12,7 @@ import {
   EyeOff,
   ChevronLeft,
   Settings,
-  Receipt,
+  History,
   Smartphone,
   Globe,
   Gift,
@@ -48,26 +48,26 @@ export default function PexlyPay() {
   ];
 
   const paymentApps = [
-    { 
-      icon: CreditCard, 
+    {
+      icon: CreditCard,
       label: "Bank Transfer",
       description: "Send to bank accounts",
       href: "/wallet/crypto-to-bank"
     },
-    { 
-      icon: Smartphone, 
+    {
+      icon: Smartphone,
       label: "Mobile Money",
       description: "M-Pesa, MTN, Airtel",
       href: "/wallet/mobile-topup"
     },
-    { 
-      icon: Globe, 
+    {
+      icon: Globe,
       label: "International",
       description: "Global transfers",
       href: "/wallet"
     },
-    { 
-      icon: Gift, 
+    {
+      icon: Gift,
       label: "Giveaway",
       description: "Rewards & gifts",
       href: "/wallet"
@@ -85,18 +85,22 @@ export default function PexlyPay() {
           </Link>
           <h1 className="text-lg font-semibold">Pexly Pay</h1>
           <div className="flex gap-2">
-            <Button variant="ghost" size="icon">
-              <Receipt className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
-            </Button>
+            <Link href="/wallet/pexly-pay/history">
+              <Button variant="ghost" size="icon">
+                <History className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/wallet/pexly-pay/settings">
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
 
       <div className="px-4 py-6 space-y-6">
-        <Card className="bg-card/50 backdrop-blur border-border/50">
+        <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -165,7 +169,7 @@ export default function PexlyPay() {
           <div className="grid grid-cols-2 gap-3">
             {paymentApps.map((app, index) => (
               <Link key={index} href={app.href}>
-                <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+                <Card className="cursor-pointer hover:shadow-md transition-shadow">
                   <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                     <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
                       <app.icon className="h-6 w-6" />
@@ -178,7 +182,7 @@ export default function PexlyPay() {
                 </Card>
               </Link>
             ))}
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+            <Card className="cursor-pointer hover:shadow-md transition-shadow">
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
                   <MoreHorizontal className="h-6 w-6" />
@@ -192,7 +196,7 @@ export default function PexlyPay() {
           </div>
         </div>
 
-        <Card className="bg-gradient-to-r from-primary/20 to-primary/10 border-primary/20">
+        <Card className="bg-gradient-to-r from-primary/20 to-primary/10">
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium mb-1">
@@ -209,7 +213,7 @@ export default function PexlyPay() {
         </Card>
 
         <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-gradient-to-br from-green-500/20 to-green-600/10 border-green-500/20">
+          <Card className="bg-gradient-to-br from-green-500/20 to-green-600/10">
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground mb-1">Cashback</p>
               <p className="text-2xl font-bold text-green-600">
@@ -220,7 +224,7 @@ export default function PexlyPay() {
               </Badge>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 border-orange-500/20">
+          <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/10">
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground mb-1">Auto-Earn</p>
               <p className="text-2xl font-bold text-orange-600">
@@ -236,8 +240,8 @@ export default function PexlyPay() {
         </div>
       </div>
 
-      <QRScannerDialog 
-        open={scannerDialogOpen} 
+      <QRScannerDialog
+        open={scannerDialogOpen}
         onOpenChange={setScannerDialogOpen}
         onScan={(data) => {
           console.log('QR Code scanned:', data);
