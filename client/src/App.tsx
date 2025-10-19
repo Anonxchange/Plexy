@@ -71,6 +71,7 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/shop" component={Shop} />
       <Route path="/create-offer" component={CreateOffer} />
+      <Route path="/edit-offer/:offerId" component={CreateOffer} />
       <Route path="/create-offer-advanced" component={CreateOfferAdvanced} />
       <Route path="/my-offers" component={MyOffers} />
       <Route path="/trade/:tradeId" component={ActiveTrade} />
