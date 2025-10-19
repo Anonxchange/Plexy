@@ -110,7 +110,9 @@ export default function AdminVerificationsPage() {
   const { data: verifications, isLoading, error: queryError } = useQuery({
     queryKey: ["admin-verifications"],
     queryFn: async () => {
-      console.log("Fetching verifications...");
+      console.log("=== FETCHING VERIFICATIONS ===");
+      console.log("Current user ID:", user?.id);
+      console.log("Is admin:", isAdmin);
       
       // First, let's try a simple query without joins to see if we can access the table
       const { data: simpleData, error: simpleError } = await supabase
@@ -119,6 +121,19 @@ export default function AdminVerificationsPage() {
         .order("submitted_at", { ascending: false });
 
       console.log("Simple query result:", { data: simpleData, error: simpleError });
+      console.log("Number of verifications (simple):", simpleData?.length || 0);
+
+      if (simpleError) {
+        console.error("❌ Simple query failed:", simpleError);
+        // If even simple query fails, return it with error details
+        throw new Error(`Database error: ${simpleError.message}`);
+      }
+
+      // If simple query works but returns no data, that's the issue
+      if (!simpleData || simpleData.length === 0) {
+        console.warn("⚠️ No verifications found in database");
+        return [];
+      }
 
       // Now try the full query with join
       const { data, error } = await supabase
@@ -135,10 +150,16 @@ export default function AdminVerificationsPage() {
         .order("submitted_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching verifications:", error);
-        throw error;
+        console.error("❌ Error fetching verifications with join:", error);
+        // Fall back to simple data if join fails
+        console.log("Falling back to simple query data");
+        return simpleData.map(v => ({
+          ...v,
+          user_profiles: { id: v.user_id, username: "Unknown", email: "", verification_level: 0 }
+        }));
       }
-      console.log("Full verifications data:", data);
+      
+      console.log("✅ Full verifications data:", data);
       console.log("Number of verifications:", data?.length || 0);
       return data;
     },
@@ -332,10 +353,28 @@ export default function AdminVerificationsPage() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Verification Management</h1>
-        <p className="text-muted-foreground">
-          Review and approve user verification requests
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Verification Management</h1>
+            <p className="text-muted-foreground">
+              Review and approve user verification requests
+            </p>
+          </div>
+          <Button 
+            variant="outline"
+            onClick={async () => {
+              console.log("Testing database connection...");
+              const { data, error, count } = await supabase
+                .from("verifications")
+                .select("*", { count: 'exact' });
+              
+              console.log("Test query result:", { data, error, count });
+              alert(`Database test:\nVerifications found: ${count || 0}\nError: ${error?.message || 'None'}`);
+            }}
+          >
+            Test Database
+          </Button>
+        </div>
       </div>
 
       {/* Statistics */}
