@@ -18,15 +18,86 @@ import { AppSidebar } from "./app-sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
+import { 
+  getNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  subscribeToNotifications,
+  type Notification 
+} from "@/lib/notifications-api";
+import { useToast } from "@/hooks/use-toast";
 
 export function AppHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const { user, signOut } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, navigate] = useLocation();
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const supabase = createClient();
   const { verificationLevel, levelConfig } = useVerificationGuard();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Load initial notifications
+    getNotifications().then(setNotifications);
+
+    // Subscribe to real-time updates
+    const unsubscribe = subscribeToNotifications(user.id, (notification) => {
+      setNotifications((prev) => [notification, ...prev]);
+
+      // Show toast for new notification
+      toast({
+        title: notification.title,
+        description: notification.message,
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user, toast]);
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.read) {
+      await markAsRead(notification.id);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notification.id ? { ...n, read: true } : n
+        )
+      );
+    }
+
+    // Navigate based on notification type
+    if (notification.metadata?.url) {
+      navigate(notification.metadata.url);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    const success = await markAllAsRead();
+    if (success) {
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, read: true }))
+      );
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const avatarTypes = [
     { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
@@ -117,30 +188,40 @@ export function AppHeader() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative h-9 w-9 sm:h-10 sm:w-10">
                     <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-semibold">
-                      3
-                    </span>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-80">
                   <div className="p-2">
-                    <h3 className="font-semibold mb-2">Notifications</h3>
-                    <div className="space-y-2">
-                      <div className="p-2 hover:bg-muted rounded-md cursor-pointer">
-                        <p className="text-sm font-medium">Trade completed</p>
-                        <p className="text-xs text-muted-foreground">Your BTC purchase was successful</p>
-                        <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
-                      </div>
-                      <div className="p-2 hover:bg-muted rounded-md cursor-pointer">
-                        <p className="text-sm font-medium">Price alert</p>
-                        <p className="text-xs text-muted-foreground">ETH reached your target price</p>
-                        <p className="text-xs text-muted-foreground mt-1">5 hours ago</p>
-                      </div>
-                      <div className="p-2 hover:bg-muted rounded-md cursor-pointer">
-                        <p className="text-sm font-medium">New offer available</p>
-                        <p className="text-xs text-muted-foreground">Better rates for USDT trading</p>
-                        <p className="text-xs text-muted-foreground mt-1">1 day ago</p>
-                      </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <Button variant="link" size="sm" onClick={handleMarkAllAsRead} className="p-0 h-auto font-normal">
+                          Mark all as read
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {notifications.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">No notifications yet</p>
+                      )}
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`p-2 rounded-md cursor-pointer transition-colors ${
+                            notification.read ? 'bg-muted/30' : 'hover:bg-muted'
+                          }`}
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <p className="text-sm font-medium">{notification.title}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(notification.createdAt)}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </DropdownMenuContent>
@@ -166,35 +247,35 @@ export function AppHeader() {
                 <div className="p-2">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setLocation('/dashboard')} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer">
                 <LayoutDashboard className="mr-2 h-4 w-4" />
                 <div>
                   <div className="font-medium">Dashboard</div>
                   <div className="text-xs text-muted-foreground">Your main dashboard</div>
                 </div>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLocation('/profile')} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 <div>
                   <div className="font-medium">Profile</div>
                   <div className="text-xs text-muted-foreground">Your public profile</div>
                 </div>
               </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/trade-history")}>
+                  <DropdownMenuItem onClick={() => navigate("/trade-history")}>
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <div className="flex flex-col">
                       <span>Trade statistics</span>
                       <span className="text-xs text-muted-foreground">Trade history, partners, statistics</span>
                     </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/account-settings")}>
+                  <DropdownMenuItem onClick={() => navigate("/account-settings")}>
                     <Settings className="mr-2 h-4 w-4" />
                     <div className="flex flex-col">
                       <span>Account settings</span>
                       <span className="text-xs text-muted-foreground">Verification, notifications, security</span>
                     </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/submit-idea")}>
+                  <DropdownMenuItem onClick={() => navigate("/submit-idea")}>
                     <Lightbulb className="mr-2 h-4 w-4" />
                     <div className="flex flex-col">
                       <span>Submit an idea</span>
@@ -204,7 +285,7 @@ export function AppHeader() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={async () => {
                     await signOut();
-                    setLocation("/");
+                    navigate("/");
                   }}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
@@ -223,7 +304,7 @@ export function AppHeader() {
                       size="sm" 
                       variant="outline"
                       className="h-7 text-xs"
-                      onClick={() => setLocation("/verification")}
+                      onClick={() => navigate("/verification")}
                     >
                       {verificationLevel === 0 ? "Verify Now" : "Upgrade"}
                     </Button>
@@ -268,14 +349,14 @@ export function AppHeader() {
                   variant="ghost" 
                   size="sm"
                   className="text-xs sm:text-sm px-2 sm:px-3"
-                  onClick={() => setLocation("/signin")}
+                  onClick={() => navigate("/signin")}
                 >
                   Sign In
                 </Button>
                 <Button 
                   size="sm"
                   className="text-xs sm:text-sm px-2 sm:px-3"
-                  onClick={() => setLocation("/signup")}
+                  onClick={() => navigate("/signup")}
                 >
                   Sign Up
                 </Button>
