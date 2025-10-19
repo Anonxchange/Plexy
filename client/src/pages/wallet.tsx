@@ -813,14 +813,14 @@ export default function Wallet() {
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm">
-                      {pair.symbol === "BTC" && "₿"}
-                      {pair.symbol === "ETH" && "Ξ"}
-                      {pair.symbol === "BNB" && "B"}
-                      {pair.symbol === "TRX" && "T"}
-                      {pair.symbol === "SOL" && "◎"}
-                      {pair.symbol === "LTC" && "Ł"}
-                    </div>
+                    <img 
+                      src={cryptoIconUrls[pair.symbol as keyof typeof cryptoIconUrls] || `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`}
+                      alt={pair.symbol}
+                      className="w-8 h-8 rounded-full"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`;
+                      }}
+                    />
                     <span className="font-medium">{pair.symbol}</span>
                   </div>
                   <div className="text-right">
