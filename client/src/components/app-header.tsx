@@ -145,16 +145,19 @@ export function AppHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
+        {/* Left side - Menu button (when signed in) */}
         <div className="flex items-center gap-2 flex-1">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => setMobileMenuOpen(true)}
-            data-testid="button-sidebar-toggle"
-            className="border-border"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+          {user && (
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setMobileMenuOpen(true)}
+              data-testid="button-sidebar-toggle"
+              className="border-border"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
           <Link href="/" className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-lg px-2 py-1" data-testid="link-home-header">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Zap className="h-5 w-5 text-primary-foreground" />
@@ -165,6 +168,7 @@ export function AppHeader() {
 
         <div className="flex-1 hidden md:block"></div>
 
+        {/* Right side - Profile info and menu button (when not signed in) */}
         <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-end">
           {user ? (
             <>
@@ -184,48 +188,6 @@ export function AppHeader() {
                   </button>
                 </div>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative h-9 w-9 sm:h-10 sm:w-10">
-                    <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
-                  <div className="p-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <Button variant="link" size="sm" onClick={handleMarkAllAsRead} className="p-0 h-auto font-normal">
-                          Mark all as read
-                        </Button>
-                      )}
-                    </div>
-                    <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {notifications.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">No notifications yet</p>
-                      )}
-                      {notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`p-2 rounded-md cursor-pointer transition-colors ${
-                            notification.read ? 'bg-muted/30' : 'hover:bg-muted'
-                          }`}
-                          onClick={() => handleNotificationClick(notification)}
-                        >
-                          <p className="text-sm font-medium">{notification.title}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(notification.createdAt)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -342,32 +304,21 @@ export function AppHeader() {
             </DropdownMenu>
             </>
           ) : (
-            <>
-              <ThemeToggle />
-              <div className="flex items-center gap-1 sm:gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="text-xs sm:text-sm px-2 sm:px-3"
-                  onClick={() => navigate("/signin")}
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  size="sm"
-                  className="text-xs sm:text-sm px-2 sm:px-3"
-                  onClick={() => navigate("/signup")}
-                >
-                  Sign Up
-                </Button>
-              </div>
-            </>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setMobileMenuOpen(true)}
+              data-testid="button-sidebar-toggle"
+              className="border-border"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
           )}
         </div>
       </div>
 
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-80">
+        <SheetContent side="right" className="p-0 w-80">
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation Menu</SheetTitle>
           </SheetHeader>
