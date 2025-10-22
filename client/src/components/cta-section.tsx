@@ -1,11 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Smartphone } from "lucide-react";
 import { SiApple, SiGoogleplay } from "react-icons/si";
+import mobileAppImage from "@assets/IMG_1541_1761095087462.png";
 
 export function CTASection() {
   return (
-    <section className="py-20 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
-      <div className="max-w-6xl mx-auto px-4 lg:px-6 text-center space-y-8">
+    <section className="py-8 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 text-center space-y-2">
+        <div className="flex justify-center">
+          <img 
+            src={mobileAppImage} 
+            alt="Pexly Mobile App Screens" 
+            className="max-w-full h-auto max-h-96 object-contain"
+          />
+        </div>
         <div className="space-y-4">
           <h2 className="text-3xl lg:text-4xl font-bold">Start trading on Pexly today</h2>
           <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto">
