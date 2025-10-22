@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Zap } from "lucide-react";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { createClient } from "@/lib/supabase";
 import { authenticator } from "otplib";
@@ -194,9 +194,12 @@ export function SignIn() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-8">
-            Pexly
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+              <Zap className="h-7 w-7 text-primary-foreground" />
+            </div>
+            <h1 className="text-4xl font-bold">Pexly</h1>
+          </div>
           <h2 className="text-2xl font-semibold mb-6">
             Welcome to Pexly
           </h2>
