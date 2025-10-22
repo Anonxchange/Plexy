@@ -37,6 +37,8 @@ export function AppHeader() {
   const { verificationLevel, levelConfig } = useVerificationGuard();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { toast } = useToast();
+  const [userName, setUserName] = useState<string>('');
+  const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
     if (!user) return;
@@ -113,8 +115,41 @@ export function AppHeader() {
   useEffect(() => {
     if (user) {
       fetchProfileAvatar();
+      fetchUserData();
     }
   }, [user]);
+
+  const fetchUserData = async () => {
+    try {
+      // Fetch user profile for username
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('username')
+        .eq('id', user?.id)
+        .single();
+
+      if (!profileError && profileData?.username) {
+        setUserName(profileData.username);
+      } else {
+        // Fallback to email username
+        setUserName(user?.email?.split('@')[0] || 'User');
+      }
+
+      // Fetch wallet balance
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', user?.id)
+        .eq('currency', 'USD')
+        .single();
+
+      if (!walletError && walletData) {
+        setBalance(walletData.balance);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const fetchProfileAvatar = async () => {
     try {
@@ -172,12 +207,16 @@ export function AppHeader() {
         <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-end">
           {user ? (
             <>
-              <div className="text-center relative hidden sm:block">
-                <div className="text-sm font-semibold text-foreground whitespace-nowrap">JohnDoe85</div>
+              <div className="text-center relative max-w-[120px] sm:max-w-[150px]">
+                <div className="text-sm font-semibold text-foreground truncate">
+                  {userName || user?.email?.split('@')[0] || 'User'}
+                </div>
                 <div className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
-                  <span className="whitespace-nowrap">{balanceVisible ? "28,787.79 USD" : "****"}</span>
+                  <span className="truncate">
+                    {balanceVisible ? `${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : "****"}
+                  </span>
                   <button 
-                    className="inline-flex items-center justify-center h-4 w-4 hover:opacity-70 transition-opacity"
+                    className="inline-flex items-center justify-center h-4 w-4 hover:opacity-70 transition-opacity flex-shrink-0"
                     onClick={() => setBalanceVisible(!balanceVisible)}
                   >
                     {balanceVisible ? (
@@ -318,7 +357,7 @@ export function AppHeader() {
       </div>
 
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="right" className="p-0 w-80">
+        <SheetContent side="left" className="p-0 w-80">
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation Menu</SheetTitle>
           </SheetHeader>
