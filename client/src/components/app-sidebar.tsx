@@ -22,13 +22,16 @@ import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ThemeToggle } from "./theme-toggle";
+import { useAuth } from "@/lib/auth-context";
 
 interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+  const { user } = useAuth();
 
   const handleLinkClick = () => {
     if (onNavigate) {
@@ -343,12 +346,35 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </div>
 
       <div className="border-t border-border p-4 space-y-2">
-        <Button variant="outline" className="w-full" data-testid="button-sign-in">
-          Sign In
-        </Button>
-        <Button className="w-full" data-testid="button-sign-up">
-          Sign Up
-        </Button>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium">Theme</span>
+          <ThemeToggle />
+        </div>
+        {!user && (
+          <>
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              data-testid="button-sign-in"
+              onClick={() => {
+                navigate("/signin");
+                handleLinkClick();
+              }}
+            >
+              Sign In
+            </Button>
+            <Button 
+              className="w-full" 
+              data-testid="button-sign-up"
+              onClick={() => {
+                navigate("/signup");
+                handleLinkClick();
+              }}
+            >
+              Sign Up
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
