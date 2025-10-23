@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { 
   CreditCard, 
   Building2, 
@@ -15,10 +16,18 @@ import {
   Info,
   Shield,
   Zap,
-  Check
+  Check,
+  Clock,
+  DollarSign,
+  Globe
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { useLocation } from "wouter";
+import { PexlyFooter } from "@/components/pexly-footer";
 
 export default function BuyCrypto() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [paymentMethod, setPaymentMethod] = useState<"card" | "bank" | "mobile">("card");
   const [selectedCrypto, setSelectedCrypto] = useState("BTC");
   const [amount, setAmount] = useState("");
@@ -43,6 +52,10 @@ export default function BuyCrypto() {
   const cryptoAmount = amount ? (parseFloat(amount) / (selectedCryptoData?.price || 1)).toFixed(8) : "0";
 
   const handlePurchase = () => {
+    if (!user) {
+      setLocation("/signin");
+      return;
+    }
     console.log("Processing purchase with:", {
       paymentMethod,
       selectedCrypto,
@@ -51,6 +64,349 @@ export default function BuyCrypto() {
     });
   };
 
+  // Non-logged-in user view
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <div className="flex-1 pb-20">
+          {/* Buy Interface at the top */}
+          <div className="bg-gradient-to-br from-primary/10 to-background py-8 px-4">
+            <div className="max-w-4xl mx-auto">
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
+                Buy Crypto Instantly
+              </h1>
+              <p className="text-base text-muted-foreground mb-4">
+                Purchase cryptocurrency using your credit card, bank transfer, or mobile money
+              </p>
+            </div>
+          </div>
+
+          <div className="max-w-4xl mx-auto px-4 -mt-4">
+            <div className="grid lg:grid-cols-2 gap-6 mb-8">
+              {/* Buy Form */}
+              <div className="space-y-4">
+                <Card>
+                  <CardContent className="p-6 space-y-4">
+                    <div>
+                      <Label className="text-sm font-semibold mb-2 block">
+                        Choose crypto
+                      </Label>
+                      <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                        <SelectTrigger className="h-14">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cryptoOptions.map((crypto) => (
+                            <SelectItem key={crypto.symbol} value={crypto.symbol}>
+                              <div className="flex items-center justify-between w-full">
+                                <span className="font-semibold">{crypto.name} ({crypto.symbol})</span>
+                                <span className="text-muted-foreground ml-4">${crypto.price.toLocaleString()}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-semibold mb-2 block">
+                        Amount to spend
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="h-14 pr-20 text-lg"
+                        />
+                        <Select value={fiatCurrency} onValueChange={setFiatCurrency}>
+                          <SelectTrigger className="absolute right-2 top-2 w-20 h-10 border-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="USD">USD</SelectItem>
+                            <SelectItem value="EUR">EUR</SelectItem>
+                            <SelectItem value="GBP">GBP</SelectItem>
+                            <SelectItem value="NGN">NGN</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {amount && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          ≈ {cryptoAmount} {selectedCrypto}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      {[100, 500, 1000, 5000].map((quickAmount) => (
+                        <Button
+                          key={quickAmount}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAmount(quickAmount.toString())}
+                          className="flex-1"
+                        >
+                          ${quickAmount}
+                        </Button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <Label className="text-sm font-semibold mb-3 block">Payment Method</Label>
+                    <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                        <RadioGroupItem value="card" id="card" />
+                        <Label htmlFor="card" className="flex items-center gap-3 cursor-pointer flex-1">
+                          <CreditCard className="h-5 w-5 text-primary" />
+                          <div>
+                            <div className="font-semibold text-sm">Credit/Debit Card</div>
+                            <div className="text-xs text-muted-foreground">Instant delivery</div>
+                          </div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                        <RadioGroupItem value="bank" id="bank" />
+                        <Label htmlFor="bank" className="flex items-center gap-3 cursor-pointer flex-1">
+                          <Building2 className="h-5 w-5 text-primary" />
+                          <div>
+                            <div className="font-semibold text-sm">Bank Transfer</div>
+                            <div className="text-xs text-muted-foreground">Lower fees</div>
+                          </div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                        <RadioGroupItem value="mobile" id="mobile" />
+                        <Label htmlFor="mobile" className="flex items-center gap-3 cursor-pointer flex-1">
+                          <Smartphone className="h-5 w-5 text-primary" />
+                          <div>
+                            <div className="font-semibold text-sm">Mobile Money</div>
+                            <div className="text-xs text-muted-foreground">M-Pesa, MTN, Airtel</div>
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Order Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground text-sm">You pay</span>
+                    <span className="font-semibold">
+                      {amount || "0"} {fiatCurrency}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground text-sm">You receive</span>
+                    <span className="font-semibold">
+                      {cryptoAmount} {selectedCrypto}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground text-sm">Exchange rate</span>
+                    <span className="font-medium text-sm">
+                      1 {selectedCrypto} = ${selectedCryptoData?.price.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground text-sm">Processing fee</span>
+                    <span className="font-medium text-sm">
+                      {paymentMethod === "card" ? "2.5%" : paymentMethod === "bank" ? "0.5%" : "1.5%"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-muted-foreground text-sm">Estimated delivery</span>
+                    <span className="font-medium text-sm">
+                      {paymentMethod === "card" ? "Instant" : paymentMethod === "bank" ? "1-3 days" : "5-10 min"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Log in/Join us CTA */}
+            <div className="max-w-4xl mx-auto mb-8">
+              <Button 
+                className="w-full h-16 text-lg bg-primary hover:bg-primary/90"
+                onClick={() => setLocation("/signin")}
+              >
+                Log in/Join us
+              </Button>
+            </div>
+
+            {/* Why Buy on Pexly */}
+            <div className="max-w-4xl mx-auto mb-12">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold mb-3">Why Buy on Pexly</h2>
+                <p className="text-muted-foreground">
+                  The easiest way to buy cryptocurrency with confidence
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <Card className="bg-card/80">
+                  <CardContent className="p-6 text-center">
+                    <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <Zap className="h-7 w-7 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Instant Delivery</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Get your crypto delivered to your wallet instantly with card payments
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card/80">
+                  <CardContent className="p-6 text-center">
+                    <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <Shield className="h-7 w-7 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Secure & Safe</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Bank-grade security with 256-bit SSL encryption and 2FA protection
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card/80">
+                  <CardContent className="p-6 text-center">
+                    <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <DollarSign className="h-7 w-7 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Best Rates</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Competitive rates with transparent fees - no hidden charges
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Payment Methods Info */}
+            <div className="max-w-4xl mx-auto mb-12">
+              <h2 className="text-2xl font-bold mb-6 text-center">Choose Your Payment Method</h2>
+              <div className="space-y-4">
+                <Card className="bg-card/60">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <CreditCard className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold mb-2">Credit/Debit Card</h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Instant delivery with a 2.5% processing fee. We accept Visa, Mastercard, and American Express.
+                        </p>
+                        <div className="flex gap-2">
+                          <Badge variant="secondary">Instant</Badge>
+                          <Badge variant="secondary">2.5% fee</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card/60">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold mb-2">Bank Transfer</h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Lower fees at just 0.5%, but delivery takes 1-3 business days. Perfect for larger purchases.
+                        </p>
+                        <div className="flex gap-2">
+                          <Badge variant="secondary">1-3 days</Badge>
+                          <Badge variant="secondary">0.5% fee</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card/60">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Smartphone className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold mb-2">Mobile Money</h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Fast delivery in 5-10 minutes with 1.5% fee. Available for M-Pesa, MTN, Airtel, and more.
+                        </p>
+                        <div className="flex gap-2">
+                          <Badge variant="secondary">5-10 min</Badge>
+                          <Badge variant="secondary">1.5% fee</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* FAQ */}
+            <div className="max-w-4xl mx-auto mb-12">
+              <h2 className="text-2xl font-bold mb-6 text-center">Frequently Asked Questions</h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="item-1" className="bg-card/60 rounded-lg px-6 border-0">
+                  <AccordionTrigger className="text-left hover:no-underline py-5">
+                    <span className="text-base font-semibold">What payment methods do you accept?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-5">
+                    We accept credit/debit cards (Visa, Mastercard, Amex), bank transfers, and mobile money (M-Pesa, MTN, Airtel, Orange, and Vodafone).
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-2" className="bg-card/60 rounded-lg px-6 border-0">
+                  <AccordionTrigger className="text-left hover:no-underline py-5">
+                    <span className="text-base font-semibold">How long does it take to receive my crypto?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-5">
+                    Card payments are instant, mobile money takes 5-10 minutes, and bank transfers take 1-3 business days.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-3" className="bg-card/60 rounded-lg px-6 border-0">
+                  <AccordionTrigger className="text-left hover:no-underline py-5">
+                    <span className="text-base font-semibold">Is there a minimum purchase amount?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-5">
+                    The minimum purchase amount varies by payment method and currency, but typically starts at $10 USD or equivalent.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-4" className="bg-card/60 rounded-lg px-6 border-0">
+                  <AccordionTrigger className="text-left hover:no-underline py-5">
+                    <span className="text-base font-semibold">Is my payment information secure?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-5">
+                    Yes, we use 256-bit SSL encryption and are PCI DSS compliant. Your payment information is never stored on our servers and all transactions are encrypted.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </div>
+        </div>
+        <PexlyFooter />
+      </div>
+    );
+  }
+
+  // Logged-in user view - full buy interface
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
