@@ -36,6 +36,7 @@ import type { CryptoPrice } from "@/lib/crypto-prices";
 import { getVerificationLevel, getVerificationRequirements } from "@shared/verification-levels";
 import { createClient } from "@/lib/supabase";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { Sparkline } from "@/components/ui/sparkline";
 
 const cryptoAssets = [
   { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.BTC, color: "text-orange-500", avgCost: 0 },
@@ -88,6 +89,20 @@ const recentActivities = [
     partner: "TraderPro"
   }
 ];
+
+const generateSparklineData = (baseValue: number, trend: 'up' | 'down' | 'neutral', points: number = 20): number[] => {
+  const data: number[] = [];
+  let current = baseValue;
+  const volatility = 0.03;
+  const trendStrength = trend === 'up' ? 0.015 : trend === 'down' ? -0.015 : 0;
+  
+  for (let i = 0; i < points; i++) {
+    const random = (Math.random() - 0.5) * volatility;
+    current = current * (1 + random + trendStrength);
+    data.push(current);
+  }
+  return data;
+};
 
 const allOperations = [
   {
@@ -302,6 +317,9 @@ export default function Wallet() {
     const pnlUsd = usdValue - costBasis;
     const pnlPercentage = costBasis > 0 ? ((usdValue - costBasis) / costBasis) * 100 : 0;
 
+    const trend = pnlPercentage > 0 ? 'up' : pnlPercentage < 0 ? 'down' : 'neutral';
+    const sparklineData = generateSparklineData(avgCost, trend);
+
     return {
       ...asset,
       balance,
@@ -311,11 +329,19 @@ export default function Wallet() {
       avgCost,
       pnlUsd,
       pnlPercentage,
-      priceChange24h: priceData?.price_change_percentage_24h || 0
+      priceChange24h: priceData?.price_change_percentage_24h || 0,
+      sparklineData
     };
   });
 
   const totalBalance = mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0);
+  const totalPnL = mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0);
+  const totalPnLPercentage = mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0) > 0
+    ? (totalPnL / mergedAssets.reduce((sum, asset) => sum + (asset.balance * asset.avgCost), 0)) * 100
+    : 0;
+
+  const portfolioTrend = totalPnLPercentage > 0 ? 'up' : totalPnLPercentage < 0 ? 'down' : 'neutral';
+  const portfolioSparklineData = generateSparklineData(totalBalance * 0.95, portfolioTrend, 30);
 
   const filteredAssets = hideZeroBalance
     ? mergedAssets.filter(asset => asset.balance > 0)
@@ -504,9 +530,29 @@ export default function Wallet() {
               </Button>
             </div>
 
-            <div className="text-3xl sm:text-4xl font-bold text-primary mb-6">
-              {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
+            <div className="mb-2">
+              <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
+                {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
+              </div>
+              {balanceVisible && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
+                  </span>
+                </div>
+              )}
             </div>
+
+            {balanceVisible && (
+              <div className="mb-6 h-12 opacity-60">
+                <Sparkline 
+                  data={portfolioSparklineData} 
+                  color="auto"
+                  height={48}
+                  strokeWidth={2}
+                />
+              </div>
+            )}
 
             {/* Action Buttons - Horizontal Layout */}
             <div className="grid grid-cols-3 gap-3 mb-4">
@@ -619,6 +665,16 @@ export default function Wallet() {
                           </div>
                         </div>
                       </div>
+                      {balanceVisible && asset.balance > 0 && (
+                        <div className="h-10 w-full mt-2 opacity-50">
+                          <Sparkline 
+                            data={asset.sparklineData} 
+                            color="auto"
+                            height={40}
+                            strokeWidth={1.5}
+                          />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
               ))}
