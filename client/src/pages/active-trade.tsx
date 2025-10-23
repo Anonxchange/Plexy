@@ -507,10 +507,6 @@ export default function ActiveTrade() {
                     <span className="mr-2">⭐</span> Add to favorites
                   </Button>
 
-                  <Button variant="outline" className="w-full mb-3 text-xs sm:text-sm h-9 sm:h-10">
-                    View Offer
-                  </Button>
-
                   <Button variant="outline" className="w-full text-xs sm:text-sm h-9 sm:h-10">
                     Report Bad Behaviour
                   </Button>
@@ -573,6 +569,14 @@ export default function ActiveTrade() {
                       <div className="text-xs sm:text-sm font-medium">{new Date(trade.completed_at || trade.created_at).toLocaleString()}</div>
                     </div>
                   </div>
+
+                  <Button variant="outline" className="w-full mb-3 text-xs sm:text-sm h-9 sm:h-10">
+                    View Offer
+                  </Button>
+
+                  <Button variant="outline" className="w-full text-xs sm:text-sm h-9 sm:h-10">
+                    Tour
+                  </Button>
                 </div>
               </>
             ) : (
