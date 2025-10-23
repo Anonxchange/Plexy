@@ -94,6 +94,10 @@ export default function ActiveTrade() {
 
   useEffect(() => {
     if (!trade?.created_at) return;
+    
+    if (trade.status === "completed" || trade.status === "cancelled") {
+      return;
+    }
 
     const updateTimer = () => {
       const startTime = new Date(trade.created_at).getTime();
@@ -190,6 +194,11 @@ export default function ActiveTrade() {
 
   const formatTradeTime = () => {
     if (!trade?.created_at) return "00:00";
+    
+    if (trade.status === "completed" || trade.status === "cancelled") {
+      return "00:00";
+    }
+    
     const startTime = new Date(trade.created_at).getTime();
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
     const mins = Math.floor(elapsedSeconds / 60);
