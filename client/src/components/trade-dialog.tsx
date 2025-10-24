@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createNotification } from "@/lib/notifications-api";
 import { useLocation } from "wouter";
 import {
   Dialog,
@@ -134,6 +135,62 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       if (tradeError) throw tradeError;
 
       console.log("Trade created successfully:", trade);
+
+      // Create notifications for both parties
+      try {
+        // Get user profiles for avatar and name
+        const { data: currentUserProfile } = await supabase
+          .from('user_profiles')
+          .select('username, avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        const { data: counterpartProfile } = await supabase
+          .from('user_profiles')
+          .select('username, avatar_url')
+          .eq('id', vendorId)
+          .single();
+
+        const currentUserName = currentUserProfile?.username || user.email?.split('@')[0] || 'User';
+        const currentUserAvatar = currentUserProfile?.avatar_url || null;
+        const counterpartName = counterpartProfile?.username || offer.vendor?.name || 'User';
+        const counterpartAvatar = counterpartProfile?.avatar_url || offer.vendor?.avatar || null;
+
+        // Notification for the current user (trade initiator)
+        await createNotification(
+          user.id,
+          'New Trade Started',
+          `Trade with ${counterpartName} for ${fiatAmount} ${offer.currency}`,
+          'trade',
+          {
+            tradeId: trade.id,
+            counterpart_name: counterpartName,
+            counterpart_avatar: counterpartAvatar,
+            status: 'Pending',
+            url: `/trade/${trade.id}`
+          }
+        );
+
+        // Notification for the counterpart (vendor)
+        await createNotification(
+          vendorId,
+          'New Trade Request',
+          `${currentUserName} wants to trade for ${fiatAmount} ${offer.currency}`,
+          'trade',
+          {
+            tradeId: trade.id,
+            counterpart_name: currentUserName,
+            counterpart_avatar: currentUserAvatar,
+            status: 'Pending',
+            url: `/trade/${trade.id}`
+          }
+        );
+
+        console.log("Notifications created for trade:", trade.id);
+      } catch (notifError) {
+        console.error("Error creating notifications:", notifError);
+        // Don't fail the trade creation, just log the error
+      }
 
       // Create escrow to lock seller's crypto
       try {
