@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import { 
   MessageCircle, 
@@ -13,13 +13,18 @@ import {
   Plus,
   UserCircle,
   CheckSquare,
-  Square
+  Square,
+  Image as ImageIcon,
+  Video,
+  File,
+  Download
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { uploadToR2 } from "@/lib/r2-storage";
 
 interface Trade {
   id: string;
@@ -61,6 +66,9 @@ interface TradeMessage {
   trade_id: string;
   sender_id: string;
   content: string;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_filename?: string | null;
   created_at: string;
 }
 
@@ -83,6 +91,8 @@ export default function ActiveTrade() {
   const [confirmNotPaid, setConfirmNotPaid] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [messages, setMessages] = useState<TradeMessage[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createClient();
 
@@ -250,7 +260,8 @@ export default function ActiveTrade() {
       return "00:00";
     }
     
-    const startTime = new Date(trade.created_at).getTime();
+    const referenceTime = trade.buyer_paid_at || trade.created_at;
+    const startTime = new Date(referenceTime).getTime();
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
     const mins = Math.floor(elapsedSeconds / 60);
     const secs = elapsedSeconds % 60;
@@ -367,6 +378,68 @@ export default function ActiveTrade() {
       fetchTradeData();
     } catch (error) {
       console.error("Error auto-cancelling trade:", error);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !tradeId || !currentUserProfileId || !user?.id) {
+      return;
+    }
+
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 50MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const uploadResult = await uploadToR2(file, 'trade-attachments', user.id);
+      
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+
+      const fileType = file.type.startsWith('image/') ? 'image' : 
+                      file.type.startsWith('video/') ? 'video' : 'file';
+
+      const { data, error } = await supabase
+        .from("trade_messages")
+        .insert({
+          trade_id: tradeId,
+          sender_id: currentUserProfileId,
+          content: `Sent ${fileType}: ${file.name}`,
+          attachment_url: uploadResult.url,
+          attachment_type: fileType,
+          attachment_filename: file.name,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "File uploaded",
+        description: `${file.name} sent successfully`,
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Could not upload file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -586,6 +659,37 @@ export default function ActiveTrade() {
                               : 'bg-muted'
                           }`}
                         >
+                          {message.attachment_url && (
+                            <div className="mb-2">
+                              {message.attachment_type === 'image' ? (
+                                <img 
+                                  src={message.attachment_url} 
+                                  alt={message.attachment_filename || 'Uploaded image'} 
+                                  className="rounded max-w-full h-auto cursor-pointer"
+                                  onClick={() => window.open(message.attachment_url!, '_blank')}
+                                />
+                              ) : message.attachment_type === 'video' ? (
+                                <video 
+                                  src={message.attachment_url} 
+                                  controls 
+                                  className="rounded max-w-full h-auto"
+                                />
+                              ) : (
+                                <a 
+                                  href={message.attachment_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className={`flex items-center gap-2 p-2 rounded border ${
+                                    isOwnMessage ? 'border-primary-foreground/30' : 'border-border'
+                                  } hover:opacity-80 transition-opacity`}
+                                >
+                                  <File className="w-4 h-4" />
+                                  <span className="text-sm truncate">{message.attachment_filename || 'Download file'}</span>
+                                  <Download className="w-4 h-4 ml-auto" />
+                                </a>
+                              )}
+                            </div>
+                          )}
                           <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                           <p className="text-xs opacity-70 mt-1">
                             {new Date(message.created_at).toLocaleTimeString()}
@@ -669,6 +773,37 @@ export default function ActiveTrade() {
                               : 'bg-muted'
                           }`}
                         >
+                          {message.attachment_url && (
+                            <div className="mb-2">
+                              {message.attachment_type === 'image' ? (
+                                <img 
+                                  src={message.attachment_url} 
+                                  alt={message.attachment_filename || 'Uploaded image'} 
+                                  className="rounded max-w-full h-auto cursor-pointer"
+                                  onClick={() => window.open(message.attachment_url!, '_blank')}
+                                />
+                              ) : message.attachment_type === 'video' ? (
+                                <video 
+                                  src={message.attachment_url} 
+                                  controls 
+                                  className="rounded max-w-full h-auto"
+                                />
+                              ) : (
+                                <a 
+                                  href={message.attachment_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className={`flex items-center gap-2 p-2 rounded border ${
+                                    isOwnMessage ? 'border-primary-foreground/30' : 'border-border'
+                                  } hover:opacity-80 transition-opacity`}
+                                >
+                                  <File className="w-4 h-4" />
+                                  <span className="text-sm truncate">{message.attachment_filename || 'Download file'}</span>
+                                  <Download className="w-4 h-4 ml-auto" />
+                                </a>
+                              )}
+                            </div>
+                          )}
                           <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                           <p className="text-xs opacity-70 mt-1">
                             {new Date(message.created_at).toLocaleTimeString()}
@@ -1057,7 +1192,20 @@ export default function ActiveTrade() {
             </button>
 
             <div className="p-2 sm:p-3 flex gap-1.5 sm:gap-2">
-              <Button variant="outline" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*,.pdf,.doc,.docx"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
                 <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <input
