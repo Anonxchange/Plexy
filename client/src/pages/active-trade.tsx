@@ -25,6 +25,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { uploadToR2 } from "@/lib/r2-storage";
+import { createMessageNotification } from "@/lib/notifications-api";
+import { notificationSounds } from "@/lib/notification-sounds";
 
 interface Trade {
   id: string;
@@ -126,7 +128,12 @@ export default function ActiveTrade() {
           filter: `trade_id=eq.${tradeId}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as TradeMessage]);
+          const newMessage = payload.new as TradeMessage;
+          // Play sound only if message is from counterparty
+          if (newMessage.sender_id !== currentUserProfileId) {
+            notificationSounds.play('message_received');
+          }
+          setMessages((prev) => [...prev, newMessage]);
         }
       )
       .subscribe();
@@ -154,6 +161,11 @@ export default function ActiveTrade() {
       // Auto-cancel trade when timer expires ONLY if not paid
       if (remainingSeconds === 0 && trade.status === "pending" && !isPaid && !trade.buyer_paid_at) {
         handleAutoCancelTrade();
+      }
+
+      // Play warning sound when 2 minutes remaining
+      if (remainingSeconds === 120 && trade.status === "pending" && !isPaid) {
+        notificationSounds.play('time_warning');
       }
     };
 
@@ -235,6 +247,11 @@ export default function ActiveTrade() {
 
       setTrade(fullTradeData);
       setIsPaid(!!tradeData.buyer_paid_at);
+
+      // Play sound when trade first loads (only once)
+      if (!loading && tradeData.status === 'pending' && !tradeData.buyer_paid_at) {
+        notificationSounds.play('trade_started');
+      }
     } catch (error) {
       console.error("Error fetching trade:", error);
       toast({
@@ -282,6 +299,7 @@ export default function ActiveTrade() {
       if (error) throw error;
 
       setIsPaid(true);
+      notificationSounds.play('message_received');
       toast({
         title: "Success",
         description: "Payment marked as sent.",
@@ -316,6 +334,7 @@ export default function ActiveTrade() {
 
       if (error) throw error;
 
+      notificationSounds.play('trade_cancelled');
       toast({
         title: "Trade Cancelled",
         description: "The trade has been cancelled",
@@ -346,6 +365,7 @@ export default function ActiveTrade() {
 
       if (error) throw error;
 
+      notificationSounds.play('trade_completed');
       toast({
         title: "Success",
         description: "Crypto released to buyer",
@@ -375,6 +395,7 @@ export default function ActiveTrade() {
 
       if (error) throw error;
 
+      notificationSounds.play('trade_cancelled');
       fetchTradeData();
     } catch (error) {
       console.error("Error auto-cancelling trade:", error);
@@ -471,6 +492,48 @@ export default function ActiveTrade() {
         .single();
 
       if (error) throw error;
+
+      // Create notification for the counterparty
+      const recipientId = isUserBuyer ? trade.seller_id : trade.buyer_id;
+
+      // Get sender's profile data
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('username, avatar_url, avatar_type')
+        .eq('id', currentUserProfileId)
+        .single();
+
+      const senderName = senderProfile?.username || user.user_metadata?.username || user.email?.split('@')[0] || 'User';
+      let senderAvatar = senderProfile?.avatar_url || null;
+
+      // If no custom avatar, use avatar type
+      if (!senderAvatar && senderProfile?.avatar_type) {
+        const avatarTypes = [
+          { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
+          { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
+          { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
+          { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
+          { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
+          { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
+          { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
+          { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
+        ];
+        const selectedAvatar = avatarTypes.find(a => a.id === senderProfile.avatar_type);
+        if (selectedAvatar) {
+          senderAvatar = selectedAvatar.image;
+        }
+      }
+
+      await createMessageNotification(
+        recipientId,
+        currentUserProfileId,
+        senderName,
+        senderAvatar,
+        messageText,
+        tradeId,
+        trade.status,
+        counterparty?.username ? 'Nigeria' : undefined // Assuming 'Nigeria' is a placeholder for country
+      );
 
       setMessages((prev) =>
         prev.map((msg) => (msg.id === optimisticMessage.id ? data : msg))
@@ -712,7 +775,7 @@ export default function ActiveTrade() {
                       </div>
                     );
                   })}</div>
-                
+
                 {/* Cancelled Message */}
                 <div className="bg-destructive/10 border border-destructive/20 p-3 sm:p-4 rounded-lg">
                   <div className="text-sm sm:text-base text-destructive">
