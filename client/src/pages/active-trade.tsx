@@ -35,12 +35,11 @@ interface Trade {
   status: "pending" | "payment_sent" | "completed" | "disputed" | "cancelled" | "expired";
   escrow_id: string | null;
   payment_deadline: string | null;
-  payment_proof_url: string | null;
   buyer_paid_at: string | null;
   seller_released_at: string | null;
   created_at: string;
-  completed_at: string | null;
   expires_at: string | null;
+  completed_at: string | null;
   time_limit_minutes?: number;
   offer_terms?: string;
   buyer_profile?: {
@@ -55,6 +54,14 @@ interface Trade {
     positive_ratings: number;
     negative_ratings: number;
   };
+}
+
+interface TradeMessage {
+  id: string;
+  trade_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
 }
 
 export default function ActiveTrade() {
@@ -74,6 +81,8 @@ export default function ActiveTrade() {
   const [newMessage, setNewMessage] = useState("");
   const [cancelReason, setCancelReason] = useState("");
   const [confirmNotPaid, setConfirmNotPaid] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [messages, setMessages] = useState<TradeMessage[]>([]);
 
   const supabase = createClient();
 
@@ -89,8 +98,33 @@ export default function ActiveTrade() {
   useEffect(() => {
     if (tradeId && currentUserProfileId) {
       fetchTradeData();
+      fetchMessages();
     }
   }, [tradeId, currentUserProfileId]);
+
+  useEffect(() => {
+    if (!tradeId) return;
+
+    const channel = supabase
+      .channel(`trade-messages-${tradeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'trade_messages',
+          filter: `trade_id=eq.${tradeId}`,
+        },
+        (payload) => {
+          setMessages((prev) => [...prev, payload.new as TradeMessage]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tradeId]);
 
   useEffect(() => {
     if (!trade?.created_at) return;
@@ -136,11 +170,28 @@ export default function ActiveTrade() {
     }
   };
 
+  const fetchMessages = async () => {
+    if (!tradeId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("trade_messages")
+        .select("*")
+        .eq("trade_id", tradeId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      setMessages(data || []);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    }
+  };
+
   const fetchTradeData = async () => {
     try {
       const { data: tradeData, error: tradeError } = await supabase
         .from("p2p_trades")
-        .select("*")
+        .select("id, offer_id, buyer_id, seller_id, crypto_symbol, crypto_amount, fiat_currency, fiat_amount, price, payment_method, status, escrow_id, payment_deadline, buyer_paid_at, seller_released_at, created_at, expires_at, completed_at")
         .eq("id", tradeId)
         .single();
 
@@ -307,8 +358,7 @@ export default function ActiveTrade() {
       const { error } = await supabase
         .from("p2p_trades")
         .update({ 
-          status: "cancelled",
-          completed_at: new Date().toISOString()
+          status: "cancelled"
         })
         .eq("id", tradeId);
 
@@ -317,6 +367,59 @@ export default function ActiveTrade() {
       fetchTradeData();
     } catch (error) {
       console.error("Error auto-cancelling trade:", error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !tradeId || !currentUserProfileId) return;
+
+    const messageText = newMessage.trim();
+    const optimisticMessage: TradeMessage = {
+      id: `temp-${Date.now()}`,
+      trade_id: tradeId,
+      sender_id: currentUserProfileId,
+      content: messageText,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setNewMessage("");
+    setIsSendingMessage(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("trade_messages")
+        .insert({
+          trade_id: tradeId,
+          sender_id: currentUserProfileId,
+          content: messageText,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === optimisticMessage.id ? data : msg))
+      );
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticMessage.id));
+      setNewMessage(messageText);
+      toast({
+        title: "Failed to send",
+        description: "Could not send your message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -419,8 +522,8 @@ export default function ActiveTrade() {
           <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
             {trade.status === "cancelled" ? (
               <>
-                {/* Trade Instructions - Show for Buyer even when cancelled */}
-                {!isUserBuyer && (
+                {/* Trade Instructions - Show for Both Buyer and Seller even when cancelled */}
+                {!isUserBuyer ? (
                   <div className="bg-orange-500/10 border border-orange-500/20 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
                     <div className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">
                       {counterparty?.username} was selling you <span className="font-bold">{trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}</span>
@@ -432,6 +535,20 @@ export default function ActiveTrade() {
                       <li>4. (It really helps if you upload a screenshot or PDF as a receipt of payment too)</li>
                       <li>5. Then wait for {counterparty?.username} to confirm they have received payment</li>
                       <li>6. When they do, they will release your {trade.crypto_symbol} and the trade will be complete</li>
+                    </ol>
+                  </div>
+                ) : (
+                  <div className="bg-blue-500/10 border border-blue-500/20 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
+                    <div className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">
+                      You were selling <span className="font-bold">{trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}</span> to {counterparty?.username}
+                    </div>
+                    <ol className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                      <li>1. Share your payment details in the chat below for {trade.payment_method}</li>
+                      <li>2. Wait for {counterparty?.username} to send you <span className="font-bold">{trade.fiat_amount.toLocaleString()} {trade.fiat_currency}</span></li>
+                      <li>3. They will mark the trade as "paid" once they have sent the money</li>
+                      <li>4. Verify that you have received the payment in your account</li>
+                      <li>5. Once confirmed, click "Release Crypto" to complete the trade</li>
+                      <li>6. The {trade.crypto_symbol} will then be transferred to {counterparty?.username}'s wallet</li>
                     </ol>
                   </div>
                 )}
@@ -449,21 +566,48 @@ export default function ActiveTrade() {
                   </div>
                 )}
 
+                <div className="text-xs text-muted-foreground text-center mb-4">
+                  TRADE CANCELLED - {new Date(trade.created_at).toLocaleString().toUpperCase()}
+                </div>
+
+                {/* Chat Messages */}
+                <div className="space-y-2 mb-4">
+                  {messages.map((message) => {
+                    const isOwnMessage = message.sender_id === currentUserProfileId;
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            isOwnMessage
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {new Date(message.created_at).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
                 {/* Cancelled Message */}
                 <div className="bg-destructive/10 border border-destructive/20 p-3 sm:p-4 rounded-lg">
                   <div className="text-sm sm:text-base text-destructive">
                     This trade was canceled and {trade.crypto_symbol} is no longer reserved. To continue, ask your trade partner to reopen this trade, and make sure {trade.crypto_symbol} is reserved, before you make the payment.
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground text-center">
-                  {new Date(trade.completed_at || trade.created_at).toLocaleString().toUpperCase()}
-                </div>
               </>
             ) : (
               <>
-                {/* Trade Instructions - Show for Buyer (the one making payment) */}
-                {!isUserBuyer && (
-                  <div className="bg-orange-500/10 border border-orange-500/20 p-3 sm:p-4 rounded-lg">
+                {/* Trade Instructions - Show for Both Buyer and Seller */}
+                {!isUserBuyer ? (
+                  <div className="bg-orange-500/10 border border-orange-500/20 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
                     <div className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">
                       {counterparty?.username} is selling you <span className="font-bold">{trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}</span>
                     </div>
@@ -476,11 +620,25 @@ export default function ActiveTrade() {
                       <li>6. When they do, they will release your {trade.crypto_symbol} and the trade will be complete</li>
                     </ol>
                   </div>
+                ) : (
+                  <div className="bg-blue-500/10 border border-blue-500/20 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
+                    <div className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">
+                      You are selling <span className="font-bold">{trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}</span> to {counterparty?.username}
+                    </div>
+                    <ol className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                      <li>1. Share your payment details in the chat below for {trade.payment_method}</li>
+                      <li>2. Wait for {counterparty?.username} to send you <span className="font-bold">{trade.fiat_amount.toLocaleString()} {trade.fiat_currency}</span></li>
+                      <li>3. They will mark the trade as "paid" once they have sent the money</li>
+                      <li>4. Verify that you have received the payment in your account</li>
+                      <li>5. Once confirmed, click "Release Crypto" to complete the trade</li>
+                      <li>6. The {trade.crypto_symbol} will then be transferred to {counterparty?.username}'s wallet</li>
+                    </ol>
+                  </div>
                 )}
 
                 {/* Trade Partner Offer Terms - Show after instructions */}
                 {trade.offer_terms && (
-                  <div className="bg-card border p-3 sm:p-4 rounded-lg">
+                  <div className="bg-card border p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
                     <div className="flex items-start gap-2 mb-2 sm:mb-3">
                       <Info className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0 mt-0.5 sm:mt-1" />
                       <div className="font-semibold text-sm sm:text-base">Offer Terms from {counterparty?.username}:</div>
@@ -491,8 +649,34 @@ export default function ActiveTrade() {
                   </div>
                 )}
 
-                <div className="text-xs text-muted-foreground text-center">
+                <div className="text-xs text-muted-foreground text-center mb-4">
                   {new Date(trade.created_at).toLocaleString().toUpperCase()}
+                </div>
+
+                {/* Chat Messages */}
+                <div className="space-y-2 mb-4">
+                  {messages.map((message) => {
+                    const isOwnMessage = message.sender_id === currentUserProfileId;
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            isOwnMessage
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {new Date(message.created_at).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -568,15 +752,9 @@ export default function ActiveTrade() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
-                    <div>
-                      <div className="text-xs sm:text-sm text-muted-foreground mb-1">STARTED</div>
-                      <div className="text-xs sm:text-sm font-medium">{new Date(trade.created_at).toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs sm:text-sm text-muted-foreground mb-1">CANCELLED</div>
-                      <div className="text-xs sm:text-sm font-medium">{new Date(trade.completed_at || trade.created_at).toLocaleString()}</div>
-                    </div>
+                  <div className="mb-3 sm:mb-4">
+                    <div className="text-xs sm:text-sm text-muted-foreground mb-1">STARTED</div>
+                    <div className="text-xs sm:text-sm font-medium">{new Date(trade.created_at).toLocaleString()}</div>
                   </div>
 
                   <Button variant="outline" className="w-full mb-3 text-xs sm:text-sm h-9 sm:h-10">
@@ -887,9 +1065,16 @@ export default function ActiveTrade() {
                 placeholder="Write a message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isSendingMessage}
                 className="flex-1 bg-secondary rounded-lg px-3 sm:px-4 py-2 sm:py-3 placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm sm:text-base min-w-0"
               />
-              <Button size="icon" className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0">
+              <Button 
+                size="icon" 
+                className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
+                onClick={sendMessage}
+                disabled={isSendingMessage || !newMessage.trim()}
+              >
                 <Send className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </div>
