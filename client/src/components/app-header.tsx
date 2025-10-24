@@ -231,7 +231,7 @@ export function AppHeader() {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0"
+                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0 relative"
                     data-testid="button-profile"
                   >
                     <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
@@ -242,6 +242,13 @@ export function AppHeader() {
                          "JD"}
                       </AvatarFallback>
                     </Avatar>
+                    {unreadCount > 0 && (
+                      <Badge 
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 hover:bg-red-600 border-2 border-background"
+                      >
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Badge>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[280px] p-0">
@@ -260,6 +267,20 @@ export function AppHeader() {
                 <div>
                   <div className="font-medium">Profile</div>
                   <div className="text-xs text-muted-foreground">Your public profile</div>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/notifications')} className="cursor-pointer">
+                <Bell className="mr-2 h-4 w-4" />
+                <div className="flex flex-1 items-center justify-between">
+                  <div>
+                    <div className="font-medium">Notifications</div>
+                    <div className="text-xs text-muted-foreground">Messages and updates</div>
+                  </div>
+                  {unreadCount > 0 && (
+                    <Badge className="ml-2 h-5 px-2 bg-red-500 hover:bg-red-600 text-xs">
+                      {unreadCount}
+                    </Badge>
+                  )}
                 </div>
               </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/trade-history")}>
