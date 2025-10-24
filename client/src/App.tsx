@@ -48,6 +48,7 @@ import PexlyPaySettings from "@/pages/pexly-pay-settings";
 import PexlyPayPaymentLimits from "@/pages/pexly-pay-payment-limits";
 import PexlyPayPasswordFree from "@/pages/pexly-pay-password-free";
 import PexlyPayHelp from "@/pages/pexly-pay-help";
+import NotificationsPage from "@/pages/notifications";
 
 function Router() {
   return (
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/account-settings" component={AccountSettingsPage} />
       <Route path="/medals" component={MedalsPage} />
       <Route path="/fees" component={Fees} />
+      <Route path="/notifications" component={NotificationsPage} />
       <Route path="*" component={NotFound} />
     </Switch>
   );
@@ -98,7 +100,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/signin", "/signup"].includes(location) || location.startsWith("/trade/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup"].includes(location) || location.startsWith("/trade/");
   const hideHeaderAndNav = ["/signin", "/signup"].includes(location);
 
   return (
