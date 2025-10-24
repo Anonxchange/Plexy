@@ -138,7 +138,7 @@ export default function ActiveTrade() {
 
   useEffect(() => {
     if (!trade?.created_at) return;
-    
+
     if (trade.status === "completed" || trade.status === "cancelled") {
       return;
     }
@@ -255,11 +255,11 @@ export default function ActiveTrade() {
 
   const formatTradeTime = () => {
     if (!trade?.created_at) return "00:00";
-    
+
     if (trade.status === "completed" || trade.status === "cancelled") {
       return "00:00";
     }
-    
+
     const referenceTime = trade.buyer_paid_at || trade.created_at;
     const startTime = new Date(referenceTime).getTime();
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
@@ -401,7 +401,7 @@ export default function ActiveTrade() {
 
     try {
       const uploadResult = await uploadToR2(file, 'trade-attachments', user.id);
-      
+
       if (!uploadResult.success || !uploadResult.url) {
         throw new Error(uploadResult.error || 'Upload failed');
       }
@@ -647,6 +647,8 @@ export default function ActiveTrade() {
                 <div className="space-y-2 mb-4">
                   {messages.map((message) => {
                     const isOwnMessage = message.sender_id === currentUserProfileId;
+                    const hasAttachment = message.attachment_url && message.attachment_url.trim() !== '';
+
                     return (
                       <div
                         key={message.id}
@@ -659,20 +661,30 @@ export default function ActiveTrade() {
                               : 'bg-muted'
                           }`}
                         >
-                          {message.attachment_url && (
+                          {hasAttachment && (
                             <div className="mb-2">
                               {message.attachment_type === 'image' ? (
-                                <img 
-                                  src={message.attachment_url} 
-                                  alt={message.attachment_filename || 'Uploaded image'} 
-                                  className="rounded max-w-full h-auto cursor-pointer"
-                                  onClick={() => window.open(message.attachment_url!, '_blank')}
-                                />
+                                <div className="relative">
+                                  <img 
+                                    src={message.attachment_url} 
+                                    alt={message.attachment_filename || 'Uploaded image'} 
+                                    className="rounded max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => window.open(message.attachment_url!, '_blank')}
+                                    onError={(e) => {
+                                      console.error('Image failed to load:', message.attachment_url);
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                    loading="lazy"
+                                  />
+                                </div>
                               ) : message.attachment_type === 'video' ? (
                                 <video 
                                   src={message.attachment_url} 
                                   controls 
                                   className="rounded max-w-full h-auto"
+                                  onError={(e) => {
+                                    console.error('Video failed to load:', message.attachment_url);
+                                  }}
                                 />
                               ) : (
                                 <a 
@@ -690,16 +702,17 @@ export default function ActiveTrade() {
                               )}
                             </div>
                           )}
-                          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                          {message.content && message.content.trim() !== '' && (
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                          )}
                           <p className="text-xs opacity-70 mt-1">
                             {new Date(message.created_at).toLocaleTimeString()}
                           </p>
                         </div>
                       </div>
                     );
-                  })}
-                </div>
-
+                  })}</div>
+                
                 {/* Cancelled Message */}
                 <div className="bg-destructive/10 border border-destructive/20 p-3 sm:p-4 rounded-lg">
                   <div className="text-sm sm:text-base text-destructive">
@@ -761,6 +774,8 @@ export default function ActiveTrade() {
                 <div className="space-y-2 mb-4">
                   {messages.map((message) => {
                     const isOwnMessage = message.sender_id === currentUserProfileId;
+                    const hasAttachment = message.attachment_url && message.attachment_url.trim() !== '';
+
                     return (
                       <div
                         key={message.id}
@@ -773,20 +788,30 @@ export default function ActiveTrade() {
                               : 'bg-muted'
                           }`}
                         >
-                          {message.attachment_url && (
+                          {hasAttachment && (
                             <div className="mb-2">
                               {message.attachment_type === 'image' ? (
-                                <img 
-                                  src={message.attachment_url} 
-                                  alt={message.attachment_filename || 'Uploaded image'} 
-                                  className="rounded max-w-full h-auto cursor-pointer"
-                                  onClick={() => window.open(message.attachment_url!, '_blank')}
-                                />
+                                <div className="relative">
+                                  <img 
+                                    src={message.attachment_url} 
+                                    alt={message.attachment_filename || 'Uploaded image'} 
+                                    className="rounded max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => window.open(message.attachment_url!, '_blank')}
+                                    onError={(e) => {
+                                      console.error('Image failed to load:', message.attachment_url);
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                    loading="lazy"
+                                  />
+                                </div>
                               ) : message.attachment_type === 'video' ? (
                                 <video 
                                   src={message.attachment_url} 
                                   controls 
                                   className="rounded max-w-full h-auto"
+                                  onError={(e) => {
+                                    console.error('Video failed to load:', message.attachment_url);
+                                  }}
                                 />
                               ) : (
                                 <a 
@@ -804,15 +829,16 @@ export default function ActiveTrade() {
                               )}
                             </div>
                           )}
-                          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                          {message.content && message.content.trim() !== '' && (
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                          )}
                           <p className="text-xs opacity-70 mt-1">
                             {new Date(message.created_at).toLocaleTimeString()}
                           </p>
                         </div>
                       </div>
                     );
-                  })}
-                </div>
+                  })}</div>
               </>
             )}
           </div>
