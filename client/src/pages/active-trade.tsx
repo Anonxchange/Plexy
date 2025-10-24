@@ -541,7 +541,7 @@ export default function ActiveTrade() {
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
             <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span>{formatTradeTime()}</span>
+            <span>{isPaid ? formatTradeTime() : formatTime(timer)}</span>
           </div>
         </div>
       </div>
