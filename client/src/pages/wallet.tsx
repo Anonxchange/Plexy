@@ -30,7 +30,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
-import { walletClient, type Wallet } from "@/lib/wallet-client";
+import { type Wallet } from "@/lib/wallet-api";
 import { getCryptoPrices, convertToNGN, formatPrice } from "@/lib/crypto-prices";
 import type { CryptoPrice } from "@/lib/crypto-prices";
 import { getVerificationLevel, getVerificationRequirements } from "@shared/verification-levels";
@@ -266,13 +266,23 @@ export default function Wallet() {
   const loadWalletData = async () => {
     if (!user) return;
     try {
-      const response = await walletClient.getWallets();
-      console.log("Wallet API response:", response);
-      // Handle both possible response formats
-      const userWallets = response.wallets || response || [];
-      setWallets(Array.isArray(userWallets) ? userWallets : []);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('crypto_symbol', { ascending: true });
+
+      if (error) {
+        console.error("Error loading wallets:", error);
+        setWallets([]);
+      } else {
+        console.log("Loaded wallets from database:", data);
+        setWallets(data || []);
+      }
     } catch (error) {
       console.error("Error loading wallets:", error);
+      setWallets([]);
     } finally {
       setLoadingWallets(false);
     }
@@ -304,11 +314,15 @@ export default function Wallet() {
   }
 
   const mergedAssets = cryptoAssets.map(asset => {
-    const wallet = wallets.find(w => w.currency === asset.symbol);
+    const wallet = wallets.find(w => w.crypto_symbol === asset.symbol);
     const priceData = cryptoPrices[asset.symbol];
     const balance = wallet?.balance || asset.balance;
     const currentPrice = priceData?.current_price || 0;
     const usdValue = balance * currentPrice;
+    
+    if (balance > 0) {
+      console.log(`Wallet Page - ${asset.symbol}: ${balance} × $${currentPrice} = $${usdValue.toFixed(2)}`);
+    }
     const ngnValue = convertToNGN(usdValue);
 
     // Calculate PnL (using a mock avg cost for now - this should come from trade history)
@@ -334,10 +348,19 @@ export default function Wallet() {
     };
   });
 
-  const totalBalance = mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0);
-  const totalPnL = mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0);
-  const totalPnLPercentage = mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0) > 0
-    ? (totalPnL / mergedAssets.reduce((sum, asset) => sum + (asset.balance * asset.avgCost), 0)) * 100
+  // Calculate total balance in the user's preferred currency (USD by default)
+  const totalBalance = preferredCurrency === 'USD' 
+    ? mergedAssets.reduce((sum, asset) => sum + asset.usdValue, 0)
+    : mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0);
+  
+  // Calculate total PnL in the user's preferred currency
+  const totalPnL = preferredCurrency === 'USD'
+    ? mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0)
+    : mergedAssets.reduce((sum, asset) => sum + (convertToNGN(asset.pnlUsd)), 0);
+  
+  const totalCostBasis = mergedAssets.reduce((sum, asset) => sum + (asset.balance * asset.avgCost), 0);
+  const totalPnLPercentage = totalCostBasis > 0
+    ? (mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0) / totalCostBasis) * 100
     : 0;
 
   const portfolioTrend = totalPnLPercentage > 0 ? 'up' : totalPnLPercentage < 0 ? 'down' : 'neutral';
