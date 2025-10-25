@@ -40,6 +40,7 @@ export function AppHeader() {
   const { toast } = useToast();
   const [userName, setUserName] = useState<string>('');
   const [balance, setBalance] = useState<number>(0);
+  const [preferredCurrency, setPreferredCurrency] = useState<string>('USD');
 
   useEffect(() => {
     if (!user) return;
@@ -117,61 +118,96 @@ export function AppHeader() {
     if (user) {
       fetchProfileAvatar();
       fetchUserData();
+
+      // Subscribe to wallet changes for real-time balance updates
+      const channel = supabase
+        .channel('wallet-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'wallets',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            console.log('Wallet changed, refreshing balance...');
+            fetchUserData();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 
   const fetchUserData = async () => {
     try {
-      // Fetch user profile for username
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('username')
-        .eq('id', user?.id)
-        .single();
+      // Fetch profile and wallets in parallel
+      const [profileResult, walletsResult] = await Promise.all([
+        supabase
+          .from('user_profiles')
+          .select('username, preferred_currency')
+          .eq('id', user?.id)
+          .single(),
+        supabase
+          .from('wallets')
+          .select('crypto_symbol, balance')
+          .eq('user_id', user?.id)
+      ]);
 
-      if (!profileError && profileData?.username) {
-        setUserName(profileData.username);
+      // Set username
+      if (!profileResult.error && profileResult.data?.username) {
+        setUserName(profileResult.data.username);
       } else {
-        // Fallback to email username
         setUserName(user?.email?.split('@')[0] || 'User');
       }
 
-      // Fetch all wallets and calculate total balance in USD using real-time prices
-      const { data: walletsData, error: walletError } = await supabase
-        .from('wallets')
-        .select('crypto_symbol, balance')
-        .eq('user_id', user?.id);
+      // Set preferred currency
+      const currency = profileResult.data?.preferred_currency?.toUpperCase() || 'USD';
+      setPreferredCurrency(currency);
 
-      if (!walletError && walletsData && walletsData.length > 0) {
-        // Get unique crypto symbols that have balance > 0
-        const symbolsWithBalance = walletsData
-          .filter(w => w.balance > 0)
-          .map(w => w.crypto_symbol);
+      // Calculate balance if wallets exist
+      if (!walletsResult.error && walletsResult.data && walletsResult.data.length > 0) {
+        const walletsData = walletsResult.data;
         
-        if (symbolsWithBalance.length === 0) {
+        // Filter wallets with balance > 0 to reduce API calls
+        const walletsWithBalance = walletsData.filter(w => w.balance > 0);
+        
+        if (walletsWithBalance.length === 0) {
           setBalance(0);
           return;
         }
-
-        // Fetch real-time prices for all crypto assets
-        const prices = await getCryptoPrices(symbolsWithBalance);
         
-        // Calculate total balance in USD
-        const totalBalance = walletsData.reduce((sum, wallet) => {
+        // Get unique crypto symbols
+        const allSymbols = walletsWithBalance.map(w => w.crypto_symbol);
+        
+        // Fetch prices (this is already parallel internally)
+        const prices = await getCryptoPrices(allSymbols);
+        
+        // Calculate total in USD
+        const totalUSD = walletsWithBalance.reduce((sum, wallet) => {
           const priceData = prices[wallet.crypto_symbol];
           const currentPrice = priceData?.current_price || 0;
-          const walletValue = wallet.balance * currentPrice;
-          console.log(`Header Balance - ${wallet.crypto_symbol}: ${wallet.balance} × $${currentPrice} = $${walletValue.toFixed(2)}`);
-          return sum + walletValue;
+          return sum + (wallet.balance * currentPrice);
         }, 0);
         
-        console.log(`Header Total Balance: $${totalBalance.toFixed(2)} USD`);
-        setBalance(totalBalance);
+        // Convert to preferred currency if needed
+        if (currency !== 'USD') {
+          const { convertCurrency } = await import('@/lib/crypto-prices');
+          const finalBalance = await convertCurrency(totalUSD, currency);
+          setBalance(finalBalance);
+        } else {
+          setBalance(totalUSD);
+        }
       } else {
         setBalance(0);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setBalance(0);
     }
   };
 
@@ -237,7 +273,7 @@ export function AppHeader() {
                 </div>
                 <div className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
                   <span className="truncate">
-                    {balanceVisible ? `${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : "****"}
+                    {balanceVisible ? `${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"}
                   </span>
                   <button 
                     className="inline-flex items-center justify-center h-4 w-4 hover:opacity-70 transition-opacity flex-shrink-0"
@@ -255,7 +291,7 @@ export function AppHeader() {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0 relative"
+                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0"
                     data-testid="button-profile"
                   >
                     <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
@@ -266,13 +302,6 @@ export function AppHeader() {
                          "JD"}
                       </AvatarFallback>
                     </Avatar>
-                    {unreadCount > 0 && (
-                      <Badge 
-                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 hover:bg-red-600 border-2 border-background"
-                      >
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </Badge>
-                    )}
                   </Button>
                 </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[280px] p-0">
