@@ -4,15 +4,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowLeftRight, ArrowUp, ArrowDown, History, Share2, X, Copy, Download, Mail, ArrowDownToLine, ArrowUpFromLine, TrendingUp } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { getCryptoPrices } from "@/lib/crypto-prices";
 import { createClient } from "@/lib/supabase";
+import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { useToast } from "@/hooks/use-toast";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { QRCodeSVG } from "qrcode.react";
-import { useToast } from "@/hooks/use-toast";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 const cryptoData: Record<string, { name: string; icon: string; color: string; iconUrl?: string }> = {
   BTC: { name: "Bitcoin", icon: "₿", color: "text-orange-500", iconUrl: cryptoIconUrls.BTC },
@@ -42,6 +42,7 @@ export default function AssetDetail() {
   const [avgCost, setAvgCost] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [preferredCurrency, setPreferredCurrency] = useState('USD'); // State for preferred currency
   const [tradingPairs, setTradingPairs] = useState<any>({
     usdt: { price: 0, change: 0 },
     usdc: { price: 0, change: 0 },
@@ -59,12 +60,61 @@ export default function AssetDetail() {
     loadAssetData();
     generateChartData();
 
+    // Subscribe to real-time transaction updates
+    const channel = supabase
+      .channel('wallet-transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'wallet_transactions'
+        },
+        (payload) => {
+          console.log('New transaction detected:', payload);
+          // Reload transactions when new deposit is detected
+          loadTransactions();
+
+          // Show toast notification
+          toast({
+            title: 'New Deposit Received!',
+            description: `${payload.new.amount} ${payload.new.crypto_symbol} has been credited to your wallet`,
+          });
+        }
+      )
+      .subscribe();
+
     // Refresh prices every 30 seconds
     const priceInterval = setInterval(() => {
       loadAssetData();
     }, 30000);
 
-    return () => clearInterval(priceInterval);
+    // Subscribe to wallet changes for real-time balance updates
+    const walletChannel = supabase
+      .channel('wallet-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'wallets',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          // Only reload if the changed wallet matches current symbol
+          if (payload.new && (payload.new as any).crypto_symbol === symbol) {
+            console.log('Wallet changed, refreshing balance...');
+            loadAssetData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(priceInterval);
+      supabase.removeChannel(channel);
+      supabase.removeChannel(walletChannel);
+    };
   }, [user, symbol]);
 
   const generateChartData = () => {
@@ -81,9 +131,19 @@ export default function AssetDetail() {
 
   const loadAssetData = async () => {
     try {
-      // Fetch wallet balance directly from database
+      // Fetch wallet balance and user preferences directly from database
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+
+      // Fetch user preferred currency
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('preferred_currency')
+        .eq('id', session.user.id)
+        .single();
+
+      const currency = profileData?.preferred_currency?.toUpperCase() || 'USD';
+      setPreferredCurrency(currency);
 
       const { data: walletData, error: walletError } = await supabase
         .from('wallets')
@@ -98,45 +158,50 @@ export default function AssetDetail() {
       // Fetch real-time crypto prices
       const prices = await getCryptoPrices([symbol]);
       const priceData = prices[symbol];
-      
+
       if (priceData) {
-        setPrice(priceData.current_price);
+        let displayPrice = priceData.current_price;
+
+        // Convert price to preferred currency if not USD
+        if (currency !== 'USD') {
+          const { convertCurrency } = await import('@/lib/crypto-prices');
+          displayPrice = await convertCurrency(priceData.current_price, currency);
+        }
+
+        setPrice(displayPrice);
         setPriceChange24h(priceData.price_change_percentage_24h);
 
-        // Set trading pairs with real prices
+        // Set trading pairs with converted prices
         setTradingPairs({
           usdt: { 
-            price: priceData.current_price, 
+            price: displayPrice, 
             change: priceData.price_change_percentage_24h 
           },
           usdc: { 
-            price: priceData.current_price * 0.9995, 
+            price: displayPrice * 0.9995, 
             change: priceData.price_change_percentage_24h 
           },
           usd: { 
-            price: priceData.current_price, 
+            price: displayPrice, 
             change: priceData.price_change_percentage_24h 
           },
           eur: { 
-            price: priceData.current_price * 0.92, 
+            price: displayPrice * 0.92, 
             change: priceData.price_change_percentage_24h 
           }
         });
 
-        setAvgCost(priceData.current_price * 0.95);
-      } else {
-        // Fallback prices if API fails
-        const fallbackPrice = symbol === 'BTC' ? 100000 : symbol === 'ETH' ? 3500 : 100;
-        setPrice(fallbackPrice);
-        setAvgCost(fallbackPrice * 0.95);
+        // Calculate average cost (mock - should come from trade history)
+        setAvgCost(displayPrice * 0.95);
       }
     } catch (error) {
-      console.error("Error loading asset data:", error);
-      // Set fallback values on error
-      const fallbackPrice = symbol === 'BTC' ? 100000 : symbol === 'ETH' ? 3500 : 100;
-      setPrice(fallbackPrice);
-      setAvgCost(fallbackPrice * 0.95);
+      console.error('Error loading asset data:', error);
     }
+  };
+
+  const loadTransactions = async () => {
+    console.log("Reloading transactions and asset data...");
+    await loadAssetData();
   };
 
   const usdValue = balance * price;
@@ -221,7 +286,9 @@ export default function AssetDetail() {
         <div className="mb-6">
           <div className="text-sm text-muted-foreground mb-2">Equity</div>
           <div className="text-3xl sm:text-4xl font-bold mb-1">{balance.toFixed(8)}</div>
-          <div className="text-sm text-muted-foreground">≈ {usdValue.toFixed(2)} USD</div>
+          <div className="text-sm text-muted-foreground">
+            ≈ {preferredCurrency === 'USD' ? '$' : ''}{(balance * price).toFixed(2)} {preferredCurrency}
+          </div>
         </div>
 
         {/* PnL Stats */}
@@ -251,7 +318,7 @@ export default function AssetDetail() {
           <Card>
             <CardContent className="p-3 sm:p-4">
               <div className="text-xs sm:text-sm text-muted-foreground mb-1">Index Price (USD)</div>
-              <div className="text-lg sm:text-xl font-semibold">{price.toLocaleString()}</div>
+              <div className="text-lg sm:text-xl font-semibold">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {preferredCurrency}</div>
             </CardContent>
           </Card>
         </div>
@@ -312,7 +379,7 @@ export default function AssetDetail() {
                   </div>
                   <div>
                     <div className="font-semibold">Unified Trading Account</div>
-                    <div className="text-sm text-muted-foreground">≈ {usdValue.toFixed(2)} USD</div>
+                    <div className="text-sm text-muted-foreground">≈ {preferredCurrency === 'USD' ? '$' : ''}{(balance * price).toFixed(2)} {preferredCurrency}</div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -494,7 +561,7 @@ export default function AssetDetail() {
                   <Card>
                     <CardContent className="p-3 sm:p-4">
                       <div className="text-xs text-muted-foreground mb-1">Current</div>
-                      <div className="text-base sm:text-lg font-bold">${price.toFixed(0)}</div>
+                      <div className="text-base sm:text-lg font-bold">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                       <div className="text-xs text-muted-foreground">per {symbol}</div>
                     </CardContent>
                   </Card>
