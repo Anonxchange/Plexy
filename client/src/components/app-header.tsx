@@ -18,6 +18,7 @@ import { AppSidebar } from "./app-sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
+import { getCryptoPrices } from "@/lib/crypto-prices";
 import { 
   getNotifications, 
   markAsRead, 
@@ -135,16 +136,39 @@ export function AppHeader() {
         setUserName(user?.email?.split('@')[0] || 'User');
       }
 
-      // Fetch wallet balance
-      const { data: walletData, error: walletError } = await supabase
+      // Fetch all wallets and calculate total balance in USD using real-time prices
+      const { data: walletsData, error: walletError } = await supabase
         .from('wallets')
-        .select('balance')
-        .eq('user_id', user?.id)
-        .eq('currency', 'USD')
-        .single();
+        .select('crypto_symbol, balance')
+        .eq('user_id', user?.id);
 
-      if (!walletError && walletData) {
-        setBalance(walletData.balance);
+      if (!walletError && walletsData && walletsData.length > 0) {
+        // Get unique crypto symbols that have balance > 0
+        const symbolsWithBalance = walletsData
+          .filter(w => w.balance > 0)
+          .map(w => w.crypto_symbol);
+        
+        if (symbolsWithBalance.length === 0) {
+          setBalance(0);
+          return;
+        }
+
+        // Fetch real-time prices for all crypto assets
+        const prices = await getCryptoPrices(symbolsWithBalance);
+        
+        // Calculate total balance in USD
+        const totalBalance = walletsData.reduce((sum, wallet) => {
+          const priceData = prices[wallet.crypto_symbol];
+          const currentPrice = priceData?.current_price || 0;
+          const walletValue = wallet.balance * currentPrice;
+          console.log(`Header Balance - ${wallet.crypto_symbol}: ${wallet.balance} × $${currentPrice} = $${walletValue.toFixed(2)}`);
+          return sum + walletValue;
+        }, 0);
+        
+        console.log(`Header Total Balance: $${totalBalance.toFixed(2)} USD`);
+        setBalance(totalBalance);
+      } else {
+        setBalance(0);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
