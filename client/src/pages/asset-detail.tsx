@@ -4,8 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowLeftRight, ArrowUp, ArrowDown, History, Share2, X, Copy, Download, Mail, ArrowDownToLine, ArrowUpFromLine, TrendingUp } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { walletClient } from "@/lib/wallet-client";
 import { getCryptoPrices } from "@/lib/crypto-prices";
+import { createClient } from "@/lib/supabase";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -34,6 +34,7 @@ export default function AssetDetail() {
   const [, setLocation] = useLocation();
   const symbol = params?.symbol || "";
   const { toast } = useToast();
+  const supabase = createClient();
 
   const [balance, setBalance] = useState(0);
   const [price, setPrice] = useState(0);
@@ -80,11 +81,18 @@ export default function AssetDetail() {
 
   const loadAssetData = async () => {
     try {
-      // Fetch wallet balance
-      const walletResponse = await walletClient.getWallets();
-      const wallets = walletResponse?.wallets || [];
-      const wallet = wallets.find((w: any) => w.currency === symbol);
-      const assetBalance = wallet?.balance || 0;
+      // Fetch wallet balance directly from database
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', session.user.id)
+        .eq('crypto_symbol', symbol)
+        .single();
+
+      const assetBalance = walletData?.balance || 0;
       setBalance(assetBalance);
 
       // Fetch real-time crypto prices
