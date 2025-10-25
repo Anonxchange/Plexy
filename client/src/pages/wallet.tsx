@@ -37,6 +37,7 @@ import { getVerificationLevel, getVerificationRequirements } from "@shared/verif
 import { createClient } from "@/lib/supabase";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { Sparkline } from "@/components/ui/sparkline";
+import { useToast } from "@/hooks/use-toast";
 
 const cryptoAssets = [
   { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.BTC, color: "text-orange-500", avgCost: 0 },
@@ -95,7 +96,7 @@ const generateSparklineData = (baseValue: number, trend: 'up' | 'down' | 'neutra
   let current = baseValue;
   const volatility = 0.03;
   const trendStrength = trend === 'up' ? 0.015 : trend === 'down' ? -0.015 : 0;
-  
+
   for (let i = 0; i < points; i++) {
     const random = (Math.random() - 0.5) * volatility;
     current = current * (1 + random + trendStrength);
@@ -206,6 +207,7 @@ export default function Wallet() {
   const [lifetimeTradeVolume, setLifetimeTradeVolume] = useState<number>(0);
   const [lifetimeSendVolume, setLifetimeSendVolume] = useState<number>(0);
   const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!user) {
@@ -215,9 +217,57 @@ export default function Wallet() {
       loadWalletData();
       loadCryptoPrices();
       const priceInterval = setInterval(loadCryptoPrices, 60000);
-      return () => clearInterval(priceInterval);
+
+      const supabase = createClient();
+      // Subscribe to wallet changes for real-time balance updates
+      const walletChannel = supabase
+        .channel('wallet-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'wallets',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            console.log('Wallet changed, refreshing balance...');
+            loadWalletData();
+          }
+        )
+        .subscribe();
+
+      // Subscribe to real-time transaction updates
+      const transactionChannel = supabase
+        .channel('wallet-transactions-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'wallet_transactions',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('New transaction detected:', payload);
+            loadWalletData();
+
+            // Show toast notification
+            toast({
+              title: 'New Transaction!',
+              description: `${payload.new.amount} ${payload.new.crypto_symbol} transaction detected`,
+            });
+          }
+        )
+        .subscribe();
+
+      return () => {
+        clearInterval(priceInterval);
+        supabase.removeChannel(walletChannel);
+        supabase.removeChannel(transactionChannel);
+      };
     }
-  }, [user, setLocation]);
+  }, [user, hideZeroBalance]);
 
   const loadUserProfile = async () => {
     if (!user) return;
@@ -319,7 +369,7 @@ export default function Wallet() {
     const balance = wallet?.balance || asset.balance;
     const currentPrice = priceData?.current_price || 0;
     const usdValue = balance * currentPrice;
-    
+
     if (balance > 0) {
       console.log(`Wallet Page - ${asset.symbol}: ${balance} × $${currentPrice} = $${usdValue.toFixed(2)}`);
     }
@@ -352,12 +402,12 @@ export default function Wallet() {
   const totalBalance = preferredCurrency === 'USD' 
     ? mergedAssets.reduce((sum, asset) => sum + asset.usdValue, 0)
     : mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0);
-  
+
   // Calculate total PnL in the user's preferred currency
   const totalPnL = preferredCurrency === 'USD'
     ? mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0)
     : mergedAssets.reduce((sum, asset) => sum + (convertToNGN(asset.pnlUsd)), 0);
-  
+
   const totalCostBasis = mergedAssets.reduce((sum, asset) => sum + (asset.balance * asset.avgCost), 0);
   const totalPnLPercentage = totalCostBasis > 0
     ? (mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0) / totalCostBasis) * 100
