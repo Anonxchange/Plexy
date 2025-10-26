@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Sun, Moon } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon, Zap } from "lucide-react";
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
 import { createClient } from "@/lib/supabase";
@@ -154,9 +154,11 @@ export function SignUp() {
       {/* Header */}
       <div className="p-6 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg ${isDark ? 'bg-lime-400' : 'bg-lime-500'}`}></div>
-          <span className={`text-2xl font-semibold ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 300 }}>
-            pexly
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <Zap className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-black'}`}>
+            Pexly
           </span>
         </div>
 
