@@ -14,6 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Link } from "wouter";
 
 const footerSections = [
   {
@@ -34,7 +35,7 @@ const footerSections = [
   },
   {
     title: "Useful Links",
-    links: ["Support", "Bitcoin Calculator", "Market Prices", "Blog"]
+    links: ["Support", { text: "Bitcoin Calculator", href: "/bitcoin-calculator" }, "Market Prices", "Blog"]
   },
   {
     title: "About Pexly",
@@ -118,13 +119,23 @@ export function PexlyFooter() {
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-4 pb-2 space-y-3">
                 {section.links.map((link) => (
-                  <a
-                    key={link}
-                    href="#"
-                    className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                  >
-                    {link}
-                  </a>
+                  <li key={typeof link === 'string' ? link : link.text}>
+                    {typeof link === 'string' ? (
+                      <a href="#" className="hover:text-foreground transition-colors">
+                        {link}
+                      </a>
+                    ) : (
+                      link.href.startsWith('/') ? (
+                        <Link to={link.href} className="hover:text-foreground transition-colors">
+                          {link.text}
+                        </Link>
+                      ) : (
+                        <a href={link.href} className="hover:text-foreground transition-colors">
+                          {link.text}
+                        </a>
+                      )
+                    )}
+                  </li>
                 ))}
               </CollapsibleContent>
             </Collapsible>
