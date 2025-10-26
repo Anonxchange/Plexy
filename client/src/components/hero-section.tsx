@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import heroImage from "@assets/generated_images/Crypto_P2P_trading_hero_641f4218.png";
 import { currencies, cryptoCurrencies } from "@/lib/currencies";
 import { paymentMethods } from "@/lib/payment-methods";
+import { Globe } from "@/components/globe";
 
 export function HeroSection() {
   const [tradeType, setTradeType] = useState("buy");
@@ -47,40 +48,84 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-primary/10">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-      <div className="max-w-6xl mx-auto px-4 lg:px-6 py-20 lg:py-32 relative">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-10">
-            <div className="space-y-6">
-              <div className="inline-block">
-                <span className="px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-semibold">
-                  Trusted by 14M+ users worldwide
-                </span>
-              </div>
-              <h1 className="text-5xl lg:text-7xl font-bold text-foreground leading-tight tracking-tight">
-                The people-powered way to move money
-              </h1>
-              <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed">
-                Trade cryptocurrency with 500+ payment methods across 140 countries. Fast, secure, and reliable P2P marketplace.
-              </p>
+      
+      {/* Animated Globe Background */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] opacity-15 pointer-events-none">
+        <Globe />
+      </div>
+
+      {/* Gradient Orbs */}
+      <div className="absolute top-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16 relative z-10 w-full">
+        <div className="text-center space-y-8 max-w-4xl mx-auto mb-12">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+            <span className="text-sm font-semibold text-primary">Trusted by 14M+ users worldwide</span>
+          </div>
+
+          {/* Main Headline */}
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[1.1] tracking-tight">
+            <span className="block text-foreground">Trade crypto</span>
+            <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
+              your way
+            </span>
+          </h1>
+
+          {/* Subheadline */}
+          <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground max-w-2xl mx-auto">
+            Connect with traders worldwide. 500+ payment methods. Zero hassle.
+          </p>
+
+          {/* Stats */}
+          <div className="flex flex-wrap justify-center gap-8 pt-4">
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl font-bold text-foreground">140+</div>
+              <div className="text-sm text-muted-foreground">Countries</div>
             </div>
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl font-bold text-foreground">500+</div>
+              <div className="text-sm text-muted-foreground">Payment methods</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl font-bold text-foreground">14M+</div>
+              <div className="text-sm text-muted-foreground">Users</div>
+            </div>
+          </div>
+        </div>
 
-            <div className="bg-card border border-card-border rounded-3xl p-8 space-y-4 shadow-2xl backdrop-blur-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">I want to</label>
-                  <Select value={tradeType} onValueChange={setTradeType}>
-                    <SelectTrigger className="h-12" data-testid="select-trade-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="buy">Buy</SelectItem>
-                      <SelectItem value="sell">Sell</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Trade Form Card */}
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
+              {/* Trade Type Tabs */}
+              <div className="flex gap-2 p-1 bg-muted rounded-xl">
+                <button
+                  onClick={() => setTradeType("buy")}
+                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+                    tradeType === "buy"
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Buy Crypto
+                </button>
+                <button
+                  onClick={() => setTradeType("sell")}
+                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+                    tradeType === "sell"
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Sell Crypto
+                </button>
+              </div>
 
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Cryptocurrency</label>
                   <Popover open={openCrypto} onOpenChange={setOpenCrypto}>
@@ -89,7 +134,7 @@ export function HeroSection() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCrypto}
-                        className="h-12 w-full justify-between"
+                        className="h-14 w-full justify-between text-base"
                         data-testid="select-crypto"
                       >
                         {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
@@ -124,16 +169,7 @@ export function HeroSection() {
                     </PopoverContent>
                   </Popover>
                 </div>
-              </div>
 
-              <div className="bg-muted/50 rounded-xl p-4 text-center border border-border/50">
-                <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
-                <div className="text-2xl font-bold tabular-nums text-foreground">
-                  1 {crypto} ≈ ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Currency</label>
                   <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
@@ -142,7 +178,7 @@ export function HeroSection() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCurrency}
-                        className="h-12 w-full justify-between"
+                        className="h-14 w-full justify-between text-base"
                         data-testid="select-currency"
                       >
                         {currency ? currencies.find((c) => c.code === currency)?.flag + " " + currency : "Select currency..."}
@@ -177,22 +213,31 @@ export function HeroSection() {
                     </PopoverContent>
                   </Popover>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">Payment Method</label>
-                  <Popover open={openPayment} onOpenChange={setOpenPayment}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openPayment}
-                        className="h-12 w-full justify-between"
-                        data-testid="select-payment-method"
-                      >
-                        {paymentMethod ? paymentMethods.find((p) => p.id === paymentMethod)?.name : "Select method..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
+              {/* Price Display */}
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+                <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
+                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-foreground">
+                  1 {crypto} ≈ ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Payment Method</label>
+                <Popover open={openPayment} onOpenChange={setOpenPayment}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openPayment}
+                      className="h-14 w-full justify-between text-base"
+                      data-testid="select-payment-method"
+                    >
+                      {paymentMethod ? paymentMethods.find((p) => p.id === paymentMethod)?.name : "Select method..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
                     <PopoverContent className="w-[280px] p-0">
                       <Command>
                         <CommandInput placeholder="Search payment method..." />
@@ -223,30 +268,21 @@ export function HeroSection() {
                       </Command>
                     </PopoverContent>
                   </Popover>
-                </div>
               </div>
 
+              {/* CTA Button */}
               <Button 
-                className="w-full h-14 text-lg font-semibold shadow-lg" 
+                className="w-full h-16 text-lg font-bold shadow-xl hover:shadow-2xl transition-all" 
                 size="lg"
                 onClick={handleFindOffers}
                 data-testid="button-find-offers"
               >
                 Find offers
-                <ArrowRight className="ml-2 h-6 w-6" />
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
           </div>
-
-          <div className="relative lg:block hidden">
-            <img
-              src={heroImage}
-              alt="Cryptocurrency P2P Trading"
-              className="w-full h-auto rounded-2xl"
-            />
-          </div>
         </div>
-      </div>
     </section>
   );
 }
