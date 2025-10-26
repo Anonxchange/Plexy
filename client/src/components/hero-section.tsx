@@ -60,8 +60,8 @@ export function HeroSection() {
       <div className="absolute top-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16 relative z-10 w-full">
-        <div className="text-center space-y-8 max-w-4xl mx-auto mb-12">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 relative z-10 w-full">
+        <div className="text-center space-y-6 max-w-4xl mx-auto mb-8">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
