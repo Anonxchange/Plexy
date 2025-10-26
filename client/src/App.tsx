@@ -49,6 +49,7 @@ import PexlyPayPaymentLimits from "@/pages/pexly-pay-payment-limits";
 import PexlyPayPasswordFree from "@/pages/pexly-pay-password-free";
 import PexlyPayHelp from "@/pages/pexly-pay-help";
 import NotificationsPage from "@/pages/notifications";
+import { BitcoinCalculator } from "@/pages/bitcoin-calculator";
 
 function Router() {
   return (
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/medals" component={MedalsPage} />
       <Route path="/fees" component={Fees} />
       <Route path="/notifications" component={NotificationsPage} />
+      <Route path="/bitcoin-calculator" component={BitcoinCalculator} />
       <Route path="*" component={NotFound} />
     </Switch>
   );
