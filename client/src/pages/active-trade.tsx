@@ -17,7 +17,9 @@ import {
   Image as ImageIcon,
   Video,
   File,
-  Download
+  Download,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -95,6 +97,14 @@ export default function ActiveTrade() {
   const [messages, setMessages] = useState<TradeMessage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showQuickMessages, setShowQuickMessages] = useState(false);
+  const [quickMessages, setQuickMessages] = useState<string[]>([
+    "Hello, I'm ready to trade",
+    "Payment sent, please check",
+    "Please provide your payment details",
+    "Can you confirm receipt?",
+    "Thank you for the trade",
+  ]);
 
   const supabase = createClient();
 
@@ -574,14 +584,32 @@ export default function ActiveTrade() {
         {/* Trader Info */}
         <div className="flex items-center justify-between mb-3 gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+            <Avatar 
+              className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => {
+                const counterpartyId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
+                if (counterpartyId) {
+                  setLocation(`/profile/${counterpartyId}`);
+                }
+              }}
+            >
               <AvatarImage src={counterparty?.avatar_url || undefined} alt={counterparty?.username} />
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {counterparty?.username?.substring(0, 1).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-wrap">
-              <span className="font-semibold text-sm sm:text-base truncate">{counterparty?.username}</span>
+              <span 
+                className="font-semibold text-sm sm:text-base truncate cursor-pointer hover:underline"
+                onClick={() => {
+                  const counterpartyId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
+                  if (counterpartyId) {
+                    setLocation(`/profile/${counterpartyId}`);
+                  }
+                }}
+              >
+                {counterparty?.username}
+              </span>
               <span className="w-5 h-5 sm:w-6 sm:h-6 rounded bg-primary/20 flex items-center justify-center text-xs flex-shrink-0">🇳🇬</span>
               <Info className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
             </div>
@@ -1275,9 +1303,53 @@ export default function ActiveTrade() {
       {activeTab === 'chat' && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t">
           <div className="max-w-md mx-auto">
-            <button className="w-full p-2 sm:p-3 text-left text-muted-foreground border-b flex items-center justify-between hover:bg-secondary/50 transition-colors">
+            {/* Quick Messages Dropdown */}
+            {showQuickMessages && (
+              <div className="border-b max-h-64 overflow-y-auto bg-background">
+                <div className="p-2 sm:p-3 space-y-1">
+                  {quickMessages.map((msg, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setNewMessage(msg);
+                        setShowQuickMessages(false);
+                      }}
+                      className="w-full text-left p-2 sm:p-3 rounded hover:bg-secondary transition-colors text-xs sm:text-sm"
+                    >
+                      {msg}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const customMsg = prompt("Enter your custom quick message:");
+                      if (customMsg && customMsg.trim()) {
+                        setQuickMessages([...quickMessages, customMsg.trim()]);
+                        toast({
+                          title: "Quick message added",
+                          description: "Your custom message has been saved",
+                        });
+                      }
+                      setShowQuickMessages(false);
+                    }}
+                    className="w-full text-left p-2 sm:p-3 rounded bg-primary/10 hover:bg-primary/20 transition-colors text-xs sm:text-sm font-semibold text-primary flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Custom Message
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => setShowQuickMessages(!showQuickMessages)}
+              className="w-full p-2 sm:p-3 text-left text-muted-foreground border-b flex items-center justify-between hover:bg-secondary/50 transition-colors"
+            >
               <span className="text-xs sm:text-sm">SELECT A MESSAGE:</span>
-              <span className="text-xl sm:text-2xl">^</span>
+              {showQuickMessages ? (
+                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+              ) : (
+                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
             </button>
 
             <div className="p-2 sm:p-3 flex gap-1.5 sm:gap-2">
