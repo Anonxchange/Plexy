@@ -170,8 +170,8 @@ export function OfferCard({
         onOpenChange={setShowTradeDialog}
         offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, time_limit_minutes, country_restrictions, ...offer } as OfferCardProps}
       />
-      <Card className="hover:shadow-lg transition-shadow border-2 border-primary/50" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
-        <CardContent className="p-4 space-y-3">
+      <div className="hover:shadow-lg transition-shadow" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
+        <div className="p-4 space-y-3">
           {/* Vendor Info Row */}
           <div className="flex items-center gap-3">
             <Avatar className="h-14 w-14">
@@ -293,8 +293,8 @@ export function OfferCard({
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </>
   );
 }
