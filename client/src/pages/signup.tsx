@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Zap } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon } from "lucide-react";
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
 import { createClient } from "@/lib/supabase";
 import { CountryCodeSelector } from "@/components/country-code-selector";
+import { useTheme } from "@/components/theme-provider";
 
 export function SignUp() {
   const [signupMethod, setSignupMethod] = useState<"email" | "phone">("email");
@@ -29,6 +26,9 @@ export function SignUp() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
+  const { theme, setTheme } = useTheme();
+
+  const isDark = theme === "dark";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +51,6 @@ export function SignUp() {
       return;
     }
 
-    // Validate based on signup method
     if (signupMethod === "email" && !email) {
       toast({
         title: "Error",
@@ -73,13 +72,10 @@ export function SignUp() {
     setLoading(true);
 
     if (signupMethod === "phone") {
-      // For phone signup, we need to verify the phone first, then create account
-      // Store the signup data and move to phone verification
-      setUserId("pending"); // Temporary ID to indicate pending verification
+      setUserId("pending");
       setLoading(false);
       setStep("phone");
     } else {
-      // Email signup - create account with email/password
       const { error } = await signUp(email, password);
       setLoading(false);
 
@@ -93,7 +89,6 @@ export function SignUp() {
         const { data } = await supabase.auth.getUser();
         if (data.user) {
           setUserId(data.user.id);
-          // Optional phone verification for email signups
           setStep("phone");
         }
       }
@@ -101,11 +96,9 @@ export function SignUp() {
   };
 
   const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
-    // For phone signups, create the account now that phone is verified
     if (signupMethod === "phone" && userId === "pending") {
       setLoading(true);
       
-      // Create account with email/password (use phone as email identifier)
       const tempEmail = `${verifiedPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
       const { error } = await signUp(tempEmail, password);
       
@@ -119,7 +112,6 @@ export function SignUp() {
         return;
       }
 
-      // Get the new user and update their profile with verified phone
       const { data } = await supabase.auth.getUser();
       if (data.user) {
         await supabase.from('user_profiles').update({
@@ -136,7 +128,6 @@ export function SignUp() {
       }
       setLoading(false);
     } else if (userId && userId !== "pending") {
-      // For email signups, just update the phone number
       await supabase.from('user_profiles').update({
         phone_number: verifiedPhoneNumber,
         phone_verified: true,
@@ -159,221 +150,269 @@ export function SignUp() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-              <Zap className="h-7 w-7 text-primary-foreground" />
-            </div>
-            <h1 className="text-4xl font-bold">Pexly</h1>
-          </div>
-          {step === "details" && (
-            <h2 className="text-2xl font-semibold mb-2">
-              Create your free Pexly account
-            </h2>
-          )}
-          {step === "phone" && (
-            <h2 className="text-2xl font-semibold mb-2">
-              Phone Verification
-            </h2>
-          )}
+    <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
+      {/* Header */}
+      <div className="p-6 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-lg ${isDark ? 'bg-lime-400' : 'bg-lime-500'}`}></div>
+          <span className={`text-2xl font-semibold ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 300 }}>
+            pexly
+          </span>
         </div>
 
-        <Card className="shadow-xl">
-          <CardContent className="pt-6">
-            {step === "details" ? (
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <Button
+        {/* Theme Toggle */}
+        <button
+          onClick={() => setTheme(isDark ? 'light' : 'dark')}
+          className={`p-2 rounded-full ${
+            isDark ? 'bg-gray-800 text-lime-400' : 'bg-gray-100 text-gray-700'
+          } transition-colors`}
+        >
+          {isDark ? <Moon size={20} /> : <Sun size={20} />}
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-6 pt-12 max-w-md mx-auto pb-12">
+        {step === "details" ? (
+          <>
+            <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
+              Create your account
+            </h1>
+
+            {/* Social Login Buttons */}
+            <div className="flex justify-center gap-4 mb-6">
+              <button 
+                type="button"
+                onClick={() => toast({ title: "Coming soon", description: "Google sign-in will be available soon" })}
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  isDark 
+                    ? 'border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white' 
+                    : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
+                }`}
+              >
+                <FaGoogle className="w-5 h-5" />
+              </button>
+              <button 
+                type="button"
+                onClick={() => toast({ title: "Coming soon", description: "Facebook sign-in will be available soon" })}
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  isDark 
+                    ? 'border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white' 
+                    : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
+                }`}
+              >
+                <FaFacebook className="w-5 h-5" />
+              </button>
+              <button 
+                type="button"
+                onClick={() => toast({ title: "Coming soon", description: "Apple sign-in will be available soon" })}
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  isDark 
+                    ? 'border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white' 
+                    : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
+                }`}
+              >
+                <FaApple className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className={`flex items-center gap-4 mb-6`}>
+              <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
+              <span className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>or</span>
+              <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              {/* Toggle Signup Method */}
+              <div className="mb-6">
+                <button
                   type="button"
-                  variant="outline"
-                  className="w-full h-14 text-base"
                   onClick={() => setSignupMethod(signupMethod === "email" ? "phone" : "email")}
+                  className={`w-full py-3 px-4 rounded-xl text-sm ${
+                    isDark 
+                      ? 'bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-700' 
+                      : 'bg-gray-50 text-gray-700 border border-gray-200 hover:border-gray-300'
+                  } transition-colors`}
                 >
                   Sign up using {signupMethod === "email" ? "Phone Number" : "Email"}
-                </Button>
+                </button>
+              </div>
 
-                <div className="flex items-center justify-center gap-4 my-6">
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="w-12 h-12 rounded-full border-2"
-                    onClick={() => toast({ title: "Coming soon", description: "Google sign-in will be available soon" })}
-                  >
-                    <FaGoogle className="h-6 w-6" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="w-12 h-12 rounded-full border-2"
-                    onClick={() => toast({ title: "Coming soon", description: "Facebook sign-in will be available soon" })}
-                  >
-                    <FaFacebook className="h-6 w-6" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="w-12 h-12 rounded-full border-2"
-                    onClick={() => toast({ title: "Coming soon", description: "Apple sign-in will be available soon" })}
-                  >
-                    <FaApple className="h-6 w-6" />
-                  </Button>
-                </div>
+              {/* Full Name */}
+              <div className="mb-6">
+                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Full Name<span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  className={`w-full px-4 py-4 rounded-xl text-base ${
+                    isDark 
+                      ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                      : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                  } focus:outline-none transition-colors`}
+                />
+              </div>
 
-                <p className="text-center text-sm text-muted-foreground mb-4">
-                  or sign up with your {signupMethod === "email" ? "email" : "mobile number"}
-                </p>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+              {/* Email or Phone */}
+              {signupMethod === "email" ? (
+                <div className="mb-6">
+                  <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Email Address<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="h-12"
+                    className={`w-full px-4 py-4 rounded-xl text-base ${
+                      isDark 
+                        ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                        : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                    } focus:outline-none transition-colors`}
                   />
                 </div>
-
-                {signupMethod === "email" ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Country
+                    </label>
+                    <CountryCodeSelector value={countryCode} onChange={setCountryCode} />
+                  </div>
+                  <div className="mb-6">
+                    <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Phone Number<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Enter phone number"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
                       required
-                      className="h-12"
+                      className={`w-full px-4 py-4 rounded-xl text-base ${
+                        isDark 
+                          ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                          : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                      } focus:outline-none transition-colors`}
                     />
                   </div>
-                ) : (
-                  <>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Country</Label>
-                      <CountryCodeSelector value={countryCode} onChange={setCountryCode} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm font-medium">Phone number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="Enter phone number"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        required
-                        className="h-12"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Referral code (optional)</Label>
-                      <Input
-                        type="text"
-                        placeholder="Enter referral code (optional)"
-                        className="h-12"
-                      />
-                    </div>
-                  </>
-                )}
+                </>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Create a strong password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="h-12 pr-12"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password" className="text-sm font-medium">Confirm Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirm-password"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Re-enter your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      className="h-12 pr-12"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="text-xs text-muted-foreground mt-4">
-                  By continuing, you acknowledge that you have read and agree to Pexly's{" "}
-                  <a href="#" className="text-primary hover:underline">Terms and conditions</a> and{" "}
-                  <a href="#" className="text-primary hover:underline">Privacy policy</a>
-                </div>
-
-                <Button type="submit" className="w-full h-14 mt-6 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base" size="lg" disabled={loading}>
-                  {loading ? "Creating your account..." : "Create account"}
-                </Button>
-
-                <p className="text-center text-sm text-muted-foreground mt-4">
-                  Have an account?{" "}
-                  <a href="/signin" className="text-primary hover:underline font-medium">
-                    Log in
-                  </a>
-                </p>
-              </form>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Phone Verification</CardTitle>
-                  <CardDescription>
-                    {signupMethod === "phone" 
-                      ? "Verify your phone number to complete signup"
-                      : "Verify your phone number to unlock Level 1 trading (Optional)"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PhoneVerification
-                    onVerified={handlePhoneVerified}
-                    onSkip={signupMethod === "email" ? handleSkipPhone : undefined}
-                    initialPhone={phoneNumber}
-                    initialCountryCode={countryCode}
+              {/* Password */}
+              <div className="mb-6">
+                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Password<span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a strong password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
+                      isDark 
+                        ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                        : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                    } focus:outline-none transition-colors`}
                   />
-                </CardContent>
-              </Card>
-            )}
-          </CardContent>
-        </Card>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 ${
+                      isDark ? 'text-gray-500' : 'text-gray-400'
+                    }`}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="mb-6">
+                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Confirm Password<span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Re-enter your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
+                      isDark 
+                        ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                        : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                    } focus:outline-none transition-colors`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 ${
+                      isDark ? 'text-gray-500' : 'text-gray-400'
+                    }`}
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Terms and Conditions */}
+              <div className={`text-xs mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                By continuing, you acknowledge that you have read and agree to Pexly's{" "}
+                <a href="#" className={`${isDark ? 'text-lime-400' : 'text-lime-600'} hover:underline`}>
+                  Terms and conditions
+                </a>{" "}
+                and{" "}
+                <a href="#" className={`${isDark ? 'text-lime-400' : 'text-lime-600'} hover:underline`}>
+                  Privacy policy
+                </a>
+              </div>
+
+              {/* Create Account Button */}
+              <button 
+                type="submit"
+                disabled={loading}
+                className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
+                style={{ fontWeight: 500 }}
+              >
+                {loading ? "Creating account..." : "Create account"}
+              </button>
+
+              {/* Sign In Link */}
+              <div className={`text-center mt-8 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Have an account?{' '}
+                <a href="/signin" className={`${isDark ? 'text-lime-400' : 'text-lime-600'} hover:underline font-medium`}>
+                  Log in
+                </a>
+              </div>
+            </form>
+          </>
+        ) : (
+          <div className={`rounded-2xl p-6 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
+            <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
+              Phone Verification
+            </h2>
+            <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {signupMethod === "phone" 
+                ? "Verify your phone number to complete signup"
+                : "Verify your phone number to unlock Level 1 trading (Optional)"}
+            </p>
+            <PhoneVerification
+              onVerified={handlePhoneVerified}
+              onSkip={signupMethod === "email" ? handleSkipPhone : undefined}
+              initialPhone={phoneNumber}
+              initialCountryCode={countryCode}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
