@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import {
   Trophy,
   Flag,
   Wallet,
+  Send,
 } from "lucide-react";
 import medalTheOg from '@assets/generated_images/IMG_1432.png';
 import medalInitiate from '@assets/generated_images/IMG_1430.png';
@@ -88,8 +89,13 @@ interface Feedback {
 export function Profile() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
+  const [, params] = useRoute("/profile/:userId");
   const { toast } = useToast();
   const supabase = createClient();
+
+  // If there's a userId in the URL, view that user's profile; otherwise view own profile
+  const viewingUserId = params?.userId || user?.id;
+  const isOwnProfile = !params?.userId || params?.userId === user?.id;
 
   const [offerFilter, setOfferFilter] = useState("buying");
   const [feedbackFilter, setFeedbackFilter] = useState("buyers");
@@ -119,13 +125,13 @@ export function Profile() {
   ];
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && isOwnProfile) {
       setLocation("/signin");
-    } else if (user) {
+    } else if (viewingUserId) {
       fetchProfileData();
       fetchFeedbacks();
     }
-  }, [user, loading, setLocation]);
+  }, [user, loading, setLocation, viewingUserId]);
 
   const fetchProfileData = async () => {
     try {
@@ -139,7 +145,7 @@ export function Profile() {
       const fetchPromise = supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', user?.id)
+        .eq('id', viewingUserId)
         .single();
 
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
@@ -554,13 +560,15 @@ export function Profile() {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">{profileData?.country || 'Nigeria'}</p>
-                  <Button 
-                    variant="ghost" 
-                    className="text-primary hover:text-primary/80 font-medium w-full sm:w-auto"
-                    onClick={handleEditProfile}
-                  >
-                    Edit Profile
-                  </Button>
+                  {isOwnProfile && (
+                    <Button 
+                      variant="ghost" 
+                      className="text-primary hover:text-primary/80 font-medium w-full sm:w-auto"
+                      onClick={handleEditProfile}
+                    >
+                      Edit Profile
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -598,13 +606,30 @@ export function Profile() {
           </CardContent>
         </Card>
 
-        <Button 
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6 mb-6"
-          onClick={handleShareProfile}
-        >
-          <Share2 className="h-5 w-5 mr-2" />
-          Share Profile
-        </Button>
+        {!isOwnProfile && (
+          <Button 
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6 mb-6"
+            onClick={() => {
+              toast({
+                title: "Send Coin",
+                description: "Send coin feature coming soon",
+              });
+            }}
+          >
+            <Send className="h-5 w-5 mr-2" />
+            Send Coin
+          </Button>
+        )}
+
+        {isOwnProfile && (
+          <Button 
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6 mb-6"
+            onClick={handleShareProfile}
+          >
+            <Share2 className="h-5 w-5 mr-2" />
+            Share Profile
+          </Button>
+        )}
 
         <Card className="mb-6 bg-card border-border">
           <CardContent className="p-6">
