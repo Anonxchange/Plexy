@@ -128,7 +128,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/verify-email`;
+    // Use custom domain if available, otherwise fall back to current origin
+    const baseUrl = window.location.hostname.includes('pexly.app') 
+      ? 'https://pexly.app' 
+      : window.location.origin;
+    const redirectUrl = `${baseUrl}/verify-email`;
+    
+    console.log("Signup redirect URL:", redirectUrl);
     
     const { error, data } = await supabase.auth.signUp({
       email,
