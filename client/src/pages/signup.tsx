@@ -86,6 +86,10 @@ export function SignUp() {
           variant: "destructive",
         });
       } else {
+        toast({
+          title: "Check your email!",
+          description: "We've sent you a verification link. Please check your email to verify your account.",
+        });
         const { data } = await supabase.auth.getUser();
         if (data.user) {
           setUserId(data.user.id);
