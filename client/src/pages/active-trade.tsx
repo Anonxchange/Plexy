@@ -26,6 +26,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { createMessageNotification } from "@/lib/notifications-api";
 import { notificationSounds } from "@/lib/notification-sounds";
@@ -572,7 +573,7 @@ export default function ActiveTrade() {
   if (loading || !trade) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading trade...</div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
