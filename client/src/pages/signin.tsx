@@ -19,13 +19,19 @@ export function SignIn() {
   const [show2FAInput, setShow2FAInput] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [tempUserId, setTempUserId] = useState<string | null>(null);
-  const { signIn, signOut } = useAuth();
+  const { signIn, signOut, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
+
+  useEffect(() => {
+    if (user) {
+      setLocation("/dashboard");
+    }
+  }, [user, setLocation]);
 
   useEffect(() => {
     const value = inputValue.trim();
