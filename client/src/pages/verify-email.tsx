@@ -17,71 +17,103 @@ export function VerifyEmail() {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get("token");
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get("access_token");
+        const type = hashParams.get("type");
+        const refreshToken = hashParams.get("refresh_token");
 
-        if (!token) {
-          setStatus("error");
-          setMessage("Invalid verification link");
-          return;
+        if (accessToken && type === "signup") {
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || "",
+          });
+
+          if (sessionError) {
+            console.error("Session error:", sessionError);
+            setStatus("error");
+            setMessage("Invalid or expired verification link");
+            return;
+          }
+
+          if (sessionData?.user) {
+            await supabase
+              .from("user_profiles")
+              .update({ email_verified: true })
+              .eq("id", sessionData.user.id);
+
+            setStatus("success");
+            setMessage("Email verified successfully! Redirecting to dashboard...");
+            
+            toast({
+              title: "Success!",
+              description: "Your email has been verified",
+            });
+
+            setTimeout(() => setLocation("/dashboard"), 2000);
+            return;
+          }
         }
 
-        // Verify token with Supabase
-        const { data, error } = await supabase
-          .from("email_verifications")
-          .select("*")
-          .eq("token", token)
-          .single();
+        const queryParams = new URLSearchParams(window.location.search);
+        const token = queryParams.get("token");
 
-        if (error || !data) {
-          setStatus("error");
-          setMessage("Invalid or expired verification link");
-          return;
-        }
+        if (token) {
+          const { data, error } = await supabase
+            .from("email_verifications")
+            .select("*")
+            .eq("token", token)
+            .single();
 
-        // Check if token is expired
-        const expiresAt = new Date(data.expires_at);
-        if (expiresAt < new Date()) {
-          setStatus("error");
-          setMessage("Verification link has expired");
-          return;
-        }
+          if (error || !data) {
+            setStatus("error");
+            setMessage("Invalid or expired verification link");
+            return;
+          }
 
-        // Check if already verified
-        if (data.verified_at) {
+          const expiresAt = new Date(data.expires_at);
+          if (expiresAt < new Date()) {
+            setStatus("error");
+            setMessage("Verification link has expired");
+            return;
+          }
+
+          if (data.verified_at) {
+            setStatus("success");
+            setMessage("Email already verified! Redirecting...");
+            setTimeout(() => setLocation("/signin"), 2000);
+            return;
+          }
+
+          const { error: updateError } = await supabase
+            .from("email_verifications")
+            .update({ verified_at: new Date().toISOString() })
+            .eq("token", token);
+
+          if (updateError) {
+            setStatus("error");
+            setMessage("Failed to verify email");
+            return;
+          }
+
+          await supabase
+            .from("user_profiles")
+            .update({ email_verified: true })
+            .eq("id", data.user_id);
+
           setStatus("success");
-          setMessage("Email already verified! Redirecting...");
-          setTimeout(() => setLocation("/signin"), 2000);
+          setMessage("Email verified successfully! Redirecting to login...");
+          
+          toast({
+            title: "Success!",
+            description: "Your email has been verified",
+          });
+
+          setTimeout(() => setLocation("/signin"), 3000);
           return;
         }
 
-        // Mark as verified
-        const { error: updateError } = await supabase
-          .from("email_verifications")
-          .update({ verified_at: new Date().toISOString() })
-          .eq("token", token);
-
-        if (updateError) {
-          setStatus("error");
-          setMessage("Failed to verify email");
-          return;
-        }
-
-        // Update user's email_verified status in user_profiles if needed
-        await supabase
-          .from("user_profiles")
-          .update({ email_verified: true })
-          .eq("id", data.user_id);
-
-        setStatus("success");
-        setMessage("Email verified successfully! Redirecting to login...");
-        
-        toast({
-          title: "Success!",
-          description: "Your email has been verified",
-        });
-
-        setTimeout(() => setLocation("/signin"), 3000);
+        setStatus("error");
+        setMessage("Invalid verification link");
       } catch (error) {
         console.error("Verification error:", error);
         setStatus("error");
