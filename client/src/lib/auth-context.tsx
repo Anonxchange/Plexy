@@ -71,8 +71,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+
+  // Separate effect for inactivity timer
+  useEffect(() => {
+    if (!user) return;
+
+    // Inactivity timeout (30 minutes)
+    let inactivityTimer: NodeJS.Timeout;
+    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(async () => {
+        await supabase.auth.signOut();
+        window.location.href = '/signin?reason=timeout';
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    // Listen for user activity
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+
+    // Start inactivity timer
+    resetInactivityTimer();
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+      clearTimeout(inactivityTimer);
+    };
+  }, [user]);
+
+  // Separate effect for browser close detection
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Check if user wants to stay logged in
+      const stayLoggedIn = localStorage.getItem('stayLoggedIn');
+      if (!stayLoggedIn && user) {
+        // Use sendBeacon for reliability on page unload
+        navigator.sendBeacon('/api/logout');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [user]);
 
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/verify-email`;
