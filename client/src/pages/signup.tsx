@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -22,13 +22,19 @@ export function SignUp() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"details" | "phone">("details");
   const [userId, setUserId] = useState<string | null>(null);
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
+
+  useEffect(() => {
+    if (user) {
+      setLocation("/dashboard");
+    }
+  }, [user, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
