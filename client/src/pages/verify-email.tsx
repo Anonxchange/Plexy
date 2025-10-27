@@ -4,52 +4,72 @@ import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle2, XCircle, Zap } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { useAuth } from "@/lib/auth-context";
 
 export function VerifyEmail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [message, setMessage] = useState("Verifying your email...");
   const isDark = theme === "dark";
 
+  // Remove the auto-redirect effect since we want users to login manually
+
   useEffect(() => {
     const verifyEmail = async () => {
       try {
+        console.log("Full URL:", window.location.href);
+        console.log("Hash:", window.location.hash);
+        console.log("Search:", window.location.search);
+        
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get("access_token");
         const type = hashParams.get("type");
         const refreshToken = hashParams.get("refresh_token");
 
-        if (accessToken && type === "signup") {
+        console.log("Hash params:", { accessToken: !!accessToken, type, refreshToken: !!refreshToken });
+
+        // Check if this is from an email confirmation link with access token
+        if (accessToken) {
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || "",
           });
 
+          console.log("Session result:", { sessionData: !!sessionData?.user, error: sessionError });
+
           if (sessionError) {
             console.error("Session error:", sessionError);
-       with access token
-        if (accessTokend verification link");
+            setStatus("error");
+            setMessage(`Session error: ${sessionError.message}`);
             return;
           }
 
           if (sessionData?.user) {
-            await supabase
+            const { error: updateError } = await supabase
               .from("user_profiles")
               .update({ email_verified: true })
               .eq("id", sessionData.user.id);
 
+            if (updateError) {
+              console.warn("Profile update error:", updateError);
+            }
+
             setStatus("success");
-            setMessage("Email verified successfully! Redirecting to dashboard...");
+            setMessage("Email verified successfully! Redirecting to login...");
             
             toast({
               title: "Success!",
-              description: "Your email has been verified",
+              description: "Your email has been verified. Please sign in to continue.",
             });
 
-            setTimeout(() => setLocation("/dashboard"), 2000);
+            // Sign out the user so they must login again
+            await supabase.auth.signOut();
+            
+            setTimeout(() => setLocation("/signin"), 2000);
             return;
           }
         }
