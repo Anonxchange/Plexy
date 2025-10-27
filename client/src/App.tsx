@@ -38,6 +38,7 @@ import VerificationPage from "@/pages/verification";
 import AdminPage from "@/pages/admin";
 import AdminVerificationsPage from "@/pages/admin-verifications";
 import AssetDetail from "@/pages/asset-detail";
+import AssetHistory from "@/pages/asset-history";
 import { Profile as ProfilePage } from "@/pages/profile";
 import { AccountSettings as AccountSettingsPage } from "@/pages/account-settings";
 import MedalsPage from "@/pages/medals";
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/wallet/visa-card" component={VisaCard} />
       <Route path="/wallet/visa-card/details" component={VisaCardDetails} />
       <Route path="/wallet/asset/:symbol" component={AssetDetail} />
+      <Route path="/wallet/history/:symbol" component={AssetHistory} />
       <Route path="/wallet/mobile-topup" component={MobileTopup} />
       <Route path="/wallet/crypto-to-bank" component={CryptoToBank} />
       <Route path="/wallet/lightning" component={Lightning} />
