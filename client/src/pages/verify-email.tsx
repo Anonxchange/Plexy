@@ -21,6 +21,7 @@ export function VerifyEmail() {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
+        console.log("=== EMAIL VERIFICATION DEBUG ===");
         console.log("Full URL:", window.location.href);
         console.log("Hash:", window.location.hash);
         console.log("Search:", window.location.search);
@@ -29,8 +30,28 @@ export function VerifyEmail() {
         const accessToken = hashParams.get("access_token");
         const type = hashParams.get("type");
         const refreshToken = hashParams.get("refresh_token");
+        const errorCode = hashParams.get("error");
+        const errorDescription = hashParams.get("error_description");
 
-        console.log("Hash params:", { accessToken: !!accessToken, type, refreshToken: !!refreshToken });
+        console.log("Hash params:", { 
+          accessToken: accessToken ? accessToken.substring(0, 20) + "..." : null, 
+          type, 
+          refreshToken: !!refreshToken,
+          error: errorCode,
+          errorDescription 
+        });
+
+        // Check for errors in the URL
+        if (errorCode) {
+          setStatus("error");
+          setMessage(`Verification failed: ${errorDescription || errorCode}`);
+          toast({
+            title: "Verification Error",
+            description: errorDescription || "The verification link is invalid or has expired.",
+            variant: "destructive",
+          });
+          return;
+        }
 
         // Check if this is from an email confirmation link with access token
         if (accessToken) {
