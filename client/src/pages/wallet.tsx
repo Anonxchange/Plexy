@@ -189,7 +189,7 @@ const allOperations = [
 ];
 
 export default function Wallet() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [activeWalletTab, setActiveWalletTab] = useState("wallet");
   const [activeAssetTab, setActiveAssetTab] = useState("assets");
@@ -209,65 +209,87 @@ export default function Wallet() {
   const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
   const { toast } = useToast();
 
+  // Check authentication only once on mount - wait for loading to complete
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       setLocation("/signin");
-    } else {
-      loadUserProfile();
-      loadWalletData();
-      loadCryptoPrices();
-      const priceInterval = setInterval(loadCryptoPrices, 60000);
-
-      const supabase = createClient();
-      // Subscribe to wallet changes for real-time balance updates
-      const walletChannel = supabase
-        .channel('wallet-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'wallets',
-            filter: `user_id=eq.${user.id}`
-          },
-          () => {
-            console.log('Wallet changed, refreshing balance...');
-            loadWalletData();
-          }
-        )
-        .subscribe();
-
-      // Subscribe to real-time transaction updates
-      const transactionChannel = supabase
-        .channel('wallet-transactions-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'wallet_transactions',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            console.log('New transaction detected:', payload);
-            loadWalletData();
-
-            // Show toast notification
-            toast({
-              title: 'New Transaction!',
-              description: `${payload.new.amount} ${payload.new.crypto_symbol} transaction detected`,
-            });
-          }
-        )
-        .subscribe();
-
-      return () => {
-        clearInterval(priceInterval);
-        supabase.removeChannel(walletChannel);
-        supabase.removeChannel(transactionChannel);
-      };
     }
-  }, [user, hideZeroBalance]);
+  }, [user, loading, setLocation]);
+
+  // Load initial data and set up real-time subscriptions
+  useEffect(() => {
+    if (!user) return;
+
+    loadUserProfile();
+    loadWalletData();
+    loadCryptoPrices();
+    
+    // Increase price update interval to reduce calls
+    const priceInterval = setInterval(loadCryptoPrices, 120000); // 2 minutes instead of 1
+
+    const supabase = createClient();
+    
+    // Debounce wallet updates to prevent rapid successive calls
+    let walletUpdateTimeout: NodeJS.Timeout;
+    
+    // Subscribe to wallet changes for real-time balance updates
+    const walletChannel = supabase
+      .channel('wallet-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'wallets',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          console.log('Wallet changed, debouncing refresh...');
+          // Debounce: only refresh after 1 second of no changes
+          clearTimeout(walletUpdateTimeout);
+          walletUpdateTimeout = setTimeout(() => {
+            loadWalletData();
+          }, 1000);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to real-time transaction updates
+    const transactionChannel = supabase
+      .channel('wallet-transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'wallet_transactions',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('New transaction detected:', payload);
+          
+          // Debounce wallet reload
+          clearTimeout(walletUpdateTimeout);
+          walletUpdateTimeout = setTimeout(() => {
+            loadWalletData();
+          }, 1000);
+
+          // Show toast notification
+          toast({
+            title: 'New Transaction!',
+            description: `${payload.new.amount} ${payload.new.crypto_symbol} transaction detected`,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(priceInterval);
+      clearTimeout(walletUpdateTimeout);
+      supabase.removeChannel(walletChannel);
+      supabase.removeChannel(transactionChannel);
+    };
+  }, [user]);
 
   const loadUserProfile = async () => {
     if (!user) return;
@@ -358,6 +380,18 @@ export default function Wallet() {
       console.error("Error loading crypto prices:", error);
     }
   };
+
+  // Show loading state while auth is loading
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return null;
