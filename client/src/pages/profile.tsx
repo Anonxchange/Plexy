@@ -47,6 +47,7 @@ import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface UserProfile {
   id: string;
@@ -303,7 +304,7 @@ export function Profile() {
   if (loading || loadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
