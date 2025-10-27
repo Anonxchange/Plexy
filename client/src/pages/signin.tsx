@@ -31,7 +31,17 @@ export function SignIn() {
     if (user) {
       setLocation("/dashboard");
     }
-  }, [user, setLocation]);
+
+    // Check if redirected due to timeout
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reason') === 'timeout') {
+      toast({
+        title: "Session Expired",
+        description: "You were logged out due to inactivity",
+        variant: "destructive",
+      });
+    }
+  }, [user, setLocation, toast]);
 
   useEffect(() => {
     const value = inputValue.trim();
@@ -321,8 +331,24 @@ export function SignIn() {
                 </div>
               </div>
 
-              {/* Forgot Password */}
-              <div className="text-right mb-8">
+              {/* Stay Logged In & Forgot Password */}
+              <div className="flex items-center justify-between mb-8">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-gray-300"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        localStorage.setItem('stayLoggedIn', 'true');
+                      } else {
+                        localStorage.removeItem('stayLoggedIn');
+                      }
+                    }}
+                  />
+                  <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Stay logged in
+                  </span>
+                </label>
                 <a href="#" className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} hover:underline`}>
                   Forgot password?
                 </a>
