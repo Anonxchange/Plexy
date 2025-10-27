@@ -46,7 +46,7 @@ export function TwoFactorSetupDialog({
     if (open && !secret) {
       generateSecret();
     }
-  }, [open, secret]);
+  }, [open]);
 
   const generateSecret = async () => {
     // Generate a random secret using Web Crypto API
