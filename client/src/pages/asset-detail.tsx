@@ -88,10 +88,10 @@ export default function AssetDetail() {
       )
       .subscribe();
 
-    // Refresh prices every 30 seconds
+    // Refresh prices every 2 minutes instead of 30 seconds
     const priceInterval = setInterval(() => {
       loadAssetData();
-    }, 30000);
+    }, 120000);
 
     // Subscribe to wallet changes for real-time balance updates
     const walletChannel = supabase
