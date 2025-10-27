@@ -51,6 +51,7 @@ import PexlyPayPasswordFree from "@/pages/pexly-pay-password-free";
 import PexlyPayHelp from "@/pages/pexly-pay-help";
 import NotificationsPage from "@/pages/notifications";
 import { BitcoinCalculator } from "@/pages/bitcoin-calculator";
+import { VerifyEmail } from "@/pages/verify-email";
 
 function Router() {
   return (
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/admin/verifications" component={AdminVerificationsPage} />
       <Route path="/signup" component={SignUp} />
       <Route path="/signin" component={SignIn} />
+      <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/profile" component={Profile} />
       <Route path="/shop" component={Shop} />
@@ -104,8 +106,8 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup"].includes(location) || location.startsWith("/trade/");
-  const hideHeaderAndNav = ["/signin", "/signup"].includes(location);
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email"].includes(location) || location.startsWith("/trade/");
+  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email"].includes(location);
 
   return (
     <QueryClientProvider client={queryClient}>
