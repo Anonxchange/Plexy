@@ -43,10 +43,10 @@ export function TwoFactorSetupDialog({
   const supabase = createClient();
 
   useEffect(() => {
-    if (open) {
+    if (open && !secret) {
       generateSecret();
     }
-  }, [open]);
+  }, [open, secret]);
 
   const generateSecret = async () => {
     // Generate a random secret using Web Crypto API
@@ -157,6 +157,11 @@ export function TwoFactorSetupDialog({
   const handleClose = () => {
     setStep(1);
     setVerificationCode("");
+    setSecret("");
+    setQrCodeUrl("");
+    setBackupCodes([]);
+    setCopiedSecret(false);
+    setCopiedBackup(false);
     onOpenChange(false);
   };
 
