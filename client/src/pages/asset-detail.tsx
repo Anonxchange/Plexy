@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowLeftRight, ArrowUp, ArrowDown, History, Share2, X, Copy, Download, Mail, ArrowDownToLine, ArrowUpFromLine, TrendingUp } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
-import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { getCryptoPrices, getHistoricalPrices, getIntradayPrices, type CryptoPrice, type HistoricalPrice } from "@/lib/crypto-prices";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useToast } from "@/hooks/use-toast";
+import { getWalletTransactions, type WalletTransaction } from "@/lib/wallet-api";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -42,6 +43,8 @@ export default function AssetDetail() {
   const [avgCost, setAvgCost] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [timeframe, setTimeframe] = useState<'1D' | '7D' | '30D'>('30D');
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
   const [preferredCurrency, setPreferredCurrency] = useState('USD'); // State for preferred currency
   const [tradingPairs, setTradingPairs] = useState<any>({
     usdt: { price: 0, change: 0 },
@@ -49,6 +52,7 @@ export default function AssetDetail() {
     usd: { price: 0, change: 0 },
     eur: { price: 0, change: 0 }
   });
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
 
   const assetInfo = cryptoData[symbol] || { name: symbol, icon: symbol[0], color: "text-gray-500" };
 
@@ -58,7 +62,7 @@ export default function AssetDetail() {
       return;
     }
     loadAssetData();
-    generateChartData();
+    loadChartData();
 
     // Subscribe to real-time transaction updates
     const channel = supabase
@@ -117,16 +121,34 @@ export default function AssetDetail() {
     };
   }, [user, symbol]);
 
-  const generateChartData = () => {
-    const data = [];
-    const basePrice = 108000;
-    for (let i = 0; i < 30; i++) {
-      data.push({
-        date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        price: basePrice + Math.random() * 5000 - 2500
-      });
+  useEffect(() => {
+    loadChartData();
+  }, [timeframe]);
+
+  const loadChartData = async () => {
+    setIsLoadingChart(true);
+    try {
+      let historicalData: HistoricalPrice[] = [];
+      
+      if (timeframe === '1D') {
+        historicalData = await getIntradayPrices(symbol);
+      } else if (timeframe === '7D') {
+        historicalData = await getHistoricalPrices(symbol, 7);
+      } else {
+        historicalData = await getHistoricalPrices(symbol, 30);
+      }
+
+      const formattedData = historicalData.map(item => ({
+        date: item.date,
+        price: item.price
+      }));
+
+      setChartData(formattedData);
+    } catch (error) {
+      console.error('Error loading chart data:', error);
+    } finally {
+      setIsLoadingChart(false);
     }
-    setChartData(data);
   };
 
   const loadAssetData = async () => {
@@ -325,10 +347,43 @@ export default function AssetDetail() {
 
         {/* Price Chart */}
         <div className="mb-6">
-          <h3 className="text-lg sm:text-xl font-bold mb-4">Price Chart</h3>
-          <Card>
-            <CardContent className="p-4">
-              <ChartContainer config={chartConfig} className="h-[200px] w-full">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg sm:text-xl font-bold">Price Chart</h3>
+            <div className="flex gap-2">
+              <Button
+                variant={timeframe === '1D' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTimeframe('1D')}
+                className="h-8 px-3 text-xs"
+              >
+                1D
+              </Button>
+              <Button
+                variant={timeframe === '7D' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTimeframe('7D')}
+                className="h-8 px-3 text-xs"
+              >
+                7D
+              </Button>
+              <Button
+                variant={timeframe === '30D' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTimeframe('30D')}
+                className="h-8 px-3 text-xs"
+              >
+                30D
+              </Button>
+            </div>
+          </div>
+          <Card className="overflow-hidden border-2 hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 bg-gradient-to-br from-background to-muted/20">
+              {isLoadingChart ? (
+                <div className="h-[250px] flex items-center justify-center">
+                  <div className="text-muted-foreground">Loading chart...</div>
+                </div>
+              ) : (
+              <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="fillPrice" x1="0" y1="0" x2="0" y2="1">
@@ -359,10 +414,12 @@ export default function AssetDetail() {
                     dataKey="price"
                     stroke={pnlPercentage >= 0 ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)"}
                     fill="url(#fillPrice)"
-                    strokeWidth={2}
+                    strokeWidth={3}
+                    animationDuration={800}
                   />
                 </AreaChart>
               </ChartContainer>
+              )}
             </CardContent>
           </Card>
         </div>
