@@ -30,8 +30,8 @@ export function VerifyEmail() {
 
           if (sessionError) {
             console.error("Session error:", sessionError);
-            setStatus("error");
-            setMessage("Invalid or expired verification link");
+       with access token
+        if (accessTokend verification link");
             return;
           }
 
