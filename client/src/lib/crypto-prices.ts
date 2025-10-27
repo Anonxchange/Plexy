@@ -11,6 +11,11 @@ export interface ExchangeRates {
   [key: string]: number;
 }
 
+// Cache for crypto prices
+let cryptoPricesCache: Record<string, CryptoPrice> | null = null;
+let lastPricesFetchTime = 0;
+const PRICES_CACHE_DURATION = 30000; // 30 seconds
+
 const COINGECKO_IDS: Record<string, string> = {
   BTC: 'bitcoin',
   ETH: 'ethereum',
@@ -41,7 +46,21 @@ const COINGECKO_IDS: Record<string, string> = {
 };
 
 export async function getCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
+  const now = Date.now();
+  
+  // Return cached prices if still valid and contains all requested symbols
+  if (cryptoPricesCache && (now - lastPricesFetchTime) < PRICES_CACHE_DURATION) {
+    const hasAllSymbols = symbols.every(s => cryptoPricesCache![s]);
+    if (hasAllSymbols) {
+      return cryptoPricesCache;
+    }
+  }
+  
   const ids = symbols.map(s => COINGECKO_IDS[s]).filter(Boolean).join(',');
+  
+  if (!ids) {
+    return {};
+  }
   
   try {
     const response = await fetch(
@@ -49,6 +68,11 @@ export async function getCryptoPrices(symbols: string[]): Promise<Record<string,
     );
     
     if (!response.ok) {
+      // If rate limited or error, return cached data if available
+      if (cryptoPricesCache) {
+        console.warn('Using cached crypto prices due to API error');
+        return cryptoPricesCache;
+      }
       throw new Error('Failed to fetch crypto prices');
     }
     
@@ -73,10 +97,14 @@ export async function getCryptoPrices(symbols: string[]): Promise<Record<string,
       }
     });
     
+    cryptoPricesCache = pricesMap;
+    lastPricesFetchTime = now;
+    
     return pricesMap;
   } catch (error) {
     console.error('Error fetching crypto prices:', error);
-    return {};
+    // Return cached data if available, otherwise empty object
+    return cryptoPricesCache || {};
   }
 }
 
@@ -143,4 +171,78 @@ export async function convertCurrency(usdAmount: number, toCurrency: string): Pr
 // Legacy function for backward compatibility
 export function convertToNGN(usdAmount: number, usdToNgnRate: number = 1470): number {
   return usdAmount * usdToNgnRate;
+}
+
+export interface HistoricalPrice {
+  timestamp: number;
+  price: number;
+  date: string;
+}
+
+export async function getHistoricalPrices(
+  symbol: string, 
+  days: number = 30
+): Promise<HistoricalPrice[]> {
+  const coinId = COINGECKO_IDS[symbol];
+  
+  if (!coinId) {
+    console.error(`No CoinGecko ID found for ${symbol}`);
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=daily`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch historical prices');
+    }
+
+    const data = await response.json();
+    
+    return data.prices.map(([timestamp, price]: [number, number]) => ({
+      timestamp,
+      price,
+      date: new Date(timestamp).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      })
+    }));
+  } catch (error) {
+    console.error('Error fetching historical prices:', error);
+    return [];
+  }
+}
+
+export async function getIntradayPrices(symbol: string): Promise<HistoricalPrice[]> {
+  const coinId = COINGECKO_IDS[symbol];
+  
+  if (!coinId) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=1&interval=hourly`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch intraday prices');
+    }
+
+    const data = await response.json();
+    
+    return data.prices.map(([timestamp, price]: [number, number]) => ({
+      timestamp,
+      price,
+      date: new Date(timestamp).toLocaleTimeString('en-US', { 
+        hour: 'numeric',
+        minute: '2-digit'
+      })
+    }));
+  } catch (error) {
+    console.error('Error fetching intraday prices:', error);
+    return [];
+  }
 }
