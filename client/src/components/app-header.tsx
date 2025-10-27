@@ -41,6 +41,7 @@ export function AppHeader() {
   const [userName, setUserName] = useState<string>('');
   const [balance, setBalance] = useState<number>(0);
   const [preferredCurrency, setPreferredCurrency] = useState<string>('USD');
+  const [lastBalanceUpdate, setLastBalanceUpdate] = useState<number>(0);
 
   useEffect(() => {
     if (!user) return;
@@ -117,11 +118,12 @@ export function AppHeader() {
   useEffect(() => {
     if (user) {
       fetchProfileAvatar();
+      // Only fetch on mount
       fetchUserData();
 
       // Subscribe to wallet changes for real-time balance updates
       const channel = supabase
-        .channel('wallet-changes')
+        .channel('wallet-changes-header')
         .on(
           'postgres_changes',
           {
@@ -131,8 +133,8 @@ export function AppHeader() {
             filter: `user_id=eq.${user.id}`
           },
           () => {
-            console.log('Wallet changed, refreshing balance...');
-            fetchUserData();
+            console.log('Wallet changed in header, updating balance...');
+            setLastBalanceUpdate(Date.now());
           }
         )
         .subscribe();
@@ -142,6 +144,13 @@ export function AppHeader() {
       };
     }
   }, [user]);
+
+  // Separate effect to fetch balance only when wallet actually changes
+  useEffect(() => {
+    if (lastBalanceUpdate > 0) {
+      fetchUserData();
+    }
+  }, [lastBalanceUpdate]);
 
   const fetchUserData = async () => {
     try {
