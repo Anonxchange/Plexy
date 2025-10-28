@@ -1126,7 +1126,7 @@ export function P2P() {
                     <CardContent className="p-0">
                       <div className="w-full">
                         <img 
-                          src="/assets/IMG_1750_1761657821369.jpeg"
+                          src="/assets/IMG_1750.jpeg"
                           alt="P2P Trading"
                           className="w-full h-auto object-cover"
                         />
@@ -1149,7 +1149,7 @@ export function P2P() {
                     <CardContent className="p-0">
                       <div className="w-full">
                         <img 
-                          src="/assets/IMG_1754_1761657821369.jpeg"
+                          src="/assets/IMG_1754.jpeg"
                           alt="Avoid Scams"
                           className="w-full h-auto object-cover"
                         />
@@ -1172,7 +1172,7 @@ export function P2P() {
                     <CardContent className="p-0">
                       <div className="w-full">
                         <img 
-                          src="/assets/IMG_1755_1761657821369.jpeg"
+                          src="/assets/IMG_1755.jpeg"
                           alt="Earn Money"
                           className="w-full h-auto object-cover"
                         />
