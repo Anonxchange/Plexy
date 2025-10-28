@@ -348,21 +348,21 @@ export function AppHeader() {
                   <DropdownMenuItem onClick={() => navigate("/trade-history")}>
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <div className="flex flex-col">
-                      <span>Trade statistics</span>
+                      <span className="font-medium">Trade statistics</span>
                       <span className="text-xs text-muted-foreground">Trade history, partners, statistics</span>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/account-settings")}>
                     <Settings className="mr-2 h-4 w-4" />
                     <div className="flex flex-col">
-                      <span>Account settings</span>
+                      <span className="font-medium">Account settings</span>
                       <span className="text-xs text-muted-foreground">Verification, notifications, security</span>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/submit-idea")}>
                     <Lightbulb className="mr-2 h-4 w-4" />
                     <div className="flex flex-col">
-                      <span>Submit an idea</span>
+                      <span className="font-medium">Submit an idea</span>
                       <span className="text-xs text-muted-foreground">Improve Pexly with us</span>
                     </div>
                   </DropdownMenuItem>
