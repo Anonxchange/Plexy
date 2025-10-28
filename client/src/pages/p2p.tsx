@@ -356,7 +356,7 @@ export function P2P() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
+      <main className="flex-1 px-4 py-6">
         {/* Buy/Sell Tabs */}
         <div className="flex gap-0 mb-8 border-b">
           <button
@@ -777,7 +777,7 @@ export function P2P() {
                   View All →
                 </Button>
               </div>
-              <div className="grid gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {activeTrades.slice(0, 3).map((trade) => {
                   const isUserBuyer = trade.buyer_id === user?.id;
                   const counterparty = isUserBuyer ? trade.seller_profile : trade.buyer_profile;
@@ -847,7 +847,7 @@ export function P2P() {
                         <Separator className="my-1" />
 
                         {/* Pay and Receive Row */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
                               {isUserBuyer ? "Pay" : "Receive"} {trade.payment_method}
@@ -933,92 +933,338 @@ export function P2P() {
             </Card>
           )}
 
-          {/* Educational Content */}
-          <Card className="mt-8">
-            <CardContent className="p-6 space-y-4">
-              <div className="flex justify-center mb-4">
-                <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Bitcoin className="h-12 w-12 text-primary" />
+          {/* How to Get Started Section */}
+          <div className="mt-12 space-y-6">
+            <div className="text-left space-y-3">
+              <h2 className="text-3xl font-bold">
+                How to Get Started With Pexly P2P
+              </h2>
+              <p className="text-muted-foreground">
+                Ready to begin your P2P trading journey? Follow this step-by-step guide to complete your first P2P transaction on Pexly.
+              </p>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 border-b">
+              <button 
+                onClick={() => setActiveTab("buy")}
+                className={`px-6 py-3 font-semibold border-b-2 transition-colors ${
+                  activeTab === "buy" 
+                    ? "border-primary text-primary" 
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Buy Coins
+              </button>
+              <button 
+                onClick={() => setActiveTab("sell")}
+                className={`px-6 py-3 font-semibold border-b-2 transition-colors ${
+                  activeTab === "sell" 
+                    ? "border-primary text-primary" 
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Sell Coins
+              </button>
+            </div>
+
+            {/* Steps */}
+            <div className="space-y-6 py-6">
+              {/* Step 1 */}
+              <div className="flex gap-6 items-start">
+                <div className="flex-shrink-0">
+                  <img 
+                    src="/assets/IMG_1764_1761656498054.png"
+                    alt="Select an Ad"
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Step 1: Select an Ad
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Browse the ads, choose your preferred one, and click <span className="font-semibold">{activeTab === "buy" ? "Buy" : "Sell"}</span>
+                  </p>
                 </div>
               </div>
 
-              <h2 className="text-2xl font-bold text-center">
-                How to {activeTab === "buy" ? "Buy" : "Sell"} Bitcoin on Pexly
-              </h2>
-
-              <p className="text-muted-foreground text-center">
-                {activeTab === "buy" ? (
-                  <>
-                    It's now easy to buy Bitcoin on Pexly. You have access to over 300 payment 
-                    options to purchase Bitcoin. As Pexly is a peer-to-peer marketplace, you can 
-                    buy Bitcoin directly from over 3 million users worldwide. Our platform makes it 
-                    extremely easy for beginners and veterans alike to start trading.
-                  </>
-                ) : (
-                  <>
-                    It's now easy to sell Bitcoin as a Pexly vendor. You have the freedom to set your own rates, 
-                    and also the luxury of over 300 payment options to get paid for the Bitcoin you sell. As Pexly 
-                    is a peer-to-peer marketplace, you can sell your Bitcoin directly to over 3 million users worldwide. 
-                    Our platform makes it extremely easy for beginners and veterans alike to make a profit.
-                  </>
-                )}
-              </p>
-
-              <div className="space-y-4 mt-6">
-                <p className="text-sm text-muted-foreground">
-                  To {activeTab === "buy" ? "buy" : "sell"} Bitcoin instantly,{" "}
-                  <a href="#" className="text-primary hover:underline">create a Pexly account</a>
-                  {" "}or{" "}
-                  <a href="#" className="text-primary hover:underline">log in to your existing one</a>
-                  . Once logged in, just follow these steps:
-                </p>
-
-                <ol className="space-y-4 list-decimal list-inside">
-                  <li className="text-sm">
-                    <span className="font-semibold">Set your requirements</span> – Choose your preferred 
-                    payment method and the {activeTab === "buy" ? "amount of Bitcoin you want to buy" : "maximum amount of Bitcoin you're willing to sell"}. You may also 
-                    indicate your location and your preferred currency. Once you're done, click{" "}
-                    <span className="font-semibold">Search For Offers</span>. You will see a list of 
-                    relevant offers to choose from.
-                  </li>
-                  <li className="text-sm">
-                    <span className="font-semibold">Review offers</span> – Before selecting an offer, 
-                    be sure to check all vital information about the {activeTab === "buy" ? "seller" : "buyer"}, including but not limited to 
-                    their name, reputation, verification level, and rate per Bitcoin. Once you've found a 
-                    suitable offer, click <span className="font-semibold">{activeTab === "buy" ? "Buy" : "Sell"}</span>. It won't open a 
-                    trade yet, but will guide you through the offer terms and conditions set by the {activeTab === "buy" ? "seller" : "buyer"}.
-                  </li>
-                  <li className="text-sm">
-                    <span className="font-semibold">Start the trade</span> – If you are satisfied with 
-                    the {activeTab === "buy" ? "seller's" : "buyer's"} terms, enter the amount you're willing to trade for and click{" "}
-                    <span className="font-semibold">{activeTab === "buy" ? "Buy" : "Sell"} Now</span>. This will open a live trade chat 
-                    and move {activeTab === "buy" ? "the seller's" : "your"} Bitcoin to our secured escrow. Read the instructions provided carefully, 
-                    and follow them. {activeTab === "buy" ? "Once you complete your payment and the seller confirms, you can receive the Bitcoin." : "Once your buyer completes their end of the trade and you receive the payment, you can release the Bitcoin."} You can download a public receipt after the trade.
-                  </li>
-                  <li className="text-sm">
-                    <span className="font-semibold">Leave feedback</span> – After successfully {activeTab === "buy" ? "buying" : "selling"} {" "}
-                    your Bitcoin, don't forget to give your trade partner feedback. This is important for 
-                    our platform as it helps build a user's reputation.
-                  </li>
-                </ol>
+              {/* Step 2 */}
+              <div className="flex gap-6 items-start">
+                <div className="flex-shrink-0">
+                  <img 
+                    src="/assets/IMG_1766_1761656498054.png"
+                    alt="Confirm Payment"
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Step 2: Confirm Payment
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Click <span className="font-semibold">Payment Completed</span> after making the transfer to the {activeTab === "buy" ? "seller's" : "buyer's"} bank account.
+                  </p>
+                </div>
               </div>
 
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  For more information, watch our{" "}
-                  <a href="#" className="text-primary hover:underline">detailed video tutorial</a>
-                  {" "}on how to {activeTab === "buy" ? "buy" : "sell"} Bitcoin quickly. You can also create an offer to {activeTab === "buy" ? "buy" : "sell"} Bitcoin by 
-                  following{" "}
-                  <a href="#" className="text-primary hover:underline">our guide to creating an offer on Pexly</a>.
-                </p>
+              {/* Step 3 */}
+              <div className="flex gap-6 items-start">
+                <div className="flex-shrink-0">
+                  <img 
+                    src="/assets/IMG_1765_1761656498054.png"
+                    alt="Receive Coins"
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Step 3: Receive Coins
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Once the {activeTab === "buy" ? "seller confirms receipt of payment" : "buyer completes payment"}, the coins will be released to your {activeTab === "buy" ? "Pexly" : "buyer's"} account.
+                  </p>
+                </div>
               </div>
 
-              <p className="text-sm text-center text-muted-foreground mt-6">
-                Pexly peer-to-peer marketplace is easy to use, secured by escrow, and accessible across the globe. 
-                Start trading today!
-              </p>
-            </CardContent>
-          </Card>
+              {/* Video Card */}
+              <Card className="bg-gradient-to-r from-blue-600 to-orange-400 border-0 overflow-hidden relative">
+                <CardContent className="p-8 relative">
+                  <div className="flex items-center justify-between">
+                    <div className="text-white space-y-2">
+                      <h3 className="text-3xl font-bold">P2P?</h3>
+                      <p className="text-white/90 max-w-md">
+                        Learn how peer-to-peer trading works on Pexly
+                      </p>
+                    </div>
+                    <button className="bg-white rounded-full p-6 hover:scale-110 transition-transform shadow-lg">
+                      <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="absolute bottom-0 right-0 opacity-20">
+                    <svg width="200" height="120" viewBox="0 0 200 120" fill="none">
+                      <circle cx="180" cy="100" r="60" fill="white" />
+                      <circle cx="140" cy="80" r="40" fill="white" />
+                    </svg>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Benefits of P2P Section */}
+            <div className="mt-12 space-y-8">
+              <h2 className="text-3xl font-bold">Benefits of P2P</h2>
+
+              {/* First Benefits Image */}
+              <div className="flex justify-center">
+                <img 
+                  src="/assets/IMG_1767_1761657339701.jpeg"
+                  alt="Benefits of P2P Trading"
+                  className="max-w-md w-full object-contain"
+                />
+              </div>
+
+              {/* Why Choose P2P */}
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold">Why Choose P2P?</h3>
+                <ul className="space-y-3">
+                  <li>
+                    <span className="font-semibold">Lower Fees:</span> Save on transaction fees compared to traditional exchanges.
+                  </li>
+                  <li>
+                    <span className="font-semibold">Global Accessibility:</span> Trade anytime, anywhere, 24/7.
+                  </li>
+                  <li>
+                    <span className="font-semibold">Customizable Trading:</span> Filter ads by price, payment method, and other preferences.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Second Benefits Image */}
+              <div className="flex justify-center">
+                <img 
+                  src="/assets/IMG_1759_1761657339702.jpeg"
+                  alt="Why Choose Pexly P2P"
+                  className="max-w-md w-full object-contain"
+                />
+              </div>
+
+              {/* Why Choose Pexly P2P */}
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold">Why Choose Pexly P2P?</h3>
+                <ul className="space-y-3">
+                  <li>
+                    <span className="font-semibold">Zero Fees:</span> Enjoy zero fees on crypto transactions.
+                  </li>
+                  <li>
+                    <span className="font-semibold">Diverse Payment Options:</span> Choose from over 600 payment options.
+                  </li>
+                  <li>
+                    <span className="font-semibold">24/7 Customer Support:</span> Access multilingual support anytime and find instant solutions in our Help Center.
+                  </li>
+                  <li>
+                    <span className="font-semibold">Secure Escrow System:</span> Trade with confidence — your assets will only be released upon your confirmation.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Learn About P2P */}
+              <div className="mt-12">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl font-bold">Learn About P2P</h2>
+                  <a href="#" className="text-primary hover:underline font-medium inline-flex items-center gap-2">
+                    Learn More
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Card 1: P2P on Pexly Trading */}
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="w-full">
+                        <img 
+                          src="/assets/IMG_1750_1761657821369.jpeg"
+                          alt="P2P Trading"
+                          className="w-full h-auto object-cover"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <div className="text-xs text-muted-foreground mb-2 uppercase font-semibold">PEXLY LEARN</div>
+                        <h3 className="text-xl font-bold mb-2">P2P on Pexly Trading</h3>
+                        <p className="text-muted-foreground mb-3">
+                          Everything you need to know for a seamless and secure peer-to-peer trading experience.
+                        </p>
+                        <a href="#" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
+                          Read More <ArrowRight className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card 2: Avoid P2P Crypto Scams */}
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="w-full">
+                        <img 
+                          src="/assets/IMG_1754_1761657821369.jpeg"
+                          alt="Avoid Scams"
+                          className="w-full h-auto object-cover"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <div className="text-xs text-muted-foreground mb-2 uppercase font-semibold">PEXLY LEARN</div>
+                        <h3 className="text-xl font-bold mb-2">Avoid P2P Crypto Scams and Fraud</h3>
+                        <p className="text-muted-foreground mb-3">
+                          Learn about common tactics like fake escrow services, chargebacks, phishing, and non-payment schemes to stay safe in P2P trading.
+                        </p>
+                        <a href="#" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
+                          Read More <ArrowRight className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card 3: Earn Money With P2P Trading */}
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="w-full">
+                        <img 
+                          src="/assets/IMG_1755_1761657821369.jpeg"
+                          alt="Earn Money"
+                          className="w-full h-auto object-cover"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <div className="text-xs text-muted-foreground mb-2 uppercase font-semibold">PEXLY LEARN</div>
+                        <h3 className="text-xl font-bold mb-2">
+                          How to Earn Money with <span className="text-primary">Pexly</span> P2P HotSwap
+                        </h3>
+                        <p className="text-muted-foreground mb-3">
+                          Discover 5 essential tips to help you earn money safely on Pexly P2P.
+                        </p>
+                        <a href="#" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
+                          Read More <ArrowRight className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Payment Methods Section */}
+              <div className="mt-12 space-y-6">
+                <div>
+                  <h2 className="text-3xl font-bold mb-2">Payment Methods</h2>
+                  <p className="text-muted-foreground">
+                    Trade effortlessly with popular payment methods
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    "ABA", "ACB", "ACLEDA",
+                    "AirTM", "Akbank", "Altyn Bank",
+                    "Al Rajhi Bank", "Ameriabank", "Apple Pay"
+                  ].map((method) => (
+                    <Card key={method} className="hover:shadow-lg transition-shadow cursor-pointer">
+                      <CardContent className="p-6 text-center">
+                        <div className="font-semibold">{method}</div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* FAQs Section */}
+              <div className="mt-12 space-y-6">
+                <h2 className="text-3xl font-bold">FAQs</h2>
+
+                <div className="flex gap-2 border-b pb-2">
+                  {["Beginner", "Advanced", "Advertiser", "Safe"].map((tab) => (
+                    <Button
+                      key={tab}
+                      variant="ghost"
+                      className="font-semibold"
+                    >
+                      {tab}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="space-y-4">
+                  {[
+                    "What is P2P on Pexly?",
+                    "Are there any transaction fees on the P2P platform?",
+                    "Do I need Identity Verification (KYC) to perform P2P trading?",
+                    "Can I trade with users in other countries or regions?",
+                    "What payment methods are supported for P2P trade?",
+                    "How to buy and sell on P2P?",
+                    "What are the order limits on the P2P trading platform?",
+                    "Why am I ineligible to buy or sell my coin?"
+                  ].map((question) => (
+                    <Card key={question} className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <span className="font-medium">{question}</span>
+                        <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                <div className="mt-6">
+                  <a href="#" className="text-primary hover:underline font-medium inline-flex items-center gap-2">
+                    Learn More
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
 
