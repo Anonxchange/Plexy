@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { authenticator } from "otplib";
+import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
 import { Copy, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase";
@@ -59,37 +59,19 @@ export function TwoFactorSetupDialog({
   }, [open, userId]);
 
   const generateSecret = async () => {
-    // Generate a random secret using Web Crypto API
-    const buffer = new Uint8Array(20);
-    crypto.getRandomValues(buffer);
+    // Generate a TOTP instance with a random secret
+    const totp = new OTPAuth.TOTP({
+      issuer: "Pexly",
+      label: userEmail,
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+    });
     
-    // Convert to base32 (RFC 4648)
-    const base32chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    let bits = 0;
-    let value = 0;
-    let newSecret = '';
-    
-    for (let i = 0; i < buffer.length; i++) {
-      value = (value << 8) | buffer[i];
-      bits += 8;
-      
-      while (bits >= 5) {
-        newSecret += base32chars[(value >>> (bits - 5)) & 31];
-        bits -= 5;
-      }
-    }
-    
-    if (bits > 0) {
-      newSecret += base32chars[(value << (5 - bits)) & 31];
-    }
-    
+    const newSecret = totp.secret.base32;
     setSecret(newSecret);
 
-    const otpauthUrl = authenticator.keyuri(
-      userEmail,
-      "Pexly",
-      newSecret
-    );
+    const otpauthUrl = totp.toString();
 
     let qrCode = '';
     try {
@@ -116,10 +98,17 @@ export function TwoFactorSetupDialog({
   const handleVerify = async () => {
     setLoading(true);
     try {
-      const isValid = authenticator.verify({
-        token: verificationCode,
-        secret: secret,
+      // Create TOTP instance with the stored secret
+      const totp = new OTPAuth.TOTP({
+        issuer: "Pexly",
+        label: userEmail,
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(secret),
       });
+      
+      const isValid = totp.validate({ token: verificationCode, window: 1 }) !== null;
 
       if (!isValid) {
         toast({
@@ -131,6 +120,19 @@ export function TwoFactorSetupDialog({
         return;
       }
 
+      // First check if user profile exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("id", userId)
+        .single();
+
+      if (checkError || !existingProfile) {
+        console.error("User profile check failed:", checkError);
+        throw new Error("User profile not found. Please complete your profile first.");
+      }
+
+      // Update the profile with 2FA settings
       const { error } = await supabase
         .from("user_profiles")
         .update({
@@ -140,7 +142,10 @@ export function TwoFactorSetupDialog({
         })
         .eq("id", userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error enabling 2FA:", error);
+        throw new Error(error.message || error.details || "Database update failed");
+      }
 
       setStep(3);
       
@@ -150,9 +155,18 @@ export function TwoFactorSetupDialog({
       });
     } catch (error) {
       console.error("Error enabling 2FA:", error);
+      let errorMessage = "Failed to enable 2FA. Please try again.";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const err = error as any;
+        errorMessage = err.message || err.details || err.hint || JSON.stringify(error);
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to enable 2FA. Please try again.",
+        title: "2FA Enable Failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
