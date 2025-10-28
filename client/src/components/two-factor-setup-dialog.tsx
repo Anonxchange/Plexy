@@ -123,13 +123,12 @@ export function TwoFactorSetupDialog({
 
       if (error) throw error;
 
+      setStep(3);
+      
       toast({
         title: "Success!",
         description: "Two-factor authentication has been enabled.",
       });
-
-      setStep(3);
-      onSuccess();
     } catch (error) {
       console.error("Error enabling 2FA:", error);
       toast({
@@ -155,14 +154,30 @@ export function TwoFactorSetupDialog({
   };
 
   const handleClose = () => {
-    setStep(1);
-    setVerificationCode("");
-    setSecret("");
-    setQrCodeUrl("");
-    setBackupCodes([]);
-    setCopiedSecret(false);
-    setCopiedBackup(false);
-    onOpenChange(false);
+    // Prevent closing if still in setup process
+    if (step === 3) {
+      // Only allow closing after backup codes are shown
+      setStep(1);
+      setVerificationCode("");
+      setSecret("");
+      setQrCodeUrl("");
+      setBackupCodes([]);
+      setCopiedSecret(false);
+      setCopiedBackup(false);
+      onSuccess();
+      onOpenChange(false);
+    } else if (step === 1) {
+      // Allow closing from first step
+      setStep(1);
+      setVerificationCode("");
+      setSecret("");
+      setQrCodeUrl("");
+      setBackupCodes([]);
+      setCopiedSecret(false);
+      setCopiedBackup(false);
+      onOpenChange(false);
+    }
+    // Prevent closing during verification (step 2)
   };
 
   return (
