@@ -1012,7 +1012,7 @@ export function P2P() {
               <div className="flex gap-6 items-start">
                 <div className="flex-shrink-0">
                   <img 
-                    src="/assets/IMG_1765_1761656498054.png"
+                    src="/assets/IMG_1766.png"
                     alt="Receive Coins"
                     className="w-24 h-24 object-contain"
                   />
