@@ -28,7 +28,7 @@ const articles: Record<string, Article[]> = {
       category: "Security",
       difficulty: "Beginner",
       readTime: "10 min read",
-      imageUrl: "/assets/IMG_1804_1761669025650.jpeg",
+      imageUrl: "/assets/IMG_1804.jpeg",
     },
     {
       id: "p2p-2",
@@ -37,7 +37,7 @@ const articles: Record<string, Article[]> = {
       category: "Trading",
       difficulty: "Intermediate",
       readTime: "9 min read",
-      imageUrl: "/assets/IMG_1807_1761669025651.jpeg",
+      imageUrl: "/assets/IMG_1807.jpeg",
     },
     {
       id: "p2p-3",
@@ -46,7 +46,7 @@ const articles: Record<string, Article[]> = {
       category: "Getting Started",
       difficulty: "Beginner",
       readTime: "7 min read",
-      imageUrl: "/assets/IMG_1754_1761669025651.jpeg",
+      imageUrl: "/assets/IMG_1750.jpeg",
     },
     {
       id: "p2p-4",
@@ -54,8 +54,8 @@ const articles: Record<string, Article[]> = {
       description: "Looking to start selling crypto? Explore the easy step-by-step process to sell cryptocurrency on Pexly P2P.",
       category: "Trading",
       difficulty: "Beginner",
-      readTime: "3 min read",
-      imageUrl: "/assets/IMG_1755_1761669025651.jpeg",
+      readTime: "3 min read", 
+      imageUrl: "/assets/IMG_1809.jpeg",
     },
     {
       id: "p2p-5",
