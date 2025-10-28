@@ -73,7 +73,7 @@ const articles: Record<string, Article[]> = {
       category: "Advanced Trading",
       difficulty: "Intermediate",
       readTime: "7 min read",
-      imageUrl: "/assets/IMG_1805_1761669025651.jpeg",
+      imageUrl: "/assets/IMG_1754.jpeg",
     },
     {
       id: "p2p-7",
@@ -82,7 +82,7 @@ const articles: Record<string, Article[]> = {
       category: "Earning",
       difficulty: "Intermediate",
       readTime: "8 min read",
-      imageUrl: "/assets/IMG_1811_1761669025651.jpeg",
+      imageUrl: "/assets/IMG_1755.jpeg",
     },
     {
       id: "p2p-8",
@@ -91,7 +91,7 @@ const articles: Record<string, Article[]> = {
       category: "Getting Started",
       difficulty: "Beginner",
       readTime: "4 min read",
-      imageUrl: "/assets/IMG_1750_1761669025651.jpeg",
+      imageUrl: "/assets/IMG_1811.jpeg",
     },
     {
       id: "p2p-9",
@@ -100,7 +100,7 @@ const articles: Record<string, Article[]> = {
       category: "Advanced Trading",
       difficulty: "Advanced",
       readTime: "12 min read",
-      imageUrl: "/assets/IMG_1811_1761670170400.jpeg",
+      imageUrl: "/assets/IMG_1808.jpeg",
     },
   ],
   "crypto": [
