@@ -53,15 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   useEffect(() => {
+    // If on verify-email page, don't try to restore any session
+    if (window.location.pathname === '/verify-email') {
+      setSession(null);
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // Don't set session if we're on the verify-email page
-      if (window.location.pathname === '/verify-email') {
-        setSession(null);
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
