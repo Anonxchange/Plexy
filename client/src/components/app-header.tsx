@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard } from "lucide-react";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -249,15 +249,15 @@ export function AppHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
-        {/* Left side - Menu button (when signed in) */}
-        <div className="flex items-center gap-2 flex-1">
+        {/* Left side - Menu button (mobile only) and Logo */}
+        <div className="flex items-center gap-2">
           {user && (
             <Button 
               variant="outline" 
               size="icon" 
               onClick={() => setMobileMenuOpen(true)}
               data-testid="button-sidebar-toggle"
-              className="border-border"
+              className="border-border lg:hidden"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -270,13 +270,76 @@ export function AppHeader() {
           </Link>
         </div>
 
-        <div className="flex-1 hidden md:block"></div>
+        {/* Desktop Navigation - Hidden on mobile */}
+        {user && (
+          <nav className="hidden lg:flex items-center gap-1 flex-1 ml-8">
+            <Link href="/">
+              <Button
+                variant={location === "/" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2"
+              >
+                <Home className="h-4 w-4" />
+                Home
+              </Button>
+            </Link>
+            <Link href="/p2p">
+              <Button
+                variant={location === "/p2p" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                P2P
+              </Button>
+            </Link>
+            <Link href="/shop">
+              <Button
+                variant={location === "/shop" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2"
+              >
+                <Store className="h-4 w-4" />
+                Shop
+              </Button>
+            </Link>
+            <Link href="/swap">
+              <Button
+                variant={location === "/swap" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2"
+              >
+                Swap
+              </Button>
+            </Link>
+            <Link href="/wallet">
+              <Button
+                variant={location === "/wallet" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2"
+              >
+                <Wallet className="h-4 w-4" />
+                Wallet
+              </Button>
+            </Link>
+            <Link href="/medals">
+              <Button
+                variant={location === "/medals" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2"
+              >
+                <Trophy className="h-4 w-4" />
+                Medals
+              </Button>
+            </Link>
+          </nav>
+        )}
 
         {/* Right side - Profile info and menu button (when not signed in) */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-end">
+        <div className="flex items-center gap-2 justify-end">
           {user ? (
             <>
-              <div className="text-center relative max-w-[120px] sm:max-w-[150px]">
+              <div className="text-center relative max-w-[120px] sm:max-w-[150px] hidden sm:block">
                 <div className="text-sm font-semibold text-foreground truncate">
                   {userName || user?.email?.split('@')[0] || 'User'}
                 </div>
@@ -426,15 +489,32 @@ export function AppHeader() {
             </DropdownMenu>
             </>
           ) : (
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setMobileMenuOpen(true)}
-              data-testid="button-sidebar-toggle"
-              className="border-border"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => setMobileMenuOpen(true)}
+                data-testid="button-sidebar-toggle"
+                className="border-border lg:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div className="hidden lg:flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/signin")}
+                  data-testid="button-sign-in"
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  onClick={() => navigate("/signup")}
+                  data-testid="button-sign-up"
+                >
+                  Sign Up
+                </Button>
+              </div>
+            </>
           )}
         </div>
       </div>
