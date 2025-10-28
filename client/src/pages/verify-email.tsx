@@ -75,22 +75,28 @@ export function VerifyEmail() {
             }
           }
 
-          // NOW sign out completely to clear the session
+          // IMMEDIATELY sign out to prevent auto-login
           await supabase.auth.signOut();
           
-          // Clear local storage to ensure no remnants
-          localStorage.removeItem('supabase.auth.token');
+          // Clear ALL storage to ensure no session remnants
+          localStorage.clear();
+          sessionStorage.clear();
           
-          setStatus("success");
-          setMessage("Email verified successfully! Redirecting to login...");
-          
-          toast({
-            title: "Success!",
-            description: "Your email has been verified. Please sign in to continue.",
+          // Clear cookies
+          document.cookie.split(";").forEach((c) => {
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
           });
           
+          setStatus("success");
+          setMessage("Email verified successfully! Please sign in with your credentials.");
+          
+          toast({
+            title: "Email Verified!",
+            description: "Your email has been verified. You can now sign in.",
+          });
+          
+          // Redirect after a short delay
           setTimeout(() => {
-            // Force a full page reload to clear any cached auth state
             window.location.href = "/signin";
           }, 2000);
           return;
