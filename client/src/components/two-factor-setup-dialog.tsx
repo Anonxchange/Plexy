@@ -43,10 +43,20 @@ export function TwoFactorSetupDialog({
   const supabase = createClient();
 
   useEffect(() => {
-    if (open && !secret) {
+    if (!open) return;
+
+    const sessionKey = `2fa_setup_${userId}`;
+    const storedData = sessionStorage.getItem(sessionKey);
+    
+    if (storedData) {
+      const { secret: storedSecret, qrCodeUrl: storedQr, backupCodes: storedCodes } = JSON.parse(storedData);
+      setSecret(storedSecret);
+      setQrCodeUrl(storedQr);
+      setBackupCodes(storedCodes);
+    } else {
       generateSecret();
     }
-  }, [open]);
+  }, [open, userId]);
 
   const generateSecret = async () => {
     // Generate a random secret using Web Crypto API
@@ -81,8 +91,9 @@ export function TwoFactorSetupDialog({
       newSecret
     );
 
+    let qrCode = '';
     try {
-      const qrCode = await QRCode.toDataURL(otpauthUrl);
+      qrCode = await QRCode.toDataURL(otpauthUrl);
       setQrCodeUrl(qrCode);
     } catch (error) {
       console.error("Error generating QR code:", error);
@@ -92,6 +103,14 @@ export function TwoFactorSetupDialog({
       Math.random().toString(36).substring(2, 10).toUpperCase()
     );
     setBackupCodes(codes);
+
+    // Store in sessionStorage to persist across remounts
+    const sessionKey = `2fa_setup_${userId}`;
+    sessionStorage.setItem(sessionKey, JSON.stringify({
+      secret: newSecret,
+      qrCodeUrl: qrCode,
+      backupCodes: codes
+    }));
   };
 
   const handleVerify = async () => {
@@ -164,6 +183,11 @@ export function TwoFactorSetupDialog({
       setBackupCodes([]);
       setCopiedSecret(false);
       setCopiedBackup(false);
+      
+      // Clear sessionStorage
+      const sessionKey = `2fa_setup_${userId}`;
+      sessionStorage.removeItem(sessionKey);
+      
       onSuccess();
       onOpenChange(false);
     } else if (step === 1) {
@@ -175,6 +199,11 @@ export function TwoFactorSetupDialog({
       setBackupCodes([]);
       setCopiedSecret(false);
       setCopiedBackup(false);
+      
+      // Clear sessionStorage
+      const sessionKey = `2fa_setup_${userId}`;
+      sessionStorage.removeItem(sessionKey);
+      
       onOpenChange(false);
     }
     // Prevent closing during verification (step 2)
