@@ -248,12 +248,12 @@
     transform: translateX(0);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translateX(-33.33%);
   }
 }
 
 .animate-scroll {
-  animation: scroll 30s linear infinite;
+  animation: scroll 25s linear infinite;
 }
 
 .animate-scroll:hover {
