@@ -974,7 +974,7 @@ export function P2P() {
               <div className="flex gap-6 items-start">
                 <div className="flex-shrink-0">
                   <img 
-                    src="/assets/IMG_1764_1761656498054.png"
+                    src="/assets/IMG_1764.png"
                     alt="Select an Ad"
                     className="w-24 h-24 object-contain"
                   />
@@ -993,7 +993,7 @@ export function P2P() {
               <div className="flex gap-6 items-start">
                 <div className="flex-shrink-0">
                   <img 
-                    src="/assets/IMG_1766_1761656498054.png"
+                    src="/assets/IMG_1766.png"
                     alt="Confirm Payment"
                     className="w-24 h-24 object-contain"
                   />
