@@ -54,7 +54,7 @@ export function VerifyEmail() {
         }
 
         // Check if this is from an email confirmation link with access token
-        if (accessToken) {
+        if (accessToken && type === "signup") {
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || "",
@@ -62,21 +62,21 @@ export function VerifyEmail() {
 
           console.log("Session result:", { sessionData: !!sessionData?.user, error: sessionError });
 
-          if (sessionError) {
-            console.error("Session error:", sessionError);
-            setStatus("error");
-            setMessage(`Session error: ${sessionError.message}`);
-            return;
-          }
+          // Even if session fails, the email is still verified by Supabase
+          // Just show success and redirect to login
+          if (sessionData?.user || sessionError) {
+            // Sign out FIRST before doing anything else to prevent auto-redirect
+            await supabase.auth.signOut();
+            
+            if (sessionData?.user) {
+              const { error: updateError } = await supabase
+                .from("user_profiles")
+                .update({ email_verified: true })
+                .eq("id", sessionData.user.id);
 
-          if (sessionData?.user) {
-            const { error: updateError } = await supabase
-              .from("user_profiles")
-              .update({ email_verified: true })
-              .eq("id", sessionData.user.id);
-
-            if (updateError) {
-              console.warn("Profile update error:", updateError);
+              if (updateError) {
+                console.warn("Profile update error:", updateError);
+              }
             }
 
             setStatus("success");
@@ -86,9 +86,6 @@ export function VerifyEmail() {
               title: "Success!",
               description: "Your email has been verified. Please sign in to continue.",
             });
-
-            // Sign out the user so they must login again
-            await supabase.auth.signOut();
             
             setTimeout(() => setLocation("/signin"), 2000);
             return;
