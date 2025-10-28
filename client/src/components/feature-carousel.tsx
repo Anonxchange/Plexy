@@ -4,19 +4,19 @@ import { Button } from "@/components/ui/button";
 const features = [
   {
     id: 1,
-    image: "/assets/IMG_1821_1761687661785.jpeg",
+    image: "/assets/IMG_1820.jpeg",
     title: "Secure Wallet. Your keys, your crypto.",
     buttonText: "Create Wallet",
   },
   {
     id: 2,
-    image: "/assets/IMG_1820_1761687661785.jpeg",
+    image: "/assets/IMG_1821.jpeg",
     title: "Live crypto. Pay anywhere. Get 10% back.",
     buttonText: "Get My Card",
   },
   {
     id: 3,
-    image: "/assets/IMG_1824_1761687661785.jpeg",
+    image: "/assets/IMG_1824.jpeg",
     title: "Refer friends. Earn crypto rewards.",
     buttonText: "Start Earning",
   },
