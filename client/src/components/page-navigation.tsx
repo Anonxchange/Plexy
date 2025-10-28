@@ -31,7 +31,7 @@ export function PageNavigation() {
   };
 
   return (
-    <div className="bg-card border-b">
+    <div className="bg-card border-b lg:hidden">
       <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {["HOME", "P2P", "SHOP", "SWAP", "WALLET"].map((tab) => (
