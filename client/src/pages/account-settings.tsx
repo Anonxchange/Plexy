@@ -28,6 +28,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -66,6 +67,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { TwoFactorSetupDialog } from "@/components/two-factor-setup-dialog";
+import * as OTPAuth from "otpauth";
 
 const settingsSections = [
   { id: "profile", label: "Profile", icon: User },
@@ -112,6 +114,10 @@ export function AccountSettings() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [show2FADialog, setShow2FADialog] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [showSMS2FADialog, setShowSMS2FADialog] = useState(false);
+  const [smsVerificationCode, setSmsVerificationCode] = useState("");
+  const [smsSent, setSmsSent] = useState(false);
+  const [sendingSMS, setSendingSMS] = useState(false);
 
   // Notification settings
   const [tradeUpdates, setTradeUpdates] = useState(true);
@@ -151,7 +157,7 @@ export function AccountSettings() {
   const [devices, setDevices] = useState<any[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(true);
 
-  
+
 
   // Online Wallet Providers
   const onlineWalletProviders = [
@@ -290,7 +296,7 @@ export function AccountSettings() {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('two_factor_enabled')
+        .select('two_factor_enabled, sms_two_factor_enabled')
         .eq('id', user?.id)
         .single();
 
@@ -299,18 +305,193 @@ export function AccountSettings() {
       if (data) {
         setTwoFactorEnabled(data.two_factor_enabled || false);
         setAppAuth(data.two_factor_enabled || false);
+        setSmsAuth(data.sms_two_factor_enabled || false);
       }
     } catch (error) {
       console.error('Error fetching 2FA status:', error);
     }
   };
 
-  const handleDisable2FA = async () => {
-    if (!confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+  const [showDisable2FADialog, setShowDisable2FADialog] = useState(false);
+  const [disable2FACode, setDisable2FACode] = useState("");
+  const [disabling2FA, setDisabling2FA] = useState(false);
+
+  const handleSendSMSCode = async () => {
+    if (!phone) {
+      toast({
+        title: "Phone Required",
+        description: "Please add a phone number to your profile first",
+        variant: "destructive",
+      });
       return;
     }
 
+    setSendingSMS(true);
     try {
+      // Generate a 6-digit code
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Store code in database with expiry (5 minutes)
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          sms_verification_code: code,
+          sms_code_expires_at: expiresAt
+        })
+        .eq('id', user?.id);
+
+      if (updateError) throw updateError;
+
+      // Send SMS via edge function
+      const { error: smsError } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: phone,
+          code: code
+        }
+      });
+
+      if (smsError) throw smsError;
+
+      setSmsSent(true);
+      toast({
+        title: "Code Sent",
+        description: `Verification code sent to ${phone}`,
+      });
+    } catch (error) {
+      console.error('Error sending SMS:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send verification code",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingSMS(false);
+    }
+  };
+
+  const handleEnableSMS2FA = async () => {
+    try {
+      // Verify the code
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('sms_verification_code, sms_code_expires_at')
+        .eq('id', user?.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      if (!profileData?.sms_verification_code) {
+        throw new Error('No verification code found');
+      }
+
+      const expiresAt = new Date(profileData.sms_code_expires_at);
+      if (expiresAt < new Date()) {
+        throw new Error('Verification code has expired');
+      }
+
+      if (profileData.sms_verification_code !== smsVerificationCode) {
+        toast({
+          title: "Invalid Code",
+          description: "The verification code is incorrect",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Enable SMS 2FA
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          sms_two_factor_enabled: true,
+          sms_verification_code: null,
+          sms_code_expires_at: null
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      setSmsAuth(true);
+      setShowSMS2FADialog(false);
+      setSmsVerificationCode("");
+      setSmsSent(false);
+
+      toast({
+        title: "SMS 2FA Enabled",
+        description: "SMS two-factor authentication has been enabled",
+      });
+    } catch (error: any) {
+      console.error('Error enabling SMS 2FA:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to enable SMS 2FA",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisableSMS2FA = async () => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          sms_two_factor_enabled: false
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      setSmsAuth(false);
+      toast({
+        title: "SMS 2FA Disabled",
+        description: "SMS two-factor authentication has been disabled",
+      });
+    } catch (error) {
+      console.error('Error disabling SMS 2FA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disable SMS 2FA",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    setDisabling2FA(true);
+    try {
+      // Verify the 2FA code first
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('two_factor_secret')
+        .eq('id', user?.id)
+        .single();
+
+      if (profileError || !profileData?.two_factor_secret) {
+        throw new Error('Failed to verify 2FA settings');
+      }
+
+      const totp = new OTPAuth.TOTP({
+        issuer: "Pexly",
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(profileData.two_factor_secret),
+      });
+
+      const isValid = totp.validate({ token: disable2FACode, window: 1 }) !== null;
+
+      if (!isValid) {
+        toast({
+          title: "Invalid Code",
+          description: "The authenticator code is incorrect. Please try again.",
+          variant: "destructive",
+        });
+        setDisabling2FA(false);
+        return;
+      }
+
+      // Disable 2FA immediately after successful verification
       const { error } = await supabase
         .from('user_profiles')
         .update({
@@ -324,10 +505,12 @@ export function AccountSettings() {
 
       setTwoFactorEnabled(false);
       setAppAuth(false);
+      setShowDisable2FADialog(false);
+      setDisable2FACode("");
 
       toast({
         title: "2FA Disabled",
-        description: "Two-factor authentication has been disabled for your account.",
+        description: "Two-factor authentication has been successfully disabled.",
       });
     } catch (error) {
       console.error('Error disabling 2FA:', error);
@@ -336,6 +519,8 @@ export function AccountSettings() {
         description: "Failed to disable 2FA. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setDisabling2FA(false);
     }
   };
 
@@ -952,8 +1137,30 @@ export function AccountSettings() {
                   <p className="text-sm text-muted-foreground">
                     Receive verification codes via SMS to your registered phone number
                   </p>
+                  {smsAuth && (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 mt-2">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Enabled
+                    </Badge>
+                  )}
                 </div>
-                <Switch checked={smsAuth} onCheckedChange={setSmsAuth} />
+                {smsAuth ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDisableSMS2FA}
+                  >
+                    Disable
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSMS2FADialog(true)}
+                  >
+                    Enable
+                  </Button>
+                )}
               </div>
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="flex-1">
@@ -972,7 +1179,7 @@ export function AccountSettings() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleDisable2FA}
+                    onClick={() => setShowDisable2FADialog(true)}
                   >
                     Disable
                   </Button>
@@ -999,6 +1206,172 @@ export function AccountSettings() {
                   }}
                 />
               )}
+
+              {/* SMS 2FA Setup Dialog */}
+              <Dialog open={showSMS2FADialog} onOpenChange={setShowSMS2FADialog}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Enable SMS Two-Factor Authentication</DialogTitle>
+                    <DialogDescription>
+                      We'll send a verification code to your phone number
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {!phone ? (
+                      <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                              Phone Number Required
+                            </p>
+                            <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                              Please add and verify your phone number in the Profile section first
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : !smsSent ? (
+                      <>
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-blue-800 dark:text-blue-200">
+                                We'll send a 6-digit verification code to <strong>{phone}</strong>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={handleSendSMSCode}
+                          disabled={sendingSMS}
+                          className="w-full"
+                        >
+                          {sendingSMS ? "Sending..." : "Send Verification Code"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                          <p className="text-sm text-green-800 dark:text-green-200">
+                            Code sent to <strong>{phone}</strong>
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="sms-code">Enter Verification Code</Label>
+                          <Input
+                            id="sms-code"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="000000"
+                            maxLength={6}
+                            value={smsVerificationCode}
+                            onChange={(e) => setSmsVerificationCode(e.target.value.replace(/\D/g, ""))}
+                            className="text-center text-2xl tracking-widest font-mono"
+                          />
+                          <p className="text-xs text-muted-foreground text-center">
+                            Didn't receive the code?{" "}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSmsSent(false);
+                                setSmsVerificationCode("");
+                                handleSendSMSCode();
+                              }}
+                              className="text-primary hover:underline"
+                            >
+                              Resend
+                            </button>
+                          </p>
+                        </div>
+                        <Button
+                          onClick={handleEnableSMS2FA}
+                          disabled={smsVerificationCode.length !== 6}
+                          className="w-full"
+                        >
+                          Verify & Enable
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowSMS2FADialog(false);
+                        setSmsVerificationCode("");
+                        setSmsSent(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Disable 2FA Verification Dialog */}
+              <Dialog open={showDisable2FADialog} onOpenChange={setShowDisable2FADialog}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
+                    <DialogDescription>
+                      Enter your authenticator code to confirm disabling 2FA
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                            Security Warning
+                          </p>
+                          <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                            Disabling 2FA will make your account less secure. Make sure you understand the risks.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="disable-2fa-code">Enter Authenticator Code</Label>
+                      <Input
+                        id="disable-2fa-code"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="000000"
+                        maxLength={6}
+                        value={disable2FACode}
+                        onChange={(e) => setDisable2FACode(e.target.value.replace(/\D/g, ""))}
+                        className="text-center text-2xl tracking-widest font-mono"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Open your authenticator app and enter the 6-digit code for Pexly
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowDisable2FADialog(false);
+                        setDisable2FACode("");
+                      }}
+                      disabled={disabling2FA}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDisable2FA}
+                      disabled={disable2FACode.length !== 6 || disabling2FA}
+                    >
+                      {disabling2FA ? "Disabling..." : "Disable 2FA"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               {!smsAuth && !appAuth && (
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mt-4">
                   <div className="flex gap-3">
@@ -1147,7 +1520,7 @@ export function AccountSettings() {
 
         {/* Security Recommendations */}
         <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex gap-3">
               <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="space-y-2">
@@ -1681,8 +2054,8 @@ export function AccountSettings() {
                     <SelectItem value="Zimbabwe">🇿🇼 Zimbabwe</SelectItem>
                     <SelectItem value="United States">🇺🇸 United States</SelectItem>
                     <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
-                    <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
-                    <SelectItem value="Australia">🇦🇺 Australia</SelectItem>
+                    <SelectItem value="Canada">🇨🇦 Canadian Dollar (CAD)</SelectItem>
+                    <SelectItem value="Australia">🇦🇺 Australian Dollar (AUD)</SelectItem>
                     <SelectItem value="France">🇫🇷 France</SelectItem>
                     <SelectItem value="Germany">🇩🇪 Germany</SelectItem>
                     <SelectItem value="Spain">🇪🇸 Spain</SelectItem>
@@ -1826,7 +2199,7 @@ export function AccountSettings() {
                 />
               </div>
 
-              {/* Custom Bank Details - Optional */}
+              {/* Custom bank details - Optional */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-base">Custom bank details</Label>
