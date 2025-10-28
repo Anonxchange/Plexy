@@ -6,7 +6,7 @@ import { Eye, EyeOff, Sun, Moon, ShieldCheck, Zap } from "lucide-react";
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { createClient } from "@/lib/supabase";
-import { authenticator } from "otplib";
+import * as OTPAuth from "otpauth";
 import { useTheme } from "@/components/theme-provider";
 
 export function SignIn() {
@@ -19,6 +19,7 @@ export function SignIn() {
   const [show2FAInput, setShow2FAInput] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [tempUserId, setTempUserId] = useState<string | null>(null);
+  const [checking2FA, setChecking2FA] = useState(false);
   const { signIn, signOut, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -28,7 +29,7 @@ export function SignIn() {
   const isDark = theme === "dark";
 
   useEffect(() => {
-    if (user) {
+    if (user && !checking2FA && !show2FAInput) {
       setLocation("/dashboard");
     }
 
@@ -41,7 +42,7 @@ export function SignIn() {
         variant: "destructive",
       });
     }
-  }, [user, setLocation, toast]);
+  }, [user, setLocation, toast, checking2FA, show2FAInput]);
 
   useEffect(() => {
     const value = inputValue.trim();
@@ -52,6 +53,7 @@ export function SignIn() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setChecking2FA(true);
 
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
@@ -61,6 +63,7 @@ export function SignIn() {
         variant: "destructive",
       });
       setLoading(false);
+      setChecking2FA(false);
       return;
     }
 
@@ -68,6 +71,7 @@ export function SignIn() {
 
     if (error) {
       setLoading(false);
+      setChecking2FA(false);
       toast({
         title: "Error",
         description: error.message,
@@ -81,6 +85,7 @@ export function SignIn() {
 
     if (!userId) {
       setLoading(false);
+      setChecking2FA(false);
       toast({
         title: "Error",
         description: "Failed to get user session",
@@ -105,6 +110,7 @@ export function SignIn() {
       setLoading(false);
       await signOut();
     } else {
+      setChecking2FA(false);
       toast({
         title: "Success!",
         description: "You have successfully signed in",
@@ -137,12 +143,24 @@ export function SignIn() {
         .eq('id', tempUserId)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw new Error(`Failed to fetch profile: ${profileError.message}`);
+      }
 
-      const isValidToken = authenticator.verify({
-        token: twoFactorCode,
-        secret: profileData.two_factor_secret,
+      if (!profileData?.two_factor_secret) {
+        throw new Error('Two-factor authentication is not properly configured for this account');
+      }
+
+      const totp = new OTPAuth.TOTP({
+        issuer: "Pexly",
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(profileData.two_factor_secret),
       });
+      
+      const isValidToken = totp.validate({ token: twoFactorCode, window: 1 }) !== null;
 
       let isBackupCode = false;
       let updatedBackupCodes = profileData.two_factor_backup_codes;
@@ -183,6 +201,7 @@ export function SignIn() {
         return;
       }
 
+      setChecking2FA(false);
       toast({
         title: "Success!",
         description: "You have successfully signed in with 2FA",
@@ -192,11 +211,11 @@ export function SignIn() {
         setLoading(false);
         setLocation("/dashboard");
       }, 100);
-    } catch (error) {
+    } catch (error: any) {
       console.error('2FA verification error:', error);
       toast({
         title: "Error",
-        description: "Failed to verify 2FA code",
+        description: error?.message || "Failed to verify 2FA code",
         variant: "destructive",
       });
       setLoading(false);
@@ -425,6 +444,7 @@ export function SignIn() {
                 setShow2FAInput(false);
                 setTwoFactorCode("");
                 setTempUserId(null);
+                setChecking2FA(false);
               }}
               className={`w-full py-4 rounded-full text-base transition-colors ${
                 isDark 
