@@ -5,7 +5,9 @@ export type NotificationSound =
   | 'trade_completed' 
   | 'message_received' 
   | 'time_warning' 
-  | 'trade_cancelled';
+  | 'trade_cancelled'
+  | 'payment_marked'
+  | 'escrow_released';
 
 // Create audio context for playing notification sounds
 class NotificationSounds {
@@ -89,6 +91,20 @@ class NotificationSounds {
         // Descending tone
         this.playBeep(659.25, 0.1); // E5
         setTimeout(() => this.playBeep(523.25, 0.2), 100); // C5
+        break;
+
+      case 'payment_marked':
+        // Hopeful double beep
+        this.playBeep(698.46, 0.12); // F5
+        setTimeout(() => this.playBeep(880, 0.15), 120); // A5
+        break;
+
+      case 'escrow_released':
+        // Triumphant ascending sequence
+        this.playBeep(523.25, 0.1); // C5
+        setTimeout(() => this.playBeep(659.25, 0.1), 100); // E5
+        setTimeout(() => this.playBeep(783.99, 0.1), 200); // G5
+        setTimeout(() => this.playBeep(1046.5, 0.2), 300); // C6
         break;
 
       default:
