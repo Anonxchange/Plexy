@@ -55,6 +55,7 @@ export function VerifyEmail() {
 
         // Check if this is from an email confirmation link with access token
         if (accessToken && type === "signup") {
+          // First, verify the email by setting the session temporarily
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || "",
@@ -62,34 +63,37 @@ export function VerifyEmail() {
 
           console.log("Session result:", { sessionData: !!sessionData?.user, error: sessionError });
 
-          // Even if session fails, the email is still verified by Supabase
-          // Just show success and redirect to login
-          if (sessionData?.user || sessionError) {
-            // Sign out FIRST before doing anything else to prevent auto-redirect
-            await supabase.auth.signOut();
-            
-            if (sessionData?.user) {
-              const { error: updateError } = await supabase
-                .from("user_profiles")
-                .update({ email_verified: true })
-                .eq("id", sessionData.user.id);
+          // Update the user profile to mark email as verified
+          if (sessionData?.user) {
+            const { error: updateError } = await supabase
+              .from("user_profiles")
+              .update({ email_verified: true })
+              .eq("id", sessionData.user.id);
 
-              if (updateError) {
-                console.warn("Profile update error:", updateError);
-              }
+            if (updateError) {
+              console.warn("Profile update error:", updateError);
             }
-
-            setStatus("success");
-            setMessage("Email verified successfully! Redirecting to login...");
-            
-            toast({
-              title: "Success!",
-              description: "Your email has been verified. Please sign in to continue.",
-            });
-            
-            setTimeout(() => setLocation("/signin"), 2000);
-            return;
           }
+
+          // NOW sign out completely to clear the session
+          await supabase.auth.signOut();
+          
+          // Clear local storage to ensure no remnants
+          localStorage.removeItem('supabase.auth.token');
+          
+          setStatus("success");
+          setMessage("Email verified successfully! Redirecting to login...");
+          
+          toast({
+            title: "Success!",
+            description: "Your email has been verified. Please sign in to continue.",
+          });
+          
+          setTimeout(() => {
+            // Force a full page reload to clear any cached auth state
+            window.location.href = "/signin";
+          }, 2000);
+          return;
         }
 
         const queryParams = new URLSearchParams(window.location.search);
