@@ -7,9 +7,44 @@ export function GlobalNotificationListener() {
   const { user } = useAuth();
   const supabase = createClient();
   const lastProcessedIds = useRef<Set<string>>(new Set());
+  const hasPlayedLoginSound = useRef(false);
 
   useEffect(() => {
     if (!user?.id) return;
+
+    // Check for unread notifications on mount (when user logs in or refreshes)
+    const checkUnreadNotifications = async () => {
+      if (hasPlayedLoginSound.current) return;
+      
+      const { data: unreadNotifications } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('read', false)
+        .limit(1);
+
+      if (unreadNotifications && unreadNotifications.length > 0) {
+        // Play sound for unread notifications
+        notificationSounds.play('message_received');
+        hasPlayedLoginSound.current = true;
+      }
+    };
+
+    checkUnreadNotifications();
+
+    // Periodic check for unread notifications (every 5 minutes)
+    const unreadCheckInterval = setInterval(async () => {
+      const { data: unreadNotifications } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('read', false)
+        .limit(1);
+
+      if (unreadNotifications && unreadNotifications.length > 0) {
+        notificationSounds.play('message_received');
+      }
+    }, 5 * 60 * 1000); // 5 minutes
 
     const notificationsChannel = supabase
       .channel('global-notifications')
@@ -74,6 +109,7 @@ export function GlobalNotificationListener() {
       .subscribe();
 
     return () => {
+      clearInterval(unreadCheckInterval);
       supabase.removeChannel(notificationsChannel);
       supabase.removeChannel(tradesChannel);
     };
