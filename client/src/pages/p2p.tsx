@@ -1060,7 +1060,7 @@ export function P2P() {
               {/* First Benefits Image */}
               <div className="flex justify-center">
                 <img 
-                  src="/assets/IMG_1767_1761657339701.jpeg"
+                  src="/assets/IMG_1767.jpeg"
                   alt="Benefits of P2P Trading"
                   className="max-w-md w-full object-contain"
                 />
@@ -1085,7 +1085,7 @@ export function P2P() {
               {/* Second Benefits Image */}
               <div className="flex justify-center">
                 <img 
-                  src="/assets/IMG_1759_1761657339702.jpeg"
+                  src="/assets/IMG_1759.jpeg"
                   alt="Why Choose Pexly P2P"
                   className="max-w-md w-full object-contain"
                 />
