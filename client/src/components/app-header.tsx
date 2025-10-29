@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp } from "lucide-react";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Banknote, Smartphone } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -271,39 +271,72 @@ export function AppHeader() {
         </div>
 
         {/* Desktop Navigation - Hidden on mobile */}
-        {user && (
-          <nav className="hidden lg:flex items-center gap-1 flex-1 ml-8">
-            <Link href="/p2p">
+        <nav className="hidden lg:flex items-center gap-1 flex-1 ml-8">
+          {/* Trade Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
-                variant={location.startsWith("/p2p") || location === "/spot" || location === "/swap" ? "secondary" : "ghost"}
+                variant={location.startsWith("/p2p") || location === "/spot" || location === "/swap" || location === "/my-offers" || location === "/create-offer" ? "secondary" : "ghost"}
                 size="sm"
                 className="gap-2"
               >
                 <ShoppingCart className="h-4 w-4" />
                 Trade
+                <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
-            </Link>
-            <Link href="/gift-cards">
-              <Button
-                variant={location === "/gift-cards" ? "secondary" : "ghost"}
-                size="sm"
-                className="gap-2"
-              >
-                <Gift className="h-4 w-4" />
-                Gift Cards
-              </Button>
-            </Link>
-            <Link href="/pexly-academy">
-              <Button
-                variant={location === "/pexly-academy" ? "secondary" : "ghost"}
-                size="sm"
-                className="gap-2"
-              >
-                <Lightbulb className="h-4 w-4" />
-                Pexly Academy
-              </Button>
-            </Link>
-            <Link href="/wallet">
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem onClick={() => navigate('/p2p')} className="cursor-pointer">
+                <div className="flex items-center justify-between w-full">
+                  <span>P2P Trading</span>
+                  <Badge variant="secondary" className="text-xs">LOW FEES</Badge>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/spot')} className="cursor-pointer">
+                Spot Trading
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/swap')} className="cursor-pointer">
+                Swap
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/my-offers')} className="cursor-pointer">
+                <List className="h-4 w-4 mr-2" />
+                My Offers
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/create-offer')} className="cursor-pointer">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Offer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Gift Cards - No dropdown */}
+          <Link href="/gift-cards">
+            <Button
+              variant={location === "/gift-cards" ? "secondary" : "ghost"}
+              size="sm"
+              className="gap-2"
+            >
+              <Gift className="h-4 w-4" />
+              Gift Cards
+            </Button>
+          </Link>
+
+          {/* Pexly Academy - No dropdown */}
+          <Link href="/pexly-academy">
+            <Button
+              variant={location === "/pexly-academy" ? "secondary" : "ghost"}
+              size="sm"
+              className="gap-2"
+            >
+              <Lightbulb className="h-4 w-4" />
+              Pexly Academy
+            </Button>
+          </Link>
+
+          {/* Wallet Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant={location.startsWith("/wallet") ? "secondary" : "ghost"}
                 size="sm"
@@ -311,9 +344,65 @@ export function AppHeader() {
               >
                 <Wallet className="h-4 w-4" />
                 Wallet
+                <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
-            </Link>
-            <Link href="/shop">
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-72">
+              <DropdownMenuItem onClick={() => navigate('/wallet')} className="cursor-pointer h-auto py-3">
+                <Bitcoin className="h-5 w-5 mr-3 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-semibold">Assets</span>
+                  <span className="text-xs text-muted-foreground">My assets in the Pexly wallet</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/wallet/receive')} className="cursor-pointer h-auto py-3">
+                <ArrowDownToLine className="h-5 w-5 mr-3 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-semibold">Receive</span>
+                  <span className="text-xs text-muted-foreground">Receive crypto or deposit using fiat</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/wallet/visa-card')} className="cursor-pointer h-auto py-3">
+                <CreditCard className="h-5 w-5 mr-3 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-semibold">Visa card</span>
+                  <span className="text-xs text-muted-foreground">Spend your crypto</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/wallet/buy-crypto')} className="cursor-pointer h-auto py-3">
+                <ShoppingBag className="h-5 w-5 mr-3 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-semibold">Buy crypto</span>
+                  <span className="text-xs text-muted-foreground">Pay using card, bank, or mobile money</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/wallet/crypto-to-bank')} className="cursor-pointer h-auto py-3">
+                <Banknote className="h-5 w-5 mr-3 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-semibold">Crypto to Bank</span>
+                  <span className="text-xs text-muted-foreground">Cash out to bank or MoMo wallet</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/wallet/lightning')} className="cursor-pointer h-auto py-3">
+                <Zap className="h-5 w-5 mr-3 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-semibold">Lightning</span>
+                  <span className="text-xs text-muted-foreground">Send Bitcoin ultra fast</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/wallet/mobile-topup')} className="cursor-pointer h-auto py-3">
+                <Smartphone className="h-5 w-5 mr-3 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-semibold">Mobile top-up</span>
+                  <span className="text-xs text-muted-foreground">Recharge your phone using crypto</span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Shop Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant={location.startsWith("/shop") ? "secondary" : "ghost"}
                 size="sm"
@@ -321,9 +410,30 @@ export function AppHeader() {
               >
                 <Store className="h-4 w-4" />
                 Shop
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1">BETA</Badge>
+                <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
-            </Link>
-            <Link href="/affiliate">
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem onClick={() => navigate('/shop')} className="cursor-pointer">
+                <List className="h-4 w-4 mr-2" />
+                Listings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/shop/post')} className="cursor-pointer">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    <Plus className="h-4 w-4 mr-2" />
+                    <span className="font-semibold">Post Ad</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">FREE</Badge>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Earn with Us Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant={location === "/affiliate" || location === "/rewards" ? "secondary" : "ghost"}
                 size="sm"
@@ -331,10 +441,19 @@ export function AppHeader() {
               >
                 <TrendingUp className="h-4 w-4" />
                 Earn with Us
+                <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
-            </Link>
-          </nav>
-        )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem onClick={() => navigate('/affiliate')} className="cursor-pointer">
+                Affiliate Program
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/rewards')} className="cursor-pointer">
+                Rewards
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </nav>
 
         {/* Right side - Profile info and menu button (when not signed in) */}
         <div className="flex items-center gap-2 justify-end">
