@@ -31,6 +31,12 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"), // ✅ final build goes here
     emptyOutDir: true,
+    assetsInlineLimit: 0, // Don't inline assets, keep them as separate files for better caching
+  },
+  preview: {
+    headers: {
+      'Cache-Control': 'public, max-age=31536000, immutable'
+    }
   },
   server: {
     host: "0.0.0.0",
@@ -40,10 +46,16 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    headers: {
+      'Cache-Control': 'public, max-age=31536000'
+    }
   },
   preview: {
     host: "0.0.0.0",
     port: 5000,
     allowedHosts: true,
+    headers: {
+      'Cache-Control': 'public, max-age=31536000, immutable'
+    }
   },
 });
