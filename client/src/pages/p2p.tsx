@@ -361,7 +361,7 @@ export function P2P() {
         <div className="flex gap-0 mb-8 border-b">
           <button
             onClick={() => setActiveTab("buy")}
-            className={`flex-1 py-4 px-6 font-semibold text-lg transition-colors relative ${
+            className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 font-semibold text-base sm:text-lg transition-colors relative ${
               activeTab === "buy" 
                 ? "text-foreground" 
                 : "text-muted-foreground hover:text-foreground"
@@ -374,7 +374,7 @@ export function P2P() {
           </button>
           <button
             onClick={() => setActiveTab("sell")}
-            className={`flex-1 py-4 px-6 font-semibold text-lg transition-colors relative ${
+            className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 font-semibold text-base sm:text-lg transition-colors relative ${
               activeTab === "sell" 
                 ? "text-foreground" 
                 : "text-muted-foreground hover:text-foreground"
@@ -1222,16 +1222,18 @@ export function P2P() {
               <div className="mt-12 space-y-6">
                 <h2 className="text-3xl font-bold">FAQs</h2>
 
-                <div className="flex gap-2 border-b pb-2">
-                  {["Beginner", "Advanced", "Advertiser", "Safe"].map((tab) => (
-                    <Button
-                      key={tab}
-                      variant="ghost"
-                      className="font-semibold"
-                    >
-                      {tab}
-                    </Button>
-                  ))}
+                <div className="overflow-x-auto scrollbar-hide border-b">
+                  <div className="flex gap-2 pb-2 min-w-max">
+                    {["Beginner", "Advanced", "Advertiser", "Safe"].map((tab) => (
+                      <Button
+                        key={tab}
+                        variant="ghost"
+                        className="font-semibold whitespace-nowrap"
+                      >
+                        {tab}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-4">
