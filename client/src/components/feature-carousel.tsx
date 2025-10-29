@@ -24,46 +24,40 @@ const features = [
 
 export function FeatureCarousel() {
   return (
-    <section className="py-8 sm:py-12 bg-muted/30 overflow-hidden">
-      <div className="relative">
-        {/* Scrolling container */}
-        <div className="flex animate-scroll">
-          {/* Duplicate features twice for seamless loop */}
-          {[...features, ...features, ...features].map((feature, index) => (
-            <div
-              key={`${feature.id}-${index}`}
-              className="flex-shrink-0 w-[280px] sm:w-[320px]"
-            >
-              <div className="group relative overflow-hidden h-[400px] sm:h-[450px]">
-                {/* Background Image */}
-                <div className="absolute inset-0">
-                  <img
-                    src={feature.image}
-                    alt={feature.title}
-                    className="w-full h-full object-contain"
-                    loading="eager"
-                  />
-                  {/* Dark gradient overlay for text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                </div>
+    <section className="overflow-hidden">
+      {/* Scrolling container */}
+      <div className="flex animate-scroll">
+        {/* Duplicate features twice for seamless loop */}
+        {[...features, ...features, ...features].map((feature, index) => (
+          <div
+            key={`${feature.id}-${index}`}
+            className="flex-shrink-0 w-[280px] sm:w-[320px] group relative overflow-hidden h-[300px] sm:h-[350px]"
+          >
+            {/* Background Image */}
+            <img
+              src={feature.image}
+              alt={feature.title}
+              className="w-full h-full object-contain"
+              loading="eager"
+            />
+            {/* Dark gradient overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-                {/* Content overlay at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 space-y-3 z-10">
-                  <h3 className="text-lg sm:text-xl font-bold text-white leading-tight">
-                    {feature.title}
-                  </h3>
+            {/* Content overlay at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 space-y-3 z-10">
+              <h3 className="text-lg sm:text-xl font-bold text-white leading-tight">
+                {feature.title}
+              </h3>
 
-                  <Button
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                    size="default"
-                  >
-                    {feature.buttonText}
-                  </Button>
-                </div>
-              </div>
+              <Button
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                size="default"
+              >
+                {feature.buttonText}
+              </Button>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </section>
   );
