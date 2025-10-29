@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy } from "lucide-react";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -273,48 +273,39 @@ export function AppHeader() {
         {/* Desktop Navigation - Hidden on mobile */}
         {user && (
           <nav className="hidden lg:flex items-center gap-1 flex-1 ml-8">
-            <Link href="/">
-              <Button
-                variant={location === "/" ? "secondary" : "ghost"}
-                size="sm"
-                className="gap-2"
-              >
-                <Home className="h-4 w-4" />
-                Home
-              </Button>
-            </Link>
             <Link href="/p2p">
               <Button
-                variant={location === "/p2p" ? "secondary" : "ghost"}
+                variant={location.startsWith("/p2p") || location === "/spot" || location === "/swap" ? "secondary" : "ghost"}
                 size="sm"
                 className="gap-2"
               >
                 <ShoppingCart className="h-4 w-4" />
-                P2P
+                Trade
               </Button>
             </Link>
-            <Link href="/shop">
+            <Link href="/gift-cards">
               <Button
-                variant={location === "/shop" ? "secondary" : "ghost"}
+                variant={location === "/gift-cards" ? "secondary" : "ghost"}
                 size="sm"
                 className="gap-2"
               >
-                <Store className="h-4 w-4" />
-                Shop
+                <Gift className="h-4 w-4" />
+                Gift Cards
               </Button>
             </Link>
-            <Link href="/swap">
+            <Link href="/pexly-academy">
               <Button
-                variant={location === "/swap" ? "secondary" : "ghost"}
+                variant={location === "/pexly-academy" ? "secondary" : "ghost"}
                 size="sm"
                 className="gap-2"
               >
-                Swap
+                <Lightbulb className="h-4 w-4" />
+                Pexly Academy
               </Button>
             </Link>
             <Link href="/wallet">
               <Button
-                variant={location === "/wallet" ? "secondary" : "ghost"}
+                variant={location.startsWith("/wallet") ? "secondary" : "ghost"}
                 size="sm"
                 className="gap-2"
               >
@@ -322,14 +313,24 @@ export function AppHeader() {
                 Wallet
               </Button>
             </Link>
-            <Link href="/medals">
+            <Link href="/shop">
               <Button
-                variant={location === "/medals" ? "secondary" : "ghost"}
+                variant={location.startsWith("/shop") ? "secondary" : "ghost"}
                 size="sm"
                 className="gap-2"
               >
-                <Trophy className="h-4 w-4" />
-                Medals
+                <Store className="h-4 w-4" />
+                Shop
+              </Button>
+            </Link>
+            <Link href="/affiliate">
+              <Button
+                variant={location === "/affiliate" || location === "/rewards" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                Earn with Us
               </Button>
             </Link>
           </nav>
