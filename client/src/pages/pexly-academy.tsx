@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { AppHeader } from "@/components/app-header";
-import { PexlyFooter } from "@/components/pexly-footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -412,8 +411,6 @@ export function PexlyAcademy() {
           </Card>
         </div>
       </main>
-
-      <PexlyFooter />
     </div>
   );
 }
