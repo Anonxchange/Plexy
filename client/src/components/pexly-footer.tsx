@@ -39,7 +39,7 @@ const footerSections = [
   },
   {
     title: "About Pexly",
-    links: ["About Us", "Careers", "Press", "Contact"]
+    links: [{ text: "About Us", href: "/about" }, "Careers", "Press", "Contact"]
   },
   {
     title: "Legal",
