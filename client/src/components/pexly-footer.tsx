@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Zap, ChevronDown, Globe, HelpCircle, Accessibility, X as XIcon } from "lucide-react";
 import { SiDiscord, SiInstagram, SiFacebook, SiYoutube, SiReddit } from "react-icons/si";
@@ -58,17 +59,17 @@ export function PexlyFooter() {
 
   return (
     <footer className="bg-background border-t">
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
         {/* Logo */}
-        <div className="flex items-center gap-3 pb-4">
+        <div className="flex items-center gap-3 pb-4 lg:pb-8">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
             <Zap className="h-6 w-6 text-primary-foreground" />
           </div>
           <span className="text-2xl font-bold">pexly</span>
         </div>
 
-        {/* Language Selector */}
-        <div className="space-y-4">
+        {/* Mobile: Language Selector and Buttons */}
+        <div className="space-y-4 lg:hidden">
           <Select defaultValue="en">
             <SelectTrigger className="w-full h-14">
               <div className="flex items-center gap-3">
@@ -101,8 +102,38 @@ export function PexlyFooter() {
           </Button>
         </div>
 
-        {/* Collapsible Sections */}
-        <div className="space-y-2 pt-4">
+        {/* Desktop: Grid Layout */}
+        <div className="hidden lg:grid lg:grid-cols-4 gap-8 mb-12">
+          {footerSections.map((section) => (
+            <div key={section.title}>
+              <h3 className="text-lg font-semibold mb-4">{section.title}</h3>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                {section.links.map((link) => (
+                  <li key={typeof link === 'string' ? link : link.text}>
+                    {typeof link === 'string' ? (
+                      <a href="#" className="hover:text-foreground transition-colors">
+                        {link}
+                      </a>
+                    ) : (
+                      link.href.startsWith('/') ? (
+                        <Link to={link.href} className="hover:text-foreground transition-colors">
+                          {link.text}
+                        </Link>
+                      ) : (
+                        <a href={link.href} className="hover:text-foreground transition-colors">
+                          {link.text}
+                        </a>
+                      )
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile: Collapsible Sections */}
+        <div className="space-y-2 pt-4 lg:hidden">
           {footerSections.map((section) => (
             <Collapsible
               key={section.title}
@@ -142,11 +173,43 @@ export function PexlyFooter() {
           ))}
         </div>
 
+        {/* Desktop: Language Selector and Buttons */}
+        <div className="hidden lg:flex lg:items-center lg:gap-4 lg:mb-8">
+          <Select defaultValue="en">
+            <SelectTrigger className="w-48 h-12">
+              <div className="flex items-center gap-3">
+                <Globe className="h-5 w-5 text-muted-foreground" />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="es">Español</SelectItem>
+              <SelectItem value="fr">Français</SelectItem>
+              <SelectItem value="de">Deutsch</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button variant="outline" className="h-12" asChild>
+            <a href="#">
+              <HelpCircle className="h-5 w-5 mr-2 text-muted-foreground" />
+              FAQ & Help Center
+            </a>
+          </Button>
+
+          <Button variant="outline" className="h-12" asChild>
+            <a href="#">
+              <Accessibility className="h-5 w-5 mr-2 text-muted-foreground" />
+              Accessibility
+            </a>
+          </Button>
+        </div>
+
         {/* App Download Buttons */}
-        <div className="flex gap-4 pt-6">
+        <div className="flex gap-4 pt-6 lg:pt-0">
           <a
             href="#"
-            className="flex-1"
+            className="flex-1 lg:flex-none"
           >
             <div className="bg-black text-white rounded-lg px-4 py-3 flex items-center justify-center gap-2 hover:bg-black/90 transition-colors">
               <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
@@ -160,7 +223,7 @@ export function PexlyFooter() {
           </a>
           <a
             href="#"
-            className="flex-1"
+            className="flex-1 lg:flex-none"
           >
             <div className="bg-black text-white rounded-lg px-4 py-3 flex items-center justify-center gap-2 hover:bg-black/90 transition-colors">
               <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
@@ -175,7 +238,7 @@ export function PexlyFooter() {
         </div>
 
         {/* Social Media Icons */}
-        <div className="flex justify-center gap-4 pt-6">
+        <div className="flex justify-center lg:justify-start gap-4 pt-6">
           <a href="#" className="w-12 h-12 border rounded-lg flex items-center justify-center hover:bg-accent transition-colors">
             <XIcon className="h-5 w-5" />
           </a>
@@ -197,7 +260,7 @@ export function PexlyFooter() {
         </div>
 
         {/* Legal Disclaimer */}
-        <div className="text-xs text-muted-foreground leading-relaxed pt-6 border-t">
+        <div className="text-xs text-muted-foreground leading-relaxed pt-6 border-t mt-8">
           <p>
             "PEXLY" is a registered trademark of Pexly, Inc. Copyright © {new Date().getFullYear()} Pexly, Inc. All Rights Reserved. 
             Pexly Inc. has no relation to MoneyGram, Western Union, Payoneer, WorldRemit, Paxum, PayPal, Amazon, OkPay, Payza, 
