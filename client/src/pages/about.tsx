@@ -331,10 +331,10 @@ export default function About() {
             {/* Office Images Grid */}
             <div className="grid grid-cols-2 gap-4 mb-12">
               {[
-                "/office-1.jpeg",
-                "/office-2.jpeg", 
-                "/office-3.jpeg",
-                "/office-4.jpeg"
+                "/IMG_1845.jpeg",
+                "/IMG_1862.jpeg", 
+                "/IMG_1843.jpeg",
+                "/IMG_1861.jpeg"
               ].map((img, i) => (
                 <div
                   key={i}
