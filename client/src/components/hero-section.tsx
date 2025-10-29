@@ -61,46 +61,48 @@ export function HeroSection() {
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 relative z-10 w-full">
-        <div className="text-center space-y-6 max-w-4xl mx-auto mb-8">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-            <span className="text-sm font-semibold text-primary">Trusted by 14M+ users worldwide</span>
+        {/* Mobile & Tablet - Original Centered Layout */}
+        <div className="lg:hidden">
+          <div className="text-center space-y-6 max-w-4xl mx-auto mb-8">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+              <span className="text-sm font-semibold text-primary">Trusted by 14M+ users worldwide</span>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tight">
+              <span className="block text-foreground">Trade crypto</span>
+              <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
+                your way
+              </span>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
+              Connect with traders worldwide. 500+ payment methods. Zero hassle.
+            </p>
+
+            {/* Stats */}
+            <div className="flex flex-wrap justify-center gap-8 pt-4">
+              <div className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-foreground">140+</div>
+                <div className="text-sm text-muted-foreground">Countries</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-foreground">500+</div>
+                <div className="text-sm text-muted-foreground">Payment methods</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-foreground">14M+</div>
+                <div className="text-sm text-muted-foreground">Users</div>
+              </div>
+            </div>
           </div>
 
-          {/* Main Headline */}
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[1.1] tracking-tight">
-            <span className="block text-foreground">Trade crypto</span>
-            <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
-              your way
-            </span>
-          </h1>
-
-          {/* Subheadline */}
-          <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            Connect with traders worldwide. 500+ payment methods. Zero hassle.
-          </p>
-
-          {/* Stats */}
-          <div className="flex flex-wrap justify-center gap-8 pt-4">
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-foreground">140+</div>
-              <div className="text-sm text-muted-foreground">Countries</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-foreground">500+</div>
-              <div className="text-sm text-muted-foreground">Payment methods</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-foreground">14M+</div>
-              <div className="text-sm text-muted-foreground">Users</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Trade Form Card */}
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
+          {/* Trade Form Card */}
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
               {/* Trade Type Tabs */}
               <div className="flex gap-2 p-1 bg-muted rounded-xl">
                 <button
@@ -283,6 +285,233 @@ export function HeroSection() {
             </div>
           </div>
         </div>
+
+        {/* Desktop - Two Column Layout */}
+        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+          {/* Left Column - Content */}
+          <div className="space-y-8">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+              <span className="text-sm font-semibold text-primary">Trusted by 14M+ users worldwide</span>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="text-6xl xl:text-7xl 2xl:text-8xl font-bold leading-[1.05] tracking-tight">
+              <span className="block text-foreground">Trade crypto</span>
+              <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
+                your way
+              </span>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="text-xl xl:text-2xl text-muted-foreground max-w-xl">
+              Connect with traders worldwide. 500+ payment methods. Zero hassle.
+            </p>
+
+            {/* Stats */}
+            <div className="flex gap-12 pt-4">
+              <div>
+                <div className="text-4xl xl:text-5xl font-bold text-foreground">140+</div>
+                <div className="text-sm text-muted-foreground mt-1">Countries</div>
+              </div>
+              <div>
+                <div className="text-4xl xl:text-5xl font-bold text-foreground">500+</div>
+                <div className="text-sm text-muted-foreground mt-1">Payment methods</div>
+              </div>
+              <div>
+                <div className="text-4xl xl:text-5xl font-bold text-foreground">14M+</div>
+                <div className="text-sm text-muted-foreground mt-1">Users</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Trade Form Card */}
+          <div>
+            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-8 space-y-6">
+              {/* Trade Type Tabs */}
+              <div className="flex gap-2 p-1 bg-muted rounded-xl">
+                <button
+                  onClick={() => setTradeType("buy")}
+                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+                    tradeType === "buy"
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Buy Crypto
+                </button>
+                <button
+                  onClick={() => setTradeType("sell")}
+                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+                    tradeType === "sell"
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Sell Crypto
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">Cryptocurrency</label>
+                  <Popover open={openCrypto} onOpenChange={setOpenCrypto}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCrypto}
+                        className="h-14 w-full justify-between text-base"
+                        data-testid="select-crypto"
+                      >
+                        {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search crypto..." />
+                        <CommandEmpty>No crypto found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {cryptoCurrencies.map((c) => (
+                            <CommandItem
+                              key={c.code}
+                              value={c.code}
+                              onSelect={(currentValue) => {
+                                setCrypto(currentValue.toUpperCase());
+                                setOpenCrypto(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  crypto === c.code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {c.name} ({c.code})
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">Currency</label>
+                  <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCurrency}
+                        className="h-14 w-full justify-between text-base"
+                        data-testid="select-currency"
+                      >
+                        {currency ? currencies.find((c) => c.code === currency)?.flag + " " + currency : "Select currency..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search currency..." />
+                        <CommandEmpty>No currency found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {currencies.map((c) => (
+                            <CommandItem
+                              key={c.code}
+                              value={c.code}
+                              onSelect={(currentValue) => {
+                                setCurrency(currentValue.toUpperCase());
+                                setOpenCurrency(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  currency === c.code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {c.flag} {c.name} ({c.code})
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* Price Display */}
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+                <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
+                <div className="text-2xl xl:text-3xl font-bold tabular-nums text-foreground">
+                  1 {crypto} ≈ ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Payment Method</label>
+                <Popover open={openPayment} onOpenChange={setOpenPayment}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openPayment}
+                      className="h-14 w-full justify-between text-base"
+                      data-testid="select-payment-method"
+                    >
+                      {paymentMethod ? paymentMethods.find((p) => p.id === paymentMethod)?.name : "Select method..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search payment method..." />
+                        <CommandEmpty>No payment method found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {paymentMethods.map((p) => (
+                            <CommandItem
+                              key={p.id}
+                              value={p.id}
+                              onSelect={(currentValue) => {
+                                setPaymentMethod(currentValue);
+                                setOpenPayment(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  paymentMethod === p.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {p.name}
+                              {p.category !== "All" && (
+                                <span className="ml-auto text-xs text-muted-foreground">{p.category}</span>
+                              )}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+              </div>
+
+              {/* CTA Button */}
+              <Button 
+                className="w-full h-16 text-lg font-bold shadow-xl hover:shadow-2xl transition-all" 
+                size="lg"
+                onClick={handleFindOffers}
+                data-testid="button-find-offers"
+              >
+                Find offers
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
