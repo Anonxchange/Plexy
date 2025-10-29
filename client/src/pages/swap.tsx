@@ -301,7 +301,7 @@ export function Swap() {
                   </div>
                   <div className="rounded-lg overflow-hidden border border-border mb-4">
                     <img 
-                      src="/assets/IMG_1814.jpeg" 
+                      src="/assets/IMG_1832.jpeg" 
                       alt="Select cryptocurrencies to swap"
                       className="w-full h-auto object-cover"
                     />
