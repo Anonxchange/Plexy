@@ -55,11 +55,13 @@ import { BitcoinCalculator } from "@/pages/bitcoin-calculator";
 import { VerifyEmail } from "@/pages/verify-email";
 import PexlyAcademy from "@/pages/pexly-academy";
 import { AcademyArticle } from "@/pages/academy-article";
+import About from "@/pages/about";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/about" component={About} />
       <Route path="/buy" component={Buy} />
       <Route path="/p2p" component={P2P} />
       <Route path="/spot" component={Spot} />
