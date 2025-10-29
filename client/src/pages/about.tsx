@@ -15,9 +15,9 @@ export default function About() {
   };
 
   const heroImages = [
-    "/hero-1.jpeg",
-    "/hero-2.jpeg",
-    "/hero-3.jpeg"
+    "/assests/IMG_1845.jpeg",
+    "/assests/IMG_1839.jpeg",
+    "/assests/IMG_1843.jpeg"
   ];
 
   useEffect(() => {
