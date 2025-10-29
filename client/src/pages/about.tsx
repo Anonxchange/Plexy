@@ -15,9 +15,9 @@ export default function About() {
   };
 
   const heroImages = [
-    "/assests/IMG_1845.jpeg",
-    "/assests/IMG_1839.jpeg",
-    "/assests/IMG_1843.jpeg"
+    "/IMG_1845.jpeg",
+    "/IMG_1839.jpeg",
+    "/IMG_1843.jpeg"
   ];
 
   useEffect(() => {
