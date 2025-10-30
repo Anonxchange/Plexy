@@ -78,7 +78,7 @@ export default function Affiliate() {
           <div className="mb-8 flex justify-center">
             <div className="relative w-full max-w-md">
               <img 
-                src="/assets/IMG_1824.jpeg" 
+                src="/assets/IMG_1935.jpeg" 
                 alt="Affiliate Program Illustration" 
                 className="w-full h-auto"
               />
