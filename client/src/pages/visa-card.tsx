@@ -18,10 +18,19 @@ import {
 export default function VisaCard() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentPhoneImageIndex, setCurrentPhoneImageIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % 3);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentPhoneImageIndex((prev) => (prev + 1) % 2);
     }, 4000);
 
     return () => clearInterval(interval);
@@ -170,32 +179,27 @@ export default function VisaCard() {
       {/* Cashback Section */}
       <section className="py-16 px-4 bg-muted/30">
         <div className="max-w-6xl mx-auto">
-          <Card className="bg-gradient-to-br from-card to-card/80 border-2 border-primary/20 p-8 md:p-12">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Selected Users Only: <span className="text-primary">10% Cashback</span>
-                </h2>
-                <p className="text-lg text-muted-foreground mb-6">
-                  Spend with your Pexly Card to earn 10% cashback, up to 150 USD.
-                </p>
-                <Button variant="outline" className="group">
-                  Learn More 
-                  <ChevronDown className="ml-2 h-4 w-4 rotate-[-90deg] group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </div>
-              <div className="relative">
-                <div className="aspect-video rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 p-6 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-20 h-20 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4">
-                      <TrendingUp className="h-10 w-10 text-primary" />
-                    </div>
-                    <div className="text-sm text-muted-foreground mb-2">Cashback Earned</div>
-                    <div className="text-3xl font-bold text-primary">+11.22 USDT</div>
-                    <div className="text-xs text-muted-foreground mt-1">Today, 2:51PM UTC</div>
-                  </div>
-                </div>
-              </div>
+          <Card className="bg-gradient-to-br from-card to-card/80 border-2 border-primary/20 p-8 md:p-12 rounded-3xl">
+            <div className="max-w-md">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Selected Users Only: <span className="text-primary">10% Cashback</span>
+              </h2>
+              <p className="text-lg text-muted-foreground mb-6">
+                Spend with your Pexly Card to earn 10% cashback, up to 150 USD.
+              </p>
+              <Button variant="outline" className="group">
+                Learn More 
+                <ChevronDown className="ml-2 h-4 w-4 rotate-[-90deg] group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </div>
+            
+            {/* Card and Phone Image */}
+            <div className="mt-8 relative">
+              <img 
+                src="/assets/IMG_1933_1761796955548.jpeg" 
+                alt="Pexly Card Cashback" 
+                className="w-full h-auto rounded-2xl object-cover"
+              />
             </div>
           </Card>
         </div>
@@ -222,19 +226,21 @@ export default function VisaCard() {
             </div>
           </div>
 
-          {/* Phone mockup */}
-          <div className="relative w-64 h-96 mx-auto">
-            <div className="absolute inset-0 bg-gradient-to-br from-foreground to-foreground/80 rounded-[3rem] shadow-2xl p-3">
-              <div className="bg-background rounded-[2.5rem] h-full p-6 flex flex-col">
-                <div className="text-center mb-6">
-                  <div className="text-sm font-bold mb-2">My Pexly Card</div>
-                  <Card className="w-full h-32 bg-gradient-to-br from-primary to-primary/80 rounded-xl p-4 flex flex-col justify-between">
-                    <div className="text-xs text-white font-bold">PEXLY</div>
-                    <div className="text-white text-xs opacity-80">•••• •••• •••• 1234</div>
-                  </Card>
-                </div>
-              </div>
-            </div>
+          {/* Phone mockup with rotating images */}
+          <div className="relative w-64 h-96 mx-auto overflow-hidden rounded-[3rem]">
+            {[
+              "/assets/IMG_1892_1761796637236.jpeg",
+              "/assets/IMG_1875_1761796637238.jpeg"
+            ].map((image, index) => (
+              <img
+                key={index}
+                src={image}
+                alt={`Pexly Card Interface ${index + 1}`}
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                  currentPhoneImageIndex === index ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            ))}
           </div>
         </div>
       </section>
