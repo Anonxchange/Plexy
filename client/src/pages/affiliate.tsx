@@ -148,7 +148,7 @@ export default function Affiliate() {
           </p>
 
           <div className="space-y-12">
-            {benefits.map((benefit, index) => (
+            {benefits.slice(0, 2).map((benefit, index) => (
               <Card key={index} className="p-8 md:p-12">
                 <h3 className="text-2xl md:text-3xl font-bold text-primary mb-4">
                   {benefit.title}
@@ -172,6 +172,52 @@ export default function Affiliate() {
                 )}
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Worldwide Networking Events Section */}
+      <section className="py-16 px-4 bg-muted/30">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6" style={{ color: '#FFB800' }}>
+            Worldwide Networking Events
+          </h2>
+          <p className="text-lg text-muted-foreground mb-12 max-w-2xl mx-auto">
+            Meet like-minded and passionate professionals in the Crypto space to grow your influence!
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="overflow-hidden hover:shadow-xl transition-shadow">
+              <div className="aspect-video overflow-hidden">
+                <img 
+                  src="/assets/IMG_1821.jpeg" 
+                  alt="Global Crypto Conferences"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold mb-2">Global Crypto Conferences</h3>
+                <p className="text-sm text-muted-foreground">
+                  Network with industry leaders and enthusiasts at major crypto events worldwide
+                </p>
+              </div>
+            </Card>
+
+            <Card className="overflow-hidden hover:shadow-xl transition-shadow">
+              <div className="aspect-video overflow-hidden">
+                <img 
+                  src="/assets/IMG_1939.jpeg" 
+                  alt="F1 Redbull Racing VIP Passes"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold mb-2">F1 Redbull Racing VIP Passes</h3>
+                <p className="text-sm text-muted-foreground">
+                  Experience exclusive VIP access to Formula 1 racing events with fellow affiliates
+                </p>
+              </div>
+            </Card>
           </div>
         </div>
       </section>
