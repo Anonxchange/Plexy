@@ -265,47 +265,53 @@ export default function VisaCard() {
       {/* Earn Cashback Section */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 p-8 md:p-16">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+          <div 
+            className="relative overflow-hidden rounded-3xl bg-cover bg-center min-h-[600px] flex flex-col justify-between p-8 md:p-16"
+            style={{
+              backgroundImage: `url(/assets/IMG_1931_1761795011937.jpeg)`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60"></div>
             
-            <div className="relative z-10 text-center max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">
+            <div className="relative z-10 text-center max-w-3xl mx-auto pt-8">
+              <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white drop-shadow-lg">
                 Earn 2% – 10%<br />
-                <span className="text-primary">Cashback Rewards on Your Everyday Spending</span>
+                Cashback Rewards on Your Everyday Spending
               </h2>
-              <Button className="mt-8" size="lg">
-                Learn More About Cashback Rates
-                <ChevronDown className="ml-2 h-4 w-4 rotate-[-90deg]" />
+              <Button className="mt-8 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20" size="lg">
+                Learn More About Cashback Rates →
               </Button>
-              
-              {/* Cashback Examples */}
-              <div className="mt-12 grid md:grid-cols-2 gap-6">
-                <div className="bg-card rounded-2xl p-6 border border-border">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <TrendingUp className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-semibold">Cashback</div>
-                      <div className="text-sm text-muted-foreground">Today, 2:51PM UTC</div>
-                    </div>
+            </div>
+
+            {/* Cashback Examples - Overlapping Cards */}
+            <div className="relative z-10 mt-auto flex justify-center items-end px-4 pb-6">
+              <div className="relative">
+                {/* Back Card - Button sized, positioned behind */}
+                <div className="absolute -top-6 -left-8 bg-white rounded-xl px-3 py-2 h-14 shadow-md flex items-center gap-2 z-0">
+                  <div className="w-9 h-9 rounded-full bg-[#26A17B] flex items-center justify-center flex-shrink-0">
+                    <Wallet className="h-5 w-5 text-white" />
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">+1.89 USDT</div>
+                  <div className="text-left flex-1 whitespace-nowrap">
+                    <div className="font-medium text-foreground text-[10px]">Cashback</div>
+                    <div className="text-sm font-bold text-[#26A17B]">+1.89 USDT</div>
                   </div>
                 </div>
-                <div className="bg-card rounded-2xl p-6 border border-border">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <TrendingUp className="h-6 w-6 text-primary" />
+
+                {/* Front Card - Larger, in front */}
+                <div className="relative bg-white rounded-2xl p-4 shadow-xl w-[280px] z-10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-full bg-[#26A17B] flex items-center justify-center flex-shrink-0">
+                      <Wallet className="h-6 w-6 text-white" />
                     </div>
-                    <div className="text-left">
-                      <div className="font-semibold">Cashback</div>
-                      <div className="text-sm text-muted-foreground">Today, 2:51PM UTC</div>
+                    <div className="text-left flex-1">
+                      <div className="font-semibold text-foreground text-sm">Cashback</div>
+                      <div className="text-xs text-muted-foreground">Today, 2:51PM UTC</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">+11.22 USDT</div>
+                    <div className="text-2xl font-bold text-[#26A17B]">+11.22 USDT</div>
                   </div>
                 </div>
               </div>
