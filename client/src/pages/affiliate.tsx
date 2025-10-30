@@ -34,7 +34,7 @@ export default function Affiliate() {
     {
       title: "We Help You Grow Your Audience",
       description: "Pexly's affiliate portal not only provides the latest insights to your earnings, it is an information hub for the latest campaigns, video & design assets on Pexly's latest products and more!",
-      image: "/assets/IMG_1935.jpeg"
+      image: "/assets/IMG_1939.jpeg"
     },
     {
       title: "Timely Compensation",
