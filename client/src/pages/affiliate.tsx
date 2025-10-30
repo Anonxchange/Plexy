@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Users, TrendingUp, DollarSign, Globe, Clock, UserPlus, Share2, Wallet, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
@@ -39,7 +39,7 @@ export default function Affiliate() {
     {
       title: "Timely Compensation",
       description: "Payments are calculated and processed on a daily basis. We seek to complete payments to our affiliates as fast as possible.",
-      icon: <Clock className="h-12 w-12 text-primary" />
+      image: "/assets/IMG_1955_1761828186531.jpeg"
     },
     {
       title: "Worldwide Networking Events",
