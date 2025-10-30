@@ -196,7 +196,7 @@ export default function VisaCard() {
             {/* Card and Phone Image */}
             <div className="mt-8 relative">
               <img 
-                src="/assets/IMG_1933_1761796955548.jpeg" 
+                src="/assets/IMG_1933.jpeg" 
                 alt="Pexly Card Cashback" 
                 className="w-full h-auto rounded-2xl object-cover"
               />
