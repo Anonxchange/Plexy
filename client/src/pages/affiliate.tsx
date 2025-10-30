@@ -190,7 +190,7 @@ export default function Affiliate() {
             <Card className="overflow-hidden hover:shadow-xl transition-shadow">
               <div className="aspect-video overflow-hidden">
                 <img 
-                  src="/assets/IMG_1857.jpeg" 
+                  src="/assets/IMG_1957.jpeg" 
                   alt="Global Crypto Conferences"
                   className="w-full h-full object-cover"
                 />
