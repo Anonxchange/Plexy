@@ -45,6 +45,7 @@ import { AccountSettings as AccountSettingsPage } from "@/pages/account-settings
 import MedalsPage from "@/pages/medals";
 import { Fees } from "@/pages/fees";
 import Affiliate from "@/pages/affiliate";
+import RewardsPage from "@/pages/rewards";
 import PexlyPay from "@/pages/pexly-pay";
 import PexlyPayHistory from "@/pages/pexly-pay-history";
 import PexlyPaySettings from "@/pages/pexly-pay-settings";
@@ -104,6 +105,7 @@ function Router() {
       <Route path="/medals" component={MedalsPage} />
       <Route path="/fees" component={Fees} />
       <Route path="/affiliate" component={Affiliate} />
+      <Route path="/rewards" component={RewardsPage} />
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/bitcoin-calculator" component={BitcoinCalculator} />
       <Route path="/academy" component={PexlyAcademy} />
