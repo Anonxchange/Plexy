@@ -16,7 +16,8 @@ import {
   CreditCard,
   ShoppingBag,
   Banknote,
-  Trophy
+  Trophy,
+  Users
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -296,6 +297,17 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
+                <Link href="/referral" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/referral" ? "secondary" : "ghost"} 
+                    className="w-full justify-start gap-2" 
+                    size="sm" 
+                    data-testid="nav-referral"
+                  >
+                    <Users className="h-4 w-4" />
+                    Referral Program
+                  </Button>
+                </Link>
                 <Link href="/affiliate" onClick={handleLinkClick}>
                   <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-affiliate">
                     Affiliate Program
