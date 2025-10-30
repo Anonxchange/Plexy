@@ -190,7 +190,7 @@ export default function Affiliate() {
             <Card className="overflow-hidden hover:shadow-xl transition-shadow">
               <div className="aspect-video overflow-hidden">
                 <img 
-                  src="/assets/IMG_1821.jpeg" 
+                  src="/assets/IMG_1857.jpeg" 
                   alt="Global Crypto Conferences"
                   className="w-full h-full object-cover"
                 />
@@ -206,7 +206,7 @@ export default function Affiliate() {
             <Card className="overflow-hidden hover:shadow-xl transition-shadow">
               <div className="aspect-video overflow-hidden">
                 <img 
-                  src="/assets/IMG_1939.jpeg" 
+                  src="/assets/IMG_1958.jpeg" 
                   alt="F1 Redbull Racing VIP Passes"
                   className="w-full h-full object-cover"
                 />
@@ -234,7 +234,7 @@ export default function Affiliate() {
 
           <div className="mb-8 rounded-xl overflow-hidden max-w-4xl mx-auto">
             <img 
-              src="/assets/IMG_1939.jpeg" 
+              src="/assets/IMG_1956.jpeg" 
               alt="Pexly Parties Event"
               className="w-full h-auto"
             />
