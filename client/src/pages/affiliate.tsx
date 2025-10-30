@@ -222,26 +222,67 @@ export default function Affiliate() {
         </div>
       </section>
 
-      {/* 1:1 Account Services */}
-      <section className="py-16 px-4 bg-muted/30">
+      {/* Pexly Parties */}
+      <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-primary mb-6">
-            1:1 Account Services
+          <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ color: '#FFB800' }}>
+            Pexly Parties for Affiliates, Institutions and VIP Traders
           </h2>
-          <p className="text-lg text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Our experienced team members are here to provide a comprehensive guide to the program and update you with timely promotions once you've joined! You will also be served by a dedicated 1-to-1 Account Manager
+          <p className="text-lg text-muted-foreground mb-12 max-w-3xl mx-auto">
+            Join exclusive networking events and celebrations with fellow affiliates and VIP traders from around the world
           </p>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {["Sarah", "Melanie", "David"].map((name, index) => (
-              <div key={index} className="flex flex-col items-center">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4">
-                  <Users className="h-16 w-16 text-primary" />
+          <div className="mb-8 rounded-xl overflow-hidden max-w-4xl mx-auto">
+            <img 
+              src="/assets/IMG_1939.jpeg" 
+              alt="Pexly Parties Event"
+              className="w-full h-auto"
+            />
+          </div>
+
+          <p className="text-sm text-muted-foreground italic">
+            Bybit Parties for Affiliates, Institutions and VIP Traders
+          </p>
+        </div>
+      </section>
+
+      {/* 1:1 Account Services */}
+      <section className="py-16 px-4 bg-muted/30">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-primary mb-6">
+              1:1 Account Services
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Our experienced team members are here to provide a comprehensive guide to the program and update you with timely promotions once you've joined! You will also be served by a dedicated 1-to-1 Account Manager
+            </p>
+          </div>
+
+          {/* Horizontally Scrollable Account Managers */}
+          <div className="relative">
+            <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {[
+                { name: "Sarah", image: "/assets/IMG_1820.jpeg" },
+                { name: "Melanie", image: "/assets/IMG_1821.jpeg" },
+                { name: "David", image: "/assets/IMG_1824.jpeg" }
+              ].map((manager, index) => (
+                <div key={index} className="flex-shrink-0 w-64 snap-center">
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="aspect-square overflow-hidden">
+                      <img 
+                        src={manager.image}
+                        alt={manager.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <CardContent className="p-6 text-center">
+                      <h3 className="font-bold text-lg mb-1">{manager.name}</h3>
+                      <p className="text-sm text-muted-foreground">Account Manager</p>
+                    </CardContent>
+                  </Card>
                 </div>
-                <h3 className="font-bold text-lg mb-1">{name}</h3>
-                <p className="text-sm text-muted-foreground">Account Manager</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
