@@ -285,9 +285,9 @@ export default function VisaCard() {
           >
             {/* Background Image Carousel */}
             {[
-              "/assets/IMG_1931_1761795011937.jpeg",
-              "/assets/IMG_1930_1761796233965.jpeg",
-              "/assets/IMG_1930_1761795011937.jpeg"
+              "/assets/IMG_1931.jpeg",
+              "/assets/IMG_1930.jpeg",
+              "/assets/IMG_1930.jpeg"
             ].map((image, index) => (
               <div
                 key={index}
