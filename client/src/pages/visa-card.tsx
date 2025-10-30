@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -17,6 +17,15 @@ import {
 
 export default function VisaCard() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % 3);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const features = [
     {
@@ -266,13 +275,23 @@ export default function VisaCard() {
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div 
-            className="relative overflow-hidden rounded-3xl bg-cover bg-center min-h-[600px] flex flex-col justify-between p-8 md:p-16"
-            style={{
-              backgroundImage: `url(/assets/IMG_1931_1761795011937.jpeg)`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
+            className="relative overflow-hidden rounded-3xl min-h-[600px] flex flex-col justify-between p-8 md:p-16"
           >
+            {/* Background Image Carousel */}
+            {[
+              "/assets/IMG_1931_1761795011937.jpeg",
+              "/assets/IMG_1930_1761796233965.jpeg",
+              "/assets/IMG_1930_1761795011937.jpeg"
+            ].map((image, index) => (
+              <div
+                key={index}
+                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
+                  currentImageIndex === index ? "opacity-100" : "opacity-0"
+                }`}
+                style={{ backgroundImage: `url(${image})` }}
+              />
+            ))}
+            
             <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60"></div>
             
             <div className="relative z-10 text-center max-w-3xl mx-auto pt-8">
