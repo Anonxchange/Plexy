@@ -229,8 +229,8 @@ export default function VisaCard() {
           {/* Phone mockup with rotating images */}
           <div className="relative w-64 h-96 mx-auto overflow-hidden rounded-[3rem]">
             {[
-              "/assets/IMG_1892_1761796637236.jpeg",
-              "/assets/IMG_1875_1761796637238.jpeg"
+              "/assets/IMG_1875.jpeg",
+              "/assets/IMG_1892.jpeg"
             ].map((image, index) => (
               <img
                 key={index}
