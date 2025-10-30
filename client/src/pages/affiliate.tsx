@@ -262,9 +262,9 @@ export default function Affiliate() {
           <div className="relative">
             <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {[
-                { name: "Sarah", image: "/assets/IMG_1820.jpeg" },
-                { name: "Melanie", image: "/assets/IMG_1821.jpeg" },
-                { name: "David", image: "/assets/IMG_1824.jpeg" }
+                { name: "Sarah", image: "/assets/IMG_1962.jpeg" },
+                { name: "David", image: "/assets/IMG_1961.jpeg" },
+                { name: "Melanie", image: "/assets/IMG_1963.jpeg" }
               ].map((manager, index) => (
                 <div key={index} className="flex-shrink-0 w-64 snap-center">
                   <Card className="overflow-hidden hover:shadow-lg transition-shadow">
