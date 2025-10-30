@@ -10,6 +10,7 @@ import { GlobalNotificationListener } from "@/components/global-notification-lis
 import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
+import { CookieConsent } from "@/components/cookie-consent";
 import Home from "@/pages/home";
 import Buy from "@/pages/buy";
 import Wallet from "@/pages/wallet";
@@ -139,6 +140,7 @@ function App() {
               {!hideAppFooter && <AppFooter />}
             </div>
             <Toaster />
+            <CookieConsent />
           </AuthProvider>
         </ThemeProvider>
       </TooltipProvider>
