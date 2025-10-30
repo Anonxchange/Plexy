@@ -39,7 +39,7 @@ export default function Affiliate() {
     {
       title: "Timely Compensation",
       description: "Payments are calculated and processed on a daily basis. We seek to complete payments to our affiliates as fast as possible.",
-      image: "/assets/IMG_1955_1761828186531.jpeg"
+      image: "/assets/IMG_1955.jpeg"
     },
     {
       title: "Worldwide Networking Events",
