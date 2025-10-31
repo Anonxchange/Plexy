@@ -286,15 +286,7 @@ export function OfferCard({
 
           {/* Price and Button Row */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
-            <Button
-              className="bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto h-9 sm:h-10 text-sm sm:text-base order-2 sm:order-1"
-              onClick={handleTrade}
-              data-testid={`button-trade-${type}`}
-            >
-              {type === "sell" ? "Sell" : "Buy"} {cryptoSymbol}
-              <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </Button>
-            <div className="flex-1 min-w-0 w-full sm:w-auto order-1 sm:order-2">
+            <div className="flex-1 min-w-0 w-full sm:w-auto order-1 sm:order-first">
               <div className="text-lg sm:text-2xl font-bold text-foreground flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
                 <span className="text-[10px] sm:text-xs text-muted-foreground font-normal">{currency}</span>
                 <span className="truncate">{pricePerBTC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -303,6 +295,14 @@ export function OfferCard({
                 <span className="truncate">{limits.min.toLocaleString()} - {limits.max.toLocaleString()} {currency}</span>
               </div>
             </div>
+            <Button
+              className="bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto h-9 sm:h-10 text-sm sm:text-base order-2 sm:order-last"
+              onClick={handleTrade}
+              data-testid={`button-trade-${type}`}
+            >
+              {type === "sell" ? "Sell" : "Buy"} {cryptoSymbol}
+              <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </Button>
           </div>
         </CardContent>
       </Card>
