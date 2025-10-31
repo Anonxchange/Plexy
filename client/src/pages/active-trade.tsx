@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
-import { Info } from "lucide-react";
+import { Info, CheckCircle, XCircle } from "lucide-react";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { createMessageNotification } from "@/lib/notifications-api";
 import { notificationSounds } from "@/lib/notification-sounds";
@@ -584,7 +584,7 @@ export default function ActiveTrade() {
       <div className="max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-6 lg:p-6">
         
         {/* Right Column: Trade Info Section (Desktop only, appears first in grid) */}
-        <div className="hidden lg:block bg-card rounded-lg shadow-lg p-6 max-h-[calc(100vh-100px)] overflow-y-auto lg:order-1">
+        <div className="hidden lg:block bg-card rounded-lg p-6 overflow-y-auto lg:order-1">
           <TradeInfo
             trade={trade}
             counterpartyUsername={counterparty?.username}
@@ -605,7 +605,7 @@ export default function ActiveTrade() {
         </div>
 
         {/* Left Column: Chat Section (Mobile: Full width, Desktop: Right side) */}
-        <div className="lg:bg-card lg:rounded-lg lg:shadow-lg lg:overflow-hidden lg:order-2">
+        <div className="lg:bg-card lg:rounded-lg lg:order-2">
           <div className="max-w-md mx-auto lg:max-w-full">
             <TradeHeader
               counterparty={counterparty}
@@ -620,7 +620,7 @@ export default function ActiveTrade() {
 
             <TradeTimer isUserBuyer={isUserBuyer} trade={trade} />
 
-            <div className="bg-muted p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground flex items-center gap-2 border-b">
+            <div className="bg-muted p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
               {isPaid ? (
                 <span>Payment marked as sent. Waiting for seller to release crypto.</span>
               ) : (
@@ -629,7 +629,7 @@ export default function ActiveTrade() {
             </div>
 
             {activeTab === "chat" && (
-              <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 max-h-[calc(100vh-400px)] lg:max-h-[600px] overflow-y-auto">
+              <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 overflow-y-auto">
                 <TradeInstructions
                   isUserBuyer={isUserBuyer}
                   counterpartyUsername={counterparty?.username}
@@ -644,6 +644,28 @@ export default function ActiveTrade() {
                   messages={messages}
                   currentUserProfileId={currentUserProfileId}
                 />
+
+                {trade.status === "cancelled" && (
+                  <div className="bg-black/80 border border-destructive rounded-lg p-4 space-y-3">
+                    <div className="text-sm text-muted-foreground text-center">
+                      TRADE CANCELLED - {new Date(trade.created_at).toLocaleString().toUpperCase()}
+                    </div>
+                    <p className="text-sm text-destructive leading-relaxed">
+                      This trade was cancelled and {trade.crypto_symbol} is no longer reserved. To continue, ask your trade partner to reopen this trade, and make sure {trade.crypto_symbol} is reserved, before you make the payment.
+                    </p>
+                  </div>
+                )}
+
+                {trade.status === "completed" && (
+                  <div className="bg-black/80 border border-green-500 rounded-lg p-4 space-y-3">
+                    <div className="text-sm text-muted-foreground text-center">
+                      TRADE COMPLETED - {new Date(trade.completed_at || trade.created_at).toLocaleString().toUpperCase()}
+                    </div>
+                    <p className="text-sm text-green-500 leading-relaxed text-center">
+                      This trade has been successfully completed. The {trade.crypto_symbol} has been released to the buyer.
+                    </p>
+                  </div>
+                )}
 
                 <div className="lg:block hidden">
                   <MessageInput
@@ -663,18 +685,18 @@ export default function ActiveTrade() {
             )}
 
             {activeTab === "actions" && (
-              <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 max-h-[calc(100vh-400px)] lg:max-h-[600px] overflow-y-auto">
+              <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 overflow-y-auto">
                 {/* Trade Started Card */}
-                <div className="bg-card border rounded-lg overflow-hidden">
-                  <div className="bg-muted p-3 flex items-center gap-2">
+                <div className="bg-card rounded-lg overflow-hidden border shadow-xs">
+                  <div className="bg-primary p-3 flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="font-semibold text-sm">Trade Started</span>
+                    <span className="font-semibold text-sm text-primary-foreground">Trade Started</span>
                   </div>
                   
                   <div className="p-4 space-y-4">
                     {isUserBuyer ? (
                       <>
-                        <div className="bg-black/50 p-4 rounded border">
+                        <div className="bg-black/50 p-4 rounded">
                           <div className="text-base sm:text-lg mb-2">
                             Please make a payment of {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} using {trade.payment_method}.
                           </div>
@@ -683,7 +705,7 @@ export default function ActiveTrade() {
                           </div>
                         </div>
 
-                        <div className="bg-black/50 p-4 rounded border">
+                        <div className="bg-black/50 p-4 rounded">
                           <div className="mb-4 text-xs sm:text-sm">
                             <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
                             <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
@@ -713,6 +735,13 @@ export default function ActiveTrade() {
                           Report Bad Behaviour
                         </Button>
 
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                        >
+                          Raise Dispute
+                        </Button>
+
                         <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
                           Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within {import.meta.env.VITE_APP_NAME || "NoOnes"}. If you choose to proceed outside {import.meta.env.VITE_APP_NAME || "NoOnes"}, note that we cannot help or support you if you are scammed during such trades.
                         </div>
@@ -735,7 +764,7 @@ export default function ActiveTrade() {
                       </>
                     ) : (
                       <>
-                        <div className="bg-black/50 p-4 rounded border">
+                        <div className="bg-black/50 p-4 rounded">
                           <div className="text-base sm:text-lg mb-2">
                             Waiting for {counterparty?.username} to send {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
                           </div>
@@ -783,7 +812,7 @@ export default function ActiveTrade() {
                       Please follow {counterparty?.username}'s terms
                     </div>
 
-                    <div className="bg-card border p-4 rounded text-xs sm:text-sm space-y-2 whitespace-pre-wrap">
+                    <div className="bg-card p-4 rounded text-xs sm:text-sm space-y-2 whitespace-pre-wrap">
                       {trade.offer_terms}
                     </div>
                   </>
@@ -844,10 +873,18 @@ export default function ActiveTrade() {
 
                   <Button 
                     variant="outline" 
-                    className="w-full mb-3"
+                    className="w-full mb-2 sm:mb-3"
                     onClick={() => window.location.href = `/offers/${trade.offer_id}`}
                   >
                     View Offer
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    className="w-full mb-3 flex items-center justify-center gap-2 border shadow-xs hover-elevate active-elevate-2 transition-all"
+                  >
+                    <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Tutor
                   </Button>
                 </div>
               </div>
@@ -855,7 +892,7 @@ export default function ActiveTrade() {
 
             {/* Mobile Message Input - Only show in chat tab */}
             {activeTab === "chat" && (
-              <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-background border-t p-2 sm:p-3">
+              <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-background p-2 sm:p-3">
                 <div className="max-w-md mx-auto">
                   <MessageInput
                     newMessage={newMessage}
