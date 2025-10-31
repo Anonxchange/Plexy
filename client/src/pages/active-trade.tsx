@@ -581,8 +581,29 @@ export default function ActiveTrade() {
       {/* Desktop: Two-column layout, Mobile: Single column */}
       <div className="max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-6 lg:p-6">
         
-        {/* Left Column: Chat Section (Mobile: Full width, Desktop: Left side) */}
-        <div className="lg:bg-card lg:rounded-lg lg:shadow-lg lg:overflow-hidden">
+        {/* Right Column: Trade Info Section (Desktop only, appears first in grid) */}
+        <div className="hidden lg:block bg-card rounded-lg shadow-lg p-6 max-h-[calc(100vh-100px)] overflow-y-auto lg:order-1">
+          <TradeInfo
+            trade={trade}
+            counterpartyUsername={counterparty?.username}
+          />
+          
+          <div className="mt-6 space-y-4">
+            <h3 className="text-lg font-semibold">Trade Actions</h3>
+            <TradeActions
+              isUserBuyer={isUserBuyer}
+              isPaid={isPaid}
+              counterpartyUsername={counterparty?.username}
+              trade={trade}
+              onMarkAsPaid={markAsPaid}
+              onReleaseCrypto={releaseCrypto}
+              onCancelTrade={() => setShowCancelWarning(true)}
+            />
+          </div>
+        </div>
+
+        {/* Left Column: Chat Section (Mobile: Full width, Desktop: Right side) */}
+        <div className="lg:bg-card lg:rounded-lg lg:shadow-lg lg:overflow-hidden lg:order-2">
           <div className="max-w-md mx-auto lg:max-w-full">
             <TradeHeader
               counterparty={counterparty}
@@ -641,15 +662,29 @@ export default function ActiveTrade() {
 
             {activeTab === "actions" && (
               <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 max-h-[calc(100vh-400px)] lg:max-h-[600px] overflow-y-auto">
-                <TradeActions
+                <TradeInstructions
                   isUserBuyer={isUserBuyer}
-                  isPaid={isPaid}
                   counterpartyUsername={counterparty?.username}
                   trade={trade}
-                  onMarkAsPaid={markAsPaid}
-                  onReleaseCrypto={releaseCrypto}
-                  onCancelTrade={() => setShowCancelWarning(true)}
                 />
+
+                <TradeInfo
+                  trade={trade}
+                  counterpartyUsername={counterparty?.username}
+                />
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Trade Actions</h3>
+                  <TradeActions
+                    isUserBuyer={isUserBuyer}
+                    isPaid={isPaid}
+                    counterpartyUsername={counterparty?.username}
+                    trade={trade}
+                    onMarkAsPaid={markAsPaid}
+                    onReleaseCrypto={releaseCrypto}
+                    onCancelTrade={() => setShowCancelWarning(true)}
+                  />
+                </div>
               </div>
             )}
 
@@ -683,27 +718,7 @@ export default function ActiveTrade() {
           </div>
         </div>
 
-        {/* Right Column: Trade Info Section (Desktop only) */}
-        <div className="hidden lg:block bg-card rounded-lg shadow-lg p-6 max-h-[calc(100vh-100px)] overflow-y-auto">
-          <TradeInfo
-            trade={trade}
-            counterpartyUsername={counterparty?.username}
-          />
-          
-          <div className="mt-6 space-y-4">
-            <h3 className="text-lg font-semibold">Trade Actions</h3>
-            <TradeActions
-              isUserBuyer={isUserBuyer}
-              isPaid={isPaid}
-              counterpartyUsername={counterparty?.username}
-              trade={trade}
-              onMarkAsPaid={markAsPaid}
-              onReleaseCrypto={releaseCrypto}
-              onCancelTrade={() => setShowCancelWarning(true)}
-            />
-          </div>
         </div>
-      </div>
 
       <CancelTradeModal
         isOpen={showCancelWarning}
