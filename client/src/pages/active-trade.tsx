@@ -662,29 +662,101 @@ export default function ActiveTrade() {
 
             {activeTab === "actions" && (
               <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 max-h-[calc(100vh-400px)] lg:max-h-[600px] overflow-y-auto">
-                <TradeInstructions
-                  isUserBuyer={isUserBuyer}
-                  counterpartyUsername={counterparty?.username}
-                  trade={trade}
-                />
+                {/* Trade Started Card */}
+                <div className="bg-card border rounded-lg overflow-hidden">
+                  <div className="bg-muted p-3 flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="font-semibold">Trade Started</span>
+                  </div>
+                  
+                  <div className="p-4 space-y-4">
+                    <div className="bg-background border p-4 rounded">
+                      <div className="text-base sm:text-lg mb-2">
+                        Please make a payment of {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} using {trade.payment_method}.
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} will be added to your {trade.crypto_symbol} wallet
+                      </div>
+                    </div>
+
+                    <div className="bg-background border p-4 rounded space-y-4">
+                      <div className="text-sm">
+                        <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
+                        <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
+                      </div>
+
+                      <Button 
+                        className={`w-full p-4 h-auto ${isPaid ? 'bg-green-500 hover:bg-green-600' : 'bg-primary hover:bg-primary/90'}`}
+                        onClick={markAsPaid}
+                        disabled={isPaid || trade.status !== 'pending'}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="text-left">
+                            <div className="font-bold text-lg">Paid</div>
+                            <div className="text-sm">Time left {formatTime(timer)}</div>
+                          </div>
+                          {isPaid && <span className="text-2xl">✓</span>}
+                        </div>
+                      </Button>
+                    </div>
+
+                    <Button 
+                      variant="outline" 
+                      className="w-full text-sm"
+                    >
+                      Report Bad Behaviour
+                    </Button>
+
+                    {/* Warning Message */}
+                    <div className="border-2 border-primary rounded-lg p-4 text-xs sm:text-sm bg-primary/5">
+                      Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within {import.meta.env.VITE_APP_NAME || "NoOnes"}. If you choose to proceed outside {import.meta.env.VITE_APP_NAME || "NoOnes"}, note that we cannot help or support you if you are scammed during such trades.
+                    </div>
+
+                    <Button 
+                      variant="destructive"
+                      className="w-full"
+                      onClick={() => setShowCancelWarning(true)}
+                    >
+                      Cancel Trade
+                    </Button>
+
+                    {!isPaid && (
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Info className="w-5 h-5" />
+                        <span>You haven't paid yet</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Offer Terms */}
+                {trade.offer_terms && (
+                  <>
+                    <div className="text-center text-muted-foreground text-base sm:text-lg mb-2">
+                      Please follow {counterparty?.username}'s terms
+                    </div>
+
+                    <div className="flex items-center gap-2 text-primary mb-3 text-xs sm:text-sm">
+                      <span>Translate into</span>
+                      <Info className="w-5 h-5" />
+                    </div>
+
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                      <span className="bg-secondary px-3 py-2 rounded text-sm">receipt required</span>
+                      <span className="bg-secondary px-3 py-2 rounded text-sm">photo id required</span>
+                      <span className="bg-secondary px-3 py-2 rounded text-sm">no third parties</span>
+                    </div>
+
+                    <div className="bg-card border p-4 rounded-lg text-sm whitespace-pre-wrap">
+                      {trade.offer_terms}
+                    </div>
+                  </>
+                )}
 
                 <TradeInfo
                   trade={trade}
                   counterpartyUsername={counterparty?.username}
                 />
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Trade Actions</h3>
-                  <TradeActions
-                    isUserBuyer={isUserBuyer}
-                    isPaid={isPaid}
-                    counterpartyUsername={counterparty?.username}
-                    trade={trade}
-                    onMarkAsPaid={markAsPaid}
-                    onReleaseCrypto={releaseCrypto}
-                    onCancelTrade={() => setShowCancelWarning(true)}
-                  />
-                </div>
               </div>
             )}
 
