@@ -653,23 +653,25 @@ export default function ActiveTrade() {
               </div>
             )}
 
-            {/* Mobile Message Input */}
-            <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-background border-t p-2 sm:p-3">
-              <div className="max-w-md mx-auto">
-                <MessageInput
-                  newMessage={newMessage}
-                  isSendingMessage={isSendingMessage}
-                  showQuickMessages={showQuickMessages}
-                  quickMessages={quickMessages}
-                  onMessageChange={setNewMessage}
-                  onSend={sendMessage}
-                  onKeyPress={handleKeyPress}
-                  onFileSelect={handleFileUpload}
-                  onToggleQuickMessages={() => setShowQuickMessages(!showQuickMessages)}
-                  onQuickMessageSelect={(msg) => setNewMessage(msg)}
-                />
+            {/* Mobile Message Input - Only show in chat tab */}
+            {activeTab === "chat" && (
+              <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-background border-t p-2 sm:p-3">
+                <div className="max-w-md mx-auto">
+                  <MessageInput
+                    newMessage={newMessage}
+                    isSendingMessage={isSendingMessage}
+                    showQuickMessages={showQuickMessages}
+                    quickMessages={quickMessages}
+                    onMessageChange={setNewMessage}
+                    onSend={sendMessage}
+                    onKeyPress={handleKeyPress}
+                    onFileSelect={handleFileUpload}
+                    onToggleQuickMessages={() => setShowQuickMessages(!showQuickMessages)}
+                    onQuickMessageSelect={(msg) => setNewMessage(msg)}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Mobile Tab Navigation */}
             <div className="lg:hidden">
