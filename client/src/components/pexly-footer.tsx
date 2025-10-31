@@ -59,7 +59,7 @@ export function PexlyFooter() {
 
   return (
     <footer className="bg-background border-t">
-      <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
+      <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12 max-w-7xl">
         {/* Logo */}
         <div className="flex items-center gap-3 pb-4 lg:pb-8">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
