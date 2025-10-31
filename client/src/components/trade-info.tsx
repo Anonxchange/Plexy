@@ -45,9 +45,9 @@ export function TradeInfo({ trade, counterpartyUsername }: TradeInfoProps) {
         View Offer
       </Button>
 
-      <Button variant="outline" className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm h-9 sm:h-10">
+      <Button variant="outline" className="w-full mb-3 sm:mb-4 flex items-center justify-center gap-2 text-xs sm:text-sm h-9 sm:h-10 border shadow-xs hover-elevate active-elevate-2 transition-all">
         <Info className="w-4 h-4 sm:w-5 sm:h-5" />
-        Take a Tour
+        Tutor
       </Button>
 
       {trade.offer_terms && (
