@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Button } from "@/components/ui/button";
+import { Info } from "lucide-react";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { createMessageNotification } from "@/lib/notifications-api";
 import { notificationSounds } from "@/lib/notification-sounds";
@@ -662,93 +664,192 @@ export default function ActiveTrade() {
 
             {activeTab === "actions" && (
               <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 max-h-[calc(100vh-400px)] lg:max-h-[600px] overflow-y-auto">
-                <TradeInstructions
-                  isUserBuyer={isUserBuyer}
-                  counterpartyUsername={counterparty?.username}
-                  trade={trade}
-                />
-
-                {isUserBuyer ? (
-                  <div className="space-y-4">
-                    <Button 
-                      className={`w-full p-4 h-auto ${isPaid ? 'bg-green-500 hover:bg-green-600' : 'bg-primary hover:bg-primary/90'}`}
-                      onClick={markAsPaid}
-                      disabled={isPaid || trade.status !== 'pending'}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="text-left">
-                          <div className="font-bold text-lg">Paid</div>
-                          <div className="text-sm">
-                            {isPaid ? 'Payment marked' : `Time left ${formatTime(timer)}`}
+                {/* Trade Started Card */}
+                <div className="bg-card border rounded-lg overflow-hidden">
+                  <div className="bg-muted p-3 flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="font-semibold text-sm">Trade Started</span>
+                  </div>
+                  
+                  <div className="p-4 space-y-4">
+                    {isUserBuyer ? (
+                      <>
+                        <div className="bg-black/50 p-4 rounded border">
+                          <div className="text-base sm:text-lg mb-2">
+                            Please make a payment of {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} using {trade.payment_method}.
+                          </div>
+                          <div className="text-xs sm:text-sm text-muted-foreground">
+                            {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} will be added to your wallet
                           </div>
                         </div>
-                        {isPaid && <span className="text-2xl">✓</span>}
-                      </div>
-                    </Button>
 
-                    <Button 
-                      variant="outline" 
-                      className="w-full text-sm"
-                    >
-                      Report Bad Behaviour
-                    </Button>
+                        <div className="bg-black/50 p-4 rounded border">
+                          <div className="mb-4 text-xs sm:text-sm">
+                            <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
+                            <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
+                          </div>
 
-                    <div className="border-2 border-primary rounded-lg p-4 text-xs sm:text-sm bg-primary/5">
-                      Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within {import.meta.env.VITE_APP_NAME || "NoOnes"}. If you choose to proceed outside {import.meta.env.VITE_APP_NAME || "NoOnes"}, note that we cannot help or support you if you are scammed during such trades.
-                    </div>
-
-                    <Button 
-                      variant="destructive"
-                      className="w-full"
-                      onClick={() => setShowCancelWarning(true)}
-                      disabled={trade.status !== 'pending'}
-                    >
-                      Cancel Trade
-                    </Button>
-
-                    {!isPaid && (
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <Info className="w-5 h-5" />
-                        <span>You haven't paid yet</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Button 
-                      className="w-full p-4 h-auto bg-green-500 hover:bg-green-600"
-                      onClick={releaseCrypto}
-                      disabled={!isPaid || trade.status !== 'pending'}
-                    >
-                      <div className="text-left w-full">
-                        <div className="font-bold text-lg">Release Crypto</div>
-                        <div className="text-sm">
-                          {isPaid ? 'Buyer has marked as paid' : 'Waiting for buyer payment'}
+                          <Button 
+                            className={`w-full p-4 h-auto ${isPaid ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
+                            onClick={markAsPaid}
+                            disabled={isPaid || trade.status !== 'pending'}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <div className="text-left">
+                                <div className="font-bold text-lg">Paid</div>
+                                <div className="text-sm">
+                                  {isPaid ? 'Payment marked' : `Time left ${formatTime(timer)}`}
+                                </div>
+                              </div>
+                              {isPaid && <span className="text-2xl">✓</span>}
+                            </div>
+                          </Button>
                         </div>
-                      </div>
-                    </Button>
 
-                    <Button variant="outline" className="w-full text-sm">
-                      Raise Dispute
-                    </Button>
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                        >
+                          Report Bad Behaviour
+                        </Button>
 
-                    <div className="border-2 border-primary rounded-lg p-4 text-xs sm:text-sm bg-primary/5">
-                      Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt.
-                    </div>
+                        <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
+                          Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within {import.meta.env.VITE_APP_NAME || "NoOnes"}. If you choose to proceed outside {import.meta.env.VITE_APP_NAME || "NoOnes"}, note that we cannot help or support you if you are scammed during such trades.
+                        </div>
 
-                    {!isPaid && (
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <Info className="w-5 h-5" />
-                        <span>Payment not yet marked</span>
-                      </div>
+                        <Button 
+                          variant="destructive"
+                          className="w-full"
+                          onClick={() => setShowCancelWarning(true)}
+                          disabled={trade.status !== 'pending'}
+                        >
+                          Cancel Trade
+                        </Button>
+
+                        {!isPaid && (
+                          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <Info className="w-5 h-5" />
+                            <span>You haven't paid yet</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-black/50 p-4 rounded border">
+                          <div className="text-base sm:text-lg mb-2">
+                            Waiting for {counterparty?.username} to send {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
+                          </div>
+                          <div className="text-xs sm:text-sm text-muted-foreground">
+                            You are selling {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                          </div>
+                        </div>
+
+                        <Button 
+                          className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
+                          onClick={releaseCrypto}
+                          disabled={!isPaid || trade.status !== 'pending'}
+                        >
+                          <div className="text-left w-full">
+                            <div className="font-bold text-lg">Release Crypto</div>
+                            <div className="text-sm">
+                              {isPaid ? 'Buyer has marked as paid' : 'Waiting for buyer payment'}
+                            </div>
+                          </div>
+                        </Button>
+
+                        <Button variant="outline" className="w-full">
+                          Raise Dispute
+                        </Button>
+
+                        <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
+                          Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt.
+                        </div>
+
+                        {!isPaid && (
+                          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <Info className="w-5 h-5" />
+                            <span>Payment not yet marked</span>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
+                </div>
+
+                {/* Trade Partner Terms */}
+                {trade.offer_terms && (
+                  <>
+                    <div className="text-center text-muted-foreground text-sm sm:text-base">
+                      Please follow {counterparty?.username}'s terms
+                    </div>
+
+                    <div className="bg-card border p-4 rounded text-xs sm:text-sm space-y-2 whitespace-pre-wrap">
+                      {trade.offer_terms}
+                    </div>
+                  </>
                 )}
 
-                <TradeInfo
-                  trade={trade}
-                  counterpartyUsername={counterparty?.username}
-                />
+                {/* Trade Information */}
+                <div className="mt-6">
+                  <h3 className="text-lg sm:text-xl font-semibold mb-4">Trade Information</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <div className="text-xs sm:text-sm text-muted-foreground mb-1">RATE</div>
+                      <div className="text-xs sm:text-sm">{trade.price.toLocaleString()} {trade.fiat_currency}/{trade.crypto_symbol}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                        TRADE ID <Info className="w-4 h-4" />
+                      </div>
+                      <div className="text-xs sm:text-sm flex items-center gap-2">
+                        {trade.id.substring(0, 11)}
+                        <button 
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(trade.id);
+                            toast({
+                              title: "Copied!",
+                              description: "Trade ID copied to clipboard",
+                            });
+                          }}
+                        >
+                          📋
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <div className="text-xs sm:text-sm text-muted-foreground mb-1">STARTED</div>
+                    <div className="text-xs sm:text-sm">
+                      {(() => {
+                        const now = new Date();
+                        const created = new Date(trade.created_at);
+                        const diffMs = now.getTime() - created.getTime();
+                        const diffMins = Math.floor(diffMs / 60000);
+                        
+                        if (diffMins < 1) return 'just now';
+                        if (diffMins === 1) return 'a minute ago';
+                        if (diffMins < 60) return `${diffMins} minutes ago`;
+                        
+                        const diffHours = Math.floor(diffMins / 60);
+                        if (diffHours === 1) return 'an hour ago';
+                        if (diffHours < 24) return `${diffHours} hours ago`;
+                        
+                        return created.toLocaleDateString();
+                      })()}
+                    </div>
+                  </div>
+
+                  <Button 
+                    variant="outline" 
+                    className="w-full mb-3"
+                    onClick={() => window.location.href = `/offers/${trade.offer_id}`}
+                  >
+                    View Offer
+                  </Button>
+                </div>
               </div>
             )}
 
