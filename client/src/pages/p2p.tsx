@@ -356,53 +356,55 @@ export function P2P() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 px-4 py-6">
-        {/* Buy/Sell Tabs */}
-        <div className="flex gap-0 mb-8 border-b">
-          <button
-            onClick={() => setActiveTab("buy")}
-            className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 font-semibold text-base sm:text-lg transition-colors relative ${
-              activeTab === "buy" 
-                ? "text-foreground" 
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Buy
-            {activeTab === "buy" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"></div>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("sell")}
-            className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 font-semibold text-base sm:text-lg transition-colors relative ${
-              activeTab === "sell" 
-                ? "text-foreground" 
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Sell
-            {activeTab === "sell" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"></div>
-            )}
-          </button>
-        </div>
-
-        <div className="space-y-6">
-          {/* Title */}
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {activeTab === "buy" ? "Buy" : "Sell"} Bitcoin (BTC).
-            </h1>
-            <p className="text-muted-foreground">
-              {activeTab === "buy" 
-                ? "Buy Bitcoin with over 500 payment methods to choose from, including bank transfers, online wallets, and gift cards."
-                : "Sell your Bitcoin and get paid via over 500 payment methods, including bank transfers, online wallets, and gift cards."
-              }
-            </p>
+      <main className="flex-1">
+        {/* Mobile View */}
+        <div className="lg:hidden px-4 py-6">
+          {/* Buy/Sell Tabs */}
+          <div className="flex gap-0 mb-8 border-b">
+            <button
+              onClick={() => setActiveTab("buy")}
+              className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 font-semibold text-base sm:text-lg transition-colors relative ${
+                activeTab === "buy" 
+                  ? "text-foreground" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Buy
+              {activeTab === "buy" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("sell")}
+              className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 font-semibold text-base sm:text-lg transition-colors relative ${
+                activeTab === "sell" 
+                  ? "text-foreground" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Sell
+              {activeTab === "sell" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"></div>
+              )}
+            </button>
           </div>
 
+          <div className="space-y-6">
+          {/* Title */}
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                {activeTab === "buy" ? "Buy" : "Sell"} Bitcoin (BTC).
+              </h1>
+              <p className="text-muted-foreground">
+                {activeTab === "buy" 
+                  ? "Buy Bitcoin with over 500 payment methods to choose from, including bank transfers, online wallets, and gift cards."
+                  : "Sell your Bitcoin and get paid via over 500 payment methods, including bank transfers, online wallets, and gift cards."
+                }
+              </p>
+            </div>
+
           {/* Cryptocurrency Selector */}
-          <div className="space-y-2">
+            <div className="space-y-2">
             <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
               <SelectTrigger className="w-full h-14 text-lg">
                 <div className="flex items-center gap-3">
@@ -934,7 +936,7 @@ export function P2P() {
           )}
 
           {/* How to Get Started Section */}
-          <div className="mt-12 space-y-6">
+            <div className="mt-12 space-y-6">
             <div className="text-left space-y-3">
               <h2 className="text-3xl font-bold">
                 How to Get Started With Pexly P2P
@@ -1264,6 +1266,502 @@ export function P2P() {
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop View - Two Column Layout */}
+        <div className="hidden lg:block">
+          <div className="container mx-auto max-w-7xl px-6 py-8">
+            {/* Buy/Sell Tabs - Desktop */}
+            <div className="flex gap-6 mb-8 border-b">
+              <button
+                onClick={() => setActiveTab("buy")}
+                className={`py-4 px-8 font-semibold text-lg transition-colors relative ${
+                  activeTab === "buy" 
+                    ? "text-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Buy Crypto
+                {activeTab === "buy" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("sell")}
+                className={`py-4 px-8 font-semibold text-lg transition-colors relative ${
+                  activeTab === "sell" 
+                    ? "text-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Sell Crypto
+                {activeTab === "sell" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+                )}
+              </button>
+            </div>
+
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-12 gap-6">
+              {/* Left Sidebar - Filters */}
+              <div className="col-span-3">
+                <Card className="sticky top-6">
+                  <CardContent className="p-6 space-y-6">
+                    <div>
+                      <h3 className="font-semibold mb-4 text-lg">Filters</h3>
+                    </div>
+
+                    {/* Cryptocurrency Selector */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Cryptocurrency</Label>
+                      <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                        <SelectTrigger className="w-full">
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={selectedCryptoData.iconUrl} 
+                              alt={selectedCryptoData.symbol}
+                              className="h-5 w-5 rounded-full"
+                            />
+                            <SelectValue />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cryptocurrencies.map((crypto) => (
+                            <SelectItem key={crypto.symbol} value={crypto.symbol}>
+                              <div className="flex items-center gap-2">
+                                <img 
+                                  src={crypto.iconUrl} 
+                                  alt={crypto.symbol}
+                                  className="h-4 w-4 rounded-full"
+                                />
+                                <span>{crypto.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="text-xs text-muted-foreground">
+                        1 {selectedCrypto} ≈ ${selectedCryptoData.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Payment Method */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Payment Method</Label>
+                      <Dialog open={openPaymentDialog} onOpenChange={setOpenPaymentDialog}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start text-left font-normal">
+                            <span className="truncate">{selectedPaymentMethod}</span>
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md h-full sm:h-auto max-h-screen p-0 flex flex-col">
+                          <div className="sticky top-0 bg-background z-10 border-b">
+                            <div className="flex items-center gap-3 p-4 pb-0">
+                              <button 
+                                onClick={() => setOpenPaymentDialog(false)}
+                                className="p-1 hover:bg-muted rounded-md transition-colors"
+                              >
+                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                              </button>
+                              <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                <Input
+                                  placeholder="Search payment methods"
+                                  value={paymentSearchQuery}
+                                  onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                                  className="pl-10 h-12 border-0 focus-visible:ring-0 bg-muted"
+                                />
+                              </div>
+                            </div>
+                            <div className="overflow-x-auto px-4 pt-4">
+                              <div className="flex gap-3 pb-3 border-b">
+                                {paymentCategories.map((cat) => (
+                                  <button
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategory(cat.id)}
+                                    className={cn(
+                                      "pb-2 px-1 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px",
+                                      selectedCategory === cat.id
+                                        ? "border-foreground text-foreground"
+                                        : "border-transparent text-muted-foreground hover:text-foreground"
+                                    )}
+                                  >
+                                    {cat.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="px-4 py-3 flex justify-center">
+                              <Button
+                                variant="outline"
+                                className="rounded-full px-6"
+                                onClick={() => {
+                                  setSelectedPaymentMethod("All Payment Methods");
+                                  setOpenPaymentDialog(false);
+                                }}
+                              >
+                                Select All
+                              </Button>
+                            </div>
+                          </div>
+                          <ScrollArea className="flex-1">
+                            <div className="px-4 py-4 space-y-6">
+                              {selectedCategory === "all" ? (
+                                paymentCategories.slice(1).map((category) => {
+                                  const categoryMethods = allPaymentMethods.filter(
+                                    (method) => 
+                                      method.category === category.id &&
+                                      method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase())
+                                  );
+                                  if (categoryMethods.length === 0) return null;
+                                  return (
+                                    <div key={category.id}>
+                                      <h3 className="text-sm font-semibold mb-3 capitalize">{category.name}</h3>
+                                      <div className="space-y-0 bg-card rounded-lg overflow-hidden border">
+                                        {categoryMethods.map((method, index) => (
+                                          <button
+                                            key={method.id}
+                                            onClick={() => {
+                                              setSelectedPaymentMethod(method.name);
+                                              setOpenPaymentDialog(false);
+                                            }}
+                                            className={cn(
+                                              "w-full flex items-center gap-3 p-4 hover:bg-muted transition-colors text-left",
+                                              index !== 0 && "border-t"
+                                            )}
+                                          >
+                                            <method.icon className="h-5 w-5 text-muted-foreground" />
+                                            <span className="font-medium">{method.name}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div>
+                                  <h3 className="text-sm font-semibold mb-3 capitalize">
+                                    {paymentCategories.find(c => c.id === selectedCategory)?.name}
+                                  </h3>
+                                  <div className="space-y-0 bg-card rounded-lg overflow-hidden border">
+                                    {allPaymentMethods
+                                      .filter((method) => {
+                                        const matchesSearch = method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase());
+                                        const matchesCategory = method.category === selectedCategory;
+                                        return matchesSearch && matchesCategory;
+                                      })
+                                      .map((method, index) => (
+                                        <button
+                                          key={method.id}
+                                          onClick={() => {
+                                            setSelectedPaymentMethod(method.name);
+                                            setOpenPaymentDialog(false);
+                                          }}
+                                          className={cn(
+                                            "w-full flex items-center gap-3 p-4 hover:bg-muted transition-colors text-left",
+                                            index !== 0 && "border-t"
+                                          )}
+                                        >
+                                          <method.icon className="h-5 w-5 text-muted-foreground" />
+                                          <span className="font-medium">{method.name}</span>
+                                        </button>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+
+                    <Separator />
+
+                    {/* Amount */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Amount</Label>
+                      <div className="relative">
+                        <Input
+                          placeholder="Enter amount"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="pr-16"
+                          type="number"
+                        />
+                        <Dialog open={openCurrencyDialog} onOpenChange={setOpenCurrencyDialog}>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-2 text-xs font-semibold">
+                              {selectedCurrencyData?.flag} {currency}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Preferred currency</DialogTitle>
+                            </DialogHeader>
+                            <Command>
+                              <CommandInput placeholder="Search for your currency" />
+                              <CommandEmpty>No currency found.</CommandEmpty>
+                              <div className="max-h-[400px] overflow-y-auto">
+                                <CommandGroup heading="MOST POPULAR">
+                                  <CommandItem
+                                    value="any"
+                                    onSelect={() => {
+                                      setCurrency("USD");
+                                      setOpenCurrencyDialog(false);
+                                    }}
+                                    className="flex items-center justify-between"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xl">🌐</span>
+                                      <span>Any currency</span>
+                                    </div>
+                                    <span className="text-sm font-semibold">$£€</span>
+                                  </CommandItem>
+                                  {popularCurrencies.map((code) => {
+                                    const curr = currencies.find(c => c.code === code);
+                                    if (!curr) return null;
+                                    return (
+                                      <CommandItem
+                                        key={code}
+                                        value={code}
+                                        onSelect={() => {
+                                          setCurrency(code);
+                                          setOpenCurrencyDialog(false);
+                                        }}
+                                        className={cn(
+                                          "flex items-center justify-between",
+                                          currency === code && "bg-primary/10"
+                                        )}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-xl">{curr.flag}</span>
+                                          <span>{curr.name}</span>
+                                        </div>
+                                        <span className={cn(
+                                          "text-sm font-semibold px-3 py-1 rounded",
+                                          currency === code ? "bg-green-500 text-white" : "bg-muted"
+                                        )}>
+                                          {code}
+                                        </span>
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                                <CommandGroup heading="ALL CURRENCIES">
+                                  {currencies.filter(c => !popularCurrencies.includes(c.code)).map((curr) => (
+                                    <CommandItem
+                                      key={curr.code}
+                                      value={curr.code}
+                                      onSelect={() => {
+                                        setCurrency(curr.code);
+                                        setOpenCurrencyDialog(false);
+                                      }}
+                                      className={cn(
+                                        "flex items-center justify-between",
+                                        currency === curr.code && "bg-primary/10"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-xl">{curr.flag}</span>
+                                        <span>{curr.name}</span>
+                                      </div>
+                                      <span className={cn(
+                                        "text-sm font-semibold px-3 py-1 rounded",
+                                        currency === curr.code ? "bg-green-500 text-white" : "bg-muted"
+                                      )}>
+                                        {curr.code}
+                                      </span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </div>
+                            </Command>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Location Filters */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Trader Location</Label>
+                        <Select value={traderLocation} onValueChange={setTraderLocation}>
+                          <SelectTrigger className="w-full">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              <SelectValue />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="usa">United States (USA)</SelectItem>
+                            <SelectItem value="uk">United Kingdom</SelectItem>
+                            <SelectItem value="ng">Nigeria</SelectItem>
+                            <SelectItem value="worldwide">Worldwide</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <Button 
+                      className="w-full bg-primary hover:bg-primary/90 font-semibold"
+                      onClick={fetchOffers}
+                    >
+                      Find Offers
+                      <RotateCw className={`ml-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Content Area - Offers */}
+              <div className="col-span-9 space-y-6">
+                {/* Active Trades */}
+                {activeTrades.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                        Active Trades ({activeTrades.length})
+                      </h2>
+                      <Button 
+                        variant="ghost" 
+                        className="text-primary hover:text-primary/90 font-semibold"
+                        onClick={() => window.location.href = '/trade-history'}
+                      >
+                        View All →
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      {activeTrades.slice(0, 4).map((trade) => {
+                        const isUserBuyer = trade.buyer_id === user?.id;
+                        const counterparty = isUserBuyer ? trade.seller_profile : trade.buyer_profile;
+                        let vendorAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${counterparty?.username || 'vendor'}`;
+                        if (counterparty?.avatar_url) {
+                          vendorAvatarUrl = counterparty.avatar_url;
+                        } else if (counterparty?.avatar_type) {
+                          const avatarTypes = [
+                            { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
+                            { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
+                            { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
+                            { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
+                            { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
+                            { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
+                            { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
+                            { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
+                          ];
+                          const selectedAvatar = avatarTypes.find(a => a.id === counterparty.avatar_type);
+                          if (selectedAvatar) {
+                            vendorAvatarUrl = selectedAvatar.image;
+                          }
+                        }
+                        return (
+                          <Card 
+                            key={trade.id} 
+                            className="hover:shadow-lg transition-shadow border-2 border-primary/50 cursor-pointer"
+                            onClick={() => window.location.href = `/trade/${trade.id}`}
+                          >
+                            <CardContent className="p-4 space-y-3">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-12 w-12">
+                                  <AvatarImage src={vendorAvatarUrl} />
+                                  <AvatarFallback className="text-sm font-semibold bg-primary/10">
+                                    {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-semibold text-sm">{counterparty?.username || "Vendor"}</span>
+                                    {counterparty?.country && (
+                                      <span className="text-sm">{getCountryFlag(counterparty.country)}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <ThumbsUp className="h-3 w-3" />
+                                    <span>100%</span>
+                                    <span>{counterparty?.total_trades || 0} Trades</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <Separator />
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    {isUserBuyer ? "Pay" : "Receive"}
+                                  </div>
+                                  <div className="text-lg font-bold">
+                                    {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    {isUserBuyer ? "Receive" : "Pay"}
+                                  </div>
+                                  <div className="text-lg font-bold">
+                                    {trade.crypto_amount.toFixed(6)} {trade.crypto_symbol}
+                                  </div>
+                                </div>
+                              </div>
+                              <Button 
+                                className="w-full bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.location.href = `/trade/${trade.id}`;
+                                }}
+                              >
+                                View Trade <ArrowRight className="h-4 w-4 ml-2" />
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Offers List */}
+                {offers.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold">
+                        {activeTab === "buy" ? "Buy" : "Sell"} Offers ({offers.length})
+                      </h2>
+                    </div>
+                    <div className="space-y-3">
+                      {offers.map((offer) => (
+                        <OfferCard key={offer.id} {...offer} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {!loading && offers.length === 0 && (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <h3 className="text-xl font-semibold mb-2">No offers found</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Try adjusting your filters or create your own offer to {activeTab === "buy" ? "sell" : "buy"} {selectedCrypto}.
+                      </p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => window.location.href = '/create-offer'}
+                      >
+                        Create an Offer
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           </div>
