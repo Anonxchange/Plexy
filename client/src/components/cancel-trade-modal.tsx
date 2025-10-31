@@ -26,6 +26,16 @@ export function CancelTradeModal({
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
       <div className="bg-card border rounded-lg p-4 sm:p-6 max-w-sm w-full shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="space-y-3 sm:space-y-4">
+          <div className="flex justify-end">
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="border-2 border-primary rounded-lg p-3 sm:p-4 text-xs sm:text-sm bg-primary/5 mb-4">
+            Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within {import.meta.env.VITE_APP_NAME || "NoOnes"}. If you choose to proceed outside {import.meta.env.VITE_APP_NAME || "NoOnes"}, note that we cannot help or support you if you are scammed during such trades.
+          </div>
+
           <div className="bg-muted/50 rounded-lg p-3 sm:p-4 space-y-3">
             <button
               onClick={() => onReasonSelect("unresponsive")}
