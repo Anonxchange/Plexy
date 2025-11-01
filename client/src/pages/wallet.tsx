@@ -473,8 +473,96 @@ export default function Wallet() {
           {/* LEFT COLUMN - Navigation Sidebar */}
           <div className="lg:col-span-3">
             <div className="space-y-4 lg:sticky lg:top-6">
-            {/* Navigation Card */}
-            <Card className="overflow-hidden">
+            {/* Limits Card - Now at the top */}
+            <Card>
+              <CardContent className="p-4">
+                <div
+                  className="cursor-pointer"
+                  onClick={() => setLimitsExpanded(!limitsExpanded)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm">Limits</span>
+                    {limitsExpanded ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="text-xs">
+                      Level {userVerificationLevel}
+                    </Badge>
+                    <Link href="/verification">
+                      <span className="text-xs text-primary cursor-pointer hover:underline">
+                        {userVerificationLevel < 3 ? "Upgrade" : "Details"}
+                      </span>
+                    </Link>
+                  </div>
+                </div>
+
+                {limitsExpanded && (
+                  <div className="mt-4 pt-4 border-t space-y-3">
+                    <div className="space-y-3">
+                      {/* Current Level Info */}
+                      <div className="bg-primary/5 p-3 rounded-lg space-y-2">
+                        <div className="font-medium text-xs text-primary">
+                          {getVerificationLevel(userVerificationLevel).name}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {getVerificationLevel(userVerificationLevel).description}
+                        </p>
+                      </div>
+                      
+                      {/* Limits */}
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Daily Limit</span>
+                          <span className="font-medium">
+                            {getVerificationLevel(userVerificationLevel).dailyLimit !== null
+                              ? `$${getVerificationLevel(userVerificationLevel).dailyLimit?.toLocaleString()}`
+                              : "Unlimited"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Per Trade</span>
+                          <span className="font-medium">
+                            {getVerificationLevel(userVerificationLevel).perTradeLimit !== null
+                              ? `$${getVerificationLevel(userVerificationLevel).perTradeLimit?.toLocaleString()}`
+                              : "Unlimited"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* What you can do */}
+                      {getVerificationLevel(userVerificationLevel).permissions.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-xs font-medium">What you can do:</div>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {getVerificationLevel(userVerificationLevel).permissions.slice(0, 3).map((permission, idx) => (
+                              <li key={idx} className="flex items-start gap-1">
+                                <span className="text-primary mt-0.5">•</span>
+                                <span>{permission}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {userVerificationLevel < 3 && (
+                      <Link href="/verification" className="block">
+                        <Button size="sm" className="w-full" variant="default">
+                          Upgrade to Level {userVerificationLevel + 1}
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Access Card - Now below limits */}
+            <Card className="overflow-hidden hidden lg:block">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 border-b">
                   <h3 className="font-semibold text-sm">Quick Access</h3>
@@ -537,62 +625,69 @@ export default function Wallet() {
               </CardContent>
             </Card>
 
-            {/* Withdraw Limits Card - Compact for sidebar */}
-            <Card>
-              <CardContent className="p-4">
-                <div
-                  className="cursor-pointer"
-                  onClick={() => setLimitsExpanded(!limitsExpanded)}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm">Limits</span>
-                    {limitsExpanded ? (
-                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="text-xs">
-                      Level {userVerificationLevel}
-                    </Badge>
-                    <Link href="/verification">
-                      <span className="text-xs text-primary cursor-pointer hover:underline">
-                        {userVerificationLevel < 3 ? "Upgrade" : "Details"}
-                      </span>
+            {/* Mobile Horizontal Quick Access - Shows only on mobile */}
+            <Card className="overflow-hidden lg:hidden">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 border-b">
+                  <h3 className="font-semibold text-sm">Quick Access</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="flex gap-2 p-3 min-w-max">
+                    <Button
+                      variant={activeWalletTab === "wallet" ? "default" : "outline"}
+                      className="flex-col h-20 w-24 text-xs whitespace-nowrap"
+                      onClick={() => setActiveWalletTab("wallet")}
+                    >
+                      <WalletIcon className="h-5 w-5 mb-1" />
+                      Wallet
+                    </Button>
+                    <Link href="/spot">
+                      <Button
+                        variant="outline"
+                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
+                      >
+                        <ArrowLeftRight className="h-5 w-5 mb-1" />
+                        Spot
+                      </Button>
+                    </Link>
+                    <Link href="/visa-card">
+                      <Button
+                        variant="outline"
+                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
+                      >
+                        <CreditCard className="h-5 w-5 mb-1" />
+                        Visa Card
+                      </Button>
+                    </Link>
+                    <Link href="/pexly-pay">
+                      <Button
+                        variant="outline"
+                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
+                      >
+                        <Send className="h-5 w-5 mb-1" />
+                        Pexly Pay
+                      </Button>
+                    </Link>
+                    <Link href="/mobile-topup">
+                      <Button
+                        variant="outline"
+                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
+                      >
+                        <Smartphone className="h-5 w-5 mb-1" />
+                        Top-up
+                      </Button>
+                    </Link>
+                    <Link href="/gift-cards">
+                      <Button
+                        variant="outline"
+                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
+                      >
+                        <Gift className="h-5 w-5 mb-1" />
+                        Gift Cards
+                      </Button>
                     </Link>
                   </div>
                 </div>
-
-                {limitsExpanded && (
-                  <div className="mt-4 pt-4 border-t space-y-3">
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Daily</span>
-                        <span className="font-medium">
-                          {getVerificationLevel(userVerificationLevel).dailyLimit !== null
-                            ? `$${getVerificationLevel(userVerificationLevel).dailyLimit?.toLocaleString()}`
-                            : "Unlimited"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Per Trade</span>
-                        <span className="font-medium">
-                          {getVerificationLevel(userVerificationLevel).perTradeLimit !== null
-                            ? `$${getVerificationLevel(userVerificationLevel).perTradeLimit?.toLocaleString()}`
-                            : "Unlimited"}
-                        </span>
-                      </div>
-                    </div>
-                    {userVerificationLevel < 3 && (
-                      <Link href="/verification" className="block">
-                        <Button size="sm" className="w-full" variant="default">
-                          Upgrade to Level {userVerificationLevel + 1}
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
-                )}
               </CardContent>
             </Card>
             </div>
