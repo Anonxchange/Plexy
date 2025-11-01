@@ -585,23 +585,142 @@ export default function ActiveTrade() {
         
         {/* Right Column: Trade Info Section (Desktop only, appears first in grid) */}
         <div className="hidden lg:block bg-card rounded-lg p-6 overflow-y-auto lg:order-1">
+          {/* Trade Started Card */}
+          <div className="bg-card rounded-lg overflow-hidden border shadow-xs mb-6">
+            <div className="bg-primary p-3 flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="font-semibold text-sm text-primary-foreground">Trade Started</span>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              {!isUserBuyer ? (
+                <>
+                  <div className="bg-black/50 p-4 rounded">
+                    <div className="text-base mb-2">
+                      Please make a payment of {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} using {trade.payment_method}.
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} will be added to your wallet
+                    </div>
+                  </div>
+
+                  <div className="bg-black/50 p-4 rounded">
+                    <div className="mb-4 text-sm">
+                      <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
+                      <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
+                    </div>
+
+                    <Button 
+                      className={`w-full p-4 h-auto ${isPaid ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
+                      onClick={markAsPaid}
+                      disabled={isPaid || trade.status !== 'pending'}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="text-left">
+                          <div className="font-bold text-lg">Paid</div>
+                          <div className="text-sm">
+                            {isPaid ? 'Payment marked' : `Time left ${formatTime(timer)}`}
+                          </div>
+                        </div>
+                        {isPaid && <span className="text-2xl">✓</span>}
+                      </div>
+                    </Button>
+                  </div>
+
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                  >
+                    Report Bad Behaviour
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                  >
+                    Raise Dispute
+                  </Button>
+
+                  <div className="border-2 border-primary rounded p-4 text-sm">
+                    Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within {import.meta.env.VITE_APP_NAME || "NoOnes"}. If you choose to proceed outside {import.meta.env.VITE_APP_NAME || "NoOnes"}, note that we cannot help or support you if you are scammed during such trades.
+                  </div>
+
+                  <Button 
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => setShowCancelWarning(true)}
+                    disabled={trade.status !== 'pending'}
+                  >
+                    Cancel Trade
+                  </Button>
+
+                  {!isPaid && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Info className="w-5 h-5" />
+                      <span>You haven't paid yet</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="bg-black/50 p-4 rounded">
+                    <div className="text-base mb-2">
+                      Waiting for {counterparty?.username} to send {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      You are selling {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                    </div>
+                  </div>
+
+                  <Button 
+                    className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
+                    onClick={releaseCrypto}
+                    disabled={!isPaid || trade.status !== 'pending'}
+                  >
+                    <div className="text-left w-full">
+                      <div className="font-bold text-lg">Release Crypto</div>
+                      <div className="text-sm">
+                        {isPaid ? 'Buyer has marked as paid' : 'Waiting for buyer payment'}
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button variant="outline" className="w-full">
+                    Raise Dispute
+                  </Button>
+
+                  <div className="border-2 border-primary rounded p-4 text-sm">
+                    Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt.
+                  </div>
+
+                  {!isPaid && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Info className="w-5 h-5" />
+                      <span>Payment not yet marked</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Trade Partner Terms */}
+          {trade.offer_terms && (
+            <div className="mb-6">
+              <div className="text-center text-muted-foreground text-sm mb-2">
+                Please follow {counterparty?.username}'s terms
+              </div>
+              <div className="bg-muted p-4 rounded text-sm space-y-2 whitespace-pre-wrap">
+                {trade.offer_terms}
+              </div>
+            </div>
+          )}
+
+          {/* Trade Information */}
           <TradeInfo
             trade={trade}
             counterpartyUsername={counterparty?.username}
           />
-          
-          <div className="mt-6 space-y-4">
-            <h3 className="text-lg font-semibold">Trade Actions</h3>
-            <TradeActions
-              isUserBuyer={isUserBuyer}
-              isPaid={isPaid}
-              counterpartyUsername={counterparty?.username}
-              trade={trade}
-              onMarkAsPaid={markAsPaid}
-              onReleaseCrypto={releaseCrypto}
-              onCancelTrade={() => setShowCancelWarning(true)}
-            />
-          </div>
         </div>
 
         {/* Left Column: Chat Section (Mobile: Full width, Desktop: Right side) */}
