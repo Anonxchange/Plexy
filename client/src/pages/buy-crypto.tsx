@@ -42,22 +42,12 @@ const initTransakWidget = () => {};
 export default function BuyCrypto() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "bank" | "mobile">("card");
   const [selectedCrypto, setSelectedCrypto] = useState("BTC");
   const [amount, setAmount] = useState("");
   const [fiatCurrency, setFiatCurrency] = useState("USD");
   const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
   const [loadingVerification, setLoadingVerification] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  
-  // Payment form states
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [mobileProvider, setMobileProvider] = useState("");
-  const [mobileNumber, setMobileNumber] = useState("");
 
   // Helper function to initialize Transak widget
   const initTransakWidget = () => {
@@ -378,13 +368,13 @@ export default function BuyCrypto() {
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="text-muted-foreground text-sm">Processing fee</span>
                     <span className="font-medium text-sm">
-                      {paymentMethod === "card" ? "2.5%" : paymentMethod === "bank" ? "0.5%" : "1.5%"}
+                      Varies by method
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-2">
                     <span className="text-muted-foreground text-sm">Estimated delivery</span>
                     <span className="font-medium text-sm">
-                      {paymentMethod === "card" ? "Instant" : paymentMethod === "bank" ? "1-3 days" : "5-10 min"}
+                      Instant - 3 days
                     </span>
                   </div>
                 </CardContent>
@@ -709,171 +699,42 @@ export default function BuyCrypto() {
               </CardContent>
             </Card>
 
-            {/* Payment Method Selection */}
+            {/* Payment Method Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Payment Method</CardTitle>
+                <CardTitle className="text-xl">Available Payment Methods</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
-                  <div className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-muted/50">
-                    <RadioGroupItem value="card" id="card" />
-                    <Label htmlFor="card" className="flex items-center gap-3 cursor-pointer flex-1">
-                      <CreditCard className="h-5 w-5 text-primary" />
-                      <div>
-                        <div className="font-semibold">Credit/Debit Card</div>
-                        <div className="text-xs text-muted-foreground">Instant • Visa, Mastercard, Amex</div>
-                      </div>
-                    </Label>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-3 p-3 border rounded-lg bg-muted/30">
+                  <CreditCard className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                  <div>
+                    <div className="font-semibold text-sm">Credit/Debit Card</div>
+                    <div className="text-xs text-muted-foreground">Instant • Visa, Mastercard, Amex</div>
                   </div>
+                </div>
 
-                  <div className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-muted/50">
-                    <RadioGroupItem value="bank" id="bank" />
-                    <Label htmlFor="bank" className="flex items-center gap-3 cursor-pointer flex-1">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      <div>
-                        <div className="font-semibold">Bank Transfer</div>
-                        <div className="text-xs text-muted-foreground">1-3 business days • Lower fees</div>
-                      </div>
-                    </Label>
+                <div className="flex items-start gap-3 p-3 border rounded-lg bg-muted/30">
+                  <Building2 className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                  <div>
+                    <div className="font-semibold text-sm">Bank Transfer</div>
+                    <div className="text-xs text-muted-foreground">1-3 business days • Lower fees</div>
                   </div>
+                </div>
 
-                  <div className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-muted/50">
-                    <RadioGroupItem value="mobile" id="mobile" />
-                    <Label htmlFor="mobile" className="flex items-center gap-3 cursor-pointer flex-1">
-                      <Smartphone className="h-5 w-5 text-primary" />
-                      <div>
-                        <div className="font-semibold">Mobile Money</div>
-                        <div className="text-xs text-muted-foreground">Instant • M-Pesa, MTN, Airtel</div>
-                      </div>
-                    </Label>
+                <div className="flex items-start gap-3 p-3 border rounded-lg bg-muted/30">
+                  <Smartphone className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                  <div>
+                    <div className="font-semibold text-sm">Mobile Money</div>
+                    <div className="text-xs text-muted-foreground">Instant • M-Pesa, MTN, Airtel</div>
                   </div>
-                </RadioGroup>
-              </CardContent>
-            </Card>
+                </div>
 
-            {/* Payment Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Payment Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {paymentMethod === "card" && (
-                  <>
-                    <div>
-                      <Label htmlFor="cardNumber" className="text-sm font-semibold mb-2 block">
-                        Card Number
-                      </Label>
-                      <Input
-                        id="cardNumber"
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        className="h-12"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="cardExpiry" className="text-sm font-semibold mb-2 block">
-                          Expiry Date
-                        </Label>
-                        <Input
-                          id="cardExpiry"
-                          type="text"
-                          placeholder="MM/YY"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
-                          className="h-12"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cardCvv" className="text-sm font-semibold mb-2 block">
-                          CVV
-                        </Label>
-                        <Input
-                          id="cardCvv"
-                          type="text"
-                          placeholder="123"
-                          value={cardCvv}
-                          onChange={(e) => setCardCvv(e.target.value)}
-                          className="h-12"
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {paymentMethod === "bank" && (
-                  <>
-                    <div>
-                      <Label htmlFor="bankName" className="text-sm font-semibold mb-2 block">
-                        Bank Name
-                      </Label>
-                      <Select value={bankName} onValueChange={setBankName}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Select your bank" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="chase">Chase Bank</SelectItem>
-                          <SelectItem value="bofa">Bank of America</SelectItem>
-                          <SelectItem value="wells">Wells Fargo</SelectItem>
-                          <SelectItem value="citi">Citibank</SelectItem>
-                          <SelectItem value="gtb">GTBank (Nigeria)</SelectItem>
-                          <SelectItem value="firstbank">First Bank (Nigeria)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="accountNumber" className="text-sm font-semibold mb-2 block">
-                        Account Number
-                      </Label>
-                      <Input
-                        id="accountNumber"
-                        type="text"
-                        placeholder="Enter account number"
-                        value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value)}
-                        className="h-12"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {paymentMethod === "mobile" && (
-                  <>
-                    <div>
-                      <Label htmlFor="mobileProvider" className="text-sm font-semibold mb-2 block">
-                        Mobile Money Provider
-                      </Label>
-                      <Select value={mobileProvider} onValueChange={setMobileProvider}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Select provider" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mpesa">M-Pesa</SelectItem>
-                          <SelectItem value="mtn">MTN Mobile Money</SelectItem>
-                          <SelectItem value="airtel">Airtel Money</SelectItem>
-                          <SelectItem value="orange">Orange Money</SelectItem>
-                          <SelectItem value="vodafone">Vodafone Cash</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="mobileNumber" className="text-sm font-semibold mb-2 block">
-                        Mobile Number
-                      </Label>
-                      <Input
-                        id="mobileNumber"
-                        type="tel"
-                        placeholder="+1 234 567 8900"
-                        value={mobileNumber}
-                        onChange={(e) => setMobileNumber(e.target.value)}
-                        className="h-12"
-                      />
-                    </div>
-                  </>
-                )}
+                <Alert className="mt-4">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    After clicking "Buy Now", you'll be redirected to our secure payment processor where you can select your preferred payment method and complete the transaction.
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
 
@@ -930,13 +791,13 @@ export default function BuyCrypto() {
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="text-muted-foreground">Processing fee</span>
                   <span className="font-medium">
-                    {paymentMethod === "card" ? "2.5%" : paymentMethod === "bank" ? "0.5%" : "1.5%"}
+                    Varies by payment method
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-3">
                   <span className="text-muted-foreground">Estimated delivery</span>
                   <span className="font-medium">
-                    {paymentMethod === "card" ? "Instant" : paymentMethod === "bank" ? "1-3 days" : "5-10 min"}
+                    Instant - 3 days
                   </span>
                 </div>
               </CardContent>
