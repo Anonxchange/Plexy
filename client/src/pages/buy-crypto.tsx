@@ -189,66 +189,85 @@ export default function BuyCrypto() {
       return;
     }
 
-    console.log("Opening Transak widget...");
-    console.log("API Key present:", !!import.meta.env.VITE_TRANSAK_API_KEY);
+    console.log("=== Opening Transak Widget ===");
+    console.log("API Key:", import.meta.env.VITE_TRANSAK_API_KEY || '5a30d45e-5510-4c50-804b-8d1e9b948732');
     console.log("Environment:", import.meta.env.VITE_TRANSAK_ENVIRONMENT || 'PRODUCTION');
     console.log("Wallet Address:", walletAddress || "Not set");
     console.log("Selected Crypto:", selectedCrypto);
     console.log("Amount:", amount);
+    console.log("window.transak exists:", !!window.transak);
 
-    // Check if script is already loaded and Transak is available
-    const existingScript = document.querySelector('script[src*="transakSDK"]');
-    if (existingScript && window.transak) {
-      console.log("Transak SDK already loaded, initializing widget");
+    // Check if Transak is already available
+    if (window.transak) {
+      console.log("✓ Transak SDK already available, initializing widget");
       initTransakWidget();
       return;
     }
 
-    // If script exists but window.transak is not available yet, wait for it
+    // Check if script is already in the DOM
+    const existingScript = document.querySelector('script[src*="transakSDK"]');
+    console.log("Existing script tag found:", !!existingScript);
+    
     if (existingScript) {
-      console.log("Waiting for Transak SDK to be ready...");
+      console.log("⏳ Script tag exists, waiting for Transak to initialize...");
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds
+      
       const checkInterval = setInterval(() => {
+        attempts++;
+        console.log(`Checking for Transak (attempt ${attempts}/${maxAttempts})...`);
+        
         if (window.transak) {
           clearInterval(checkInterval);
-          console.log("Transak SDK now ready, initializing widget");
+          console.log("✓ Transak SDK now available, initializing widget");
           initTransakWidget();
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          console.error("✗ Transak SDK failed to load after 5 seconds");
+          console.error("window object keys:", Object.keys(window).filter(k => k.toLowerCase().includes('trans')));
+          alert("Payment processor not ready. Please refresh the page and try again.");
         }
       }, 100);
-      
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        if (!window.transak) {
-          console.error("Transak SDK failed to load in time");
-          alert("Payment processor not ready. Please refresh and try again.");
-        }
-      }, 5000);
       return;
     }
 
+    // Load the script for the first time
+    console.log("📥 Loading Transak SDK script...");
     const script = document.createElement('script');
     script.src = 'https://global.transak.com/sdk/v1.2/transakSDK.js';
     script.async = true;
+    script.id = 'transak-sdk-script';
     
     script.onload = () => {
-      console.log("Transak SDK script loaded");
-      // Wait a bit for the SDK to initialize
-      setTimeout(() => {
+      console.log("✓ Transak SDK script loaded successfully");
+      
+      // Poll for window.transak availability
+      let attempts = 0;
+      const maxAttempts = 30; // 3 seconds
+      
+      const checkInterval = setInterval(() => {
+        attempts++;
+        console.log(`Waiting for Transak to initialize (attempt ${attempts}/${maxAttempts})...`);
+        
         if (window.transak) {
-          console.log("Transak SDK ready, initializing widget");
+          clearInterval(checkInterval);
+          console.log("✓ Transak SDK initialized, opening widget");
           initTransakWidget();
-        } else {
-          console.error("Transak SDK loaded but not available on window");
-          alert("Payment processor not ready. Please refresh and try again.");
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          console.error("✗ Transak SDK script loaded but window.transak not available");
+          console.error("window object keys:", Object.keys(window).filter(k => k.toLowerCase().includes('trans')));
+          alert("Payment processor initialization failed. Please refresh and try again.");
         }
       }, 100);
     };
     
     script.onerror = (error) => {
-      console.error("Failed to load Transak SDK:", error);
-      alert("Failed to load payment processor. Please try again.");
+      console.error("✗ Failed to load Transak SDK script:", error);
+      alert("Failed to load payment processor. Please check your internet connection and try again.");
     };
     
+    console.log("📌 Appending script to document body");
     document.body.appendChild(script);
   };
 
