@@ -43,7 +43,7 @@ export function TradeActions({
 
   return (
     <>
-      {isUserBuyer ? (
+      {!isUserBuyer ? (
         <>
           <div className="bg-muted p-3 sm:p-4 rounded-lg border">
             <div className="mb-3 sm:mb-4 text-xs sm:text-sm">
