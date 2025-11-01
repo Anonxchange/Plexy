@@ -36,6 +36,9 @@ declare global {
   }
 }
 
+// Add helper function declaration
+const initTransakWidget = () => {};
+
 export default function BuyCrypto() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -55,6 +58,56 @@ export default function BuyCrypto() {
   const [accountNumber, setAccountNumber] = useState("");
   const [mobileProvider, setMobileProvider] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
+
+  // Helper function to initialize Transak widget
+  const initTransakWidget = () => {
+    try {
+      if (!window.transak) {
+        console.error("Transak SDK not available on window object");
+        alert("Payment processor not ready. Please refresh and try again.");
+        return;
+      }
+
+      const transakConfig = {
+        apiKey: import.meta.env.VITE_TRANSAK_API_KEY || '5a30d45e-5510-4c50-804b-8d1e9b948732',
+        environment: import.meta.env.VITE_TRANSAK_ENVIRONMENT || 'PRODUCTION',
+        defaultCryptoCurrency: selectedCrypto,
+        walletAddress: walletAddress || '',
+        themeColor: 'B4F22E',
+        fiatCurrency: fiatCurrency,
+        fiatAmount: parseFloat(amount) || undefined,
+        email: user?.email || '',
+        redirectURL: window.location.origin + '/wallet',
+        hostURL: window.location.origin,
+        widgetHeight: '625px',
+        widgetWidth: '500px',
+      };
+
+      console.log("Initializing Transak with config:", transakConfig);
+
+      const transak = new window.transak.default(transakConfig);
+
+      transak.init();
+
+      transak.on('TRANSAK_ORDER_SUCCESSFUL', (orderData: any) => {
+        console.log('Transak order successful:', orderData);
+        transak.close();
+        setLocation('/wallet');
+      });
+
+      transak.on('TRANSAK_ORDER_FAILED', (error: any) => {
+        console.error('Transak order failed:', error);
+        alert('Payment failed: ' + (error.message || 'Unknown error'));
+      });
+
+      transak.on('TRANSAK_WIDGET_CLOSE', () => {
+        console.log('Transak widget closed');
+      });
+    } catch (error) {
+      console.error("Error initializing Transak:", error);
+      alert("Failed to open payment form. Please try again.");
+    }
+  };
 
   const cryptoOptions = [
     { symbol: "BTC", name: "Bitcoin", price: 122256.00 },
@@ -119,49 +172,52 @@ export default function BuyCrypto() {
 
   const openTransakWidget = () => {
     if (!user) {
+      console.log("No user, redirecting to signin");
       setLocation("/signin");
       return;
     }
 
     if (userVerificationLevel < 2) {
+      console.log("User verification level too low:", userVerificationLevel);
+      alert("You need Level 2 verification to buy crypto. Please complete verification first.");
+      setLocation("/verification");
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    console.log("Opening Transak widget...");
+    console.log("API Key present:", !!import.meta.env.VITE_TRANSAK_API_KEY);
+    console.log("Environment:", import.meta.env.VITE_TRANSAK_ENVIRONMENT || 'PRODUCTION');
+    console.log("Wallet Address:", walletAddress || "Not set");
+    console.log("Selected Crypto:", selectedCrypto);
+    console.log("Amount:", amount);
+
+    // Check if script is already loaded
+    const existingScript = document.querySelector('script[src*="transakSDK"]');
+    if (existingScript) {
+      console.log("Transak SDK already loaded, initializing widget");
+      initTransakWidget();
       return;
     }
 
     const script = document.createElement('script');
     script.src = 'https://global.transak.com/sdk/v1.2/transakSDK.js';
     script.async = true;
+    
     script.onload = () => {
-      const transak = new window.transak.default({
-        apiKey: import.meta.env.VITE_TRANSAK_API_KEY || 'YOUR_API_KEY_HERE',
-        environment: import.meta.env.VITE_TRANSAK_ENVIRONMENT || 'STAGING',
-        defaultCryptoCurrency: selectedCrypto,
-        walletAddress: walletAddress,
-        themeColor: 'B4F22E',
-        fiatCurrency: fiatCurrency,
-        fiatAmount: amount || undefined,
-        email: user.email || '',
-        redirectURL: window.location.origin + '/wallet',
-        hostURL: window.location.origin,
-        widgetHeight: '625px',
-        widgetWidth: '500px',
-      });
-
-      transak.init();
-
-      transak.on('TRANSAK_ORDER_SUCCESSFUL', (orderData: any) => {
-        console.log('Transak order successful:', orderData);
-        transak.close();
-        setLocation('/wallet');
-      });
-
-      transak.on('TRANSAK_ORDER_FAILED', (error: any) => {
-        console.error('Transak order failed:', error);
-      });
-
-      transak.on('TRANSAK_WIDGET_CLOSE', () => {
-        console.log('Transak widget closed');
-      });
+      console.log("Transak SDK loaded successfully");
+      initTransakWidget();
     };
+    
+    script.onerror = (error) => {
+      console.error("Failed to load Transak SDK:", error);
+      alert("Failed to load payment processor. Please try again.");
+    };
+    
     document.body.appendChild(script);
   };
 
