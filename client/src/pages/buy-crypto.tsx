@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   CreditCard, 
   Building2, 
@@ -19,11 +20,21 @@ import {
   Check,
   Clock,
   DollarSign,
-  Globe
+  Globe,
+  AlertCircle,
+  Lock
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { createClient } from "@/lib/supabase";
+import { getUserWallets } from "@/lib/wallet-api";
+
+declare global {
+  interface Window {
+    transak?: any;
+  }
+}
 
 export default function BuyCrypto() {
   const { user } = useAuth();
@@ -32,13 +43,9 @@ export default function BuyCrypto() {
   const [selectedCrypto, setSelectedCrypto] = useState("BTC");
   const [amount, setAmount] = useState("");
   const [fiatCurrency, setFiatCurrency] = useState("USD");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [mobileProvider, setMobileProvider] = useState("");
-  const [mobileNumber, setMobileNumber] = useState("");
+  const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
+  const [loadingVerification, setLoadingVerification] = useState(true);
+  const [walletAddress, setWalletAddress] = useState<string>("");
 
   const cryptoOptions = [
     { symbol: "BTC", name: "Bitcoin", price: 122256.00 },
@@ -51,17 +58,102 @@ export default function BuyCrypto() {
   const selectedCryptoData = cryptoOptions.find(c => c.symbol === selectedCrypto);
   const cryptoAmount = amount ? (parseFloat(amount) / (selectedCryptoData?.price || 1)).toFixed(8) : "0";
 
-  const handlePurchase = () => {
+  useEffect(() => {
+    if (!user) return;
+
+    const loadUserData = async () => {
+      try {
+        const supabase = createClient();
+
+        const metadata = user.user_metadata || {};
+        if (metadata.verification_level !== undefined) {
+          setUserVerificationLevel(Number(metadata.verification_level) || 0);
+          setLoadingVerification(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('verification_level')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error("Error loading user profile:", error);
+          setUserVerificationLevel(0);
+        } else if (data) {
+          setUserVerificationLevel(Number(data.verification_level) || 0);
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        setUserVerificationLevel(0);
+      } finally {
+        setLoadingVerification(false);
+      }
+    };
+
+    const loadWalletAddress = async () => {
+      try {
+        const wallets = await getUserWallets(user.id);
+        const ethWallet = wallets.find(w => w.crypto_symbol === 'ETH');
+        if (ethWallet?.deposit_address) {
+          setWalletAddress(ethWallet.deposit_address);
+        }
+      } catch (error) {
+        console.error("Error loading wallet address:", error);
+      }
+    };
+
+    loadUserData();
+    loadWalletAddress();
+  }, [user]);
+
+  const openTransakWidget = () => {
     if (!user) {
       setLocation("/signin");
       return;
     }
-    console.log("Processing purchase with:", {
-      paymentMethod,
-      selectedCrypto,
-      amount,
-      fiatCurrency,
-    });
+
+    if (userVerificationLevel < 2) {
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://global.transak.com/sdk/v1.2/transakSDK.js';
+    script.async = true;
+    script.onload = () => {
+      const transak = new window.transak.default({
+        apiKey: import.meta.env.VITE_TRANSAK_API_KEY || 'YOUR_API_KEY_HERE',
+        environment: import.meta.env.VITE_TRANSAK_ENVIRONMENT || 'STAGING',
+        defaultCryptoCurrency: selectedCrypto,
+        walletAddress: walletAddress,
+        themeColor: 'B4F22E',
+        fiatCurrency: fiatCurrency,
+        fiatAmount: amount || undefined,
+        email: user.email || '',
+        redirectURL: window.location.origin + '/wallet',
+        hostURL: window.location.origin,
+        widgetHeight: '625px',
+        widgetWidth: '500px',
+      });
+
+      transak.init();
+
+      transak.on('TRANSAK_ORDER_SUCCESSFUL', (orderData: any) => {
+        console.log('Transak order successful:', orderData);
+        transak.close();
+        setLocation('/wallet');
+      });
+
+      transak.on('TRANSAK_ORDER_FAILED', (error: any) => {
+        console.error('Transak order failed:', error);
+      });
+
+      transak.on('TRANSAK_WIDGET_CLOSE', () => {
+        console.log('Transak widget closed');
+      });
+    };
+    document.body.appendChild(script);
   };
 
   // Non-logged-in user view
@@ -436,6 +528,44 @@ export default function BuyCrypto() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Level 2 Verification Requirement Alert */}
+        {loadingVerification ? (
+          <div className="mb-6">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4 text-muted-foreground">Loading verification status...</p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : userVerificationLevel < 2 ? (
+          <Alert className="mb-6 border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+            <Lock className="h-5 w-5 text-orange-600" />
+            <AlertTitle className="text-orange-900 dark:text-orange-400 font-semibold">
+              Level 2 Verification Required
+            </AlertTitle>
+            <AlertDescription className="text-orange-800 dark:text-orange-300">
+              To buy crypto with card or bank transfer, you need to complete Level 2 verification (ID + live video).
+              This ensures secure transactions and protects against fraud.
+              <Link href="/verification">
+                <Button variant="outline" size="sm" className="mt-3 w-full sm:w-auto border-orange-300 text-orange-900 hover:bg-orange-100 dark:text-orange-400 dark:hover:bg-orange-950">
+                  Complete Verification →
+                </Button>
+              </Link>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="mb-6 border-green-200 bg-green-50 dark:bg-green-950/20">
+            <Check className="h-5 w-5 text-green-600" />
+            <AlertTitle className="text-green-900 dark:text-green-400 font-semibold">
+              Verification Complete - Level {userVerificationLevel}
+            </AlertTitle>
+            <AlertDescription className="text-green-800 dark:text-green-300">
+              You're verified! You can now buy crypto with card or bank transfer instantly.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left Column - Payment Form */}
           <div className="space-y-6">
@@ -683,13 +813,27 @@ export default function BuyCrypto() {
             </Card>
 
             <Button 
-              onClick={handlePurchase} 
+              onClick={openTransakWidget} 
               className="w-full h-14 text-lg font-semibold"
-              disabled={!amount || parseFloat(amount) <= 0}
+              disabled={!amount || parseFloat(amount) <= 0 || userVerificationLevel < 2 || loadingVerification}
             >
-              Complete Purchase
-              <ArrowRight className="ml-2 h-5 w-5" />
+              {userVerificationLevel < 2 ? (
+                <>
+                  <Lock className="mr-2 h-5 w-5" />
+                  Level 2 Required
+                </>
+              ) : (
+                <>
+                  Buy {selectedCrypto} Now
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
             </Button>
+            {userVerificationLevel < 2 && !loadingVerification && (
+              <p className="text-sm text-center text-muted-foreground">
+                Complete Level 2 verification to buy crypto with card or bank transfer
+              </p>
+            )}
           </div>
 
           {/* Right Column - Order Summary & Info */}
