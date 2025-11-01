@@ -46,6 +46,15 @@ export default function BuyCrypto() {
   const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
   const [loadingVerification, setLoadingVerification] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
+  
+  // Payment form states
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [mobileProvider, setMobileProvider] = useState("");
+  const [mobileNumber, setMobileNumber] = useState("");
 
   const cryptoOptions = [
     { symbol: "BTC", name: "Bitcoin", price: 122256.00 },
