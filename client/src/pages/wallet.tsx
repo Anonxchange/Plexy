@@ -471,7 +471,8 @@ export default function Wallet() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* LEFT COLUMN - Navigation Sidebar */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="lg:col-span-3">
+            <div className="space-y-4 lg:sticky lg:top-6">
             {/* Navigation Card */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
@@ -594,6 +595,7 @@ export default function Wallet() {
                 )}
               </CardContent>
             </Card>
+            </div>
           </div>
 
           {/* MIDDLE COLUMN - Main Wallet Content */}
@@ -978,7 +980,8 @@ export default function Wallet() {
           </div>
 
           {/* RIGHT COLUMN - Rewards & Referrals */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="lg:col-span-3">
+            <div className="space-y-4 lg:sticky lg:top-6">
             
             {/* Rewards Card */}
             <Card className="overflow-hidden">
@@ -1065,6 +1068,7 @@ export default function Wallet() {
               </CardContent>
             </Card>
 
+            </div>
           </div>
         </div>
 
