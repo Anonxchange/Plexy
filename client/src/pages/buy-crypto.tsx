@@ -196,11 +196,33 @@ export default function BuyCrypto() {
     console.log("Selected Crypto:", selectedCrypto);
     console.log("Amount:", amount);
 
-    // Check if script is already loaded
+    // Check if script is already loaded and Transak is available
     const existingScript = document.querySelector('script[src*="transakSDK"]');
-    if (existingScript) {
+    if (existingScript && window.transak) {
       console.log("Transak SDK already loaded, initializing widget");
       initTransakWidget();
+      return;
+    }
+
+    // If script exists but window.transak is not available yet, wait for it
+    if (existingScript) {
+      console.log("Waiting for Transak SDK to be ready...");
+      const checkInterval = setInterval(() => {
+        if (window.transak) {
+          clearInterval(checkInterval);
+          console.log("Transak SDK now ready, initializing widget");
+          initTransakWidget();
+        }
+      }, 100);
+      
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!window.transak) {
+          console.error("Transak SDK failed to load in time");
+          alert("Payment processor not ready. Please refresh and try again.");
+        }
+      }, 5000);
       return;
     }
 
@@ -209,8 +231,17 @@ export default function BuyCrypto() {
     script.async = true;
     
     script.onload = () => {
-      console.log("Transak SDK loaded successfully");
-      initTransakWidget();
+      console.log("Transak SDK script loaded");
+      // Wait a bit for the SDK to initialize
+      setTimeout(() => {
+        if (window.transak) {
+          console.log("Transak SDK ready, initializing widget");
+          initTransakWidget();
+        } else {
+          console.error("Transak SDK loaded but not available on window");
+          alert("Payment processor not ready. Please refresh and try again.");
+        }
+      }, 100);
     };
     
     script.onerror = (error) => {
