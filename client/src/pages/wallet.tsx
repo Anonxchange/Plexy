@@ -467,554 +467,608 @@ export default function Wallet() {
         {/* My Assets Header */}
         <h1 className="text-xl sm:text-2xl font-bold mb-4">My assets</h1>
 
-        {/* Withdraw Limits Card */}
-        <Card className="mb-4">
-          <CardContent className="p-3 sm:p-4">
-            <div
-              className="flex items-center justify-between flex-wrap gap-2 cursor-pointer"
-              onClick={() => setLimitsExpanded(!limitsExpanded)}
-            >
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-sm sm:text-base">Withdraw limits</span>
-                <Badge variant="default" className="text-xs">
-                  Level {userVerificationLevel}
-                </Badge>
-                <Link href="/verification">
-                  <span className="text-xs sm:text-sm text-primary cursor-pointer hover:underline">
-                    {userVerificationLevel < 3 ? "Upgrade" : "Learn more"}
-                  </span>
-                </Link>
-              </div>
-              {limitsExpanded ? (
-                <ChevronUp className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              )}
-            </div>
+        {/* 3-Column Layout for Desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* LEFT COLUMN - Navigation Sidebar */}
+          <div className="lg:col-span-3 space-y-4">
+            {/* Navigation Card */}
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 border-b">
+                  <h3 className="font-semibold text-sm">Quick Access</h3>
+                </div>
+                <nav className="p-2 space-y-1">
+                  <Button
+                    variant={activeWalletTab === "wallet" ? "default" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => setActiveWalletTab("wallet")}
+                  >
+                    <WalletIcon className="h-4 w-4 mr-3" />
+                    Wallet
+                  </Button>
+                  <Link href="/spot" className="block">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <ArrowLeftRight className="h-4 w-4 mr-3" />
+                      Spot Trading
+                    </Button>
+                  </Link>
+                  <Link href="/visa-card" className="block">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <CreditCard className="h-4 w-4 mr-3" />
+                      Visa Card
+                    </Button>
+                  </Link>
+                  <Link href="/pexly-pay" className="block">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <Send className="h-4 w-4 mr-3" />
+                      Pexly Pay
+                    </Button>
+                  </Link>
+                  <Link href="/mobile-topup" className="block">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <Smartphone className="h-4 w-4 mr-3" />
+                      Mobile Top-up
+                    </Button>
+                  </Link>
+                  <Link href="/gift-cards" className="block">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <Gift className="h-4 w-4 mr-3" />
+                      Gift Cards
+                    </Button>
+                  </Link>
+                </nav>
+              </CardContent>
+            </Card>
 
-            {limitsExpanded && (
-              <div className="mt-4 pt-4 border-t space-y-4">
-                {/* Current Level Details */}
-                <div>
-                  <h4 className="font-semibold text-sm mb-2">
-                    {getVerificationLevel(userVerificationLevel).name}
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    {getVerificationLevel(userVerificationLevel).description}
-                  </p>
-
-                  {/* Limits Grid */}
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="bg-muted/50 p-2 rounded">
-                      <div className="text-muted-foreground mb-1">Daily Limit</div>
-                      <div className="font-medium">
-                        {getVerificationLevel(userVerificationLevel).dailyLimit !== null
-                          ? `$${getVerificationLevel(userVerificationLevel).dailyLimit?.toLocaleString()}`
-                          : "Unlimited"}
-                      </div>
-                    </div>
-                    <div className="bg-muted/50 p-2 rounded">
-                      <div className="text-muted-foreground mb-1">Per Trade</div>
-                      <div className="font-medium">
-                        {getVerificationLevel(userVerificationLevel).perTradeLimit !== null
-                          ? `$${getVerificationLevel(userVerificationLevel).perTradeLimit?.toLocaleString()}`
-                          : "Unlimited"}
-                      </div>
-                    </div>
-                    <div className="bg-muted/50 p-2 rounded">
-                      <div className="text-muted-foreground mb-1">Lifetime Trade</div>
-                      <div className="font-medium">
-                        {getVerificationLevel(userVerificationLevel).lifetimeTradeLimit !== null
-                          ? `$${lifetimeTradeVolume.toLocaleString()} / $${getVerificationLevel(userVerificationLevel).lifetimeTradeLimit?.toLocaleString()}`
-                          : "Unlimited"}
-                      </div>
-                    </div>
-                    <div className="bg-muted/50 p-2 rounded">
-                      <div className="text-muted-foreground mb-1">Lifetime Send</div>
-                      <div className="font-medium">
-                        {getVerificationLevel(userVerificationLevel).lifetimeSendLimit !== null
-                          ? `$${lifetimeSendVolume.toLocaleString()} / $${getVerificationLevel(userVerificationLevel).lifetimeSendLimit?.toLocaleString()}`
-                          : "Unlimited"}
-                      </div>
-                    </div>
+            {/* Withdraw Limits Card - Compact for sidebar */}
+            <Card>
+              <CardContent className="p-4">
+                <div
+                  className="cursor-pointer"
+                  onClick={() => setLimitsExpanded(!limitsExpanded)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm">Limits</span>
+                    {limitsExpanded ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="text-xs">
+                      Level {userVerificationLevel}
+                    </Badge>
+                    <Link href="/verification">
+                      <span className="text-xs text-primary cursor-pointer hover:underline">
+                        {userVerificationLevel < 3 ? "Upgrade" : "Details"}
+                      </span>
+                    </Link>
                   </div>
                 </div>
 
-                {/* Next Level Progress */}
-                {userVerificationLevel < 3 && getVerificationRequirements(userVerificationLevel) && (
-                  <div className="bg-primary/5 p-3 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-sm">
-                        Next: Level {getVerificationRequirements(userVerificationLevel)?.nextLevel}
-                      </h4>
-                      <Link href="/verification">
-                        <Button size="sm" variant="default">Upgrade Now</Button>
+                {limitsExpanded && (
+                  <div className="mt-4 pt-4 border-t space-y-3">
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Daily</span>
+                        <span className="font-medium">
+                          {getVerificationLevel(userVerificationLevel).dailyLimit !== null
+                            ? `$${getVerificationLevel(userVerificationLevel).dailyLimit?.toLocaleString()}`
+                            : "Unlimited"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Per Trade</span>
+                        <span className="font-medium">
+                          {getVerificationLevel(userVerificationLevel).perTradeLimit !== null
+                            ? `$${getVerificationLevel(userVerificationLevel).perTradeLimit?.toLocaleString()}`
+                            : "Unlimited"}
+                        </span>
+                      </div>
+                    </div>
+                    {userVerificationLevel < 3 && (
+                      <Link href="/verification" className="block">
+                        <Button size="sm" className="w-full" variant="default">
+                          Upgrade to Level {userVerificationLevel + 1}
+                        </Button>
                       </Link>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {getVerificationRequirements(userVerificationLevel)?.description}
-                    </p>
-                    <div className="space-y-1">
-                      <div className="text-xs font-medium mb-1">Requirements:</div>
-                      {getVerificationRequirements(userVerificationLevel)?.requirements.map((req, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <div className="w-1 h-1 rounded-full bg-primary" />
-                          {req}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-2 space-y-1">
-                      <div className="text-xs font-medium mb-1">Benefits:</div>
-                      {getVerificationRequirements(userVerificationLevel)?.benefits.map((benefit, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-xs text-green-600">
-                          <CheckCircle2 className="h-3 w-3" />
-                          {benefit}
-                        </div>
-                      ))}
-                    </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Wallet Type Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto">
-          <Button
-            variant={activeWalletTab === "wallet" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveWalletTab("wallet")}
-            className="whitespace-nowrap"
-          >
-            <WalletIcon className="h-4 w-4 mr-2" />
-            Wallet
-          </Button>
-          <Link href="/spot">
-            <Button
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap"
-            >
-              <ArrowLeftRight className="h-4 w-4 mr-2" />
-              Spot
-            </Button>
-          </Link>
-          <Link href="/wallet/visa-card">
-            <Button
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap"
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              Visa card
-            </Button>
-          </Link>
-          <Link href="/wallet/pexly-pay">
-            <Button
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Pexly Pay
-            </Button>
-          </Link>
-        </div>
-
-        {/* Wallet Balance Card */}
-        <Card className="mb-6">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-muted-foreground">Wallet balance</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setBalanceVisible(!balanceVisible)}
-                className="h-8 w-8"
-              >
-                {balanceVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-              </Button>
-            </div>
-
-            <div className="mb-2">
-              <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
-                {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
-              </div>
-              {balanceVisible && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
-                    {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {balanceVisible && (
-              <div className="mb-6 h-12 opacity-60">
-                <Sparkline 
-                  data={portfolioSparklineData} 
-                  color="auto"
-                  height={48}
-                  strokeWidth={2}
-                />
-              </div>
-            )}
-
-            {/* Action Buttons - Horizontal Layout */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <Button variant="outline" className="h-14" onClick={() => setReceiveDialogOpen(true)}>
-                <ArrowDownToLine className="mr-2 h-5 w-5" />
-                Receive
-              </Button>
-              <Button variant="outline" className="h-14" onClick={() => setSendDialogOpen(true)}>
-                <ArrowUpFromLine className="mr-2 h-5 w-5" />
-                Send
-              </Button>
-              <Button className="h-14 bg-primary hover:bg-primary/90">
-                <ArrowLeftRight className="mr-2 h-5 w-5" />
-                Swap
-              </Button>
-            </div>
-
-            {/* Main Action Buttons */}
-            <div className="space-y-3">
-              <Button variant="outline" className="w-full">
-                <Landmark className="h-4 w-4 mr-2" />
-                Crypto to Bank
-              </Button>
-              <Button className="w-full">
-                <ShoppingBag className="h-4 w-4 mr-2" />
-                Buy crypto
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Asset Tabs */}
-        <div className="flex gap-4 sm:gap-6 mb-4 border-b overflow-x-auto">
-          {[
-            { id: "assets", label: "Wallet assets" },
-            { id: "activity", label: "Recent activity" },
-            { id: "operations", label: "All operations" }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveAssetTab(tab.id)}
-              className={`pb-3 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeAssetTab === tab.id
-                  ? "text-foreground border-b-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Wallet Assets Tab Content */}
-        {activeAssetTab === "assets" && (
-          <>
-            {/* Hide 0 Balance Toggle */}
-            <div className="flex items-center gap-2 mb-4">
-              <Switch
-                checked={hideZeroBalance}
-                onCheckedChange={setHideZeroBalance}
-              />
-              <span className="text-sm text-muted-foreground">Hide 0 balance</span>
-            </div>
-
-            {/* Asset List Header */}
-            <div className="hidden sm:grid grid-cols-3 gap-4 px-4 mb-2">
-              <div className="text-xs text-muted-foreground">Asset</div>
-              <div className="text-xs text-muted-foreground text-right">Balance</div>
-              <div className="text-xs text-muted-foreground text-right">Action</div>
-            </div>
-
-            {/* Asset List */}
-            <div className="space-y-2 mb-8">
-              {filteredAssets.map((asset) => (
-                  <Card 
-                    key={asset.symbol} 
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setLocation(`/wallet/asset/${asset.symbol}`)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={asset.iconUrl} 
-                            alt={asset.symbol}
-                            className="w-10 h-10 rounded-full"
-                            onError={(e) => {
-                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
-                            }}
-                          />
-                          <div>
-                            <div className="font-medium text-sm sm:text-base">{asset.symbol}</div>
-                            <div className="text-xs text-muted-foreground">{asset.name}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium text-sm sm:text-base">
-                            {balanceVisible ? asset.balance.toFixed(7) : "••••••"}
-                          </div>
-                          <div className="text-xs sm:text-sm text-muted-foreground">
-                            {balanceVisible ? `≈ ${asset.usdValue.toFixed(2)} USD` : "••••••"}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className={`font-medium text-sm ${asset.pnlUsd >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {balanceVisible ? (asset.pnlUsd >= 0 ? '+' : '') + asset.pnlUsd.toFixed(2) : "••••"}
-                          </div>
-                          <div className={`text-xs ${asset.pnlPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {balanceVisible ? (asset.pnlPercentage >= 0 ? '+' : '') + asset.pnlPercentage.toFixed(2) + '%' : "••••"}
-                          </div>
-                        </div>
-                      </div>
-                      {balanceVisible && asset.balance > 0 && (
-                        <div className="h-10 w-full mt-2 opacity-50">
-                          <Sparkline 
-                            data={asset.sparklineData} 
-                            color="auto"
-                            height={40}
-                            strokeWidth={1.5}
-                          />
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Recent Activity Tab Content */}
-        {activeAssetTab === "activity" && (
-          <div className="space-y-3 mb-8">
-            <p className="text-sm text-muted-foreground mb-4">Recent P2P trading activity</p>
-            {recentActivities.map((activity) => (
-              <Card key={activity.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm">{activity.type}</span>
-                        <Badge
-                          variant="outline"
-                          className={
-                            activity.status === "completed"
-                              ? "bg-green-500/10 text-green-600 border-green-500/20"
-                              : activity.status === "pending"
-                              ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                              : "bg-red-500/10 text-red-600 border-red-500/20"
-                          }
-                        >
-                          {activity.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                          {activity.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
-                          {activity.status === "failed" && <XCircle className="h-3 w-3 mr-1" />}
-                          {activity.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">{activity.action}</p>
-                      <p className="text-xs text-muted-foreground">with {activity.partner}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{activity.amount}</p>
-                      <p className="text-sm text-muted-foreground">{activity.cryptoAmount}</p>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{activity.date}</div>
-                </CardContent>
-              </Card>
-            ))}
+              </CardContent>
+            </Card>
           </div>
-        )}
 
-        {/* All Operations Tab Content */}
-        {activeAssetTab === "operations" && (
-          <div className="space-y-3 mb-8">
-            <p className="text-sm text-muted-foreground mb-4">All wallet operations including trades, purchases, and transfers</p>
-            {allOperations.map((operation) => (
-              <Card key={operation.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {operation.type}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={
-                            operation.status === "completed"
-                              ? "bg-green-500/10 text-green-600 border-green-500/20"
-                              : operation.status === "pending"
-                              ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                              : "bg-red-500/10 text-red-600 border-red-500/20"
-                          }
-                        >
-                          {operation.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                          {operation.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
-                          {operation.status === "failed" && <XCircle className="h-3 w-3 mr-1" />}
-                          {operation.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">{operation.action}</p>
-                      <p className="text-xs text-muted-foreground">{operation.partner}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{operation.amount}</p>
-                      <p className="text-sm text-muted-foreground">{operation.cryptoAmount}</p>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{operation.date}</div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+          {/* MIDDLE COLUMN - Main Wallet Content */}
+          <div className="lg:col-span-6 space-y-4">
 
-        {/* Recommended Section */}
-        <h2 className="text-xl font-bold mb-4">Recommended for you</h2>
-
-        {/* P2P Trading Card */}
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">P2P Trading</h3>
-              <Link href="/p2p">
-                <span className="text-primary text-sm cursor-pointer flex items-center gap-1 hover:underline">
-                  View all <ChevronRight className="h-4 w-4" />
-                </span>
-              </Link>
-            </div>
-
-            <Card className="bg-muted/50">
-              <CardContent className="p-4">
+            {/* Wallet Balance Card */}
+            <Card>
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-xl">
-                      👤
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">MKUU_</span>
-                        <span className="text-xs">🇰🇪 🇳🇬</span>
-                        <Badge variant="default" className="text-xs">EXPERT</Badge>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                        <span>👍</span>
-                        <span>2929</span>
-                      </div>
-                    </div>
-                  </div>
-                  <Button>
-                    Buy BTC ₿
+                  <span className="text-sm text-muted-foreground">Wallet balance</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setBalanceVisible(!balanceVisible)}
+                    className="h-8 w-8"
+                  >
+                    {balanceVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="text-muted-foreground mb-1">Payment</div>
-                    <div className="font-medium">Bank Transfer</div>
+
+                <div className="mb-2">
+                  <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
+                    {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
                   </div>
-                  <div className="text-right">
-                    <div className="text-muted-foreground mb-1">Price</div>
-                    <div className="font-medium">₿ KES 13,300,000.00</div>
-                  </div>
+                  {balanceVisible && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div className="text-sm mt-2">
-                  <div className="text-muted-foreground">Range</div>
-                  <div className="font-medium">KES 3,000.00 - KES 110,931.00</div>
+
+                {balanceVisible && (
+                  <div className="mb-6 h-12 opacity-60">
+                    <Sparkline 
+                      data={portfolioSparklineData} 
+                      color="auto"
+                      height={48}
+                      strokeWidth={2}
+                    />
+                  </div>
+                )}
+
+                {/* Action Buttons - Horizontal Layout */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <Button variant="outline" className="h-14" onClick={() => setReceiveDialogOpen(true)}>
+                    <ArrowDownToLine className="mr-2 h-5 w-5" />
+                    Receive
+                  </Button>
+                  <Button variant="outline" className="h-14" onClick={() => setSendDialogOpen(true)}>
+                    <ArrowUpFromLine className="mr-2 h-5 w-5" />
+                    Send
+                  </Button>
+                  <Button className="h-14 bg-primary hover:bg-primary/90">
+                    <ArrowLeftRight className="mr-2 h-5 w-5" />
+                    Swap
+                  </Button>
+                </div>
+
+                {/* Main Action Buttons */}
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full">
+                    <Landmark className="h-4 w-4 mr-2" />
+                    Crypto to Bank
+                  </Button>
+                  <Button className="w-full">
+                    <ShoppingBag className="h-4 w-4 mr-2" />
+                    Buy crypto
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          </CardContent>
-        </Card>
 
-        {/* Spot Exchange Card */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Spot exchange</h3>
-              <span className="text-primary text-sm cursor-pointer flex items-center gap-1 hover:underline">
-                View all 50+ coins <ChevronRight className="h-4 w-4" />
-              </span>
-            </div>
-
-            {/* Spot Tabs */}
-            <div className="flex gap-2 mb-4">
-              <Button
-                variant={activeSpotTab === "hot" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveSpotTab("hot")}
-              >
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Hot pairs
-              </Button>
-              <Button
-                variant={activeSpotTab === "movers" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveSpotTab("movers")}
-              >
-                Top movers
-              </Button>
-              <Button
-                variant={activeSpotTab === "added" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveSpotTab("added")}
-              >
-                Recently added
-              </Button>
-            </div>
-
-            {/* Spot Pairs List */}
-            <div className="space-y-2">
-              {spotPairs.map((pair) => (
-                <div
-                  key={pair.symbol}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
+            {/* Asset Tabs */}
+            <div className="flex gap-4 sm:gap-6 mb-4 border-b overflow-x-auto">
+              {[
+                { id: "assets", label: "Wallet assets" },
+                { id: "activity", label: "Recent activity" },
+                { id: "operations", label: "All operations" }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveAssetTab(tab.id)}
+                  className={`pb-3 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+                    activeAssetTab === tab.id
+                      ? "text-foreground border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={cryptoIconUrls[pair.symbol as keyof typeof cryptoIconUrls] || `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`}
-                      alt={pair.symbol}
-                      className="w-8 h-8 rounded-full"
-                      onError={(e) => {
-                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`;
-                      }}
-                    />
-                    <span className="font-medium">{pair.symbol}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">${pair.price.toLocaleString()}</div>
-                  </div>
-                  <div className={`text-sm font-medium ${pair.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {pair.change >= 0 ? '+' : ''}{pair.change}%
-                  </div>
-                </div>
+                  {tab.label}
+                </button>
               ))}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Promotions Card */}
-        <h2 className="text-xl font-bold mb-4">Check out our promotions</h2>
-        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 border-none text-white">
-          <CardContent className="p-6 text-center">
-            <h3 className="text-3xl font-bold mb-2">Save up to</h3>
-            <p className="text-4xl font-bold text-orange-100 mb-4">20% on gift cards</p>
-            <p className="text-sm mb-6 opacity-90">
-              Exclusive discounts on the gift cards you love—shop now and save more!
-            </p>
-            <Button className="bg-white text-orange-600 hover:bg-gray-100">
-              <Gift className="h-4 w-4 mr-2" />
-              Buy a gift card
-            </Button>
-          </CardContent>
-        </Card>
+            {/* Wallet Assets Tab Content */}
+            {activeAssetTab === "assets" && (
+              <>
+            {/* Hide 0 Balance Toggle */}
+            <div className="flex items-center gap-2 mb-4">
+              <Switch
+                    checked={hideZeroBalance}
+                    onCheckedChange={setHideZeroBalance}
+                  />
+                  <span className="text-sm text-muted-foreground">Hide 0 balance</span>
+                </div>
 
+                {/* Asset List Header */}
+                <div className="hidden sm:grid grid-cols-3 gap-4 px-4 mb-2">
+                  <div className="text-xs text-muted-foreground">Asset</div>
+                  <div className="text-xs text-muted-foreground text-right">Balance</div>
+                  <div className="text-xs text-muted-foreground text-right">Action</div>
+                </div>
+
+                {/* Asset List */}
+                <div className="space-y-2 mb-8">
+                  {filteredAssets.map((asset) => (
+                      <Card 
+                        key={asset.symbol} 
+                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => setLocation(`/wallet/asset/${asset.symbol}`)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={asset.iconUrl} 
+                                alt={asset.symbol}
+                                className="w-10 h-10 rounded-full"
+                                onError={(e) => {
+                                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
+                                }}
+                              />
+                              <div>
+                                <div className="font-medium text-sm sm:text-base">{asset.symbol}</div>
+                                <div className="text-xs text-muted-foreground">{asset.name}</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium text-sm sm:text-base">
+                                {balanceVisible ? asset.balance.toFixed(7) : "••••••"}
+                              </div>
+                              <div className="text-xs sm:text-sm text-muted-foreground">
+                                {balanceVisible ? `≈ ${asset.usdValue.toFixed(2)} USD` : "••••••"}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`font-medium text-sm ${asset.pnlUsd >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {balanceVisible ? (asset.pnlUsd >= 0 ? '+' : '') + asset.pnlUsd.toFixed(2) : "••••"}
+                              </div>
+                              <div className={`text-xs ${asset.pnlPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {balanceVisible ? (asset.pnlPercentage >= 0 ? '+' : '') + asset.pnlPercentage.toFixed(2) + '%' : "••••"}
+                              </div>
+                            </div>
+                          </div>
+                          {balanceVisible && asset.balance > 0 && (
+                            <div className="h-10 w-full mt-2 opacity-50">
+                              <Sparkline 
+                                data={asset.sparklineData} 
+                                color="auto"
+                                height={40}
+                                strokeWidth={1.5}
+                              />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Recent Activity Tab Content */}
+            {activeAssetTab === "activity" && (
+              <div className="space-y-3 mb-8">
+                <p className="text-sm text-muted-foreground mb-4">Recent P2P trading activity</p>
+                {recentActivities.map((activity) => (
+                  <Card key={activity.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-sm">{activity.type}</span>
+                            <Badge
+                              variant="outline"
+                              className={
+                                activity.status === "completed"
+                                  ? "bg-green-500/10 text-green-600 border-green-500/20"
+                                  : activity.status === "pending"
+                                  ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                                  : "bg-red-500/10 text-red-600 border-red-500/20"
+                              }
+                            >
+                              {activity.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                              {activity.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                              {activity.status === "failed" && <XCircle className="h-3 w-3 mr-1" />}
+                              {activity.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm font-medium">{activity.action}</p>
+                          <p className="text-xs text-muted-foreground">with {activity.partner}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{activity.amount}</p>
+                          <p className="text-sm text-muted-foreground">{activity.cryptoAmount}</p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{activity.date}</div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* All Operations Tab Content */}
+            {activeAssetTab === "operations" && (
+              <div className="space-y-3 mb-8">
+                <p className="text-sm text-muted-foreground mb-4">All wallet operations including trades, purchases, and transfers</p>
+                {allOperations.map((operation) => (
+                  <Card key={operation.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="secondary" className="text-xs">
+                              {operation.type}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={
+                                operation.status === "completed"
+                                  ? "bg-green-500/10 text-green-600 border-green-500/20"
+                                  : operation.status === "pending"
+                                  ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                                  : "bg-red-500/10 text-red-600 border-red-500/20"
+                              }
+                            >
+                              {operation.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                              {operation.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                              {operation.status === "failed" && <XCircle className="h-3 w-3 mr-1" />}
+                              {operation.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm font-medium">{operation.action}</p>
+                          <p className="text-xs text-muted-foreground">{operation.partner}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{operation.amount}</p>
+                          <p className="text-sm text-muted-foreground">{operation.cryptoAmount}</p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{operation.date}</div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Recommended Section */}
+            <h2 className="text-xl font-bold mb-4">Recommended for you</h2>
+
+            {/* P2P Trading Card */}
+            <Card className="mb-4">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">P2P Trading</h3>
+                  <Link href="/p2p">
+                    <span className="text-primary text-sm cursor-pointer flex items-center gap-1 hover:underline">
+                      View all <ChevronRight className="h-4 w-4" />
+                    </span>
+                  </Link>
+                </div>
+
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-xl">
+                          👤
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">MKUU_</span>
+                            <span className="text-xs">🇰🇪 🇳🇬</span>
+                            <Badge variant="default" className="text-xs">EXPERT</Badge>
+                          </div>
+                          <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                            <span>👍</span>
+                            <span>2929</span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button>
+                        Buy BTC ₿
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground mb-1">Payment</div>
+                        <div className="font-medium">Bank Transfer</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-muted-foreground mb-1">Price</div>
+                        <div className="font-medium">₿ KES 13,300,000.00</div>
+                      </div>
+                    </div>
+                    <div className="text-sm mt-2">
+                      <div className="text-muted-foreground">Range</div>
+                      <div className="font-medium">KES 3,000.00 - KES 110,931.00</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
+
+            {/* Spot Exchange Card */}
+            <Card className="mb-6">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Spot exchange</h3>
+                  <span className="text-primary text-sm cursor-pointer flex items-center gap-1 hover:underline">
+                    View all 50+ coins <ChevronRight className="h-4 w-4" />
+                  </span>
+                </div>
+
+                {/* Spot Tabs */}
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant={activeSpotTab === "hot" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveSpotTab("hot")}
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Hot pairs
+                  </Button>
+                  <Button
+                    variant={activeSpotTab === "movers" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveSpotTab("movers")}
+                  >
+                    Top movers
+                  </Button>
+                  <Button
+                    variant={activeSpotTab === "added" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveSpotTab("added")}
+                  >
+                    Recently added
+                  </Button>
+                </div>
+
+                {/* Spot Pairs List */}
+                <div className="space-y-2">
+                  {spotPairs.map((pair) => (
+                    <div
+                      key={pair.symbol}
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={cryptoIconUrls[pair.symbol as keyof typeof cryptoIconUrls] || `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`}
+                          alt={pair.symbol}
+                          className="w-8 h-8 rounded-full"
+                          onError={(e) => {
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`;
+                          }}
+                        />
+                        <span className="font-medium">{pair.symbol}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">${pair.price.toLocaleString()}</div>
+                      </div>
+                      <div className={`text-sm font-medium ${pair.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {pair.change >= 0 ? '+' : ''}{pair.change}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+
+          {/* RIGHT COLUMN - Rewards & Referrals */}
+          <div className="lg:col-span-3 space-y-4">
+            
+            {/* Rewards Card */}
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-primary to-primary/80 p-4 text-primary-foreground">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Gift className="h-5 w-5" />
+                    <h3 className="font-bold text-lg">Rewards</h3>
+                  </div>
+                  <p className="text-sm opacity-90">Earn while you trade</p>
+                </div>
+                <div className="p-4 space-y-3">
+                  <Link href="/rewards" className="block">
+                    <div className="p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">Trading Rewards</span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Earn up to 0.5% cashback</p>
+                    </div>
+                  </Link>
+                  <Link href="/medals" className="block">
+                    <div className="p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">Achievement Medals</span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Unlock exclusive badges</p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Referral Card */}
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-green-600 to-green-500 p-4 text-white">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-5 w-5" />
+                    <h3 className="font-bold text-lg">Referrals</h3>
+                  </div>
+                  <p className="text-sm opacity-90">Invite & earn together</p>
+                </div>
+                <div className="p-4 space-y-3">
+                  <Link href="/referral" className="block">
+                    <div className="p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">Invite Friends</span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Get $10 per referral</p>
+                    </div>
+                  </Link>
+                  <Link href="/affiliate" className="block">
+                    <div className="p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">Affiliate Program</span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Earn up to 40% commission</p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Promotions Card */}
+            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 border-none text-white overflow-hidden">
+              <CardContent className="p-4">
+                <div className="mb-3">
+                  <h3 className="text-2xl font-bold mb-1">Save up to</h3>
+                  <p className="text-3xl font-bold text-orange-100">20% on gift cards</p>
+                </div>
+                <p className="text-xs mb-4 opacity-90">
+                  Exclusive discounts on the gift cards you love!
+                </p>
+                <Link href="/gift-cards">
+                  <Button className="w-full bg-white text-orange-600 hover:bg-gray-100" size="sm">
+                    <Gift className="h-4 w-4 mr-2" />
+                    Buy a gift card
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+          </div>
         </div>
+
+      </div>
 
       <PexlyFooter />
 
