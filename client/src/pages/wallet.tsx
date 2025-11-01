@@ -626,70 +626,63 @@ export default function Wallet() {
             </Card>
 
             {/* Mobile Horizontal Quick Access - Shows only on mobile */}
-            <Card className="overflow-hidden lg:hidden">
-              <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 border-b">
-                  <h3 className="font-semibold text-sm">Quick Access</h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <div className="flex gap-2 p-3 min-w-max">
-                    <Button
-                      variant={activeWalletTab === "wallet" ? "default" : "outline"}
-                      className="flex-col h-20 w-24 text-xs whitespace-nowrap"
-                      onClick={() => setActiveWalletTab("wallet")}
-                    >
-                      <WalletIcon className="h-5 w-5 mb-1" />
-                      Wallet
-                    </Button>
-                    <Link href="/spot">
-                      <Button
-                        variant="outline"
-                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
-                      >
-                        <ArrowLeftRight className="h-5 w-5 mb-1" />
-                        Spot
-                      </Button>
-                    </Link>
-                    <Link href="/visa-card">
-                      <Button
-                        variant="outline"
-                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
-                      >
-                        <CreditCard className="h-5 w-5 mb-1" />
-                        Visa Card
-                      </Button>
-                    </Link>
-                    <Link href="/pexly-pay">
-                      <Button
-                        variant="outline"
-                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
-                      >
-                        <Send className="h-5 w-5 mb-1" />
-                        Pexly Pay
-                      </Button>
-                    </Link>
-                    <Link href="/mobile-topup">
-                      <Button
-                        variant="outline"
-                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
-                      >
-                        <Smartphone className="h-5 w-5 mb-1" />
-                        Top-up
-                      </Button>
-                    </Link>
-                    <Link href="/gift-cards">
-                      <Button
-                        variant="outline"
-                        className="flex-col h-20 w-24 text-xs whitespace-nowrap"
-                      >
-                        <Gift className="h-5 w-5 mb-1" />
-                        Gift Cards
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="overflow-x-auto lg:hidden -mx-4 px-4">
+              <div className="flex gap-2 min-w-max pb-2">
+                <Button
+                  variant={activeWalletTab === "wallet" ? "default" : "outline"}
+                  className="h-9 text-sm whitespace-nowrap"
+                  onClick={() => setActiveWalletTab("wallet")}
+                >
+                  <WalletIcon className="h-4 w-4 mr-2" />
+                  Wallet
+                </Button>
+                <Link href="/spot">
+                  <Button
+                    variant="outline"
+                    className="h-9 text-sm whitespace-nowrap"
+                  >
+                    <ArrowLeftRight className="h-4 w-4 mr-2" />
+                    Spot
+                  </Button>
+                </Link>
+                <Link href="/visa-card">
+                  <Button
+                    variant="outline"
+                    className="h-9 text-sm whitespace-nowrap"
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Visa card
+                  </Button>
+                </Link>
+                <Link href="/pexly-pay">
+                  <Button
+                    variant="outline"
+                    className="h-9 text-sm whitespace-nowrap"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Pexly Pay
+                  </Button>
+                </Link>
+                <Link href="/mobile-topup">
+                  <Button
+                    variant="outline"
+                    className="h-9 text-sm whitespace-nowrap"
+                  >
+                    <Smartphone className="h-4 w-4 mr-2" />
+                    Top-up
+                  </Button>
+                </Link>
+                <Link href="/gift-cards">
+                  <Button
+                    variant="outline"
+                    className="h-9 text-sm whitespace-nowrap"
+                  >
+                    <Gift className="h-4 w-4 mr-2" />
+                    Gift Cards
+                  </Button>
+                </Link>
+              </div>
+            </div>
             </div>
           </div>
 
