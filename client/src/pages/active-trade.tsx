@@ -694,7 +694,7 @@ export default function ActiveTrade() {
                   </div>
                   
                   <div className="p-4 space-y-4">
-                    {isUserBuyer ? (
+                    {!isUserBuyer ? (
                       <>
                         <div className="bg-black/50 p-4 rounded">
                           <div className="text-base sm:text-lg mb-2">
