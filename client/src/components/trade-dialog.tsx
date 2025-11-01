@@ -24,6 +24,7 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
   const [, setLocation] = useLocation();
   const [amount, setAmount] = useState("");
   const [showMoreTerms, setShowMoreTerms] = useState(false);
+  const [isCreatingTrade, setIsCreatingTrade] = useState(false);
 
   const cryptoAmount = amount ? parseFloat(amount) / offer.pricePerBTC : 0;
   const receiveAmount = amount ? parseFloat(amount) / offer.pricePerBTC : 0;
@@ -32,6 +33,12 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
     if (!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max) {
       return;
     }
+
+    if (isCreatingTrade) {
+      return; // Prevent duplicate submissions
+    }
+
+    setIsCreatingTrade(true);
 
     try {
       const { createClient } = await import("@/lib/supabase");
@@ -237,6 +244,7 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
     } catch (error) {
       console.error("Error in handleProceed:", error);
       alert(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsCreatingTrade(false);
     }
   };
 
@@ -408,14 +416,14 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
           {/* Proceed Button */}
           <Button
             className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max}
+            disabled={!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max || isCreatingTrade}
             onClick={(e) => {
               e.preventDefault();
               handleProceed();
             }}
             type="button"
           >
-            Proceed
+            {isCreatingTrade ? "Creating Trade..." : "Proceed"}
             <Bitcoin className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
 
