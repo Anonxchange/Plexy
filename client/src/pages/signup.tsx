@@ -162,7 +162,7 @@ export function SignUp() {
   return (
     <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
       {/* Header */}
-      <div className="p-6 flex justify-between items-center">
+      <div className="p-6 flex justify-between items-center lg:absolute lg:top-0 lg:left-0 lg:right-0 lg:z-10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Zap className="h-5 w-5 text-primary-foreground" />
@@ -183,8 +183,19 @@ export function SignUp() {
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className="px-6 pt-12 max-w-md mx-auto pb-12">
+      {/* Desktop 2-Column Layout */}
+      <div className="lg:grid lg:grid-cols-2 lg:min-h-screen">
+        {/* Left Column: Image (Desktop only) */}
+        <div className="hidden lg:flex lg:items-center lg:justify-center lg:p-12 bg-gradient-to-br from-primary/10 to-primary/5">
+          <img 
+            src="/attached_assets/generated_images/Crypto_success_and_growth_d90b6aec.png"
+            alt="Crypto Success and Growth"
+            className="max-w-full max-h-[80vh] object-contain rounded-2xl"
+          />
+        </div>
+
+        {/* Right Column: Form */}
+        <div className="px-6 pt-12 lg:pt-32 max-w-md mx-auto pb-12 lg:flex lg:flex-col lg:justify-center">
         {step === "details" ? (
           <>
             <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
@@ -425,6 +436,7 @@ export function SignUp() {
             />
           </div>
         )}
+        </div>
       </div>
     </div>
   );
