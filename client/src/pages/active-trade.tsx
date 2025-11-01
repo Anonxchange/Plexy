@@ -646,7 +646,7 @@ export default function ActiveTrade() {
                 />
 
                 {trade.status === "cancelled" && (
-                  <div className="bg-black/80 border border-destructive rounded-lg p-4 space-y-3">
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3">
                     <div className="text-sm text-muted-foreground text-center">
                       TRADE CANCELLED - {new Date(trade.created_at).toLocaleString().toUpperCase()}
                     </div>
