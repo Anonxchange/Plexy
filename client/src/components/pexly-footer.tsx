@@ -36,11 +36,11 @@ const footerSections = [
   },
   {
     title: "Useful Links",
-    links: ["Support", { text: "Bitcoin Calculator", href: "/bitcoin-calculator" }, { text: "Pexly Academy", href: "/academy" }, "Market Prices", "Blog"]
+    links: [{ text: "Support", href: "/support" }, { text: "Bitcoin Calculator", href: "/bitcoin-calculator" }, { text: "Pexly Academy", href: "/academy" }, "Market Prices", { text: "Blog", href: "/blog" }]
   },
   {
     title: "About Pexly",
-    links: [{ text: "About Us", href: "/about" }, "Careers", "Press", "Contact"]
+    links: [{ text: "About Us", href: "/about" }, { text: "Careers", href: "/careers" }, "Press", "Contact", { text: "Reviews", href: "/reviews" }]
   },
   {
     title: "Legal",
