@@ -66,6 +66,13 @@ import Careers from "@/pages/careers";
 import Blog from "@/pages/blog";
 import Reviews from "@/pages/reviews";
 import Support from "@/pages/support";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
+import CookiePolicy from "@/pages/cookie-policy";
+import AMLPolicy from "@/pages/aml-policy";
+import RestrictedCountries from "@/pages/restricted-countries";
+import VIPTerms from "@/pages/vip-terms";
+import VendorReminder from "@/pages/vendor-reminder";
 
 function Router() {
   return (
@@ -126,6 +133,13 @@ function Router() {
       <Route path="/blog" component={Blog} />
       <Route path="/reviews" component={Reviews} />
       <Route path="/support" component={Support} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/cookie-policy" component={CookiePolicy} />
+      <Route path="/aml-policy" component={AMLPolicy} />
+      <Route path="/restricted-countries" component={RestrictedCountries} />
+      <Route path="/vip-terms" component={VIPTerms} />
+      <Route path="/vendor-reminder" component={VendorReminder} />
       <Route path="*" component={NotFound} />
     </Switch>
   );
@@ -133,7 +147,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews"].includes(location) || location.startsWith("/trade/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/affiliate", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder"].includes(location) || location.startsWith("/trade/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email"].includes(location);
 
   return (
