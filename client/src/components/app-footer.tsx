@@ -53,7 +53,7 @@ export function AppFooter() {
           <div>
             <h3 className="font-semibold text-white mb-4">About Plexu</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm hover:text-white transition-colors">About us</a></li>
+              <li><Link href="/about" className="text-sm hover:text-white transition-colors"></Link></li>
               <li><a href="#" className="text-sm hover:text-white transition-colors">Careers</a></li>
               <li><a href="#" className="text-sm hover:text-white transition-colors">Blog</a></li>
               <li><a href="#" className="text-sm hover:text-white transition-colors">Reviews</a></li>
