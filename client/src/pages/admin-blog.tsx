@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Edit, Trash2, Plus, ArrowLeft } from "lucide-react";
+import { Calendar, Edit, Trash2, Plus, ArrowLeft, Upload, Image as ImageIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { uploadToR2 } from "@/lib/r2-storage";
+import { useAuth } from "@/lib/auth-context";
 
 const categories = ["News", "Guides", "Trading Tips", "Security", "Product Updates", "Market Analysis"];
 
@@ -18,10 +20,14 @@ export default function AdminBlog() {
   const supabase = createClient();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPost, setEditingPost] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -30,12 +36,68 @@ export default function AdminBlog() {
     category: "News",
     author: "",
     featured: false,
-    read_time: ""
+    read_time: "",
+    image_url: ""
   });
 
   useEffect(() => {
     fetchPosts();
   }, []);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const uploadResult = await uploadToR2(file, 'profile-pictures', user.id);
+
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+
+      setUploadedImages([...uploadedImages, uploadResult.url]);
+      setFormData({ ...formData, image_url: uploadResult.url });
+
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully",
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const copyImageUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Copied",
+      description: "Image URL copied to clipboard",
+    });
+  };
+
+  const removeImage = () => {
+    setFormData({ ...formData, image_url: "" });
+  };
 
   const fetchPosts = async () => {
     try {
@@ -89,8 +151,10 @@ export default function AdminBlog() {
         category: "News",
         author: "",
         featured: false,
-        read_time: ""
+        read_time: "",
+        image_url: ""
       });
+      setUploadedImages([]);
       setEditingPost(null);
       setShowForm(false);
       fetchPosts();
@@ -113,8 +177,12 @@ export default function AdminBlog() {
       category: post.category,
       author: post.author,
       featured: post.featured,
-      read_time: post.read_time
+      read_time: post.read_time,
+      image_url: post.image_url || ""
     });
+    if (post.image_url) {
+      setUploadedImages([post.image_url]);
+    }
     setShowForm(true);
   };
 
@@ -152,8 +220,10 @@ export default function AdminBlog() {
       category: "News",
       author: "",
       featured: false,
-      read_time: ""
+      read_time: "",
+      image_url: ""
     });
+    setUploadedImages([]);
     setEditingPost(null);
     setShowForm(false);
   };
@@ -223,6 +293,65 @@ export default function AdminBlog() {
                   rows={10}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Featured Image</Label>
+                <div className="flex gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    {uploadingImage ? (
+                      <>Uploading...</>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Image
+                      </>
+                    )}
+                  </Button>
+                  {formData.image_url && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => copyImageUrl(formData.image_url)}
+                    >
+                      <ImageIcon className="h-4 w-4 mr-2" />
+                      Copy URL
+                    </Button>
+                  )}
+                </div>
+                {formData.image_url && (
+                  <div className="mt-3 relative inline-block">
+                    <img
+                      src={formData.image_url}
+                      alt="Featured"
+                      className="w-full max-w-sm rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={removeImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Upload a featured image for your blog post. You can insert the URL in your content.
+                </p>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
@@ -310,7 +439,14 @@ export default function AdminBlog() {
             {posts.map((post) => (
               <Card key={post.id}>
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-4">
+                    {post.image_url && (
+                      <img
+                        src={post.image_url}
+                        alt={post.title}
+                        className="w-32 h-32 object-cover rounded-lg flex-shrink-0"
+                      />
+                    )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge>{post.category}</Badge>
