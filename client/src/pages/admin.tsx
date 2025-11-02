@@ -126,6 +126,13 @@ export default function AdminPage() {
       badge: "Active"
     },
     {
+      icon: FileCheck,
+      title: "Blog Management",
+      description: "Create and manage blog posts",
+      href: "/admin/blog",
+      badge: "Active"
+    },
+    {
       icon: Users,
       title: "User Management",
       description: "Manage user accounts and permissions",
