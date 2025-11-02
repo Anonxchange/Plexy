@@ -65,6 +65,7 @@ import MarketsPage from "@/pages/markets";
 import Careers from "@/pages/careers";
 import Blog from "@/pages/blog";
 import Reviews from "@/pages/reviews";
+import Support from "@/pages/support";
 
 function Router() {
   return (
@@ -124,6 +125,7 @@ function Router() {
       <Route path="/careers" component={Careers} />
       <Route path="/blog" component={Blog} />
       <Route path="/reviews" component={Reviews} />
+      <Route path="/support" component={Support} />
       <Route path="*" component={NotFound} />
     </Switch>
   );
