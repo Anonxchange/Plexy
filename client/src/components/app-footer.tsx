@@ -73,13 +73,13 @@ export function AppFooter() {
           <div>
             <h3 className="font-semibold text-white mb-4">Legal</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Terms & Conditions</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Vendor Reminder</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">AML Policy</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Privacy Notice</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Cookie Policy</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Restricted Countries</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">VIP Program T&C</a></li>
+              <li><Link href="/terms" className="text-sm hover:text-white transition-colors">Terms & Conditions</Link></li>
+              <li><Link href="/vendor-reminder" className="text-sm hover:text-white transition-colors">Vendor Reminder</Link></li>
+              <li><Link href="/aml-policy" className="text-sm hover:text-white transition-colors">AML Policy</Link></li>
+              <li><Link href="/privacy" className="text-sm hover:text-white transition-colors">Privacy Notice</Link></li>
+              <li><Link href="/cookie-policy" className="text-sm hover:text-white transition-colors">Cookie Policy</Link></li>
+              <li><Link href="/restricted-countries" className="text-sm hover:text-white transition-colors">Restricted Countries</Link></li>
+              <li><Link href="/vip-terms" className="text-sm hover:text-white transition-colors">VIP Program T&C</Link></li>
             </ul>
           </div>
         </div>
