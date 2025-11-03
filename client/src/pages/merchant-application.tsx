@@ -291,17 +291,29 @@ export default function MerchantApplicationPage() {
               </Alert>
             </div>
 
-            {merchantStatus === "verified_merchant" && (
-              <div className="pt-4 border-t">
-                <h4 className="font-semibold mb-2">Upgrade to Block Merchant</h4>
+            <div className="pt-4 border-t space-y-4">
+              {merchantStatus === "verified_merchant" && (
+                <div>
+                  <h4 className="font-semibold mb-2">Upgrade to Block Merchant</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Get exclusive features, zero fees, and top placement for an additional $300 deposit.
+                  </p>
+                  <Button onClick={() => setLocation("/merchant-upgrade")} variant="outline" className="w-full">
+                    Learn More About Block Merchant
+                  </Button>
+                </div>
+              )}
+              
+              <div>
+                <h4 className="font-semibold mb-2">Withdraw Your Deposit</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Get exclusive features, zero fees, and top placement for an additional $300 deposit.
+                  No longer need merchant status? Downgrade and unlock your ${depositAmount} deposit.
                 </p>
-                <Button onClick={() => setLocation("/merchant-upgrade")} variant="outline">
-                  Learn More About Block Merchant
+                <Button onClick={() => setLocation("/merchant-downgrade")} variant="outline" className="w-full">
+                  Downgrade & Withdraw Deposit
                 </Button>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>
