@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin, Lock, Shield, Award } from "lucide-react";
+import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin, Lock, Shield, Award, TrendingUp, CheckCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useRoute } from "wouter";
@@ -31,6 +31,7 @@ import { useVerificationGuard } from "@/hooks/use-verification-guard";
 import { canCreateOffer } from "@shared/verification-levels";
 import { getMerchantLevel } from "@shared/merchant-levels";
 import { useQuery } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function CreateOffer() {
   const { 
@@ -39,20 +40,20 @@ export function CreateOffer() {
     verificationLevel,
     levelConfig 
   } = useVerificationGuard();
-  
+
   const { data: userProfile } = useQuery({
     queryKey: ["userProfile"],
     queryFn: async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
-      
+
       const { data } = await supabase
         .from("user_profiles")
         .select("merchant_status, verification_level")
         .eq("id", user.id)
         .single();
-      
+
       return data;
     },
   });
@@ -63,13 +64,13 @@ export function CreateOffer() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return 0;
-      
+
       const { count } = await supabase
         .from("p2p_offers")
         .select("*", { count: 'exact', head: true })
         .eq("user_id", user.id)
         .eq("is_active", true);
-      
+
       return count || 0;
     },
   });
@@ -480,59 +481,115 @@ export function CreateOffer() {
           </Alert>
         )}
 
-        {/* Merchant Upgrade Cards - Only show for regular users */}
+        {/* Merchant Upgrade Tabs - Only show for regular users */}
         {!isLevel0 && merchantStatus === "none" && (
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="border-blue-500/50 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/10">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <Shield className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
-                  <div>
-                    <h3 className="font-bold text-blue-900 dark:text-blue-100">Verified Merchant</h3>
-                    <p className="text-xs text-blue-700 dark:text-blue-300">$200 deposit</p>
-                  </div>
-                </div>
-                <ul className="space-y-1 text-xs text-blue-800 dark:text-blue-200 mb-3">
-                  <li>• Up to 50 active offers</li>
-                  <li>• 0.5% trading fees</li>
-                  <li>• Merchant badge</li>
-                  <li>• Priority support</li>
-                </ul>
-                <Button 
-                  onClick={() => setLocation("/merchant-application")}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  size="sm"
-                >
-                  Become a Merchant
-                </Button>
-              </CardContent>
-            </Card>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Become an Advertiser
+              </CardTitle>
+              <CardDescription>
+                Unlock enhanced benefits: more offers, lower fees, and priority placement
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="verified" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="verified" className="gap-2">
+                    <Shield className="h-4 w-4" />
+                    Verified Merchant
+                  </TabsTrigger>
+                  <TabsTrigger value="block" className="gap-2">
+                    <Award className="h-4 w-4" />
+                    Block Merchant
+                  </TabsTrigger>
+                </TabsList>
 
-            <Card className="border-purple-500/50 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/20 dark:to-purple-900/10">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <Award className="h-6 w-6 text-purple-600 flex-shrink-0 mt-1" />
-                  <div>
-                    <h3 className="font-bold text-purple-900 dark:text-purple-100">Block Merchant</h3>
-                    <p className="text-xs text-purple-700 dark:text-purple-300">$500 deposit</p>
+                <TabsContent value="verified" className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <div>
+                      <p className="font-semibold text-blue-900 dark:text-blue-100">Security Deposit</p>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">Refundable anytime</p>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-600">$200</div>
                   </div>
-                </div>
-                <ul className="space-y-1 text-xs text-purple-800 dark:text-purple-200 mb-3">
-                  <li>• Unlimited offers</li>
-                  <li>• 0% trading fees</li>
-                  <li>• Top placement</li>
-                  <li>• Exclusive badge</li>
-                </ul>
-                <Button 
-                  onClick={() => setLocation("/merchant-application")}
-                  className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white"
-                  size="sm"
-                >
-                  Become a Block Merchant
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3">Benefits Include:</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Up to 50 active offers</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>0.5% trading fees (50% discount)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Verified Merchant badge</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Priority customer support</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <Button 
+                    onClick={() => setLocation("/merchant-application")}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    Apply for Verified Merchant
+                  </Button>
+                </TabsContent>
+
+                <TabsContent value="block" className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+                    <div>
+                      <p className="font-semibold text-purple-900 dark:text-purple-100">Security Deposit</p>
+                      <p className="text-sm text-purple-700 dark:text-purple-300">Refundable anytime</p>
+                    </div>
+                    <div className="text-2xl font-bold text-purple-600">$500</div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3">Premium Benefits:</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Unlimited active offers</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>0% trading fees (free forever)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Top priority placement</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Exclusive Block Merchant badge</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Premium support & perks</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <Button 
+                    onClick={() => setLocation("/merchant-application")}
+                    className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900"
+                  >
+                    Apply for Block Merchant
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         )}
 
         {!isLevel0 && offerLimits.maxOffers && userOfferCount !== undefined && userOfferCount >= offerLimits.maxOffers && (
