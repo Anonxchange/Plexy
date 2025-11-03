@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 const paymentCategories = [
   { image: "/assets/IMG_2020.jpeg", name: "Bank Transfer", count: "200+", methods: ["ACH", "SEPA", "Wire Transfer", "SWIFT", "Local Bank", "BACS", "CHAPS", "FPS", "TARGET2", "RTGS"] },
-  { image: "/assets/IMG_1804.jpeg", name: "Credit/Debit Cards", count: "80+", methods: ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Diners Club", "Maestro", "RuPay", "Elo"] },
+  { image: "/assets/IMG_2021.jpeg", name: "Credit/Debit Cards", count: "80+", methods: ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Diners Club", "Maestro", "RuPay", "Elo"] },
   { image: "/assets/IMG_1805.jpeg", name: "Mobile Money", count: "150+", methods: ["M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Tigo Pesa", "Vodafone Cash", "Ecocash", "Wave", "Moov Money", "GCash"] },
   { image: "/assets/IMG_1807.jpeg", name: "Gift Cards", count: "120+", methods: ["Amazon", "Apple", "Google Play", "Steam", "eBay", "iTunes", "Xbox", "PlayStation", "Target", "Walmart"] },
   { image: "/assets/IMG_1808.jpeg", name: "E-Wallets", count: "100+", methods: ["PayPal", "Skrill", "Neteller", "Perfect Money", "WebMoney", "Payeer", "AdvCash", "EcoPayz", "Payoneer", "Paytm"] },
@@ -67,13 +67,13 @@ export function PaymentMethods() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-16">
           {paymentCategories.map((method, index) => (
-            <Card key={index} className="hover-elevate active-elevate-2 cursor-pointer transition-all" data-testid={`card-payment-${method.name.toLowerCase().replace(/\s+/g, '-')}`}>
-              <div className="p-6 text-center space-y-4">
+            <Card key={index} className="hover-elevate active-elevate-2 cursor-pointer transition-all h-full" data-testid={`card-payment-${method.name.toLowerCase().replace(/\s+/g, '-')}`}>
+              <div className="p-6 text-center space-y-4 h-full flex flex-col justify-center">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto overflow-hidden">
                   <img 
                     src={method.image} 
                     alt={method.name}
-                    className="w-full h-full object-contain p-1"
+                    className="w-full h-full object-cover"
                   />
                 </div>
                 <div>
