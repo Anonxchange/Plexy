@@ -50,6 +50,7 @@ import Affiliate from "@/pages/affiliate";
 import RewardsPage from "@/pages/rewards";
 import ReferralPage from "@/pages/referral";
 import MerchantApplicationPage from "@/pages/merchant-application";
+import MerchantDowngradePage from "@/pages/merchant-downgrade";
 import AdminMerchantsPage from "@/pages/admin-merchants";
 import PexlyPay from "@/pages/pexly-pay";
 import PexlyPayHistory from "@/pages/pexly-pay-history";
@@ -106,6 +107,7 @@ function Router() {
       <Route path="/account-settings" component={AccountSettings} />
       <Route path="/verification" component={VerificationPage} />
       <Route path="/merchant-application" component={MerchantApplicationPage} />
+      <Route path="/merchant-downgrade" component={MerchantDowngradePage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/admin/verifications" component={AdminVerificationsPage} />
       <Route path="/admin/merchants" component={AdminMerchantsPage} />
