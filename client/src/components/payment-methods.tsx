@@ -7,16 +7,16 @@ const paymentCategories = [
   { image: "/assets/IMG_2021.jpeg", name: "Credit/Debit Cards", count: "80+", methods: ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Diners Club", "Maestro", "RuPay", "Elo"] },
   { image: "/assets/IMG_2022.jpeg", name: "Mobile Money", count: "150+", methods: ["M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Tigo Pesa", "Vodafone Cash", "Ecocash", "Wave", "Moov Money", "GCash"] },
   { image: "/assets/IMG_2023.jpeg", name: "Gift Cards", count: "120+", methods: ["Amazon", "Apple", "Google Play", "Steam", "eBay", "iTunes", "Xbox", "PlayStation", "Target", "Walmart"] },
-  { image: "/assets/IMG_1808.jpeg", name: "E-Wallets", count: "100+", methods: ["PayPal", "Skrill", "Neteller", "Perfect Money", "WebMoney", "Payeer", "AdvCash", "EcoPayz", "Payoneer", "Paytm"] },
+  { image: "/assets/IMG_2033.jpeg", name: "E-Wallets", count: "100+", methods: ["PayPal", "Skrill", "Neteller", "Perfect Money", "WebMoney", "Payeer", "AdvCash", "EcoPayz", "Payoneer", "Paytm"] },
   { image: "/assets/IMG_2026.jpeg", name: "Digital Wallets", count: "90+", methods: ["Zelle", "Venmo", "Cash App", "Apple Pay", "Google Pay", "Samsung Pay", "WeChat Pay", "Alipay", "PhonePe", "Paytm"] },
   { image: "/assets/IMG_2030.jpeg", name: "Cash Payments", count: "60+", methods: ["Cash Deposit", "Cash in Person", "ATM", "Western Union", "Remitly", "Ria", "Moneygram", "Xoom", "WorldRemit", "Cash Pickup"] },
-  { image: "/assets/IMG_1811.jpeg", name: "Money Transfer", count: "85+", methods: ["Wise", "Remitly", "WorldRemit", "MoneyGram", "Ria", "Xoom", "Azimo", "TransferGo", "InstaReM", "Xe"] },
-  { image: "/assets/IMG_1820.jpeg", name: "International", count: "110+", methods: ["TransferWise", "Revolut", "N26", "Payoneer", "Paysera", "Monese", "Starling", "Bunq", "Vivid", "Lydia"] },
-  { image: "/assets/IMG_1821.jpeg", name: "Banking Apps", count: "130+", methods: ["Chime", "Varo", "Current", "SoFi", "Ally", "Marcus", "Discover", "Capital One", "Chase", "Bank of America"] },
+  { image: "/assets/IMG_2035.jpeg", name: "Money Transfer", count: "85+", methods: ["Wise", "Remitly", "WorldRemit", "MoneyGram", "Ria", "Xoom", "Azimo", "TransferGo", "InstaReM", "Xe"] },
+  { image: "/assets/IMG_2036.jpeg", name: "International", count: "110+", methods: ["TransferWise", "Revolut", "N26", "Payoneer", "Paysera", "Monese", "Starling", "Bunq", "Vivid", "Lydia"] },
+  { image: "/assets/IMG_2040.jpeg", name: "Banking Apps", count: "130+", methods: ["Chime", "Varo", "Current", "SoFi", "Ally", "Marcus", "Discover", "Capital One", "Chase", "Bank of America"] },
   { image: "/assets/IMG_2029.jpeg", name: "Crypto Payments", count: "40+", methods: ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB", "XRP", "Litecoin", "Dogecoin", "Cardano", "Solana"] },
   { image: "/assets/IMG_2028.jpeg", name: "Point of Sale", count: "35+", methods: ["Square", "Stripe", "PayPal Here", "SumUp", "iZettle", "Clover", "Toast", "Shopify POS", "Lightspeed", "Vend"] },
-  { image: "/assets/IMG_1828.jpeg", name: "Business Solutions", count: "55+", methods: ["QuickBooks", "Xero", "FreshBooks", "Wave", "Zoho Books", "Sage", "Bill.com", "Melio", "Tipalti", "AvidXchange"] },
-  { image: "/assets/IMG_1830.jpeg", name: "Delivery Services", count: "30+", methods: ["Uber Cash", "Lyft Credits", "DoorDash", "Grubhub", "Postmates", "Deliveroo", "Just Eat", "Bolt", "Rappi", "Glovo"] },
+  { image: "/assets/IMG_2037.jpeg", name: "Business Solutions", count: "55+", methods: ["QuickBooks", "Xero", "FreshBooks", "Wave", "Zoho Books", "Sage", "Bill.com", "Melio", "Tipalti", "AvidXchange"] },
+  { image: "/assets/IMG_2039.jpeg", name: "Delivery Services", count: "30+", methods: ["Uber Cash", "Lyft Credits", "DoorDash", "Grubhub", "Postmates", "Deliveroo", "Just Eat", "Bolt", "Rappi", "Glovo"] },
 ];
 
 const popularMethods = [
