@@ -1,5 +1,4 @@
 
-import { CreditCard, Building2, Smartphone, Gift, Banknote, Globe, Wallet, DollarSign, ArrowRightLeft, Landmark, ShoppingCart, Coins, TrendingUp, Store, Boxes, Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -12,14 +11,12 @@ const paymentCategories = [
   { image: "/attached_assets/IMG_2026_1762129044151.jpeg", name: "Digital Wallets", count: "90+", methods: ["Zelle", "Venmo", "Cash App", "Apple Pay", "Google Pay", "Samsung Pay", "WeChat Pay", "Alipay", "PhonePe", "Paytm"] },
   { image: "/attached_assets/IMG_2028_1762129044151.jpeg", name: "Cash Payments", count: "60+", methods: ["Cash Deposit", "Cash in Person", "ATM", "Western Union", "Remitly", "Ria", "Moneygram", "Xoom", "WorldRemit", "Cash Pickup"] },
   { image: "/attached_assets/IMG_2029_1762129044151.jpeg", name: "Money Transfer", count: "85+", methods: ["Wise", "Remitly", "WorldRemit", "MoneyGram", "Ria", "Xoom", "Azimo", "TransferGo", "InstaReM", "Xe"] },
-  { icon: Globe, name: "International", count: "110+", methods: ["TransferWise", "Revolut", "N26", "Payoneer", "Paysera", "Monese", "Starling", "Bunq", "Vivid", "Lydia"] },
-  { icon: Landmark, name: "Banking Apps", count: "130+", methods: ["Chime", "Varo", "Current", "SoFi", "Ally", "Marcus", "Discover", "Capital One", "Chase", "Bank of America"] },
-  { icon: ShoppingCart, name: "Buy Now Pay Later", count: "45+", methods: ["Klarna", "Afterpay", "Affirm", "Sezzle", "Quadpay", "Zip", "Laybuy", "Clearpay", "Splitit", "Humm"] },
-  { icon: Coins, name: "Crypto Payments", count: "40+", methods: ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB", "XRP", "Litecoin", "Dogecoin", "Cardano", "Solana"] },
-  { icon: TrendingUp, name: "Investment Platforms", count: "50+", methods: ["Robinhood", "Webull", "E*TRADE", "TD Ameritrade", "Fidelity", "Schwab", "Interactive Brokers", "M1 Finance", "Acorns", "Stash"] },
-  { icon: Store, name: "Point of Sale", count: "35+", methods: ["Square", "Stripe", "PayPal Here", "SumUp", "iZettle", "Clover", "Toast", "Shopify POS", "Lightspeed", "Vend"] },
-  { icon: Boxes, name: "Business Solutions", count: "55+", methods: ["QuickBooks", "Xero", "FreshBooks", "Wave", "Zoho Books", "Sage", "Bill.com", "Melio", "Tipalti", "AvidXchange"] },
-  { icon: Package, name: "Delivery Services", count: "30+", methods: ["Uber Cash", "Lyft Credits", "DoorDash", "Grubhub", "Postmates", "Deliveroo", "Just Eat", "Bolt", "Rappi", "Glovo"] },
+  { image: "/attached_assets/IMG_2020_1762129044150.jpeg", name: "International", count: "110+", methods: ["TransferWise", "Revolut", "N26", "Payoneer", "Paysera", "Monese", "Starling", "Bunq", "Vivid", "Lydia"] },
+  { image: "/attached_assets/IMG_2021_1762129044150.jpeg", name: "Banking Apps", count: "130+", methods: ["Chime", "Varo", "Current", "SoFi", "Ally", "Marcus", "Discover", "Capital One", "Chase", "Bank of America"] },
+  { image: "/attached_assets/IMG_2022_1762129044151.jpeg", name: "Crypto Payments", count: "40+", methods: ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB", "XRP", "Litecoin", "Dogecoin", "Cardano", "Solana"] },
+  { image: "/attached_assets/IMG_2023_1762129044151.jpeg", name: "Point of Sale", count: "35+", methods: ["Square", "Stripe", "PayPal Here", "SumUp", "iZettle", "Clover", "Toast", "Shopify POS", "Lightspeed", "Vend"] },
+  { image: "/attached_assets/IMG_2025_1762129044151.jpeg", name: "Business Solutions", count: "55+", methods: ["QuickBooks", "Xero", "FreshBooks", "Wave", "Zoho Books", "Sage", "Bill.com", "Melio", "Tipalti", "AvidXchange"] },
+  { image: "/attached_assets/IMG_2026_1762129044151.jpeg", name: "Delivery Services", count: "30+", methods: ["Uber Cash", "Lyft Credits", "DoorDash", "Grubhub", "Postmates", "Deliveroo", "Just Eat", "Bolt", "Rappi", "Glovo"] },
 ];
 
 const popularMethods = [
@@ -73,15 +70,11 @@ export function PaymentMethods() {
             <Card key={index} className="hover-elevate active-elevate-2 cursor-pointer transition-all" data-testid={`card-payment-${method.name.toLowerCase().replace(/\s+/g, '-')}`}>
               <div className="p-6 text-center space-y-4">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto overflow-hidden">
-                  {'image' in method ? (
-                    <img 
-                      src={method.image} 
-                      alt={method.name}
-                      className="w-full h-full object-contain p-1"
-                    />
-                  ) : (
-                    <method.icon className="h-7 w-7 text-primary" />
-                  )}
+                  <img 
+                    src={method.image} 
+                    alt={method.name}
+                    className="w-full h-full object-contain p-1"
+                  />
                 </div>
                 <div>
                   <div className="font-semibold text-foreground mb-1">{method.name}</div>
