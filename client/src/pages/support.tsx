@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Search, BookOpen, MessageCircle, HelpCircle, ChevronRight, Mail, Phone } from "lucide-react";
+import { Search, ChevronRight, MessageCircle, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -130,20 +129,18 @@ export default function Support() {
       </section>
 
       {/* Knowledge Base */}
-      <section className="max-w-6xl mx-auto px-4 py-12">
+      <section className="max-w-6xl mx-auto px-0 py-12">
         <div className="text-center mb-12">
-          <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
-            <img 
-              src="/assets/IMG_2014.jpeg" 
-              alt="Knowledge base"
-              className="w-full h-full object-contain"
-            />
-          </div>
+          <img 
+            src="/assets/IMG_2014.jpeg" 
+            alt="Knowledge base"
+            className="w-full h-64 object-cover mb-8"
+          />
           <h2 className="text-3xl font-bold mb-2">Knowledge base</h2>
           <p className="text-muted-foreground">View all articles</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 px-4">
           {knowledgeBaseCategories.map((category, index) => (
             <Card key={index} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
@@ -168,20 +165,18 @@ export default function Support() {
       </section>
 
       {/* Contact Support Options */}
-      <section className="max-w-6xl mx-auto px-4 py-12 bg-muted/30">
+      <section className="max-w-6xl mx-auto px-0 py-12 bg-muted/30">
         <div className="text-center mb-12">
-          <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
-            <img 
-              src="/assets/IMG_2013.jpeg" 
-              alt="Need help"
-              className="w-full h-full object-contain"
-            />
-          </div>
+          <img 
+            src="/assets/IMG_2013.jpeg" 
+            alt="Need help"
+            className="w-full h-64 object-cover mb-8"
+          />
           <h2 className="text-3xl font-bold mb-2">Need more help?</h2>
           <p className="text-muted-foreground">Choose how you'd like to reach us</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
           {supportOptions.map((option, index) => {
             const supportImages = [
               "/assets/IMG_2015.jpeg",
@@ -223,20 +218,18 @@ export default function Support() {
       </section>
 
       {/* FAQ Section */}
-      <section className="max-w-4xl mx-auto px-4 py-12">
+      <section className="max-w-4xl mx-auto px-0 py-12">
         <div className="text-center mb-12">
-          <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
-            <img 
-              src="/assets/IMG_2012.jpeg" 
-              alt="FAQ"
-              className="w-full h-full object-contain"
-            />
-          </div>
+          <img 
+            src="/assets/IMG_2012.jpeg" 
+            alt="FAQ"
+            className="w-full h-64 object-cover mb-8"
+          />
           <h2 className="text-3xl font-bold mb-2">Frequently Asked Questions</h2>
           <p className="text-muted-foreground">Quick answers to common questions</p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 px-4">
           {[
             {
               q: "How long does verification take?",
