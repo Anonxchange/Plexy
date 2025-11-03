@@ -78,13 +78,6 @@ export default function Support() {
       {/* Hero Section with Search */}
       <section className="bg-gradient-to-br from-primary/20 via-primary/10 to-background py-16 px-4">
         <div className="max-w-4xl mx-auto text-center space-y-6">
-          <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-6 overflow-hidden">
-            <img 
-              src="/assets/IMG_1845.jpeg" 
-              alt="Support"
-              className="w-full h-full object-contain"
-            />
-          </div>
           <h1 className="text-4xl md:text-5xl font-bold">Hi, how can we help you?</h1>
           <div className="relative max-w-2xl mx-auto">
             <Input
@@ -132,13 +125,6 @@ export default function Support() {
       {/* Knowledge Base */}
       <section className="max-w-6xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
-            <img 
-              src="/assets/IMG_1843.jpeg" 
-              alt="Knowledge base"
-              className="w-full h-full object-contain"
-            />
-          </div>
           <h2 className="text-3xl font-bold mb-2">Knowledge base</h2>
           <p className="text-muted-foreground">View all articles</p>
         </div>
