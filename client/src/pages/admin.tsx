@@ -126,6 +126,13 @@ export default function AdminPage() {
       badge: "Active"
     },
     {
+      icon: Shield,
+      title: "Merchant Management",
+      description: "Review and approve merchant applications",
+      href: "/admin/merchants",
+      badge: "Active"
+    },
+    {
       icon: FileCheck,
       title: "Blog Management",
       description: "Create and manage blog posts",
