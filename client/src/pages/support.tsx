@@ -78,6 +78,13 @@ export default function Support() {
       {/* Hero Section with Search */}
       <section className="bg-gradient-to-br from-primary/20 via-primary/10 to-background py-16 px-4">
         <div className="max-w-4xl mx-auto text-center space-y-6">
+          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-6 overflow-hidden">
+            <img 
+              src="/attached_assets/IMG_2011_1762157729849.jpeg" 
+              alt="Support"
+              className="w-full h-full object-contain"
+            />
+          </div>
           <h1 className="text-4xl md:text-5xl font-bold">Hi, how can we help you?</h1>
           <div className="relative max-w-2xl mx-auto">
             <Input
@@ -103,8 +110,12 @@ export default function Support() {
         <Card className="bg-card hover:shadow-lg transition-shadow cursor-pointer">
           <CardContent className="p-8">
             <div className="flex items-center gap-6">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <BookOpen className="h-8 w-8 text-primary" />
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img 
+                  src="/attached_assets/IMG_2011_1762157729849.jpeg" 
+                  alt="Browse articles"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-2">Browse articles</h2>
@@ -121,6 +132,13 @@ export default function Support() {
       {/* Knowledge Base */}
       <section className="max-w-6xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+            <img 
+              src="/attached_assets/IMG_2012_1762157729849.jpeg" 
+              alt="Knowledge base"
+              className="w-full h-full object-contain"
+            />
+          </div>
           <h2 className="text-3xl font-bold mb-2">Knowledge base</h2>
           <p className="text-muted-foreground">View all articles</p>
         </div>
@@ -152,18 +170,33 @@ export default function Support() {
       {/* Contact Support Options */}
       <section className="max-w-6xl mx-auto px-4 py-12 bg-muted/30">
         <div className="text-center mb-12">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+            <img 
+              src="/attached_assets/IMG_2015_1762157729850.jpeg" 
+              alt="Need help"
+              className="w-full h-full object-contain"
+            />
+          </div>
           <h2 className="text-3xl font-bold mb-2">Need more help?</h2>
           <p className="text-muted-foreground">Choose how you'd like to reach us</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {supportOptions.map((option, index) => {
-            const Icon = option.icon;
+            const supportImages = [
+              "/attached_assets/IMG_2016_1762157729850.jpeg",
+              "/attached_assets/IMG_2017_1762157729850.jpeg",
+              "/attached_assets/IMG_2018_1762157729850.jpeg"
+            ];
             return (
               <Card key={index} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                    <Icon className="h-8 w-8 text-primary" />
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto overflow-hidden">
+                    <img 
+                      src={supportImages[index]} 
+                      alt={option.title}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold mb-2">{option.title}</h3>
@@ -192,7 +225,13 @@ export default function Support() {
       {/* FAQ Section */}
       <section className="max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <HelpCircle className="h-12 w-12 mx-auto mb-4 text-primary" />
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+            <img 
+              src="/attached_assets/IMG_2019_1762157729850.jpeg" 
+              alt="FAQ"
+              className="w-full h-full object-contain"
+            />
+          </div>
           <h2 className="text-3xl font-bold mb-2">Frequently Asked Questions</h2>
           <p className="text-muted-foreground">Quick answers to common questions</p>
         </div>
