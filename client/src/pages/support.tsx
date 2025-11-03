@@ -1,10 +1,9 @@
+"use client";
 import { useState } from "react";
-import { Search, ChevronRight, MessageCircle, Mail, Phone } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MessageCircle, Mail, Phone, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { PexlyFooter } from "@/components/pexly-footer";
-import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export default function Support() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,8 +15,8 @@ export default function Support() {
         "How to create a Pexly account",
         "Verifying your identity",
         "How to deposit cryptocurrency",
-        "Understanding P2P trading"
-      ]
+        "Understanding P2P trading",
+      ],
     },
     {
       title: "Trading",
@@ -25,8 +24,8 @@ export default function Support() {
         "How to buy crypto on P2P",
         "How to sell crypto on P2P",
         "Understanding escrow system",
-        "Dispute resolution process"
-      ]
+        "Dispute resolution process",
+      ],
     },
     {
       title: "Wallet & Security",
@@ -34,8 +33,8 @@ export default function Support() {
         "Securing your wallet",
         "Two-factor authentication setup",
         "Withdrawal guidelines",
-        "Transaction fees explained"
-      ]
+        "Transaction fees explained",
+      ],
     },
     {
       title: "Payment Methods",
@@ -43,9 +42,9 @@ export default function Support() {
         "Supported payment methods",
         "Adding a payment method",
         "Bank transfer guide",
-        "Mobile money transfers"
-      ]
-    }
+        "Mobile money transfers",
+      ],
+    },
   ];
 
   const supportOptions = [
@@ -54,22 +53,22 @@ export default function Support() {
       title: "Live Chat",
       description: "Chat with our support team in real-time",
       action: "Start Chat",
-      available: "24/7"
+      available: "24/7",
     },
     {
       icon: Mail,
       title: "Email Support",
       description: "Send us an email and we'll respond within 24 hours",
       action: "Send Email",
-      email: "support@pexly.com"
+      email: "support@pexly.com",
     },
     {
       icon: Phone,
       title: "Phone Support",
       description: "Speak directly with our support team",
       action: "Call Now",
-      available: "Mon-Fri, 9AM-6PM EST"
-    }
+      available: "Mon-Fri, 9AM-6PM EST",
+    },
   ];
 
   return (
@@ -80,177 +79,135 @@ export default function Support() {
           <img
             src="/assets/IMG_2011.jpeg"
             alt="Support Hero"
-            className="w-full max-w-5xl mx-auto h-48 sm:h-64 md:h-80 lg:h-96 object-cover rounded-xl"
+            className="w-full max-w-5xl mx-auto h-56 sm:h-64 md:h-80 lg:h-96 object-cover rounded-xl"
           />
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold">
-            Hi, how can we help you?
-          </h1>
-          <div className="relative max-w-2xl mx-auto px-2">
-            <Input
-              type="text"
-              placeholder="Enter your question here..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12 sm:h-14 pl-4 pr-12 text-base sm:text-lg rounded-xl"
-            />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-            >
-              <Search className="h-5 w-5 text-muted-foreground" />
-            </Button>
+
+          <div className="max-w-3xl mx-auto">
+            <h1 className="text-4xl font-bold mb-4">Welcome to Pexly Support</h1>
+            <p className="text-lg text-muted-foreground mb-6">
+              We’re here to help you 24/7. Find answers, get assistance, and explore our knowledge base.
+            </p>
+
+            <div className="relative max-w-md mx-auto">
+              <Search className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search for help..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Browse Articles */}
-      <section className="max-w-4xl mx-auto px-4 -mt-10 mb-12">
-        <Card className="bg-card hover:shadow-lg transition-shadow cursor-pointer rounded-xl">
-          <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center overflow-hidden">
-              <img
-                src="/assets/IMG_2018.jpeg"
-                alt="Browse articles"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div className="flex-1 text-center sm:text-left">
-              <h2 className="text-2xl font-bold mb-2">Browse articles</h2>
-              <p className="text-muted-foreground">
-                Explore How-To guides and learn best practices from our knowledge base
-              </p>
-            </div>
-            <ChevronRight className="h-6 w-6 text-muted-foreground hidden sm:block" />
-          </CardContent>
-        </Card>
-      </section>
-
       {/* Knowledge Base */}
-      <section className="max-w-6xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
+      <section className="py-16 px-4">
+        <div className="max-w-6xl mx-auto">
           <img
             src="/assets/IMG_2014.jpeg"
             alt="Knowledge base"
-            className="w-full max-w-5xl mx-auto h-48 sm:h-64 md:h-80 object-cover rounded-xl mb-8"
+            className="w-full max-w-5xl mx-auto h-56 sm:h-64 md:h-80 object-cover rounded-xl mb-10"
           />
-          <h2 className="text-3xl font-bold mb-2">Knowledge Base</h2>
-          <p className="text-muted-foreground">View all articles</p>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {knowledgeBaseCategories.map((category, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow rounded-xl">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">{category.title}</h3>
-                <ul className="space-y-3">
+          <h2 className="text-3xl font-bold text-center mb-12">Knowledge Base</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {knowledgeBaseCategories.map((category, index) => (
+              <Card key={index} className="p-6 hover:shadow-lg transition-all">
+                <h3 className="font-semibold text-xl mb-4">{category.title}</h3>
+                <ul className="space-y-2 text-muted-foreground">
                   {category.articles.map((article, i) => (
-                    <li key={i}>
-                      <a
-                        href="#"
-                        className="text-muted-foreground hover:text-primary transition flex items-center gap-2"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                        {article}
-                      </a>
+                    <li key={i} className="hover:text-primary cursor-pointer transition">
+                      {article}
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Contact Support Options */}
-      <section className="max-w-6xl mx-auto px-4 py-12 bg-muted/30 rounded-xl">
-        <div className="text-center mb-12">
+      {/* Need More Help */}
+      <section className="py-16 px-4 bg-muted/20">
+        <div className="max-w-6xl mx-auto text-center">
           <img
             src="/assets/IMG_2013.jpeg"
             alt="Need help"
-            className="w-full max-w-5xl mx-auto h-48 sm:h-64 md:h-80 object-cover rounded-xl mb-8"
+            className="w-full max-w-5xl mx-auto h-56 sm:h-64 md:h-80 object-cover rounded-xl mb-10"
           />
-          <h2 className="text-3xl font-bold mb-2">Need More Help?</h2>
-          <p className="text-muted-foreground">Choose how you'd like to reach us</p>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {supportOptions.map((option, index) => {
-            const supportImages = [
-              "/assets/IMG_2015.jpeg",
-              "/assets/IMG_2016.jpeg",
-              "/assets/IMG_2017.jpeg"
-            ];
-            return (
-              <Card key={index} className="hover:shadow-lg transition-shadow rounded-xl">
-                <CardContent className="p-6 text-center space-y-4">
-                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto overflow-hidden">
-                    <img
-                      src={supportImages[index]}
-                      alt={option.title}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">{option.title}</h3>
-                    <p className="text-sm text-muted-foreground">{option.description}</p>
-                    {option.available && (
-                      <p className="text-xs text-muted-foreground">Available: {option.available}</p>
-                    )}
-                    {option.email && (
-                      <p className="text-xs text-muted-foreground">{option.email}</p>
-                    )}
-                  </div>
-                  <Button className="w-full">{option.action}</Button>
-                </CardContent>
+          <h2 className="text-3xl font-bold mb-12">Need More Help?</h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {supportOptions.map((option, index) => (
+              <Card
+                key={index}
+                className="overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl"
+              >
+                <div className="relative w-full h-48 sm:h-56 md:h-64">
+                  <img
+                    src={`/assets/${option.title.replace(/\s/g, "").toLowerCase()}.jpeg`}
+                    alt={option.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                <div className="p-6 text-center">
+                  <option.icon className="w-10 h-10 text-primary mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">{option.title}</h3>
+                  <p className="text-muted-foreground mb-2">{option.description}</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {option.available || option.email}
+                  </p>
+                  <Button className="bg-primary text-black hover:bg-primary/90 w-full">
+                    {option.action}
+                  </Button>
+                </div>
               </Card>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section className="max-w-4xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
+      <section className="py-16 px-4">
+        <div className="max-w-6xl mx-auto text-center">
           <img
             src="/assets/IMG_2012.jpeg"
             alt="FAQ"
-            className="w-full max-w-5xl mx-auto h-48 sm:h-64 md:h-80 object-cover rounded-xl mb-8"
+            className="w-full max-w-5xl mx-auto h-56 sm:h-64 md:h-80 object-cover rounded-xl mb-10"
           />
-          <h2 className="text-3xl font-bold mb-2">Frequently Asked Questions</h2>
-          <p className="text-muted-foreground">Quick answers to common questions</p>
-        </div>
-
-        <div className="space-y-4">
-          {[
-            {
-              q: "How long does verification take?",
-              a: "Basic verification usually takes 5–10 minutes. Advanced verification may take up to 24 hours."
-            },
-            {
-              q: "What are the trading fees?",
-              a: "P2P trading is free. Standard trading fees range from 0.1% to 0.5% depending on your volume."
-            },
-            {
-              q: "How do I withdraw my funds?",
-              a: "Go to Wallet > Select asset > Withdraw. Enter the amount and destination address."
-            },
-            {
-              q: "Is my crypto safe on Pexly?",
-              a: "Yes, we use industry-leading security including cold storage and multi-signature wallets."
-            }
-          ].map((faq, index) => (
-            <Card key={index} className="rounded-xl">
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">{faq.q}</h3>
-                <p className="text-muted-foreground">{faq.a}</p>
-              </CardContent>
-            </Card>
-          ))}
+          <h2 className="text-3xl font-bold mb-8">Frequently Asked Questions</h2>
+          <div className="max-w-3xl mx-auto text-left space-y-6">
+            <div>
+              <h3 className="font-semibold text-lg mb-2">
+                How long does verification take?
+              </h3>
+              <p className="text-muted-foreground">
+                Verification typically takes 5–10 minutes once all documents are submitted correctly.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg mb-2">
+                Can I cancel a trade after payment?
+              </h3>
+              <p className="text-muted-foreground">
+                No, once payment is made, cancellation isn’t allowed. Always confirm before sending funds.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg mb-2">
+                How can I contact support directly?
+              </h3>
+              <p className="text-muted-foreground">
+                Use live chat or email us anytime — we’re available 24/7 for urgent matters.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
-
-      <PexlyFooter />
     </div>
   );
 }
