@@ -112,7 +112,7 @@ export default function Support() {
             <div className="flex items-center gap-6">
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 <img 
-                  src="/assets/IMG_2012.jpeg" 
+                  src="/assets/IMG_2018.jpeg" 
                   alt="Browse articles"
                   className="w-full h-full object-contain"
                 />
