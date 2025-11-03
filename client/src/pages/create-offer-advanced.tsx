@@ -17,12 +17,15 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Bitcoin, Building2, Lock, Shield } from "lucide-react";
+import { ArrowLeft, Bitcoin, Building2, Lock, Shield, Award } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { getCryptoPrices, convertToNGN } from "@/lib/crypto-prices";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
+import { canCreateOffer } from "@shared/verification-levels";
+import { getMerchantLevel } from "@shared/merchant-levels";
+import { useQuery } from "@tanstack/react-query";
 
 export function CreateOfferAdvanced() {
   const { 
@@ -31,6 +34,44 @@ export function CreateOfferAdvanced() {
     verificationLevel,
     levelConfig 
   } = useVerificationGuard();
+
+  const { data: userProfile } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("merchant_status, verification_level")
+        .eq("id", user.id)
+        .single();
+      
+      return data;
+    },
+  });
+
+  const { data: userOfferCount } = useQuery({
+    queryKey: ["userOfferCount"],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return 0;
+      
+      const { count } = await supabase
+        .from("p2p_offers")
+        .select("*", { count: 'exact', head: true })
+        .eq("user_id", user.id)
+        .eq("is_active", true);
+      
+      return count || 0;
+    },
+  });
+
+  const merchantStatus = userProfile?.merchant_status || "none";
+  const merchantLevel = getMerchantLevel(merchantStatus);
+  const offerLimits = canCreateOffer(verificationLevel, merchantStatus);
   const [priceType, setPriceType] = useState<"fixed" | "floating">("floating");
   const [fixedPrice, setFixedPrice] = useState("");
   const [priceOffset, setPriceOffset] = useState([0]);
@@ -128,6 +169,17 @@ export function CreateOfferAdvanced() {
         variant: "destructive",
       });
       setLocation("/verification");
+      return;
+    }
+
+    // Check offer limits
+    if (offerLimits.maxOffers && userOfferCount !== undefined && userOfferCount >= offerLimits.maxOffers) {
+      toast({
+        title: "Offer Limit Reached",
+        description: `You have reached your limit of ${offerLimits.maxOffers} active offers. Deactivate an existing offer or upgrade to Merchant for more slots.`,
+        variant: "destructive",
+      });
+      setLocation("/merchant-application");
       return;
     }
 
@@ -266,6 +318,97 @@ export function CreateOfferAdvanced() {
               <p className="font-semibold mb-1">You can create offers - {levelConfig.name}</p>
               <p className="text-sm">
                 Your verification level allows you to create and publish offers on the P2P marketplace.
+              </p>
+              {merchantStatus !== "none" && (
+                <p className="text-sm mt-2">
+                  <strong>{merchantLevel.name}</strong> - {offerLimits.maxOffers ? `Up to ${offerLimits.maxOffers} offers` : "Unlimited offers"} • {offerLimits.feePercentage}% trading fees
+                </p>
+              )}
+              {merchantStatus === "none" && offerLimits.maxOffers && (
+                <p className="text-sm mt-2">
+                  You can create up to <strong>{offerLimits.maxOffers} active offers</strong>. 
+                  <button 
+                    onClick={() => setLocation("/merchant-application")}
+                    className="underline ml-1 font-semibold hover:text-green-900"
+                  >
+                    Upgrade to Merchant
+                  </button> for more offers and lower fees.
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Merchant Upgrade Cards - Only show for regular users */}
+        {!isLevel0 && merchantStatus === "none" && (
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="border-blue-500/50 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/10">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <Shield className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-bold text-blue-900 dark:text-blue-100">Verified Merchant</h3>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">$200 deposit</p>
+                  </div>
+                </div>
+                <ul className="space-y-1 text-xs text-blue-800 dark:text-blue-200 mb-3">
+                  <li>• Up to 50 active offers</li>
+                  <li>• 0.5% trading fees</li>
+                  <li>• Merchant badge</li>
+                  <li>• Priority support</li>
+                </ul>
+                <Button 
+                  onClick={() => setLocation("/merchant-application")}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  size="sm"
+                >
+                  Become a Merchant
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-purple-500/50 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/20 dark:to-purple-900/10">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <Award className="h-6 w-6 text-purple-600 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-bold text-purple-900 dark:text-purple-100">Block Merchant</h3>
+                    <p className="text-xs text-purple-700 dark:text-purple-300">$500 deposit</p>
+                  </div>
+                </div>
+                <ul className="space-y-1 text-xs text-purple-800 dark:text-purple-200 mb-3">
+                  <li>• Unlimited offers</li>
+                  <li>• 0% trading fees</li>
+                  <li>• Top placement</li>
+                  <li>• Exclusive badge</li>
+                </ul>
+                <Button 
+                  onClick={() => setLocation("/merchant-application")}
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white"
+                  size="sm"
+                >
+                  Become a Block Merchant
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {!isLevel0 && offerLimits.maxOffers && userOfferCount !== undefined && userOfferCount >= offerLimits.maxOffers && (
+          <Alert className="mb-6 border-orange-500/50 bg-orange-500/10">
+            <Lock className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800 dark:text-orange-200">
+              <p className="font-semibold mb-1">Offer Limit Reached</p>
+              <p className="text-sm">
+                You have {userOfferCount} active offers out of {offerLimits.maxOffers} allowed. 
+                Deactivate an existing offer or{" "}
+                <button 
+                  onClick={() => setLocation("/merchant-application")}
+                  className="underline font-semibold hover:text-orange-900"
+                >
+                  upgrade to Merchant
+                </button>{" "}
+                for more offer slots.
               </p>
             </AlertDescription>
           </Alert>
