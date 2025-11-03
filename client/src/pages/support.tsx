@@ -81,17 +81,15 @@ export default function Support() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary/20 via-primary/10 to-background py-16 px-4">
+      {/* Hero Section (image removed) */}
+      <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-background py-20 px-4">
         <div className="max-w-6xl mx-auto text-center space-y-8">
-          <img
-            src="/assets/IMG_2011.jpeg"
-            alt="Support Hero"
-            className="w-full max-w-5xl mx-auto h-48 sm:h-64 md:h-80 lg:h-96 object-cover rounded-xl"
-          />
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold">
             Hi, how can we help you?
           </h1>
+          <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
+            Find answers, explore guides, or reach out to our support team.
+          </p>
           <div className="relative max-w-2xl mx-auto px-2">
             <Input
               type="text"
