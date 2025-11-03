@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PexlyFooter } from "@/components/pexly-footer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -11,29 +10,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin, Lock, Shield, Award, TrendingUp, CheckCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, Bitcoin, Building2, Lock, Shield, Award, TrendingUp, CheckCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation, useRoute } from "wouter";
+import { useLocation } from "wouter";
 import { getCryptoPrices, convertToNGN } from "@/lib/crypto-prices";
-import { cn } from "@/lib/utils";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
 import { canCreateOffer } from "@shared/verification-levels";
 import { getMerchantLevel } from "@shared/merchant-levels";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PexlyFooter } from "@/components/pexly-footer";
 
-export function CreateOffer() {
+export function CreateOfferAdvanced() {
   const { 
     checkCanCreateOffer, 
     isLevel0, 
@@ -83,26 +78,41 @@ export function CreateOffer() {
   const [priceOffset, setPriceOffset] = useState([0]);
   const [crypto, setCrypto] = useState("BTC");
   const [offerType, setOfferType] = useState<"buy" | "sell">("sell");
+  const [offerStatus, setOfferStatus] = useState<"online" | "private">("online");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [currency, setCurrency] = useState("NGN");
   const [country, setCountry] = useState("");
   const [minAmount, setMinAmount] = useState("14777");
   const [maxAmount, setMaxAmount] = useState("147769");
   const [totalQuantity, setTotalQuantity] = useState("");
+  const [offerTerms, setOfferTerms] = useState("");
+  const [offerLabel, setOfferLabel] = useState("");
   const [timeLimit, setTimeLimit] = useState("30");
+  const [requireVerification, setRequireVerification] = useState(false);
+  const [autoReply, setAutoReply] = useState("");
+  const [minTradeCount, setMinTradeCount] = useState("0");
+  const [allowNewTraders, setAllowNewTraders] = useState(true);
+  const [blockList, setBlockList] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marketRate, setMarketRate] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Counterparty requirements
+  const [completedOrders, setCompletedOrders] = useState("60");
+  const [completionRate, setCompletionRate] = useState("95");
+  const [requireMobile, setRequireMobile] = useState(false);
+  const [requireEmail, setRequireEmail] = useState(false);
+  const [noTradesWithOthers, setNoTradesWithOthers] = useState(false);
+  const [maxOrdersPerUser, setMaxOrdersPerUser] = useState("1");
+  const [registeredFor, setRegisteredFor] = useState("15");
+  const [regionRestrictions, setRegionRestrictions] = useState<string[]>([]);
+
+  // Payment method selection
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
-  const [paymentSearchQuery, setPaymentSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [, params] = useRoute("/edit-offer/:offerId");
-  const offerId = params?.offerId;
-  const isEditMode = !!offerId;
 
   useEffect(() => {
     const fetchLivePrices = async () => {
@@ -118,7 +128,7 @@ export function CreateOffer() {
     };
 
     fetchLivePrices();
-    const interval = setInterval(fetchLivePrices, 30000);
+    const interval = setInterval(fetchLivePrices, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
   }, [crypto, currency]);
@@ -148,135 +158,9 @@ export function CreateOffer() {
     fetchPaymentMethods();
   }, []);
 
-  // Load existing offer when in edit mode
-  useEffect(() => {
-    if (isEditMode && offerId) {
-      const loadOffer = async () => {
-        try {
-          setLoading(true);
-          const supabase = createClient();
-          const { data, error } = await supabase
-            .from("p2p_offers")
-            .select("*")
-            .eq("id", offerId)
-            .single();
-
-          if (error) {
-            console.error("Error loading offer:", error);
-            toast({
-              title: "Error",
-              description: "Failed to load offer",
-              variant: "destructive",
-            });
-            setLocation("/my-offers");
-            return;
-          }
-
-          if (data) {
-            // Pre-fill form with existing offer data
-            setOfferType(data.offer_type);
-            setCrypto(data.crypto_symbol);
-            setPaymentMethod(Array.isArray(data.payment_methods) ? data.payment_methods[0] : data.payment_methods);
-            setCurrency(data.fiat_currency);
-            setCountry(data.country || "");
-            setMinAmount(data.min_amount.toString());
-            setMaxAmount(data.max_amount.toString());
-            setTotalQuantity(data.available_amount.toString());
-            setTimeLimit(data.time_limit?.toString() || "30");
-
-            if (data.fixed_price) {
-              setPriceType("fixed");
-              setFixedPrice(data.fixed_price.toString());
-            } else if (data.price_offset !== undefined) {
-              setPriceType("floating");
-              setPriceOffset([data.price_offset]);
-            }
-          }
-        } catch (error) {
-          console.error("Error loading offer:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load offer",
-            variant: "destructive",
-          });
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      loadOffer();
-    }
-  }, [isEditMode, offerId]);
-
   const yourRate = priceType === "fixed" 
     ? parseFloat(fixedPrice) || marketRate
     : marketRate * (1 + priceOffset[0] / 100);
-
-  const paymentCategories = [
-    { id: "all", name: "All payment methods" },
-    { id: "bank", name: "Bank transfers" },
-    { id: "wallet", name: "Online wallets" },
-    { id: "card", name: "Debit/credit cards" },
-    { id: "gift", name: "Gift cards" },
-    { id: "digital", name: "Digital currencies" },
-    { id: "goods", name: "Goods and services" },
-  ];
-
-  const allPaymentMethods = [
-    // Bank Transfers
-    { id: "bank-transfer", name: "Bank Transfer", icon: Building2, category: "bank" },
-    { id: "wire", name: "Domestic Wire Transfer", icon: Building2, category: "bank" },
-    { id: "ach", name: "ACH Transfer", icon: Building2, category: "bank" },
-    { id: "sepa", name: "SEPA Transfer", icon: Building2, category: "bank" },
-    { id: "swift", name: "SWIFT Transfer", icon: Building2, category: "bank" },
-
-    // Online Wallets
-    { id: "paypal", name: "PayPal", icon: Wallet, category: "wallet" },
-    { id: "google-pay", name: "Google Pay", icon: Smartphone, category: "wallet" },
-    { id: "apple-pay", name: "Apple Pay", icon: Smartphone, category: "wallet" },
-    { id: "advcash", name: "AdvCash", icon: Wallet, category: "wallet" },
-    { id: "airtel", name: "Airtel Money", icon: Smartphone, category: "wallet" },
-    { id: "alipay", name: "Alipay", icon: Smartphone, category: "wallet" },
-    { id: "mtn", name: "MTN Mobile Money", icon: Smartphone, category: "wallet" },
-    { id: "skrill", name: "Skrill", icon: Wallet, category: "wallet" },
-    { id: "neteller", name: "Neteller", icon: Wallet, category: "wallet" },
-    { id: "venmo", name: "Venmo", icon: Smartphone, category: "wallet" },
-    { id: "cashapp", name: "Cash App", icon: Smartphone, category: "wallet" },
-    { id: "zelle", name: "Zelle", icon: Smartphone, category: "wallet" },
-    { id: "wechat", name: "WeChat Pay", icon: Smartphone, category: "wallet" },
-
-    // Debit/Credit Cards
-    { id: "visa", name: "Visa", icon: CreditCard, category: "card" },
-    { id: "mastercard", name: "Mastercard", icon: CreditCard, category: "card" },
-    { id: "amex", name: "American Express", icon: CreditCard, category: "card" },
-    { id: "discover", name: "Discover", icon: CreditCard, category: "card" },
-    { id: "debit", name: "Debit Card", icon: CreditCard, category: "card" },
-    { id: "credit", name: "Credit Card", icon: CreditCard, category: "card" },
-
-    // Gift Cards
-    { id: "amazon", name: "Amazon Gift Card", icon: Gift, category: "gift" },
-    { id: "apple-gift", name: "Apple Gift Card", icon: Gift, category: "gift" },
-    { id: "google-play", name: "Google Play", icon: Gift, category: "gift" },
-    { id: "steam", name: "Steam", icon: Gift, category: "gift" },
-    { id: "itunes", name: "iTunes Gift Card", icon: Gift, category: "gift" },
-    { id: "xbox", name: "Xbox Gift Card", icon: Gift, category: "gift" },
-    { id: "playstation", name: "PlayStation Gift Card", icon: Gift, category: "gift" },
-    { id: "netflix", name: "Netflix Gift Card", icon: Gift, category: "gift" },
-    { id: "spotify", name: "Spotify Gift Card", icon: Gift, category: "gift" },
-
-    // Digital Currencies
-    { id: "bitcoin", name: "Bitcoin (BTC)", icon: Bitcoin, category: "digital" },
-    { id: "ethereum", name: "Ethereum (ETH)", icon: Coins, category: "digital" },
-    { id: "usdt", name: "Tether (USDT)", icon: Coins, category: "digital" },
-    { id: "usdc", name: "USD Coin (USDC)", icon: Coins, category: "digital" },
-    { id: "arweave", name: "Arweave (AR)", icon: Coins, category: "digital" },
-    { id: "litecoin", name: "Litecoin (LTC)", icon: Coins, category: "digital" },
-
-    // Goods and Services
-    { id: "merchandise", name: "Merchandise", icon: MapPin, category: "goods" },
-    { id: "services", name: "Services", icon: MapPin, category: "goods" },
-    { id: "vouchers", name: "Vouchers", icon: Gift, category: "goods" },
-  ];
 
   const handleCreateOffer = async () => {
     if (!checkCanCreateOffer()) {
@@ -314,15 +198,6 @@ export function CreateOffer() {
       toast({
         title: "Missing Information",
         description: "Please select a payment method and currency",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (paymentMethod && !selectedPaymentMethodId && paymentMethods.length > 0) {
-      toast({
-        title: "Bank Account Required",
-        description: "Please select a bank account for your payment method",
         variant: "destructive",
       });
       return;
@@ -368,7 +243,7 @@ export function CreateOffer() {
 
       const totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
 
-      const offerData = {
+      const { error } = await supabase.from("p2p_offers").insert({
         user_id: user.id,
         offer_type: offerType,
         crypto_symbol: crypto,
@@ -381,36 +256,20 @@ export function CreateOffer() {
         max_amount: maxAmountNum,
         available_amount: maxAmountNum,
         total_quantity: totalQuantityNum,
-        country_restrictions: country ? [country] : null,
+        country_restrictions: country && country !== "ALL" ? [country] : null,
+        // Payment method reference
         payment_method_id: selectedPaymentMethodId || null,
-        time_limit_minutes: parseInt(timeLimit),
         is_active: true,
-      };
-
-      let error;
-      if (isEditMode && offerId) {
-        // Update existing offer
-        const result = await supabase
-          .from("p2p_offers")
-          .update(offerData)
-          .eq("id", offerId);
-        error = result.error;
-      } else {
-        // Create new offer
-        const result = await supabase.from("p2p_offers").insert(offerData);
-        error = result.error;
-      }
+      });
 
       if (error) throw error;
 
       toast({
-        title: isEditMode ? "Offer Updated!" : "Offer Created!",
-        description: isEditMode 
-          ? "Your offer has been successfully updated" 
-          : "Your offer has been successfully listed on the P2P marketplace",
+        title: "Offer Created!",
+        description: "Your advanced offer has been successfully listed on the P2P marketplace",
       });
 
-      setLocation("/my-offers");
+      setLocation("/p2p");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -426,21 +285,21 @@ export function CreateOffer() {
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-2xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-4xl font-bold">{isEditMode ? "Edit offer" : "Create an offer"}</h1>
-          <Badge variant="outline">LITE</Badge>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setLocation("/create-offer")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-4xl font-bold">Create Advanced Offer</h1>
+          </div>
+          <Badge variant="default">ADVANCED</Badge>
         </div>
 
         <p className="text-muted-foreground mb-8">
-          {isEditMode 
-            ? "Update your offer details below." 
-            : <>List your ad in our P2P marketplace. More settings in the{" "}
-                <button 
-                  onClick={() => setLocation("/create-offer-advanced")} 
-                  className="underline text-primary hover:text-primary/80"
-                >
-                  advanced version
-                </button>.</>
-          }
+          Create a detailed P2P offer with advanced settings and custom requirements.
         </p>
 
         {/* Verification Alert */}
@@ -662,159 +521,30 @@ export function CreateOffer() {
                     <span>Bitcoin (BTC)</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="ETH">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">Ξ</span>
-                    <span>Ethereum (ETH)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="USDT">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg text-green-600">₮</span>
-                    <span>Tether (USDT)</span>
-                  </div>
-                </SelectItem>
+                <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
+                <SelectItem value="USDT">Tether (USDT)</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* I want section */}
+          {/* Payment & Currency */}
           <div>
             <Label className="text-sm text-muted-foreground mb-2 block">
               {offerType === "buy" ? "I will pay with" : "I want"}
             </Label>
             <div className="space-y-3">
-              <Dialog open={openPaymentDialog} onOpenChange={setOpenPaymentDialog}>
-                <DialogTrigger asChild>
-                  <div className="relative cursor-pointer">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      placeholder={paymentMethod || "Select payment method"}
-                      className="pl-10 pr-12 h-12 bg-elevate-1 text-base cursor-pointer"
-                      readOnly
-                    />
-                    <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-accent rounded-md transition-colors">
-                      <Menu className="h-5 w-5 text-muted-foreground" />
-                    </button>
-                  </div>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md h-full sm:h-auto max-h-screen p-0 flex flex-col">
-                  <div className="sticky top-0 bg-background z-10 border-b">
-                    <div className="flex items-center gap-3 p-4 pb-0">
-                      <button 
-                        onClick={() => setOpenPaymentDialog(false)}
-                        className="p-1 hover:bg-muted rounded-md transition-colors"
-                      >
-                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                          placeholder="Search"
-                          value={paymentSearchQuery}
-                          onChange={(e) => setPaymentSearchQuery(e.target.value)}
-                          className="pl-10 h-12 border-0 focus-visible:ring-0 bg-muted"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="overflow-x-auto px-4 pt-4">
-                      <div className="flex gap-3 pb-3 border-b">
-                        {paymentCategories.map((cat) => (
-                          <button
-                            key={cat.id}
-                            onClick={() => setSelectedCategory(cat.id)}
-                            className={cn(
-                              "pb-2 px-1 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px",
-                              selectedCategory === cat.id
-                                ? "border-foreground text-foreground"
-                                : "border-transparent text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            {cat.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="px-4 py-3 flex justify-center">
-                      <Button
-                        variant="outline"
-                        className="rounded-full px-6"
-                        onClick={() => {
-                          setPaymentSearchQuery("");
-                          setSelectedCategory("all");
-                        }}
-                      >
-                        Clear Filter
-                      </Button>
-                    </div>
-                  </div>
-
-                  <ScrollArea className="flex-1">
-                    <div className="px-4 py-4 space-y-6">
-                      {selectedCategory === "all" ? (
-                        paymentCategories.slice(1).map((category) => {
-                          const categoryMethods = allPaymentMethods.filter(
-                            (method) => 
-                              method.category === category.id &&
-                              method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase())
-                          );
-
-                          if (categoryMethods.length === 0) return null;
-
-                          return (
-                            <div key={category.id}>
-                              <h3 className="text-sm font-semibold mb-3 capitalize">
-                                {category.name}
-                              </h3>
-                              <div className="grid grid-cols-2 gap-2">
-                                {categoryMethods.map((method) => (
-                                  <button
-                                    key={method.id}
-                                    onClick={() => {
-                                      setPaymentMethod(method.name);
-                                      setOpenPaymentDialog(false);
-                                    }}
-                                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors text-left"
-                                  >
-                                    <method.icon className="h-5 w-5 text-muted-foreground shrink-0" />
-                                    <span className="text-sm">{method.name}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="grid grid-cols-2 gap-2">
-                          {allPaymentMethods
-                            .filter(
-                              (method) => 
-                                method.category === selectedCategory &&
-                                method.name.toLowerCase().includes(paymentSearchQuery.toLowerCase())
-                            )
-                            .map((method) => (
-                              <button
-                                key={method.id}
-                                onClick={() => {
-                                  setPaymentMethod(method.name);
-                                  setOpenPaymentDialog(false);
-                                }}
-                                className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors text-left"
-                              >
-                                <method.icon className="h-5 w-5 text-muted-foreground shrink-0" />
-                                <span className="text-sm">{method.name}</span>
-                              </button>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </DialogContent>
-              </Dialog>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="h-12 bg-elevate-1">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Mobile Money">Mobile Money</SelectItem>
+                  <SelectItem value="PayPal">PayPal</SelectItem>
+                  <SelectItem value="Cash App">Cash App</SelectItem>
+                  <SelectItem value="Zelle">Zelle</SelectItem>
+                </SelectContent>
+              </Select>
 
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger className="h-12 bg-elevate-1">
@@ -890,7 +620,7 @@ export function CreateOffer() {
             </div>
           </div>
 
-          {/* Offer Type Selection */}
+          {/* Price Type Selection */}
           <div>
             <Label className="text-sm text-muted-foreground mb-2 block">Price Type</Label>
             <div className="grid grid-cols-2 gap-3">
@@ -974,31 +704,35 @@ export function CreateOffer() {
                     <span className="font-bold font-mono">{yourRate.toFixed(2)} {currency}</span>
                   </div>
                 </div>
-                {priceType === "floating" && (
-                  <p className="text-xs text-muted-foreground mt-4">
-                    *You will sell at <span className="font-bold">market price {priceOffset[0] > 0 ? "+" : ""}{priceOffset[0]}%</span>
-                  </p>
-                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Payment Time Limit */}
+          {/* Offer Status */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Payment Time Limit</Label>
-            <Select value={timeLimit} onValueChange={setTimeLimit}>
-              <SelectTrigger className="h-12 bg-elevate-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 minutes</SelectItem>
-                <SelectItem value="30">30 minutes</SelectItem>
-                <SelectItem value="45">45 minutes</SelectItem>
-                <SelectItem value="60">60 minutes</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-sm text-muted-foreground mb-2 block">Offer Status</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={offerStatus === "online" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferStatus("online")}
+              >
+                Online
+              </Button>
+              <Button
+                type="button"
+                variant={offerStatus === "private" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferStatus("private")}
+              >
+                Private
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Time allowed for the buyer to complete payment
+              {offerStatus === "online" 
+                ? "Your offer will be visible to all users" 
+                : "Your offer will only be visible to users you share the link with"}
             </p>
           </div>
 
@@ -1034,8 +768,35 @@ export function CreateOffer() {
             </p>
           </div>
 
+          {/* Limit section */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-4 block">
+              Trade limits
+            </Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Minimum</Label>
+                <Input 
+                  type="number"
+                  value={minAmount}
+                  onChange={(e) => setMinAmount(e.target.value)}
+                  className="bg-elevate-1 text-center text-lg font-bold"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Maximum</Label>
+                <Input 
+                  type="number"
+                  value={maxAmount}
+                  onChange={(e) => setMaxAmount(e.target.value)}
+                  className="bg-elevate-1 text-center text-lg font-bold"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Bank Payment Method Selection */}
-          {paymentMethod && (
+          {paymentMethod === "Bank Transfer" && (
             <Card className="bg-elevate-1 border-border">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -1081,45 +842,287 @@ export function CreateOffer() {
             </Card>
           )}
 
-          {/* Limit section */}
-          <div>
-            <Label className="text-sm text-muted-foreground mb-4 block">
-              Limit your offer to
-            </Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  value={minAmount}
-                  onChange={(e) => setMinAmount(e.target.value)}
-                  className="bg-elevate-1 text-center text-lg font-bold"
-                />
-                <p className="text-xs text-muted-foreground text-center mt-1">
-                  ≈0.00008331 {crypto}
-                </p>
-              </div>
-              <div>
-                <Input 
-                  value={maxAmount}
-                  onChange={(e) => setMaxAmount(e.target.value)}
-                  className="bg-elevate-1 text-center text-lg font-bold"
-                />
-                <p className="text-xs text-muted-foreground text-center mt-1">
-                  ≈0.00083309 {crypto}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mt-4">
-              <Checkbox id="exact-amounts" />
-              <Label htmlFor="exact-amounts" className="text-sm">
-                Use exact amounts
-              </Label>
-            </div>
-          </div>
+          {/* Advanced Settings */}
+          <Card className="bg-elevate-1 border-border">
+            <CardContent className="p-6 space-y-6">
+              <h3 className="text-lg font-bold">Advanced Settings</h3>
 
-          <p className="text-sm text-muted-foreground text-center py-4">
-            We can't estimate your offer position at the moment. 
-            Create an offer to view it in your offer list.
-          </p>
+              {/* Offer Label */}
+              <div>
+                <Label className="text-sm mb-2 block">Offer Label (Optional)</Label>
+                <Input 
+                  value={offerLabel}
+                  onChange={(e) => setOfferLabel(e.target.value)}
+                  placeholder="e.g., Fast & Reliable"
+                  className="bg-elevate-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Add a short label to make your offer stand out
+                </p>
+              </div>
+
+              {/* Payment Time Limit */}
+              <div>
+                <Label className="text-sm text-muted-foreground mb-2 block">Payment Time Limit (minutes)</Label>
+                <Select value={timeLimit} onValueChange={setTimeLimit}>
+                  <SelectTrigger className="h-12 bg-elevate-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">60 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Auto Reply */}
+              <div>
+                <Label className="text-sm mb-2 block">Auto Reply Message</Label>
+                <Textarea 
+                  value={autoReply}
+                  onChange={(e) => setAutoReply(e.target.value)}
+                  placeholder="This message will be sent automatically when a trade starts..."
+                  className="bg-elevate-1 min-h-20"
+                />
+              </div>
+
+              {/* Offer Terms */}
+              <div>
+                <Label className="text-sm mb-2 block">Offer Terms & Conditions</Label>
+                <Textarea 
+                  value={offerTerms}
+                  onChange={(e) => setOfferTerms(e.target.value)}
+                  placeholder="Enter your trading terms and conditions..."
+                  className="bg-elevate-1 min-h-32"
+                />
+              </div>
+
+              {/* Counterparty Requirements */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">Requirements for Counterparty</h4>
+                <p className="text-xs text-muted-foreground">
+                  This setting allows you to screen out credible counterparties but may also reduce the exposure of your advertisements.
+                </p>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="completed-orders"
+                    checked={completedOrders !== "0"}
+                    onCheckedChange={(checked) => setCompletedOrders(checked ? "60" : "0")}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="completed-orders" className="text-sm">
+                      Completed Order(s) in 30 Days≥
+                    </Label>
+                    {completedOrders !== "0" && (
+                      <Select value={completedOrders} onValueChange={setCompletedOrders}>
+                        <SelectTrigger className="mt-2 bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="30">30</SelectItem>
+                          <SelectItem value="60">60</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="completion-rate"
+                    checked={completionRate !== "0"}
+                    onCheckedChange={(checked) => setCompletionRate(checked ? "95" : "0")}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="completion-rate" className="text-sm">
+                      30-Day Order Completion Rate (%)≥
+                    </Label>
+                    {completionRate !== "0" && (
+                      <Select value={completionRate} onValueChange={setCompletionRate}>
+                        <SelectTrigger className="mt-2 bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="50">50%</SelectItem>
+                          <SelectItem value="75">75%</SelectItem>
+                          <SelectItem value="85">85%</SelectItem>
+                          <SelectItem value="95">95%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="mobile-linked"
+                    checked={requireMobile}
+                    onCheckedChange={setRequireMobile}
+                  />
+                  <Label htmlFor="mobile-linked" className="text-sm">
+                    Mobile No. Linked
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="email-linked"
+                    checked={requireEmail}
+                    onCheckedChange={setRequireEmail}
+                  />
+                  <Label htmlFor="email-linked" className="text-sm">
+                    Email Linked
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="require-verification"
+                    checked={requireVerification}
+                    onCheckedChange={setRequireVerification}
+                  />
+                  <Label htmlFor="require-verification" className="text-sm">
+                    Require Identity Verification
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="no-trades"
+                    checked={noTradesWithOthers}
+                    onCheckedChange={setNoTradesWithOthers}
+                  />
+                  <Label htmlFor="no-trades" className="text-sm">
+                    No Trades With Other Advertisers
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="max-orders"
+                    checked={maxOrdersPerUser !== "999"}
+                    onCheckedChange={(checked) => setMaxOrdersPerUser(checked ? "1" : "999")}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="max-orders" className="text-sm">
+                      Each user can place up to orders on this ad.≥
+                    </Label>
+                    {maxOrdersPerUser !== "999" && (
+                      <Select value={maxOrdersPerUser} onValueChange={setMaxOrdersPerUser}>
+                        <SelectTrigger className="mt-2 bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1</SelectItem>
+                          <SelectItem value="3">3</SelectItem>
+                          <SelectItem value="5">5</SelectItem>
+                          <SelectItem value="10">10</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="registered-for"
+                    checked={registeredFor !== "0"}
+                    onCheckedChange={(checked) => setRegisteredFor(checked ? "15" : "0")}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="registered-for" className="text-sm">
+                      Registered For≥
+                    </Label>
+                    {registeredFor !== "0" && (
+                      <Select value={registeredFor} onValueChange={setRegisteredFor}>
+                        <SelectTrigger className="mt-2 bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="7">7 days</SelectItem>
+                          <SelectItem value="15">15 days</SelectItem>
+                          <SelectItem value="30">30 days</SelectItem>
+                          <SelectItem value="90">90 days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="region-restrictions"
+                    checked={regionRestrictions.length > 0}
+                    onCheckedChange={(checked) => setRegionRestrictions(checked ? [] : [])}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="region-restrictions" className="text-sm">
+                      Only available to users from select regions.
+                    </Label>
+                    {regionRestrictions.length > 0 && (
+                      <Select>
+                        <SelectTrigger className="mt-2 bg-background">
+                          <SelectValue placeholder="Please Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NG">🇳🇬 Nigeria</SelectItem>
+                          <SelectItem value="US">🇺🇸 United States</SelectItem>
+                          <SelectItem value="GB">🇬🇧 United Kingdom</SelectItem>
+                          <SelectItem value="GH">🇬🇭 Ghana</SelectItem>
+                          <SelectItem value="KE">🇰🇪 Kenya</SelectItem>
+                          <SelectItem value="ZA">🇿🇦 South Africa</SelectItem>
+                          <SelectItem value="CA">🇨🇦 Canada</SelectItem>
+                          <SelectItem value="AU">🇦🇺 Australia</SelectItem>
+                          <SelectItem value="IN">🇮🇳 India</SelectItem>
+                          <SelectItem value="PH">🇵🇭 Philippines</SelectItem>
+                          <SelectItem value="ID">🇮🇩 Indonesia</SelectItem>
+                          <SelectItem value="MY">🇲🇾 Malaysia</SelectItem>
+                          <SelectItem value="SG">🇸🇬 Singapore</SelectItem>
+                          <SelectItem value="TH">🇹🇭 Thailand</SelectItem>
+                          <SelectItem value="VN">🇻🇳 Vietnam</SelectItem>
+                          <SelectItem value="AE">🇦🇪 UAE</SelectItem>
+                          <SelectItem value="SA">🇸🇦 Saudi Arabia</SelectItem>
+                          <SelectItem value="EG">🇪🇬 Egypt</SelectItem>
+                          <SelectItem value="DZ">🇩🇿 Algeria</SelectItem>
+                          <SelectItem value="ET">🇪🇹 Ethiopia</SelectItem>
+                          <SelectItem value="FR">🇫🇷 France</SelectItem>
+                          <SelectItem value="DE">🇩🇪 Germany</SelectItem>
+                          <SelectItem value="IT">🇮🇹 Italy</SelectItem>
+                          <SelectItem value="ES">🇪🇸 Spain</SelectItem>
+                          <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
+                          <SelectItem value="MX">🇲🇽 Mexico</SelectItem>
+                          <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
+                          <SelectItem value="DO">🇩🇴 Dominican Republic</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm mb-2 block">Block List (Optional)</Label>
+                  <Textarea 
+                    value={blockList}
+                    onChange={(e) => setBlockList(e.target.value)}
+                    placeholder="Enter usernames to block, separated by commas..."
+                    className="bg-background"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>ⓘ</span>
+                  <p>
+                    Once the Identity Verification is completed, you can easily place an order on the P2P trading platform without any extra setup.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Fee info */}
           <Card className="bg-elevate-1 border-border">
@@ -1129,20 +1132,13 @@ export function CreateOffer() {
             </CardContent>
           </Card>
 
-          {/* Offer terms */}
-          <Button variant="ghost" className="w-full text-primary">
-            Offer terms
-          </Button>
-
           {/* Submit button */}
           <Button 
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6"
             onClick={handleCreateOffer}
             disabled={isSubmitting}
           >
-            {isSubmitting 
-              ? (isEditMode ? "Updating offer..." : "Creating offer...") 
-              : (isEditMode ? "Update offer" : "Place an offer")}
+            {isSubmitting ? "Creating offer..." : "Place Advanced Offer"}
           </Button>
         </div>
       </main>
