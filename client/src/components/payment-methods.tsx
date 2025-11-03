@@ -4,14 +4,14 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const paymentCategories = [
-  { icon: Building2, name: "Bank Transfer", count: "200+", methods: ["ACH", "SEPA", "Wire Transfer", "SWIFT", "Local Bank", "BACS", "CHAPS", "FPS", "TARGET2", "RTGS"] },
-  { icon: CreditCard, name: "Credit/Debit Cards", count: "80+", methods: ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Diners Club", "Maestro", "RuPay", "Elo"] },
-  { icon: Smartphone, name: "Mobile Money", count: "150+", methods: ["M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Tigo Pesa", "Vodafone Cash", "Ecocash", "Wave", "Moov Money", "GCash"] },
-  { icon: Gift, name: "Gift Cards", count: "120+", methods: ["Amazon", "Apple", "Google Play", "Steam", "eBay", "iTunes", "Xbox", "PlayStation", "Target", "Walmart"] },
-  { icon: Wallet, name: "E-Wallets", count: "100+", methods: ["PayPal", "Skrill", "Neteller", "Perfect Money", "WebMoney", "Payeer", "AdvCash", "EcoPayz", "Payoneer", "Paytm"] },
-  { icon: DollarSign, name: "Digital Wallets", count: "90+", methods: ["Zelle", "Venmo", "Cash App", "Apple Pay", "Google Pay", "Samsung Pay", "WeChat Pay", "Alipay", "PhonePe", "Paytm"] },
-  { icon: Banknote, name: "Cash Payments", count: "60+", methods: ["Cash Deposit", "Cash in Person", "ATM", "Western Union", "Remitly", "Ria", "Moneygram", "Xoom", "WorldRemit", "Cash Pickup"] },
-  { icon: ArrowRightLeft, name: "Money Transfer", count: "85+", methods: ["Wise", "Remitly", "WorldRemit", "MoneyGram", "Ria", "Xoom", "Azimo", "TransferGo", "InstaReM", "Xe"] },
+  { image: "/attached_assets/IMG_2020_1762129044150.jpeg", name: "Bank Transfer", count: "200+", methods: ["ACH", "SEPA", "Wire Transfer", "SWIFT", "Local Bank", "BACS", "CHAPS", "FPS", "TARGET2", "RTGS"] },
+  { image: "/attached_assets/IMG_2021_1762129044150.jpeg", name: "Credit/Debit Cards", count: "80+", methods: ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Diners Club", "Maestro", "RuPay", "Elo"] },
+  { image: "/attached_assets/IMG_2022_1762129044151.jpeg", name: "Mobile Money", count: "150+", methods: ["M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Tigo Pesa", "Vodafone Cash", "Ecocash", "Wave", "Moov Money", "GCash"] },
+  { image: "/attached_assets/IMG_2023_1762129044151.jpeg", name: "Gift Cards", count: "120+", methods: ["Amazon", "Apple", "Google Play", "Steam", "eBay", "iTunes", "Xbox", "PlayStation", "Target", "Walmart"] },
+  { image: "/attached_assets/IMG_2025_1762129044151.jpeg", name: "E-Wallets", count: "100+", methods: ["PayPal", "Skrill", "Neteller", "Perfect Money", "WebMoney", "Payeer", "AdvCash", "EcoPayz", "Payoneer", "Paytm"] },
+  { image: "/attached_assets/IMG_2026_1762129044151.jpeg", name: "Digital Wallets", count: "90+", methods: ["Zelle", "Venmo", "Cash App", "Apple Pay", "Google Pay", "Samsung Pay", "WeChat Pay", "Alipay", "PhonePe", "Paytm"] },
+  { image: "/attached_assets/IMG_2028_1762129044151.jpeg", name: "Cash Payments", count: "60+", methods: ["Cash Deposit", "Cash in Person", "ATM", "Western Union", "Remitly", "Ria", "Moneygram", "Xoom", "WorldRemit", "Cash Pickup"] },
+  { image: "/attached_assets/IMG_2029_1762129044151.jpeg", name: "Money Transfer", count: "85+", methods: ["Wise", "Remitly", "WorldRemit", "MoneyGram", "Ria", "Xoom", "Azimo", "TransferGo", "InstaReM", "Xe"] },
   { icon: Globe, name: "International", count: "110+", methods: ["TransferWise", "Revolut", "N26", "Payoneer", "Paysera", "Monese", "Starling", "Bunq", "Vivid", "Lydia"] },
   { icon: Landmark, name: "Banking Apps", count: "130+", methods: ["Chime", "Varo", "Current", "SoFi", "Ally", "Marcus", "Discover", "Capital One", "Chase", "Bank of America"] },
   { icon: ShoppingCart, name: "Buy Now Pay Later", count: "45+", methods: ["Klarna", "Afterpay", "Affirm", "Sezzle", "Quadpay", "Zip", "Laybuy", "Clearpay", "Splitit", "Humm"] },
@@ -72,8 +72,16 @@ export function PaymentMethods() {
           {paymentCategories.map((method, index) => (
             <Card key={index} className="hover-elevate active-elevate-2 cursor-pointer transition-all" data-testid={`card-payment-${method.name.toLowerCase().replace(/\s+/g, '-')}`}>
               <div className="p-6 text-center space-y-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto">
-                  <method.icon className="h-7 w-7 text-primary" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto overflow-hidden">
+                  {'image' in method ? (
+                    <img 
+                      src={method.image} 
+                      alt={method.name}
+                      className="w-full h-full object-contain p-1"
+                    />
+                  ) : (
+                    <method.icon className="h-7 w-7 text-primary" />
+                  )}
                 </div>
                 <div>
                   <div className="font-semibold text-foreground mb-1">{method.name}</div>
