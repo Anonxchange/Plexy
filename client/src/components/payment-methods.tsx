@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 const paymentCategories = [
   { image: "/assets/IMG_2020.jpeg", name: "Bank Transfer", count: "200+", methods: ["ACH", "SEPA", "Wire Transfer", "SWIFT", "Local Bank", "BACS", "CHAPS", "FPS", "TARGET2", "RTGS"] },
   { image: "/assets/IMG_2021.jpeg", name: "Credit/Debit Cards", count: "80+", methods: ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Diners Club", "Maestro", "RuPay", "Elo"] },
-  { image: "/assets/IMG_1805.jpeg", name: "Mobile Money", count: "150+", methods: ["M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Tigo Pesa", "Vodafone Cash", "Ecocash", "Wave", "Moov Money", "GCash"] },
-  { image: "/assets/IMG_1807.jpeg", name: "Gift Cards", count: "120+", methods: ["Amazon", "Apple", "Google Play", "Steam", "eBay", "iTunes", "Xbox", "PlayStation", "Target", "Walmart"] },
+  { image: "/assets/IMG_2022.jpeg", name: "Mobile Money", count: "150+", methods: ["M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Tigo Pesa", "Vodafone Cash", "Ecocash", "Wave", "Moov Money", "GCash"] },
+  { image: "/assets/IMG_2023.jpeg", name: "Gift Cards", count: "120+", methods: ["Amazon", "Apple", "Google Play", "Steam", "eBay", "iTunes", "Xbox", "PlayStation", "Target", "Walmart"] },
   { image: "/assets/IMG_1808.jpeg", name: "E-Wallets", count: "100+", methods: ["PayPal", "Skrill", "Neteller", "Perfect Money", "WebMoney", "Payeer", "AdvCash", "EcoPayz", "Payoneer", "Paytm"] },
   { image: "/assets/IMG_1809.jpeg", name: "Digital Wallets", count: "90+", methods: ["Zelle", "Venmo", "Cash App", "Apple Pay", "Google Pay", "Samsung Pay", "WeChat Pay", "Alipay", "PhonePe", "Paytm"] },
   { image: "/assets/IMG_1810.jpeg", name: "Cash Payments", count: "60+", methods: ["Cash Deposit", "Cash in Person", "ATM", "Western Union", "Remitly", "Ria", "Moneygram", "Xoom", "WorldRemit", "Cash Pickup"] },
