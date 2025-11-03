@@ -80,7 +80,7 @@ export default function Support() {
         <div className="max-w-4xl mx-auto text-center space-y-6">
           <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-6 overflow-hidden">
             <img 
-              src="/assets/IMG_1845.jpeg" 
+              src="/assets/IMG_2011.jpeg" 
               alt="Support"
               className="w-full h-full object-contain"
             />
@@ -112,7 +112,7 @@ export default function Support() {
             <div className="flex items-center gap-6">
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 <img 
-                  src="/assets/IMG_1845.jpeg" 
+                  src="/assets/IMG_2012.jpeg" 
                   alt="Browse articles"
                   className="w-full h-full object-contain"
                 />
@@ -134,7 +134,7 @@ export default function Support() {
         <div className="text-center mb-12">
           <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
             <img 
-              src="/assets/IMG_1843.jpeg" 
+              src="/assets/IMG_2014.jpeg" 
               alt="Knowledge base"
               className="w-full h-full object-contain"
             />
@@ -172,7 +172,7 @@ export default function Support() {
         <div className="text-center mb-12">
           <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
             <img 
-              src="/assets/IMG_1839.jpeg" 
+              src="/assets/IMG_2013.jpeg" 
               alt="Need help"
               className="w-full h-full object-contain"
             />
@@ -184,9 +184,9 @@ export default function Support() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {supportOptions.map((option, index) => {
             const supportImages = [
-              "/assets/IMG_1861.jpeg",
-              "/assets/IMG_1862.jpeg",
-              "/assets/IMG_1875.jpeg"
+              "/assets/IMG_2015.jpeg",
+              "/assets/IMG_2016.jpeg",
+              "/assets/IMG_2017.jpeg"
             ];
             return (
               <Card key={index} className="hover:shadow-lg transition-shadow">
@@ -227,7 +227,7 @@ export default function Support() {
         <div className="text-center mb-12">
           <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 overflow-hidden">
             <img 
-              src="/assets/IMG_1830.jpeg" 
+              src="/assets/IMG_2012.jpeg" 
               alt="FAQ"
               className="w-full h-full object-contain"
             />
