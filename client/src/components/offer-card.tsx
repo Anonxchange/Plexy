@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign, Globe } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign, Globe, Shield, Award } from "lucide-react";
 import { TradeDialog } from "./trade-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,7 @@ export interface OfferCardProps {
     responseTime: string;
     id?: string;
     country?: string;
+    merchantStatus?: string;
   };
   paymentMethod: string;
   pricePerBTC: number;
@@ -169,8 +171,6 @@ export function OfferCard({
         open={showTradeDialog}
         onOpenChange={setShowTradeDialog}
         offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, time_limit_minutes, country_restrictions, ...offer } as OfferCardProps}
-        // Added a description for accessibility
-        description="Trade dialog for offer details"
       />
       <Card className="hover:shadow-lg transition-shadow border-purple-100 dark:border-purple-900/30" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
         <CardContent className="p-3 sm:p-4 space-y-3">
@@ -198,6 +198,18 @@ export function OfferCard({
                       <Circle className="h-1.5 w-1.5 sm:h-2 sm:w-2 fill-green-600" />
                       <span className="hidden xs:inline">POWER</span>
                     </span>
+                  )}
+                  {vendor.merchantStatus === "block_merchant" && (
+                    <Badge variant="default" className="text-[10px] sm:text-xs px-1 sm:px-2 py-0 h-4 sm:h-5 bg-purple-600 hover:bg-purple-700 flex items-center gap-0.5 flex-shrink-0">
+                      <Award className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                      <span className="hidden sm:inline">Block</span>
+                    </Badge>
+                  )}
+                  {vendor.merchantStatus === "verified_merchant" && (
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-2 py-0 h-4 sm:h-5 bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-0.5 flex-shrink-0">
+                      <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                      <span className="hidden sm:inline">Verified</span>
+                    </Badge>
                   )}
                   {userMedals.length > 0 && (
                     <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
