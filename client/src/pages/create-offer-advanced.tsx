@@ -26,6 +26,7 @@ import { canCreateOffer } from "@shared/verification-levels";
 import { getMerchantLevel } from "@shared/merchant-levels";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PexlyFooter } from "@/components/pexly-footer";
 
 export function CreateOfferAdvanced() {
   const { 
