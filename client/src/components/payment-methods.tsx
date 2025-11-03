@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const paymentCategories = [
-  { image: "/attached_assets/IMG_2020_1762129044150.jpeg", name: "Bank Transfer", count: "200+", methods: ["ACH", "SEPA", "Wire Transfer", "SWIFT", "Local Bank", "BACS", "CHAPS", "FPS", "TARGET2", "RTGS"] },
+  { image: "/attached_assets/IMG_1541.png", name: "Bank Transfer", count: "200+", methods: ["ACH", "SEPA", "Wire Transfer", "SWIFT", "Local Bank", "BACS", "CHAPS", "FPS", "TARGET2", "RTGS"] },
   { image: "/attached_assets/IMG_2021_1762129044150.jpeg", name: "Credit/Debit Cards", count: "80+", methods: ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Diners Club", "Maestro", "RuPay", "Elo"] },
   { image: "/attached_assets/IMG_2022_1762129044151.jpeg", name: "Mobile Money", count: "150+", methods: ["M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Tigo Pesa", "Vodafone Cash", "Ecocash", "Wave", "Moov Money", "GCash"] },
   { image: "/attached_assets/IMG_2023_1762129044151.jpeg", name: "Gift Cards", count: "120+", methods: ["Amazon", "Apple", "Google Play", "Steam", "eBay", "iTunes", "Xbox", "PlayStation", "Target", "Walmart"] },
