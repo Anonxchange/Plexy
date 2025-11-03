@@ -785,7 +785,7 @@ export function CreateOfferAdvanced() {
           </div>
 
           {/* Bank Payment Method Selection */}
-          {paymentMethod && (
+          {paymentMethod === "Bank Transfer" && (
             <Card className="bg-elevate-1 border-border">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -843,18 +843,18 @@ export function CreateOfferAdvanced() {
                   value={offerLabel}
                   onChange={(e) => setOfferLabel(e.target.value)}
                   placeholder="e.g., Fast & Reliable"
-                  className="bg-background"
+                  className="bg-elevate-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Add a short label to make your offer stand out
                 </p>
               </div>
 
-              {/* Time Limit */}
+              {/* Payment Time Limit */}
               <div>
-                <Label className="text-sm mb-2 block">Payment Time Limit (minutes)</Label>
+                <Label className="text-sm text-muted-foreground mb-2 block">Payment Time Limit (minutes)</Label>
                 <Select value={timeLimit} onValueChange={setTimeLimit}>
-                  <SelectTrigger className="bg-background">
+                  <SelectTrigger className="h-12 bg-elevate-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -873,7 +873,7 @@ export function CreateOfferAdvanced() {
                   value={autoReply}
                   onChange={(e) => setAutoReply(e.target.value)}
                   placeholder="This message will be sent automatically when a trade starts..."
-                  className="bg-background min-h-20"
+                  className="bg-elevate-1 min-h-20"
                 />
               </div>
 
@@ -884,7 +884,7 @@ export function CreateOfferAdvanced() {
                   value={offerTerms}
                   onChange={(e) => setOfferTerms(e.target.value)}
                   placeholder="Enter your trading terms and conditions..."
-                  className="bg-background min-h-32"
+                  className="bg-elevate-1 min-h-32"
                 />
               </div>
 
