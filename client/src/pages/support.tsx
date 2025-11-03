@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Search, ChevronRight, MessageCircle, Mail, Phone } from "lucide-react";
+import {
+  Search,
+  ChevronRight,
+  MessageCircle,
+  Mail,
+  Phone,
+  BookOpen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,8 +23,8 @@ export default function Support() {
         "How to create a Pexly account",
         "Verifying your identity",
         "How to deposit cryptocurrency",
-        "Understanding P2P trading"
-      ]
+        "Understanding P2P trading",
+      ],
     },
     {
       title: "Trading",
@@ -25,8 +32,8 @@ export default function Support() {
         "How to buy crypto on P2P",
         "How to sell crypto on P2P",
         "Understanding escrow system",
-        "Dispute resolution process"
-      ]
+        "Dispute resolution process",
+      ],
     },
     {
       title: "Wallet & Security",
@@ -34,8 +41,8 @@ export default function Support() {
         "Securing your wallet",
         "Two-factor authentication setup",
         "Withdrawal guidelines",
-        "Transaction fees explained"
-      ]
+        "Transaction fees explained",
+      ],
     },
     {
       title: "Payment Methods",
@@ -43,9 +50,9 @@ export default function Support() {
         "Supported payment methods",
         "Adding a payment method",
         "Bank transfer guide",
-        "Mobile money transfers"
-      ]
-    }
+        "Mobile money transfers",
+      ],
+    },
   ];
 
   const supportOptions = [
@@ -54,22 +61,22 @@ export default function Support() {
       title: "Live Chat",
       description: "Chat with our support team in real-time",
       action: "Start Chat",
-      available: "24/7"
+      available: "24/7",
     },
     {
       icon: Mail,
       title: "Email Support",
       description: "Send us an email and we'll respond within 24 hours",
       action: "Send Email",
-      email: "support@pexly.com"
+      email: "support@pexly.com",
     },
     {
       icon: Phone,
       title: "Phone Support",
       description: "Speak directly with our support team",
       action: "Call Now",
-      available: "Mon-Fri, 9AM-6PM EST"
-    }
+      available: "Mon–Fri, 9AM–6PM EST",
+    },
   ];
 
   return (
@@ -108,12 +115,8 @@ export default function Support() {
       <section className="max-w-4xl mx-auto px-4 -mt-10 mb-12">
         <Card className="bg-card hover:shadow-lg transition-shadow cursor-pointer rounded-xl">
           <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center overflow-hidden">
-              <img
-                src="/assets/IMG_2018.jpeg"
-                alt="Browse articles"
-                className="w-full h-full object-contain"
-              />
+            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <BookOpen className="w-12 h-12 text-lime-600" />
             </div>
             <div className="flex-1 text-center sm:text-left">
               <h2 className="text-2xl font-bold mb-2">Browse articles</h2>
@@ -175,37 +178,28 @@ export default function Support() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {supportOptions.map((option, index) => {
-            const supportImages = [
-              "/assets/IMG_2015.jpeg",
-              "/assets/IMG_2016.jpeg",
-              "/assets/IMG_2017.jpeg"
-            ];
-            return (
-              <Card key={index} className="hover:shadow-lg transition-shadow rounded-xl">
-                <CardContent className="p-6 text-center space-y-4">
-                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto overflow-hidden">
-                    <img
-                      src={supportImages[index]}
-                      alt={option.title}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">{option.title}</h3>
-                    <p className="text-sm text-muted-foreground">{option.description}</p>
-                    {option.available && (
-                      <p className="text-xs text-muted-foreground">Available: {option.available}</p>
-                    )}
-                    {option.email && (
-                      <p className="text-xs text-muted-foreground">{option.email}</p>
-                    )}
-                  </div>
-                  <Button className="w-full">{option.action}</Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {supportOptions.map((option, index) => (
+            <Card key={index} className="hover:shadow-lg transition-shadow rounded-xl">
+              <CardContent className="p-6 text-center space-y-4">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto">
+                  <option.icon className="w-12 h-12 text-lime-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">{option.title}</h3>
+                  <p className="text-sm text-muted-foreground">{option.description}</p>
+                  {option.available && (
+                    <p className="text-xs text-muted-foreground">
+                      Available: {option.available}
+                    </p>
+                  )}
+                  {option.email && (
+                    <p className="text-xs text-muted-foreground">{option.email}</p>
+                  )}
+                </div>
+                <Button className="w-full">{option.action}</Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
@@ -225,20 +219,20 @@ export default function Support() {
           {[
             {
               q: "How long does verification take?",
-              a: "Basic verification usually takes 5–10 minutes. Advanced verification may take up to 24 hours."
+              a: "Basic verification usually takes 5–10 minutes. Advanced verification may take up to 24 hours.",
             },
             {
               q: "What are the trading fees?",
-              a: "P2P trading is free. Standard trading fees range from 0.1% to 0.5% depending on your volume."
+              a: "P2P trading is free. Standard trading fees range from 0.1% to 0.5% depending on your volume.",
             },
             {
               q: "How do I withdraw my funds?",
-              a: "Go to Wallet > Select asset > Withdraw. Enter the amount and destination address."
+              a: "Go to Wallet > Select asset > Withdraw. Enter the amount and destination address.",
             },
             {
               q: "Is my crypto safe on Pexly?",
-              a: "Yes, we use industry-leading security including cold storage and multi-signature wallets."
-            }
+              a: "Yes, we use industry-leading security including cold storage and multi-signature wallets.",
+            },
           ].map((faq, index) => (
             <Card key={index} className="rounded-xl">
               <CardContent className="p-6">
