@@ -289,21 +289,11 @@ export function CreateOffer() {
       return;
     }
 
-    // Check offer limits - strict enforcement
+    // Check offer limits - allow up to the max (not blocking at max-1)
     if (offerLimits.maxOffers && userOfferCount !== undefined && userOfferCount >= offerLimits.maxOffers) {
       toast({
         title: "Offer Limit Reached",
         description: `You have ${userOfferCount} active offers out of ${offerLimits.maxOffers} allowed. Please deactivate an existing offer or upgrade to Merchant for unlimited offers.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Additional check for non-merchants
-    if (merchantStatus === "none" && userOfferCount !== undefined && userOfferCount >= 5) {
-      toast({
-        title: "Maximum Offers Reached",
-        description: "Regular users can have up to 5 active offers. Upgrade to Merchant for 50+ offers or Block Merchant for unlimited offers.",
         variant: "destructive",
       });
       setLocation("/merchant-application");
