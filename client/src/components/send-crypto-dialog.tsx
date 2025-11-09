@@ -21,6 +21,7 @@ import { AlertCircle, Loader2, CheckCircle2, X, Copy } from "lucide-react";
 import { sendCrypto } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { useSendFee } from "@/hooks/use-fees";
 
 interface SendCryptoDialogProps {
   open: boolean;
@@ -44,7 +45,15 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
   const [success, setSuccess] = useState(false);
 
   const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
-  const fee = parseFloat(amount) * 0.001 || 0;
+  
+  // Use the fee system to calculate fees
+  const { data: feeData, isLoading: feeLoading } = useSendFee(
+    selectedCrypto,
+    parseFloat(amount) || 0,
+    false // assuming external send, set to true for internal transfers
+  );
+  
+  const fee = feeData?.totalFee || 0;
   const total = parseFloat(amount) + fee || 0;
 
   const networkMap: Record<string, string[]> = {
@@ -311,6 +320,32 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                 className="h-12 bg-muted"
               />
             </div>
+
+            {/* Fee Breakdown */}
+            {feeData && parseFloat(amount) > 0 && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-medium">{parseFloat(amount).toFixed(8)} {selectedCrypto}</span>
+                </div>
+                {feeData.platformFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Platform Fee</span>
+                    <span>{feeData.platformFee.toFixed(8)} {selectedCrypto}</span>
+                  </div>
+                )}
+                {feeData.networkFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Network Fee</span>
+                    <span>{feeData.networkFee.toFixed(8)} {selectedCrypto}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-border">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold">{total.toFixed(8)} {selectedCrypto}</span>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
