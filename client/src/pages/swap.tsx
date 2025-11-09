@@ -12,6 +12,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { useSwapFee } from "@/hooks/use-fees";
 
 const currencies = [
   { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC },
@@ -27,6 +28,13 @@ export function Swap() {
   const [toAmount, setToAmount] = useState("1.222411");
   const [fromCurrency, setFromCurrency] = useState("BTC");
   const [toCurrency, setToCurrency] = useState("USDT");
+
+  // Fetch swap fee
+  const { data: swapFee } = useSwapFee(
+    fromCurrency,
+    toCurrency,
+    parseFloat(fromAmount) || 0
+  );
 
   const handleSwapCurrencies = () => {
     const tempCurrency = fromCurrency;
@@ -147,6 +155,22 @@ export function Swap() {
                       1 {fromCurrency} = {marketRate} {toCurrency}
                     </span>
                   </div>
+                  {swapFee && (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Swap fee:</span>
+                        <span className="font-medium">
+                          {swapFee.feePercentage ? `${swapFee.feePercentage}%` : `$${swapFee.totalFee.toFixed(2)}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">You will receive:</span>
+                        <span className="font-semibold text-primary">
+                          {(parseFloat(toAmount) - swapFee.totalFee).toFixed(6)} {toCurrency}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -586,6 +610,22 @@ export function Swap() {
                   1 {fromCurrency} = {marketRate} {toCurrency}
                 </span>
               </div>
+              {swapFee && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Swap fee:</span>
+                    <span className="font-medium">
+                      {swapFee.feePercentage ? `${swapFee.feePercentage}%` : `$${swapFee.totalFee.toFixed(2)}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">You will receive:</span>
+                    <span className="font-semibold text-primary">
+                      {(parseFloat(toAmount) - swapFee.totalFee).toFixed(6)} {toCurrency}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -732,6 +772,22 @@ export function Swap() {
                     1 {fromCurrency} = {marketRate} {toCurrency}
                   </span>
                 </div>
+                {swapFee && (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Swap fee:</span>
+                      <span className="font-medium">
+                        {swapFee.feePercentage ? `${swapFee.feePercentage}%` : `$${swapFee.totalFee.toFixed(2)}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">You will receive:</span>
+                      <span className="font-semibold text-primary">
+                        {(parseFloat(toAmount) - swapFee.totalFee).toFixed(6)} {toCurrency}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Swap Button */}
