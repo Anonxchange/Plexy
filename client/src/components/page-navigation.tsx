@@ -7,27 +7,13 @@ export function PageNavigation() {
   const [activeTab, setActiveTab] = useState("");
 
   useEffect(() => {
-    if (location === "/") {
-      setActiveTab("home");
-    } else if (location === "/p2p") {
-      setActiveTab("p2p");
-    } else if (location === "/wallet") {
-      setActiveTab("wallet");
-    } else {
-      const path = location.slice(1);
-      setActiveTab(path);
-    }
+    const path = location === "/" ? "home" : location.slice(1);
+    setActiveTab(path);
   }, [location]);
 
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
-    if (tab === "home") {
-      navigate("/");
-    } else if (tab === "swap") {
-      navigate("/swap");
-    } else {
-      navigate(`/${tab}`);
-    }
+    navigate(tab === "home" ? "/" : `/${tab}`);
   };
 
   return (
