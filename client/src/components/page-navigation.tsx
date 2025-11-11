@@ -12,7 +12,6 @@ export function PageNavigation() {
   }, [location]);
 
   const handleTabClick = (tab: string) => {
-    setActiveTab(tab);
     navigate(tab === "home" ? "/" : `/${tab}`);
   };
 
