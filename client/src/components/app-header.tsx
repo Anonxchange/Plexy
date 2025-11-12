@@ -488,13 +488,13 @@ export function AppHeader() {
                 </div>
               </div>
 
-              {/* Notification Icon - Desktop only */}
+              {/* Notification Icon - All screens */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="hidden lg:flex relative h-9 w-9"
+                    className="relative h-9 w-9"
                     data-testid="button-notifications"
                   >
                     <Bell className="h-5 w-5" />
