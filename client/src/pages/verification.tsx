@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import LivenessCheck from "@/components/liveness-check";
 import { LivenessResult } from "@/lib/liveness-api";
-import { uploadToR2 } from "@/lib/r2-storage";
+import { uploadToR2, uploadBase64ToR2 } from "@/lib/r2-storage";
 
 export default function VerificationPage() {
   const supabase = createClient();
@@ -138,44 +138,34 @@ export default function VerificationPage() {
       // Upload document to R2
       if (documentFile) {
         console.log("Uploading front document...");
-        const formData = new FormData();
-        formData.append("file", documentFile);
-        formData.append("userId", authUser.id);
-        formData.append("fileType", "document_front");
+        const uploadResult = await uploadToR2(
+          documentFile,
+          "verification-documents",
+          authUser.id
+        );
 
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to upload document");
+        if (!uploadResult.success || !uploadResult.url) {
+          throw new Error(uploadResult.error || "Failed to upload document");
         }
 
-        const data = await response.json();
-        documentUrl = data.url;
+        documentUrl = uploadResult.url;
         console.log("Front document uploaded:", documentUrl);
       }
 
       // Upload document back if available
       if (documentBackFile) {
         console.log("Uploading back document...");
-        const formData = new FormData();
-        formData.append("file", documentBackFile);
-        formData.append("userId", authUser.id);
-        formData.append("fileType", "document_back");
+        const uploadResult = await uploadToR2(
+          documentBackFile,
+          "verification-documents",
+          authUser.id
+        );
 
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to upload document back");
+        if (!uploadResult.success || !uploadResult.url) {
+          throw new Error(uploadResult.error || "Failed to upload document back");
         }
 
-        const data = await response.json();
-        documentBackUrl = data.url;
+        documentBackUrl = uploadResult.url;
         console.log("Back document uploaded:", documentBackUrl);
       }
 
@@ -185,65 +175,37 @@ export default function VerificationPage() {
           throw new Error("Address proof document is required for Level 3 verification");
         }
         
-        console.log("Uploading address proof...");
-        const formData = new FormData();
-        formData.append("file", addressFile);
-        formData.append("userId", authUser.id);
-        formData.append("fileType", "address_proof");
+        console.log("Uploading address proof to R2...");
+        const uploadResult = await uploadToR2(
+          addressFile,
+          "verification-documents",
+          authUser.id
+        );
 
-        try {
-          const response = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Upload failed with status:", response.status, errorText);
-            let errorData;
-            try {
-              errorData = JSON.parse(errorText);
-            } catch {
-              errorData = { error: errorText || "Upload failed" };
-            }
-            throw new Error(errorData.error || `Failed to upload address proof (${response.status})`);
-          }
-
-          const data = await response.json();
-          if (!data.url) {
-            throw new Error("Upload completed but no URL returned");
-          }
-          addressProofUrl = data.url;
-          console.log("Address proof uploaded:", addressProofUrl);
-        } catch (error) {
-          console.error("Address proof upload error:", error);
-          throw new Error(`Address proof upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        if (!uploadResult.success || !uploadResult.url) {
+          console.error("Address proof upload failed:", uploadResult.error);
+          throw new Error(uploadResult.error || "Failed to upload address proof");
         }
+
+        addressProofUrl = uploadResult.url;
+        console.log("Address proof uploaded successfully:", addressProofUrl);
       }
 
       // Upload liveness image if available
       if (livenessResult?.imageDataUrl) {
         console.log("Uploading liveness image...");
-        // Convert base64 to blob
-        const response = await fetch(livenessResult.imageDataUrl);
-        const blob = await response.blob();
+        const uploadResult = await uploadBase64ToR2(
+          livenessResult.imageDataUrl,
+          "liveness-captures",
+          authUser.id,
+          "jpg"
+        );
 
-        const formData = new FormData();
-        formData.append("file", new File([blob], "liveness.jpg", { type: "image/jpeg" }));
-        formData.append("userId", authUser.id);
-        formData.append("fileType", "liveness");
-
-        const uploadResponse = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error("Failed to upload liveness image");
+        if (!uploadResult.success || !uploadResult.url) {
+          throw new Error(uploadResult.error || "Failed to upload liveness image");
         }
 
-        const data = await uploadResponse.json();
-        livenessImageUrl = data.url;
+        livenessImageUrl = uploadResult.url;
         console.log("Liveness image uploaded:", livenessImageUrl);
       }
 
