@@ -20,7 +20,7 @@ import { ArrowLeft, Bitcoin, Building2, Lock, Shield, Award, TrendingUp, CheckCi
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { getCryptoPrices, convertToNGN } from "@/lib/crypto-prices";
+import { getCryptoPrices, convertToNGN, getOfferLimits } from "@/lib/crypto-prices";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
 import { canCreateOffer } from "@shared/verification-levels";
 import { getMerchantLevel } from "@shared/merchant-levels";
@@ -82,8 +82,8 @@ export function CreateOfferAdvanced() {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [currency, setCurrency] = useState("NGN");
   const [country, setCountry] = useState("");
-  const [minAmount, setMinAmount] = useState("14777");
-  const [maxAmount, setMaxAmount] = useState("147769");
+  const [minAmount, setMinAmount] = useState("4500");
+  const [maxAmount, setMaxAmount] = useState("100000");
   const [totalQuantity, setTotalQuantity] = useState("");
   const [offerTerms, setOfferTerms] = useState("");
   const [offerLabel, setOfferLabel] = useState("");
@@ -209,6 +209,35 @@ export function CreateOfferAdvanced() {
       toast({
         title: "Invalid Range",
         description: "Minimum amount cannot be greater than maximum amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const limits = await getOfferLimits(currency);
+      
+      if (minAmountNum < limits.min) {
+        toast({
+          title: "Amount Too Low",
+          description: `Minimum amount must be at least ${limits.min} ${currency} (₦4,500 NGN equivalent)`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (maxAmountNum > limits.max) {
+        toast({
+          title: "Amount Too High",
+          description: `Maximum amount cannot exceed ${limits.max.toLocaleString()} ${currency} (₦23,000,000 NGN equivalent)`,
+          variant: "destructive",
+        });
+        return;
+      }
+    } catch (error) {
+      toast({
+        title: "Currency Error",
+        description: error instanceof Error ? error.message : "Unable to validate amount for selected currency",
         variant: "destructive",
       });
       return;
