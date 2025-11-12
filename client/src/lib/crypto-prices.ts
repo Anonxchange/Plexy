@@ -173,6 +173,50 @@ export function convertToNGN(usdAmount: number, usdToNgnRate: number = 1470): nu
   return usdAmount * usdToNgnRate;
 }
 
+// Convert NGN amount to another currency
+export async function convertFromNGN(ngnAmount: number, toCurrency: string): Promise<number> {
+  if (toCurrency === 'NGN') {
+    return ngnAmount;
+  }
+  
+  const rates = await getExchangeRates();
+  const ngnRate = rates['NGN'];
+  const targetRate = rates[toCurrency];
+  
+  if (!ngnRate || ngnRate === 0) {
+    throw new Error('NGN exchange rate not available');
+  }
+  
+  if (!targetRate || targetRate === 0) {
+    throw new Error(`Exchange rate for ${toCurrency} not available`);
+  }
+  
+  const usdAmount = ngnAmount / ngnRate;
+  return usdAmount * targetRate;
+}
+
+// Get minimum and maximum offer limits in the specified currency
+export async function getOfferLimits(currency: string): Promise<{ min: number; max: number }> {
+  const MIN_NGN = 4500;
+  const MAX_NGN = 23000000;
+  
+  if (currency === 'NGN') {
+    return { min: MIN_NGN, max: MAX_NGN };
+  }
+  
+  try {
+    const min = await convertFromNGN(MIN_NGN, currency);
+    const max = await convertFromNGN(MAX_NGN, currency);
+    
+    return { 
+      min: Math.round(min * 100) / 100,
+      max: Math.round(max * 100) / 100
+    };
+  } catch (error) {
+    throw new Error(`Cannot calculate limits for currency ${currency}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 export interface HistoricalPrice {
   timestamp: number;
   price: number;
