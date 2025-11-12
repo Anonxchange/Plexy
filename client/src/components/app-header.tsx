@@ -459,6 +459,81 @@ export function AppHeader() {
         <div className="flex items-center gap-2 justify-end">
           {user ? (
             <>
+              {/* Notification Icon - Desktop only */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hidden lg:flex relative h-9 w-9"
+                    data-testid="button-notifications"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 hover:bg-red-600 text-xs">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[400px] max-h-[500px] overflow-y-auto">
+                  <div className="flex items-center justify-between px-2 py-2">
+                    <DropdownMenuLabel className="text-base">Notifications</DropdownMenuLabel>
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleMarkAllAsRead}
+                        className="text-xs h-7"
+                      >
+                        Mark all as read
+                      </Button>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                  {notifications.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">No notifications yet</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-[400px] overflow-y-auto">
+                      {notifications.map((notification) => (
+                        <DropdownMenuItem
+                          key={notification.id}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`cursor-pointer p-4 ${!notification.read ? 'bg-accent/50' : ''}`}
+                        >
+                          <div className="flex flex-col w-full gap-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className={`font-medium text-sm ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                {notification.title}
+                              </span>
+                              {!notification.read && (
+                                <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1" />
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {notification.message}
+                            </span>
+                            <span className="text-xs text-muted-foreground/70">
+                              {formatTimeAgo(notification.created_at)}
+                            </span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => navigate('/notifications')}
+                    className="cursor-pointer justify-center font-medium text-primary"
+                  >
+                    View all notifications
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <div className="text-center relative max-w-[120px] sm:max-w-[150px] hidden sm:block">
                 <div className="text-sm font-semibold text-foreground truncate">
                   {userName || user?.email?.split('@')[0] || 'User'}
