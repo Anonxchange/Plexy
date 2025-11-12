@@ -348,9 +348,9 @@ export function MyOffers() {
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Trade Statistics
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/rewards')}>
+                <DropdownMenuItem onClick={() => navigate('/affiliate')}>
                   <Award className="h-4 w-4 mr-2" />
-                  Trader Program Badges
+                  Become an Affiliate
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <QrCode className="h-4 w-4 mr-2" />
