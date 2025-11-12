@@ -12,7 +12,7 @@ export function AppFooter() {
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <Zap className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-white">plexy</span>
+            <span className="text-2xl font-bold text-white">Pexly</span>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <span className="text-sm text-gray-400 sm:mr-2">Download App:</span>
@@ -63,7 +63,7 @@ export function AppFooter() {
           <div>
             <h3 className="font-semibold text-white mb-4">Useful links</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Plexu Wallet</a></li>
+              <li><a href="#" className="text-sm hover:text-white transition-colors">Pexly Wallet</a></li>
               <li><Link href="/support" className="text-sm hover:text-white transition-colors">Support</Link></li>
               <li><Link href="/bitcoin-calculator" className="text-sm hover:text-white transition-colors">Bitcoin Calculator</Link></li>
               <li><a href="#" className="text-sm hover:text-white transition-colors">Peer-to-Peer Market Prices</a></li>
