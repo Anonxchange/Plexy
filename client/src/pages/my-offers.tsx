@@ -3,12 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { Plus, Package, TrendingUp, TrendingDown, Share2 } from "lucide-react";
-import { Link } from "wouter";
+import { Plus, Package, TrendingUp, TrendingDown, Share2, MoreVertical, History, Users, Star, ThumbsUp, Lock, BarChart3, Award, QrCode, Medal, Settings, Code } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Offer {
   id: string;
@@ -31,6 +38,7 @@ export function MyOffers() {
   const { toast } = useToast();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [, navigate] = useLocation();
 
 
   useEffect(() => {
@@ -295,13 +303,74 @@ export function MyOffers() {
       <div className="min-h-screen flex flex-col bg-background">
         <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold">My Offers</h1>
-            <Link href="/create-offer">
-              <Button className="bg-primary hover:bg-primary/90 gap-2">
-                <Plus className="h-5 w-5" />
-                Create Offer
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold">My Offers</h1>
+              <Link href="/create-offer">
+                <Button variant="outline" size="icon">
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => navigate('/trade-history')}>
+                  <History className="h-4 w-4 mr-2" />
+                  Trade History
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <Users className="h-4 w-4 mr-2" />
+                  Recent Trade Partners
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/my-offers')} className="bg-primary/10">
+                  <Package className="h-4 w-4 mr-2" />
+                  My Offers
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <Star className="h-4 w-4 mr-2" />
+                  Favorite Offers
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  Trusted Users
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Blocked Users
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/trade-history')}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Trade Statistics
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/rewards')}>
+                  <Award className="h-4 w-4 mr-2" />
+                  Trader Program Badges
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Share Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/medals')}>
+                  <Medal className="h-4 w-4 mr-2" />
+                  Medals
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/account-settings')}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Account Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open('https://docs.replit.com', '_blank')}>
+                  <Code className="h-4 w-4 mr-2" />
+                  Developer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <p className="text-muted-foreground mb-8">
