@@ -180,25 +180,45 @@ export default function VerificationPage() {
       }
 
       // Upload address proof if level 3
-      if (level === 3 && addressFile) {
+      if (level === 3) {
+        if (!addressFile) {
+          throw new Error("Address proof document is required for Level 3 verification");
+        }
+        
         console.log("Uploading address proof...");
         const formData = new FormData();
         formData.append("file", addressFile);
         formData.append("userId", authUser.id);
         formData.append("fileType", "address_proof");
 
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
+        try {
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
 
-        if (!response.ok) {
-          throw new Error("Failed to upload address proof");
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Upload failed with status:", response.status, errorText);
+            let errorData;
+            try {
+              errorData = JSON.parse(errorText);
+            } catch {
+              errorData = { error: errorText || "Upload failed" };
+            }
+            throw new Error(errorData.error || `Failed to upload address proof (${response.status})`);
+          }
+
+          const data = await response.json();
+          if (!data.url) {
+            throw new Error("Upload completed but no URL returned");
+          }
+          addressProofUrl = data.url;
+          console.log("Address proof uploaded:", addressProofUrl);
+        } catch (error) {
+          console.error("Address proof upload error:", error);
+          throw new Error(`Address proof upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-
-        const data = await response.json();
-        addressProofUrl = data.url;
-        console.log("Address proof uploaded:", addressProofUrl);
       }
 
       // Upload liveness image if available
@@ -231,7 +251,7 @@ export default function VerificationPage() {
       const verificationData = {
         user_id: authUser.id,
         requested_level: level.toString(),
-        document_type: documentType,
+        document_type: level === 3 ? "address_proof" : documentType,
         document_url: documentUrl || null,
         document_back_url: documentBackUrl || null,
         address_proof: addressProofUrl || null,
@@ -242,6 +262,17 @@ export default function VerificationPage() {
         status: "pending",
       };
 
+      // Validate all requirements based on level
+      if (level === 2) {
+        if (!documentUrl || !documentBackUrl) {
+          throw new Error("Both front and back of ID are required for Level 2");
+        }
+      } else if (level === 3) {
+        if (!addressProofUrl) {
+          throw new Error("Address proof upload failed. Please try again.");
+        }
+      }
+
       console.log("Submitting verification data to Supabase:", verificationData);
 
       const { data: insertedData, error } = await supabase
@@ -251,7 +282,13 @@ export default function VerificationPage() {
 
       if (error) {
         console.error("❌ Error submitting verification:", error);
-        throw error;
+        console.error("Error details:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw new Error(`Database error: ${error.message || 'Failed to save verification'}`);
       }
 
       console.log("✅ Verification submitted successfully:", insertedData);
@@ -692,7 +729,7 @@ export default function VerificationPage() {
           )}
 
           {/* Level 2 -> Level 3 OR Resubmit Level 3 */}
-          {((currentLevel === 2 && !needsResubmitForCurrentLevel) || (currentLevel === 3 && needsResubmitForCurrentLevel)) && !pendingVerification && (
+          {((currentLevel === 2 && !needsResubmitForCurrentLevel && !needsResubmitForLevel2) || (currentLevel === 3 && needsResubmitForCurrentLevel)) && !pendingVerification && (
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">
                 {needsResubmitForCurrentLevel && currentLevel === 3 ? "Resubmit Level 3 Verification" : "Step 3: Enhanced Due Diligence (Level 3)"}
@@ -713,11 +750,24 @@ export default function VerificationPage() {
                 </ul>
               </div>
 
+              <Alert className="bg-blue-500/10 border-blue-500/20">
+                <AlertDescription className="text-sm">
+                  <strong>Important:</strong> Your address proof must be:
+                  <ul className="mt-2 space-y-1 text-xs ml-4">
+                    <li>• A recent utility bill, bank statement, or government letter</li>
+                    <li>• Dated within the last 3 months</li>
+                    <li>• Showing your full name exactly as registered</li>
+                    <li>• Showing your complete residential address</li>
+                    <li>• Clear and readable (not blurry or cut off)</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="address">Address Proof (Utility Bill or Bank Statement)</Label>
                   <p className="text-xs text-muted-foreground">
-                    Document must show your full name and current address, dated within last 3 months
+                    Upload a clear photo or PDF of your address proof document
                   </p>
                   <Input
                     id="address"
@@ -726,7 +776,7 @@ export default function VerificationPage() {
                     onChange={(e) => setAddressFile(e.target.files?.[0] || null)}
                   />
                   {addressFile && (
-                    <p className="text-xs text-green-600">Selected: {addressFile.name}</p>
+                    <p className="text-xs text-green-600">✓ Selected: {addressFile.name}</p>
                   )}
                 </div>
               </div>
@@ -737,7 +787,7 @@ export default function VerificationPage() {
                 className="w-full"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {submitVerification.isPending ? "Submitting..." : "Submit for Level 3"}
+                {submitVerification.isPending ? "Submitting..." : "Submit for Level 3 Verification"}
               </Button>
             </div>
           )}
