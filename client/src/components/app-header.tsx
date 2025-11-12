@@ -181,28 +181,28 @@ export function AppHeader() {
       // Calculate balance if wallets exist
       if (!walletsResult.error && walletsResult.data && walletsResult.data.length > 0) {
         const walletsData = walletsResult.data;
-        
+
         // Filter wallets with balance > 0 to reduce API calls
         const walletsWithBalance = walletsData.filter(w => w.balance > 0);
-        
+
         if (walletsWithBalance.length === 0) {
           setBalance(0);
           return;
         }
-        
+
         // Get unique crypto symbols
         const allSymbols = walletsWithBalance.map(w => w.crypto_symbol);
-        
+
         // Fetch prices (this is already parallel internally)
         const prices = await getCryptoPrices(allSymbols);
-        
+
         // Calculate total in USD
         const totalUSD = walletsWithBalance.reduce((sum, wallet) => {
           const priceData = prices[wallet.crypto_symbol];
           const currentPrice = priceData?.current_price || 0;
           return sum + (wallet.balance * currentPrice);
         }, 0);
-        
+
         // Convert to preferred currency if needed
         if (currency !== 'USD') {
           const { convertCurrency } = await import('@/lib/crypto-prices');
@@ -245,6 +245,14 @@ export function AppHeader() {
       console.error('Error fetching profile avatar:', error);
     }
   };
+
+  // Helper function to format currency, assuming it's defined elsewhere or needs to be added.
+  // For now, using a placeholder similar to the balance formatting.
+  const formatCurrency = (amount: number): string => {
+    return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}`;
+  };
+
+  const walletBalance = balance; // Assuming walletBalance is the same as balance for this context
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -459,6 +467,27 @@ export function AppHeader() {
         <div className="flex items-center gap-2 justify-end">
           {user ? (
             <>
+              <div className="text-center relative max-w-[120px] sm:max-w-[150px] hidden sm:block">
+                <div className="text-sm font-semibold text-foreground truncate">
+                  {userName || user?.email?.split('@')[0] || 'User'}
+                </div>
+                <div className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
+                  <span className="truncate">
+                    {balanceVisible ? `${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"}
+                  </span>
+                  <button 
+                    className="inline-flex items-center justify-center h-4 w-4 hover:opacity-70 transition-opacity flex-shrink-0"
+                    onClick={() => setBalanceVisible(!balanceVisible)}
+                  >
+                    {balanceVisible ? (
+                      <Eye className="h-3 w-3 text-muted-foreground" />
+                    ) : (
+                      <EyeOff className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
               {/* Notification Icon - Desktop only */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -534,26 +563,6 @@ export function AppHeader() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <div className="text-center relative max-w-[120px] sm:max-w-[150px] hidden sm:block">
-                <div className="text-sm font-semibold text-foreground truncate">
-                  {userName || user?.email?.split('@')[0] || 'User'}
-                </div>
-                <div className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
-                  <span className="truncate">
-                    {balanceVisible ? `${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"}
-                  </span>
-                  <button 
-                    className="inline-flex items-center justify-center h-4 w-4 hover:opacity-70 transition-opacity flex-shrink-0"
-                    onClick={() => setBalanceVisible(!balanceVisible)}
-                  >
-                    {balanceVisible ? (
-                      <Eye className="h-3 w-3 text-muted-foreground" />
-                    ) : (
-                      <EyeOff className="h-3 w-3 text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
