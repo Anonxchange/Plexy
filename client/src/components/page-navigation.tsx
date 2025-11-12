@@ -1,34 +1,29 @@
-import * as React from "react";
+
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
 export function PageNavigation() {
   const [location, navigate] = useLocation();
-  const [activeTab, setActiveTab] = React.useState("");
 
-  React.useEffect(() => {
-    if (location === "/") {
-      setActiveTab("home");
-    } else if (location === "/p2p") {
-      setActiveTab("p2p");
-    } else if (location === "/wallet") {
-      setActiveTab("wallet");
-    } else {
-      const path = location.slice(1);
-      setActiveTab(path);
-    }
-  }, [location]);
+  const getActiveTab = () => {
+    if (location === "/") return "home";
+    if (location === "/p2p") return "p2p";
+    if (location === "/shop") return "shop";
+    if (location === "/swap") return "swap";
+    if (location === "/wallet") return "wallet";
+    return location.slice(1);
+  };
 
   const handleTabClick = (tab: string) => {
-    setActiveTab(tab);
     if (tab === "home") {
       navigate("/");
-    } else if (tab === "swap") {
-      navigate("/swap");
     } else {
       navigate(`/${tab}`);
     }
   };
+
+  const activeTab = getActiveTab();
 
   return (
     <div className="bg-card border-b lg:hidden">
