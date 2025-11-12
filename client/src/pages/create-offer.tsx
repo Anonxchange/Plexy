@@ -87,7 +87,7 @@ export function CreateOffer() {
   const [currency, setCurrency] = useState("NGN");
   const [country, setCountry] = useState("");
   const [minAmount, setMinAmount] = useState("4500");
-  const [maxAmount, setMaxAmount] = useState("100000");
+  const [maxAmount, setMaxAmount] = useState("23000000");
   const [totalQuantity, setTotalQuantity] = useState("");
   const [timeLimit, setTimeLimit] = useState("30");
   const [isSubmitting, setIsSubmitting] = useState(false);
