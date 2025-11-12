@@ -237,7 +237,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
 
             <div>
               <Label className="text-sm font-medium mb-2 block">
-                Receiver address or NoOnes username
+                Receiver address or Pexly username
               </Label>
               <div className="relative">
                 <Input
