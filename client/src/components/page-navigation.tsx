@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
 export function PageNavigation() {
   const [location, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState("");
+  const [activeTab, setActiveTab] = React.useState("");
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (location === "/") {
       setActiveTab("home");
     } else if (location === "/p2p") {
