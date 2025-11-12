@@ -16,11 +16,9 @@ export function PageNavigation() {
   };
 
   const handleTabClick = (tab: string) => {
-    if (tab === "home") {
-      navigate("/");
-    } else {
-      navigate(`/${tab}`);
-    }
+    const targetPath = tab === "home" ? "/" : `/${tab}`;
+    // Always navigate, even if already on the page
+    navigate(targetPath, { replace: false });
   };
 
   const activeTab = getActiveTab();
