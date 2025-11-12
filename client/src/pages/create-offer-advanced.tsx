@@ -83,7 +83,7 @@ export function CreateOfferAdvanced() {
   const [currency, setCurrency] = useState("NGN");
   const [country, setCountry] = useState("");
   const [minAmount, setMinAmount] = useState("4500");
-  const [maxAmount, setMaxAmount] = useState("100000");
+  const [maxAmount, setMaxAmount] = useState("23000000");
   const [totalQuantity, setTotalQuantity] = useState("");
   const [offerTerms, setOfferTerms] = useState("");
   const [offerLabel, setOfferLabel] = useState("");
