@@ -32,7 +32,7 @@ interface ReceiveCryptoDialogProps {
 type Step = "method" | "asset" | "details";
 
 const networkMap: Record<string, string[]> = {
-  BTC: ["Bitcoin (SegWit)", "Bitcoin (Legacy)", "Bitcoin (Taproot)"],
+  BTC: ["Bitcoin (SegWit)"],
   ETH: ["Ethereum (ERC-20)"],
   SOL: ["Solana"],
   TON: ["TON"],
