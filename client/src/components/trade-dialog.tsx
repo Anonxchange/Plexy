@@ -27,6 +27,41 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
   const [isCreatingTrade, setIsCreatingTrade] = useState(false);
   const [platformFee, setPlatformFee] = useState(0);
   const [feePercentage, setFeePercentage] = useState<number | null>(null);
+  const [showBankSelection, setShowBankSelection] = useState(false);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [selectedBankAccount, setSelectedBankAccount] = useState<any | null>(null);
+
+  // Fetch bank accounts for sellers
+  useEffect(() => {
+    const fetchBankAccounts = async () => {
+      // Only fetch if this is a sell offer (seller needs to provide bank details)
+      if (offer.type !== 'sell') return;
+
+      try {
+        const { createClient } = await import("@/lib/supabase");
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('payment_methods')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active');
+
+        if (!error && data) {
+          setBankAccounts(data);
+        }
+      } catch (error) {
+        console.error("Error fetching bank accounts:", error);
+      }
+    };
+
+    if (open) {
+      fetchBankAccounts();
+    }
+  }, [open, offer.type]);
 
   // Calculate fee data when amount or offer changes
   useEffect(() => {
@@ -95,6 +130,16 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
     if (isCreatingTrade) {
       return; // Prevent duplicate submissions
+    }
+
+    // If this is a sell offer and no bank account is selected, show bank selection
+    if (offer.type === 'sell' && !selectedBankAccount) {
+      if (bankAccounts.length === 0) {
+        alert("Please add a payment method first in your settings");
+        return;
+      }
+      setShowBankSelection(true);
+      return;
     }
 
     setIsCreatingTrade(true);
@@ -203,6 +248,40 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       if (tradeError) throw tradeError;
 
       console.log("Trade created successfully:", trade);
+
+      // If seller, post bank account details to chat
+      if (offer.type === 'sell' && selectedBankAccount) {
+        try {
+          const bankDetailsMessage = `A payment of ${fiatAmount.toLocaleString()} ${offer.currency} is being made to your payment method:
+
+AMOUNT
+${fiatAmount.toLocaleString()} ${offer.currency}
+
+PAYMENT TYPE
+${selectedBankAccount.payment_type}
+
+ACCOUNT HOLDER
+${selectedBankAccount.account_holder || selectedBankAccount.account_name}
+
+BANK/PROVIDER NAME
+${selectedBankAccount.bank_name}
+
+ACCOUNT NUMBER
+${selectedBankAccount.account_number}`;
+
+          await supabase
+            .from("trade_messages")
+            .insert({
+              trade_id: trade.id,
+              sender_id: user.id,
+              content: bankDetailsMessage,
+            });
+
+          console.log("Bank details posted to chat");
+        } catch (error) {
+          console.error("Error posting bank details:", error);
+        }
+      }
 
       // Create notifications for both parties
       try {
@@ -489,17 +568,82 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
             </div>
           </div>
 
+          {/* Bank Account Selection (for sellers) */}
+          {showBankSelection && offer.type === 'sell' && (
+            <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm sm:text-base">Select Payment Method</h3>
+                <button
+                  onClick={() => setShowBankSelection(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Select the payment method where you want to receive payment
+              </p>
+              <div className="space-y-2">
+                {bankAccounts.map((account) => (
+                  <button
+                    key={account.id}
+                    onClick={() => {
+                      setSelectedBankAccount(account);
+                      setShowBankSelection(false);
+                    }}
+                    className={`w-full p-3 rounded-lg border text-left transition-all ${
+                      selectedBankAccount?.id === account.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm">{account.bank_name}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {account.account_number} • {account.account_holder || account.account_name}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Selected Bank Account Display */}
+          {selectedBankAccount && offer.type === 'sell' && !showBankSelection && (
+            <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground mb-1">Selected Payment Method</p>
+                  <p className="font-semibold text-sm truncate">{selectedBankAccount.payment_type} - {selectedBankAccount.bank_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {selectedBankAccount.account_number}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedBankAccount(null);
+                    setShowBankSelection(true);
+                  }}
+                  className="text-xs h-7"
+                >
+                  Change
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Proceed Button */}
           <Button
             className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max || isCreatingTrade}
+            disabled={!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max || isCreatingTrade || (offer.type === 'sell' && !selectedBankAccount)}
             onClick={(e) => {
               e.preventDefault();
               handleProceed();
             }}
             type="button"
           >
-            {isCreatingTrade ? "Creating Trade..." : "Proceed"}
+            {isCreatingTrade ? "Creating Trade..." : (offer.type === 'sell' && !selectedBankAccount ? "Select Payment Method" : "Proceed")}
             <Bitcoin className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
 
