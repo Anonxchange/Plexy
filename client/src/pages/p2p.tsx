@@ -84,6 +84,14 @@ export function P2P() {
   const [offers, setOffers] = useState<OfferCardProps[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTrades, setActiveTrades] = useState<any[]>([]);
+  const [openFiltersDialog, setOpenFiltersDialog] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState("All countries");
+  const [sortingMethod, setSortingMethod] = useState("Recommended");
+  const [showTopRatedOnly, setShowTopRatedOnly] = useState(false);
+  const [verifiedUsersOnly, setVerifiedUsersOnly] = useState(false);
+  const [recentlyActive, setRecentlyActive] = useState(false);
+  const [acceptableOnly, setAcceptableOnly] = useState(false);
+  const [rememberFilters, setRememberFilters] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -755,13 +763,236 @@ export function P2P() {
           </div>
 
           {/* Find Offers Button */}
-          <Button 
-            className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
-            onClick={fetchOffers}
-          >
-            Find Offers
-            <RotateCw className={`ml-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              className="flex-1 h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
+              onClick={fetchOffers}
+            >
+              Find Offers
+              <RotateCw className={`ml-2 h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button 
+              variant="outline"
+              className="h-14 w-14 p-0"
+              onClick={() => setOpenFiltersDialog(true)}
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            </Button>
+          </div>
+
+          {/* Filters Dialog */}
+          <Dialog open={openFiltersDialog} onOpenChange={setOpenFiltersDialog}>
+            <DialogContent className="sm:max-w-md h-full sm:h-auto max-h-screen p-0 flex flex-col">
+              <div className="sticky top-0 bg-background z-10 border-b p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <DialogTitle className="text-xl font-bold">Filters</DialogTitle>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      className="text-sm"
+                      onClick={() => {
+                        setSelectedCountry("All countries");
+                        setSortingMethod("Recommended");
+                        setShowTopRatedOnly(false);
+                        setVerifiedUsersOnly(false);
+                        setRecentlyActive(false);
+                        setAcceptableOnly(false);
+                      }}
+                    >
+                      Reset all filters
+                    </Button>
+                    <button 
+                      onClick={() => setOpenFiltersDialog(false)}
+                      className="p-1 hover:bg-muted rounded-md transition-colors"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="p-4 space-y-6">
+                  {/* Country Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold">Country</Label>
+                    <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                      <SelectTrigger className="w-full">
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <SelectValue />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="All countries">All countries</SelectItem>
+                        <SelectItem value="United States">🇺🇸 United States</SelectItem>
+                        <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
+                        <SelectItem value="Nigeria">🇳🇬 Nigeria</SelectItem>
+                        <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
+                        <SelectItem value="Ghana">🇬🇭 Ghana</SelectItem>
+                        <SelectItem value="Kenya">🇰🇪 Kenya</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Sorting */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold">Sorting</Label>
+                    <Select value={sortingMethod} onValueChange={setSortingMethod}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Recommended">Recommended</SelectItem>
+                        <SelectItem value="Price: Low to High">Price: Low to High</SelectItem>
+                        <SelectItem value="Price: High to Low">Price: High to Low</SelectItem>
+                        <SelectItem value="Most Trades">Most Trades</SelectItem>
+                        <SelectItem value="Newest First">Newest First</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Offer tags */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold">Offer tags</Label>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span className="text-muted-foreground">Select tags</span>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Button>
+                  </div>
+
+                  <Separator />
+
+                  {/* Toggle Filters */}
+                  <div className="space-y-4">
+                    {/* Top-rated traders */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold">Show only top-rated traders</div>
+                        <div className="text-sm text-muted-foreground">Experienced traders with badges</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          "ml-4 h-8 w-14 rounded-full p-0 transition-colors",
+                          showTopRatedOnly ? "bg-green-500" : "bg-muted"
+                        )}
+                        onClick={() => setShowTopRatedOnly(!showTopRatedOnly)}
+                      >
+                        <div
+                          className={cn(
+                            "h-6 w-6 rounded-full bg-white transition-transform",
+                            showTopRatedOnly ? "translate-x-6" : "translate-x-1"
+                          )}
+                        />
+                      </Button>
+                    </div>
+
+                    {/* Verified users only */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold">Verified users only</div>
+                        <div className="text-sm text-muted-foreground">Show offers from ID-verified users</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          "ml-4 h-8 w-14 rounded-full p-0 transition-colors",
+                          verifiedUsersOnly ? "bg-green-500" : "bg-muted"
+                        )}
+                        onClick={() => setVerifiedUsersOnly(!verifiedUsersOnly)}
+                      >
+                        <div
+                          className={cn(
+                            "h-6 w-6 rounded-full bg-white transition-transform",
+                            verifiedUsersOnly ? "translate-x-6" : "translate-x-1"
+                          )}
+                        />
+                      </Button>
+                    </div>
+
+                    {/* Recently active */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold">Recently active</div>
+                        <div className="text-sm text-muted-foreground">Last seen 30 mins ago</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          "ml-4 h-8 w-14 rounded-full p-0 transition-colors",
+                          recentlyActive ? "bg-green-500" : "bg-muted"
+                        )}
+                        onClick={() => setRecentlyActive(!recentlyActive)}
+                      >
+                        <div
+                          className={cn(
+                            "h-6 w-6 rounded-full bg-white transition-transform",
+                            recentlyActive ? "translate-x-6" : "translate-x-1"
+                          )}
+                        />
+                      </Button>
+                    </div>
+
+                    {/* Acceptable only */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold">Acceptable only</div>
+                        <div className="text-sm text-muted-foreground">Show only offers that I can accept now</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          "ml-4 h-8 w-14 rounded-full p-0 transition-colors",
+                          acceptableOnly ? "bg-green-500" : "bg-muted"
+                        )}
+                        onClick={() => setAcceptableOnly(!acceptableOnly)}
+                      >
+                        <div
+                          className={cn(
+                            "h-6 w-6 rounded-full bg-white transition-transform",
+                            acceptableOnly ? "translate-x-6" : "translate-x-1"
+                          )}
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+
+              <div className="sticky bottom-0 bg-background border-t p-4 space-y-3">
+                <Button 
+                  className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-semibold"
+                  onClick={() => {
+                    setOpenFiltersDialog(false);
+                    fetchOffers();
+                  }}
+                >
+                  Apply
+                </Button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember-filters"
+                    checked={rememberFilters}
+                    onChange={(e) => setRememberFilters(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="remember-filters" className="text-sm">
+                    Remember my filters
+                  </label>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Active Trades Section - Always show if there are active trades */}
           {activeTrades.length > 0 && (
@@ -1612,13 +1843,24 @@ export function P2P() {
                       </div>
                     </div>
 
-                    <Button 
-                      className="w-full bg-primary hover:bg-primary/90 font-semibold"
-                      onClick={fetchOffers}
-                    >
-                      Find Offers
-                      <RotateCw className={`ml-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1 bg-primary hover:bg-primary/90 font-semibold"
+                        onClick={fetchOffers}
+                      >
+                        Find Offers
+                        <RotateCw className={`ml-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        className="w-10 h-10 p-0"
+                        onClick={() => setOpenFiltersDialog(true)}
+                      >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
