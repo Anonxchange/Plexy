@@ -817,6 +817,30 @@ export function P2P() {
 
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-6">
+                  {/* Country Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold">Country</Label>
+                    <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                      <SelectTrigger className="w-full">
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <SelectValue />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="All countries">All countries</SelectItem>
+                        <SelectItem value="United States">🇺🇸 United States</SelectItem>
+                        <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
+                        <SelectItem value="Nigeria">🇳🇬 Nigeria</SelectItem>
+                        <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
+                        <SelectItem value="Ghana">🇬🇭 Ghana</SelectItem>
+                        <SelectItem value="Kenya">🇰🇪 Kenya</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Sorting */}
                   <div className="space-y-2">
                     <Label className="text-base font-semibold">Sorting</Label>
@@ -832,6 +856,17 @@ export function P2P() {
                         <SelectItem value="Newest First">Newest First</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* Offer tags */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold">Offer tags</Label>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span className="text-muted-foreground">Select tags</span>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Button>
                   </div>
 
                   <Separator />
@@ -930,25 +965,12 @@ export function P2P() {
                       </Button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 mt-6">
-                    <input
-                      type="checkbox"
-                      id="remember-filters"
-                      checked={rememberFilters}
-                      onChange={(e) => setRememberFilters(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <label htmlFor="remember-filters" className="text-sm">
-                      Remember my filters
-                    </label>
-                  </div>
                 </div>
               </ScrollArea>
 
-              <div className="sticky bottom-0 bg-background border-t p-4">
+              <div className="sticky bottom-0 bg-background border-t p-4 space-y-3">
                 <Button 
-                  className="w-full h-14 bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold text-base"
+                  className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-semibold"
                   onClick={() => {
                     setOpenFiltersDialog(false);
                     fetchOffers();
@@ -956,6 +978,18 @@ export function P2P() {
                 >
                   Apply
                 </Button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember-filters"
+                    checked={rememberFilters}
+                    onChange={(e) => setRememberFilters(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="remember-filters" className="text-sm">
+                    Remember my filters
+                  </label>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
