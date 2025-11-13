@@ -59,7 +59,7 @@ export function TradeHeader({
             >
               {counterparty?.username}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
                 <span className="text-lg">🇳🇬</span>
                 <Button
                   variant="ghost"
