@@ -61,7 +61,6 @@ export function TradeHeader({
             </span>
             <div className="flex items-center gap-2">
                 <span className="text-lg">🇳🇬</span>
-                <span className="text-xs sm:text-sm text-muted-foreground">Nigeria</span>
                 <Button
                   variant="ghost"
                   size="icon"
