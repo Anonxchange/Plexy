@@ -1,5 +1,11 @@
 import { Info, ThumbsUp, ThumbsDown, Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ThumbsUp, ThumbsDown, ArrowLeft, User, Info } from "lucide-react";
+import { useLocation } from "wouter";
+import { UserInfoDialog } from "@/components/user-info-dialog";
+import { useState } from "react";
 
 interface TradeHeaderProps {
   counterparty?: {
@@ -23,12 +29,16 @@ interface TradeHeaderProps {
 export function TradeHeader({
   counterparty,
   isUserBuyer,
+  trade,
   timer,
   isPaid,
   formatTime,
   formatTradeTime,
   onCounterpartyClick,
 }: TradeHeaderProps) {
+  const [, setLocation] = useLocation();
+  const [showUserInfo, setShowUserInfo] = useState(false);
+
   return (
     <div className="bg-primary/10 border-b p-3 sm:p-4">
       <div className="flex items-center justify-between mb-3 gap-2">
@@ -49,8 +59,18 @@ export function TradeHeader({
             >
               {counterparty?.username}
             </span>
-            <span className="w-5 h-5 sm:w-6 sm:h-6 rounded bg-primary/20 flex items-center justify-center text-xs flex-shrink-0">🇳🇬</span>
-            <Info className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+            <div className="flex items-center gap-2">
+                <span className="text-lg">🇳🇬</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">Nigeria</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full hover:bg-muted"
+                  onClick={() => setShowUserInfo(true)}
+                >
+                  <Info className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
+                </Button>
+              </div>
           </div>
         </div>
         <div className="flex gap-1 sm:gap-2 flex-shrink-0">
@@ -73,6 +93,11 @@ export function TradeHeader({
           <span>{isPaid ? formatTradeTime() : formatTime(timer)}</span>
         </div>
       </div>
+      <UserInfoDialog
+        isOpen={showUserInfo}
+        onClose={() => setShowUserInfo(false)}
+        counterparty={counterparty}
+      />
     </div>
   );
 }
