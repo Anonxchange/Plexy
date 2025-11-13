@@ -100,6 +100,28 @@ export function P2PFiltersDialog({
 
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-6 pb-4">
+            {/* Country */}
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">Country</Label>
+              <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All countries">🌍 All countries</SelectItem>
+                  <SelectItem value="United States">🇺🇸 United States</SelectItem>
+                  <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
+                  <SelectItem value="Nigeria">🇳🇬 Nigeria</SelectItem>
+                  <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
+                  <SelectItem value="Ghana">🇬🇭 Ghana</SelectItem>
+                  <SelectItem value="Kenya">🇰🇪 Kenya</SelectItem>
+                  <SelectItem value="South Africa">🇿🇦 South Africa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
             {/* Sorting */}
             <div className="space-y-2">
               <Label className="text-base font-semibold">Sorting</Label>
@@ -115,6 +137,19 @@ export function P2PFiltersDialog({
                   <SelectItem value="Newest First">Newest First</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <Separator />
+
+            {/* Offer tags */}
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">Offer tags</Label>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-left font-normal text-muted-foreground"
+              >
+                Select tags
+              </Button>
             </div>
 
             <Separator />
