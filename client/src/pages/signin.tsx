@@ -57,8 +57,9 @@ export function SignIn() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isPhoneNumber && phoneLoginMethod === 'otp') {
-      // For phone numbers with OTP method, show phone verification
+    if (isPhoneNumber) {
+      const fullPhoneNumber = `${countryCode}${inputValue}`;
+      setUserPhoneNumber(fullPhoneNumber);
       setShowPhoneVerification(true);
       return;
     }
@@ -66,21 +67,7 @@ export function SignIn() {
     setLoading(true);
     setChecking2FA(true);
 
-    let authResult;
-
-    if (isPhoneNumber) {
-      const fullPhoneNumber = `${countryCode}${inputValue}`;
-      setUserPhoneNumber(fullPhoneNumber);
-      
-      // Use Supabase's native phone authentication
-      authResult = await supabase.auth.signInWithPassword({
-        phone: fullPhoneNumber,
-        password: password,
-      });
-    } else {
-      // Use email authentication
-      authResult = await signIn(inputValue, password);
-    }
+    const authResult = await signIn(inputValue, password);
 
     if (authResult.error) {
       setLoading(false);
@@ -254,7 +241,7 @@ export function SignIn() {
     const tempEmail = `${fullPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
 
     // Sign in with password
-    const { error, data: authData } = await signIn(tempEmail, password);
+    const { error, data } = await signIn(tempEmail, password);
 
     if (error) {
       setLoading(false);
@@ -268,18 +255,18 @@ export function SignIn() {
     }
 
     // Check for 2FA after successful password authentication
-    const { data } = await supabase.auth.getUser();
-    if (data.user) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) {
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('two_factor_enabled, two_factor_secret')
-        .eq('id', data.user.id)
+        .eq('id', userData.user.id)
         .single();
 
       setChecking2FA(false);
 
       if (profile?.two_factor_enabled) {
-        setTempUserId(data.user.id);
+        setTempUserId(userData.user.id);
         setShow2FAInput(true);
         setLoading(false);
       } else {
