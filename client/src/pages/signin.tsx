@@ -55,7 +55,7 @@ export function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isPhoneNumber && phoneLoginMethod === 'otp') {
       // For phone numbers with OTP method, show phone verification
       setShowPhoneVerification(true);
@@ -66,7 +66,7 @@ export function SignIn() {
     setChecking2FA(true);
 
     let emailToUse = inputValue;
-    
+
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
       // Convert phone number to the temporary email format used during signup
@@ -174,7 +174,7 @@ export function SignIn() {
         period: 30,
         secret: OTPAuth.Secret.fromBase32(profileData.two_factor_secret),
       });
-      
+
       const isValidToken = totp.validate({ token: twoFactorCode, window: 1 }) !== null;
 
       let isBackupCode = false;
@@ -236,6 +236,56 @@ export function SignIn() {
       setLoading(false);
     }
   };
+
+  const handlePhonePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setChecking2FA(true);
+
+    const fullPhoneNumber = `${countryCode}${inputValue}`;
+    const tempEmail = `${fullPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
+
+    // Sign in with password
+    const { error, data: authData } = await signIn(tempEmail, password);
+
+    if (error) {
+      setLoading(false);
+      setChecking2FA(false);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for 2FA after successful password authentication
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('two_factor_enabled, two_factor_secret')
+        .eq('id', data.user.id)
+        .single();
+
+      setChecking2FA(false);
+
+      if (profile?.two_factor_enabled) {
+        setTempUserId(data.user.id);
+        setShow2FAInput(true);
+        setLoading(false);
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "Successfully signed in",
+        });
+        setTimeout(() => {
+          setLocation("/dashboard");
+        }, 100);
+      }
+    }
+  };
+
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
