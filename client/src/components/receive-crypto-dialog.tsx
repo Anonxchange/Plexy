@@ -21,7 +21,7 @@ import { getDepositAddress } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { QRCodeSVG } from "qrcode.react";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ReceiveCryptoDialogProps {
   open: boolean;
@@ -73,13 +73,6 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       }
     }
   }, [selectedCrypto]);
-
-  // Reload deposit address when network changes
-  useEffect(() => {
-    if (selectedCrypto && selectedNetwork && user && step === "details" && depositAddress) {
-      loadDepositAddress();
-    }
-  }, [selectedNetwork]);
 
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
     // For USDT and USDC, append network suffix based on selection
@@ -387,10 +380,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
 
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Network</Label>
-                  <Select value={selectedNetwork} onValueChange={(network) => {
-                    setSelectedNetwork(network);
-                    setDepositAddress(""); // Clear the old address when network changes
-                  }}>
+                  <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
                     <SelectTrigger className="h-12">
                       <SelectValue />
                     </SelectTrigger>
