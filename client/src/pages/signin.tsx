@@ -19,7 +19,6 @@ export function SignIn() {
   const [loading, setLoading] = useState(false);
   const [show2FAInput, setShow2FAInput] = useState(false);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
-  const [phoneLoginMethod, setPhoneLoginMethod] = useState<'password' | 'otp'>('password');
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [checking2FA, setChecking2FA] = useState(false);
@@ -57,10 +56,21 @@ export function SignIn() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Phone number → OTP only (no password)
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
       setUserPhoneNumber(fullPhoneNumber);
       setShowPhoneVerification(true);
+      return;
+    }
+
+    // Email → Password authentication
+    if (!password) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -417,101 +427,60 @@ export function SignIn() {
                 />
               </div>
 
-              {/* Phone Login Method Toggle */}
-              {isPhoneNumber && (
-                <div className="mb-6">
+              {/* Password Input - Only shown for email */}
+              {!isPhoneNumber && (
+                <div className="mb-4">
                   <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Login Method
+                    Password<span className="text-red-500">*</span>
                   </label>
-                  <div className="flex gap-2">
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
+                        isDark 
+                          ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                          : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                      } focus:outline-none transition-colors`}
+                      placeholder="Enter your password"
+                    />
                     <button
                       type="button"
-                      onClick={() => setPhoneLoginMethod('password')}
-                      className={`flex-1 py-3 px-4 rounded-xl text-sm transition-colors ${
-                        phoneLoginMethod === 'password'
-                          ? isDark
-                            ? 'bg-lime-400 text-black font-medium'
-                            : 'bg-lime-500 text-white font-medium'
-                          : isDark
-                            ? 'bg-gray-900 text-gray-400 border border-gray-800 hover:border-gray-700'
-                            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
+                      onClick={() => setShowPassword(!showPassword)}
+                      className={`absolute right-4 top-1/2 -translate-y-1/2 ${
+                        isDark ? 'text-gray-500' : 'text-gray-400'
                       }`}
                     >
-                      Password
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPhoneLoginMethod('otp')}
-                      className={`flex-1 py-3 px-4 rounded-xl text-sm transition-colors ${
-                        phoneLoginMethod === 'otp'
-                          ? isDark
-                            ? 'bg-lime-400 text-black font-medium'
-                            : 'bg-lime-500 text-white font-medium'
-                          : isDark
-                            ? 'bg-gray-900 text-gray-400 border border-gray-800 hover:border-gray-700'
-                            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      SMS OTP
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Password Input */}
-              {(!isPhoneNumber || phoneLoginMethod === 'password') && (
-              <div className="mb-4">
-                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Password<span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
-                      isDark 
-                        ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                        : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                    } focus:outline-none transition-colors`}
-                    placeholder="Enter your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className={`absolute right-4 top-1/2 -translate-y-1/2 ${
-                      isDark ? 'text-gray-500' : 'text-gray-400'
-                    }`}
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
+              {/* Stay Logged In & Forgot Password - Only shown for email */}
+              {!isPhoneNumber && (
+                <div className="flex items-center justify-between mb-8">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-gray-300"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          localStorage.setItem('stayLoggedIn', 'true');
+                        } else {
+                          localStorage.removeItem('stayLoggedIn');
+                        }
+                      }}
+                    />
+                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Stay logged in
+                    </span>
+                  </label>
+                  <a href="#" className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} hover:underline`}>
+                    Forgot password?
+                  </a>
                 </div>
-              </div>
-              )}
-
-              {/* Stay Logged In & Forgot Password */}
-              {(!isPhoneNumber || phoneLoginMethod === 'password') && (
-              <div className="flex items-center justify-between mb-8">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-gray-300"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        localStorage.setItem('stayLoggedIn', 'true');
-                      } else {
-                        localStorage.removeItem('stayLoggedIn');
-                      }
-                    }}
-                  />
-                  <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Stay logged in
-                  </span>
-                </label>
-                <a href="#" className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} hover:underline`}>
-                  Forgot password?
-                </a>
-              </div>
               )}
 
               {/* Sign In Button */}
@@ -521,7 +490,7 @@ export function SignIn() {
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
                 style={{ fontWeight: 500 }}
               >
-                {loading ? "Signing in..." : isPhoneNumber && phoneLoginMethod === 'otp' ? "Continue with SMS" : "Sign in"}
+                {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
               </button>
 
               {/* Sign Up Link */}
