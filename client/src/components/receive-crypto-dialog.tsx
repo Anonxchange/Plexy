@@ -35,10 +35,10 @@ const networkMap: Record<string, string[]> = {
   BTC: ["Bitcoin (SegWit)"],
   ETH: ["Ethereum (ERC-20)"],
   SOL: ["Solana"],
-  TON: ["TON"],
+  BNB: ["Binance Smart Chain (BEP-20)"],
+  TRX: ["Tron (TRC-20)"],
   USDC: ["Ethereum (ERC-20)", "Solana (SPL)", "Polygon"],
   USDT: ["Ethereum (ERC-20)", "Tron (TRC-20)", "Binance Smart Chain (BEP-20)"],
-  XMR: ["Monero"],
 };
 
 export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryptoDialogProps) {
