@@ -62,8 +62,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     SOL: ["Solana"],
     BNB: ["Binance Smart Chain (BEP-20)"],
     TRX: ["Tron (TRC-20)"],
-    USDC: ["Ethereum (ERC-20)"],
-    USDT: ["Ethereum (ERC-20)"],
+    USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
+    USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
   };
 
   const handleSelectCrypto = (symbol: string) => {
