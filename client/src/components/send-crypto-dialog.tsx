@@ -73,6 +73,18 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     setStep("details");
   };
 
+  const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
+    // For USDT and USDC, append network suffix based on selection
+    if (crypto === 'USDT' || crypto === 'USDC') {
+      if (network.includes('ERC-20')) return `${crypto}-ERC20`;
+      if (network.includes('BEP-20')) return `${crypto}-BEP20`;
+      if (network.includes('TRC-20')) return `${crypto}-TRC20`;
+      if (network.includes('SPL')) return `${crypto}-SOL`;
+    }
+    // For native coins, return as-is
+    return crypto;
+  };
+
   const handleSend = async () => {
     if (!user) return;
     if (!selectedCrypto || !toAddress || !amount) {
@@ -95,7 +107,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     setLoading(true);
 
     try {
-      await sendCrypto(user.id, selectedCrypto, toAddress, amountNum, notes);
+      const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+      await sendCrypto(user.id, symbolToUse, toAddress, amountNum, notes);
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
