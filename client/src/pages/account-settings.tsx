@@ -96,6 +96,9 @@ export function AccountSettings() {
   const [showPhoneVerificationDialog, setShowPhoneVerificationDialog] = useState(false);
   const [pendingPhoneNumber, setPendingPhoneNumber] = useState("");
   const [pendingCountryCode, setPendingCountryCode] = useState("+234");
+  const [phoneChangeCode, setPhoneChangeCode] = useState("");
+  const [awaitingPhoneChangeOTP, setAwaitingPhoneChangeOTP] = useState(false);
+  const [sendingPhoneOTP, setSendingPhoneOTP] = useState(false);
 
   // Verification Data
   const [verificationLevel, setVerificationLevel] = useState(0);
@@ -646,33 +649,103 @@ export function AccountSettings() {
     }
   };
 
-  const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
+  const handleInitiatePhoneChange = async () => {
+    if (!pendingPhoneNumber) return;
+
     try {
-      const { error } = await supabase
+      setSendingPhoneOTP(true);
+      const fullPhoneNumber = pendingCountryCode + pendingPhoneNumber;
+
+      // Initiate phone change - this sends OTP to the new phone number
+      const { error: authError } = await supabase.auth.updateUser({
+        phone: fullPhoneNumber,
+      });
+
+      if (authError) {
+        // Handle specific error codes
+        if (authError.status === 422 || authError.status === 409 || 
+            authError.message.toLowerCase().includes('already') || 
+            authError.message.toLowerCase().includes('duplicate')) {
+          toast({
+            title: "Phone Number Already in Use",
+            description: "This phone number is already linked to another account.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw authError;
+      }
+
+      // OTP sent successfully
+      setAwaitingPhoneChangeOTP(true);
+      toast({
+        title: "Verification Code Sent",
+        description: `A 6-digit code has been sent to ${fullPhoneNumber}`,
+      });
+    } catch (error: any) {
+      console.error('Error initiating phone change:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send verification code",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingPhoneOTP(false);
+    }
+  };
+
+  const handleVerifyPhoneChange = async () => {
+    if (!phoneChangeCode || !pendingPhoneNumber) return;
+
+    try {
+      const fullPhoneNumber = pendingCountryCode + pendingPhoneNumber;
+
+      // Verify the phone change OTP
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        phone: fullPhoneNumber,
+        token: phoneChangeCode,
+        type: 'phone_change',
+      });
+
+      if (verifyError) {
+        toast({
+          title: "Invalid Code",
+          description: "The verification code is incorrect or has expired.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update user profile in database after successful verification
+      const { error: profileError } = await supabase
         .from('user_profiles')
         .update({
-          phone_number: verifiedPhoneNumber,
+          phone_number: fullPhoneNumber,
           phone_verified: true,
         })
         .eq('id', user?.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
-      setPhone(verifiedPhoneNumber);
+      // Reset states
+      setPhone(pendingPhoneNumber);
       setPhoneVerified(true);
       setShowPhoneVerificationDialog(false);
+      setAwaitingPhoneChangeOTP(false);
+      setPhoneChangeCode("");
+      setPendingPhoneNumber("");
 
       toast({
         title: "Success!",
-        description: "Phone number verified and updated successfully"
+        description: "Phone number verified and linked! You can now login with this phone number."
       });
 
       fetchProfileData();
-    } catch (error) {
-      console.error('Error updating phone number:', error);
+    } catch (error: any) {
+      console.error('Error verifying phone change:', error);
       toast({
         title: "Error",
-        description: "Failed to update phone number",
+        description: error.message || "Failed to verify phone number",
         variant: "destructive"
       });
     }
@@ -1248,20 +1321,69 @@ export function AccountSettings() {
       </div>
 
       {/* Phone Verification Dialog */}
-      <Dialog open={showPhoneVerificationDialog} onOpenChange={setShowPhoneVerificationDialog}>
+      <Dialog open={showPhoneVerificationDialog} onOpenChange={(open) => {
+        setShowPhoneVerificationDialog(open);
+        if (!open) {
+          setAwaitingPhoneChangeOTP(false);
+          setPhoneChangeCode("");
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Verify Phone Number</DialogTitle>
             <DialogDescription>
-              We'll send a verification code to your new phone number
+              {!awaitingPhoneChangeOTP 
+                ? "Click below to send a verification code to your new phone number"
+                : `Enter the 6-digit code sent to ${pendingCountryCode}${pendingPhoneNumber}`
+              }
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <PhoneVerification
-              onVerified={handlePhoneVerified}
-              initialPhone={pendingPhoneNumber}
-              initialCountryCode={pendingCountryCode}
-            />
+          <div className="py-4 space-y-4">
+            {!awaitingPhoneChangeOTP ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">New Phone Number:</p>
+                  <p className="text-lg">{pendingCountryCode}{pendingPhoneNumber}</p>
+                </div>
+                <Button 
+                  onClick={handleInitiatePhoneChange} 
+                  disabled={sendingPhoneOTP}
+                  className="w-full"
+                >
+                  {sendingPhoneOTP ? "Sending Code..." : "Send Verification Code"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="otp-code">Verification Code</Label>
+                  <Input
+                    id="otp-code"
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    value={phoneChangeCode}
+                    onChange={(e) => setPhoneChangeCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    className="text-center text-lg tracking-widest"
+                  />
+                </div>
+                <Button 
+                  onClick={handleVerifyPhoneChange} 
+                  disabled={phoneChangeCode.length !== 6}
+                  className="w-full"
+                >
+                  Verify and Link Phone Number
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={handleInitiatePhoneChange}
+                  disabled={sendingPhoneOTP}
+                  className="w-full"
+                >
+                  {sendingPhoneOTP ? "Sending..." : "Resend Code"}
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
