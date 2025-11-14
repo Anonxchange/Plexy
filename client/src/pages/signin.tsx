@@ -55,19 +55,15 @@ export function SignIn() {
     setLoading(true);
     setChecking2FA(true);
 
+    let emailToUse = inputValue;
+    
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
-      toast({
-        title: "Phone Sign-In Not Yet Implemented",
-        description: "Please use email to sign in, or sign up with phone verification",
-        variant: "destructive",
-      });
-      setLoading(false);
-      setChecking2FA(false);
-      return;
+      // Convert phone number to the same temporary email format used during signup
+      emailToUse = `${fullPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
     }
 
-    const { error } = await signIn(inputValue, password);
+    const { error } = await signIn(emailToUse, password);
 
     if (error) {
       setLoading(false);
