@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Sun, Moon, ShieldCheck, Zap } from "lucide-react";
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 import { CountryCodeSelector } from "@/components/country-code-selector";
+import { PhoneVerification } from "@/components/phone-verification";
 import { createClient } from "@/lib/supabase";
 import * as OTPAuth from "otpauth";
 import { useTheme } from "@/components/theme-provider";
@@ -17,6 +18,8 @@ export function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [show2FAInput, setShow2FAInput] = useState(false);
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [phoneLoginMethod, setPhoneLoginMethod] = useState<'password' | 'otp'>('password');
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [checking2FA, setChecking2FA] = useState(false);
@@ -52,6 +55,13 @@ export function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isPhoneNumber && phoneLoginMethod === 'otp') {
+      // For phone numbers with OTP method, show phone verification
+      setShowPhoneVerification(true);
+      return;
+    }
+
     setLoading(true);
     setChecking2FA(true);
 
@@ -59,7 +69,7 @@ export function SignIn() {
     
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
-      // Convert phone number to the same temporary email format used during signup
+      // Convert phone number to the temporary email format used during signup
       emailToUse = `${fullPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
     }
 
@@ -116,6 +126,15 @@ export function SignIn() {
         setLocation("/dashboard");
       }, 100);
     }
+  };
+
+  const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
+    // Phone verification successful, user is now authenticated
+    toast({
+      title: "Success!",
+      description: "Phone verified! Signing you in...",
+    });
+    setLocation("/dashboard");
   };
 
   const handleVerify2FA = async (e: React.FormEvent) => {
@@ -255,7 +274,32 @@ export function SignIn() {
 
         {/* Right Column: Form */}
         <div className="px-6 pt-20 lg:pt-32 max-w-md mx-auto lg:flex lg:flex-col lg:justify-center">
-        {!show2FAInput ? (
+        {showPhoneVerification ? (
+          <div className={`rounded-2xl p-6 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
+            <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
+              Phone Verification
+            </h2>
+            <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Verify your phone number to sign in
+            </p>
+            <PhoneVerification
+              onVerified={handlePhoneVerified}
+              initialPhone={inputValue}
+              initialCountryCode={countryCode}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPhoneVerification(false)}
+              className={`w-full mt-4 py-3 rounded-xl text-sm transition-colors ${
+                isDark 
+                  ? 'text-gray-400 hover:text-white hover:bg-gray-800' 
+                  : 'text-gray-600 hover:text-black hover:bg-gray-100'
+              }`}
+            >
+              Back to Sign In
+            </button>
+          </div>
+        ) : !show2FAInput ? (
           <>
             <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
               Welcome back!
@@ -328,7 +372,49 @@ export function SignIn() {
                 />
               </div>
 
+              {/* Phone Login Method Toggle */}
+              {isPhoneNumber && (
+                <div className="mb-6">
+                  <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Login Method
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPhoneLoginMethod('password')}
+                      className={`flex-1 py-3 px-4 rounded-xl text-sm transition-colors ${
+                        phoneLoginMethod === 'password'
+                          ? isDark
+                            ? 'bg-lime-400 text-black font-medium'
+                            : 'bg-lime-500 text-white font-medium'
+                          : isDark
+                            ? 'bg-gray-900 text-gray-400 border border-gray-800 hover:border-gray-700'
+                            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      Password
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPhoneLoginMethod('otp')}
+                      className={`flex-1 py-3 px-4 rounded-xl text-sm transition-colors ${
+                        phoneLoginMethod === 'otp'
+                          ? isDark
+                            ? 'bg-lime-400 text-black font-medium'
+                            : 'bg-lime-500 text-white font-medium'
+                          : isDark
+                            ? 'bg-gray-900 text-gray-400 border border-gray-800 hover:border-gray-700'
+                            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      SMS OTP
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Password Input */}
+              {(!isPhoneNumber || phoneLoginMethod === 'password') && (
               <div className="mb-4">
                 <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   Password<span className="text-red-500">*</span>
@@ -356,8 +442,10 @@ export function SignIn() {
                   </button>
                 </div>
               </div>
+              )}
 
               {/* Stay Logged In & Forgot Password */}
+              {(!isPhoneNumber || phoneLoginMethod === 'password') && (
               <div className="flex items-center justify-between mb-8">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -379,6 +467,7 @@ export function SignIn() {
                   Forgot password?
                 </a>
               </div>
+              )}
 
               {/* Sign In Button */}
               <button 
@@ -387,7 +476,7 @@ export function SignIn() {
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
                 style={{ fontWeight: 500 }}
               >
-                {loading ? "Signing in..." : "Sign in"}
+                {loading ? "Signing in..." : isPhoneNumber && phoneLoginMethod === 'otp' ? "Continue with SMS" : "Sign in"}
               </button>
 
               {/* Sign Up Link */}
