@@ -13,7 +13,8 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { QRCodeSVG } from "qrcode.react";
-import { PexlyFooter } from "@/components/pexly-footer";
+import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
+import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 
 const cryptoData: Record<string, { name: string; icon: string; color: string; iconUrl?: string }> = {
   BTC: { name: "Bitcoin", icon: "₿", color: "text-orange-500", iconUrl: cryptoIconUrls.BTC },
@@ -51,6 +52,8 @@ export default function AssetDetail() {
     eur: { price: 0, change: 0 }
   });
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [receiveOpen, setReceiveOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
 
   const assetInfo = cryptoData[symbol] || { name: symbol, icon: symbol[0], color: "text-gray-500" };
 
@@ -445,6 +448,26 @@ export default function AssetDetail() {
           </Card>
         </div>
 
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+          <Button 
+            variant="outline" 
+            className="h-14 sm:h-16"
+            onClick={() => setReceiveOpen(true)}
+          >
+            <ArrowDownToLine className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+            Receive
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-14 sm:h-16"
+            onClick={() => setSendOpen(true)}
+          >
+            <ArrowUpFromLine className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+            Send
+          </Button>
+        </div>
+
         {/* Trading Pairs */}
         <div className="mb-6">
           <h3 className="text-lg sm:text-xl font-bold mb-4">Trade</h3>
@@ -516,26 +539,6 @@ export default function AssetDetail() {
               </CardContent>
             </Card>
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-8">
-          <Button 
-            variant="outline" 
-            className="h-14 sm:h-16"
-            onClick={() => setLocation('/wallet')}
-          >
-            <ArrowDownToLine className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-            Receive
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-14 sm:h-16"
-            onClick={() => setLocation('/wallet')}
-          >
-            <ArrowUpFromLine className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-            Send
-          </Button>
         </div>
       </div>
 
@@ -708,7 +711,35 @@ export default function AssetDetail() {
         </DrawerContent>
       </Drawer>
 
-      <PexlyFooter />
+      {/* Receive Crypto Dialog */}
+      <ReceiveCryptoDialog
+        open={receiveOpen}
+        onOpenChange={setReceiveOpen}
+        wallets={Object.entries(cryptoData).map(([symbol, data]) => ({
+          symbol,
+          name: data.name,
+          icon: data.icon
+        }))}
+      />
+
+      {/* Send Crypto Dialog */}
+      <SendCryptoDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        wallets={Object.entries(cryptoData).map(([symbol, data]) => ({
+          symbol,
+          name: data.name,
+          icon: data.icon,
+          balance: symbol === selectedCrypto ? balance : 0
+        }))}
+        onSuccess={() => {
+          loadAssetData();
+          toast({
+            title: "Success",
+            description: "Transaction completed successfully"
+          });
+        }}
+      />
     </div>
   );
 }
