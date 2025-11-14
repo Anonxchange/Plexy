@@ -105,6 +105,7 @@ export function AccountSettings() {
   const [currency, setCurrency] = useState("usd");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [countryCodeForPhone, setCountryCodeForPhone] = useState("+234");
 
   // Security settings
   const [smsAuth, setSmsAuth] = useState(false);
@@ -220,7 +221,9 @@ export function AccountSettings() {
         setProfileData(data);
         setUsername(data.username || '');
         setBio(data.bio || '');
-        setPhone(data.phone || '');
+        // Load phone number from phone_number field
+        setPhone(data.phone_number || data.phone || '');
+        setPhoneVerified(data.phone_verified || false);
         setCurrency(data.preferred_currency || 'usd');
       }
     } catch (error) {
@@ -554,7 +557,7 @@ export function AccountSettings() {
       const updateData: any = {
         username: username.trim(),
         bio: bio,
-        phone: phone,
+        phone_number: phone,
         preferred_currency: currency,
       };
 
@@ -1047,29 +1050,32 @@ export function AccountSettings() {
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Phone</Label>
         <div className="flex gap-2 items-center">
-          <Select defaultValue="ng">
-            <SelectTrigger className="w-24">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ng">🇳🇬</SelectItem>
-              <SelectItem value="us">🇺🇸</SelectItem>
-              <SelectItem value="gb">🇬🇧</SelectItem>
-              <SelectItem value="ca">🇨🇦</SelectItem>
-            </SelectContent>
-          </Select>
           <Input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            placeholder="+1234567890"
             className="flex-1"
-            disabled={phoneVerified}
           />
           {phoneVerified && (
             <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10">
               <Check className="h-5 w-5 text-primary" />
             </div>
           )}
+          {!phoneVerified && phone && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveProfile}
+            >
+              Save
+            </Button>
+          )}
         </div>
+        {phoneVerified && (
+          <p className="text-sm text-muted-foreground">
+            ✓ Phone number verified
+          </p>
+        )}
       </div>
 
       {/* Reset Phone */}
