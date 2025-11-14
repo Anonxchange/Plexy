@@ -66,23 +66,28 @@ export function SignIn() {
     setLoading(true);
     setChecking2FA(true);
 
-    let emailToUse = inputValue;
+    let authResult;
 
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
-      // Convert phone number to the temporary email format used during signup
-      emailToUse = `${fullPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
-      setUserPhoneNumber(fullPhoneNumber); // Store the phone number
+      setUserPhoneNumber(fullPhoneNumber);
+      
+      // Use Supabase's native phone authentication
+      authResult = await supabase.auth.signInWithPassword({
+        phone: fullPhoneNumber,
+        password: password,
+      });
+    } else {
+      // Use email authentication
+      authResult = await signIn(inputValue, password);
     }
 
-    const { error } = await signIn(emailToUse, password);
-
-    if (error) {
+    if (authResult.error) {
       setLoading(false);
       setChecking2FA(false);
       toast({
         title: "Error",
-        description: error.message,
+        description: authResult.error.message,
         variant: "destructive",
       });
       return;
