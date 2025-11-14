@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
-import { firebaseAuth } from "@/lib/firebase";
+import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,24 +23,10 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
   const [phoneNumber, setPhoneNumber] = useState(initialPhone);
   const [countryCode, setCountryCode] = useState(initialCountryCode);
   const [verificationCode, setVerificationCode] = useState("");
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [codeSent, setCodeSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  const setupRecaptcha = () => {
-    if (!(window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(
-        firebaseAuth,
-        'recaptcha-container',
-        {
-          size: 'invisible',
-          callback: () => {
-            console.log("Recaptcha verified");
-          },
-        }
-      );
-    }
-  };
+  const supabase = createClient();
 
   const sendVerificationCode = async () => {
     if (!phoneNumber || phoneNumber.length < 7) {
@@ -55,13 +40,15 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
 
     try {
       setLoading(true);
-      setupRecaptcha();
       
       const fullPhoneNumber = countryCode + phoneNumber;
-      const appVerifier = (window as any).recaptchaVerifier;
-      const result = await signInWithPhoneNumber(firebaseAuth, fullPhoneNumber, appVerifier);
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: fullPhoneNumber,
+      });
       
-      setConfirmationResult(result);
+      if (error) throw error;
+      
+      setCodeSent(true);
       toast({
         title: "Code sent!",
         description: `Verification code sent to ${fullPhoneNumber}`,
@@ -73,24 +60,26 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
         description: error.message || "Failed to send verification code",
         variant: "destructive",
       });
-      
-      // Reset recaptcha on error
-      if ((window as any).recaptchaVerifier) {
-        (window as any).recaptchaVerifier = null;
-      }
     } finally {
       setLoading(false);
     }
   };
 
   const verifyCode = async () => {
-    if (!confirmationResult) return;
+    if (!verificationCode) return;
 
     try {
       setLoading(true);
-      await confirmationResult.confirm(verificationCode);
       
       const fullPhoneNumber = countryCode + phoneNumber;
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: fullPhoneNumber,
+        token: verificationCode,
+        type: 'sms',
+      });
+      
+      if (error) throw error;
+      
       toast({
         title: "Success!",
         description: "Phone number verified successfully",
@@ -101,7 +90,7 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
       console.error("Error verifying code:", error);
       toast({
         title: "Error",
-        description: "Invalid verification code",
+        description: error.message || "Invalid verification code",
         variant: "destructive",
       });
     } finally {
@@ -111,13 +100,11 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
 
   return (
     <div className="space-y-4">
-      <div id="recaptcha-container"></div>
-      
-      {!confirmationResult ? (
+      {!codeSent ? (
         <>
           <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              We'll send a verification code to your phone number via SMS.
+              We'll send a verification code to your phone number via SMS using Supabase.
             </p>
           </div>
           
@@ -206,7 +193,7 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
               <button
                 type="button"
                 onClick={() => {
-                  setConfirmationResult(null);
+                  setCodeSent(false);
                   setVerificationCode("");
                 }}
                 className="text-primary hover:underline"
