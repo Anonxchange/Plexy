@@ -225,8 +225,21 @@ export function AccountSettings() {
         setProfileData(data);
         setUsername(data.username || '');
         setBio(data.bio || '');
-        // Load phone number from phone_number field
-        setPhone(data.phone_number || data.phone || '');
+        
+        // Load phone number from phone_number field and parse country code
+        const fullPhone = data.phone_number || data.phone || '';
+        if (fullPhone) {
+          // Try to extract country code
+          const codes = ['+234', '+1', '+44', '+91'];
+          const matchedCode = codes.find(code => fullPhone.startsWith(code));
+          if (matchedCode) {
+            setCountryCodeForPhone(matchedCode);
+            setPhone(fullPhone.replace(matchedCode, ''));
+          } else {
+            setPhone(fullPhone);
+          }
+        }
+        
         setPhoneVerified(data.phone_verified || false);
         setCurrency(data.preferred_currency || 'usd');
       }
@@ -562,9 +575,32 @@ export function AccountSettings() {
       const currentPhone = profileData?.phone_number || '';
       const newPhone = phone.trim();
       
-      if (newPhone !== currentPhone && !skipPhoneVerification) {
+      if (newPhone !== currentPhone && newPhone && !skipPhoneVerification) {
+        // Check if this phone number is already linked to another account
+        const fullPhoneNumber = countryCodeForPhone + newPhone;
+        const { data: existingPhone, error: checkError } = await supabase
+          .from('user_profiles')
+          .select('id, username')
+          .eq('phone_number', fullPhoneNumber)
+          .neq('id', user?.id)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error("Error checking phone number:", checkError);
+        }
+
+        if (existingPhone) {
+          toast({
+            title: "Phone Number Already in Use",
+            description: "This phone number is already linked to another account.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         // Phone number changed - trigger OTP verification
         setPendingPhoneNumber(newPhone);
+        setPendingCountryCode(countryCodeForPhone);
         setShowPhoneVerificationDialog(true);
         return;
       }
@@ -1100,34 +1136,73 @@ export function AccountSettings() {
       {/* Phone */}
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Phone</Label>
-        <div className="flex gap-2 items-center">
-          <Input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+1234567890"
-            className="flex-1"
-          />
-          {phoneVerified && phone === (profileData?.phone_number || '') && (
-            <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10">
-              <Check className="h-5 w-5 text-primary" />
+        <div className="space-y-2">
+          <div className="space-y-2">
+            <Label>Country Code</Label>
+            <Select value={countryCodeForPhone} onValueChange={setCountryCodeForPhone}>
+              <SelectTrigger className="w-full h-12">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="+234">
+                  <div className="flex items-center gap-2">
+                    <span>🇳🇬</span>
+                    <span>Nigeria (+234)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="+1">
+                  <div className="flex items-center gap-2">
+                    <span>🇺🇸</span>
+                    <span>United States (+1)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="+44">
+                  <div className="flex items-center gap-2">
+                    <span>🇬🇧</span>
+                    <span>United Kingdom (+44)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="+91">
+                  <div className="flex items-center gap-2">
+                    <span>🇮🇳</span>
+                    <span>India (+91)</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2 items-center">
+            <div className="flex items-center px-3 py-2 border rounded-md bg-muted h-12">
+              <span className="text-sm font-medium">{countryCodeForPhone}</span>
             </div>
-          )}
-          {phone !== (profileData?.phone_number || '') && phone && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleSaveProfile(false)}
-            >
-              Verify
-            </Button>
-          )}
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="1234567890"
+              className="flex-1 h-12"
+            />
+            {phoneVerified && phone && (countryCodeForPhone + phone) === (profileData?.phone_number || '') && (
+              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10">
+                <Check className="h-5 w-5 text-primary" />
+              </div>
+            )}
+            {((phone !== (profileData?.phone_number || '').replace(countryCodeForPhone, '')) || (countryCodeForPhone + phone) !== (profileData?.phone_number || '')) && phone && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleSaveProfile(false)}
+              >
+                Verify
+              </Button>
+            )}
+          </div>
         </div>
-        {phoneVerified && phone === (profileData?.phone_number || '') && (
+        {phoneVerified && phone && (countryCodeForPhone + phone) === (profileData?.phone_number || '') && (
           <p className="text-sm text-muted-foreground">
             ✓ Phone number verified
           </p>
         )}
-        {phone !== (profileData?.phone_number || '') && phone && (
+        {((phone !== (profileData?.phone_number || '').replace(countryCodeForPhone, '')) || (countryCodeForPhone + phone) !== (profileData?.phone_number || '')) && phone && (
           <p className="text-sm text-orange-600 dark:text-orange-400">
             ⚠ Phone number needs verification
           </p>
