@@ -23,6 +23,7 @@ export function SignIn() {
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [checking2FA, setChecking2FA] = useState(false);
+  const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
   const { signIn, signOut, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -71,6 +72,7 @@ export function SignIn() {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
       // Convert phone number to the temporary email format used during signup
       emailToUse = `${fullPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
+      setUserPhoneNumber(fullPhoneNumber); // Store the phone number
     }
 
     const { error } = await signIn(emailToUse, password);
@@ -204,6 +206,7 @@ export function SignIn() {
         return;
       }
 
+      // Use the original inputValue for sign-in, as it could be email or phone number
       const { error: signInError } = await signIn(inputValue, password);
 
       if (signInError) {
@@ -548,7 +551,8 @@ export function SignIn() {
                 Two-Factor Authentication
               </h1>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Enter the 6-digit code from your authenticator app
+                Enter the 6-digit code from your authenticator app or SMS.
+                {userPhoneNumber && ` We've sent a code to ${userPhoneNumber}.`}
               </p>
             </div>
 
