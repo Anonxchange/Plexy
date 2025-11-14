@@ -357,13 +357,13 @@ export function TradeHistory() {
                       variant="outline" 
                       className="h-10"
                     >
-                      TON
+                      BNB
                     </Button>
                     <Button 
                       variant="outline" 
                       className="h-10"
                     >
-                      XMR
+                      TRX
                     </Button>
                   </div>
                 </div>
