@@ -22,8 +22,6 @@ const COINGECKO_IDS: Record<string, string> = {
   USDT: 'tether',
   USDC: 'usd-coin',
   SOL: 'solana',
-  TON: 'the-open-network',
-  XMR: 'monero',
   BNB: 'binancecoin',
   TRX: 'tron',
   LTC: 'litecoin',
