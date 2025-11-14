@@ -33,6 +33,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { PhoneVerification } from "@/components/phone-verification";
 
 import { Switch } from "@/components/ui/switch";
 import {
@@ -92,6 +93,9 @@ export function AccountSettings() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [nameDisplay, setNameDisplay] = useState("hide");
   const [phoneVerified, setPhoneVerified] = useState(true);
+  const [showPhoneVerificationDialog, setShowPhoneVerificationDialog] = useState(false);
+  const [pendingPhoneNumber, setPendingPhoneNumber] = useState("");
+  const [pendingCountryCode, setPendingCountryCode] = useState("+234");
 
   // Verification Data
   const [verificationLevel, setVerificationLevel] = useState(0);
@@ -552,14 +556,29 @@ export function AccountSettings() {
     }
   };
 
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = async (skipPhoneVerification = false) => {
     try {
+      // Check if phone number has changed
+      const currentPhone = profileData?.phone_number || '';
+      const newPhone = phone.trim();
+      
+      if (newPhone !== currentPhone && !skipPhoneVerification) {
+        // Phone number changed - trigger OTP verification
+        setPendingPhoneNumber(newPhone);
+        setShowPhoneVerificationDialog(true);
+        return;
+      }
+
       const updateData: any = {
         username: username.trim(),
         bio: bio,
-        phone_number: phone,
         preferred_currency: currency,
       };
+
+      // Only update phone if it's verified or hasn't changed
+      if (skipPhoneVerification || newPhone === currentPhone) {
+        updateData.phone_number = newPhone;
+      }
 
       console.log("Saving profile with currency:", currency, "updateData:", updateData);
 
@@ -586,6 +605,38 @@ export function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to update profile",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          phone_number: verifiedPhoneNumber,
+          phone_verified: true,
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      setPhone(verifiedPhoneNumber);
+      setPhoneVerified(true);
+      setShowPhoneVerificationDialog(false);
+
+      toast({
+        title: "Success!",
+        description: "Phone number verified and updated successfully"
+      });
+
+      fetchProfileData();
+    } catch (error) {
+      console.error('Error updating phone number:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update phone number",
         variant: "destructive"
       });
     }
@@ -1056,24 +1107,29 @@ export function AccountSettings() {
             placeholder="+1234567890"
             className="flex-1"
           />
-          {phoneVerified && (
+          {phoneVerified && phone === (profileData?.phone_number || '') && (
             <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10">
               <Check className="h-5 w-5 text-primary" />
             </div>
           )}
-          {!phoneVerified && phone && (
+          {phone !== (profileData?.phone_number || '') && phone && (
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSaveProfile}
+              onClick={() => handleSaveProfile(false)}
             >
-              Save
+              Verify
             </Button>
           )}
         </div>
-        {phoneVerified && (
+        {phoneVerified && phone === (profileData?.phone_number || '') && (
           <p className="text-sm text-muted-foreground">
             ✓ Phone number verified
+          </p>
+        )}
+        {phone !== (profileData?.phone_number || '') && phone && (
+          <p className="text-sm text-orange-600 dark:text-orange-400">
+            ⚠ Phone number needs verification
           </p>
         )}
       </div>
@@ -1115,6 +1171,25 @@ export function AccountSettings() {
           Maximum 3 lines and 180 characters ({bio.length}/180)
         </p>
       </div>
+
+      {/* Phone Verification Dialog */}
+      <Dialog open={showPhoneVerificationDialog} onOpenChange={setShowPhoneVerificationDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Verify Phone Number</DialogTitle>
+            <DialogDescription>
+              We'll send a verification code to your new phone number
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <PhoneVerification
+              onVerified={handlePhoneVerified}
+              initialPhone={pendingPhoneNumber}
+              initialCountryCode={pendingCountryCode}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
@@ -2786,8 +2861,8 @@ export function AccountSettings() {
                 Increase your verification level to unlock higher trading limits and additional features.
               </p>
               <Button
-                variant="link"
-                className="h-auto p-0 text-primary"
+                variant="ghost"
+                className="h-auto p-0 text-primary hover:text-primary/90"
                 onClick={() => setLocation('/verification')}
               >
                 View Verification Levels →
