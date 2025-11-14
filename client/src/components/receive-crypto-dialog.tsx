@@ -74,6 +74,13 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
     }
   }, [selectedCrypto]);
 
+  // Reload deposit address when network changes
+  useEffect(() => {
+    if (selectedCrypto && selectedNetwork && user && step === "details" && depositAddress) {
+      loadDepositAddress();
+    }
+  }, [selectedNetwork]);
+
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
     // For USDT and USDC, append network suffix based on selection
     if (crypto === 'USDT' || crypto === 'USDC') {
@@ -380,7 +387,10 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
 
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Network</Label>
-                  <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+                  <Select value={selectedNetwork} onValueChange={(network) => {
+                    setSelectedNetwork(network);
+                    setDepositAddress(""); // Clear the old address when network changes
+                  }}>
                     <SelectTrigger className="h-12">
                       <SelectValue />
                     </SelectTrigger>
