@@ -708,12 +708,12 @@ export function Profile() {
                   <span>&lt; 10K USDC</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.TON} alt="TON" className="h-5 w-5" />
-                  <span>&lt; 10K TON</span>
+                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
+                  <span>&lt; 1K BNB</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.XMR} alt="XMR" className="h-5 w-5" />
-                  <span>&lt; 10K XMR</span>
+                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
+                  <span>&lt; 100K TRX</span>
                 </div>
               </div>
             </div>
