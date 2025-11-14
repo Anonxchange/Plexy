@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; data: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
 }
@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await trackDevice(data.user.id);
     }
     
-    return { error };
+    return { error, data };
   };
 
   const signOut = async () => {
