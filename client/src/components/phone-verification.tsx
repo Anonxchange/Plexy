@@ -121,7 +121,7 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
         <>
           <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              We'll send a verification code to your phone number via SMS using Supabase.
+              We'll send a 6-digit verification code to your phone number via SMS.
             </p>
           </div>
           
@@ -189,23 +189,28 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
         <>
           <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg mb-4">
             <p className="text-sm text-green-800 dark:text-green-200">
-              Verification code sent to <strong>{countryCode}{phoneNumber}</strong>
+              ✓ Verification code sent to <strong>{countryCode}{phoneNumber}</strong>
+            </p>
+            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+              Please check your SMS messages for the 6-digit code.
             </p>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="code">Enter Verification Code</Label>
+            <Label htmlFor="code" className="text-base font-semibold">Enter Verification Code</Label>
             <Input
               id="code"
               type="text"
-              placeholder="Enter 6-digit code"
+              inputMode="numeric"
+              placeholder="000000"
               value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
               disabled={loading}
               maxLength={6}
-              className="h-12 text-center text-2xl tracking-widest"
+              className="h-14 text-center text-3xl tracking-[0.5em] font-mono"
+              autoFocus
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground text-center">
               Didn't receive the code?{" "}
               <button
                 type="button"
@@ -213,10 +218,10 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
                   setCodeSent(false);
                   setVerificationCode("");
                 }}
-                className="text-primary hover:underline"
+                className="text-primary hover:underline font-medium"
                 disabled={loading}
               >
-                Resend
+                Resend Code
               </button>
             </p>
           </div>
@@ -226,7 +231,7 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
             disabled={!verificationCode || verificationCode.length !== 6 || loading}
             className="w-full h-12"
           >
-            {loading ? "Verifying..." : "Verify Code"}
+            {loading ? "Verifying..." : "Verify & Link Phone Number"}
           </Button>
         </>
       )}
