@@ -21,7 +21,7 @@ import { getDepositAddress } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { QRCodeSVG } from "qrcode.react";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReceiveCryptoDialogProps {
   open: boolean;
