@@ -43,10 +43,10 @@ const cryptoAssets = [
   { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.BTC, color: "text-orange-500", avgCost: 0 },
   { symbol: "ETH", name: "Ethereum", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.ETH, color: "text-blue-500", avgCost: 0 },
   { symbol: "SOL", name: "Solana", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.SOL, color: "text-purple-500", avgCost: 0 },
-  { symbol: "TON", name: "Toncoin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.TON, color: "text-blue-400", avgCost: 0 },
+  { symbol: "BNB", name: "Binance Coin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.BNB, color: "text-yellow-500", avgCost: 0 },
+  { symbol: "TRX", name: "Tron", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.TRX, color: "text-red-500", avgCost: 0 },
   { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.USDC, color: "text-blue-600", avgCost: 0 },
   { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.USDT, color: "text-green-500", avgCost: 0 },
-  { symbol: "XMR", name: "Monero", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.XMR, color: "text-orange-600", avgCost: 0 },
 ];
 
 const initialSpotPairs = [
