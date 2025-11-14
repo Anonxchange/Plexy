@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -22,6 +21,7 @@ import { getDepositAddress } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { QRCodeSVG } from "qrcode.react";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ReceiveCryptoDialogProps {
   open: boolean;
@@ -50,6 +50,8 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
   const [depositAddress, setDepositAddress] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false); // Added state for address generation
+  const { toast } = useToast();
 
   useEffect(() => {
     if (selectedCrypto && user && step === "details") {
@@ -60,7 +62,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
   useEffect(() => {
     if (selectedCrypto) {
       const networks = networkMap[selectedCrypto] || [];
-      setSelectedNetwork(networks[0] || "");
+      // Set default network if available, otherwise use the first one
+      if (selectedCrypto === 'USDT' || selectedCrypto === 'USDC') {
+        if (networks.includes("Ethereum (ERC-20)")) setSelectedNetwork("Ethereum (ERC-20)");
+        else if (networks.includes("Binance Smart Chain (BEP-20)")) setSelectedNetwork("Binance Smart Chain (BEP-20)");
+        else if (networks.includes("Tron (TRC-20)")) setSelectedNetwork("Tron (TRC-20)");
+        else if (networks.includes("Solana (SPL)")) setSelectedNetwork("Solana (SPL)");
+      } else {
+        setSelectedNetwork(networks[0] || "");
+      }
     }
   }, [selectedCrypto]);
 
@@ -70,7 +80,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       if (network.includes('ERC-20')) return `${crypto}-ERC20`;
       if (network.includes('BEP-20')) return `${crypto}-BEP20`;
       if (network.includes('TRC-20')) return `${crypto}-TRC20`;
-      if (network.includes('SPL')) return `${crypto}-SOL`;
+      if (network.includes('SPL')) return `${crypto}-SOL`; // Assuming SPL maps to SOL network
     }
     // For native coins, return as-is
     return crypto;
@@ -85,6 +95,11 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       setDepositAddress(address);
     } catch (error) {
       console.error("Error loading deposit address:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load deposit address. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -104,6 +119,9 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       setSelectedCrypto("");
       setSelectedNetwork("");
       setDepositAddress("");
+      setCopied(false); // Reset copied state
+      setLoading(false); // Reset loading state
+      setIsGenerating(false); // Reset isGenerating state
     }, 200);
   };
 
@@ -112,6 +130,67 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       setStep("asset");
     } else if (step === "asset") {
       setStep("method");
+    }
+  };
+
+  // Handler for crypto selection change
+  const handleCryptoChange = (value: string) => {
+    setSelectedCrypto(value);
+    // Auto-select appropriate network based on crypto
+    if (value === 'BTC') {
+      setSelectedNetwork('Bitcoin (SegWit)');
+    } else if (value === 'ETH') {
+      setSelectedNetwork('Ethereum (ERC-20)');
+    } else if (value === 'BNB') {
+      setSelectedNetwork('Binance Smart Chain (BEP-20)');
+    } else if (value === 'SOL') {
+      setSelectedNetwork('Solana');
+    } else if (value === 'TRX') {
+      setSelectedNetwork('Tron (TRC-20)');
+    } else if (value === 'USDT' || value === 'USDC') {
+      setSelectedNetwork('Ethereum (ERC-20)'); // Default to ERC20
+    }
+    setDepositAddress(""); // Clear previous address
+  };
+
+  // Helper function to get the correct crypto symbol with network suffix
+  const getCryptoSymbolWithNetwork = () => {
+    if (selectedCrypto === 'BTC') return 'BTC';
+    if (selectedCrypto === 'ETH') return 'ETH';
+    if (selectedCrypto === 'BNB') return 'BNB';
+    if (selectedCrypto === 'SOL') return 'SOL';
+    if (selectedCrypto === 'TRX') return 'TRX';
+
+    // For USDT/USDC, append network suffix
+    if (selectedCrypto === 'USDT' || selectedCrypto === 'USDC') {
+      if (selectedNetwork === 'Ethereum (ERC-20)') return `${selectedCrypto}-ERC20`;
+      if (selectedNetwork === 'Binance Smart Chain (BEP-20)') return `${selectedCrypto}-BEP20`;
+      if (selectedNetwork === 'Tron (TRC-20)') return `${selectedCrypto}-TRC20`;
+      if (selectedNetwork === 'Solana (SPL)') return `${selectedCrypto}-SOL`; // Corrected to match SPL
+    }
+
+    return selectedCrypto; // Fallback for unhandled cases
+  };
+
+  // Handler to generate the deposit address
+  const handleGenerateAddress = async () => {
+    if (!selectedCrypto || !selectedNetwork) return;
+
+    setIsGenerating(true);
+    try {
+      const cryptoSymbol = getCryptoSymbolWithNetwork();
+      console.log('Generating address for:', cryptoSymbol, 'on network:', selectedNetwork);
+      const address = await getDepositAddress(user?.id || '', cryptoSymbol);
+      setDepositAddress(address);
+    } catch (error: any) {
+      console.error('Error generating address:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to generate deposit address"
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -239,7 +318,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                       selectedCrypto === wallet.symbol ? "bg-green-500/10 border-green-500/50" : ""
                     }`}
                     onClick={() => {
-                      setSelectedCrypto(wallet.symbol);
+                      handleCryptoChange(wallet.symbol); // Use handler to set crypto and network
                       setStep("details");
                     }}
                   >
@@ -266,7 +345,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
           {/* Details Step */}
           {step === "details" && (
             <>
-              {loading ? (
+              {isGenerating ? ( // Use isGenerating state for loading indicator
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
@@ -275,7 +354,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                   <div className="space-y-4 px-1 pr-4">
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Asset</Label>
-                  <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                  <Select value={selectedCrypto} onValueChange={handleCryptoChange}>
                     <SelectTrigger className="h-12">
                       <SelectValue />
                     </SelectTrigger>
@@ -287,6 +366,9 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                               src={cryptoIconUrls[wallet.symbol]} 
                               alt={wallet.symbol}
                               className="w-5 h-5 rounded-full"
+                              onError={(e) => {
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
+                              }}
                             />
                             <span>{wallet.symbol}</span>
                           </span>
@@ -312,66 +394,73 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                   </Select>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Deposit address</Label>
-                  
-                  {/* QR Code */}
-                  <div className="flex justify-center mb-4">
-                    <div className="p-4 bg-white rounded-lg relative">
-                      <QRCodeSVG value={depositAddress} size={200} />
-                      {/* Logo Overlay */}
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center shadow-lg">
-                          <svg className="w-8 h-8 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
+                {depositAddress ? ( // Only show address details if an address exists
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Deposit address</Label>
+
+                    {/* QR Code */}
+                    <div className="flex justify-center mb-4">
+                      <div className="p-4 bg-white rounded-lg relative">
+                        <QRCodeSVG value={depositAddress} size={200} />
+                        {/* Logo Overlay */}
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                          <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center shadow-lg">
+                            <svg className="w-8 h-8 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Address Display */}
-                  <div className="p-3 bg-muted rounded-lg mb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="text-xs text-muted-foreground mb-1">
-                          {selectedCrypto} #{selectedNetwork.includes("SegWit") ? "1" : "1"} ({selectedNetwork.split(" ")[0]})
+                    {/* Address Display */}
+                    <div className="p-3 bg-muted rounded-lg mb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="text-xs text-muted-foreground mb-1">
+                            {selectedCrypto} #{selectedNetwork.includes("SegWit") ? "1" : "1"} ({selectedNetwork.split(" ")[0]})
+                          </div>
+                          <code className="text-sm font-mono break-all">{depositAddress}</code>
                         </div>
-                        <code className="text-sm font-mono break-all">{depositAddress}</code>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleCopy}
+                          className="ml-2"
+                        >
+                          {copied ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleCopy}
-                        className="ml-2"
-                      >
-                        {copied ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
                     </div>
-                  </div>
 
-                  {/* Create New Address Button */}
-                  <Button variant="outline" className="w-full mb-2">
-                    Create a new address
+                    {/* Create New Address Button */}
+                    <Button variant="outline" className="w-full mb-2" onClick={handleGenerateAddress} disabled={isGenerating}>
+                      {isGenerating ? 'Generating...' : 'Create a new address'}
+                    </Button>
+
+                    <p className="text-xs text-center text-muted-foreground">
+                      You can generate a new address once the current one receives a blockchain transaction
+                    </p>
+                  </div>
+                ) : (
+                  // Button to generate address if none exists yet
+                  <Button variant="default" className="w-full py-3" onClick={handleGenerateAddress} disabled={isGenerating}>
+                    {isGenerating ? 'Generating...' : 'Generate Deposit Address'}
                   </Button>
-                  
-                  <p className="text-xs text-center text-muted-foreground">
-                    You can generate a new address once the current one receives a blockchain transaction
-                  </p>
-                </div>
+                )}
 
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mt-4">
                   <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                    <strong>Important:</strong> Only send {selectedCrypto} to this address on the {selectedNetwork} network. 
+                    <strong>Important:</strong> Only send {selectedCrypto} to this address on the {selectedNetwork} network.
                     Sending other cryptocurrencies or using wrong network may result in permanent loss.
                   </p>
                 </div>
 
-                <div className="space-y-1 text-xs text-muted-foreground">
+                <div className="space-y-1 text-xs text-muted-foreground mt-2">
                   <p><strong>Minimum deposit:</strong> {selectedCrypto === 'BTC' ? '0.0001 BTC' : selectedCrypto === 'ETH' ? '0.001 ETH' : '1 ' + selectedCrypto}</p>
                   <p><strong>Confirmations required:</strong> {selectedCrypto === 'BTC' ? '3' : '12'} network confirmations</p>
                 </div>
