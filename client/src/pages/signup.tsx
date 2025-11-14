@@ -109,8 +109,9 @@ export function SignUp() {
     if (signupMethod === "phone" && userId === "pending") {
       setLoading(true);
       
+      // Create account with phone-based email and password
       const tempEmail = `${verifiedPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
-      const { error } = await signUp(tempEmail, password);
+      const { error, data: signUpData } = await signUp(tempEmail, password);
       
       if (error) {
         setLoading(false);
@@ -122,13 +123,21 @@ export function SignUp() {
         return;
       }
 
+      // Get the authenticated user
       const { data } = await supabase.auth.getUser();
       if (data.user) {
+        // Update profile with phone number and full name
         await supabase.from('user_profiles').update({
           phone_number: verifiedPhoneNumber,
           phone_verified: true,
           full_name: fullName,
         }).eq('id', data.user.id);
+
+        // Sign in the user with the password to establish session
+        await supabase.auth.signInWithPassword({
+          email: tempEmail,
+          password: password,
+        });
 
         toast({
           title: "Success!",
