@@ -22,6 +22,8 @@ import { useAuth } from "@/lib/auth-context";
 import { QRCodeSVG } from "qrcode.react";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useToast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
+
 
 interface ReceiveCryptoDialogProps {
   open: boolean;
@@ -53,11 +55,19 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
   const [isGenerating, setIsGenerating] = useState(false); // Added state for address generation
   const { toast } = useToast();
 
+  // Auto-load or generate address when step changes to details
   useEffect(() => {
-    if (selectedCrypto && user && step === "details") {
+    if (selectedCrypto && selectedNetwork && user && step === "details") {
       loadDepositAddress();
     }
-  }, [selectedCrypto, user, step]);
+  }, [selectedCrypto, selectedNetwork, user, step]);
+
+  // Clear address when network changes to trigger regeneration
+  useEffect(() => {
+    if (selectedNetwork && depositAddress) {
+      setDepositAddress("");
+    }
+  }, [selectedNetwork]);
 
   useEffect(() => {
     if (selectedCrypto) {
@@ -89,6 +99,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
   const loadDepositAddress = async () => {
     if (!user) return;
     setLoading(true);
+    setIsGenerating(true); // Set generating state
     try {
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
       const address = await getDepositAddress(user.id, symbolToUse);
@@ -102,6 +113,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       });
     } finally {
       setLoading(false);
+      setIsGenerating(false); // Reset generating state
     }
   };
 
@@ -323,8 +335,8 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                     }}
                   >
                     <div className="flex items-center gap-3">
-                      <img 
-                        src={cryptoIconUrls[wallet.symbol]} 
+                      <img
+                        src={cryptoIconUrls[wallet.symbol]}
                         alt={wallet.symbol}
                         className="w-10 h-10 rounded-full"
                         onError={(e) => {
@@ -346,8 +358,9 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
           {step === "details" && (
             <>
               {isGenerating ? ( // Use isGenerating state for loading indicator
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-sm text-muted-foreground">Generating your {selectedNetwork} address...</p>
                 </div>
               ) : (
                 <ScrollArea className="h-[500px]">
@@ -362,8 +375,8 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                       {wallets.map((wallet) => (
                         <SelectItem key={wallet.symbol} value={wallet.symbol}>
                           <span className="flex items-center gap-2">
-                            <img 
-                              src={cryptoIconUrls[wallet.symbol]} 
+                            <img
+                              src={cryptoIconUrls[wallet.symbol]}
                               alt={wallet.symbol}
                               className="w-5 h-5 rounded-full"
                               onError={(e) => {
