@@ -99,6 +99,11 @@ export function AccountSettings() {
   const [phoneChangeCode, setPhoneChangeCode] = useState("");
   const [awaitingPhoneChangeOTP, setAwaitingPhoneChangeOTP] = useState(false);
   const [sendingPhoneOTP, setSendingPhoneOTP] = useState(false);
+  
+  // Email change states
+  const [showEmailChangeDialog, setShowEmailChangeDialog] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [changingEmail, setChangingEmail] = useState(false);
 
   // Verification Data
   const [verificationLevel, setVerificationLevel] = useState(0);
@@ -751,6 +756,56 @@ export function AccountSettings() {
     }
   };
 
+  const handleChangeEmail = async () => {
+    if (!newEmail || !newEmail.includes('@')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setChangingEmail(true);
+    try {
+      // Supabase will send a confirmation email to both the old and new email addresses
+      const { error } = await supabase.auth.updateUser({
+        email: newEmail,
+      });
+
+      if (error) {
+        // Handle specific error codes
+        if (error.status === 422 || error.message.toLowerCase().includes('already')) {
+          toast({
+            title: "Email Already in Use",
+            description: "This email address is already linked to another account.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
+
+      // Close dialog and show success message
+      setShowEmailChangeDialog(false);
+      setNewEmail("");
+      
+      toast({
+        title: "Confirmation Email Sent",
+        description: "Please check your new email address to confirm the change. You'll also receive a notification at your current email.",
+      });
+    } catch (error: any) {
+      console.error('Error changing email:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change email address",
+        variant: "destructive"
+      });
+    } finally {
+      setChangingEmail(false);
+    }
+  };
+
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -995,19 +1050,24 @@ export function AccountSettings() {
   const ProfileSection = () => (
     <div className="space-y-6">
       {/* Email and Verification */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
+      <div className="space-y-3">
+        <Label className="text-lg font-semibold">Email Address</Label>
+        <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">({user?.email})</span>
+            <span className="font-medium">{user?.email}</span>
             {profileData?.is_verified && (
               <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                 ID verified
               </Badge>
             )}
           </div>
-          <button className="text-primary hover:underline text-sm">
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEmailChangeDialog(true)}
+          >
             Change Email
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -1343,7 +1403,7 @@ export function AccountSettings() {
               <div className="space-y-4">
                 <div className="p-4 bg-muted rounded-lg">
                   <p className="text-sm font-medium">New Phone Number:</p>
-                  <p className="text-lg">{pendingCountryCode}{pendingPhoneNumber}</p>
+                  <p className="text-lg font-semibold">{pendingCountryCode}{pendingPhoneNumber}</p>
                 </div>
                 <Button 
                   onClick={handleInitiatePhoneChange} 
@@ -1355,17 +1415,22 @@ export function AccountSettings() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="otp-code">Verification Code</Label>
                   <Input
                     id="otp-code"
                     type="text"
-                    placeholder="Enter 6-digit code"
+                    inputMode="numeric"
+                    placeholder="000000"
                     value={phoneChangeCode}
                     onChange={(e) => setPhoneChangeCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     maxLength={6}
-                    className="text-center text-lg tracking-widest"
+                    className="text-center text-2xl tracking-widest font-mono"
+                    autoFocus
                   />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Enter the 6-digit code sent to {pendingCountryCode}{pendingPhoneNumber}
+                  </p>
                 </div>
                 <Button 
                   onClick={handleVerifyPhoneChange} 
@@ -1384,6 +1449,50 @@ export function AccountSettings() {
                 </Button>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Change Dialog */}
+      <Dialog open={showEmailChangeDialog} onOpenChange={(open) => {
+        setShowEmailChangeDialog(open);
+        if (!open) setNewEmail("");
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Change Email Address</DialogTitle>
+            <DialogDescription>
+              Enter your new email address. You'll receive a confirmation email at both your current and new addresses.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm font-medium mb-1">Current Email:</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+            </div>
+            <div>
+              <Label htmlFor="new-email">New Email Address *</Label>
+              <Input
+                id="new-email"
+                type="email"
+                placeholder="newEmail@example.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-xs text-blue-800 dark:text-blue-200">
+                ⓘ Both your current and new email addresses will receive a confirmation link. Your email won't change until you click the link in the new email.
+              </p>
+            </div>
+            <Button 
+              onClick={handleChangeEmail} 
+              disabled={!newEmail || changingEmail}
+              className="w-full"
+            >
+              {changingEmail ? "Sending Confirmation..." : "Send Confirmation Email"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
