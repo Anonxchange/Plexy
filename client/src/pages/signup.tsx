@@ -109,9 +109,16 @@ export function SignUp() {
     if (signupMethod === "phone" && userId === "pending") {
       setLoading(true);
       
-      // Create account with phone-based email and password
-      const tempEmail = `${verifiedPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
-      const { error, data: signUpData } = await signUp(tempEmail, password);
+      // Create account with native Supabase phone authentication
+      const { error, data: signUpData } = await supabase.auth.signUp({
+        phone: verifiedPhoneNumber,
+        password: password,
+        options: {
+          data: {
+            full_name: fullName,
+          }
+        }
+      });
       
       if (error) {
         setLoading(false);
@@ -132,16 +139,6 @@ export function SignUp() {
           phone_verified: true,
           full_name: fullName,
         }).eq('id', data.user.id);
-
-        // Sign in the user with the password to establish session
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: password,
-        });
-
-        if (signInError) {
-          console.error('Sign in error:', signInError);
-        }
 
         toast({
           title: "Success!",
