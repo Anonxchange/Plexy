@@ -79,6 +79,23 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
       });
       
       if (error) throw error;
+
+      // Update user profile to mark phone as verified
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: data.user.id,
+            phone_number: fullPhoneNumber,
+            phone_verified: true,
+          }, {
+            onConflict: 'id'
+          });
+
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+        }
+      }
       
       toast({
         title: "Success!",
