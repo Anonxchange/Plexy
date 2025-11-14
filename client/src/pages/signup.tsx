@@ -39,49 +39,36 @@ export function SignUp() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Email signup → requires password validation
+    if (signupMethod === "email") {
+      if (!email) {
+        toast({
+          title: "Error",
+          description: "Email is required",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (password !== confirmPassword) {
+        toast({
+          title: "Error",
+          description: "Passwords do not match",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (signupMethod === "email" && !email) {
-      toast({
-        title: "Error",
-        description: "Email is required",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (password.length < 6) {
+        toast({
+          title: "Error",
+          description: "Password must be at least 6 characters",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (signupMethod === "phone" && !phoneNumber) {
-      toast({
-        title: "Error",
-        description: "Phone number is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    if (signupMethod === "phone") {
-      setUserId("pending");
-      setLoading(false);
-      setStep("phone");
-    } else {
+      setLoading(true);
       const { error } = await signUp(email, password);
       setLoading(false);
 
@@ -102,43 +89,37 @@ export function SignUp() {
           setStep("phone");
         }
       }
-    }
-  };
-
-  const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
-    if (signupMethod === "phone" && userId === "pending") {
-      setLoading(true);
-      
-      // Create account with native Supabase phone authentication
-      const { error, data: signUpData } = await supabase.auth.signUp({
-        phone: verifiedPhoneNumber,
-        password: password,
-        options: {
-          data: {
-            full_name: fullName,
-          }
-        }
-      });
-      
-      if (error) {
-        setLoading(false);
+    } else {
+      // Phone signup → OTP only, no password required
+      if (!phoneNumber) {
         toast({
           title: "Error",
-          description: error.message,
+          description: "Phone number is required",
           variant: "destructive",
         });
         return;
       }
 
-      // Get the authenticated user
+      setUserId("pending");
+      setLoading(false);
+      setStep("phone");
+    }
+  };
+
+  const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
+    if (signupMethod === "phone" && userId === "pending") {
+      // Phone signup → User is already authenticated via OTP in PhoneVerification component
+      // Just update the profile with additional info
       const { data } = await supabase.auth.getUser();
       if (data.user) {
-        // Update profile with phone number and full name
-        await supabase.from('user_profiles').update({
+        await supabase.from('user_profiles').upsert({
+          id: data.user.id,
           phone_number: verifiedPhoneNumber,
           phone_verified: true,
-          full_name: fullName,
-        }).eq('id', data.user.id);
+          display_name: fullName,
+        }, {
+          onConflict: 'id'
+        });
 
         toast({
           title: "Success!",
@@ -146,8 +127,8 @@ export function SignUp() {
         });
         setLocation("/dashboard");
       }
-      setLoading(false);
     } else if (userId && userId !== "pending") {
+      // Email signup → Adding phone to existing email account
       await supabase.from('user_profiles').update({
         phone_number: verifiedPhoneNumber,
         phone_verified: true,
@@ -337,65 +318,69 @@ export function SignUp() {
                 </>
               )}
 
-              {/* Password */}
-              <div className="mb-6">
-                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Password<span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Create a strong password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
-                      isDark 
-                        ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                        : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                    } focus:outline-none transition-colors`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className={`absolute right-4 top-1/2 -translate-y-1/2 ${
-                      isDark ? 'text-gray-500' : 'text-gray-400'
-                    }`}
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
+              {/* Password - Only shown for email signup */}
+              {signupMethod === "email" && (
+                <>
+                  <div className="mb-6">
+                    <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Password<span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Create a strong password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
+                          isDark 
+                            ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                            : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                        } focus:outline-none transition-colors`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className={`absolute right-4 top-1/2 -translate-y-1/2 ${
+                          isDark ? 'text-gray-500' : 'text-gray-400'
+                        }`}
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                  </div>
 
-              {/* Confirm Password */}
-              <div className="mb-6">
-                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Confirm Password<span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="Re-enter your password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
-                      isDark 
-                        ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                        : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                    } focus:outline-none transition-colors`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className={`absolute right-4 top-1/2 -translate-y-1/2 ${
-                      isDark ? 'text-gray-500' : 'text-gray-400'
-                    }`}
-                  >
-                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
+                  {/* Confirm Password */}
+                  <div className="mb-6">
+                    <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Confirm Password<span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        placeholder="Re-enter your password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
+                          isDark 
+                            ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                            : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                        } focus:outline-none transition-colors`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className={`absolute right-4 top-1/2 -translate-y-1/2 ${
+                          isDark ? 'text-gray-500' : 'text-gray-400'
+                        }`}
+                      >
+                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Terms and Conditions */}
               <div className={`text-xs mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
