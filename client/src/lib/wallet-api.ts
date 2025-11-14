@@ -123,9 +123,8 @@ export async function getDepositAddress(userId: string, cryptoSymbol: string): P
   const supabase = createClient();
   
   const wallet = await getWalletBalance(userId, cryptoSymbol);
-  if (!wallet) throw new Error('Wallet not found');
 
-  if (wallet.deposit_address) {
+  if (wallet?.deposit_address) {
     return wallet.deposit_address;
   }
 
