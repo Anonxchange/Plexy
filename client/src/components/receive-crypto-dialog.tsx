@@ -55,9 +55,9 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
   const [isGenerating, setIsGenerating] = useState(false); // Added state for address generation
   const { toast } = useToast();
 
-  // Auto-load or generate address when step changes to details (only if address doesn't exist)
+  // Auto-load or generate address when step changes to details
   useEffect(() => {
-    if (selectedCrypto && selectedNetwork && user && step === "details" && !depositAddress) {
+    if (selectedCrypto && selectedNetwork && user && step === "details") {
       loadDepositAddress();
     }
   }, [selectedCrypto, selectedNetwork, user, step]);
