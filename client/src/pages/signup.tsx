@@ -134,10 +134,14 @@ export function SignUp() {
         }).eq('id', data.user.id);
 
         // Sign in the user with the password to establish session
-        await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email: tempEmail,
           password: password,
         });
+
+        if (signInError) {
+          console.error('Sign in error:', signInError);
+        }
 
         toast({
           title: "Success!",
