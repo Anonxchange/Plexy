@@ -1,66 +1,143 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import * as bip39 from 'npm:@scure/bip39@1.2.1';
-import { HDKey } from 'npm:@scure/bip32@1.3.2';
-import { wordlist } from 'npm:@scure/bip39@1.2.1/wordlists/english';
-import * as secp256k1 from 'npm:@noble/secp256k1@2.0.0';
-import { keccak_256 } from 'npm:@noble/hashes@1.3.3/sha3';
-import { bech32 } from 'npm:bech32@2.0.0';
+import * as secp256k1 from 'https://esm.sh/@noble/secp256k1@2.0.0';
+import { sha256 } from 'https://esm.sh/@noble/hashes@1.3.3/sha256';
+import { ripemd160 } from 'https://esm.sh/@noble/hashes@1.3.3/ripemd160';
+import { keccak_256 } from 'https://esm.sh/@noble/hashes@1.3.3/sha3';
+import * as ed25519 from 'https://esm.sh/@noble/ed25519@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Bitcoin address generation (P2WPKH - native segwit)
-async function generateBitcoinAddress(hdKey: HDKey, index: number): Promise<string> {
-  const path = `m/84'/0'/0'/0/${index}`;
-  const child = hdKey.derive(path);
+// Base58 alphabet
+const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+function base58Encode(buffer: Uint8Array): string {
+  if (buffer.length === 0) return '';
   
-  if (!child.publicKey) {
-    throw new Error('Failed to derive Bitcoin public key');
+  let digits = [0];
+  for (let i = 0; i < buffer.length; i++) {
+    let carry = buffer[i];
+    for (let j = 0; j < digits.length; j++) {
+      carry += digits[j] << 8;
+      digits[j] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
   }
   
-  // Create witness program (P2WPKH): OP_0 + 20-byte pubkey hash
-  const hash = await crypto.subtle.digest('SHA-256', child.publicKey);
-  const ripemd160 = new Uint8Array(20); // Simplified - using first 20 bytes of SHA-256
-  const sha256Bytes = new Uint8Array(hash);
-  ripemd160.set(sha256Bytes.slice(0, 20));
+  let result = '';
+  for (let i = 0; buffer[i] === 0 && i < buffer.length - 1; i++) {
+    result += ALPHABET[0];
+  }
+  for (let i = digits.length - 1; i >= 0; i--) {
+    result += ALPHABET[digits[i]];
+  }
   
-  // Encode as bech32
-  const words = bech32.toWords(ripemd160);
-  return bech32.encode('bc', words, 90);
+  return result;
 }
 
-// Ethereum address generation
-function generateEthereumAddress(hdKey: HDKey, index: number): string {
-  const path = `m/44'/60'/0'/0/${index}`;
-  const child = hdKey.derive(path);
+function base58CheckEncode(payload: Uint8Array): string {
+  const checksum = sha256(sha256(payload)).slice(0, 4);
+  const result = new Uint8Array(payload.length + checksum.length);
+  result.set(payload);
+  result.set(checksum, payload.length);
+  return base58Encode(result);
+}
+
+// Generate deterministic private key from seed and user ID
+function generatePrivateKey(seed: Uint8Array, userId: string, cryptoSymbol: string): Uint8Array {
+  const encoder = new TextEncoder();
+  const derivationData = encoder.encode(`${userId}-${cryptoSymbol}`);
   
-  if (!child.publicKey) {
-    throw new Error('Failed to derive Ethereum public key');
-  }
+  // Combine seed with derivation data
+  const combined = new Uint8Array(seed.length + derivationData.length);
+  combined.set(seed);
+  combined.set(derivationData, seed.length);
   
+  // Generate deterministic private key (32 bytes)
+  return sha256(combined);
+}
+
+// Generate Bitcoin P2PKH address
+function generateBitcoinAddress(privateKey: Uint8Array): string {
+  // Get public key from private key
+  const publicKey = secp256k1.getPublicKey(privateKey, true); // compressed
+  
+  // Hash public key: SHA-256 then RIPEMD-160
+  const sha256Hash = sha256(publicKey);
+  const hash160 = ripemd160(sha256Hash);
+  
+  // Add version byte (0x00 for mainnet P2PKH)
+  const versioned = new Uint8Array(21);
+  versioned[0] = 0x00;
+  versioned.set(hash160, 1);
+  
+  // Base58Check encode
+  return base58CheckEncode(versioned);
+}
+
+// Generate Ethereum address (also works for BNB/BSC)
+function generateEthereumAddress(privateKey: Uint8Array): string {
   // Get uncompressed public key (remove 0x04 prefix)
-  const uncompressedPubKey = secp256k1.ProjectivePoint.fromHex(child.publicKey).toRawBytes(false).slice(1);
+  const publicKey = secp256k1.getPublicKey(privateKey, false).slice(1);
   
-  // Keccak256 hash and take last 20 bytes
-  const hash = keccak_256(uncompressedPubKey);
-  const address = hash.slice(-20);
+  // Keccak-256 hash of public key
+  const hash = keccak_256(publicKey);
   
-  // EIP-55 checksum
-  const addressHex = Array.from(address).map(b => b.toString(16).padStart(2, '0')).join('');
-  const hashHex = Array.from(keccak_256(new TextEncoder().encode(addressHex)))
-    .map(b => b.toString(16).padStart(2, '0')).join('');
+  // Take last 20 bytes and convert to hex
+  const addressBytes = hash.slice(-20);
+  const address = Array.from(addressBytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
   
-  let checksummed = '0x';
-  for (let i = 0; i < addressHex.length; i++) {
-    checksummed += parseInt(hashHex[i], 16) >= 8 
-      ? addressHex[i].toUpperCase() 
-      : addressHex[i];
+  return '0x' + address;
+}
+
+// Generate Solana address
+function generateSolanaAddress(privateKey: Uint8Array): string {
+  // For Solana, we use Ed25519
+  // The public key is the address
+  const publicKey = ed25519.getPublicKey(privateKey.slice(0, 32));
+  return base58Encode(publicKey);
+}
+
+// Generate Tron address
+function generateTronAddress(privateKey: Uint8Array): string {
+  // Tron uses same algorithm as Ethereum but with different encoding
+  const publicKey = secp256k1.getPublicKey(privateKey, false).slice(1);
+  const hash = keccak_256(publicKey);
+  const addressBytes = hash.slice(-20);
+  
+  // Add Tron version byte (0x41 for mainnet)
+  const versioned = new Uint8Array(21);
+  versioned[0] = 0x41;
+  versioned.set(addressBytes, 1);
+  
+  // Base58Check encode
+  return base58CheckEncode(versioned);
+}
+
+// Generate deterministic address
+function generateAddress(seed: Uint8Array, userId: string, cryptoSymbol: string): string {
+  const privateKey = generatePrivateKey(seed, userId, cryptoSymbol);
+  
+  if (cryptoSymbol === 'BTC') {
+    return generateBitcoinAddress(privateKey);
+  } else if (cryptoSymbol === 'SOL') {
+    return generateSolanaAddress(privateKey);
+  } else if (cryptoSymbol === 'TRX') {
+    return generateTronAddress(privateKey);
+  } else {
+    // ETH, USDT, USDC, BNB all use Ethereum addresses
+    // BNB uses BSC which is EVM-compatible
+    return generateEthereumAddress(privateKey);
   }
-  
-  return checksummed;
 }
 
 serve(async (req) => {
@@ -91,7 +168,7 @@ serve(async (req) => {
 
     const { crypto_symbol } = await req.json();
 
-    if (!['BTC', 'ETH', 'USDT', 'USDC'].includes(crypto_symbol)) {
+    if (!['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'TRX', 'BNB'].includes(crypto_symbol)) {
       return new Response(
         JSON.stringify({ error: 'Invalid crypto symbol' }), 
         { 
@@ -122,35 +199,18 @@ serve(async (req) => {
       );
     }
 
-    // Get master mnemonic
-    const masterMnemonic = Deno.env.get('MASTER_WALLET_MNEMONIC');
-    if (!masterMnemonic) {
-      throw new Error('Master wallet mnemonic not configured');
+    // Get master seed
+    const masterSeed = Deno.env.get('MASTER_WALLET_SEED');
+    if (!masterSeed) {
+      throw new Error('Master wallet seed not configured');
     }
 
-    // Validate mnemonic
-    if (!bip39.validateMnemonic(masterMnemonic, wordlist)) {
-      throw new Error('Invalid master mnemonic');
-    }
-
-    // Convert mnemonic to seed
-    const seed = await bip39.mnemonicToSeed(masterMnemonic);
-    const hdKey = HDKey.fromMasterSeed(seed);
-
-    // Use user ID hash as derivation index (mod 2^31 to stay within valid range)
+    // Convert seed to bytes
     const encoder = new TextEncoder();
-    const userIdHash = await crypto.subtle.digest('SHA-256', encoder.encode(user.id));
-    const derivationIndex = new DataView(userIdHash).getUint32(0) % 0x80000000;
+    const seedBytes = sha256(encoder.encode(masterSeed));
 
-    // Generate address based on currency type
-    let address: string;
-    
-    if (crypto_symbol === 'BTC') {
-      address = await generateBitcoinAddress(hdKey, derivationIndex);
-    } else {
-      // ETH, USDT, USDC all use Ethereum addresses
-      address = generateEthereumAddress(hdKey, derivationIndex);
-    }
+    // Generate deterministic address for this user and crypto
+    const address = generateAddress(seedBytes, user.id, crypto_symbol);
 
     console.log(`Generated ${crypto_symbol} address for user ${user.id}:`, address);
 
