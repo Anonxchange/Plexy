@@ -17,7 +17,7 @@ import { useAuth } from "@/lib/auth-context";
 import LivenessCheck from "@/components/liveness-check";
 import { LivenessResult } from "@/lib/liveness-api";
 import { uploadToR2, uploadBase64ToR2 } from "@/lib/r2-storage";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function VerificationPage() {
