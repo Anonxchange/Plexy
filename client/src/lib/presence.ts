@@ -119,20 +119,31 @@ export const presenceTracker = new PresenceTracker();
 export function formatLastSeen(lastSeen: string | null): string {
   if (!lastSeen) return 'Offline';
 
-  const lastSeenDate = new Date(lastSeen);
-  const now = new Date();
-  const diffMs = now.getTime() - lastSeenDate.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
+  try {
+    const lastSeenDate = new Date(lastSeen);
+    
+    // Check if date is valid
+    if (isNaN(lastSeenDate.getTime())) {
+      return 'Offline';
+    }
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins === 1) return 'Seen 1 min ago';
-  if (diffMins < 60) return `Seen ${diffMins} mins ago`;
+    const now = new Date();
+    const diffMs = now.getTime() - lastSeenDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
 
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours === 1) return 'Seen 1 hour ago';
-  if (diffHours < 24) return `Seen ${diffHours} hours ago`;
+    if (diffMins < 1) return 'Just now';
+    if (diffMins === 1) return 'Seen 1 min ago';
+    if (diffMins < 60) return `Seen ${diffMins} mins ago`;
 
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return 'Seen 1 day ago';
-  return `Seen ${diffDays} days ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours === 1) return 'Seen 1 hour ago';
+    if (diffHours < 24) return `Seen ${diffHours} hours ago`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Seen 1 day ago';
+    return `Seen ${diffDays} days ago`;
+  } catch (error) {
+    console.error('Error formatting last seen:', error);
+    return 'Offline';
+  }
 }
