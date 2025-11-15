@@ -1,4 +1,3 @@
-
 export const VERIFICATION_LEVELS = {
   LEVEL_0: {
     level: 0,
@@ -15,8 +14,12 @@ export const VERIFICATION_LEVELS = {
   LEVEL_1: {
     level: 1,
     name: "Level 1 - Basic",
-    description: "Confirm your age to start trading",
-    requirements: ["Date of birth verification (must be 18+)"],
+    description: "Verify your identity to start trading",
+    requirements: [
+      "Full name",
+      "Date of birth verification (must be 18+)",
+      "Email OR phone verification (whichever wasn't used for signup)"
+    ],
     permissions: [
       "Receive crypto",
       "Deposit funds",
@@ -36,7 +39,7 @@ export const VERIFICATION_LEVELS = {
     name: "Level 2 - Full Verification",
     description: "Complete ID and live video verification for unlimited trading",
     requirements: [
-      "Government-issued photo ID", 
+      "Government-issued photo ID",
       "Live video verification (nod your head, turn head for liveness detection)"
     ],
     permissions: [
@@ -109,16 +112,52 @@ export function canTrade(level: number, amount: number, lifetimeVolume: number =
   return { allowed: true };
 }
 
-export function canCreateOffer(level: number) {
-  return level >= 1;
+export function canCreateOffer(level: number, merchantStatus?: string) {
+  // Only Level 2+ can create offers
+  if (level < 2) {
+    return {
+      allowed: false,
+      maxOffers: 0,
+      feePercentage: 1.0,
+      reason: "You must complete Level 2 verification (ID + liveness check) to create offers"
+    };
+  }
+
+  // Level 2+ users can create offers (merchant status determines limits)
+  if (merchantStatus === "block_merchant") {
+    return {
+      allowed: true,
+      maxOffers: null,
+      feePercentage: 0,
+    };
+  }
+
+  if (merchantStatus === "verified_merchant") {
+    return {
+      allowed: true,
+      maxOffers: 50,
+      feePercentage: 0.5,
+    };
+  }
+
+  // Regular Level 2+ users
+  return {
+    allowed: true,
+    maxOffers: 5,
+    feePercentage: 1.0,
+  };
 }
 
 export function getVerificationRequirements(currentLevel: number) {
   if (currentLevel === 0) {
     return {
       nextLevel: 1,
-      description: "Verify your age with date of birth to start trading",
-      requirements: ["Date of birth confirmation", "Must be 18 years or older"],
+      description: "Verify your identity to start trading",
+      requirements: [
+        "Full name",
+        "Date of birth confirmation (must be 18+)",
+        "Email OR phone verification"
+      ],
       benefits: ["Start trading", "Create offers", "$1,000 daily limit", "$10,000 lifetime trade limit"]
     };
   }
@@ -127,7 +166,7 @@ export function getVerificationRequirements(currentLevel: number) {
       nextLevel: 2,
       description: "Complete ID and live video verification for unlimited trading",
       requirements: [
-        "Government-issued photo ID", 
+        "Government-issued photo ID",
         "Live video verification (nod your head, turn head)"
       ],
       benefits: ["Remove daily/lifetime limits", "$100,000 per-trade limit", "More payment methods"]
