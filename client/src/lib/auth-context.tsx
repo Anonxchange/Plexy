@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -70,23 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Track device on session restore
       if (session?.user) {
         trackDevice(session.user.id);
-        
-        // Get profile ID for presence tracking
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile) {
-          presenceTracker.startTracking(profile.id);
-        }
+        presenceTracker.startTracking(session.user.id);
       }
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       // Don't set session if we're on the verify-email page
       if (window.location.pathname === '/verify-email') {
         setSession(null);
@@ -99,16 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Start or stop presence tracking based on auth state
       if (session?.user) {
-        // Get profile ID for presence tracking
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile) {
-          presenceTracker.startTracking(profile.id);
-        }
+        presenceTracker.startTracking(session.user.id);
       } else {
         presenceTracker.stopTracking();
       }
