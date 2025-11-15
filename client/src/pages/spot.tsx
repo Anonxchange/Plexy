@@ -39,6 +39,40 @@ import {
 } from "lucide-react";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 
+export default function Spot() {
+  const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
+  
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const symbols = initialTradingPairs.map(pair => pair.symbol);
+        const prices = await getCryptoPrices(symbols);
+        
+        if (prices && Object.keys(prices).length > 0) {
+          setTradingPairs(prevPairs => 
+            prevPairs.map(pair => {
+              const priceData = prices[pair.symbol];
+              if (priceData) {
+                return {
+                  ...pair,
+                  price: priceData.current_price,
+                  change: priceData.price_change_percentage_24h,
+                };
+              }
+              return pair;
+            })
+          );
+        }
+      } catch (error) {
+        console.error("Error updating prices:", error);
+      }
+    };
+
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
 interface TradingPair {
   pair: string;
   price: number;
@@ -52,15 +86,15 @@ interface TradingPair {
 }
 
 const initialTradingPairs: TradingPair[] = [
-  { pair: "BTC/USDT", symbol: "BTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "ETH/USDT", symbol: "ETH", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "SOL/USDT", symbol: "SOL", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "BNB/USDT", symbol: "BNB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "USDC/USDT", symbol: "USDC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "3x" },
-  { pair: "XRP/USDT", symbol: "XRP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "TON/USDT", symbol: "TON", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "TRX/USDT", symbol: "TRX", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "LTC/USDT", symbol: "LTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "BTC/USDT", symbol: "BTC", price: 95234.12, change: 2.45, volume: "28.5B", high: 96000, low: 94500, favorite: true, leverage: "10x" },
+  { pair: "ETH/USDT", symbol: "ETH", price: 3456.78, change: -1.23, volume: "12.3B", high: 3500, low: 3400, favorite: true, leverage: "10x" },
+  { pair: "SOL/USDT", symbol: "SOL", price: 187.45, change: 5.67, volume: "2.8B", high: 190, low: 175, favorite: true, leverage: "10x" },
+  { pair: "BNB/USDT", symbol: "BNB", price: 645.32, change: 1.89, volume: "1.5B", high: 650, low: 630, favorite: true, leverage: "10x" },
+  { pair: "USDC/USDT", symbol: "USDC", price: 1.00, change: 0.01, volume: "8.2B", high: 1.001, low: 0.999, favorite: false, leverage: "3x" },
+  { pair: "XRP/USDT", symbol: "XRP", price: 2.45, change: 3.21, volume: "3.1B", high: 2.5, low: 2.35, favorite: false, leverage: "10x" },
+  { pair: "TON/USDT", symbol: "TON", price: 5.23, change: 2.15, volume: "890M", high: 5.3, low: 5.1, favorite: false, leverage: "10x" },
+  { pair: "TRX/USDT", symbol: "TRX", price: 0.34, change: -0.45, volume: "1.2B", high: 0.35, low: 0.33, favorite: false, leverage: "10x" },
+  { pair: "LTC/USDT", symbol: "LTC", price: 116.75, change: 0.89, volume: "780M", high: 118, low: 115, favorite: false, leverage: "10x" },
 ];
 
 const orderBook = {
