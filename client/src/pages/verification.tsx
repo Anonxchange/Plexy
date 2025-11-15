@@ -660,13 +660,13 @@ export default function VerificationPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm">Email Address</span>
-                    {userProfile?.email && user?.email && (
+                    {user?.email && (
                       <Badge variant="outline" className="text-xs">
                         {user.email}
                       </Badge>
                     )}
                   </div>
-                  {userProfile?.email && user?.email ? (
+                  {user?.email ? (
                     <Badge variant="default" className="text-xs">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Verified
@@ -683,13 +683,13 @@ export default function VerificationPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm">Phone Number</span>
-                    {userProfile?.phone_number && (
+                    {user?.phone && (
                       <Badge variant="outline" className="text-xs">
-                        {userProfile.phone_number}
+                        {user.phone}
                       </Badge>
                     )}
                   </div>
-                  {userProfile?.phone_verified && userProfile?.phone_number ? (
+                  {user?.phone ? (
                     <Badge variant="default" className="text-xs">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Verified
@@ -702,8 +702,8 @@ export default function VerificationPage() {
                   )}
                 </div>
 
-                {/* Instructions based on signup method */}
-                {(!userProfile?.email || !user?.email) && (!userProfile?.phone_verified || !userProfile?.phone_number) && (
+                {/* Instructions based on what's verified */}
+                {!user?.email && !user?.phone && (
                   <Alert>
                     <AlertDescription className="text-xs">
                       Please verify at least one contact method (email or phone) in{" "}
@@ -712,7 +712,7 @@ export default function VerificationPage() {
                   </Alert>
                 )}
 
-                {userProfile?.email && user?.email && (!userProfile?.phone_verified || !userProfile?.phone_number) && (
+                {user?.email && !user?.phone && (
                   <Alert className="bg-green-500/10 border-green-500/20">
                     <AlertDescription className="text-xs text-green-800 dark:text-green-300">
                       ✓ Email verified! You can proceed with Level 1 verification.
@@ -720,10 +720,18 @@ export default function VerificationPage() {
                   </Alert>
                 )}
 
-                {userProfile?.phone_verified && userProfile?.phone_number && (!userProfile?.email || !user?.email) && (
+                {user?.phone && !user?.email && (
                   <Alert className="bg-green-500/10 border-green-500/20">
                     <AlertDescription className="text-xs text-green-800 dark:text-green-300">
                       ✓ Phone verified! You can proceed with Level 1 verification.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {user?.phone && user?.email && (
+                  <Alert className="bg-green-500/10 border-green-500/20">
+                    <AlertDescription className="text-xs text-green-800 dark:text-green-300">
+                      ✓ Both email and phone verified! You can proceed with Level 1 verification.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -734,7 +742,7 @@ export default function VerificationPage() {
                 disabled={
                   !dateOfBirth || 
                   (!fullName && !userProfile?.full_name) || 
-                  ((!userProfile?.email || !user?.email) && (!userProfile?.phone_verified || !userProfile?.phone_number)) ||
+                  (!user?.email && !user?.phone) ||
                   submitDateOfBirth.isPending
                 }
                 className="w-full"
@@ -750,7 +758,7 @@ export default function VerificationPage() {
                 </Alert>
               )}
 
-              {((!userProfile?.email || !user?.email) && (!userProfile?.phone_verified || !userProfile?.phone_number)) && (
+              {!user?.email && !user?.phone && (
                 <Alert className="bg-blue-500/10 border-blue-500/20">
                   <AlertDescription className="text-sm">
                     <strong>Note:</strong> You need at least one verified contact method (email OR phone) for Level 1. 
