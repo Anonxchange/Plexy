@@ -48,6 +48,7 @@ import { useToast } from "@/hooks/use-toast";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UserProfile {
   id: string;
@@ -93,6 +94,7 @@ export function Profile() {
   const [, params] = useRoute("/profile/:userId");
   const { toast } = useToast();
   const supabase = createClient();
+  const isMobile = useIsMobile();
 
   // If there's a userId in the URL, view that user's profile; otherwise view own profile
   const viewingUserId = params?.userId || user?.id;
@@ -351,7 +353,7 @@ export function Profile() {
       setEditForm({
         ...editForm,
         avatar_type: 'custom',
-        avatar_url: uploadResult.url,
+        avatar_url: uploadResult.url || null,
       });
 
       toast({
@@ -636,128 +638,154 @@ export function Profile() {
           </Button>
         )}
 
-        <div className="mb-6 lg:mb-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-primary">Active Offers</h2>
-            <Select value={offerFilter} onValueChange={setOfferFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="buying">Buying Crypto</SelectItem>
-                <SelectItem value="selling">Selling Crypto</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Mobile: Show sidebar stats before Active Offers */}
+        {isMobile && (
+          <>
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="bg-elevate-1 rounded-lg p-4 text-center">
+                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
+                <p className="text-2xl sm:text-3xl font-bold">{profileData?.total_trades || 0}</p>
+              </div>
+              <div className="bg-elevate-1 rounded-lg p-4 text-center">
+                <p className="text-muted-foreground uppercase text-xs mb-2">Trade Partners</p>
+                <p className="text-2xl sm:text-3xl font-bold">{profileData?.trade_partners || 0}</p>
+              </div>
+            </div>
 
-          {offers.length === 0 ? (
-            <Card className="mb-4 bg-card border-border">
-              <CardContent className="p-8 text-center">
-                <p className="text-lg">No offers from active users.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            offers.map((offer) => (
-              <OfferCard
-                key={offer.id}
-                id={offer.id}
-                vendor={{
-                  name: profileData?.username || 'User',
-                  avatar: profileData?.avatar_url,
-                  isVerified: profileData?.is_verified || false,
-                  trades: profileData?.total_trades || 0,
-                  responseTime: '< 5 min',
-                  id: viewingUserId,
-                }}
-                paymentMethod={offer.payment_method}
-                pricePerBTC={offer.price}
-                currency={offer.fiat_currency}
-                availableRange={{ min: offer.min_amount, max: offer.max_amount }}
-                limits={{ min: offer.min_amount, max: offer.max_amount }}
-                type={offer.type}
-                cryptoSymbol={offer.crypto_symbol}
-              />
-            ))
-          )}
+            <div className="mb-6">
+              <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="h-5 w-5 text-yellow-500" />
+                <span className="text-sm">🥇</span>
+                <span className="font-medium">The OG - Early Adopter</span>
+              </div>
+              {profileData && profileData.total_trades >= 10 && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <span className="text-sm">🎖️</span>
+                  <span className="font-medium">Pexly Initiate</span>
+                </div>
+              )}
+              {profileData && profileData.total_trades >= 100 && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <span className="text-sm">💎</span>
+                  <span className="font-medium">Top 1% Club</span>
+                </div>
+              )}
+            </div>
 
-          <Button 
-            variant="ghost" 
-            className="w-full text-primary hover:text-primary/80 font-medium"
-          >
-            Load More Offers
-          </Button>
-        </div>
-
-        <div className="mb-6 lg:mb-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Feedback</h2>
-            <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="buyers">From Buyers</SelectItem>
-                <SelectItem value="sellers">From Sellers</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {feedbacks.length === 0 ? (
-            <Card className="mb-4 bg-elevate-1 border-border">
-              <CardContent className="p-8 text-center">
-                <p className="text-lg">No feedback yet.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            feedbacks.map((feedback) => (
-              <Card key={feedback.id} className="mb-4 bg-elevate-1 border-border">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4 mb-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${feedback.from_user}`} />
-                      <AvatarFallback>
-                        <User className="h-6 w-6" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
-                        {feedback.from_user}
-                        <span className="text-base">🇳🇬</span>
-                      </h3>
-                      <div className="flex items-center gap-2 mb-3">
-                        {feedback.rating === 'positive' ? (
-                          <>
-                            <ThumbsUp className="h-4 w-4 text-primary" />
-                            <span className="text-primary font-bold">Positive</span>
-                          </>
-                        ) : (
-                          <>
-                            <ThumbsDown className="h-4 w-4 text-destructive" />
-                            <span className="text-destructive font-bold">Negative</span>
-                          </>
-                        )}
-                        <span className="text-muted-foreground ml-4">
-                          {new Date(feedback.created_at).toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' })}
-                        </span>
-                      </div>
-                      <Badge variant="secondary" className="mb-3">
-                        {feedback.payment_method}
-                      </Badge>
-                      <p className="text-lg mb-2">"{feedback.comment}"</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground text-sm">Trades:</span>
-                        <Badge className="bg-primary/20 text-primary">{feedback.trade_count}</Badge>
-                      </div>
-                    </div>
+            <div className="mb-6">
+              <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
+              <div className="space-y-2">
+                {profileData?.is_verified && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm">🇳🇬</span>
+                    <span className="font-medium">ID verified</span>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                )}
+                {profileData?.phone_verified && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm">🇳🇬</span>
+                    <span className="font-medium">Phone verified</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
+                  <span>&lt; 10 BTC</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
+                  <span>&lt; 10K SOL</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
+                  <span>&lt; 10K USDT</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
+                  <span>&lt; 10K USDC</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
+                  <span>&lt; 1K BNB</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
+                  <span>&lt; 100K TRX</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-muted-foreground uppercase text-xs mb-2">Trusted By</p>
+              <div className="flex items-center gap-2 text-primary">
+                <Users className="h-5 w-5" />
+                <span className="font-bold text-lg">6 USERS</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="space-y-4 mb-4">
+              <div>
+                <p className="text-muted-foreground uppercase text-xs mb-2">Blocked By</p>
+                <div className="flex items-center gap-2 text-primary">
+                  <Users className="h-5 w-5" />
+                  <span className="font-bold">5 USERS</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-muted-foreground uppercase text-xs mb-2">Has Blocked</p>
+                <div className="flex items-center gap-2 text-primary">
+                  <Users className="h-5 w-5" />
+                  <span className="font-bold">0 USERS</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-muted text-foreground text-center py-3 rounded mb-4">
+              For 30 days range
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="text-center sm:text-left">
+                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Success</p>
+                <p className="text-xl">—</p>
+              </div>
+              <div className="text-center sm:text-left">
+                <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Payment</p>
+                <p className="text-xl">—</p>
+              </div>
+              <div className="col-span-1 sm:col-span-2 text-center sm:text-left">
+                <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Release</p>
+                <p className="text-xl">—</p>
+              </div>
+              <div className="col-span-1 sm:col-span-2 text-center sm:text-left">
+                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Volume</p>
+                <p className="text-xl">&lt; 100USD</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+          </>
+        )}
       </div>
 
       {/* Right Column - Sidebar (1/3 width on desktop) */}
+      {!isMobile && (
       <div className="lg:col-span-1 space-y-6">
         <Card className="bg-card border-border">
           <CardContent className="p-6">
@@ -899,7 +927,127 @@ export function Profile() {
           </CardContent>
         </Card>
       </div>
+      )}
     </div>
+
+    {/* Full-width sections below the grid - Active Offers and Feedback */}
+    {isOwnProfile && (
+      <>
+        {/* Active Offers Section */}
+        <Card className="mt-6 bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Active Offers</h3>
+              <Select value={offerFilter} onValueChange={setOfferFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="buying">Buying Crypto</SelectItem>
+                  <SelectItem value="selling">Selling Crypto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {offers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No active {offerFilter} offers</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {offers.map((offer) => (
+                  <Card key={offer.id} className="bg-elevate-1 border-border">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={cryptoIconUrls[offer.crypto_symbol as keyof typeof cryptoIconUrls] || cryptoIconUrls.BTC} 
+                            alt={offer.crypto_symbol} 
+                            className="h-6 w-6" 
+                          />
+                          <span className="font-bold">{offer.crypto_symbol}</span>
+                        </div>
+                        <Badge variant={offer.type === 'buy' ? 'default' : 'secondary'}>
+                          {offer.type === 'buy' ? 'Buying' : 'Selling'}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Price:</span>
+                          <span className="font-medium">{offer.price.toFixed(2)} {offer.fiat_currency}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Amount:</span>
+                          <span className="font-medium">
+                            {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Payment:</span>
+                          <span className="font-medium truncate ml-2">{offer.payment_method}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Feedback Section */}
+        <Card className="mt-6 bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Feedback</h3>
+              <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="buyers">As Buyer</SelectItem>
+                  <SelectItem value="sellers">As Seller</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {feedbacks.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No feedback yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {feedbacks.map((feedback) => (
+                  <Card key={feedback.id} className="bg-elevate-1 border-border">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">@{feedback.from_user}</span>
+                          {feedback.rating === 'positive' ? (
+                            <ThumbsUp className="h-4 w-4 text-primary" />
+                          ) : (
+                            <ThumbsDown className="h-4 w-4 text-destructive" />
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(feedback.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {feedback.comment && (
+                        <p className="text-sm mb-2">{feedback.comment}</p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{feedback.payment_method}</span>
+                        <span>•</span>
+                        <span>{feedback.trade_count} trades</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </>
+    )}
       </main>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
