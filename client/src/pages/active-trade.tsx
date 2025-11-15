@@ -94,11 +94,13 @@ export default function ActiveTrade() {
     "Can you confirm receipt?",
     "Thank you for the trade",
   ]);
+  const [counterpartyPresence, setCounterpartyPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
 
   const supabase = createClient();
 
   const isUserBuyer = !!(currentUserProfileId && trade?.buyer_id === currentUserProfileId);
   const counterparty = isUserBuyer ? trade?.seller_profile : trade?.buyer_profile;
+  const counterpartyId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
 
   useEffect(() => {
     if (user?.id) {
@@ -112,6 +114,31 @@ export default function ActiveTrade() {
       fetchMessages();
     }
   }, [tradeId, currentUserProfileId]);
+
+  useEffect(() => {
+    const fetchPresence = async () => {
+      if (counterpartyId) {
+        const { presenceTracker } = await import('@/lib/presence');
+        const presence = await presenceTracker.getUserPresence(counterpartyId);
+        setCounterpartyPresence(presence);
+
+        const channel = presenceTracker.subscribeToUserPresence(counterpartyId, (updatedPresence) => {
+          setCounterpartyPresence(updatedPresence);
+        });
+
+        return channel;
+      }
+    };
+
+    let channel: any;
+    fetchPresence().then(ch => { channel = ch; });
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [counterpartyId]);
 
   useEffect(() => {
     const subscription = supabase
@@ -735,6 +762,7 @@ export default function ActiveTrade() {
               formatTime={formatTime}
               formatTradeTime={formatTradeTime}
               onCounterpartyClick={handleCounterpartyClick}
+              counterpartyPresence={counterpartyPresence}
             />
 
             <TradeTimer isUserBuyer={isUserBuyer} trade={trade} />
