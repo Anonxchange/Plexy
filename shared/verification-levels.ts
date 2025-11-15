@@ -18,7 +18,7 @@ export const VERIFICATION_LEVELS = {
     requirements: [
       "Full name",
       "Date of birth verification (must be 18+)",
-      "Email OR phone verification (whichever wasn't used for signup)"
+      "Email AND phone verification (both required)"
     ],
     permissions: [
       "Receive crypto",
@@ -26,9 +26,8 @@ export const VERIFICATION_LEVELS = {
       "Convert crypto",
       "Buy crypto",
       "Sell crypto",
-      "Create and publish offers",
     ],
-    restrictions: [],
+    restrictions: ["Cannot create offers"],
     dailyLimit: 1000,
     lifetimeTradeLimit: 10000,
     lifetimeSendLimit: 5000,
@@ -113,7 +112,7 @@ export function canTrade(level: number, amount: number, lifetimeVolume: number =
 }
 
 export function canCreateOffer(level: number, merchantStatus?: string) {
-  // Only Level 2+ can create offers
+  // Only Level 2+ can create offers (Level 0 and Level 1 cannot)
   if (level < 2) {
     return {
       allowed: false,
@@ -156,7 +155,7 @@ export function getVerificationRequirements(currentLevel: number) {
       requirements: [
         "Full name",
         "Date of birth confirmation (must be 18+)",
-        "Email OR phone verification"
+        "Email AND phone verification (both required)"
       ],
       benefits: ["Start trading", "Create offers", "$1,000 daily limit", "$10,000 lifetime trade limit"]
     };
