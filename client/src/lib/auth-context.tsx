@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { createClient } from "./supabase";
+import { presenceTracker } from './presence';
 
 interface AuthContextType {
   user: User | null;
@@ -61,33 +62,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
+
       // Track device on session restore
       if (session?.user) {
         trackDevice(session.user.id);
+        
+        // Get profile ID for presence tracking
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile) {
+          presenceTracker.startTracking(profile.id);
+        }
       }
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       // Don't set session if we're on the verify-email page
       if (window.location.pathname === '/verify-email') {
         setSession(null);
         setUser(null);
         return;
       }
-      
+
       setSession(session);
       setUser(session?.user ?? null);
+
+      // Start or stop presence tracking based on auth state
+      if (session?.user) {
+        // Get profile ID for presence tracking
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile) {
+          presenceTracker.startTracking(profile.id);
+        }
+      } else {
+        presenceTracker.stopTracking();
+      }
     });
 
     return () => {
       subscription.unsubscribe();
+      presenceTracker.stopTracking();
     };
   }, []);
 
@@ -148,9 +177,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ? 'https://pexly.app' 
       : window.location.origin;
     const redirectUrl = `${baseUrl}/verify-email`;
-    
+
     console.log("Signup redirect URL:", redirectUrl);
-    
+
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
@@ -165,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const trackDevice = async (userId: string) => {
     try {
       const deviceInfo = getDeviceInfo();
-      
+
       // Fetch IP address
       let ipAddress = 'Unknown';
       try {
@@ -175,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (ipError) {
         console.error('Error fetching IP:', ipError);
       }
-      
+
       // Check if this device already exists (match by user_agent and ip_address)
       const { data: existingDevices } = await supabase
         .from('user_devices')
@@ -187,10 +216,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (existingDevices && existingDevices.length > 0) {
         // Update existing device
         const deviceId = existingDevices[0].id;
-        
+
         // Mark all other devices as not current
         await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
-        
+
         // Update this device
         await supabase.from('user_devices')
           .update({ 
@@ -201,7 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // New device - mark all others as not current and insert new one
         await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
-        
+
         const { error } = await supabase.from('user_devices').insert({
           user_id: userId,
           device_name: deviceInfo.deviceName,
@@ -227,11 +256,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     });
-    
+
     if (!error && data.user) {
       await trackDevice(data.user.id);
     }
-    
+
     return { error, data };
   };
 
