@@ -667,7 +667,7 @@ export function Profile() {
                   isVerified: profileData?.is_verified || false,
                   trades: profileData?.total_trades || 0,
                   responseTime: '< 5 min',
-                  id: user?.id,
+                  id: viewingUserId,
                 }}
                 paymentMethod={offer.payment_method}
                 pricePerBTC={offer.price}
