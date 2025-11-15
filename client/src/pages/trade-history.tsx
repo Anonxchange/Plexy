@@ -242,7 +242,7 @@ export function TradeHistory() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header with Account */}
         <div className="flex items-center justify-between mb-6 relative">
           <h1 className="text-3xl font-bold">Trade History</h1>
@@ -291,13 +291,153 @@ export function TradeHistory() {
           </Collapsible>
         </div>
 
-        {/* Date Range Info */}
-        <p className="text-muted-foreground mb-6">
-          You are viewing all trades from March 01, 2025 to March 31, 2025
-        </p>
+        {/* Desktop: Two column layout, Mobile: Single column */}
+        <div className="lg:grid lg:grid-cols-3 lg:gap-6">
+          {/* Left Column - Main Trade List (2/3 width on desktop) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Date Range Info */}
+            <p className="text-muted-foreground">
+              You are viewing all trades from March 01, 2025 to March 31, 2025
+            </p>
 
-        {/* Action Buttons */}
-        <div className="space-y-4 mb-6">
+            {/* My Past Trades Section */}
+            <Card className="shadow-lg border">
+              <div className="flex items-center justify-between p-4">
+                <div>
+                  <h2 className="text-lg font-semibold">My Past Trades</h2>
+                  <p className="text-sm text-muted-foreground">Mar 1, 2025 - Mar 31, 2025</p>
+                </div>
+                <Button variant="ghost" size="icon">
+                  <Copy className="h-5 w-5" />
+                </Button>
+              </div>
+            </Card>
+
+            {/* Trade List */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading trade history...</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {trades.map((trade) => {
+                  const isUserBuyer = currentUserProfileId === trade.buyer_id;
+                  const counterparty = isUserBuyer ? trade.seller_profile : trade.buyer_profile;
+                  const type = isUserBuyer ? "buy" : "sell";
+
+                  return (
+                    <Card key={trade.id} className="overflow-hidden shadow-lg border">
+                      <Collapsible
+                        open={expandedTrade === trade.id}
+                        onOpenChange={() => setExpandedTrade(expandedTrade === trade.id ? null : trade.id)}
+                      >
+                        <CollapsibleTrigger asChild>
+                          <div className="cursor-pointer hover:bg-muted/50 transition-colors">
+                            <CardContent className="p-6">
+                              <div className="flex items-start gap-4">
+                                {/* Avatar */}
+                                <Avatar className="h-12 w-12">
+                                  <AvatarImage src={counterparty?.avatar_url || ""} />
+                                  <AvatarFallback>
+                                    {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
+                                  </AvatarFallback>
+                                </Avatar>
+
+                                {/* Trade Info */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="font-semibold">{trade.payment_method}</h3>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm mb-2">
+                                    <span className="font-medium">{counterparty?.username || "Unknown"}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Bitcoin className="h-4 w-4 text-orange-500" />
+                                    <span className="capitalize">{type}</span>
+                                    <span>•</span>
+                                    <span>{new Date(trade.created_at).toLocaleString()}</span>
+                                  </div>
+                                </div>
+
+                                {/* Expand Arrow */}
+                                <ChevronDown className={`h-5 w-5 transition-transform ${expandedTrade === trade.id ? "rotate-180" : ""}`} />
+                              </div>
+                            </CardContent>
+                          </div>
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent>
+                          <CardContent className="pt-0 pb-6 px-6 border-t">
+                            <div className="space-y-4 pt-4">
+                              {/* Amount Details */}
+                              <div>
+                                <div className="text-2xl font-bold mb-1">
+                                  {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
+                                </div>
+                                <div className="text-sm text-muted-foreground mb-2">
+                                  {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Rate: {trade.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {trade.fiat_currency} / {trade.crypto_symbol}
+                                </div>
+                              </div>
+
+                              {/* Status Badge */}
+                              <div>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`${getStatusColor(trade.status)} flex items-center gap-1 w-fit`}
+                                >
+                                  {getStatusIcon(trade.status)}
+                                  <span className="capitalize">{trade.status}</span>
+                                </Badge>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex gap-2 pt-2">
+                                <Button 
+                                  className="flex-1"
+                                  onClick={() => window.location.href = `/trade/${trade.id}`}
+                                >
+                                  View Details
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Empty State (when no trades) */}
+            {!loading && trades.length === 0 && (
+              <Card className="p-12 text-center shadow-lg border">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                    <Bitcoin className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">No trades yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Start trading to see your history here
+                    </p>
+                    <Button onClick={() => window.location.href = '/p2p'}>Start Trading</Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column - Sidebar (1/3 width on desktop) */}
+          <div className="lg:col-span-1 space-y-6 mt-6 lg:mt-0">
+            {/* Action Buttons */}
+            <div className="space-y-4">
           <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
             <DialogTrigger asChild>
               <Button 
@@ -483,10 +623,10 @@ export function TradeHistory() {
               </div>
             </DialogContent>
           </Dialog>
-        </div>
+            </div>
 
-        {/* Trade Statistics */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+            {/* Trade Statistics */}
+            <div className="grid grid-cols-3 lg:grid-cols-1 gap-4">
           <Card className="p-4 shadow-lg border">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-500">{activeCount}</div>
@@ -505,10 +645,10 @@ export function TradeHistory() {
               <div className="text-sm text-muted-foreground">Canceled</div>
             </div>
           </Card>
-        </div>
+            </div>
 
-        {/* Completion Stats with Crypto Volumes */}
-        <Collapsible open={completedTradesOpen} onOpenChange={setCompletedTradesOpen} className="mb-6">
+            {/* Completion Stats with Crypto Volumes */}
+            <Collapsible open={completedTradesOpen} onOpenChange={setCompletedTradesOpen}>
           <Card className="shadow-lg border">
             <CollapsibleTrigger asChild>
               <Button 
@@ -616,142 +756,9 @@ export function TradeHistory() {
               </CardContent>
             </CollapsibleContent>
           </Card>
-        </Collapsible>
-
-        {/* My Past Trades Section */}
-        <div className="mb-4">
-          <Card className="shadow-lg border">
-            <div className="flex items-center justify-between p-4">
-              <div>
-                <h2 className="text-lg font-semibold">My Past Trades</h2>
-                <p className="text-sm text-muted-foreground">Mar 1, 2025 - Mar 31, 2025</p>
-              </div>
-              <Button variant="ghost" size="icon">
-                <Copy className="h-5 w-5" />
-              </Button>
-            </div>
-          </Card>
+            </Collapsible>
+          </div>
         </div>
-
-        {/* Trade List */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading trade history...</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {trades.map((trade) => {
-              const isUserBuyer = currentUserProfileId === trade.buyer_id;
-              const counterparty = isUserBuyer ? trade.seller_profile : trade.buyer_profile;
-              const type = isUserBuyer ? "buy" : "sell";
-
-              return (
-                <Card key={trade.id} className="overflow-hidden shadow-lg border">
-                  <Collapsible
-                    open={expandedTrade === trade.id}
-                    onOpenChange={() => setExpandedTrade(expandedTrade === trade.id ? null : trade.id)}
-                  >
-                    <CollapsibleTrigger asChild>
-                      <div className="cursor-pointer hover:bg-muted/50 transition-colors">
-                        <CardContent className="p-6">
-                          <div className="flex items-start gap-4">
-                            {/* Avatar */}
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage src={counterparty?.avatar_url || ""} />
-                              <AvatarFallback>
-                                {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
-                              </AvatarFallback>
-                            </Avatar>
-
-                            {/* Trade Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold">{trade.payment_method}</h3>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm mb-2">
-                                <span className="font-medium">{counterparty?.username || "Unknown"}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Bitcoin className="h-4 w-4 text-orange-500" />
-                                <span className="capitalize">{type}</span>
-                                <span>•</span>
-                                <span>{new Date(trade.created_at).toLocaleString()}</span>
-                              </div>
-                            </div>
-
-                            {/* Expand Arrow */}
-                            <ChevronDown className={`h-5 w-5 transition-transform ${expandedTrade === trade.id ? "rotate-180" : ""}`} />
-                          </div>
-                        </CardContent>
-                      </div>
-                    </CollapsibleTrigger>
-
-                    <CollapsibleContent>
-                      <CardContent className="pt-0 pb-6 px-6 border-t">
-                        <div className="space-y-4 pt-4">
-                          {/* Amount Details */}
-                          <div>
-                            <div className="text-2xl font-bold mb-1">
-                              {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
-                            </div>
-                            <div className="text-sm text-muted-foreground mb-2">
-                              {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Rate: {trade.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {trade.fiat_currency} / {trade.crypto_symbol}
-                            </div>
-                          </div>
-
-                          {/* Status Badge */}
-                          <div>
-                            <Badge 
-                              variant="outline" 
-                              className={`${getStatusColor(trade.status)} flex items-center gap-1 w-fit`}
-                            >
-                              {getStatusIcon(trade.status)}
-                              <span className="capitalize">{trade.status}</span>
-                            </Badge>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="flex gap-2 pt-2">
-                            <Button 
-                              className="flex-1"
-                              onClick={() => window.location.href = `/trade/${trade.id}`}
-                            >
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Empty State (when no trades) */}
-        {!loading && trades.length === 0 && (
-          <Card className="p-12 text-center shadow-lg border">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <Bitcoin className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2">No trades yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Start trading to see your history here
-                </p>
-                <Button onClick={() => window.location.href = '/p2p'}>Start Trading</Button>
-              </div>
-            </div>
-          </Card>
-        )}
       </div>
 
       <PexlyFooter />
