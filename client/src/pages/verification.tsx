@@ -652,9 +652,9 @@ export default function VerificationPage() {
                 />
               </div>
 
-              {/* Email/Phone Verification Status - Only need ONE */}
+              {/* Email/Phone Verification Status - BOTH REQUIRED */}
               <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-semibold text-sm">Contact Verification (Complete at least one)</h4>
+                <h4 className="font-semibold text-sm">Contact Verification (Both Required)</h4>
 
                 {/* Email Status */}
                 <div className="flex items-center justify-between">
@@ -704,26 +704,26 @@ export default function VerificationPage() {
 
                 {/* Instructions based on what's verified */}
                 {!user?.email && !user?.phone && (
-                  <Alert>
+                  <Alert variant="destructive">
                     <AlertDescription className="text-xs">
-                      Please verify at least one contact method (email or phone) in{" "}
+                      Please verify both email and phone in{" "}
                       <a href="/account-settings" className="underline font-semibold">Account Settings</a> to continue.
                     </AlertDescription>
                   </Alert>
                 )}
 
                 {user?.email && !user?.phone && (
-                  <Alert className="bg-green-500/10 border-green-500/20">
-                    <AlertDescription className="text-xs text-green-800 dark:text-green-300">
-                      ✓ Email verified! You can proceed with Level 1 verification.
+                  <Alert className="bg-orange-500/10 border-orange-500/20">
+                    <AlertDescription className="text-xs text-orange-800 dark:text-orange-300">
+                      ✓ Email verified! Please also verify your phone number in Account Settings.
                     </AlertDescription>
                   </Alert>
                 )}
 
                 {user?.phone && !user?.email && (
-                  <Alert className="bg-green-500/10 border-green-500/20">
-                    <AlertDescription className="text-xs text-green-800 dark:text-green-300">
-                      ✓ Phone verified! You can proceed with Level 1 verification.
+                  <Alert className="bg-orange-500/10 border-orange-500/20">
+                    <AlertDescription className="text-xs text-orange-800 dark:text-orange-300">
+                      ✓ Phone verified! Please also verify your email address in Account Settings.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -742,7 +742,8 @@ export default function VerificationPage() {
                 disabled={
                   !dateOfBirth || 
                   (!fullName && !userProfile?.full_name) || 
-                  (!user?.email && !user?.phone) ||
+                  !user?.email || 
+                  !user?.phone ||
                   submitDateOfBirth.isPending
                 }
                 className="w-full"
@@ -758,11 +759,11 @@ export default function VerificationPage() {
                 </Alert>
               )}
 
-              {!user?.email && !user?.phone && (
+              {(!user?.email || !user?.phone) && (
                 <Alert className="bg-blue-500/10 border-blue-500/20">
                   <AlertDescription className="text-sm">
-                    <strong>Note:</strong> You need at least one verified contact method (email OR phone) for Level 1. 
-                    Please verify one in Account Settings before proceeding.
+                    <strong>Note:</strong> You need both email AND phone verified for Level 1. 
+                    Please verify both in Account Settings before proceeding.
                   </AlertDescription>
                 </Alert>
               )}
