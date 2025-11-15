@@ -932,52 +932,50 @@ export function Profile() {
     {/* Full-width sections below the grid - Active Offers and Feedback */}
     <>
       {/* Active Offers Section */}
-      <Card className="mt-6 bg-card border-border">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold">Active Offers</h3>
-            <Select value={offerFilter} onValueChange={setOfferFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="buying">Buying Crypto</SelectItem>
-                <SelectItem value="selling">Selling Crypto</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold">Active Offers</h3>
+          <Select value={offerFilter} onValueChange={setOfferFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="buying">Buying Crypto</SelectItem>
+              <SelectItem value="selling">Selling Crypto</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {offers.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No active {offerFilter} offers</p>
           </div>
-          {offers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No active {offerFilter} offers</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {offers.map((offer) => (
-                <OfferCard
-                  key={offer.id}
-                  id={offer.id}
-                  vendor={{
-                    name: profileData?.username || 'User',
-                    avatar: profileData?.avatar_url || undefined,
-                    isVerified: profileData?.is_verified || false,
-                    trades: profileData?.total_trades || 0,
-                    responseTime: "< 5 min",
-                    id: viewingUserId,
-                    country: profileData?.country || undefined,
-                  }}
-                  paymentMethod={offer.payment_method}
-                  pricePerBTC={offer.price}
-                  currency={offer.fiat_currency}
-                  availableRange={{ min: offer.min_amount, max: offer.max_amount }}
-                  limits={{ min: offer.min_amount, max: offer.max_amount }}
-                  type={offer.type as "buy" | "sell"}
-                  cryptoSymbol={offer.crypto_symbol}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        ) : (
+          <div className="space-y-4">
+            {offers.map((offer) => (
+              <OfferCard
+                key={offer.id}
+                id={offer.id}
+                vendor={{
+                  name: profileData?.username || 'User',
+                  avatar: profileData?.avatar_url || undefined,
+                  isVerified: profileData?.is_verified || false,
+                  trades: profileData?.total_trades || 0,
+                  responseTime: "< 5 min",
+                  id: viewingUserId,
+                  country: profileData?.country || undefined,
+                }}
+                paymentMethod={offer.payment_method}
+                pricePerBTC={offer.price}
+                currency={offer.fiat_currency}
+                availableRange={{ min: offer.min_amount, max: offer.max_amount }}
+                limits={{ min: offer.min_amount, max: offer.max_amount }}
+                type={offer.type as "buy" | "sell"}
+                cryptoSymbol={offer.crypto_symbol}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
         {/* Feedback Section */}
       <Card className="mt-6 bg-card border-border">
