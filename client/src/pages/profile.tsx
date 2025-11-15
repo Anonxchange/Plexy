@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { OfferCard } from "@/components/offer-card";
+import { OfferCard, type OfferCardProps } from "@/components/offer-card";
 import { 
   User, 
   Copy,
@@ -216,8 +216,7 @@ export function Profile() {
 
   const fetchOffers = async () => {
     try {
-      // Profile page shows YOUR OWN offers
-      // "Buying Crypto" = your buy offers, "Selling Crypto" = your sell offers
+      // Fetch offers for the profile being viewed (either own or another user's)
       const type = offerFilter === "buying" ? "buy" : "sell";
 
       // Add timeout to prevent hanging
@@ -228,7 +227,7 @@ export function Profile() {
       const fetchPromise = supabase
         .from('p2p_offers')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', viewingUserId)
         .eq('offer_type', type)
         .eq('is_active', true)
         .limit(10);
@@ -272,7 +271,7 @@ export function Profile() {
       const fetchPromise = supabase
         .from('trade_feedback')
         .select('*')
-        .eq('to_user_id', user?.id)
+        .eq('to_user_id', viewingUserId)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -292,16 +291,16 @@ export function Profile() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (viewingUserId) {
       fetchOffers();
     }
-  }, [offerFilter]);
+  }, [offerFilter, viewingUserId]);
 
   useEffect(() => {
-    if (user) {
+    if (viewingUserId) {
       fetchFeedbacks();
     }
-  }, [feedbackFilter]);
+  }, [feedbackFilter, viewingUserId]);
 
   if (loading || loadingProfile) {
     return (
@@ -931,123 +930,108 @@ export function Profile() {
     </div>
 
     {/* Full-width sections below the grid - Active Offers and Feedback */}
-    {isOwnProfile && (
-      <>
-        {/* Active Offers Section */}
-        <Card className="mt-6 bg-card border-border">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">Active Offers</h3>
-              <Select value={offerFilter} onValueChange={setOfferFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buying">Buying Crypto</SelectItem>
-                  <SelectItem value="selling">Selling Crypto</SelectItem>
-                </SelectContent>
-              </Select>
+    <>
+      {/* Active Offers Section */}
+      <Card className="mt-6 bg-card border-border">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold">Active Offers</h3>
+            <Select value={offerFilter} onValueChange={setOfferFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="buying">Buying Crypto</SelectItem>
+                <SelectItem value="selling">Selling Crypto</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {offers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No active {offerFilter} offers</p>
             </div>
-            {offers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No active {offerFilter} offers</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {offers.map((offer) => (
-                  <Card key={offer.id} className="bg-elevate-1 border-border">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <img 
-                            src={cryptoIconUrls[offer.crypto_symbol as keyof typeof cryptoIconUrls] || cryptoIconUrls.BTC} 
-                            alt={offer.crypto_symbol} 
-                            className="h-6 w-6" 
-                          />
-                          <span className="font-bold">{offer.crypto_symbol}</span>
-                        </div>
-                        <Badge variant={offer.type === 'buy' ? 'default' : 'secondary'}>
-                          {offer.type === 'buy' ? 'Buying' : 'Selling'}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Price:</span>
-                          <span className="font-medium">{offer.price.toFixed(2)} {offer.fiat_currency}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Amount:</span>
-                          <span className="font-medium">
-                            {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Payment:</span>
-                          <span className="font-medium truncate ml-2">{offer.payment_method}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          ) : (
+            <div className="space-y-4">
+              {offers.map((offer) => (
+                <OfferCard
+                  key={offer.id}
+                  id={offer.id}
+                  vendor={{
+                    name: profileData?.username || 'User',
+                    avatar: profileData?.avatar_url || undefined,
+                    isVerified: profileData?.is_verified || false,
+                    trades: profileData?.total_trades || 0,
+                    responseTime: "< 5 min",
+                    id: viewingUserId,
+                    country: profileData?.country || undefined,
+                  }}
+                  paymentMethod={offer.payment_method}
+                  pricePerBTC={offer.price}
+                  currency={offer.fiat_currency}
+                  availableRange={{ min: offer.min_amount, max: offer.max_amount }}
+                  limits={{ min: offer.min_amount, max: offer.max_amount }}
+                  type={offer.type as "buy" | "sell"}
+                  cryptoSymbol={offer.crypto_symbol}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
         {/* Feedback Section */}
-        <Card className="mt-6 bg-card border-border">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">Feedback</h3>
-              <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buyers">As Buyer</SelectItem>
-                  <SelectItem value="sellers">As Seller</SelectItem>
-                </SelectContent>
-              </Select>
+      <Card className="mt-6 bg-card border-border">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold">Feedback</h3>
+            <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="buyers">As Buyer</SelectItem>
+                <SelectItem value="sellers">As Seller</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {feedbacks.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No feedback yet</p>
             </div>
-            {feedbacks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No feedback yet</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {feedbacks.map((feedback) => (
-                  <Card key={feedback.id} className="bg-elevate-1 border-border">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">@{feedback.from_user}</span>
-                          {feedback.rating === 'positive' ? (
-                            <ThumbsUp className="h-4 w-4 text-primary" />
-                          ) : (
-                            <ThumbsDown className="h-4 w-4 text-destructive" />
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(feedback.created_at).toLocaleDateString()}
-                        </span>
+          ) : (
+            <div className="space-y-4">
+              {feedbacks.map((feedback) => (
+                <Card key={feedback.id} className="bg-elevate-1 border-border">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">@{feedback.from_user}</span>
+                        {feedback.rating === 'positive' ? (
+                          <ThumbsUp className="h-4 w-4 text-primary" />
+                        ) : (
+                          <ThumbsDown className="h-4 w-4 text-destructive" />
+                        )}
                       </div>
-                      {feedback.comment && (
-                        <p className="text-sm mb-2">{feedback.comment}</p>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{feedback.payment_method}</span>
-                        <span>•</span>
-                        <span>{feedback.trade_count} trades</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </>
-    )}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(feedback.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {feedback.comment && (
+                      <p className="text-sm mb-2">{feedback.comment}</p>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{feedback.payment_method}</span>
+                      <span>•</span>
+                      <span>{feedback.trade_count} trades</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </>
       </main>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
