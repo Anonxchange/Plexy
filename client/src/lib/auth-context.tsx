@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { createClient } from "./supabase";
@@ -47,6 +48,66 @@ function getDeviceInfo() {
   return { browser, os, deviceName, userAgent: ua };
 }
 
+async function trackDevice(supabase: any, userId: string) {
+  try {
+    const deviceInfo = getDeviceInfo();
+
+    // Fetch IP address
+    let ipAddress = 'Unknown';
+    try {
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipResponse.json();
+      ipAddress = ipData.ip;
+    } catch (ipError) {
+      console.error('Error fetching IP:', ipError);
+    }
+
+    // Check if this device already exists (match by user_agent and ip_address)
+    const { data: existingDevices } = await supabase
+      .from('user_devices')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('user_agent', deviceInfo.userAgent)
+      .eq('ip_address', ipAddress);
+
+    if (existingDevices && existingDevices.length > 0) {
+      // Update existing device
+      const deviceId = existingDevices[0].id;
+
+      // Mark all other devices as not current
+      await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
+
+      // Update this device
+      await supabase.from('user_devices')
+        .update({ 
+          is_current: true, 
+          last_active: new Date().toISOString() 
+        })
+        .eq('id', deviceId);
+    } else {
+      // New device - mark all others as not current and insert new one
+      await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
+
+      const { error } = await supabase.from('user_devices').insert({
+        user_id: userId,
+        device_name: deviceInfo.deviceName,
+        browser: deviceInfo.browser,
+        os: deviceInfo.os,
+        ip_address: ipAddress,
+        user_agent: deviceInfo.userAgent,
+        is_current: true,
+        last_active: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error('Error tracking device:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Error in trackDevice:', error);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -69,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Track device and presence on session restore
       if (session?.user) {
-        trackDevice(session.user.id);
+        trackDevice(supabase, session.user.id);
         presenceTracker.startTracking(session.user.id);
       }
     });
@@ -172,66 +233,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const trackDevice = async (userId: string) => {
-    try {
-      const deviceInfo = getDeviceInfo();
-
-      // Fetch IP address
-      let ipAddress = 'Unknown';
-      try {
-        const ipResponse = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipResponse.json();
-        ipAddress = ipData.ip;
-      } catch (ipError) {
-        console.error('Error fetching IP:', ipError);
-      }
-
-      // Check if this device already exists (match by user_agent and ip_address)
-      const { data: existingDevices } = await supabase
-        .from('user_devices')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('user_agent', deviceInfo.userAgent)
-        .eq('ip_address', ipAddress);
-
-      if (existingDevices && existingDevices.length > 0) {
-        // Update existing device
-        const deviceId = existingDevices[0].id;
-
-        // Mark all other devices as not current
-        await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
-
-        // Update this device
-        await supabase.from('user_devices')
-          .update({ 
-            is_current: true, 
-            last_active: new Date().toISOString() 
-          })
-          .eq('id', deviceId);
-      } else {
-        // New device - mark all others as not current and insert new one
-        await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
-
-        const { error } = await supabase.from('user_devices').insert({
-          user_id: userId,
-          device_name: deviceInfo.deviceName,
-          browser: deviceInfo.browser,
-          os: deviceInfo.os,
-          ip_address: ipAddress,
-          user_agent: deviceInfo.userAgent,
-          is_current: true,
-          last_active: new Date().toISOString(),
-        });
-
-        if (error) {
-          console.error('Error tracking device:', error);
-        }
-      }
-    } catch (error) {
-      console.error('Error in trackDevice:', error);
-    }
-  };
-
   const signIn = async (email: string, password: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
@@ -239,7 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (!error && data.user) {
-      await trackDevice(data.user.id);
+      await trackDevice(supabase, data.user.id);
     }
 
     return { error, data };
