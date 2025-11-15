@@ -582,14 +582,14 @@ export function AccountSettings() {
       // Check if phone number has changed
       const currentPhone = profileData?.phone_number || '';
       const newPhone = phone.trim();
+      const newFullPhoneNumber = countryCodeForPhone + newPhone;
       
-      if (newPhone !== currentPhone && newPhone && !skipPhoneVerification) {
+      if (newFullPhoneNumber !== currentPhone && newPhone && !skipPhoneVerification) {
         // Check if this phone number is already linked to another account
-        const fullPhoneNumber = countryCodeForPhone + newPhone;
         const { data: existingPhone, error: checkError } = await supabase
           .from('user_profiles')
           .select('id, username')
-          .eq('phone_number', fullPhoneNumber)
+          .eq('phone_number', newFullPhoneNumber)
           .neq('id', user?.id)
           .single();
 
@@ -620,8 +620,8 @@ export function AccountSettings() {
       };
 
       // Only update phone if it's verified or hasn't changed
-      if (skipPhoneVerification || newPhone === currentPhone) {
-        updateData.phone_number = newPhone;
+      if (skipPhoneVerification || newFullPhoneNumber === currentPhone) {
+        updateData.phone_number = newFullPhoneNumber;
       }
 
       console.log("Saving profile with currency:", currency, "updateData:", updateData);
