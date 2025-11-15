@@ -267,13 +267,22 @@ export function OfferCard({
                       <Circle className="h-1 w-1 fill-green-500" />
                       <span className="text-green-500">Active</span>
                     </>
-                  ) : (
+                  ) : vendorPresence.lastSeen ? (
                     <>
                       <Circle className="h-1 w-1 fill-gray-500" />
                       <span className="text-gray-500">{(() => {
-                        const { formatLastSeen } = require('@/lib/presence');
-                        return formatLastSeen(vendorPresence.lastSeen);
+                        try {
+                          const { formatLastSeen } = require('@/lib/presence');
+                          return formatLastSeen(vendorPresence.lastSeen);
+                        } catch (error) {
+                          return 'Offline';
+                        }
                       })()}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Circle className="h-1 w-1 fill-gray-500" />
+                      <span className="text-gray-500">Offline</span>
                     </>
                   )}
                 </div>
