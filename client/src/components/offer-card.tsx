@@ -102,6 +102,7 @@ export function OfferCard({
   const [, setLocation] = useLocation();
   const { checkCanTrade, isLevel0 } = useVerificationGuard();
   const [userMedals, setUserMedals] = useState<any[]>([]);
+  const [vendorPresence, setVendorPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
 
   useEffect(() => {
     const fetchUserMedals = async () => {
@@ -117,6 +118,34 @@ export function OfferCard({
     };
 
     fetchUserMedals();
+  }, [vendor.id]);
+
+  useEffect(() => {
+    const fetchPresence = async () => {
+      if (vendor.id) {
+        const { presenceTracker } = await import('@/lib/presence');
+        const presence = await presenceTracker.getUserPresence(vendor.id);
+        setVendorPresence(presence);
+
+        const channel = presenceTracker.subscribeToUserPresence(vendor.id, (updatedPresence) => {
+          setVendorPresence(updatedPresence);
+        });
+
+        return channel;
+      }
+    };
+
+    let channel: any;
+    fetchPresence().then(ch => { channel = ch; });
+
+    return () => {
+      if (channel) {
+        const supabase = import('@/lib/supabase').then(({ createClient }) => {
+          const client = createClient();
+          client.removeChannel(channel);
+        });
+      }
+    };
   }, [vendor.id]);
 
   const handleTrade = () => {
@@ -233,8 +262,20 @@ export function OfferCard({
                   <span>100%</span>
                   <span className="hidden xs:inline">{vendor.trades} Trades</span>
                   <span className="xs:hidden">{vendor.trades}T</span>
-                  <Circle className="h-1 w-1 fill-green-500" />
-                  <span className="text-green-500">Active</span>
+                  {vendorPresence.isOnline ? (
+                    <>
+                      <Circle className="h-1 w-1 fill-green-500" />
+                      <span className="text-green-500">Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <Circle className="h-1 w-1 fill-gray-500" />
+                      <span className="text-gray-500">{(() => {
+                        const { formatLastSeen } = require('@/lib/presence');
+                        return formatLastSeen(vendorPresence.lastSeen);
+                      })()}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
