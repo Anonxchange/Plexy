@@ -1,10 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, ArrowLeft, User, Info, Clock } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowLeft, User, Info, Clock, Circle } from "lucide-react";
 import { useLocation } from "wouter";
 import { UserInfoDialog } from "@/components/user-info-dialog";
 import { useState } from "react";
+import { formatLastSeen } from "@/lib/presence";
 
 interface TradeHeaderProps {
   counterparty?: {
@@ -23,6 +24,7 @@ interface TradeHeaderProps {
   formatTime: (seconds: number) => string;
   formatTradeTime: () => string;
   onCounterpartyClick: () => void;
+  counterpartyPresence?: { isOnline: boolean; lastSeen: string | null };
 }
 
 export function TradeHeader({
@@ -34,6 +36,7 @@ export function TradeHeader({
   formatTime,
   formatTradeTime,
   onCounterpartyClick,
+  counterpartyPresence = { isOnline: false, lastSeen: null },
 }: TradeHeaderProps) {
   const [, setLocation] = useLocation();
   const [showUserInfo, setShowUserInfo] = useState(false);
@@ -82,10 +85,19 @@ export function TradeHeader({
       </div>
 
       <div className="flex items-center justify-between text-xs sm:text-sm">
-        <div className="flex items-center gap-1 sm:gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span>Active now</span>
-        </div>
+        <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
+                {counterpartyPresence.isOnline ? (
+                  <>
+                    <Circle className="h-2 w-2 fill-green-500" />
+                    <span className="text-green-500">Active</span>
+                  </>
+                ) : (
+                  <>
+                    <Circle className="h-2 w-2 fill-gray-500" />
+                    <span className="text-gray-500">{formatLastSeen(counterpartyPresence.lastSeen)}</span>
+                  </>
+                )}
+              </div>
         <div className="flex items-center gap-1 sm:gap-2">
           <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
           <span>{isPaid ? formatTradeTime() : formatTime(timer)}</span>
