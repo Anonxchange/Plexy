@@ -99,7 +99,7 @@ export function AccountSettings() {
   const [phoneChangeCode, setPhoneChangeCode] = useState("");
   const [awaitingPhoneChangeOTP, setAwaitingPhoneChangeOTP] = useState(false);
   const [sendingPhoneOTP, setSendingPhoneOTP] = useState(false);
-
+  
   // Email change states
   const [showEmailChangeDialog, setShowEmailChangeDialog] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -118,6 +118,9 @@ export function AccountSettings() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [countryCodeForPhone, setCountryCodeForPhone] = useState("+234");
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [isEditingBio, setIsEditingBio] = useState(false);
 
   // Security settings
   const [smsAuth, setSmsAuth] = useState(false);
@@ -231,23 +234,32 @@ export function AccountSettings() {
 
       if (data) {
         setProfileData(data);
-        setUsername(data.username || '');
-        setBio(data.bio || '');
-
+        
+        // Only update fields if user is not currently editing them
+        if (!isEditingUsername) {
+          setUsername(data.username || '');
+        }
+        if (!isEditingBio) {
+          setBio(data.bio || '');
+        }
+        
         // Load phone number from phone_number field and parse country code
-        const fullPhone = data.phone_number || data.phone || '';
-        if (fullPhone) {
-          // Try to extract country code
-          const codes = ['+234', '+1', '+44', '+91'];
-          const matchedCode = codes.find(code => fullPhone.startsWith(code));
-          if (matchedCode) {
-            setCountryCodeForPhone(matchedCode);
-            setPhone(fullPhone.replace(matchedCode, ''));
-          } else {
-            setPhone(fullPhone);
+        // Only update if user is not currently editing the phone field
+        if (!isEditingPhone) {
+          const fullPhone = data.phone_number || data.phone || '';
+          if (fullPhone) {
+            // Try to extract country code
+            const codes = ['+234', '+1', '+44', '+91'];
+            const matchedCode = codes.find(code => fullPhone.startsWith(code));
+            if (matchedCode) {
+              setCountryCodeForPhone(matchedCode);
+              setPhone(fullPhone.replace(matchedCode, ''));
+            } else {
+              setPhone(fullPhone);
+            }
           }
         }
-
+        
         setPhoneVerified(data.phone_verified || false);
         setCurrency(data.preferred_currency || 'usd');
       }
@@ -358,10 +370,10 @@ export function AccountSettings() {
     try {
       // Generate a 6-digit code
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-
+      
       // Store code in database with expiry (5 minutes)
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
+      
       const { error: updateError } = await supabase
         .from('user_profiles')
         .update({
@@ -583,7 +595,7 @@ export function AccountSettings() {
       const currentPhone = profileData?.phone_number || '';
       const newPhone = phone.trim();
       const newFullPhoneNumber = countryCodeForPhone + newPhone;
-
+      
       if (newFullPhoneNumber !== currentPhone && newPhone && !skipPhoneVerification) {
         // Check if this phone number is already linked to another account
         const { data: existingPhone, error: checkError } = await supabase
@@ -668,8 +680,8 @@ export function AccountSettings() {
 
       if (authError) {
         // Handle specific error codes
-        if (authError.status === 422 || authError.status === 409 ||
-            authError.message.toLowerCase().includes('already') ||
+        if (authError.status === 422 || authError.status === 409 || 
+            authError.message.toLowerCase().includes('already') || 
             authError.message.toLowerCase().includes('duplicate')) {
           toast({
             title: "Phone Number Already in Use",
@@ -789,10 +801,10 @@ export function AccountSettings() {
       // Close dialog and show success message
       setShowEmailChangeDialog(false);
       setNewEmail("");
-
+      
       toast({
         title: "Confirmation Email Sent",
-        description: "Please check your new email address to confirm the change. You'll receive a notification at your current email.",
+        description: "Please check your new email address to confirm the change. You'll also receive a notification at your current email.",
       });
     } catch (error: any) {
       console.error('Error changing email:', error);
@@ -892,7 +904,7 @@ export function AccountSettings() {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -931,7 +943,7 @@ export function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to save payment method",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -941,7 +953,7 @@ export function AccountSettings() {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -974,7 +986,7 @@ export function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to save online wallet",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -984,7 +996,7 @@ export function AccountSettings() {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -1017,7 +1029,7 @@ export function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to save mobile money wallet",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -1061,7 +1073,7 @@ export function AccountSettings() {
               </Badge>
             )}
           </div>
-          <Button
+          <Button 
             variant="outline"
             size="sm"
             onClick={() => setShowEmailChangeDialog(true)}
@@ -1232,6 +1244,8 @@ export function AccountSettings() {
           <Input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            onFocus={() => setIsEditingUsername(true)}
+            onBlur={() => setIsEditingUsername(false)}
             className="flex-1"
           />
           <Button
@@ -1311,6 +1325,8 @@ export function AccountSettings() {
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              onFocus={() => setIsEditingPhone(true)}
+              onBlur={() => setIsEditingPhone(false)}
               placeholder="1234567890"
               className="flex-1 h-12"
             />
@@ -1371,6 +1387,8 @@ export function AccountSettings() {
         <Textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}
+          onFocus={() => setIsEditingBio(true)}
+          onBlur={() => setIsEditingBio(false)}
           placeholder="Your bio appears on your public profile"
           className="min-h-32 resize-none"
           maxLength={180}
@@ -1392,7 +1410,7 @@ export function AccountSettings() {
           <DialogHeader>
             <DialogTitle>Verify Phone Number</DialogTitle>
             <DialogDescription>
-              {!awaitingPhoneChangeOTP
+              {!awaitingPhoneChangeOTP 
                 ? "Click below to send a verification code to your new phone number"
                 : `Enter the 6-digit code sent to ${pendingCountryCode}${pendingPhoneNumber}`
               }
@@ -1405,8 +1423,8 @@ export function AccountSettings() {
                   <p className="text-sm font-medium">New Phone Number:</p>
                   <p className="text-lg font-semibold">{pendingCountryCode}{pendingPhoneNumber}</p>
                 </div>
-                <Button
-                  onClick={handleInitiatePhoneChange}
+                <Button 
+                  onClick={handleInitiatePhoneChange} 
                   disabled={sendingPhoneOTP}
                   className="w-full"
                 >
@@ -1432,14 +1450,14 @@ export function AccountSettings() {
                     Enter the 6-digit code sent to {pendingCountryCode}{pendingPhoneNumber}
                   </p>
                 </div>
-                <Button
-                  onClick={handleVerifyPhoneChange}
+                <Button 
+                  onClick={handleVerifyPhoneChange} 
                   disabled={phoneChangeCode.length !== 6}
                   className="w-full"
                 >
                   Verify and Link Phone Number
                 </Button>
-                <Button
+                <Button 
                   variant="outline"
                   onClick={handleInitiatePhoneChange}
                   disabled={sendingPhoneOTP}
@@ -1486,8 +1504,8 @@ export function AccountSettings() {
                 ⓘ Both your current and new email addresses will receive a confirmation link. Your email won't change until you click the link in the new email.
               </p>
             </div>
-            <Button
-              onClick={handleChangeEmail}
+            <Button 
+              onClick={handleChangeEmail} 
               disabled={!newEmail || changingEmail}
               className="w-full"
             >
@@ -2461,9 +2479,9 @@ export function AccountSettings() {
                     <SelectItem value="Singapore">🇸🇬 Singapore</SelectItem>
                     <SelectItem value="Malaysia">🇲🇾 Malaysia</SelectItem>
                     <SelectItem value="Thailand">🇹🇭 Thailand</SelectItem>
-                    <SelectItem value="Philippines">🇵🇭 Philippine Peso (PHP)</SelectItem>
-                    <SelectItem value="Indonesia">🇮🇩 Indonesian Rupiah (IDR)</SelectItem>
-                    <SelectItem value="Vietnam">🇻🇳 Vietnamese Dong (VND)</SelectItem>
+                    <SelectItem value="Philippines">🇵🇭 Philippines</SelectItem>
+                    <SelectItem value="Indonesia">🇮🇩 Indonesia</SelectItem>
+                    <SelectItem value="Vietnam">🇻🇳 Vietnam</SelectItem>
                     <SelectItem value="Pakistan">🇵🇰 Pakistan</SelectItem>
                     <SelectItem value="Bangladesh">🇧🇩 Bangladesh</SelectItem>
                     <SelectItem value="Brazil">🇧🇷 Brazil</SelectItem>
@@ -3180,90 +3198,6 @@ export function AccountSettings() {
     </div>
   );
 
-  const SecurityQuestionsSection = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-2xl font-bold mb-2">Security Questions</h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          Set up answers to your security questions. These will be used to verify your identity if you need to reset your password or recover your account.
-        </p>
-      </div>
-
-      <Card className="border-2 border-primary/20">
-        <CardContent className="p-6 space-y-4">
-          <div className="space-y-2">
-            <Label>Question 1</Label>
-            <Select defaultValue="mother_maiden_name">
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a security question" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mother_maiden_name">What was your mother's maiden name?</SelectItem>
-                <SelectItem value="first_pet_name">What was the name of your first pet?</SelectItem>
-                <SelectItem value="birth_city">In what city were you born?</SelectItem>
-                <SelectItem value="favorite_book">What is your favorite book?</SelectItem>
-                <SelectItem value="favorite_movie">What is your favorite movie?</SelectItem>
-                <SelectItem value="childhood_friend_name">What was the name of your childhood best friend?</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input placeholder="Enter your answer" className="mt-2" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Question 2</Label>
-            <Select defaultValue="first_pet_name">
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a security question" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mother_maiden_name">What was your mother's maiden name?</SelectItem>
-                <SelectItem value="first_pet_name">What was the name of your first pet?</SelectItem>
-                <SelectItem value="birth_city">In what city were you born?</SelectItem>
-                <SelectItem value="favorite_book">What is your favorite book?</SelectItem>
-                <SelectItem value="favorite_movie">What is your favorite movie?</SelectItem>
-                <SelectItem value="childhood_friend_name">What was the name of your childhood best friend?</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input placeholder="Enter your answer" className="mt-2" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Question 3</Label>
-            <Select defaultValue="birth_city">
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a security question" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mother_maiden_name">What was your mother's maiden name?</SelectItem>
-                <SelectItem value="first_pet_name">What was the name of your first pet?</SelectItem>
-                <SelectItem value="birth_city">In what city were you born?</SelectItem>
-                <SelectItem value="favorite_book">What is your favorite book?</SelectItem>
-                <SelectItem value="favorite_movie">What is your favorite movie?</SelectItem>
-                <SelectItem value="childhood_friend_name">What was the name of your childhood best friend?</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input placeholder="Enter your answer" className="mt-2" />
-          </div>
-
-          <Button className="w-full mt-4">Save Security Questions</Button>
-        </CardContent>
-      </Card>
-
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="p-4">
-          <div className="flex gap-3">
-            <Info className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-            <div className="space-y-2">
-              <p className="text-sm">
-                For your account's security, it's highly recommended to set up answers to your security questions. These will help you recover your account if you ever lose access.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   const renderSection = () => {
     switch (activeSection) {
       case "profile":
@@ -3282,13 +3216,11 @@ export function AccountSettings() {
         return <VerificationSection />;
       case "connected":
         return <ConnectedAppsSection />;
-      case "security-questions":
-        return <SecurityQuestionsSection />;
       default:
         return (
           <Card>
-            <CardContent className="p-12">
-              <p className="text-center text-muted-foreground">This section is coming soon</p>
+            <CardContent className="p-12 text-center">
+              <p className="text-muted-foreground">This section is coming soon</p>
             </CardContent>
           </Card>
         );
