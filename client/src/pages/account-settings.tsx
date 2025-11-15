@@ -118,6 +118,9 @@ export function AccountSettings() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [countryCodeForPhone, setCountryCodeForPhone] = useState("+234");
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [isEditingBio, setIsEditingBio] = useState(false);
 
   // Security settings
   const [smsAuth, setSmsAuth] = useState(false);
@@ -231,20 +234,29 @@ export function AccountSettings() {
 
       if (data) {
         setProfileData(data);
-        setUsername(data.username || '');
-        setBio(data.bio || '');
+        
+        // Only update fields if user is not currently editing them
+        if (!isEditingUsername) {
+          setUsername(data.username || '');
+        }
+        if (!isEditingBio) {
+          setBio(data.bio || '');
+        }
         
         // Load phone number from phone_number field and parse country code
-        const fullPhone = data.phone_number || data.phone || '';
-        if (fullPhone) {
-          // Try to extract country code
-          const codes = ['+234', '+1', '+44', '+91'];
-          const matchedCode = codes.find(code => fullPhone.startsWith(code));
-          if (matchedCode) {
-            setCountryCodeForPhone(matchedCode);
-            setPhone(fullPhone.replace(matchedCode, ''));
-          } else {
-            setPhone(fullPhone);
+        // Only update if user is not currently editing the phone field
+        if (!isEditingPhone) {
+          const fullPhone = data.phone_number || data.phone || '';
+          if (fullPhone) {
+            // Try to extract country code
+            const codes = ['+234', '+1', '+44', '+91'];
+            const matchedCode = codes.find(code => fullPhone.startsWith(code));
+            if (matchedCode) {
+              setCountryCodeForPhone(matchedCode);
+              setPhone(fullPhone.replace(matchedCode, ''));
+            } else {
+              setPhone(fullPhone);
+            }
           }
         }
         
@@ -1232,6 +1244,8 @@ export function AccountSettings() {
           <Input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            onFocus={() => setIsEditingUsername(true)}
+            onBlur={() => setIsEditingUsername(false)}
             className="flex-1"
           />
           <Button
@@ -1311,6 +1325,8 @@ export function AccountSettings() {
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              onFocus={() => setIsEditingPhone(true)}
+              onBlur={() => setIsEditingPhone(false)}
               placeholder="1234567890"
               className="flex-1 h-12"
             />
@@ -1371,6 +1387,8 @@ export function AccountSettings() {
         <Textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}
+          onFocus={() => setIsEditingBio(true)}
+          onBlur={() => setIsEditingBio(false)}
           placeholder="Your bio appears on your public profile"
           className="min-h-32 resize-none"
           maxLength={180}
