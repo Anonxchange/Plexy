@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Track device on session restore
+      // Track device and presence on session restore
       if (session?.user) {
         trackDevice(session.user.id);
         presenceTracker.startTracking(session.user.id);
