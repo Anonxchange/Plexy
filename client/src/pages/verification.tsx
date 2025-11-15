@@ -17,11 +17,15 @@ import { useAuth } from "@/lib/auth-context";
 import LivenessCheck from "@/components/liveness-check";
 import { LivenessResult } from "@/lib/liveness-api";
 import { uploadToR2, uploadBase64ToR2 } from "@/lib/r2-storage";
+import { useToast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function VerificationPage() {
   const supabase = createClient();
   const queryClient = useQueryClient();
-  const { user: authUser } = useAuth(); // Get auth user with ID
+  const { user, profileData } = useAuth(); // Get auth user with ID and profile data
+  const { toast } = useToast();
+
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [fullName, setFullName] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
@@ -32,36 +36,42 @@ export default function VerificationPage() {
   const [showLivenessCheck, setShowLivenessCheck] = useState(false);
   const [documentType, setDocumentType] = useState<string>("government_id"); // Default document type
 
+  // Email linking dialog state
+  const [emailLinkingOpen, setEmailLinkingOpen] = useState(false);
+  const [linkingEmail, setLinkingEmail] = useState("");
+  const [linkingPassword, setLinkingPassword] = useState("");
+  const [linkingConfirmPassword, setLinkingConfirmPassword] = useState("");
+
   // Fetch current user profile
   const { data: userProfile } = useQuery({
-    queryKey: ["currentUser", authUser?.id],
+    queryKey: ["currentUser", user?.id],
     queryFn: async () => {
-      if (!authUser?.id) throw new Error("Not authenticated");
+      if (!user?.id) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
         .from("user_profiles")
         .select("*")
-        .eq("id", authUser.id)
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!authUser?.id,
+    enabled: !!user?.id,
   });
 
   // Fetch verifications for the CURRENT USER ONLY - using auth user ID
   const { data: verifications } = useQuery({
-    queryKey: ["verifications", authUser?.id],
+    queryKey: ["verifications", user?.id],
     queryFn: async () => {
-      if (!authUser?.id) return [];
+      if (!user?.id) return [];
 
-      console.log("Fetching verifications for user:", authUser.id, userProfile?.username);
+      console.log("Fetching verifications for user:", user.id, userProfile?.username);
 
       const { data, error } = await supabase
         .from("verifications")
         .select("*")
-        .eq("user_id", authUser.id)
+        .eq("user_id", user.id)
         .order("submitted_at", { ascending: false });
 
       if (error) {
@@ -69,10 +79,10 @@ export default function VerificationPage() {
         throw error;
       }
 
-      console.log(`Found ${data?.length || 0} verifications for user ${userProfile?.username || authUser.id}`);
+      console.log(`Found ${data?.length || 0} verifications for user ${userProfile?.username || user.id}`);
       return data;
     },
-    enabled: !!authUser?.id,
+    enabled: !!user?.id,
   });
 
   const currentLevel = Number(userProfile?.verification_level) || 0;
@@ -83,7 +93,7 @@ export default function VerificationPage() {
   // Submit date of birth and full name for Level 1
   const submitDateOfBirth = useMutation({
     mutationFn: async () => {
-      if (!authUser?.id) throw new Error("Not authenticated");
+      if (!user?.id) throw new Error("Not authenticated");
 
       const nameToUse = fullName || userProfile?.full_name;
       if (!nameToUse || nameToUse.trim().length < 2) {
@@ -110,7 +120,7 @@ export default function VerificationPage() {
           date_of_birth: dateOfBirth, 
           verification_level: "1"
         })
-        .eq("id", authUser.id);
+        .eq("id", user.id);
 
       if (error) throw error;
     },
@@ -123,10 +133,10 @@ export default function VerificationPage() {
   const submitVerification = useMutation({
     mutationFn: async (level: number) => {
       console.log("=== VERIFICATION SUBMISSION STARTED ===");
-      console.log("Auth user:", authUser);
+      console.log("Auth user:", user);
       console.log("Requested level:", level);
 
-      if (!authUser?.id) {
+      if (!user?.id) {
         throw new Error("Not authenticated");
       }
 
@@ -141,7 +151,7 @@ export default function VerificationPage() {
         const uploadResult = await uploadToR2(
           documentFile,
           "verification-documents",
-          authUser.id
+          user.id
         );
 
         if (!uploadResult.success || !uploadResult.url) {
@@ -158,7 +168,7 @@ export default function VerificationPage() {
         const uploadResult = await uploadToR2(
           documentBackFile,
           "verification-documents",
-          authUser.id
+          user.id
         );
 
         if (!uploadResult.success || !uploadResult.url) {
@@ -174,12 +184,12 @@ export default function VerificationPage() {
         if (!addressFile) {
           throw new Error("Address proof document is required for Level 3 verification");
         }
-        
+
         console.log("Uploading address proof to R2...");
         const uploadResult = await uploadToR2(
           addressFile,
           "verification-documents",
-          authUser.id
+          user.id
         );
 
         if (!uploadResult.success || !uploadResult.url) {
@@ -197,7 +207,7 @@ export default function VerificationPage() {
         const uploadResult = await uploadBase64ToR2(
           livenessResult.imageDataUrl,
           "liveness-captures",
-          authUser.id,
+          user.id,
           "jpg"
         );
 
@@ -211,7 +221,7 @@ export default function VerificationPage() {
 
       // Submit verification to database
       const verificationData = {
-        user_id: authUser.id,
+        user_id: user.id,
         requested_level: level.toString(),
         document_type: level === 3 ? "address_proof" : documentType,
         document_url: documentUrl || null,
@@ -326,6 +336,71 @@ export default function VerificationPage() {
     !pendingVerification && 
     !needsResubmitForCurrentLevel;
 
+  // Handler for linking email, including password for phone signups
+  const handleEmailLink = async () => {
+    if (!linkingEmail || !user?.id) return;
+
+    // Validate password if user signed up with phone (no existing password)
+    if (!profileData?.email) {
+      if (!linkingPassword || linkingPassword.length < 6) {
+        toast({
+          title: "Error",
+          description: "Password must be at least 6 characters",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (linkingPassword !== linkingConfirmPassword) {
+        toast({
+          title: "Error",
+          description: "Passwords do not match",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    try {
+      // Update email and password (if new password provided)
+      const updateData: any = { email: linkingEmail };
+      if (linkingPassword && !profileData?.email) {
+        updateData.password = linkingPassword;
+      }
+
+      const { error } = await supabase.auth.updateUser(updateData);
+
+      if (error) {
+        if (error.message.toLowerCase().includes('already') || 
+            error.message.toLowerCase().includes('duplicate')) {
+          toast({
+            title: "Email Already in Use",
+            description: "This email is already linked to another account.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
+
+      toast({
+        title: "Verification Email Sent",
+        description: "Please check your email to verify your address. Once verified, you can login with email+password or phone.",
+      });
+
+      setEmailLinkingOpen(false);
+      setLinkingEmail("");
+      setLinkingPassword("");
+      setLinkingConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-8">
@@ -333,9 +408,9 @@ export default function VerificationPage() {
         <p className="text-muted-foreground">
           Unlock trading limits and features by verifying your account
         </p>
-        {authUser && userProfile && (
+        {user && userProfile && (
           <p className="text-sm text-muted-foreground mt-2">
-            Viewing verification for: <span className="font-semibold">{userProfile.username}</span> (ID: {authUser.id.slice(0, 8)}...)
+            Viewing verification for: <span className="font-semibold">{userProfile.username}</span> (ID: {user.id.slice(0, 8)}...)
           </p>
         )}
       </div>
@@ -548,7 +623,7 @@ export default function VerificationPage() {
                 {needsResubmitForCurrentLevel && currentLevel === 1 ? "Resubmit Level 1 Verification" : "Step 1: Verify Your Identity (Level 1)"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Provide your full name and confirm your age to unlock basic trading features with a $1,000 daily limit.
+                Provide your full name, confirm your age, and verify both email and phone number to unlock basic trading features.
               </p>
 
               <div className="space-y-2">
@@ -577,9 +652,87 @@ export default function VerificationPage() {
                 />
               </div>
 
+              {/* Email/Phone Verification Status */}
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-semibold text-sm">Contact Verification (Required)</h4>
+
+                {/* Email Status */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">Email Address</span>
+                    {userProfile?.email && user?.email && (
+                      <Badge variant="outline" className="text-xs">
+                        {user.email}
+                      </Badge>
+                    )}
+                  </div>
+                  {userProfile?.email && user?.email ? (
+                    <Badge variant="default" className="text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Required
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Phone Status */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">Phone Number</span>
+                    {userProfile?.phone_number && (
+                      <Badge variant="outline" className="text-xs">
+                        {userProfile.phone_number}
+                      </Badge>
+                    )}
+                  </div>
+                  {userProfile?.phone_verified && userProfile?.phone_number ? (
+                    <Badge variant="default" className="text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Required
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Instructions based on signup method */}
+                {(!userProfile?.email || !user?.email) && (
+                  <Alert>
+                    <AlertDescription className="text-xs">
+                      You signed up with a phone number. Please verify your email address in{" "}
+                      <a href="/account-settings" className="underline font-semibold">Account Settings</a> to continue.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {(!userProfile?.phone_verified || !userProfile?.phone_number) && (
+                  <Alert>
+                    <AlertDescription className="text-xs">
+                      You signed up with email. Please verify your phone number in{" "}
+                      <a href="/account-settings" className="underline font-semibold">Account Settings</a> to continue.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
               <Button 
                 onClick={() => submitDateOfBirth.mutate()}
-                disabled={!dateOfBirth || (!fullName && !userProfile?.full_name) || submitDateOfBirth.isPending}
+                disabled={
+                  !dateOfBirth || 
+                  (!fullName && !userProfile?.full_name) || 
+                  !userProfile?.email || 
+                  !user?.email ||
+                  !userProfile?.phone_verified || 
+                  !userProfile?.phone_number ||
+                  submitDateOfBirth.isPending
+                }
                 className="w-full"
               >
                 {submitDateOfBirth.isPending ? "Verifying..." : "Complete Level 1 Verification"}
@@ -589,6 +742,15 @@ export default function VerificationPage() {
                 <Alert variant="destructive">
                   <AlertDescription>
                     {submitDateOfBirth.error instanceof Error ? submitDateOfBirth.error.message : "Verification failed"}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {(!userProfile?.email || !userProfile?.phone_verified) && (
+                <Alert className="bg-blue-500/10 border-blue-500/20">
+                  <AlertDescription className="text-sm">
+                    <strong>Note:</strong> Both email and phone verification are required for Level 1. 
+                    Please complete the missing verification(s) in Account Settings before proceeding.
                   </AlertDescription>
                 </Alert>
               )}
@@ -824,6 +986,64 @@ export default function VerificationPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog for linking email */}
+      <Dialog open={emailLinkingOpen} onOpenChange={setEmailLinkingOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Email Address</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              {profileData?.email 
+                ? "Add and verify a new email address"
+                : "Add email and password to enable email login"}
+            </p>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Email Address
+              </label>
+              <Input
+                type="email"
+                placeholder="your@email.com"
+                value={linkingEmail}
+                onChange={(e) => setLinkingEmail(e.target.value)}
+              />
+            </div>
+
+            {!profileData?.email && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Password
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="Create a password (min 6 characters)"
+                    value={linkingPassword}
+                    onChange={(e) => setLinkingPassword(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Confirm Password
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="Re-enter your password"
+                    value={linkingConfirmPassword}
+                    onChange={(e) => setLinkingConfirmPassword(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+
+            <Button onClick={handleEmailLink} className="w-full">
+              Send Verification Email
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
