@@ -592,28 +592,8 @@ export function AccountSettings() {
       const newFullPhoneNumber = countryCodeForPhone + newPhone;
       
       if (newFullPhoneNumber !== currentPhone && newPhone) {
-        // Check if this phone number is already linked to another account
-        const { data: existingPhone, error: checkError } = await supabase
-          .from('user_profiles')
-          .select('id, username')
-          .eq('phone_number', newFullPhoneNumber)
-          .neq('id', user?.id)
-          .single();
-
-        if (checkError && checkError.code !== 'PGRST116') {
-          console.error("Error checking phone number:", checkError);
-        }
-
-        if (existingPhone) {
-          toast({
-            title: "Phone Number Already in Use",
-            description: "This phone number is already linked to another account.",
-            variant: "destructive",
-          });
-          return;
-        }
-
         // Phone number changed - trigger OTP verification via dialog
+        // The PhoneLinkingDialog will handle duplicate checks through Supabase Auth
         setPendingPhoneNumber(newPhone);
         setPendingCountryCode(countryCodeForPhone);
         setShowPhoneVerificationDialog(true);
