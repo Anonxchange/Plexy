@@ -59,6 +59,24 @@ export function SignIn() {
     // Phone number → OTP only (no password)
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
+      
+      // Check if phone number exists in database
+      const { data: existingUser, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('phone_number', fullPhoneNumber)
+        .eq('phone_verified', true)
+        .single();
+
+      if (checkError || !existingUser) {
+        toast({
+          title: "Phone Number Not Found",
+          description: "This phone number is not registered. Please sign up first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setUserPhoneNumber(fullPhoneNumber);
       setShowPhoneVerification(true);
       return;
