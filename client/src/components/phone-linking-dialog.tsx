@@ -36,8 +36,8 @@ export function PhoneLinkingDialog({
   const supabase = createClient();
 
   const handleSendOTP = async () => {
+    setSending(true);
     try {
-      setSending(true);
       const fullPhoneNumber = countryCode + phoneNumber;
 
       console.log("Attempting to update user phone to:", fullPhoneNumber);
@@ -70,6 +70,7 @@ export function PhoneLinkingDialog({
             description: "This phone number is already linked to another account.",
             variant: "destructive",
           });
+          setSending(false);
           return;
         }
 
@@ -79,14 +80,17 @@ export function PhoneLinkingDialog({
           description: error.message || "Failed to send verification code. Please check the phone number and try again.",
           variant: "destructive",
         });
+        setSending(false);
         return;
       }
 
-      setAwaitingOTP(true);
       toast({
         title: "Verification Code Sent",
         description: `A 6-digit code has been sent to ${fullPhoneNumber}`,
       });
+      
+      // Set awaiting OTP after successful send
+      setAwaitingOTP(true);
     } catch (error: any) {
       console.error('Error sending OTP:', error);
       toast({
