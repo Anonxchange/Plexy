@@ -40,14 +40,24 @@ export function PhoneLinkingDialog({
       setSending(true);
       const fullPhoneNumber = countryCode + phoneNumber;
 
+      console.log("Attempting to update user phone to:", fullPhoneNumber);
+
       const { error } = await supabase.auth.updateUser({
         phone: fullPhoneNumber,
       });
 
+      console.log("Update user result:", { error });
+
       if (error) {
-        if (error.status === 422 || error.status === 409 || 
-            error.message.toLowerCase().includes('already') || 
-            error.message.toLowerCase().includes('duplicate')) {
+        console.error("Supabase Auth error details:", {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          name: error.name
+        });
+
+        // Only show "already in use" if it's truly a duplicate/conflict error
+        if (error.status === 409) {
           toast({
             title: "Phone Number Already in Use",
             description: "This phone number is already linked to another account.",
@@ -55,7 +65,14 @@ export function PhoneLinkingDialog({
           });
           return;
         }
-        throw error;
+
+        // Show the actual error message for other errors
+        toast({
+          title: "Error Sending Verification Code",
+          description: error.message || "Failed to send verification code. Please check the phone number and try again.",
+          variant: "destructive",
+        });
+        return;
       }
 
       setAwaitingOTP(true);
