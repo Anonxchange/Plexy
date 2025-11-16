@@ -153,48 +153,42 @@ export default function MerchantApplicationPage() {
 
   const eligibility = canApplyForMerchant(verificationLevel, totalTrades);
 
-  const completionRate = 95;
-  const positiveRating = 100; 
-  const completedOrders = totalTrades;
-  const coinReleaseTime = 12; 
-  const paymentTime = 8;
-  const last30DaysOrders = Math.floor(totalTrades * 0.6);
+  const completionRate = Number(userProfile?.completion_rate) || 0;
+  const positiveRating = Number(userProfile?.positive_rating) || 0; 
+  const completedOrders = Number(userProfile?.completed_orders) || 0;
+  const coinReleaseTime = Number(userProfile?.avg_coin_release_time) || 999; 
+  const paymentTime = Number(userProfile?.avg_payment_time) || 999;
+  const last30DaysOrders = Number(userProfile?.last_30_days_orders) || 0;
 
   const verifiedRequirements = [
     { 
-      label: "30-day order completion rate at least 93%", 
-      met: completionRate >= 93,
-      action: "Check Now",
-      link: "/dashboard"
+      label: "Complete Level 2 verification (ID + liveness check)", 
+      met: verificationLevel >= 2,
+      subtitle: verificationLevel >= 2 ? "Verified ✓" : `Current: Level ${verificationLevel}`,
+      action: verificationLevel < 2 ? "Complete Verification" : undefined,
+      link: "/account-settings"
     },
     { 
-      label: "Overall positive rating at least 98%", 
-      met: positiveRating >= 98,
-      action: "Check Now",
-      link: "/profile"
+      label: "Complete at least 5 trades", 
+      met: completedOrders >= 5,
+      subtitle: `Current: ${completedOrders}/5 trades`,
+      action: completedOrders < 5 ? "Start Trading" : undefined,
+      link: "/p2p"
     },
     { 
-      label: "Total completed orders at least 400", 
-      met: completedOrders >= 400,
+      label: "Maintain completion rate of at least 95%", 
+      met: completionRate >= 95,
+      subtitle: `Current: ${completionRate.toFixed(1)}%`,
     },
     { 
-      label: "The average coin release time is under 15 minutes", 
-      met: coinReleaseTime < 15,
+      label: "Coin release time", 
+      met: coinReleaseTime < 30,
+      subtitle: coinReleaseTime < 999 ? `Current: ${coinReleaseTime} min` : "No data yet",
     },
     { 
-      label: "The average payment time is under 10 minutes", 
-      met: paymentTime < 10,
-    },
-    { 
-      label: `The total number of orders in the last 30 days must be ≥ 300`, 
-      met: last30DaysOrders >= 300,
-      subtitle: `${last30DaysOrders}/300 Order(s)`,
-      action: "Post Ads",
-      link: "/create-offer"
-    },
-    { 
-      label: "If you were a verified merchant, the days since your verified status was removed must be ≥ 7 days", 
-      met: true,
+      label: "Payment time", 
+      met: paymentTime < 30,
+      subtitle: paymentTime < 999 ? `Current: ${paymentTime} min` : "No data yet",
     },
   ];
 
@@ -528,14 +522,15 @@ export default function MerchantApplicationPage() {
             </TabsList>
 
             <TabsContent value="general" className="mt-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader>
-                  <CardTitle className="text-lg">General Advertiser</CardTitle>
-                  <CardDescription className="text-xs">
-                    Complete verification to start trading and creating offers!
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="overflow-x-auto pb-4">
+                <Card className="bg-card/50 border-border/50 min-w-[600px]">
+                  <CardHeader>
+                    <CardTitle className="text-lg">General Advertiser</CardTitle>
+                    <CardDescription className="text-xs">
+                      Complete verification to start trading and creating offers!
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                   <p className="text-sm font-medium">Requirements to become a General Advertiser:</p>
                   
                   <div className="space-y-3">
@@ -591,14 +586,16 @@ export default function MerchantApplicationPage() {
                       </AlertDescription>
                     </Alert>
                   )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="verified" className="mt-4 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader>
-                  <CardTitle className="text-lg">Become A Verified Advertiser</CardTitle>
+              <div className="overflow-x-auto pb-4">
+                <Card className="bg-card/50 border-border/50 min-w-[600px]">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Become A Verified Advertiser</CardTitle>
                   <CardDescription className="text-xs">
                     Apply to become a verified advertiser to enjoy privileges and special benefits!
                   </CardDescription>
@@ -690,14 +687,16 @@ export default function MerchantApplicationPage() {
                   >
                     {merchantStatus === "pending" ? "Application Pending" : "Apply Now"}
                   </Button>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="block" className="mt-4 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader>
-                  <CardTitle className="text-lg">Become A Block Advertiser</CardTitle>
+              <div className="overflow-x-auto pb-4">
+                <Card className="bg-card/50 border-border/50 min-w-[600px]">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Become A Block Advertiser</CardTitle>
                   <CardDescription className="text-xs">
                     Apply to become a block advertiser to enjoy premium privileges and exclusive benefits!
                   </CardDescription>
@@ -795,6 +794,7 @@ export default function MerchantApplicationPage() {
                   </Button>
                 </CardContent>
               </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
