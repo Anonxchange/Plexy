@@ -34,7 +34,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { PhoneVerification } from "@/components/phone-verification";
-
+import { PhoneLinkingDialog } from "@/components/phone-linking-dialog";
+import { EmailLinkingDialog } from "@/components/email-linking-dialog";
 import { Switch } from "@/components/ui/switch";
 import {
   User,
@@ -96,14 +97,8 @@ export function AccountSettings() {
   const [showPhoneVerificationDialog, setShowPhoneVerificationDialog] = useState(false);
   const [pendingPhoneNumber, setPendingPhoneNumber] = useState("");
   const [pendingCountryCode, setPendingCountryCode] = useState("+234");
-  const [phoneChangeCode, setPhoneChangeCode] = useState("");
-  const [awaitingPhoneChangeOTP, setAwaitingPhoneChangeOTP] = useState(false);
-  const [sendingPhoneOTP, setSendingPhoneOTP] = useState(false);
-  
   // Email change states
   const [showEmailChangeDialog, setShowEmailChangeDialog] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [changingEmail, setChangingEmail] = useState(false);
 
   // Verification Data
   const [verificationLevel, setVerificationLevel] = useState(0);
@@ -589,14 +584,14 @@ export function AccountSettings() {
     }
   };
 
-  const handleSaveProfile = async (skipPhoneVerification = false) => {
+  const handleSaveProfile = async () => {
     try {
       // Check if phone number has changed
       const currentPhone = profileData?.phone_number || '';
       const newPhone = phone.trim();
       const newFullPhoneNumber = countryCodeForPhone + newPhone;
       
-      if (newFullPhoneNumber !== currentPhone && newPhone && !skipPhoneVerification) {
+      if (newFullPhoneNumber !== currentPhone && newPhone) {
         // Check if this phone number is already linked to another account
         const { data: existingPhone, error: checkError } = await supabase
           .from('user_profiles')
@@ -618,7 +613,7 @@ export function AccountSettings() {
           return;
         }
 
-        // Phone number changed - trigger OTP verification
+        // Phone number changed - trigger OTP verification via dialog
         setPendingPhoneNumber(newPhone);
         setPendingCountryCode(countryCodeForPhone);
         setShowPhoneVerificationDialog(true);
@@ -631,8 +626,8 @@ export function AccountSettings() {
         preferred_currency: currency,
       };
 
-      // Only update phone if it's verified or hasn't changed
-      if (skipPhoneVerification || newFullPhoneNumber === currentPhone) {
+      // Only update phone if it hasn't changed (phone changes handled by PhoneLinkingDialog)
+      if (newFullPhoneNumber === currentPhone) {
         updateData.phone_number = newFullPhoneNumber;
       }
 
@@ -663,158 +658,6 @@ export function AccountSettings() {
         description: "Failed to update profile",
         variant: "destructive"
       });
-    }
-  };
-
-  const handleInitiatePhoneChange = async () => {
-    if (!pendingPhoneNumber) return;
-
-    try {
-      setSendingPhoneOTP(true);
-      const fullPhoneNumber = pendingCountryCode + pendingPhoneNumber;
-
-      // Initiate phone change - this sends OTP to the new phone number
-      const { error: authError } = await supabase.auth.updateUser({
-        phone: fullPhoneNumber,
-      });
-
-      if (authError) {
-        // Handle specific error codes
-        if (authError.status === 422 || authError.status === 409 || 
-            authError.message.toLowerCase().includes('already') || 
-            authError.message.toLowerCase().includes('duplicate')) {
-          toast({
-            title: "Phone Number Already in Use",
-            description: "This phone number is already linked to another account.",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw authError;
-      }
-
-      // OTP sent successfully
-      setAwaitingPhoneChangeOTP(true);
-      toast({
-        title: "Verification Code Sent",
-        description: `A 6-digit code has been sent to ${fullPhoneNumber}`,
-      });
-    } catch (error: any) {
-      console.error('Error initiating phone change:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send verification code",
-        variant: "destructive"
-      });
-    } finally {
-      setSendingPhoneOTP(false);
-    }
-  };
-
-  const handleVerifyPhoneChange = async () => {
-    if (!phoneChangeCode || !pendingPhoneNumber) return;
-
-    try {
-      const fullPhoneNumber = pendingCountryCode + pendingPhoneNumber;
-
-      // Verify the phone change OTP
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: fullPhoneNumber,
-        token: phoneChangeCode,
-        type: 'phone_change',
-      });
-
-      if (verifyError) {
-        toast({
-          title: "Invalid Code",
-          description: "The verification code is incorrect or has expired.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Update user profile in database after successful verification
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({
-          phone_number: fullPhoneNumber,
-          phone_verified: true,
-        })
-        .eq('id', user?.id);
-
-      if (profileError) throw profileError;
-
-      // Reset states
-      setPhone(pendingPhoneNumber);
-      setPhoneVerified(true);
-      setShowPhoneVerificationDialog(false);
-      setAwaitingPhoneChangeOTP(false);
-      setPhoneChangeCode("");
-      setPendingPhoneNumber("");
-
-      toast({
-        title: "Success!",
-        description: "Phone number verified and linked! You can now login with this phone number."
-      });
-
-      fetchProfileData();
-    } catch (error: any) {
-      console.error('Error verifying phone change:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to verify phone number",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleChangeEmail = async () => {
-    if (!newEmail || !newEmail.includes('@')) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setChangingEmail(true);
-    try {
-      // Supabase will send a confirmation email to both the old and new email addresses
-      const { error } = await supabase.auth.updateUser({
-        email: newEmail,
-      });
-
-      if (error) {
-        // Handle specific error codes
-        if (error.status === 422 || error.message.toLowerCase().includes('already')) {
-          toast({
-            title: "Email Already in Use",
-            description: "This email address is already linked to another account.",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw error;
-      }
-
-      // Close dialog and show success message
-      setShowEmailChangeDialog(false);
-      setNewEmail("");
-      
-      toast({
-        title: "Confirmation Email Sent",
-        description: "Please check your new email address to confirm the change. You'll also receive a notification at your current email.",
-      });
-    } catch (error: any) {
-      console.error('Error changing email:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to change email address",
-        variant: "destructive"
-      });
-    } finally {
-      setChangingEmail(false);
     }
   };
 
@@ -1339,7 +1182,7 @@ export function AccountSettings() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleSaveProfile(false)}
+                onClick={handleSaveProfile}
               >
                 Verify
               </Button>
@@ -1399,121 +1242,28 @@ export function AccountSettings() {
       </div>
 
       {/* Phone Verification Dialog */}
-      <Dialog open={showPhoneVerificationDialog} onOpenChange={(open) => {
-        setShowPhoneVerificationDialog(open);
-        if (!open) {
-          setAwaitingPhoneChangeOTP(false);
-          setPhoneChangeCode("");
-        }
-      }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Verify Phone Number</DialogTitle>
-            <DialogDescription>
-              {!awaitingPhoneChangeOTP 
-                ? "Click below to send a verification code to your new phone number"
-                : `Enter the 6-digit code sent to ${pendingCountryCode}${pendingPhoneNumber}`
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            {!awaitingPhoneChangeOTP ? (
-              <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">New Phone Number:</p>
-                  <p className="text-lg font-semibold">{pendingCountryCode}{pendingPhoneNumber}</p>
-                </div>
-                <Button 
-                  onClick={handleInitiatePhoneChange} 
-                  disabled={sendingPhoneOTP}
-                  className="w-full"
-                >
-                  {sendingPhoneOTP ? "Sending Code..." : "Send Verification Code"}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp-code">Verification Code</Label>
-                  <Input
-                    id="otp-code"
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="000000"
-                    value={phoneChangeCode}
-                    onChange={(e) => setPhoneChangeCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    maxLength={6}
-                    className="text-center text-2xl tracking-widest font-mono"
-                    autoFocus
-                  />
-                  <p className="text-xs text-muted-foreground text-center">
-                    Enter the 6-digit code sent to {pendingCountryCode}{pendingPhoneNumber}
-                  </p>
-                </div>
-                <Button 
-                  onClick={handleVerifyPhoneChange} 
-                  disabled={phoneChangeCode.length !== 6}
-                  className="w-full"
-                >
-                  Verify and Link Phone Number
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={handleInitiatePhoneChange}
-                  disabled={sendingPhoneOTP}
-                  className="w-full"
-                >
-                  {sendingPhoneOTP ? "Sending..." : "Resend Code"}
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PhoneLinkingDialog
+        open={showPhoneVerificationDialog}
+        onOpenChange={setShowPhoneVerificationDialog}
+        phoneNumber={pendingPhoneNumber}
+        countryCode={pendingCountryCode}
+        userId={user?.id || ''}
+        onSuccess={() => {
+          setPhoneVerified(true);
+          fetchProfileData();
+        }}
+      />
 
       {/* Email Change Dialog */}
-      <Dialog open={showEmailChangeDialog} onOpenChange={(open) => {
-        setShowEmailChangeDialog(open);
-        if (!open) setNewEmail("");
-      }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Change Email Address</DialogTitle>
-            <DialogDescription>
-              Enter your new email address. You'll receive a confirmation email at both your current and new addresses.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm font-medium mb-1">Current Email:</p>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
-            </div>
-            <div>
-              <Label htmlFor="new-email">New Email Address *</Label>
-              <Input
-                id="new-email"
-                type="email"
-                placeholder="newEmail@example.com"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-            <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-xs text-blue-800 dark:text-blue-200">
-                ⓘ Both your current and new email addresses will receive a confirmation link. Your email won't change until you click the link in the new email.
-              </p>
-            </div>
-            <Button 
-              onClick={handleChangeEmail} 
-              disabled={!newEmail || changingEmail}
-              className="w-full"
-            >
-              {changingEmail ? "Sending Confirmation..." : "Send Confirmation Email"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EmailLinkingDialog
+        open={showEmailChangeDialog}
+        onOpenChange={setShowEmailChangeDialog}
+        currentEmail={user?.email}
+        userId={user?.id || ''}
+        onSuccess={() => {
+          fetchProfileData();
+        }}
+      />
     </div>
   );
 
