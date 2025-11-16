@@ -515,10 +515,10 @@ export default function MerchantApplicationPage() {
           </Card>
 
           <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-card/50">
-              <TabsTrigger value="general">General Advertiser</TabsTrigger>
-              <TabsTrigger value="verified">Verified Advertisers</TabsTrigger>
-              <TabsTrigger value="block">Block Advertiser</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 bg-card/50 h-auto">
+              <TabsTrigger value="general" className="whitespace-normal py-3">General Advertiser</TabsTrigger>
+              <TabsTrigger value="verified" className="whitespace-normal py-3">Verified Advertisers</TabsTrigger>
+              <TabsTrigger value="block" className="whitespace-normal py-3">Block Advertiser</TabsTrigger>
             </TabsList>
 
             <TabsContent value="general" className="mt-4">
