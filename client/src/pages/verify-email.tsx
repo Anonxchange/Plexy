@@ -30,7 +30,7 @@ export function VerifyEmail() {
         const accessToken = hashParams.get("access_token");
         const type = hashParams.get("type");
         const refreshToken = hashParams.get("refresh_token");
-        const errorCode = hashParams.get("error");
+        const errorCode = hashParams.get("error") || hashParams.get("error_code");
         const errorDescription = hashParams.get("error_description");
 
         console.log("Hash params:", { 
@@ -41,21 +41,35 @@ export function VerifyEmail() {
           errorDescription 
         });
 
-        // Check for errors in the URL
+        // Check for errors in the URL (including OTP expired)
         if (errorCode) {
           setStatus("error");
-          setMessage(`Verification failed: ${errorDescription || errorCode}`);
+          
+          // Provide specific messages for different error types
+          let errorMessage = "The verification link is invalid or has expired.";
+          if (errorCode === "otp_expired") {
+            errorMessage = "Your verification link has expired. Please request a new one.";
+          } else if (errorCode === "access_denied") {
+            errorMessage = "Access denied. The verification link may have already been used or is invalid.";
+          }
+          
+          setMessage(errorMessage);
           toast({
             title: "Verification Error",
-            description: errorDescription || "The verification link is invalid or has expired.",
+            description: errorMessage,
             variant: "destructive",
           });
+          
+          // Redirect to signin after showing error
+          setTimeout(() => {
+            setLocation("/signin");
+          }, 3000);
           return;
         }
 
         // Check if this is from an email confirmation link with access token
         if (accessToken && (type === "signup" || type === "email_change")) {
-          // First, verify the email by setting the session temporarily
+          // Set the session to verify the email
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || "",
@@ -63,20 +77,12 @@ export function VerifyEmail() {
 
           console.log("Session result:", { sessionData: !!sessionData?.user, error: sessionError });
 
-          // Update the user profile based on type
           if (sessionData?.user) {
-            if (type === "signup") {
-              // For signup, just mark email as verified
-              const { error: updateError } = await supabase
-                .from("user_profiles")
-                .update({ email_verified: true })
-                .eq("id", sessionData.user.id);
-
-              if (updateError) {
-                console.warn("Profile update error:", updateError);
-              }
-            } else if (type === "email_change") {
-              // For email change, update the email in user_profiles ONLY after verification
+            // For email change, the email in Auth is already updated by Supabase
+            // We just need to sync it to user_profiles
+            if (type === "email_change") {
+              console.log("Syncing email to user_profiles:", sessionData.user.email);
+              
               const { error: updateError } = await supabase
                 .from("user_profiles")
                 .update({ 
@@ -86,12 +92,25 @@ export function VerifyEmail() {
                 .eq("id", sessionData.user.id);
 
               if (updateError) {
-                console.warn("Profile email update error:", updateError);
+                console.error("Profile email update error:", updateError);
+              }
+            } else if (type === "signup") {
+              // For signup, just mark email as verified
+              const { error: updateError } = await supabase
+                .from("user_profiles")
+                .update({ 
+                  email: sessionData.user.email,
+                  email_verified: true 
+                })
+                .eq("id", sessionData.user.id);
+
+              if (updateError) {
+                console.warn("Profile update error:", updateError);
               }
             }
           }
 
-          // IMMEDIATELY sign out to prevent auto-login
+          // Sign out to prevent auto-login
           await supabase.auth.signOut();
           
           // Clear ALL storage to ensure no session remnants
