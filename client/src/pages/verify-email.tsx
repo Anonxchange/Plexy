@@ -54,7 +54,7 @@ export function VerifyEmail() {
         }
 
         // Check if this is from an email confirmation link with access token
-        if (accessToken && type === "signup") {
+        if (accessToken && (type === "signup" || type === "email_change")) {
           // First, verify the email by setting the session temporarily
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -63,15 +63,31 @@ export function VerifyEmail() {
 
           console.log("Session result:", { sessionData: !!sessionData?.user, error: sessionError });
 
-          // Update the user profile to mark email as verified
+          // Update the user profile based on type
           if (sessionData?.user) {
-            const { error: updateError } = await supabase
-              .from("user_profiles")
-              .update({ email_verified: true })
-              .eq("id", sessionData.user.id);
+            if (type === "signup") {
+              // For signup, just mark email as verified
+              const { error: updateError } = await supabase
+                .from("user_profiles")
+                .update({ email_verified: true })
+                .eq("id", sessionData.user.id);
 
-            if (updateError) {
-              console.warn("Profile update error:", updateError);
+              if (updateError) {
+                console.warn("Profile update error:", updateError);
+              }
+            } else if (type === "email_change") {
+              // For email change, update the email in user_profiles ONLY after verification
+              const { error: updateError } = await supabase
+                .from("user_profiles")
+                .update({ 
+                  email: sessionData.user.email,
+                  email_verified: true 
+                })
+                .eq("id", sessionData.user.id);
+
+              if (updateError) {
+                console.warn("Profile email update error:", updateError);
+              }
             }
           }
 
@@ -88,11 +104,17 @@ export function VerifyEmail() {
           });
           
           setStatus("success");
-          setMessage("Email verified successfully! Please sign in with your credentials.");
+          if (type === "email_change") {
+            setMessage("Email updated successfully! Please sign in with your new email.");
+          } else {
+            setMessage("Email verified successfully! Please sign in with your credentials.");
+          }
           
           toast({
-            title: "Email Verified!",
-            description: "Your email has been verified. You can now sign in.",
+            title: type === "email_change" ? "Email Updated!" : "Email Verified!",
+            description: type === "email_change" 
+              ? "Your email has been updated. Please sign in with your new email."
+              : "Your email has been verified. You can now sign in.",
           });
           
           // Redirect after a short delay
