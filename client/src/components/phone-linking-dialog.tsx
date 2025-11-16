@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { PhoneVerification } from "./phone-verification";
 
 interface PhoneLinkingDialogProps {
   open: boolean;
@@ -29,105 +30,12 @@ export function PhoneLinkingDialog({
   userId,
   onSuccess,
 }: PhoneLinkingDialogProps) {
-  const [otpCode, setOtpCode] = useState("");
-  const [awaitingOTP, setAwaitingOTP] = useState(false);
-  const [sending, setSending] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
 
-  const handleSendOTP = async () => {
-    setSending(true);
+  const handleVerified = async (fullPhoneNumber: string) => {
     try {
-      const fullPhoneNumber = countryCode + phoneNumber;
-
-      console.log("Attempting to update user phone to:", fullPhoneNumber);
-
-      const { error } = await supabase.auth.updateUser({
-        phone: fullPhoneNumber,
-      });
-
-      console.log("Update user result:", { error });
-
-      if (error) {
-        console.error("Supabase Auth error details:", {
-          message: error.message,
-          status: error.status,
-          code: error.code,
-          name: error.name
-        });
-
-        // Check for duplicate phone number errors
-        const isDuplicateError = 
-          error.message?.toLowerCase().includes('already') ||
-          error.message?.toLowerCase().includes('duplicate') ||
-          error.message?.toLowerCase().includes('exists') ||
-          error.status === 409 ||
-          error.code === '23505';
-
-        if (isDuplicateError) {
-          toast({
-            title: "Phone Number Already in Use",
-            description: "This phone number is already linked to another account.",
-            variant: "destructive",
-          });
-          setSending(false);
-          return;
-        }
-
-        // Show the actual error message for other errors
-        toast({
-          title: "Error Sending Verification Code",
-          description: error.message || "Failed to send verification code. Please check the phone number and try again.",
-          variant: "destructive",
-        });
-        setSending(false);
-        return;
-      }
-
-      toast({
-        title: "Verification Code Sent",
-        description: `A 6-digit code has been sent to ${fullPhoneNumber}`,
-      });
-      
-      // Set awaiting OTP after successful send
-      setAwaitingOTP(true);
-    } catch (error: any) {
-      console.error('Error sending OTP:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send verification code",
-        variant: "destructive",
-      });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleVerifyOTP = async () => {
-    if (!otpCode || otpCode.length !== 6) return;
-
-    try {
-      const fullPhoneNumber = countryCode + phoneNumber;
-
-      console.log("Verifying OTP for phone:", fullPhoneNumber);
-
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: fullPhoneNumber,
-        token: otpCode,
-        type: 'phone_change',
-      });
-
-      if (verifyError) {
-        console.error("OTP verification error:", verifyError);
-        toast({
-          title: "Invalid Code",
-          description: "The verification code is incorrect or has expired. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log("OTP verified successfully, updating profile...");
+      console.log("Phone verified, updating profile...");
 
       const { error: profileError } = await supabase
         .from('user_profiles')
@@ -144,8 +52,6 @@ export function PhoneLinkingDialog({
 
       console.log("Profile updated successfully");
 
-      setOtpCode("");
-      setAwaitingOTP(false);
       onOpenChange(false);
 
       toast({
@@ -155,18 +61,16 @@ export function PhoneLinkingDialog({
 
       onSuccess();
     } catch (error: any) {
-      console.error('Error verifying OTP:', error);
+      console.error('Error updating profile:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to verify phone number",
+        description: error.message || "Failed to update profile",
         variant: "destructive"
       });
     }
   };
 
   const handleClose = () => {
-    setAwaitingOTP(false);
-    setOtpCode("");
     onOpenChange(false);
   };
 
@@ -176,60 +80,16 @@ export function PhoneLinkingDialog({
         <DialogHeader>
           <DialogTitle>Link Phone Number</DialogTitle>
           <DialogDescription>
-            {!awaitingOTP 
-              ? "Click below to send a verification code to your phone number"
-              : `Enter the 6-digit code sent to ${countryCode}${phoneNumber}`
-            }
+            Verify your phone number to enable phone-based login
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="py-4 space-y-4">
-          {!awaitingOTP ? (
-            <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm font-medium">Phone Number:</p>
-                <p className="text-lg font-semibold">{countryCode}{phoneNumber}</p>
-              </div>
-              <Button 
-                onClick={handleSendOTP} 
-                disabled={sending}
-                className="w-full"
-              >
-                {sending ? "Sending Code..." : "Send Verification Code"}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="otp-code">Verification Code</Label>
-                <Input
-                  id="otp-code"
-                  type="text"
-                  placeholder="Enter 6-digit code"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  maxLength={6}
-                  className="text-center text-lg tracking-widest"
-                  autoFocus
-                />
-              </div>
-              <Button 
-                onClick={handleVerifyOTP} 
-                disabled={otpCode.length !== 6}
-                className="w-full"
-              >
-                Verify and Link Phone Number
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={handleSendOTP}
-                disabled={sending}
-                className="w-full"
-              >
-                {sending ? "Sending..." : "Resend Code"}
-              </Button>
-            </div>
-          )}
+
+        <div className="py-4">
+          <PhoneVerification
+            onVerified={handleVerified}
+            initialPhone={phoneNumber}
+            initialCountryCode={countryCode}
+          />
         </div>
       </DialogContent>
     </Dialog>
