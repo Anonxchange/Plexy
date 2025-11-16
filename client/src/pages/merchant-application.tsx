@@ -4,18 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Shield, 
-  CheckCircle, 
+  CheckCircle2, 
   XCircle, 
-  Star, 
-  Lock,
-  TrendingUp,
-  Zap,
   Award,
+  AlertCircle,
+  ChevronRight,
+  TrendingUp,
+  Clock,
   DollarSign,
-  AlertCircle
+  Lock
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -33,7 +33,7 @@ export default function MerchantApplicationPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [selectedTier, setSelectedTier] = useState<"verified_merchant" | "block_merchant" | null>(null);
+  const [selectedTab, setSelectedTab] = useState<"general" | "verified" | "block">("verified");
 
   const { data: userProfile, isLoading } = useQuery({
     queryKey: ["userProfile", user?.id],
@@ -151,88 +151,57 @@ export default function MerchantApplicationPage() {
 
   const eligibility = canApplyForMerchant(verificationLevel, totalTrades);
 
-  const renderMerchantCard = (
-    tier: "verified_merchant" | "block_merchant",
-    icon: React.ReactNode,
-    color: string
-  ) => {
-    const config = MERCHANT_LEVELS[tier === "verified_merchant" ? "VERIFIED_MERCHANT" : "BLOCK_MERCHANT"];
-    const requirements = getMerchantRequirements(tier);
-    const canAfford = availableBalance >= config.depositRequired;
+  const completionRate = 95;
+  const positiveRating = 100; 
+  const completedOrders = totalTrades;
+  const coinReleaseTime = 12; 
+  const paymentTime = 8;
+  const last30DaysOrders = Math.floor(totalTrades * 0.6);
 
-    return (
-      <Card className={`relative overflow-hidden ${selectedTier === tier ? `ring-2 ring-${color}-500` : ""}`}>
-        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-${color}-500/10 to-transparent rounded-bl-full`} />
-        
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {icon}
-              <div>
-                <CardTitle className="text-xl">{config.name}</CardTitle>
-                <CardDescription>{config.description}</CardDescription>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 mt-4">
-            <DollarSign className="h-5 w-5 text-green-500" />
-            <span className="text-2xl font-bold">${config.depositRequired}</span>
-            <span className="text-sm text-muted-foreground">security deposit</span>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div>
-            <h4 className="font-semibold mb-2 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              Benefits
-            </h4>
-            <ul className="space-y-1 text-sm">
-              {config.benefits.map((benefit, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-green-500 mt-0.5">•</span>
-                  <span>{benefit}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="pt-4 border-t space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Available Balance:</span>
-              <span className={canAfford ? "text-green-500" : "text-red-500"}>
-                ${availableBalance.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Required Deposit:</span>
-              <span className="font-semibold">${config.depositRequired}</span>
-            </div>
-          </div>
-
-          <Button
-            onClick={() => {
-              if (eligibility.allowed && canAfford) {
-                setSelectedTier(tier);
-              }
-            }}
-            disabled={!eligibility.allowed || !canAfford || merchantStatus === "pending"}
-            className="w-full"
-            variant={selectedTier === tier ? "default" : "outline"}
-          >
-            {merchantStatus === "pending" 
-              ? "Application Pending" 
-              : selectedTier === tier 
-                ? "Selected" 
-                : !canAfford 
-                  ? "Insufficient Balance" 
-                  : "Select This Plan"}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  };
+  const verifiedRequirements = [
+    { 
+      label: "30-day order completion rate at least 93%", 
+      met: completionRate >= 93,
+      action: "Check Now",
+      link: "/dashboard"
+    },
+    { 
+      label: "Overall positive rating at least 98%", 
+      met: positiveRating >= 98,
+      action: "Check Now",
+      link: "/profile"
+    },
+    { 
+      label: "Total completed orders at least 400", 
+      met: completedOrders >= 400,
+    },
+    { 
+      label: "The average coin release time is under 15 minutes", 
+      met: coinReleaseTime < 15,
+    },
+    { 
+      label: "The average payment time is under 10 minutes", 
+      met: paymentTime < 10,
+    },
+    { 
+      label: `The total number of orders in the last 30 days must be ≥ 300`, 
+      met: last30DaysOrders >= 300,
+      subtitle: `${last30DaysOrders}/300 Order(s)`,
+      action: "Post Ads",
+      link: "/create-offer"
+    },
+    { 
+      label: "If you were a verified merchant, the days since your verified status was removed must be ≥ 7 days", 
+      met: true,
+    },
+    { 
+      label: "Assets", 
+      met: availableBalance >= 200,
+      subtitle: `Please note that the Available Balance in your Funding Account must be ≥ ${selectedTab === 'block' ? '500' : '200'} USDT to apply. If approved, the specified amount will be frozen to secure transactions.`,
+      action: "Check Now",
+      link: "/pexly-pay"
+    },
+  ];
 
   if (merchantStatus === "verified_merchant" || merchantStatus === "block_merchant") {
     const currentLevel = merchantStatus === "block_merchant" 
@@ -246,19 +215,19 @@ export default function MerchantApplicationPage() {
           <p className="text-muted-foreground">You are currently a {currentLevel.name}</p>
         </div>
 
-        <Card>
+        <Card className="bg-card/50 border-border/50">
           <CardHeader>
             <div className="flex items-center gap-3">
               {merchantStatus === "block_merchant" ? (
-                <Award className="h-8 w-8 text-purple-500" />
+                <Award className="h-8 w-8 text-yellow-500" />
               ) : (
-                <Shield className="h-8 w-8 text-blue-500" />
+                <Shield className="h-8 w-8 text-green-500" />
               )}
               <div>
                 <CardTitle>{currentLevel.name}</CardTitle>
                 <CardDescription>Active since {new Date(userProfile?.merchant_approved_at).toLocaleDateString()}</CardDescription>
               </div>
-              <Badge variant="default" className="ml-auto">Active</Badge>
+              <Badge variant="default" className="ml-auto bg-green-500/10 text-green-500 border-green-500/20">Active</Badge>
             </div>
           </CardHeader>
           
@@ -267,15 +236,15 @@ export default function MerchantApplicationPage() {
               <h4 className="font-semibold mb-3">Your Benefits</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {currentLevel.benefits.map((benefit, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                     <span>{benefit}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t border-border/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Security Deposit</p>
@@ -283,15 +252,15 @@ export default function MerchantApplicationPage() {
                 </div>
                 <Lock className="h-8 w-8 text-muted-foreground" />
               </div>
-              <Alert className="mt-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
+              <Alert className="mt-4 bg-blue-500/10 border-blue-500/20">
+                <AlertCircle className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-blue-500">
                   Your deposit is locked and will be refunded if you choose to downgrade your merchant status.
                 </AlertDescription>
               </Alert>
             </div>
 
-            <div className="pt-4 border-t space-y-4">
+            <div className="pt-4 border-t border-border/50 space-y-4">
               {merchantStatus === "verified_merchant" && (
                 <div>
                   <h4 className="font-semibold mb-2">Upgrade to Block Merchant</h4>
@@ -328,7 +297,7 @@ export default function MerchantApplicationPage() {
           <p className="text-muted-foreground">Your application is under review</p>
         </div>
 
-        <Card>
+        <Card className="bg-card/50 border-border/50">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="animate-pulse">
@@ -343,9 +312,9 @@ export default function MerchantApplicationPage() {
           </CardHeader>
           
           <CardContent className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
+            <Alert className="bg-blue-500/10 border-blue-500/20">
+              <AlertCircle className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-blue-500">
                 Your ${depositAmount} security deposit has been locked. It will be refunded if your application is rejected.
               </AlertDescription>
             </Alert>
@@ -377,96 +346,309 @@ export default function MerchantApplicationPage() {
   }
 
   return (
-    <div className="container max-w-6xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Become a Merchant</h1>
-        <p className="text-muted-foreground">Unlock enhanced benefits: more offers, lower fees, and top placement</p>
-        <Alert className="mt-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Regular users can already create up to 5 offers.</strong> Merchant status gives you enhanced benefits like 50+ offers, reduced/zero fees, and priority placement.
-          </AlertDescription>
-        </Alert>
+    <div className="container max-w-4xl mx-auto p-6 pb-20">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-1">Advertiser</h1>
       </div>
 
-      {!eligibility.allowed && (
-        <Alert className="mb-6" variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{eligibility.reason}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {renderMerchantCard(
-          "verified_merchant",
-          <Shield className="h-8 w-8 text-blue-500" />,
-          "blue"
-        )}
-        
-        {renderMerchantCard(
-          "block_merchant",
-          <Award className="h-8 w-8 text-purple-500" />,
-          "purple"
-        )}
-      </div>
-
-      {selectedTier && eligibility.allowed && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Confirm Application</CardTitle>
-            <CardDescription>
-              Review the details before submitting your merchant application
-            </CardDescription>
+      <div className="space-y-4">
+        <Card className="bg-gradient-to-br from-card/80 to-card/50 border-border/50 backdrop-blur">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-lg">Verified Advertisers</CardTitle>
+              </div>
+              <Award className="h-8 w-8 text-yellow-500" />
+            </div>
           </CardHeader>
-          
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Merchant Tier:</span>
-                <span className="font-semibold">
-                  {selectedTier === "block_merchant" ? "Block Merchant" : "Verified Merchant"}
-                </span>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Exclusive certified advertiser badge.</span>
               </div>
-              <div className="flex justify-between">
-                <span>Security Deposit:</span>
-                <span className="font-semibold">
-                  ${getMerchantRequirements(selectedTier).depositAmount}
-                </span>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Each currency allows up to 4 buy/sell orders.</span>
               </div>
-              <div className="flex justify-between">
-                <span>Available Balance:</span>
-                <span className={availableBalance >= getMerchantRequirements(selectedTier).depositAmount ? "text-green-500" : "text-red-500"}>
-                  ${availableBalance.toFixed(2)}
-                </span>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Single order limit: 50000 USDT (equivalent).</span>
               </div>
             </div>
+            <button 
+              className="text-sm text-yellow-600 hover:text-yellow-500 flex items-center gap-1 transition-colors"
+              onClick={() => setSelectedTab("verified")}
+            >
+              Check Application Requirements. <ChevronRight className="h-4 w-4" />
+            </button>
+          </CardContent>
+        </Card>
 
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                The security deposit will be locked in your account and can be refunded if you downgrade your merchant status.
-              </AlertDescription>
-            </Alert>
+        <Card className="bg-gradient-to-br from-card/80 to-card/50 border-border/50 backdrop-blur">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-lg">Block Advertiser</CardTitle>
+              </div>
+              <Award className="h-8 w-8 text-yellow-500" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Advanced advertiser badges.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Exclusive background in the personal center.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Block trades do not count towards the order limit (additional 4 buy/sell orders available).</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Single order limit: 200000 USDT (equivalent).</span>
+              </div>
+            </div>
+            <button 
+              className="text-sm text-yellow-600 hover:text-yellow-500 flex items-center gap-1 transition-colors"
+              onClick={() => setSelectedTab("block")}
+            >
+              Check Application Requirements. <ChevronRight className="h-4 w-4" />
+            </button>
+          </CardContent>
+        </Card>
 
-            <div className="flex gap-3">
-              <Button
-                onClick={() => applyForMerchant.mutate(selectedTier)}
-                disabled={applyForMerchant.isPending}
-                className="flex-1"
-              >
-                {applyForMerchant.isPending ? "Submitting..." : "Submit Application"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setSelectedTier(null)}
-                disabled={applyForMerchant.isPending}
-              >
-                Cancel
-              </Button>
+        <Card className="bg-card/50 border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Comparison of Privileges</CardTitle>
+            <CardDescription className="text-xs">
+              By applying for different levels of advertisers, you can gain a competitive edge in the market and attract more clients. Below is a comparison of relevant benefits.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    <th className="text-left py-3 px-2 font-medium text-muted-foreground">Privileges</th>
+                    <th className="text-center py-3 px-2 font-medium text-muted-foreground">Restricted<br/>Advertiser</th>
+                    <th className="text-center py-3 px-2 font-medium text-muted-foreground">General<br/>Advertiser</th>
+                    <th className="text-center py-3 px-2 font-medium text-muted-foreground bg-yellow-500/5">Verified<br/>Advertisers</th>
+                    <th className="text-center py-3 px-2 font-medium text-muted-foreground">Block<br/>Advertiser</th>
+                  </tr>
+                </thead>
+                <tbody className="text-xs">
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">Number of buy ads</td>
+                    <td className="text-center py-3 px-2">0-1</td>
+                    <td className="text-center py-3 px-2">1-3</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5 font-semibold">4</td>
+                    <td className="text-center py-3 px-2 font-semibold">8</td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">Number of sell ads</td>
+                    <td className="text-center py-3 px-2">1</td>
+                    <td className="text-center py-3 px-2">1-3</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5 font-semibold">4</td>
+                    <td className="text-center py-3 px-2 font-semibold">8</td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">Limit per ad</td>
+                    <td className="text-center py-3 px-2">400</td>
+                    <td className="text-center py-3 px-2">20,000</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5 font-semibold">50,000</td>
+                    <td className="text-center py-3 px-2 font-semibold">200,000</td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">Identity badge</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                    <td className="text-center py-3 px-2"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">Ad ranking</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5 font-semibold">TOP 2</td>
+                    <td className="text-center py-3 px-2 font-semibold">TOP 1</td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">Ad traffic exposure</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5">--</td>
+                    <td className="text-center py-3 px-2"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">Ad review visibility</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5">--</td>
+                    <td className="text-center py-3 px-2"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">Support for verified orders</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5">--</td>
+                    <td className="text-center py-3 px-2"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border/30">
+                    <td className="py-3 px-2 text-muted-foreground">P2P openAPI</td>
+                    <td className="text-center py-3 px-2"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                    <td className="text-center py-3 px-2"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                    <td className="text-center py-3 px-2"><CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-2 text-muted-foreground text-xs">Maximum number of Fiat listings you can post at the same time</td>
+                    <td className="text-center py-3 px-2">1</td>
+                    <td className="text-center py-3 px-2">--</td>
+                    <td className="text-center py-3 px-2 bg-yellow-500/5">--</td>
+                    <td className="text-center py-3 px-2">--</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
-      )}
+
+        <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as any)} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-card/50">
+            <TabsTrigger value="general">General Advertiser</TabsTrigger>
+            <TabsTrigger value="verified">Verified Advertisers</TabsTrigger>
+            <TabsTrigger value="block">Block Advertiser</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="mt-4">
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  General advertiser tier is available by default. Complete trades to unlock higher tiers.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="verified" className="mt-4 space-y-4">
+            <Card className="bg-card/50 border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Become A Verified Advertiser</CardTitle>
+                <CardDescription className="text-xs">
+                  Apply to become a verified advertiser to enjoy privileges and special benefits!
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm font-medium">You must meet the following requirements:</p>
+                
+                <div className="space-y-3">
+                  {verifiedRequirements.map((req, idx) => (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex items-start gap-2">
+                        {req.met ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                        )}
+                        <span className="text-sm flex-1">{req.label}</span>
+                      </div>
+                      {req.subtitle && (
+                        <p className="text-xs text-muted-foreground ml-6">
+                          {req.subtitle}
+                        </p>
+                      )}
+                      {req.action && !req.met && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-6 mt-1 h-8 border-yellow-600 text-yellow-600 hover:bg-yellow-600/10"
+                          onClick={() => req.link && setLocation(req.link)}
+                        >
+                          {req.action}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <Button 
+                  className="w-full mt-6 bg-yellow-600 hover:bg-yellow-700 text-white"
+                  disabled={!verifiedRequirements.every(r => r.met) || merchantStatus === "pending"}
+                  onClick={() => applyForMerchant.mutate("verified_merchant")}
+                >
+                  {merchantStatus === "pending" ? "Application Pending" : "Apply Now"}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="block" className="mt-4 space-y-4">
+            <Card className="bg-card/50 border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Become A Block Advertiser</CardTitle>
+                <CardDescription className="text-xs">
+                  Apply to become a block advertiser to enjoy premium privileges and exclusive benefits!
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm font-medium">You must meet the following requirements:</p>
+                
+                <div className="space-y-3">
+                  {verifiedRequirements.map((req, idx) => {
+                    const isAssetReq = req.label === "Assets";
+                    const blockAvailableBalance = availableBalance >= 500;
+                    const isMet = isAssetReq ? blockAvailableBalance : req.met;
+                    
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex items-start gap-2">
+                          {isMet ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                          )}
+                          <span className="text-sm flex-1">{req.label}</span>
+                        </div>
+                        {req.subtitle && (
+                          <p className="text-xs text-muted-foreground ml-6">
+                            {isAssetReq 
+                              ? "Please note that the Available Balance in your Funding Account must be ≥ 500 USDT to apply. If approved, the specified amount will be frozen to secure transactions."
+                              : req.subtitle
+                            }
+                          </p>
+                        )}
+                        {req.action && !isMet && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="ml-6 mt-1 h-8 border-yellow-600 text-yellow-600 hover:bg-yellow-600/10"
+                            onClick={() => req.link && setLocation(req.link)}
+                          >
+                            {req.action}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Button 
+                  className="w-full mt-6 bg-yellow-600 hover:bg-yellow-700 text-white"
+                  disabled={!verifiedRequirements.every(r => r.met) || availableBalance < 500 || merchantStatus === "pending"}
+                  onClick={() => applyForMerchant.mutate("block_merchant")}
+                >
+                  {merchantStatus === "pending" ? "Application Pending" : "Apply Now"}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
