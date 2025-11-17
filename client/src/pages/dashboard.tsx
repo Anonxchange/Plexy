@@ -126,12 +126,12 @@ export function Dashboard() {
   }
 
   const products = [
-    { icon: "Bitcoin", label: "P2P Trading", href: "/p2p" },
+    { icon: "Users", label: "P2P Trading", href: "/p2p" },
     { icon: "Store", label: "Shop", href: "#" },
     { icon: "Wallet", label: "Wallet", href: "/wallet" },
     { icon: "Gift", label: "Gift card store", href: "#" },
     { icon: "CreditCard", label: "Visa card", href: "#" },
-    { icon: "Bitcoin", label: "Buy crypto", href: "/buy" },
+    { icon: "DollarSign", label: "Buy crypto", href: "/buy" },
     { icon: "Swap", label: "Swap", href: "#" },
     { icon: "TrendingUp", label: "Spot", href: "#" },
     { icon: "Building", label: "Crypto to Bank", href: "#" },
@@ -139,10 +139,10 @@ export function Dashboard() {
     { icon: "BarChart", label: "OTC Desk", href: "#" },
     { icon: "Scan", label: "Gift card checker", href: "#" },
     { icon: "Gift", label: "Pexly gift card", href: "#" },
-    { icon: "DollarSign", label: "Fees", href: "/fees" },
-    { icon: "Award", label: "Medals", href: "/medals" },
+    { icon: "Award", label: "Fees", href: "/fees" },
+    { icon: "Trophy", label: "Medals", href: "/medals" },
     { icon: "Rocket", label: "Quick start", href: "#" },
-    { icon: "Users", label: "Invite and earn", href: "#" },
+    { icon: "Bitcoin", label: "Invite and earn", href: "#" },
   ];
 
   const accountSettings = [
