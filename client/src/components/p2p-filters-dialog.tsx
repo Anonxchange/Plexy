@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -19,6 +20,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { X, Search, Info, Check } from "lucide-react";
 
 interface P2PFiltersDialogProps {
   open: boolean;
@@ -40,6 +42,17 @@ interface P2PFiltersDialogProps {
   setRememberFilters: (value: boolean) => void;
 }
 
+const availableTags = [
+  { id: "photo-id", label: "photo id required", description: "Valid government-issued photo ID required." },
+  { id: "invoices", label: "invoices are accepted", description: "Get your invoice paid" },
+  { id: "no-receipt", label: "no receipt needed", description: "Receipt not required for this trade." },
+  { id: "same-bank", label: "same bank only", description: "Limit trades with users with an account in the same bank as yours." },
+  { id: "receipt", label: "receipt required", description: "You must provide transaction receipt to complete the trade." },
+  { id: "no-third-party", label: "no third parties", description: "Payments must be made from your own account." },
+  { id: "guided", label: "guided trade", description: "You and the trade partner are guided through each step of the trade." },
+  { id: "no-verification", label: "no verification needed", description: "You don't need to be a verified user to complete this trade." },
+];
+
 export function P2PFiltersDialog({
   open,
   onOpenChange,
@@ -59,6 +72,10 @@ export function P2PFiltersDialog({
   rememberFilters,
   setRememberFilters,
 }: P2PFiltersDialogProps) {
+  const [showTagsDialog, setShowTagsDialog] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagSearch, setTagSearch] = useState("");
+
   const handleReset = () => {
     setSelectedCountry("All countries");
     setSortingMethod("Recommended");
@@ -66,6 +83,7 @@ export function P2PFiltersDialog({
     setVerifiedUsersOnly(false);
     setRecentlyActive(false);
     setAcceptableOnly(false);
+    setSelectedTags([]);
   };
 
   const handleApply = () => {
@@ -73,39 +91,51 @@ export function P2PFiltersDialog({
     onOpenChange(false);
   };
 
+  const toggleTag = (tagId: string) => {
+    if (selectedTags.includes(tagId)) {
+      setSelectedTags(selectedTags.filter(id => id !== tagId));
+    } else if (selectedTags.length < 3) {
+      setSelectedTags([...selectedTags, tagId]);
+    }
+  };
+
+  const filteredTags = availableTags.filter(tag =>
+    tag.label.toLowerCase().includes(tagSearch.toLowerCase()) ||
+    tag.description.toLowerCase().includes(tagSearch.toLowerCase())
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md h-full sm:h-auto max-h-screen p-0 flex flex-col">
-        <div className="sticky top-0 bg-background z-10 border-b p-4">
-          <div className="flex items-center justify-between mb-4">
-            <DialogTitle className="text-xl font-bold">Filters</DialogTitle>
+      <DialogContent className="sm:max-w-[440px] max-h-[90vh] p-0 flex flex-col">
+        <div className="sticky top-0 bg-background z-10 border-b px-4 py-3">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg font-bold">Filters</DialogTitle>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
-                className="text-sm"
+                size="sm"
+                className="text-xs h-8"
                 onClick={handleReset}
               >
-                Reset all filters
+                Reset
               </Button>
               <button
                 onClick={() => onOpenChange(false)}
                 className="p-1 hover:bg-muted rounded-md transition-colors"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="h-4 w-4" />
               </button>
             </div>
           </div>
         </div>
 
         <ScrollArea className="flex-1 overflow-y-auto">
-          <div className="p-4 space-y-6 pb-4">
+          <div className="p-4 space-y-4">
             {/* Country */}
             <div className="space-y-2">
-              <Label className="text-base font-semibold">Country</Label>
+              <Label className="text-sm font-semibold">Country</Label>
               <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -125,9 +155,9 @@ export function P2PFiltersDialog({
 
             {/* Sorting */}
             <div className="space-y-2">
-              <Label className="text-base font-semibold">Sorting</Label>
+              <Label className="text-sm font-semibold">Sorting</Label>
               <Select value={sortingMethod} onValueChange={setSortingMethod}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -144,235 +174,223 @@ export function P2PFiltersDialog({
 
             {/* Offer tags */}
             <div className="space-y-2">
-              <Label className="text-base font-semibold">Offer tags</Label>
-              <Dialog>
+              <Label className="text-sm font-semibold">Offer tags</Label>
+              <Dialog open={showTagsDialog} onOpenChange={setShowTagsDialog}>
                 <DialogTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-start text-left font-normal text-muted-foreground"
+                    className="w-full h-10 justify-between text-left font-normal"
                   >
-                    Select tags
+                    <span className="text-sm text-muted-foreground truncate">
+                      {selectedTags.length > 0 
+                        ? `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''} selected`
+                        : 'Select tags'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{selectedTags.length}/3</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md h-full sm:h-auto max-h-screen p-0 flex flex-col">
-                  <div className="sticky top-0 bg-background z-10 border-b p-4">
-                    <div className="flex items-center justify-between">
-                      <DialogTitle className="text-xl font-bold">Tags</DialogTitle>
+                <DialogContent className="sm:max-w-[440px] max-h-[90vh] p-0 flex flex-col">
+                  <div className="sticky top-0 bg-background z-10 border-b">
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <DialogTitle className="text-lg font-bold">Tags</DialogTitle>
+                      <button
+                        onClick={() => setShowTagsDialog(false)}
+                        className="p-1 hover:bg-muted rounded-md transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    
+                    {/* Search */}
+                    <div className="px-4 pb-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search tags"
+                          value={tagSearch}
+                          onChange={(e) => setTagSearch(e.target.value)}
+                          className="pl-9 h-9 bg-muted border-0"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="px-4 pb-3">
+                      <div className="bg-muted p-2.5 rounded-lg flex items-start gap-2">
+                        <Info className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                        <p className="text-xs">
+                          You can select up to 3 tags ({selectedTags.length}/3)
+                        </p>
+                      </div>
                     </div>
                   </div>
 
                   <ScrollArea className="flex-1 overflow-y-auto">
-                    <div className="p-4 space-y-4">
-                      {/* Search Input */}
-                      <div className="relative">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <Input
-                          placeholder="Select an offer tag"
-                          className="pl-10 bg-muted border-0"
-                        />
-                      </div>
-
-                      {/* Info Box */}
-                      <div className="bg-muted p-3 rounded-lg flex items-start gap-2">
-                        <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p className="text-sm">
-                          You can select up to 3 tags (0/3)
-                        </p>
-                      </div>
-
-                      {/* Tag Options */}
-                      <div className="space-y-3">
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
-                          <div className="flex-1">
-                            <div className="font-semibold mb-1">photo id required</div>
-                            <div className="text-sm text-muted-foreground">Valid government-issued photo ID required.</div>
-                          </div>
-                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
-                          <div className="flex-1">
-                            <div className="font-semibold mb-1">invoices are accepted</div>
-                            <div className="text-sm text-muted-foreground">Get your invoice paid</div>
-                          </div>
-                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
-                          <div className="flex-1">
-                            <div className="font-semibold mb-1">no receipt needed</div>
-                            <div className="text-sm text-muted-foreground">Receipt not required for this trade.</div>
-                          </div>
-                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 bg-green-500 rounded-lg transition-colors text-left text-white">
-                          <div className="flex-1">
-                            <div className="font-semibold mb-1">same bank only</div>
-                            <div className="text-sm text-white/90">Limit trades with users with an account in the same bank as yours.</div>
-                          </div>
-                          <div className="bg-white rounded-full p-1.5 flex-shrink-0 ml-3">
-                            <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
-                          <div className="flex-1">
-                            <div className="font-semibold mb-1">receipt required</div>
-                            <div className="text-sm text-muted-foreground">You must provide transaction receipt to complete the trade.</div>
-                          </div>
-                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
-                          <div className="flex-1">
-                            <div className="font-semibold mb-1">no third parties</div>
-                            <div className="text-sm text-muted-foreground">Payments must be made from your own account.</div>
-                          </div>
-                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
-                          <div className="flex-1">
-                            <div className="font-semibold mb-1">guided trade</div>
-                            <div className="text-sm text-muted-foreground">You and the trade partner are guided through each step of the trade.</div>
-                          </div>
-                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
-                          <div className="flex-1">
-                            <div className="font-semibold mb-1">no verification needed</div>
-                            <div className="text-sm text-muted-foreground">You don't need to be a verified user to complete this trade.</div>
-                          </div>
-                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
+                    <div className="p-4 space-y-2">
+                      {filteredTags.map((tag) => {
+                        const isSelected = selectedTags.includes(tag.id);
+                        const canSelect = selectedTags.length < 3 || isSelected;
+                        
+                        return (
+                          <button
+                            key={tag.id}
+                            onClick={() => canSelect && toggleTag(tag.id)}
+                            disabled={!canSelect}
+                            className={cn(
+                              "w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left",
+                              isSelected
+                                ? "bg-green-500 text-white"
+                                : canSelect
+                                ? "hover:bg-muted"
+                                : "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm mb-0.5 truncate">{tag.label}</div>
+                              <div className={cn(
+                                "text-xs line-clamp-2",
+                                isSelected ? "text-white/90" : "text-muted-foreground"
+                              )}>
+                                {tag.description}
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <div className="bg-white rounded-full p-1 flex-shrink-0">
+                                <Check className="h-3 w-3 text-green-500" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </ScrollArea>
 
-                  <div className="border-t bg-background p-4">
+                  <div className="border-t bg-background p-3">
                     <Button
-                      className="w-full h-12 bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
+                      className="w-full h-10 bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
+                      onClick={() => setShowTagsDialog(false)}
                     >
                       Apply
                     </Button>
                   </div>
                 </DialogContent>
               </Dialog>
+              
+              {/* Selected tags display */}
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedTags.map((tagId) => {
+                    const tag = availableTags.find(t => t.id === tagId);
+                    return (
+                      <div
+                        key={tagId}
+                        className="inline-flex items-center gap-1 bg-muted px-2 py-1 rounded text-xs"
+                      >
+                        <span>{tag?.label}</span>
+                        <button
+                          onClick={() => toggleTag(tagId)}
+                          className="hover:bg-background rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <Separator />
 
             {/* Toggle Filters */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Top-rated traders */}
-              <div className="flex items-start justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold">Show only top-rated traders</div>
-                  <div className="text-sm text-muted-foreground">Experienced traders with badges</div>
+                  <div className="font-semibold text-sm">Top-rated traders</div>
+                  <div className="text-xs text-muted-foreground">Experienced with badges</div>
                 </div>
                 <Button
                   variant="ghost"
                   className={cn(
-                    "ml-4 h-8 w-14 rounded-full p-0 transition-colors",
+                    "ml-3 h-6 w-11 rounded-full p-0 transition-colors",
                     showTopRatedOnly ? "bg-green-500" : "bg-muted"
                   )}
                   onClick={() => setShowTopRatedOnly(!showTopRatedOnly)}
                 >
                   <div
                     className={cn(
-                      "h-6 w-6 rounded-full bg-white transition-transform",
-                      showTopRatedOnly ? "translate-x-6" : "translate-x-1"
+                      "h-5 w-5 rounded-full bg-white transition-transform",
+                      showTopRatedOnly ? "translate-x-5" : "translate-x-0.5"
                     )}
                   />
                 </Button>
               </div>
 
               {/* Verified users only */}
-              <div className="flex items-start justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold">Verified users only</div>
-                  <div className="text-sm text-muted-foreground">Show offers from ID-verified users</div>
+                  <div className="font-semibold text-sm">Verified users only</div>
+                  <div className="text-xs text-muted-foreground">ID-verified users</div>
                 </div>
                 <Button
                   variant="ghost"
                   className={cn(
-                    "ml-4 h-8 w-14 rounded-full p-0 transition-colors",
+                    "ml-3 h-6 w-11 rounded-full p-0 transition-colors",
                     verifiedUsersOnly ? "bg-green-500" : "bg-muted"
                   )}
                   onClick={() => setVerifiedUsersOnly(!verifiedUsersOnly)}
                 >
                   <div
                     className={cn(
-                      "h-6 w-6 rounded-full bg-white transition-transform",
-                      verifiedUsersOnly ? "translate-x-6" : "translate-x-1"
+                      "h-5 w-5 rounded-full bg-white transition-transform",
+                      verifiedUsersOnly ? "translate-x-5" : "translate-x-0.5"
                     )}
                   />
                 </Button>
               </div>
 
               {/* Recently active */}
-              <div className="flex items-start justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold">Recently active</div>
-                  <div className="text-sm text-muted-foreground">Last seen 30 mins ago</div>
+                  <div className="font-semibold text-sm">Recently active</div>
+                  <div className="text-xs text-muted-foreground">Last seen 30 mins ago</div>
                 </div>
                 <Button
                   variant="ghost"
                   className={cn(
-                    "ml-4 h-8 w-14 rounded-full p-0 transition-colors",
+                    "ml-3 h-6 w-11 rounded-full p-0 transition-colors",
                     recentlyActive ? "bg-green-500" : "bg-muted"
                   )}
                   onClick={() => setRecentlyActive(!recentlyActive)}
                 >
                   <div
                     className={cn(
-                      "h-6 w-6 rounded-full bg-white transition-transform",
-                      recentlyActive ? "translate-x-6" : "translate-x-1"
+                      "h-5 w-5 rounded-full bg-white transition-transform",
+                      recentlyActive ? "translate-x-5" : "translate-x-0.5"
                     )}
                   />
                 </Button>
               </div>
 
               {/* Acceptable only */}
-              <div className="flex items-start justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold">Acceptable only</div>
-                  <div className="text-sm text-muted-foreground">Show only offers that I can accept now</div>
+                  <div className="font-semibold text-sm">Acceptable only</div>
+                  <div className="text-xs text-muted-foreground">Offers I can accept now</div>
                 </div>
                 <Button
                   variant="ghost"
                   className={cn(
-                    "ml-4 h-8 w-14 rounded-full p-0 transition-colors",
+                    "ml-3 h-6 w-11 rounded-full p-0 transition-colors",
                     acceptableOnly ? "bg-green-500" : "bg-muted"
                   )}
                   onClick={() => setAcceptableOnly(!acceptableOnly)}
                 >
                   <div
                     className={cn(
-                      "h-6 w-6 rounded-full bg-white transition-transform",
-                      acceptableOnly ? "translate-x-6" : "translate-x-1"
+                      "h-5 w-5 rounded-full bg-white transition-transform",
+                      acceptableOnly ? "translate-x-5" : "translate-x-0.5"
                     )}
                   />
                 </Button>
@@ -381,21 +399,21 @@ export function P2PFiltersDialog({
           </div>
         </ScrollArea>
 
-        <div className="border-t bg-background p-4">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="border-t bg-background p-3">
+          <div className="flex items-center gap-2 mb-2">
             <input
               type="checkbox"
               id="remember-filters"
               checked={rememberFilters}
               onChange={(e) => setRememberFilters(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-3.5 w-3.5 rounded border-gray-300"
             />
-            <label htmlFor="remember-filters" className="text-sm">
+            <label htmlFor="remember-filters" className="text-xs">
               Remember my filters
             </label>
           </div>
           <Button
-            className="w-full h-12 bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
+            className="w-full h-10 bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
             onClick={handleApply}
           >
             Apply
