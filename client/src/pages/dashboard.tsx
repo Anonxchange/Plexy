@@ -18,6 +18,8 @@ import { ChevronDown, ChevronUp, Award as AwardIcon, Trophy as TrophyIcon } from
 import { MulticolorIcons } from "@/components/multicolor-icons";
 import { medals, isMedalEarned } from "@/lib/medals";
 import { getUserMedalStats } from "@/lib/medals-api";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 
 
 export function Dashboard() {
@@ -28,6 +30,7 @@ export function Dashboard() {
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [profileAvatar, setProfileAvatar] = useState<string>("");
   const [medalStats, setMedalStats] = useState<any>(null);
+  const [spotPrices, setSpotPrices] = useState<Record<string, CryptoPrice>>({});
   const supabase = createClient();
 
   const avatarTypes = [
@@ -47,8 +50,17 @@ export function Dashboard() {
     } else if (user) {
       fetchProfileAvatar();
       fetchMedals();
+      loadCryptoPrices();
     }
   }, [user, loading, setLocation]);
+
+  // Fetch crypto prices periodically
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(loadCryptoPrices, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, [user]);
 
   const fetchProfileAvatar = async () => {
     try {
@@ -83,6 +95,16 @@ export function Dashboard() {
       setMedalStats(stats);
     } catch (error) {
       console.error('Error fetching medal stats:', error);
+    }
+  };
+
+  const loadCryptoPrices = async () => {
+    try {
+      const symbols = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'XRP', 'TRX'];
+      const prices = await getCryptoPrices(symbols);
+      setSpotPrices(prices);
+    } catch (error) {
+      console.error('Error loading crypto prices:', error);
     }
   };
 
@@ -138,16 +160,25 @@ export function Dashboard() {
     { icon: "HelpCircle", label: "Help center", href: "#" },
   ];
 
+  // Use real crypto prices from API
   const spotPairs = [
-    { symbol: "BTC", name: "Bitcoin", price: 97234.50, change: 2.45, icon: "Bitcoin" },
-    { symbol: "ETH", name: "Ethereum", price: 3542.80, change: 1.83, icon: "Bitcoin" },
-    { symbol: "USDT", name: "Tether", price: 1.00, change: 0.01, icon: "DollarSign" },
-    { symbol: "BNB", name: "BNB", price: 642.15, change: -0.52, icon: "Bitcoin" },
-    { symbol: "SOL", name: "Solana", price: 184.92, change: 4.67, icon: "Rocket" },
-    { symbol: "USDC", name: "USD Coin", price: 1.00, change: 0.00, icon: "DollarSign" },
-    { symbol: "XRP", name: "Ripple", price: 0.6234, change: 1.24, icon: "Bitcoin" },
-    { symbol: "TRX", name: "Tron", price: 0.2156, change: 0.89, icon: "Bitcoin" },
-  ];
+    { symbol: "BTC", name: "Bitcoin" },
+    { symbol: "ETH", name: "Ethereum" },
+    { symbol: "USDT", name: "Tether" },
+    { symbol: "BNB", name: "BNB" },
+    { symbol: "SOL", name: "Solana" },
+    { symbol: "USDC", name: "USD Coin" },
+    { symbol: "XRP", name: "Ripple" },
+    { symbol: "TRX", name: "Tron" },
+  ].map(pair => {
+    const priceData = spotPrices[pair.symbol];
+    return {
+      ...pair,
+      price: priceData?.current_price || 0,
+      change: priceData?.price_change_percentage_24h || 0,
+      iconUrl: cryptoIconUrls[pair.symbol] || `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`
+    };
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -462,31 +493,36 @@ export function Dashboard() {
                 </Button>
               </div>
               <div className="space-y-3">
-                {spotPairs.map((pair, index) => {
-                  const IconComponent = MulticolorIcons[pair.icon as keyof typeof MulticolorIcons];
-                  return (
-                    <div 
-                      key={index}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10">
-                          <IconComponent />
-                        </div>
-                        <div>
-                          <div className="font-semibold">{pair.symbol}</div>
-                          <div className="text-xs text-muted-foreground">{pair.name}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold">${pair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</div>
-                        <div className={`text-xs font-semibold ${pair.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {pair.change >= 0 ? '+' : ''}{pair.change}%
-                        </div>
+                {spotPairs.map((pair, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => setLocation('/spot')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={pair.iconUrl}
+                        alt={pair.symbol}
+                        className="w-10 h-10 rounded-full"
+                        onError={(e) => {
+                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`;
+                        }}
+                      />
+                      <div>
+                        <div className="font-semibold">{pair.symbol}</div>
+                        <div className="text-xs text-muted-foreground">{pair.name}</div>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="text-right">
+                      <div className="font-semibold">
+                        ${pair.price > 0 ? pair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: pair.price < 1 ? 4 : 2 }) : '0.00'}
+                      </div>
+                      <div className={`text-xs font-semibold ${pair.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {pair.change >= 0 ? '+' : ''}{pair.change.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
