@@ -38,20 +38,27 @@ export function FeatureCarousel() {
 
     if (position === 0) {
       return {
-        transform: "translateX(-50%) translateZ(0px) scale(1) rotateY(0deg)",
+        transform: "translateX(-50%) translateY(0px) translateZ(0px) scale(1) rotateY(0deg)",
         opacity: 1,
         zIndex: 30,
         left: "50%",
-        display: "block",
+      };
+    }
+
+    if (position === 1) {
+      return {
+        transform: "translateX(-50%) translateY(-30px) translateZ(-100px) scale(0.85) rotateY(-15deg) translateX(240px)",
+        opacity: 0.6,
+        zIndex: 20,
+        left: "50%",
       };
     }
 
     return {
-      transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(0deg)",
-      opacity: 0,
-      zIndex: 0,
+      transform: "translateX(-50%) translateY(-30px) translateZ(-100px) scale(0.85) rotateY(15deg) translateX(-240px)",
+      opacity: 0.6,
+      zIndex: 10,
       left: "50%",
-      display: "none",
     };
   };
 
