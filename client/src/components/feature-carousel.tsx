@@ -63,7 +63,7 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative h-[550px] sm:h-[600px] md:h-[650px] lg:h-[680px] w-full overflow-hidden px-4 mb-4">
+    <section className="relative h-[550px] sm:h-[600px] md:h-[650px] lg:h-[680px] w-full overflow-hidden px-4">
       <div
         className="relative h-full w-full max-w-7xl mx-auto"
         style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
