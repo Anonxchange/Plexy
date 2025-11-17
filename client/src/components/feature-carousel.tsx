@@ -24,12 +24,12 @@ export function FeatureCarousel() {
       left: "50%",
     };
     if (position === 1) return {
-      transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(-20deg) translateX(220px)",
+      transform: "translateX(-50%) translateZ(-100px) scale(1) rotateY(-20deg) translateX(220px)",
       zIndex: 20,
       left: "50%",
     };
     return {
-      transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(20deg) translateX(-220px)",
+      transform: "translateX(-50%) translateZ(-100px) scale(1) rotateY(20deg) translateX(-220px)",
       zIndex: 10,
       left: "50%",
     };
