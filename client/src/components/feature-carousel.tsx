@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -48,7 +49,7 @@ export function FeatureCarousel() {
     if (position === 1) {
       return {
         transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(-20deg) translateX(220px)",
-        opacity: 0.85,
+        opacity: 1,
         zIndex: 20,
         left: "50%",
       };
@@ -56,14 +57,14 @@ export function FeatureCarousel() {
 
     return {
       transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(20deg) translateX(-220px)",
-      opacity: 0.85,
+      opacity: 1,
       zIndex: 10,
       left: "50%",
     };
   };
 
   return (
-    <section className="relative h-[480px] w-full overflow-visible px-4 md:h-[520px]">
+    <section className="relative h-[420px] w-full overflow-visible px-4 md:h-[460px]">
       <div
         className="relative h-full w-full"
         style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
