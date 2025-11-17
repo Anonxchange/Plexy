@@ -148,36 +148,42 @@ export class FeeCalculator {
     amount: number
   ): Promise<CalculatedFee> {
     try {
-      const { data: { session } } = await this.supabase.auth.getSession();
+      // Determine fee percentage based on trading pair
+      let feePercentage = 0.15; // Default for all other pairs
       
-      const response = await this.supabase.functions.invoke('calculate-fee', {
-        body: {
-          transaction_type: 'swap',
-          crypto_symbol: fromCrypto,
-          from_crypto: fromCrypto,
-          to_crypto: toCrypto,
-          amount: amount,
-        },
-        headers: session ? {
-          Authorization: `Bearer ${session.access_token}`
-        } : {}
-      });
-
-      if (response.error) throw response.error;
-
-      const data = response.data;
-
+      const pair = `${fromCrypto}/${toCrypto}`;
+      const reversePair = `${toCrypto}/${fromCrypto}`;
+      
+      // BTC/USDT or USDT/BTC gets 0.09%-0.15% (we'll use 0.12% as average)
+      if (pair === 'BTC/USDT' || reversePair === 'BTC/USDT' ||
+          pair === 'BTC/USDC' || reversePair === 'BTC/USDC') {
+        feePercentage = 0.12;
+      }
+      // SOL, TRX, BNB pairs get 0.15%
+      else if (
+        fromCrypto === 'SOL' || toCrypto === 'SOL' ||
+        fromCrypto === 'TRX' || toCrypto === 'TRX' ||
+        fromCrypto === 'BNB' || toCrypto === 'BNB'
+      ) {
+        feePercentage = 0.15;
+      }
+      
+      // Calculate platform fee
+      const platformFee = amount * (feePercentage / 100);
+      
+      // No network fee for swaps (internal transaction)
+      const networkFee = 0;
+      
       return {
-        platformFee: data.platform_fee,
-        networkFee: data.network_fee,
-        totalFee: data.total_fee,
-        feePercentage: data.fee_percentage,
+        platformFee,
+        networkFee,
+        totalFee: platformFee,
+        feePercentage,
         breakdown: [{
           type: 'swap',
-          amount: data.platform_fee,
-          description: `Swap fee ${fromCrypto}/${toCrypto}`
+          amount: platformFee,
+          description: `Swap fee ${fromCrypto}/${toCrypto} (${feePercentage}%)`
         }],
-        feeConfigId: data.fee_config?.id
       };
     } catch (error) {
       console.error('Error calculating swap fee:', error);
