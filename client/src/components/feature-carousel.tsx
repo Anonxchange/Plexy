@@ -26,13 +26,13 @@ export function FeatureCarousel() {
     };
     if (position === 1) return {
       transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(-20deg) translateX(220px)",
-      opacity: 0.5,
+      opacity: 1,
       zIndex: 20,
       left: "50%",
     };
     return {
       transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(20deg) translateX(-220px)",
-      opacity: 0.5,
+      opacity: 1,
       zIndex: 10,
       left: "50%",
     };
