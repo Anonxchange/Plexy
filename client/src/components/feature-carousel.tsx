@@ -36,7 +36,6 @@ export function FeatureCarousel() {
   const getCardStyle = (index: number) => {
     const position = (index - currentIndex + features.length) % features.length;
 
-    // Center card (position 0)
     if (position === 0) {
       return {
         transform: "translateX(-50%) translateZ(0px) scale(1) rotateY(0deg)",
@@ -46,19 +45,17 @@ export function FeatureCarousel() {
       };
     }
 
-    // Right card (position 1)
     if (position === 1) {
       return {
-        transform: "translateX(-50%) translateZ(-150px) scale(0.85) rotateY(-25deg) translateX(280px)",
+        transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(-20deg) translateX(220px)",
         opacity: 0.85,
         zIndex: 20,
         left: "50%",
       };
     }
 
-    // Left card (position 2)
     return {
-      transform: "translateX(-50%) translateZ(-150px) scale(0.85) rotateY(25deg) translateX(-280px)",
+      transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(20deg) translateX(-220px)",
       opacity: 0.85,
       zIndex: 10,
       left: "50%",
@@ -66,13 +63,10 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative h-[600px] w-full overflow-hidden px-4 md:h-[650px]">
+    <section className="relative h-[480px] w-full overflow-visible px-4 md:h-[520px]">
       <div
         className="relative h-full w-full"
-        style={{
-          perspective: "2000px",
-          perspectiveOrigin: "center center",
-        }}
+        style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
       >
         {features.map((feature, index) => {
           const style = getCardStyle(index);
@@ -85,20 +79,20 @@ export function FeatureCarousel() {
                 transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
             >
-              <div className="flex flex-col space-y-4">
+              <div className="flex flex-col space-y-3">
                 {/* Image container */}
                 <div className="relative overflow-hidden rounded-2xl">
                   <img
                     src={feature.image}
                     alt={feature.title}
-                    className="w-full h-[220px] sm:h-[260px] object-contain"
+                    className="w-full h-[200px] sm:h-[240px] md:h-[260px] object-cover"
                     loading="eager"
                   />
                 </div>
 
                 {/* Content below image */}
-                <div className="space-y-3 px-2">
-                  <h3 className="text-lg sm:text-xl font-bold text-foreground leading-tight">
+                <div className="space-y-2 px-2">
+                  <h3 className="text-lg sm:text-xl font-bold text-foreground leading-snug">
                     {feature.title}
                   </h3>
 
@@ -116,8 +110,8 @@ export function FeatureCarousel() {
       </div>
 
       {/* Gradient fade edges */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background to-transparent md:w-48"></div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background to-transparent md:w-48"></div>
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 md:w-40 bg-gradient-to-r from-background to-transparent"></div>
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 md:w-40 bg-gradient-to-l from-background to-transparent"></div>
     </section>
   );
 }
