@@ -38,6 +38,12 @@ import {
   Activity,
 } from "lucide-react";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { useAuth } from "@/lib/auth-context";
+import { useWallets, useWalletBalance } from "@/hooks/use-wallets";
+import { feeCalculator } from "@/lib/fee-calculator";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import { createClient } from "@/lib/supabase";
 
 interface TradingPair {
   pair: string;
@@ -89,6 +95,11 @@ const recentTrades = [
 ];
 
 export default function Spot() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const supabase = createClient();
+  
   const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
   const [selectedPair, setSelectedPair] = useState(initialTradingPairs[0]);
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
@@ -102,6 +113,15 @@ export default function Spot() {
   const [showMarketList, setShowMarketList] = useState(false);
   const [activeMarketTab, setActiveMarketTab] = useState("hot");
   const [chartInterval, setChartInterval] = useState("60");
+  const [buyFee, setBuyFee] = useState(0);
+  const [sellFee, setSellFee] = useState(0);
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  // Get wallet balances for the trading pair
+  const baseCrypto = selectedPair.symbol;
+  const quoteCrypto = "USDT";
+  const { data: baseWallet } = useWalletBalance(baseCrypto);
+  const { data: quoteWallet } = useWalletBalance(quoteCrypto);
 
   // Fetch real-time prices
   useEffect(() => {
@@ -145,6 +165,58 @@ export default function Spot() {
     }
   }, [tradingPairs]);
 
+  // Calculate buy fee
+  useEffect(() => {
+    const calculateBuyFee = async () => {
+      if (!buyAmount || parseFloat(buyAmount) <= 0) {
+        setBuyFee(0);
+        return;
+      }
+
+      try {
+        const amount = parseFloat(buyAmount);
+        const price = orderType === 'limit' ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price;
+        const totalUSDT = amount * price;
+
+        // Spot trading fee: 0.15% - 0.19% (we'll use 0.16% as average for taker)
+        const feePercentage = 0.16;
+        const fee = totalUSDT * (feePercentage / 100);
+        setBuyFee(fee);
+      } catch (error) {
+        console.error('Error calculating buy fee:', error);
+        setBuyFee(0);
+      }
+    };
+
+    calculateBuyFee();
+  }, [buyAmount, buyPrice, orderType, selectedPair.price]);
+
+  // Calculate sell fee
+  useEffect(() => {
+    const calculateSellFee = async () => {
+      if (!sellAmount || parseFloat(sellAmount) <= 0) {
+        setSellFee(0);
+        return;
+      }
+
+      try {
+        const amount = parseFloat(sellAmount);
+        const price = orderType === 'limit' ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price;
+        const totalUSDT = amount * price;
+
+        // Spot trading fee: 0.15% - 0.19% (we'll use 0.16% as average for taker)
+        const feePercentage = 0.16;
+        const fee = totalUSDT * (feePercentage / 100);
+        setSellFee(fee);
+      } catch (error) {
+        console.error('Error calculating sell fee:', error);
+        setSellFee(0);
+      }
+    };
+
+    calculateSellFee();
+  }, [sellAmount, sellPrice, orderType, selectedPair.price]);
+
   const getFilteredPairs = (type: string) => {
     let filtered = tradingPairs.filter(pair =>
       pair.pair.toLowerCase().includes(searchPair.toLowerCase())
@@ -171,6 +243,146 @@ export default function Spot() {
   };
 
   const filteredPairs = getFilteredPairs(activeMarketTab);
+
+  // Execute buy order
+  const handleBuy = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to trade",
+        variant: "destructive",
+      });
+      setLocation("/signin");
+      return;
+    }
+
+    const amount = parseFloat(buyAmount);
+    const price = orderType === 'limit' ? parseFloat(buyPrice) : selectedPair.price;
+    const totalCost = amount * price + buyFee;
+
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!quoteWallet || quoteWallet.balance < totalCost) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You need ${totalCost.toFixed(2)} USDT to complete this trade`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExecuting(true);
+    try {
+      // Execute the trade by updating wallet balances
+      const { error } = await supabase.rpc('execute_spot_trade', {
+        p_user_id: user.id,
+        p_buy_crypto: baseCrypto,
+        p_sell_crypto: quoteCrypto,
+        p_buy_amount: amount,
+        p_sell_amount: totalCost,
+        p_price: price,
+        p_fee: buyFee,
+        p_trade_type: 'buy'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Trade Executed",
+        description: `Successfully bought ${amount} ${baseCrypto}`,
+      });
+
+      setBuyAmount("");
+      setBuyPrice("");
+      setBuyPercentage([0]);
+    } catch (error: any) {
+      console.error('Trade execution error:', error);
+      toast({
+        title: "Trade Failed",
+        description: error.message || "Failed to execute trade",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  // Execute sell order
+  const handleSell = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to trade",
+        variant: "destructive",
+      });
+      setLocation("/signin");
+      return;
+    }
+
+    const amount = parseFloat(sellAmount);
+    const price = orderType === 'limit' ? parseFloat(sellPrice) : selectedPair.price;
+    const totalRevenue = (amount * price) - sellFee;
+
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!baseWallet || baseWallet.balance < amount) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You need ${amount} ${baseCrypto} to complete this trade`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExecuting(true);
+    try {
+      // Execute the trade by updating wallet balances
+      const { error } = await supabase.rpc('execute_spot_trade', {
+        p_user_id: user.id,
+        p_buy_crypto: quoteCrypto,
+        p_sell_crypto: baseCrypto,
+        p_buy_amount: totalRevenue,
+        p_sell_amount: amount,
+        p_price: price,
+        p_fee: sellFee,
+        p_trade_type: 'sell'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Trade Executed",
+        description: `Successfully sold ${amount} ${baseCrypto}`,
+      });
+
+      setSellAmount("");
+      setSellPrice("");
+      setSellPercentage([0]);
+    } catch (error: any) {
+      console.error('Trade execution error:', error);
+      toast({
+        title: "Trade Failed",
+        description: error.message || "Failed to execute trade",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
 
   if (showMarketList) {
     return (
@@ -588,7 +800,9 @@ export default function Spot() {
                     <CardContent className="p-4 space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Available</span>
-                        <span className="text-sm font-medium">0.00 USDT</span>
+                        <span className="text-sm font-medium">
+                          {quoteWallet ? quoteWallet.balance.toFixed(2) : '0.00'} USDT
+                        </span>
                       </div>
 
                       {orderType === "limit" && (
@@ -640,13 +854,28 @@ export default function Spot() {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-sm text-muted-foreground">Total</span>
-                        <span className="text-sm font-medium">0.00 USDT</span>
+                      <div className="space-y-1 pt-2 border-t">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Fee (0.16%)</span>
+                          <span className="text-sm font-medium">{buyFee.toFixed(2)} USDT</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Total</span>
+                          <span className="text-sm font-medium">
+                            {buyAmount && buyPrice ? 
+                              (parseFloat(buyAmount) * (orderType === 'limit' ? parseFloat(buyPrice) : selectedPair.price) + buyFee).toFixed(2) 
+                              : '0.00'} USDT
+                          </span>
+                        </div>
                       </div>
 
-                      <Button className="w-full bg-green-600 hover:bg-green-700" size="lg">
-                        Buy BTC
+                      <Button 
+                        className="w-full bg-green-600 hover:bg-green-700" 
+                        size="lg"
+                        onClick={handleBuy}
+                        disabled={isExecuting || !buyAmount || parseFloat(buyAmount) <= 0}
+                      >
+                        {isExecuting ? 'Executing...' : `Buy ${baseCrypto}`}
                       </Button>
                     </CardContent>
                   </Card>
@@ -658,11 +887,15 @@ export default function Spot() {
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">USDT</span>
-                            <span className="text-sm font-medium">0.00</span>
+                            <span className="text-sm font-medium">
+                              {quoteWallet ? quoteWallet.balance.toFixed(2) : '0.00'}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">BTC</span>
-                            <span className="text-sm font-medium">0.00</span>
+                            <span className="text-sm text-muted-foreground">{baseCrypto}</span>
+                            <span className="text-sm font-medium">
+                              {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'}
+                            </span>
                           </div>
                         </div>
                       </CardContent>
@@ -677,7 +910,9 @@ export default function Spot() {
                     <CardContent className="p-4 space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Available</span>
-                        <span className="text-sm font-medium">0.00 BTC</span>
+                        <span className="text-sm font-medium">
+                          {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'} {baseCrypto}
+                        </span>
                       </div>
 
                       {orderType === "limit" && (
@@ -729,13 +964,28 @@ export default function Spot() {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-sm text-muted-foreground">Total</span>
-                        <span className="text-sm font-medium">0.00 USDT</span>
+                      <div className="space-y-1 pt-2 border-t">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Fee (0.16%)</span>
+                          <span className="text-sm font-medium">{sellFee.toFixed(2)} USDT</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Total</span>
+                          <span className="text-sm font-medium">
+                            {sellAmount && sellPrice ? 
+                              (parseFloat(sellAmount) * (orderType === 'limit' ? parseFloat(sellPrice) : selectedPair.price) - sellFee).toFixed(2) 
+                              : '0.00'} USDT
+                          </span>
+                        </div>
                       </div>
 
-                      <Button className="w-full bg-red-600 hover:bg-red-700" size="lg">
-                        Sell BTC
+                      <Button 
+                        className="w-full bg-red-600 hover:bg-red-700" 
+                        size="lg"
+                        onClick={handleSell}
+                        disabled={isExecuting || !sellAmount || parseFloat(sellAmount) <= 0}
+                      >
+                        {isExecuting ? 'Executing...' : `Sell ${baseCrypto}`}
                       </Button>
                     </CardContent>
                   </Card>
