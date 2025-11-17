@@ -7,6 +7,8 @@ import { ThumbsUp, ThumbsDown, Shield, Award, Circle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { formatLastSeen } from "@/lib/presence";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -23,6 +25,7 @@ export function UserProfileDialog({
   const [loading, setLoading] = useState(true);
   const [userPresence, setUserPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
   const supabase = createClient();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -154,7 +157,12 @@ export function UserProfileDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm p-0 max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className={cn(
+        "max-w-sm p-0 overflow-hidden flex flex-col",
+        isMobile 
+          ? "fixed bottom-0 top-auto left-0 right-0 translate-x-0 translate-y-0 w-full max-h-[90vh] rounded-t-2xl rounded-b-none data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom" 
+          : "max-h-[85vh]"
+      )}>
         <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
           <div className="flex items-start gap-2">
             <Avatar className="w-12 h-12 border-2 border-primary flex-shrink-0">
@@ -256,9 +264,19 @@ export function UserProfileDialog({
           </div>
 
           <Tabs defaultValue="trading" className="w-full">
-            <TabsList className="w-full grid grid-cols-2 sticky top-0 bg-background z-10 h-9">
-              <TabsTrigger value="trading" className="text-xs">Trading info</TabsTrigger>
-              <TabsTrigger value="feedback" className="text-xs">Recent feedbacks</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-2 sticky top-0 bg-background z-10 h-auto p-2 gap-2">
+              <TabsTrigger 
+                value="trading" 
+                className="text-xs font-semibold py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-muted"
+              >
+                Trading info
+              </TabsTrigger>
+              <TabsTrigger 
+                value="feedback" 
+                className="text-xs font-semibold py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-muted"
+              >
+                Recent feedbacks
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="trading" className="p-4 space-y-3">
