@@ -35,7 +35,7 @@ export function FeatureCarousel() {
 
   const getCardStyle = (index: number) => {
     const position = (index - currentIndex + features.length) % features.length;
-    
+
     // Center card (position 0)
     if (position === 0) {
       return {
@@ -45,7 +45,7 @@ export function FeatureCarousel() {
         left: "50%",
       };
     }
-    
+
     // Right card (position 1)
     if (position === 1) {
       return {
@@ -55,7 +55,7 @@ export function FeatureCarousel() {
         left: "50%",
       };
     }
-    
+
     // Left card (position 2)
     return {
       transform: "translateX(-50%) translateZ(-150px) scale(0.85) rotateY(25deg) translateX(-280px)",
@@ -114,7 +114,7 @@ export function FeatureCarousel() {
           );
         })}
       </div>
-      
+
       {/* Gradient fade edges */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background to-transparent md:w-48"></div>
       <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background to-transparent md:w-48"></div>
