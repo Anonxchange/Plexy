@@ -1,11 +1,12 @@
-
 import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -79,14 +80,14 @@ export function P2PFiltersDialog({
           <div className="flex items-center justify-between mb-4">
             <DialogTitle className="text-xl font-bold">Filters</DialogTitle>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="text-sm"
                 onClick={handleReset}
               >
                 Reset all filters
               </Button>
-              <button 
+              <button
                 onClick={() => onOpenChange(false)}
                 className="p-1 hover:bg-muted rounded-md transition-colors"
               >
@@ -146,8 +147,8 @@ export function P2PFiltersDialog({
               <Label className="text-base font-semibold">Offer tags</Label>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full justify-start text-left font-normal text-muted-foreground"
                   >
                     Select tags
@@ -271,7 +272,7 @@ export function P2PFiltersDialog({
                   </ScrollArea>
 
                   <div className="border-t bg-background p-4">
-                    <Button 
+                    <Button
                       className="w-full h-12 bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
                     >
                       Apply
@@ -393,7 +394,7 @@ export function P2PFiltersDialog({
               Remember my filters
             </label>
           </div>
-          <Button 
+          <Button
             className="w-full h-12 bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
             onClick={handleApply}
           >
