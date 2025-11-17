@@ -14,36 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase";
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  Bitcoin, 
-  Wallet, 
-  Store, 
-  ArrowLeftRight, 
-  CreditCard,
-  Gift,
-  Smartphone,
-  TrendingUp,
-  Building2,
-  Scan,
-  Phone,
-  DollarSign,
-  Award,
-  Rocket,
-  Users,
-  BarChart3,
-  Settings,
-  Shield,
-  FileText,
-  Bell,
-  GraduationCap,
-  LayoutDashboard,
-  MessageSquare,
-  HelpCircle,
-  User,
-  Trophy
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Award as AwardIcon, Trophy as TrophyIcon } from "lucide-react";
+import { MulticolorIcons } from "@/components/multicolor-icons";
 import { medals, isMedalEarned } from "@/lib/medals";
 import { getUserMedalStats } from "@/lib/medals-api";
 
@@ -106,7 +78,8 @@ export function Dashboard() {
 
   const fetchMedals = async () => {
     try {
-      const stats = await getUserMedalStats(user?.id);
+      if (!user?.id) return;
+      const stats = await getUserMedalStats(user.id);
       setMedalStats(stats);
     } catch (error) {
       console.error('Error fetching medal stats:', error);
@@ -131,47 +104,49 @@ export function Dashboard() {
   }
 
   const products = [
-    { icon: Bitcoin, label: "P2P Trading", href: "/p2p" },
-    { icon: Store, label: "Shop", href: "#" },
-    { icon: Wallet, label: "Wallet", href: "/wallet" },
-    { icon: Gift, label: "Gift card store", href: "#" },
-    { icon: CreditCard, label: "Visa card", href: "#" },
-    { icon: Bitcoin, label: "Buy crypto", href: "/buy" },
-    { icon: ArrowLeftRight, label: "Swap", href: "#" },
-    { icon: TrendingUp, label: "Spot", href: "#" },
-    { icon: Building2, label: "Crypto to Bank", href: "#" },
-    { icon: Smartphone, label: "Mobile top-up", href: "#" },
-    { icon: BarChart3, label: "OTC Desk", href: "#" },
-    { icon: Scan, label: "Gift card checker", href: "#" },
-    { icon: Gift, label: "Pexly gift card", href: "#" },
-    { icon: DollarSign, label: "Fees", href: "/fees" },
-    { icon: Award, label: "Medals", href: "/medals" },
-    { icon: Rocket, label: "Quick start", href: "#" },
-    { icon: Users, label: "Invite and earn", href: "#" },
+    { icon: "Bitcoin", label: "P2P Trading", href: "/p2p" },
+    { icon: "Store", label: "Shop", href: "#" },
+    { icon: "Wallet", label: "Wallet", href: "/wallet" },
+    { icon: "Gift", label: "Gift card store", href: "#" },
+    { icon: "CreditCard", label: "Visa card", href: "#" },
+    { icon: "Bitcoin", label: "Buy crypto", href: "/buy" },
+    { icon: "Swap", label: "Swap", href: "#" },
+    { icon: "TrendingUp", label: "Spot", href: "#" },
+    { icon: "Building", label: "Crypto to Bank", href: "#" },
+    { icon: "Mobile", label: "Mobile top-up", href: "#" },
+    { icon: "BarChart", label: "OTC Desk", href: "#" },
+    { icon: "Scan", label: "Gift card checker", href: "#" },
+    { icon: "Gift", label: "Pexly gift card", href: "#" },
+    { icon: "DollarSign", label: "Fees", href: "/fees" },
+    { icon: "Award", label: "Medals", href: "/medals" },
+    { icon: "Rocket", label: "Quick start", href: "#" },
+    { icon: "Users", label: "Invite and earn", href: "#" },
   ];
 
   const accountSettings = [
-    { icon: FileText, label: "My offers", href: "#" },
-    { icon: User, label: "Account settings", href: "#" },
-    { icon: Settings, label: "Trader settings", href: "#" },
-    { icon: BarChart3, label: "Trade history", href: "#" },
-    { icon: CreditCard, label: "Payment accounts", href: "#" },
-    { icon: Smartphone, label: "Devices", href: "#" },
-    { icon: Shield, label: "Security", href: "#" },
-    { icon: GraduationCap, label: "NoOnes academy", href: "#" },
-    { icon: LayoutDashboard, label: "CEO dashboard", href: "#" },
-    { icon: MessageSquare, label: "Discord", href: "#" },
-    { icon: Bell, label: "Status", href: "#" },
-    { icon: HelpCircle, label: "Help center", href: "#" },
+    { icon: "FileText", label: "My offers", href: "#" },
+    { icon: "User", label: "Account settings", href: "#" },
+    { icon: "Settings", label: "Trader settings", href: "#" },
+    { icon: "BarChart", label: "Trade history", href: "#" },
+    { icon: "CreditCard", label: "Payment accounts", href: "#" },
+    { icon: "Mobile", label: "Devices", href: "#" },
+    { icon: "Shield", label: "Security", href: "#" },
+    { icon: "GraduationCap", label: "NoOnes academy", href: "#" },
+    { icon: "Dashboard", label: "CEO dashboard", href: "#" },
+    { icon: "MessageSquare", label: "Discord", href: "#" },
+    { icon: "Bell", label: "Status", href: "#" },
+    { icon: "HelpCircle", label: "Help center", href: "#" },
   ];
 
   const spotPairs = [
-    { symbol: "BTC", name: "Bitcoin", price: 121850.50, change: 0.33 },
-    { symbol: "ETH", name: "Ethereum", price: 4425.90, change: -0.43 },
-    { symbol: "BNB", name: "BNB", price: 1309.99, change: 0.39 },
-    { symbol: "TRX", name: "Tron", price: 0.34, change: 0.59 },
-    { symbol: "SOL", name: "Solana", price: 224.93, change: 2.29 },
-    { symbol: "LTC", name: "Litecoin", price: 117.42, change: 1.75 },
+    { symbol: "BTC", name: "Bitcoin", price: 97234.50, change: 2.45, icon: "Bitcoin" },
+    { symbol: "ETH", name: "Ethereum", price: 3542.80, change: 1.83, icon: "Bitcoin" },
+    { symbol: "USDT", name: "Tether", price: 1.00, change: 0.01, icon: "DollarSign" },
+    { symbol: "BNB", name: "BNB", price: 642.15, change: -0.52, icon: "Bitcoin" },
+    { symbol: "SOL", name: "Solana", price: 184.92, change: 4.67, icon: "Rocket" },
+    { symbol: "USDC", name: "USD Coin", price: 1.00, change: 0.00, icon: "DollarSign" },
+    { symbol: "XRP", name: "Ripple", price: 0.6234, change: 1.24, icon: "Bitcoin" },
+    { symbol: "TRX", name: "Tron", price: 0.2156, change: 0.89, icon: "Bitcoin" },
   ];
 
   return (
@@ -218,7 +193,7 @@ export function Dashboard() {
                     {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? (
                       <img src={medals.find(m => m.id === medalStats.earnedMedals[0])?.icon} alt="Medal Icon" className="w-5 h-5" />
                     ) : (
-                      <Award className="h-5 w-5 text-yellow-500" />
+                      <AwardIcon className="h-5 w-5 text-yellow-500" />
                     )}
                     {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? medals.find(m => m.id === medalStats.earnedMedals[0])?.name.toUpperCase() : "NEWBIE"}
                   </span>
@@ -255,8 +230,8 @@ export function Dashboard() {
           <Card className="hover-elevate cursor-pointer transition-all">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Rocket className="h-5 w-5 text-primary" />
+                <div className="w-10 h-10">
+                  <MulticolorIcons.Rocket />
                 </div>
                 <div>
                   <h3 className="font-semibold">Launch hub</h3>
@@ -268,8 +243,8 @@ export function Dashboard() {
           <Card className="hover-elevate cursor-pointer transition-all">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <BarChart3 className="h-5 w-5 text-primary" />
+                <div className="w-10 h-10">
+                  <MulticolorIcons.BarChart />
                 </div>
                 <div>
                   <h3 className="font-semibold">Trades</h3>
@@ -287,7 +262,7 @@ export function Dashboard() {
           </div>
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
             {products.slice(0, 6).map((product, index) => {
-              const Icon = product.icon;
+              const IconComponent = MulticolorIcons[product.icon as keyof typeof MulticolorIcons];
               return (
                 <Card 
                   key={index} 
@@ -295,8 +270,8 @@ export function Dashboard() {
                   onClick={() => product.href !== '#' && setLocation(product.href)}
                 >
                   <CardContent className="p-4 flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                      <Icon className="h-6 w-6 group-hover:text-primary transition-colors" />
+                    <div className="w-12 h-12">
+                      <IconComponent />
                     </div>
                     <span className="text-xs text-center font-medium">{product.label}</span>
                   </CardContent>
@@ -316,7 +291,7 @@ export function Dashboard() {
               </DialogHeader>
               <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mt-4">
                 {products.map((product, index) => {
-                  const Icon = product.icon;
+                  const IconComponent = MulticolorIcons[product.icon as keyof typeof MulticolorIcons];
                   return (
                     <Card 
                       key={index} 
@@ -329,8 +304,8 @@ export function Dashboard() {
                       }}
                     >
                       <CardContent className="p-4 flex flex-col items-center gap-2">
-                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                          <Icon className="h-6 w-6 group-hover:text-primary transition-colors" />
+                        <div className="w-12 h-12">
+                          <IconComponent />
                         </div>
                         <span className="text-xs text-center font-medium">{product.label}</span>
                       </CardContent>
@@ -349,7 +324,7 @@ export function Dashboard() {
           </div>
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
             {accountSettings.slice(0, 6).map((setting, index) => {
-              const Icon = setting.icon;
+              const IconComponent = MulticolorIcons[setting.icon as keyof typeof MulticolorIcons];
               return (
                 <Card 
                   key={index} 
@@ -357,8 +332,8 @@ export function Dashboard() {
                   onClick={() => setting.href !== '#' && setLocation(setting.href)}
                 >
                   <CardContent className="p-4 flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                      <Icon className="h-6 w-6 group-hover:text-primary transition-colors" />
+                    <div className="w-12 h-12">
+                      <IconComponent />
                     </div>
                     <span className="text-xs text-center font-medium">{setting.label}</span>
                   </CardContent>
@@ -378,7 +353,7 @@ export function Dashboard() {
               </DialogHeader>
               <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mt-4">
                 {accountSettings.map((setting, index) => {
-                  const Icon = setting.icon;
+                  const IconComponent = MulticolorIcons[setting.icon as keyof typeof MulticolorIcons];
                   return (
                     <Card 
                       key={index} 
@@ -391,8 +366,8 @@ export function Dashboard() {
                       }}
                     >
                       <CardContent className="p-4 flex flex-col items-center gap-2">
-                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                          <Icon className="h-6 w-6 group-hover:text-primary transition-colors" />
+                        <div className="w-12 h-12">
+                          <IconComponent />
                         </div>
                         <span className="text-xs text-center font-medium">{setting.label}</span>
                       </CardContent>
@@ -408,7 +383,7 @@ export function Dashboard() {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Award className="h-5 w-5 text-yellow-500" />
+              <AwardIcon className="h-5 w-5 text-yellow-500" />
               Your Medals
             </h2>
             <Button 
@@ -438,7 +413,7 @@ export function Dashboard() {
                 ) : (
                   <div className="text-center p-3 rounded-lg bg-muted/50 col-span-4">
                     <div className="text-3xl mb-2">
-                      <Award className="h-8 w-8 mx-auto text-muted-foreground" />
+                      <AwardIcon className="h-8 w-8 mx-auto text-muted-foreground" />
                     </div>
                     <div className="text-sm font-medium text-muted-foreground">No Medals Yet</div>
                     <div className="text-xs text-muted-foreground mt-1">Start trading to unlock them!</div>
@@ -448,7 +423,7 @@ export function Dashboard() {
                   Array.from({ length: 4 - medalStats.earnedMedals.length }).map((_, index) => (
                     <div key={`placeholder-${index}`} className="text-center p-3 rounded-lg bg-muted/50">
                       <div className="text-3xl mb-2 grayscale opacity-50">
-                        <Award className="h-8 w-8 mx-auto text-muted-foreground" />
+                        <AwardIcon className="h-8 w-8 mx-auto text-muted-foreground" />
                       </div>
                       <div className="text-sm font-medium text-muted-foreground">Locked</div>
                       <div className="text-xs text-muted-foreground mt-1">...</div>
@@ -457,7 +432,7 @@ export function Dashboard() {
                 )}
               </div>
               <div className="flex items-center justify-center gap-2 pt-2">
-                <Trophy className="h-4 w-4 text-yellow-500" />
+                <TrophyIcon className="h-4 w-4 text-yellow-500" />
                 <span className="text-sm font-medium">{medalStats?.earnedMedals?.length || 0} Medal{medalStats?.earnedMedals?.length !== 1 ? 's' : ''} Earned</span>
                 <span className="text-xs text-muted-foreground">• Keep trading to unlock more!</span>
               </div>
@@ -487,28 +462,31 @@ export function Dashboard() {
                 </Button>
               </div>
               <div className="space-y-3">
-                {spotPairs.map((pair, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Bitcoin className="h-5 w-5 text-primary" />
+                {spotPairs.map((pair, index) => {
+                  const IconComponent = MulticolorIcons[pair.icon as keyof typeof MulticolorIcons];
+                  return (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10">
+                          <IconComponent />
+                        </div>
+                        <div>
+                          <div className="font-semibold">{pair.symbol}</div>
+                          <div className="text-xs text-muted-foreground">{pair.name}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold">{pair.symbol}</div>
-                        <div className="text-xs text-muted-foreground">{pair.name}</div>
+                      <div className="text-right">
+                        <div className="font-semibold">${pair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</div>
+                        <div className={`text-xs font-semibold ${pair.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {pair.change >= 0 ? '+' : ''}{pair.change}%
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold">${pair.price.toLocaleString()}</div>
-                      <div className={`text-xs ${pair.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {pair.change >= 0 ? '+' : ''}{pair.change}%
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
