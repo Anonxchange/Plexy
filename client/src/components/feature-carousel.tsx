@@ -20,19 +20,16 @@ export function FeatureCarousel() {
 
     if (position === 0) return {
       transform: "translateX(-50%) translateZ(0px) scale(1) rotateY(0deg)",
-      opacity: 1,
       zIndex: 30,
       left: "50%",
     };
     if (position === 1) return {
       transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(-20deg) translateX(220px)",
-      opacity: 0.5,
       zIndex: 20,
       left: "50%",
     };
     return {
       transform: "translateX(-50%) translateZ(-100px) scale(0.85) rotateY(20deg) translateX(-220px)",
-      opacity: 0.5,
       zIndex: 10,
       left: "50%",
     };
@@ -51,11 +48,19 @@ export function FeatureCarousel() {
               style={{ ...style, transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
             >
               <div className="flex flex-col rounded-2xl overflow-hidden shadow-lg bg-background">
-                <img src={feature.image} alt={feature.title} className="w-full h-[200px] sm:h-[240px] md:h-[260px] object-cover" loading="eager" />
+                <img
+                  src={feature.image}
+                  alt={feature.title}
+                  className="w-full h-[200px] sm:h-[240px] md:h-[260px] object-cover"
+                  loading="eager"
+                />
                 {isFront && (
                   <div className="p-3 sm:p-4 flex flex-col space-y-2">
                     <h3 className="text-lg sm:text-xl font-bold text-foreground leading-snug">{feature.title}</h3>
-                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-300" size="default">
+                    <Button
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-300"
+                      size="default"
+                    >
                       {feature.buttonText}
                     </Button>
                   </div>
