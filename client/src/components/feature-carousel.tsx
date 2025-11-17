@@ -1,4 +1,4 @@
-I notice there’s an opacity that’s covering the side by side cards can we make them visible in yhis card and adjust the space closer to other component import { useEffect, useState } from “react”;
+import { useEffect, useState } from “react”;
 import { Button } from “@/components/ui/button”;
 
 const features = [
