@@ -890,7 +890,7 @@ export function AccountSettings() {
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-2">
             <span className="font-medium">{user?.email}</span>
-            {profileData?.is_verified && (
+            {profileData?.is_verified && verificationLevel >= 2 && (
               <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                 ID verified
               </Badge>
@@ -2993,9 +2993,11 @@ export function AccountSettings() {
               <CardContent className="p-6">
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold mb-2">Account settings</h2>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    ID verified
-                  </Badge>
+                  {verificationLevel >= 2 && (
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                      ID verified
+                    </Badge>
+                  )}
                 </div>
                 {renderSection()}
               </CardContent>
