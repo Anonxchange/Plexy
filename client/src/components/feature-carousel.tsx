@@ -63,41 +63,40 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative h-[480px] w-full overflow-visible px-4 md:h-[520px]">
+    <section className="relative w-full px-4 py-8 md:py-12">
       <div
-        className="relative h-full w-full"
-        style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
+        className="relative w-full flex justify-center items-end"
+        style={{ perspective: "2000px", perspectiveOrigin: "center bottom" }}
       >
         {features.map((feature, index) => {
           const style = getCardStyle(index);
           return (
             <div
               key={feature.id}
-              className="absolute top-1/2 w-[280px] -translate-y-1/2 sm:w-[320px] md:w-[360px]"
+              className="absolute bottom-0 w-64 sm:w-72 md:w-80 lg:w-96"
               style={{
                 ...style,
                 transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
             >
-              <div className="flex flex-col space-y-3">
-                {/* Image container */}
-                <div className="relative overflow-hidden rounded-2xl">
+              <div className="flex flex-col bg-background rounded-2xl shadow-lg overflow-hidden">
+                {/* Image */}
+                <div className="w-full h-48 sm:h-56 md:h-64 lg:h-72">
                   <img
                     src={feature.image}
                     alt={feature.title}
-                    className="w-full h-[200px] sm:h-[240px] md:h-[260px] object-cover"
+                    className="w-full h-full object-cover"
                     loading="eager"
                   />
                 </div>
 
-                {/* Content below image */}
-                <div className="space-y-2 px-2">
-                  <h3 className="text-lg sm:text-xl font-bold text-foreground leading-snug">
+                {/* Text & Button */}
+                <div className="p-4 flex flex-col space-y-3">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug">
                     {feature.title}
                   </h3>
-
                   <Button
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-300"
                     size="default"
                   >
                     {feature.buttonText}
