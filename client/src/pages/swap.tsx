@@ -24,6 +24,9 @@ const currencies = [
   { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT },
   { symbol: "ETH", name: "Ethereum", iconUrl: cryptoIconUrls.ETH },
   { symbol: "USDC", name: "USD Coin", iconUrl: cryptoIconUrls.USDC },
+  { symbol: "SOL", name: "Solana", iconUrl: cryptoIconUrls.SOL },
+  { symbol: "TRX", name: "Tron", iconUrl: cryptoIconUrls.TRX },
+  { symbol: "BNB", name: "BNB", iconUrl: cryptoIconUrls.BNB },
 ];
 
 export function Swap() {
