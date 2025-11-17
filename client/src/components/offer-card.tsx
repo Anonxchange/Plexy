@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign, Globe, Shield, Award } from "lucide-react";
 import { TradeDialog } from "./trade-dialog";
+import { UserProfileDialog } from "./user-profile-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
@@ -97,6 +98,7 @@ export function OfferCard({
   ...offer
 }: OfferCardProps) {
   const [showTradeDialog, setShowTradeDialog] = useState(false);
+  const [showUserProfileDialog, setShowUserProfileDialog] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -201,6 +203,13 @@ export function OfferCard({
         onOpenChange={setShowTradeDialog}
         offer={{ vendor, paymentMethod, pricePerBTC, currency, availableRange, limits, type, cryptoSymbol, time_limit_minutes, country_restrictions, ...offer } as OfferCardProps}
       />
+      {vendor.id && (
+        <UserProfileDialog
+          isOpen={showUserProfileDialog}
+          onClose={() => setShowUserProfileDialog(false)}
+          userId={vendor.id}
+        />
+      )}
       <Card className="hover:shadow-lg transition-shadow border-purple-100 dark:border-purple-900/30" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
         <CardContent className="p-3 sm:p-4 space-y-3">
           {/* Vendor Info Row */}
@@ -214,7 +223,15 @@ export function OfferCard({
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                  <span className="font-semibold text-sm sm:text-base truncate">{vendor.name}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (vendor.id) setShowUserProfileDialog(true);
+                    }}
+                    className="font-semibold text-sm sm:text-base truncate hover:underline cursor-pointer"
+                  >
+                    {vendor.name}
+                  </button>
                   {countryFlag ? (
                     <span className="text-sm sm:text-base flex-shrink-0">
                       {countryFlag}
