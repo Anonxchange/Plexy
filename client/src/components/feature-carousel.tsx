@@ -63,7 +63,7 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative h-[400px] sm:h-[450px] md:h-[500px] w-full overflow-hidden px-4">
+    <section className="relative h-[500px] sm:h-[550px] md:h-[600px] w-full overflow-hidden px-4 mb-8">
       <div
         className="relative h-full w-full max-w-7xl mx-auto"
         style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
@@ -82,32 +82,30 @@ export function FeatureCarousel() {
                 transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
             >
-              <div className="flex flex-col space-y-3">
+              <div className="flex flex-col space-y-4">
                 {/* Image container */}
-                <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg">
+                <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg w-full">
                   <img
                     src={feature.image}
                     alt={feature.title}
-                    className="w-full h-[180px] sm:h-[220px] md:h-[240px] lg:h-[260px] object-cover"
+                    className="w-full h-[200px] sm:h-[240px] md:h-[280px] lg:h-[320px] object-cover"
                     loading="eager"
                   />
                 </div>
 
                 {/* Content below image - only visible on center card */}
-                {isCenter && (
-                  <div className="space-y-2 px-2">
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug text-center">
-                      {feature.title}
-                    </h3>
+                <div className={`space-y-3 px-2 transition-opacity duration-300 ${isCenter ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug text-center">
+                    {feature.title}
+                  </h3>
 
-                    <Button
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                      size="default"
-                    >
-                      {feature.buttonText}
-                    </Button>
-                  </div>
-                )}
+                  <Button
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                    size="default"
+                  >
+                    {feature.buttonText}
+                  </Button>
+                </div>
               </div>
             </div>
           );
