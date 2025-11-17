@@ -3,9 +3,10 @@ import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ThumbsUp, ThumbsDown, Shield, Award } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Shield, Award, Circle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
+import { formatLastSeen } from "@/lib/presence";
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -20,13 +21,33 @@ export function UserProfileDialog({
 }: UserProfileDialogProps) {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [userPresence, setUserPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
   const supabase = createClient();
 
   useEffect(() => {
     if (isOpen && userId) {
       fetchUserData();
+      fetchPresence();
     }
   }, [isOpen, userId]);
+
+  const fetchPresence = async () => {
+    if (userId) {
+      const { presenceTracker } = await import('@/lib/presence');
+      const presence = await presenceTracker.getUserPresence(userId);
+      setUserPresence(presence);
+
+      const channel = presenceTracker.subscribeToUserPresence(userId, (updatedPresence) => {
+        setUserPresence(updatedPresence);
+      });
+
+      return () => {
+        if (channel) {
+          supabase.removeChannel(channel);
+        }
+      };
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -133,145 +154,154 @@ export function UserProfileDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md p-0 max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="p-6 pb-4 border-b flex-shrink-0">
-          <div className="flex items-start gap-3">
-            <Avatar className="w-14 h-14 border-2 border-primary">
+      <DialogContent className="max-w-sm p-0 max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
+          <div className="flex items-start gap-2">
+            <Avatar className="w-12 h-12 border-2 border-primary flex-shrink-0">
               <AvatarImage src={profile?.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+              <AvatarFallback className="bg-primary text-primary-foreground text-base">
                 {profile?.username?.charAt(0).toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-1.5 mb-1">
                 {profile?.country && (
-                  <span className="text-lg">🇳🇬</span>
+                  <span className="text-base">🇳🇬</span>
                 )}
-                <h3 className="font-semibold text-base truncate">{profile?.username || "Unknown"}</h3>
+                <h3 className="font-semibold text-sm truncate">{profile?.username || "Unknown"}</h3>
               </div>
-              <div className="flex items-center gap-2 flex-wrap mb-2">
-                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 flex items-center gap-1">
-                  <ThumbsUp className="w-3 h-3" />
+              <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 flex items-center gap-1 text-xs px-1.5 py-0">
+                  <ThumbsUp className="w-2.5 h-2.5" />
                   {successRate}%
                 </Badge>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs px-1.5 py-0">
                   {totalTrades} Trades
                 </Badge>
                 {profile?.merchant_status === "verified_merchant" && (
-                  <Badge className="bg-blue-500 text-white text-xs flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
+                  <Badge className="bg-blue-500 text-white text-xs flex items-center gap-1 px-1.5 py-0">
+                    <Shield className="w-2.5 h-2.5" />
                     Verified
                   </Badge>
                 )}
                 {profile?.merchant_status === "block_merchant" && (
-                  <Badge className="bg-purple-600 text-white text-xs flex items-center gap-1">
-                    <Award className="w-3 h-3" />
+                  <Badge className="bg-purple-600 text-white text-xs flex items-center gap-1 px-1.5 py-0">
+                    <Award className="w-2.5 h-2.5" />
                     Block
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs text-muted-foreground">Active now</span>
+              <div className="flex items-center gap-1.5">
+                {userPresence.isOnline ? (
+                  <>
+                    <Circle className="h-1.5 w-1.5 fill-green-500 text-green-500" />
+                    <span className="text-xs text-green-500">Active now</span>
+                  </>
+                ) : (
+                  <>
+                    <Circle className="h-1.5 w-1.5 fill-gray-500 text-gray-500" />
+                    <span className="text-xs text-gray-500">{formatLastSeen(userPresence.lastSeen)}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+          <div className="p-4 space-y-4">
             {/* Positive and Negative Feedbacks */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <h4 className="text-sm font-medium mb-2">Positive feedbacks</h4>
-                <div className="flex items-center gap-2">
-                  <ThumbsUp className="w-5 h-5 text-green-600" />
-                  <span className="text-2xl font-bold text-green-600">{positiveCount}</span>
+                <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Positive feedbacks</h4>
+                <div className="flex items-center gap-1.5">
+                  <ThumbsUp className="w-4 h-4 text-green-600" />
+                  <span className="text-xl font-bold text-green-600">{positiveCount}</span>
                 </div>
               </div>
               <div>
-                <h4 className="text-sm font-medium mb-2">Negative feedbacks</h4>
-                <div className="flex items-center gap-2">
-                  <ThumbsDown className="w-5 h-5 text-red-600" />
-                  <span className="text-2xl font-bold text-red-600">{negativeCount}</span>
+                <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Negative feedbacks</h4>
+                <div className="flex items-center gap-1.5">
+                  <ThumbsDown className="w-4 h-4 text-red-600" />
+                  <span className="text-xl font-bold text-red-600">{negativeCount}</span>
                 </div>
               </div>
             </div>
 
             {/* Country, IP Location, Trusted by, Blocked by */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="text-sm text-muted-foreground mb-1">Country</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🇳🇬</span>
-                  <span className="font-medium">Nigeria</span>
+                <div className="text-xs text-muted-foreground mb-1">Country</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">🇳🇬</span>
+                  <span className="font-medium text-sm">Nigeria</span>
                 </div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground mb-1">IP location</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🇳🇬</span>
-                  <span className="font-medium">Nigeria</span>
+                <div className="text-xs text-muted-foreground mb-1">IP location</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">🇳🇬</span>
+                  <span className="font-medium text-sm">Nigeria</span>
                 </div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground mb-1">Trusted by</div>
-                <div className="font-semibold">{positiveCount} users</div>
+                <div className="text-xs text-muted-foreground mb-1">Trusted by</div>
+                <div className="font-semibold text-sm">{positiveCount} users</div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground mb-1">Blocked by</div>
-                <div className="font-semibold">3 users</div>
+                <div className="text-xs text-muted-foreground mb-1">Blocked by</div>
+                <div className="font-semibold text-sm">3 users</div>
               </div>
             </div>
           </div>
 
           <Tabs defaultValue="trading" className="w-full">
-            <TabsList className="w-full grid grid-cols-2 sticky top-0 bg-background z-10">
-              <TabsTrigger value="trading">Trading info</TabsTrigger>
-              <TabsTrigger value="feedback">Recent feedbacks</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-2 sticky top-0 bg-background z-10 h-9">
+              <TabsTrigger value="trading" className="text-xs">Trading info</TabsTrigger>
+              <TabsTrigger value="feedback" className="text-xs">Recent feedbacks</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="trading" className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <TabsContent value="trading" className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">Trade partners</div>
-                  <div className="text-2xl font-bold">{tradePartners}</div>
+                  <div className="text-xs text-muted-foreground mb-1">Trade partners</div>
+                  <div className="text-xl font-bold">{tradePartners}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">Trades released</div>
-                  <div className="text-2xl font-bold">{tradesReleased}</div>
+                  <div className="text-xs text-muted-foreground mb-1">Trades released</div>
+                  <div className="text-xl font-bold">{tradesReleased}</div>
                 </div>
               </div>
 
-              <div className="space-y-3 pt-2">
+              <div className="space-y-2 pt-1">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Trade success</span>
-                  <span className="font-semibold">{successRate}%</span>
+                  <span className="text-xs text-muted-foreground">Trade success</span>
+                  <span className="font-semibold text-sm">{successRate}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Avg. time to payment</span>
-                  <span className="font-semibold">{avgPaymentTime}</span>
+                  <span className="text-xs text-muted-foreground">Avg. time to payment</span>
+                  <span className="font-semibold text-sm">{avgPaymentTime}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Avg. time to release</span>
-                  <span className="font-semibold">{avgReleaseTime}</span>
+                  <span className="text-xs text-muted-foreground">Avg. time to release</span>
+                  <span className="font-semibold text-sm">{avgReleaseTime}</span>
                 </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="feedback" className="p-6 space-y-4">
+            <TabsContent value="feedback" className="p-4 space-y-3">
               {positiveFeedback.length === 0 && negativeFeedback.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-6 text-muted-foreground text-sm">
                   No feedback yet
                 </div>
               ) : (
                 <>
                   {positiveFeedback.slice(0, 5).map((feedback: any, index: number) => (
-                    <div key={`positive-${index}`} className="border rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <ThumbsUp className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                    <div key={`positive-${index}`} className="border rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <ThumbsUp className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm mb-1">{feedback.comment || "No comment provided"}</p>
+                          <p className="text-xs mb-0.5">{feedback.comment || "No comment provided"}</p>
                           <p className="text-xs text-muted-foreground">
                             {new Date(feedback.created_at).toLocaleDateString()}
                           </p>
@@ -280,11 +310,11 @@ export function UserProfileDialog({
                     </div>
                   ))}
                   {negativeFeedback.slice(0, 5).map((feedback: any, index: number) => (
-                    <div key={`negative-${index}`} className="border rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <ThumbsDown className="w-5 h-5 text-red-600 mt-1 flex-shrink-0" />
+                    <div key={`negative-${index}`} className="border rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <ThumbsDown className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm mb-1">{feedback.comment || "No comment provided"}</p>
+                          <p className="text-xs mb-0.5">{feedback.comment || "No comment provided"}</p>
                           <p className="text-xs text-muted-foreground">
                             {new Date(feedback.created_at).toLocaleDateString()}
                           </p>
