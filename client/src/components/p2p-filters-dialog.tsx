@@ -144,12 +144,141 @@ export function P2PFiltersDialog({
             {/* Offer tags */}
             <div className="space-y-2">
               <Label className="text-base font-semibold">Offer tags</Label>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-left font-normal text-muted-foreground"
-              >
-                Select tags
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-left font-normal text-muted-foreground"
+                  >
+                    Select tags
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md h-full sm:h-auto max-h-screen p-0 flex flex-col">
+                  <div className="sticky top-0 bg-background z-10 border-b p-4">
+                    <div className="flex items-center justify-between">
+                      <DialogTitle className="text-xl font-bold">Tags</DialogTitle>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="flex-1 overflow-y-auto">
+                    <div className="p-4 space-y-4">
+                      {/* Search Input */}
+                      <div className="relative">
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <Input
+                          placeholder="Select an offer tag"
+                          className="pl-10 bg-muted border-0"
+                        />
+                      </div>
+
+                      {/* Info Box */}
+                      <div className="bg-muted p-3 rounded-lg flex items-start gap-2">
+                        <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-sm">
+                          You can select up to 3 tags (0/3)
+                        </p>
+                      </div>
+
+                      {/* Tag Options */}
+                      <div className="space-y-3">
+                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
+                          <div className="flex-1">
+                            <div className="font-semibold mb-1">photo id required</div>
+                            <div className="text-sm text-muted-foreground">Valid government-issued photo ID required.</div>
+                          </div>
+                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+
+                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
+                          <div className="flex-1">
+                            <div className="font-semibold mb-1">invoices are accepted</div>
+                            <div className="text-sm text-muted-foreground">Get your invoice paid</div>
+                          </div>
+                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+
+                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
+                          <div className="flex-1">
+                            <div className="font-semibold mb-1">no receipt needed</div>
+                            <div className="text-sm text-muted-foreground">Receipt not required for this trade.</div>
+                          </div>
+                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+
+                        <button className="w-full flex items-center justify-between p-4 bg-green-500 rounded-lg transition-colors text-left text-white">
+                          <div className="flex-1">
+                            <div className="font-semibold mb-1">same bank only</div>
+                            <div className="text-sm text-white/90">Limit trades with users with an account in the same bank as yours.</div>
+                          </div>
+                          <div className="bg-white rounded-full p-1.5 flex-shrink-0 ml-3">
+                            <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </button>
+
+                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
+                          <div className="flex-1">
+                            <div className="font-semibold mb-1">receipt required</div>
+                            <div className="text-sm text-muted-foreground">You must provide transaction receipt to complete the trade.</div>
+                          </div>
+                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+
+                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
+                          <div className="flex-1">
+                            <div className="font-semibold mb-1">no third parties</div>
+                            <div className="text-sm text-muted-foreground">Payments must be made from your own account.</div>
+                          </div>
+                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+
+                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
+                          <div className="flex-1">
+                            <div className="font-semibold mb-1">guided trade</div>
+                            <div className="text-sm text-muted-foreground">You and the trade partner are guided through each step of the trade.</div>
+                          </div>
+                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+
+                        <button className="w-full flex items-center justify-between p-4 hover:bg-muted rounded-lg transition-colors text-left">
+                          <div className="flex-1">
+                            <div className="font-semibold mb-1">no verification needed</div>
+                            <div className="text-sm text-muted-foreground">You don't need to be a verified user to complete this trade.</div>
+                          </div>
+                          <svg className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </ScrollArea>
+
+                  <div className="border-t bg-background p-4">
+                    <Button 
+                      className="w-full h-12 bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <Separator />
