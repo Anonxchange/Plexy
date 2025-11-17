@@ -7,12 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowUpDown, FileText, TrendingDown, Shield, Gift, BookOpen, Headphones, ChevronRight } from "lucide-react";
+import { ArrowUpDown, FileText, TrendingDown, Shield, Gift, BookOpen, Headphones, ChevronRight, Loader2 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapFee } from "@/hooks/use-fees";
+import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
+import { useWalletBalance } from "@/hooks/use-wallets";
+import { useExecuteSwap, useSwapHistory } from "@/hooks/use-swap";
+import { getCryptoPrices } from "@/lib/crypto-prices";
+import { useToast } from "@/hooks/use-toast";
 
 const currencies = [
   { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC },
@@ -24,10 +29,22 @@ const currencies = [
 export function Swap() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [fromAmount, setFromAmount] = useState("0.00001");
-  const [toAmount, setToAmount] = useState("1.222411");
+  const [toAmount, setToAmount] = useState("");
   const [fromCurrency, setFromCurrency] = useState("BTC");
   const [toCurrency, setToCurrency] = useState("USDT");
+  const [isUpdatingFromInput, setIsUpdatingFromInput] = useState(true);
+
+  // Fetch live swap prices
+  const { marketRate, swapRate, percentageDiff, isLoading } = useSwapPrice(
+    fromCurrency,
+    toCurrency
+  );
+
+  // Fetch wallet balances
+  const { data: fromWallet } = useWalletBalance(fromCurrency);
+  const { data: toWallet } = useWalletBalance(toCurrency);
 
   // Fetch swap fee
   const { data: swapFee } = useSwapFee(
@@ -35,6 +52,30 @@ export function Swap() {
     toCurrency,
     parseFloat(fromAmount) || 0
   );
+
+  // Execute swap mutation
+  const executeSwap = useExecuteSwap();
+
+  // Fetch swap history
+  const { data: swapHistory = [] } = useSwapHistory();
+
+  // Auto-update toAmount when prices change or fromAmount changes
+  useEffect(() => {
+    if (isUpdatingFromInput && swapRate > 0) {
+      const amount = parseFloat(fromAmount) || 0;
+      const calculated = calculateSwapAmount(amount, swapRate);
+      setToAmount(calculated.toFixed(6));
+    }
+  }, [fromAmount, swapRate, isUpdatingFromInput]);
+
+  // Auto-update fromAmount when toAmount is manually changed
+  useEffect(() => {
+    if (!isUpdatingFromInput && swapRate > 0) {
+      const amount = parseFloat(toAmount) || 0;
+      const calculated = amount / swapRate;
+      setFromAmount(calculated.toFixed(8));
+    }
+  }, [toAmount, swapRate, isUpdatingFromInput]);
 
   const handleSwapCurrencies = () => {
     const tempCurrency = fromCurrency;
@@ -45,9 +86,109 @@ export function Swap() {
     setToAmount(tempAmount);
   };
 
-  const swapRate = "122,470.25";
-  const marketRate = "122,470.25";
-  const percentageDiff = "0.19%";
+  const handleFromAmountChange = (value: string) => {
+    setIsUpdatingFromInput(true);
+    setFromAmount(value);
+  };
+
+  const handleToAmountChange = (value: string) => {
+    setIsUpdatingFromInput(false);
+    setToAmount(value);
+  };
+
+  // Format rates for display
+  const formatRate = (rate: number) => {
+    if (rate >= 1000) {
+      return rate.toLocaleString('en-US', { 
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 5 
+      });
+    } else if (rate >= 1) {
+      return rate.toFixed(2);
+    } else {
+      return rate.toFixed(6);
+    }
+  };
+
+  // Format balance for display
+  const formatBalance = (balance: number | undefined) => {
+    if (balance === undefined) return "0.00";
+    if (balance >= 1) return balance.toFixed(4);
+    return balance.toFixed(8);
+  };
+
+  // Get available balance (total - locked)
+  const getAvailableBalance = (wallet: any) => {
+    if (!wallet) return 0;
+    return wallet.balance - wallet.locked_balance;
+  };
+
+  // Handle swap execution
+  const handleSwap = async () => {
+    if (!user) {
+      setLocation("/signin");
+      return;
+    }
+
+    const fromAmountNum = parseFloat(fromAmount);
+    const toAmountNum = parseFloat(toAmount);
+    const feeAmount = swapFee?.totalFee || 0;
+
+    if (fromAmountNum <= 0 || toAmountNum <= 0) {
+      return;
+    }
+
+    // Calculate USD value for minimum check
+    let usdValue = 0;
+    if (fromCurrency === 'USDT' || fromCurrency === 'USDC') {
+      usdValue = fromAmountNum;
+    } else {
+      // For other cryptos, use the market rate to get USD value
+      const prices = await getCryptoPrices([fromCurrency]);
+      const fromPrice = prices[fromCurrency]?.current_price || 0;
+      
+      if (fromPrice === 0) {
+        toast({
+          title: "Price Error",
+          description: `Unable to fetch ${fromCurrency} price. Please try again.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      usdValue = fromAmountNum * fromPrice;
+    }
+
+    // Enforce $10 minimum
+    const MIN_SWAP_USD = 10;
+    if (usdValue < MIN_SWAP_USD) {
+      toast({
+        title: "Amount Too Low",
+        description: `Minimum swap amount is $${MIN_SWAP_USD} USD. Current value: $${usdValue.toFixed(2)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await executeSwap.mutateAsync({
+        userId: user.id,
+        fromCrypto: fromCurrency,
+        toCrypto: toCurrency,
+        fromAmount: fromAmountNum,
+        toAmount: toAmountNum,
+        swapRate,
+        marketRate,
+        fee: feeAmount,
+      });
+
+      // Reset form
+      setFromAmount("0.00001");
+      setToAmount("");
+    } catch (error) {
+      console.error('Swap error:', error);
+    }
+  };
 
   // Show landing page for non-logged-in users
   if (!user) {
@@ -67,8 +208,9 @@ export function Swap() {
                     <Input
                       type="number"
                       value={fromAmount}
-                      onChange={(e) => setFromAmount(e.target.value)}
+                      onChange={(e) => handleFromAmountChange(e.target.value)}
                       className="flex-1 h-16 text-2xl bg-background"
+                      placeholder="0.00"
                     />
                     <Select value={fromCurrency} onValueChange={setFromCurrency}>
                       <SelectTrigger className="w-36 h-16 bg-background">
@@ -113,8 +255,9 @@ export function Swap() {
                     <Input
                       type="number"
                       value={toAmount}
-                      onChange={(e) => setToAmount(e.target.value)}
+                      onChange={(e) => handleToAmountChange(e.target.value)}
                       className="flex-1 h-16 text-2xl bg-background"
+                      placeholder="0.00"
                     />
                     <Select value={toCurrency} onValueChange={setToCurrency}>
                       <SelectTrigger className="w-36 h-16 bg-background">
@@ -142,17 +285,22 @@ export function Swap() {
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Swap rate:</span>
-                    <span className="font-medium">
-                      1 {fromCurrency} = {swapRate} {toCurrency}{" "}
-                      <Badge variant="secondary" className="ml-2">
-                        {percentageDiff}
-                      </Badge>
+                    <span className="font-medium flex items-center gap-2">
+                      1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}
+                      {!isLoading && percentageDiff > 0 && (
+                        <Badge 
+                          variant="secondary" 
+                          className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20"
+                        >
+                          {percentageDiff.toFixed(2)}%
+                        </Badge>
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Market rate:</span>
                     <span className="font-medium">
-                      1 {fromCurrency} = {marketRate} {toCurrency}
+                      1 {fromCurrency} = {isLoading ? '...' : formatRate(marketRate)} {toCurrency}
                     </span>
                   </div>
                   {swapFee && (
@@ -446,7 +594,7 @@ export function Swap() {
                   <span className="text-lg">What are the minimum swap amounts for cryptocurrencies?</span>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground pb-6">
-                  Minimum swap amounts vary by cryptocurrency. Generally: BTC: 0.0001, ETH: 0.001, USDT: 10, USDC: 10. Check the swap interface for specific minimums for each pair.
+                  The minimum swap amount is $10 USD equivalent for all cryptocurrency pairs. This ensures efficient processing and covers network fees.
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -512,15 +660,16 @@ export function Swap() {
               <div className="flex items-center justify-between">
                 <Label className="text-muted-foreground text-base">From</Label>
                 <span className="text-sm text-muted-foreground">
-                  Available: {fromCurrency === "BTC" ? "0.0000001" : "0.001259"} {fromCurrency}
+                  Available: {formatBalance(getAvailableBalance(fromWallet))} {fromCurrency}
                 </span>
               </div>
               <div className="flex gap-3">
                 <Input
                   type="number"
                   value={fromAmount}
-                  onChange={(e) => setFromAmount(e.target.value)}
+                  onChange={(e) => handleFromAmountChange(e.target.value)}
                   className="flex-1 h-16 text-2xl bg-background"
+                  placeholder="0.00"
                 />
                 <Select value={fromCurrency} onValueChange={setFromCurrency}>
                   <SelectTrigger className="w-36 h-16 bg-background">
@@ -561,15 +710,16 @@ export function Swap() {
               <div className="flex items-center justify-between">
                 <Label className="text-muted-foreground text-base">To</Label>
                 <span className="text-sm text-muted-foreground">
-                  Available: {toCurrency === "USDT" ? "0.001259" : "0.0000001"} {toCurrency}
+                  Available: {formatBalance(getAvailableBalance(toWallet))} {toCurrency}
                 </span>
               </div>
               <div className="flex gap-3">
                 <Input
                   type="number"
                   value={toAmount}
-                  onChange={(e) => setToAmount(e.target.value)}
+                  onChange={(e) => handleToAmountChange(e.target.value)}
                   className="flex-1 h-16 text-2xl bg-background"
+                  placeholder="0.00"
                 />
                 <Select value={toCurrency} onValueChange={setToCurrency}>
                   <SelectTrigger className="w-36 h-16 bg-background">
@@ -597,17 +747,22 @@ export function Swap() {
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Swap rate:</span>
-                <span className="font-medium">
-                  1 {fromCurrency} = {swapRate} {toCurrency}{" "}
-                  <Badge variant="secondary" className="ml-2">
-                    {percentageDiff}
-                  </Badge>
+                <span className="font-medium flex items-center gap-2">
+                  1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}
+                  {!isLoading && percentageDiff > 0 && (
+                    <Badge 
+                      variant="secondary" 
+                      className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20"
+                    >
+                      {percentageDiff.toFixed(2)}%
+                    </Badge>
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Market rate:</span>
                 <span className="font-medium">
-                  1 {fromCurrency} = {marketRate} {toCurrency}
+                  1 {fromCurrency} = {isLoading ? '...' : formatRate(marketRate)} {toCurrency}
                 </span>
               </div>
               {swapFee && (
@@ -631,9 +786,22 @@ export function Swap() {
         </Card>
 
         {/* Swap Button */}
-        <Button className="w-full h-14 text-lg bg-primary hover:bg-primary/90 mb-8">
-          <ArrowUpDown className="mr-2 h-5 w-5" />
-          Swap
+        <Button 
+          className="w-full h-14 text-lg bg-primary hover:bg-primary/90 mb-8"
+          onClick={handleSwap}
+          disabled={executeSwap.isPending || !fromAmount || !toAmount || parseFloat(fromAmount) <= 0}
+        >
+          {executeSwap.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Swapping...
+            </>
+          ) : (
+            <>
+              <ArrowUpDown className="mr-2 h-5 w-5" />
+              Swap
+            </>
+          )}
         </Button>
 
         {/* Recent Activity */}
@@ -674,15 +842,16 @@ export function Swap() {
                 <div className="flex items-center justify-between">
                   <Label className="text-muted-foreground text-base">From</Label>
                   <span className="text-sm text-muted-foreground">
-                    Available: {fromCurrency === "BTC" ? "0.0000001" : "0.001259"} {fromCurrency}
+                    Available: {formatBalance(getAvailableBalance(fromWallet))} {fromCurrency}
                   </span>
                 </div>
                 <div className="flex gap-3">
                   <Input
                     type="number"
                     value={fromAmount}
-                    onChange={(e) => setFromAmount(e.target.value)}
+                    onChange={(e) => handleFromAmountChange(e.target.value)}
                     className="flex-1 h-16 text-2xl bg-background"
+                    placeholder="0.00"
                   />
                   <Select value={fromCurrency} onValueChange={setFromCurrency}>
                     <SelectTrigger className="w-40 h-16 bg-background">
@@ -723,15 +892,16 @@ export function Swap() {
                 <div className="flex items-center justify-between">
                   <Label className="text-muted-foreground text-base">To</Label>
                   <span className="text-sm text-muted-foreground">
-                    Available: {toCurrency === "USDT" ? "0.001259" : "0.0000001"} {toCurrency}
+                    Available: {formatBalance(getAvailableBalance(toWallet))} {toCurrency}
                   </span>
                 </div>
                 <div className="flex gap-3">
                   <Input
                     type="number"
                     value={toAmount}
-                    onChange={(e) => setToAmount(e.target.value)}
+                    onChange={(e) => handleToAmountChange(e.target.value)}
                     className="flex-1 h-16 text-2xl bg-background"
+                    placeholder="0.00"
                   />
                   <Select value={toCurrency} onValueChange={setToCurrency}>
                     <SelectTrigger className="w-40 h-16 bg-background">
@@ -759,18 +929,27 @@ export function Swap() {
               <div className="space-y-3 pt-4 border-t">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Swap rate:</span>
-                  <span className="font-medium">
-                    1 {fromCurrency} = {swapRate} {toCurrency}{" "}
-                    <Badge variant="secondary" className="ml-2">
-                      {percentageDiff}
-                    </Badge>
+                  <span className="font-medium flex items-center gap-2">
+                    1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}
+                    {!isLoading && percentageDiff > 0 && (
+                      <Badge 
+                        variant="secondary" 
+                        className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20"
+                      >
+                        {percentageDiff.toFixed(2)}%
+                      </Badge>
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Market rate:</span>
                   <span className="font-medium">
-                    1 {fromCurrency} = {marketRate} {toCurrency}
+                    1 {fromCurrency} = {isLoading ? '...' : formatRate(marketRate)} {toCurrency}
                   </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Minimum swap:</span>
+                  <span className="font-medium">$10.00 USD</span>
                 </div>
                 {swapFee && (
                   <>
@@ -791,9 +970,22 @@ export function Swap() {
               </div>
 
               {/* Swap Button */}
-              <Button className="w-full h-14 text-lg bg-primary hover:bg-primary/90 mt-6">
-                <ArrowUpDown className="mr-2 h-5 w-5" />
-                Swap Now
+              <Button 
+                className="w-full h-14 text-lg bg-primary hover:bg-primary/90 mt-6"
+                onClick={handleSwap}
+                disabled={executeSwap.isPending || !fromAmount || !toAmount || parseFloat(fromAmount) <= 0}
+              >
+                {executeSwap.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Swapping...
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown className="mr-2 h-5 w-5" />
+                    Swap Now
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
