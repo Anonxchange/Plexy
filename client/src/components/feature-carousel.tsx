@@ -68,12 +68,12 @@ export function FeatureCarousel() {
 
   return (
     <section className="relative py-16 md:py-24 w-full overflow-visible px-4">
-      <div className="relative w-full max-w-7xl mx-auto">
+      <div className="relative w-full max-w-5xl mx-auto">
         {/* Curved Background Container */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <svg
-            viewBox="0 0 1200 400"
-            className="w-full h-auto max-w-6xl"
+            viewBox="0 0 1000 400"
+            className="w-full h-auto max-w-4xl"
             preserveAspectRatio="xMidYMid meet"
           >
             <defs>
@@ -92,7 +92,7 @@ export function FeatureCarousel() {
             </defs>
             {/* Main curved path */}
             <path
-              d="M 100 250 Q 600 100 1100 250"
+              d="M 80 250 Q 500 100 920 250"
               fill="url(#curveGradient)"
               stroke="rgba(79, 172, 254, 0.3)"
               strokeWidth="2"
@@ -100,7 +100,7 @@ export function FeatureCarousel() {
             />
             {/* Bottom curve for depth */}
             <path
-              d="M 100 270 Q 600 120 1100 270"
+              d="M 80 270 Q 500 120 920 270"
               fill="none"
               stroke="rgba(79, 172, 254, 0.15)"
               strokeWidth="1"
@@ -111,7 +111,7 @@ export function FeatureCarousel() {
 
         {/* Cards Container */}
         <div
-          className="relative w-full h-[500px] md:h-[600px]"
+          className="relative w-full h-[450px] md:h-[520px]"
           style={{ 
             perspective: "2500px", 
             perspectiveOrigin: "center center"
@@ -126,7 +126,7 @@ export function FeatureCarousel() {
               return (
                 <div
                   key={feature.id}
-                  className="absolute top-1/2 -translate-y-1/2 w-[280px] sm:w-[320px] md:w-[360px]"
+                  className="absolute top-1/2 -translate-y-1/2 w-[240px] sm:w-[280px] md:w-[320px]"
                   style={{
                     ...style,
                     transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -182,8 +182,8 @@ export function FeatureCarousel() {
                       </h3>
 
                       <Button
-                        className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-500/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                        size="default"
+                        className="w-full bg-primary hover:opacity-90 text-black font-semibold shadow-xl hover:shadow-2xl transition-all"
+                        size="lg"
                       >
                         {feature.buttonText}
                       </Button>
