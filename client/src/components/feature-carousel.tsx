@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -92,7 +91,7 @@ export function FeatureCarousel() {
                   </feMerge>
                 </filter>
               </defs>
-              
+
               {/* Main curved container path */}
               <path
                 d="M 60 200 Q 400 80 740 200 L 740 280 Q 400 160 60 280 Z"
@@ -101,7 +100,7 @@ export function FeatureCarousel() {
                 strokeWidth="1.5"
                 filter="url(#glow)"
               />
-              
+
               {/* Highlight curve on top */}
               <path
                 d="M 60 200 Q 400 80 740 200"
@@ -129,7 +128,7 @@ export function FeatureCarousel() {
                 return (
                   <div
                     key={feature.id}
-                    className="absolute top-1/2 -translate-y-1/2 w-[200px] sm:w-[240px] md:w-[280px]"
+                    className="absolute top-1/2 -translate-y-1/2 w-[180px] sm:w-[220px] md:w-[260px]"
                     style={{
                       ...style,
                       transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
