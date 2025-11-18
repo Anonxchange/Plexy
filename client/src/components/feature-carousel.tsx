@@ -67,17 +67,14 @@ export function FeatureCarousel() {
 
   return (
     <section className="relative py-1 sm:py-1 md:py-2 lg:py-2 w-full overflow-hidden">
-      <div className="relative w-full max-w-5xl mx-auto px-4 sm:px-6">
-        {/* Unified Curved Container */}
-        <div className="relative">
-          {/* Cards Container */}
-          <div
-            className="relative w-full h-[420px] sm:h-[440px] md:h-[480px] lg:h-[520px]"
-            style={{ 
-              perspective: "2000px", 
-              perspectiveOrigin: "center center"
-            }}
-          >
+      {/* Cards Container */}
+      <div
+        className="relative w-full h-[420px] sm:h-[440px] md:h-[480px] lg:h-[520px]"
+        style={{ 
+          perspective: "2000px", 
+          perspectiveOrigin: "center center"
+        }}
+      >
             <div className="relative w-full h-full">
               {features.map((feature, index) => {
                 const style = getCardStyle(index);
@@ -165,8 +162,6 @@ export function FeatureCarousel() {
               />
             ))}
           </div>
-        </div>
-      </div>
     </section>
   );
 }
