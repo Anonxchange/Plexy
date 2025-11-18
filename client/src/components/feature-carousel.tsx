@@ -72,7 +72,7 @@ export function FeatureCarousel() {
         <div className="relative">
           {/* Cards Container */}
           <div
-            className="relative w-full h-[480px] md:h-[550px]"
+            className="relative w-full h-[490px] md:h-[560px]"
             style={{ 
               perspective: "2000px", 
               perspectiveOrigin: "center center"
@@ -87,7 +87,7 @@ export function FeatureCarousel() {
                 return (
                   <div
                     key={feature.id}
-                    className="absolute top-1/2 -translate-y-1/2 w-[240px] sm:w-[280px] md:w-[360px]"
+                    className="absolute top-1/2 -translate-y-1/2 w-[250px] sm:w-[290px] md:w-[380px]"
                     style={{
                       ...style,
                       transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -95,7 +95,7 @@ export function FeatureCarousel() {
                   >
                     <div 
                       className={`
-                        flex flex-col gap-2
+                        flex flex-col gap-1
                         ${isCenter ? 'drop-shadow-2xl' : 'drop-shadow-md'}
                       `}
                       style={{
@@ -133,7 +133,7 @@ export function FeatureCarousel() {
                           ${isCenter ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
                         `}
                       >
-                        <h3 className="text-xs sm:text-sm md:text-base font-bold text-foreground leading-tight text-center mb-2 px-1">
+                        <h3 className="text-xs sm:text-sm md:text-base font-bold text-foreground leading-tight text-center mb-1 px-1">
                           {feature.title}
                         </h3>
 
