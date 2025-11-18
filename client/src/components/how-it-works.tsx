@@ -22,7 +22,7 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="pt-16 lg:pt-20 pb-0 bg-background" id="how-it-works">
+    <section className="pt-8 lg:pt-10 pb-0 bg-background" id="how-it-works">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent"></div>
       <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
         <div className="text-center space-y-6 mb-12">
