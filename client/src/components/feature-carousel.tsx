@@ -66,51 +66,10 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative py-12 md:py-16 w-full overflow-hidden">
+    <section className="relative py-6 md:py-8 w-full overflow-hidden">
       <div className="relative w-full max-w-4xl mx-auto px-4">
         {/* Unified Curved Container */}
         <div className="relative">
-          {/* SVG Curved Background */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-10">
-            <svg
-              viewBox="0 0 800 350"
-              className="w-full h-auto"
-              preserveAspectRatio="xMidYMid meet"
-            >
-              <defs>
-                <linearGradient id="curveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="rgba(79, 172, 254, 0.08)" />
-                  <stop offset="50%" stopColor="rgba(0, 242, 254, 0.12)" />
-                  <stop offset="100%" stopColor="rgba(79, 172, 254, 0.08)" />
-                </linearGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                  <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
-              </defs>
-
-              {/* Main curved container path */}
-              <path
-                d="M 60 200 Q 400 80 740 200 L 740 280 Q 400 160 60 280 Z"
-                fill="url(#curveGradient)"
-                stroke="rgba(79, 172, 254, 0.25)"
-                strokeWidth="1.5"
-                filter="url(#glow)"
-              />
-
-              {/* Highlight curve on top */}
-              <path
-                d="M 60 200 Q 400 80 740 200"
-                fill="none"
-                stroke="rgba(79, 172, 254, 0.4)"
-                strokeWidth="2"
-              />
-            </svg>
-          </div>
-
           {/* Cards Container */}
           <div
             className="relative w-full h-[380px] md:h-[420px]"
@@ -193,7 +152,7 @@ export function FeatureCarousel() {
           </div>
 
           {/* Navigation Dots */}
-          <div className="flex justify-center gap-2 mt-6">
+          <div className="flex justify-center gap-2 mt-3">
             {features.map((_, index) => (
               <button
                 key={index}
