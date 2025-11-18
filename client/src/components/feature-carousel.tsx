@@ -72,7 +72,7 @@ export function FeatureCarousel() {
         <div className="relative">
           {/* Cards Container */}
           <div
-            className="relative w-full h-[380px] md:h-[420px]"
+            className="relative w-full h-[480px] md:h-[550px]"
             style={{ 
               perspective: "2000px", 
               perspectiveOrigin: "center center"
@@ -87,7 +87,7 @@ export function FeatureCarousel() {
                 return (
                   <div
                     key={feature.id}
-                    className="absolute top-1/2 -translate-y-1/2 w-[180px] sm:w-[220px] md:w-[260px]"
+                    className="absolute top-1/2 -translate-y-1/2 w-[240px] sm:w-[280px] md:w-[360px]"
                     style={{
                       ...style,
                       transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
