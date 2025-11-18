@@ -50,7 +50,7 @@ export function FeatureCarousel() {
     // Right card
     if (position === 1) {
       return {
-        transform: "translateX(-50%) translateY(10px) scale(0.85) rotateY(-12deg) translateZ(0px) translateX(280px)",
+        transform: "translateX(-50%) translateY(10px) scale(0.85) rotateY(-12deg) translateZ(0px) translateX(220px) translateX(min(220px, 25vw))",
         opacity: 1,
         zIndex: 20,
         left: "50%",
@@ -59,7 +59,7 @@ export function FeatureCarousel() {
 
     // Left card
     return {
-      transform: "translateX(-50%) translateY(10px) scale(0.85) rotateY(12deg) translateZ(0px) translateX(-280px)",
+      transform: "translateX(-50%) translateY(10px) scale(0.85) rotateY(12deg) translateZ(0px) translateX(-220px) translateX(max(-220px, -25vw))",
       opacity: 1,
       zIndex: 10,
       left: "50%",
@@ -67,12 +67,12 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative py-12 md:py-20 w-full overflow-visible px-4">
-      <div className="relative w-full max-w-4xl mx-auto">
+    <section className="relative py-8 md:py-12 w-full overflow-visible px-4">
+      <div className="relative w-full max-w-6xl mx-auto">
         {/* Curved Background Container */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <svg
-            viewBox="0 0 900 500"
+            viewBox="0 0 900 400"
             className="w-full h-auto"
             preserveAspectRatio="xMidYMid meet"
           >
@@ -92,7 +92,7 @@ export function FeatureCarousel() {
             </defs>
             {/* Main curved path */}
             <path
-              d="M 100 300 Q 450 150 800 300"
+              d="M 100 250 Q 450 120 800 250"
               fill="url(#curveGradient)"
               stroke="rgba(79, 172, 254, 0.3)"
               strokeWidth="2"
@@ -100,7 +100,7 @@ export function FeatureCarousel() {
             />
             {/* Bottom curve for depth */}
             <path
-              d="M 100 320 Q 450 170 800 320"
+              d="M 100 270 Q 450 140 800 270"
               fill="none"
               stroke="rgba(79, 172, 254, 0.15)"
               strokeWidth="1"
@@ -111,12 +111,10 @@ export function FeatureCarousel() {
 
         {/* Cards Container */}
         <div
-          className="relative w-full"
+          className="relative w-full h-[420px] sm:h-[450px] md:h-[480px]"
           style={{ 
             perspective: "2500px", 
-            perspectiveOrigin: "center center",
-            height: "auto",
-            minHeight: "500px"
+            perspectiveOrigin: "center center"
           }}
         >
           <div className="relative w-full h-full">
@@ -128,7 +126,7 @@ export function FeatureCarousel() {
               return (
                 <div
                   key={feature.id}
-                  className="absolute top-1/2 -translate-y-1/2 w-[200px] sm:w-[220px] md:w-[260px] lg:w-[280px]"
+                  className="absolute top-1/2 -translate-y-1/2 w-[180px] sm:w-[220px] md:w-[260px] lg:w-[300px]"
                   style={{
                     ...style,
                     transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -136,7 +134,7 @@ export function FeatureCarousel() {
                 >
                   <div 
                     className={`
-                      flex flex-col space-y-3 
+                      flex flex-col space-y-2 
                       ${isCenter ? 'drop-shadow-2xl' : 'drop-shadow-lg'}
                     `}
                     style={{
@@ -172,17 +170,17 @@ export function FeatureCarousel() {
                     {/* Content below image - only visible on center card */}
                     <div 
                       className={`
-                        space-y-2 px-1 transition-all duration-700
+                        space-y-1.5 px-0.5 transition-all duration-700
                         ${isCenter ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
                       `}
                     >
-                      <h3 className="text-sm sm:text-base md:text-lg font-bold text-foreground leading-tight text-center px-2">
+                      <h3 className="text-xs sm:text-sm md:text-base font-bold text-foreground leading-snug text-center px-1">
                         {feature.title}
                       </h3>
 
                       <Button
-                        className="w-full bg-primary hover:opacity-90 text-black font-semibold shadow-xl hover:shadow-2xl transition-all text-sm"
-                        size="default"
+                        className="w-full bg-primary hover:opacity-90 text-black font-semibold shadow-xl hover:shadow-2xl transition-all text-xs sm:text-sm"
+                        size="sm"
                       >
                         {feature.buttonText}
                       </Button>
@@ -195,7 +193,7 @@ export function FeatureCarousel() {
         </div>
 
         {/* Navigation Dots */}
-        <div className="flex justify-center gap-2 mt-8">
+        <div className="flex justify-center gap-2 mt-4 md:mt-6">
           {features.map((_, index) => (
             <button
               key={index}
