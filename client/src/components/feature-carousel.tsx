@@ -67,13 +67,13 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative py-16 md:py-24 w-full overflow-visible px-4">
-      <div className="relative w-full max-w-5xl mx-auto">
+    <section className="relative py-12 md:py-20 w-full overflow-visible px-4">
+      <div className="relative w-full max-w-4xl mx-auto">
         {/* Curved Background Container */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <svg
-            viewBox="0 0 1000 400"
-            className="w-full h-auto max-w-4xl"
+            viewBox="0 0 900 500"
+            className="w-full h-auto"
             preserveAspectRatio="xMidYMid meet"
           >
             <defs>
@@ -92,7 +92,7 @@ export function FeatureCarousel() {
             </defs>
             {/* Main curved path */}
             <path
-              d="M 80 250 Q 500 100 920 250"
+              d="M 100 300 Q 450 150 800 300"
               fill="url(#curveGradient)"
               stroke="rgba(79, 172, 254, 0.3)"
               strokeWidth="2"
@@ -100,7 +100,7 @@ export function FeatureCarousel() {
             />
             {/* Bottom curve for depth */}
             <path
-              d="M 80 270 Q 500 120 920 270"
+              d="M 100 320 Q 450 170 800 320"
               fill="none"
               stroke="rgba(79, 172, 254, 0.15)"
               strokeWidth="1"
@@ -111,10 +111,12 @@ export function FeatureCarousel() {
 
         {/* Cards Container */}
         <div
-          className="relative w-full h-[450px] md:h-[520px]"
+          className="relative w-full"
           style={{ 
             perspective: "2500px", 
-            perspectiveOrigin: "center center"
+            perspectiveOrigin: "center center",
+            height: "auto",
+            minHeight: "500px"
           }}
         >
           <div className="relative w-full h-full">
@@ -126,7 +128,7 @@ export function FeatureCarousel() {
               return (
                 <div
                   key={feature.id}
-                  className="absolute top-1/2 -translate-y-1/2 w-[240px] sm:w-[280px] md:w-[320px]"
+                  className="absolute top-1/2 -translate-y-1/2 w-[200px] sm:w-[220px] md:w-[260px] lg:w-[280px]"
                   style={{
                     ...style,
                     transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -134,7 +136,7 @@ export function FeatureCarousel() {
                 >
                   <div 
                     className={`
-                      flex flex-col space-y-4 
+                      flex flex-col space-y-3 
                       ${isCenter ? 'drop-shadow-2xl' : 'drop-shadow-lg'}
                     `}
                     style={{
@@ -146,7 +148,7 @@ export function FeatureCarousel() {
                     {/* Image container with border and glow */}
                     <div 
                       className={`
-                        relative overflow-hidden rounded-2xl 
+                        relative overflow-hidden rounded-2xl w-full
                         ${isCenter ? 'ring-2 ring-primary/20' : ''}
                       `}
                       style={{
@@ -158,10 +160,7 @@ export function FeatureCarousel() {
                       <img
                         src={feature.image}
                         alt={feature.title}
-                        className="w-full h-auto object-cover object-center"
-                        style={{
-                          aspectRatio: '9/16',
-                        }}
+                        className="w-full h-auto object-cover"
                         loading="eager"
                       />
                       {/* Glossy overlay for premium look */}
@@ -173,17 +172,17 @@ export function FeatureCarousel() {
                     {/* Content below image - only visible on center card */}
                     <div 
                       className={`
-                        space-y-3 px-2 transition-all duration-700
+                        space-y-2 px-1 transition-all duration-700
                         ${isCenter ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
                       `}
                     >
-                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug text-center">
+                      <h3 className="text-sm sm:text-base md:text-lg font-bold text-foreground leading-tight text-center px-2">
                         {feature.title}
                       </h3>
 
                       <Button
-                        className="w-full bg-primary hover:opacity-90 text-black font-semibold shadow-xl hover:shadow-2xl transition-all"
-                        size="lg"
+                        className="w-full bg-primary hover:opacity-90 text-black font-semibold shadow-xl hover:shadow-2xl transition-all text-sm"
+                        size="default"
                       >
                         {feature.buttonText}
                       </Button>
