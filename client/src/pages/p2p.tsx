@@ -170,8 +170,6 @@ export function P2P() {
     };
     
     loadCryptoPrices();
-    fetchOffers();
-    fetchActiveTrades();
 
     // Subscribe to trade status changes
     if (user?.id) {
@@ -195,7 +193,12 @@ export function P2P() {
         channel.unsubscribe();
       };
     }
-  }, [activeTab, selectedCrypto, user?.id, cryptoPrices]);
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchOffers();
+    fetchActiveTrades();
+  }, [activeTab, selectedCrypto]);
 
   const fetchActiveTrades = async () => {
     if (!user?.id) return;
@@ -252,13 +255,25 @@ export function P2P() {
   const fetchOffers = async () => {
     setLoading(true);
     try {
-      // Fetch offers first
-      const { data: basicOffersData, error: basicError } = await supabase
+      // Build query based on filters
+      let query = supabase
         .from("p2p_offers")
         .select("*")
         .eq("crypto_symbol", selectedCrypto)
         .eq("offer_type", activeTab)
         .eq("is_active", true);
+
+      // Apply currency filter if not "any"
+      if (currency !== "USD" && currency !== "any") {
+        query = query.eq("fiat_currency", currency);
+      }
+
+      // Apply payment method filter
+      if (selectedPaymentMethod !== "All Payment Methods") {
+        query = query.contains("payment_methods", [selectedPaymentMethod]);
+      }
+
+      const { data: basicOffersData, error: basicError } = await query;
 
       if (basicError) {
         console.error("Error fetching offers:", basicError);
@@ -273,7 +288,7 @@ export function P2P() {
           basicOffersData.map(async (offer: any) => {
             const { data: userProfile } = await supabase
               .from("user_profiles")
-              .select("id, username, display_name, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
+              .select("id, username, display_name, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country, merchant_status")
               .eq("id", offer.user_id)
               .single();
 
@@ -313,6 +328,14 @@ export function P2P() {
             }
           }
 
+          // Calculate price using real crypto prices
+          const cryptoPrice = cryptoPrices[offer.crypto_symbol]?.current_price || 
+            (offer.crypto_symbol === 'BTC' ? 95000 : offer.crypto_symbol === 'ETH' ? 3500 : 1);
+          
+          const pricePerCrypto = offer.price_type === "fixed" 
+            ? offer.fixed_price 
+            : cryptoPrice;
+
           return {
             id: offer.id,
             vendor: {
@@ -325,11 +348,10 @@ export function P2P() {
                 ? `${Math.floor(user.response_time_avg / 60)} min` 
                 : "5 min",
               country: user?.country || undefined,
+              merchantStatus: user?.merchant_status || undefined,
             },
             paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
-            pricePerBTC: offer.price_type === "fixed" 
-              ? offer.fixed_price 
-              : (cryptoPrices[offer.crypto_symbol]?.current_price || (offer.crypto_symbol === 'BTC' ? 95000 : offer.crypto_symbol === 'ETH' ? 3500 : 1)),
+            pricePerBTC: pricePerCrypto,
             currency: offer.fiat_currency,
             availableRange: { 
               min: offer.min_amount, 
@@ -450,11 +472,11 @@ export function P2P() {
       );
     }
 
-    // Filter by payment method
-    if (selectedPaymentMethod !== "All Payment Methods") {
+    // Filter by amount if specified
+    if (amount && parseFloat(amount) > 0) {
+      const amountNum = parseFloat(amount);
       filtered = filtered.filter(offer => 
-        offer.paymentMethod?.toLowerCase().includes(selectedPaymentMethod.toLowerCase()) ||
-        selectedPaymentMethod.toLowerCase().includes(offer.paymentMethod?.toLowerCase())
+        offer.limits.min <= amountNum && amountNum <= offer.limits.max
       );
     }
 
@@ -498,7 +520,7 @@ export function P2P() {
     }
 
     return filtered;
-  }, [offers, selectedCountry, selectedPaymentMethod, verifiedUsersOnly, showTopRatedOnly, sortingMethod]);
+  }, [offers, selectedCountry, amount, verifiedUsersOnly, showTopRatedOnly, sortingMethod]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
