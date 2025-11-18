@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase";
 import { OfferCard, OfferCardProps } from "@/components/offer-card";
 import { Button } from "@/components/ui/button";
@@ -47,24 +47,51 @@ import {
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Separator } from "@/components/ui/separator";
 import { P2PFiltersDialog } from "@/components/p2p-filters-dialog";
-
-const cryptocurrencies = [
-  { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC, price: 123592.33 },
-  { symbol: "ETH", name: "Ethereum", iconUrl: cryptoIconUrls.ETH, price: 5789.12 },
-  { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT, price: 1.00 },
-];
+import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 
 // Helper function to get country flag emoji
 const getCountryFlag = (countryName: string | undefined | null): string => {
   if (!countryName) return '🌍';
   switch (countryName.toLowerCase()) {
     case 'united states': return '🇺🇸';
-    case 'nigeria': return '🇳🇬';
     case 'united kingdom': return '🇬🇧';
     case 'canada': return '🇨🇦';
+    case 'australia': return '🇦🇺';
+    case 'germany': return '🇩🇪';
+    case 'france': return '🇫🇷';
+    case 'spain': return '🇪🇸';
+    case 'italy': return '🇮🇹';
+    case 'netherlands': return '🇳🇱';
+    case 'switzerland': return '🇨🇭';
+    case 'sweden': return '🇸🇪';
+    case 'nigeria': return '🇳🇬';
     case 'ghana': return '🇬🇭';
     case 'kenya': return '🇰🇪';
     case 'south africa': return '🇿🇦';
+    case 'egypt': return '🇪🇬';
+    case 'morocco': return '🇲🇦';
+    case 'india': return '🇮🇳';
+    case 'china': return '🇨🇳';
+    case 'japan': return '🇯🇵';
+    case 'south korea': return '🇰🇷';
+    case 'singapore': return '🇸🇬';
+    case 'united arab emirates': return '🇦🇪';
+    case 'saudi arabia': return '🇸🇦';
+    case 'brazil': return '🇧🇷';
+    case 'mexico': return '🇲🇽';
+    case 'argentina': return '🇦🇷';
+    case 'colombia': return '🇨🇴';
+    case 'chile': return '🇨🇱';
+    case 'philippines': return '🇵🇭';
+    case 'indonesia': return '🇮🇩';
+    case 'thailand': return '🇹🇭';
+    case 'vietnam': return '🇻🇳';
+    case 'malaysia': return '🇲🇾';
+    case 'turkey': return '🇹🇷';
+    case 'poland': return '🇵🇱';
+    case 'ukraine': return '🇺🇦';
+    case 'russia': return '🇷🇺';
+    case 'new zealand': return '🇳🇿';
     default: return '🌍';
   }
 };
@@ -93,9 +120,56 @@ export function P2P() {
   const [recentlyActive, setRecentlyActive] = useState(false);
   const [acceptableOnly, setAcceptableOnly] = useState(false);
   const [rememberFilters, setRememberFilters] = useState(false);
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
   const supabase = createClient();
 
+  const cryptocurrencies = [
+    { 
+      symbol: "BTC", 
+      name: "Bitcoin", 
+      iconUrl: cryptoIconUrls.BTC, 
+      price: cryptoPrices['BTC']?.current_price || 0 
+    },
+    { 
+      symbol: "ETH", 
+      name: "Ethereum", 
+      iconUrl: cryptoIconUrls.ETH, 
+      price: cryptoPrices['ETH']?.current_price || 0 
+    },
+    { 
+      symbol: "USDT", 
+      name: "Tether", 
+      iconUrl: cryptoIconUrls.USDT, 
+      price: cryptoPrices['USDT']?.current_price || 1.00 
+    },
+  ];
+
   useEffect(() => {
+    const loadCryptoPrices = async () => {
+      try {
+        const prices = await getCryptoPrices(['BTC', 'ETH', 'USDT']);
+        if (Object.keys(prices).length > 0) {
+          setCryptoPrices(prices);
+        } else {
+          // Use fallback prices if API fails
+          setCryptoPrices({
+            'BTC': { symbol: 'BTC', name: 'Bitcoin', current_price: 95000, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
+            'ETH': { symbol: 'ETH', name: 'Ethereum', current_price: 3500, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
+            'USDT': { symbol: 'USDT', name: 'Tether', current_price: 1, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 }
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to load crypto prices, using fallback prices');
+        // Use fallback prices
+        setCryptoPrices({
+          'BTC': { symbol: 'BTC', name: 'Bitcoin', current_price: 95000, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
+          'ETH': { symbol: 'ETH', name: 'Ethereum', current_price: 3500, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
+          'USDT': { symbol: 'USDT', name: 'Tether', current_price: 1, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 }
+        });
+      }
+    };
+    
+    loadCryptoPrices();
     fetchOffers();
     fetchActiveTrades();
 
@@ -121,7 +195,7 @@ export function P2P() {
         channel.unsubscribe();
       };
     }
-  }, [activeTab, selectedCrypto, user?.id]);
+  }, [activeTab, selectedCrypto, user?.id, cryptoPrices]);
 
   const fetchActiveTrades = async () => {
     if (!user?.id) return;
@@ -253,7 +327,9 @@ export function P2P() {
               country: user?.country || undefined,
             },
             paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
-            pricePerBTC: offer.price_type === "fixed" ? offer.fixed_price : 123592.33,
+            pricePerBTC: offer.price_type === "fixed" 
+              ? offer.fixed_price 
+              : (cryptoPrices[offer.crypto_symbol]?.current_price || (offer.crypto_symbol === 'BTC' ? 95000 : offer.crypto_symbol === 'ETH' ? 3500 : 1)),
             currency: offer.fiat_currency,
             availableRange: { 
               min: offer.min_amount, 
@@ -265,7 +341,8 @@ export function P2P() {
             },
             type: offer.offer_type,
             cryptoSymbol: offer.crypto_symbol,
-            time_limit_minutes: offer.time_limit_minutes || 30
+            time_limit_minutes: offer.time_limit_minutes || 30,
+            created_at: offer.created_at
           };
         });
 
@@ -362,6 +439,66 @@ export function P2P() {
 
 
   const selectedCryptoData = cryptocurrencies.find(c => c.symbol === selectedCrypto) || cryptocurrencies[0];
+
+  const filteredAndSortedOffers = useMemo(() => {
+    let filtered = [...offers];
+
+    // Filter by country
+    if (selectedCountry !== "All countries") {
+      filtered = filtered.filter(offer => 
+        offer.vendor.country?.toLowerCase() === selectedCountry.toLowerCase()
+      );
+    }
+
+    // Filter by payment method
+    if (selectedPaymentMethod !== "All Payment Methods") {
+      filtered = filtered.filter(offer => 
+        offer.paymentMethod?.toLowerCase().includes(selectedPaymentMethod.toLowerCase()) ||
+        selectedPaymentMethod.toLowerCase().includes(offer.paymentMethod?.toLowerCase())
+      );
+    }
+
+    // Filter by verified users only
+    if (verifiedUsersOnly) {
+      filtered = filtered.filter(offer => offer.vendor.isVerified);
+    }
+
+    // Filter by top-rated traders (>20 trades)
+    if (showTopRatedOnly) {
+      filtered = filtered.filter(offer => offer.vendor.trades > 20);
+    }
+
+    // Sort offers
+    switch (sortingMethod) {
+      case "Price: Low to High":
+        filtered.sort((a, b) => a.pricePerBTC - b.pricePerBTC);
+        break;
+      case "Price: High to Low":
+        filtered.sort((a, b) => b.pricePerBTC - a.pricePerBTC);
+        break;
+      case "Most Trades":
+        filtered.sort((a, b) => b.vendor.trades - a.vendor.trades);
+        break;
+      case "Newest First":
+        filtered.sort((a, b) => {
+          const aDate = new Date(a.created_at || 0).getTime();
+          const bDate = new Date(b.created_at || 0).getTime();
+          return bDate - aDate;
+        });
+        break;
+      case "Recommended":
+      default:
+        // Sort by a combination of trades, verification, and price
+        filtered.sort((a, b) => {
+          const aScore = (a.vendor.isVerified ? 100 : 0) + a.vendor.trades;
+          const bScore = (b.vendor.isVerified ? 100 : 0) + b.vendor.trades;
+          return bScore - aScore;
+        });
+        break;
+    }
+
+    return filtered;
+  }, [offers, selectedCountry, selectedPaymentMethod, verifiedUsersOnly, showTopRatedOnly, sortingMethod]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -947,10 +1084,10 @@ export function P2P() {
           {offers.length > 0 && (
             <div className={activeTrades.length > 0 ? "space-y-4" : "mt-8 space-y-4"}>
               <h2 className="text-2xl font-bold">
-                {activeTab === "buy" ? "Buy" : "Sell"} Offers ({offers.length})
+                {activeTab === "buy" ? "Buy" : "Sell"} Offers ({filteredAndSortedOffers.length})
               </h2>
               <div className="grid gap-4">
-                {offers.map((offer) => (
+                {filteredAndSortedOffers.map((offer) => (
                   <OfferCard key={offer.id} {...offer} />
                 ))}
               </div>
@@ -1786,11 +1923,11 @@ export function P2P() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h2 className="text-2xl font-bold">
-                        {activeTab === "buy" ? "Buy" : "Sell"} Offers ({offers.length})
+                        {activeTab === "buy" ? "Buy" : "Sell"} Offers ({filteredAndSortedOffers.length})
                       </h2>
                     </div>
                     <div className="space-y-3">
-                      {offers.map((offer) => (
+                      {filteredAndSortedOffers.map((offer) => (
                         <OfferCard key={offer.id} {...offer} />
                       ))}
                     </div>
