@@ -66,13 +66,13 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative py-2 md:py-2 w-full overflow-hidden">
-      <div className="relative w-full max-w-4xl mx-auto px-4">
+    <section className="relative py-1 sm:py-1 md:py-2 lg:py-2 w-full overflow-hidden">
+      <div className="relative w-full max-w-5xl mx-auto px-4 sm:px-6">
         {/* Unified Curved Container */}
         <div className="relative">
           {/* Cards Container */}
           <div
-            className="relative w-full h-[450px] md:h-[560px]"
+            className="relative w-full h-[420px] sm:h-[440px] md:h-[480px] lg:h-[520px]"
             style={{ 
               perspective: "2000px", 
               perspectiveOrigin: "center center"
@@ -87,7 +87,7 @@ export function FeatureCarousel() {
                 return (
                   <div
                     key={feature.id}
-                    className="absolute top-1/2 md:top-[42%] -translate-y-1/2 w-[260px] sm:w-[300px] md:w-[420px]"
+                    className="absolute top-1/2 md:top-[43%] lg:top-[42%] -translate-y-1/2 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[420px]"
                     style={{
                       ...style,
                       transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
