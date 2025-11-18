@@ -36,6 +36,7 @@ export interface OfferCardProps {
   cryptoSymbol?: string;
   time_limit_minutes?: number;
   country_restrictions?: string[] | null;
+  created_at?: string;
 }
 
 const getCryptoIcon = (symbol: string) => {
