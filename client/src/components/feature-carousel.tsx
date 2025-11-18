@@ -63,11 +63,12 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative py-8 w-full overflow-hidden px-4">
+    <section className="relative py-8 w-full overflow-visible px-4">
       <div
-        className="relative w-full max-w-7xl mx-auto min-h-[500px] sm:min-h-[550px] md:min-h-[600px]"
+        className="relative w-full max-w-7xl mx-auto"
         style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
       >
+        <div className="flex justify-center items-center gap-4 md:gap-6 lg:gap-8 flex-wrap md:flex-nowrap">
         {features.map((feature, index) => {
           const style = getCardStyle(index);
           const position = (index - currentIndex + features.length) % features.length;
@@ -76,12 +77,10 @@ export function FeatureCarousel() {
           return (
             <div
               key={feature.id}
-              className="w-[260px] sm:w-[300px] md:w-[340px] lg:w-[380px]"
+              className="w-full sm:w-[45%] md:w-[30%] lg:w-[28%] max-w-[380px]"
               style={{
                 ...style,
-                position: 'absolute',
-                top: '50%',
-                transform: `${style.transform} translateY(-50%)`,
+                position: 'relative',
                 transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
             >
@@ -113,6 +112,7 @@ export function FeatureCarousel() {
             </div>
           );
         })}
+        </div>
       </div>
     </section>
   );
