@@ -63,9 +63,9 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative h-[480px] sm:h-[520px] md:h-[560px] lg:h-[600px] w-full overflow-hidden px-4">
+    <section className="relative py-8 w-full overflow-hidden px-4">
       <div
-        className="relative h-full w-full max-w-7xl mx-auto"
+        className="relative w-full max-w-7xl mx-auto min-h-[500px] sm:min-h-[550px] md:min-h-[600px]"
         style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
       >
         {features.map((feature, index) => {
@@ -76,19 +76,22 @@ export function FeatureCarousel() {
           return (
             <div
               key={feature.id}
-              className="absolute top-1/2 w-[260px] -translate-y-1/2 sm:w-[300px] md:w-[340px] lg:w-[380px]"
+              className="w-[260px] sm:w-[300px] md:w-[340px] lg:w-[380px]"
               style={{
                 ...style,
+                position: 'absolute',
+                top: '50%',
+                transform: `${style.transform} translateY(-50%)`,
                 transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
             >
               <div className="flex flex-col space-y-4">
                 {/* Image container */}
-                <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg w-full aspect-[3/4]">
+                <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg w-full">
                   <img
                     src={feature.image}
                     alt={feature.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-auto"
                     loading="eager"
                   />
                 </div>
