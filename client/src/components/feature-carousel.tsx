@@ -40,26 +40,26 @@ export function FeatureCarousel() {
     // Center card (active)
     if (position === 0) {
       return {
-        transform: "translateX(-50%) translateY(-20px) scale(1.1) rotateY(0deg) translateZ(50px)",
+        transform: "translateX(-50%) translateY(-15px) scale(1.05) rotateY(0deg) translateZ(50px)",
         opacity: 1,
         zIndex: 30,
         left: "50%",
       };
     }
 
-    // Right card
+    // Right card - positioned to show only half
     if (position === 1) {
       return {
-        transform: "translateX(-50%) translateY(10px) scale(0.85) rotateY(-12deg) translateZ(0px) translateX(220px) translateX(min(220px, 25vw))",
+        transform: "translateX(-50%) translateY(5px) scale(0.8) rotateY(-15deg) translateZ(0px) translateX(200px)",
         opacity: 1,
         zIndex: 20,
         left: "50%",
       };
     }
 
-    // Left card
+    // Left card - positioned to show only half
     return {
-      transform: "translateX(-50%) translateY(10px) scale(0.85) rotateY(12deg) translateZ(0px) translateX(-220px) translateX(max(-220px, -25vw))",
+      transform: "translateX(-50%) translateY(5px) scale(0.8) rotateY(15deg) translateZ(0px) translateX(-200px)",
       opacity: 1,
       zIndex: 10,
       left: "50%",
@@ -67,8 +67,8 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative py-8 md:py-12 w-full overflow-visible px-4">
-      <div className="relative w-full max-w-6xl mx-auto">
+    <section className="relative py-8 md:py-12 w-full overflow-hidden px-4">
+      <div className="relative w-full max-w-4xl mx-auto">
         {/* Curved Background Container */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <svg
@@ -111,7 +111,7 @@ export function FeatureCarousel() {
 
         {/* Cards Container */}
         <div
-          className="relative w-full h-[420px] sm:h-[450px] md:h-[480px]"
+          className="relative w-full h-[420px] md:h-[450px]"
           style={{ 
             perspective: "2500px", 
             perspectiveOrigin: "center center"
@@ -126,7 +126,7 @@ export function FeatureCarousel() {
               return (
                 <div
                   key={feature.id}
-                  className="absolute top-1/2 -translate-y-1/2 w-[180px] sm:w-[220px] md:w-[260px] lg:w-[300px]"
+                  className="absolute top-1/2 -translate-y-1/2 w-[220px] sm:w-[240px] md:w-[260px]"
                   style={{
                     ...style,
                     transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -139,8 +139,8 @@ export function FeatureCarousel() {
                     `}
                     style={{
                       filter: isCenter 
-                        ? 'drop-shadow(0 25px 50px rgba(0, 0, 0, 0.25))' 
-                        : 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.15))',
+                        ? 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.25))' 
+                        : 'drop-shadow(0 8px 20px rgba(0, 0, 0, 0.15))',
                     }}
                   >
                     {/* Image container with border and glow */}
@@ -170,11 +170,11 @@ export function FeatureCarousel() {
                     {/* Content below image - only visible on center card */}
                     <div 
                       className={`
-                        space-y-1.5 px-0.5 transition-all duration-700
+                        space-y-1.5 transition-all duration-700
                         ${isCenter ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
                       `}
                     >
-                      <h3 className="text-xs sm:text-sm md:text-base font-bold text-foreground leading-snug text-center px-1">
+                      <h3 className="text-xs sm:text-sm md:text-base font-bold text-foreground leading-tight text-center px-1">
                         {feature.title}
                       </h3>
 
@@ -193,7 +193,7 @@ export function FeatureCarousel() {
         </div>
 
         {/* Navigation Dots */}
-        <div className="flex justify-center gap-2 mt-4 md:mt-6">
+        <div className="flex justify-center gap-2 mt-4">
           {features.map((_, index) => (
             <button
               key={index}
