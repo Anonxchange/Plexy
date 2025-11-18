@@ -63,7 +63,7 @@ export function FeatureCarousel() {
   };
 
   return (
-    <section className="relative h-[550px] sm:h-[600px] md:h-[650px] lg:h-[680px] w-full overflow-hidden px-4">
+    <section className="relative h-[480px] sm:h-[520px] md:h-[560px] lg:h-[600px] w-full overflow-hidden px-4">
       <div
         className="relative h-full w-full max-w-7xl mx-auto"
         style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
@@ -84,11 +84,11 @@ export function FeatureCarousel() {
             >
               <div className="flex flex-col space-y-4">
                 {/* Image container */}
-                <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg w-full">
+                <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg w-full aspect-[3/4]">
                   <img
                     src={feature.image}
                     alt={feature.title}
-                    className="w-full h-[200px] sm:h-[240px] md:h-[280px] lg:h-[320px] object-cover"
+                    className="w-full h-full object-cover"
                     loading="eager"
                   />
                 </div>
