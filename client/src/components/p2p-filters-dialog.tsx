@@ -142,11 +142,43 @@ export function P2PFiltersDialog({
                   <SelectItem value="All countries">🌍 All countries</SelectItem>
                   <SelectItem value="United States">🇺🇸 United States</SelectItem>
                   <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
-                  <SelectItem value="Nigeria">🇳🇬 Nigeria</SelectItem>
                   <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
+                  <SelectItem value="Australia">🇦🇺 Australia</SelectItem>
+                  <SelectItem value="Germany">🇩🇪 Germany</SelectItem>
+                  <SelectItem value="France">🇫🇷 France</SelectItem>
+                  <SelectItem value="Spain">🇪🇸 Spain</SelectItem>
+                  <SelectItem value="Italy">🇮🇹 Italy</SelectItem>
+                  <SelectItem value="Netherlands">🇳🇱 Netherlands</SelectItem>
+                  <SelectItem value="Switzerland">🇨🇭 Switzerland</SelectItem>
+                  <SelectItem value="Sweden">🇸🇪 Sweden</SelectItem>
+                  <SelectItem value="Nigeria">🇳🇬 Nigeria</SelectItem>
                   <SelectItem value="Ghana">🇬🇭 Ghana</SelectItem>
                   <SelectItem value="Kenya">🇰🇪 Kenya</SelectItem>
                   <SelectItem value="South Africa">🇿🇦 South Africa</SelectItem>
+                  <SelectItem value="Egypt">🇪🇬 Egypt</SelectItem>
+                  <SelectItem value="Morocco">🇲🇦 Morocco</SelectItem>
+                  <SelectItem value="India">🇮🇳 India</SelectItem>
+                  <SelectItem value="China">🇨🇳 China</SelectItem>
+                  <SelectItem value="Japan">🇯🇵 Japan</SelectItem>
+                  <SelectItem value="South Korea">🇰🇷 South Korea</SelectItem>
+                  <SelectItem value="Singapore">🇸🇬 Singapore</SelectItem>
+                  <SelectItem value="United Arab Emirates">🇦🇪 United Arab Emirates</SelectItem>
+                  <SelectItem value="Saudi Arabia">🇸🇦 Saudi Arabia</SelectItem>
+                  <SelectItem value="Brazil">🇧🇷 Brazil</SelectItem>
+                  <SelectItem value="Mexico">🇲🇽 Mexico</SelectItem>
+                  <SelectItem value="Argentina">🇦🇷 Argentina</SelectItem>
+                  <SelectItem value="Colombia">🇨🇴 Colombia</SelectItem>
+                  <SelectItem value="Chile">🇨🇱 Chile</SelectItem>
+                  <SelectItem value="Philippines">🇵🇭 Philippines</SelectItem>
+                  <SelectItem value="Indonesia">🇮🇩 Indonesia</SelectItem>
+                  <SelectItem value="Thailand">🇹🇭 Thailand</SelectItem>
+                  <SelectItem value="Vietnam">🇻🇳 Vietnam</SelectItem>
+                  <SelectItem value="Malaysia">🇲🇾 Malaysia</SelectItem>
+                  <SelectItem value="Turkey">🇹🇷 Turkey</SelectItem>
+                  <SelectItem value="Poland">🇵🇱 Poland</SelectItem>
+                  <SelectItem value="Ukraine">🇺🇦 Ukraine</SelectItem>
+                  <SelectItem value="Russia">🇷🇺 Russia</SelectItem>
+                  <SelectItem value="New Zealand">🇳🇿 New Zealand</SelectItem>
                 </SelectContent>
               </Select>
             </div>
