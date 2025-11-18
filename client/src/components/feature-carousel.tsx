@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -28,7 +29,7 @@ export function FeatureCarousel() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % features.length);
-    }, 3500);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, []);
@@ -36,82 +37,177 @@ export function FeatureCarousel() {
   const getCardStyle = (index: number) => {
     const position = (index - currentIndex + features.length) % features.length;
 
+    // Center card (active)
     if (position === 0) {
       return {
-        transform: "translateX(-50%) translateY(0px) translateZ(0px) scale(1) rotateY(0deg)",
+        transform: "translateX(-50%) translateY(-20px) scale(1.1) rotateY(0deg) translateZ(50px)",
         opacity: 1,
         zIndex: 30,
         left: "50%",
       };
     }
 
+    // Right card
     if (position === 1) {
       return {
-        transform: "translateX(-50%) translateY(-30px) translateZ(-100px) scale(0.85) rotateY(-15deg) translateX(240px)",
-        opacity: 0.6,
+        transform: "translateX(-50%) translateY(10px) scale(0.85) rotateY(-12deg) translateZ(0px) translateX(280px)",
+        opacity: 1,
         zIndex: 20,
         left: "50%",
       };
     }
 
+    // Left card
     return {
-      transform: "translateX(-50%) translateY(-30px) translateZ(-100px) scale(0.85) rotateY(15deg) translateX(-240px)",
-      opacity: 0.6,
+      transform: "translateX(-50%) translateY(10px) scale(0.85) rotateY(12deg) translateZ(0px) translateX(-280px)",
+      opacity: 1,
       zIndex: 10,
       left: "50%",
     };
   };
 
   return (
-    <section className="relative py-8 w-full overflow-visible px-4">
-      <div
-        className="relative w-full max-w-7xl mx-auto"
-        style={{ perspective: "2000px", perspectiveOrigin: "center center" }}
-      >
-        <div className="flex justify-center items-center gap-4 md:gap-6 lg:gap-8 flex-nowrap">
-        {features.map((feature, index) => {
-          const style = getCardStyle(index);
-          const position = (index - currentIndex + features.length) % features.length;
-          const isCenter = position === 0;
+    <section className="relative py-16 md:py-24 w-full overflow-visible px-4">
+      <div className="relative w-full max-w-7xl mx-auto">
+        {/* Curved Background Container */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <svg
+            viewBox="0 0 1200 400"
+            className="w-full h-auto max-w-6xl"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <defs>
+              <linearGradient id="curveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(79, 172, 254, 0.1)" />
+                <stop offset="50%" stopColor="rgba(0, 242, 254, 0.15)" />
+                <stop offset="100%" stopColor="rgba(79, 172, 254, 0.1)" />
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            {/* Main curved path */}
+            <path
+              d="M 100 250 Q 600 100 1100 250"
+              fill="url(#curveGradient)"
+              stroke="rgba(79, 172, 254, 0.3)"
+              strokeWidth="2"
+              filter="url(#glow)"
+            />
+            {/* Bottom curve for depth */}
+            <path
+              d="M 100 270 Q 600 120 1100 270"
+              fill="none"
+              stroke="rgba(79, 172, 254, 0.15)"
+              strokeWidth="1"
+              strokeDasharray="10,5"
+            />
+          </svg>
+        </div>
 
-          return (
-            <div
-              key={feature.id}
-              className="w-[30%] md:w-[30%] lg:w-[28%] max-w-[380px] flex-shrink-0"
-              style={{
-                ...style,
-                position: 'relative',
-                transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
-              }}
-            >
-              <div className="flex flex-col space-y-4">
-                {/* Image container */}
-                <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg w-full">
-                  <img
-                    src={feature.image}
-                    alt={feature.title}
-                    className="w-full h-auto"
-                    loading="eager"
-                  />
-                </div>
+        {/* Cards Container */}
+        <div
+          className="relative w-full h-[500px] md:h-[600px]"
+          style={{ 
+            perspective: "2500px", 
+            perspectiveOrigin: "center center"
+          }}
+        >
+          <div className="relative w-full h-full">
+            {features.map((feature, index) => {
+              const style = getCardStyle(index);
+              const position = (index - currentIndex + features.length) % features.length;
+              const isCenter = position === 0;
 
-                {/* Content below image - only visible on center card */}
-                <div className={`space-y-3 px-2 transition-opacity duration-300 ${isCenter ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug text-center">
-                    {feature.title}
-                  </h3>
-
-                  <Button
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                    size="default"
+              return (
+                <div
+                  key={feature.id}
+                  className="absolute top-1/2 -translate-y-1/2 w-[280px] sm:w-[320px] md:w-[360px]"
+                  style={{
+                    ...style,
+                    transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                  }}
+                >
+                  <div 
+                    className={`
+                      flex flex-col space-y-4 
+                      ${isCenter ? 'drop-shadow-2xl' : 'drop-shadow-lg'}
+                    `}
+                    style={{
+                      filter: isCenter 
+                        ? 'drop-shadow(0 25px 50px rgba(0, 0, 0, 0.25))' 
+                        : 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.15))',
+                    }}
                   >
-                    {feature.buttonText}
-                  </Button>
+                    {/* Image container with border and glow */}
+                    <div 
+                      className={`
+                        relative overflow-hidden rounded-2xl 
+                        ${isCenter ? 'ring-2 ring-primary/20' : ''}
+                      `}
+                      style={{
+                        boxShadow: isCenter 
+                          ? '0 0 40px rgba(79, 172, 254, 0.3), 0 20px 60px rgba(0, 0, 0, 0.3)' 
+                          : '0 10px 30px rgba(0, 0, 0, 0.2)',
+                      }}
+                    >
+                      <img
+                        src={feature.image}
+                        alt={feature.title}
+                        className="w-full h-auto object-cover object-center"
+                        style={{
+                          aspectRatio: '9/16',
+                        }}
+                        loading="eager"
+                      />
+                      {/* Glossy overlay for premium look */}
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"
+                      />
+                    </div>
+
+                    {/* Content below image - only visible on center card */}
+                    <div 
+                      className={`
+                        space-y-3 px-2 transition-all duration-700
+                        ${isCenter ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
+                      `}
+                    >
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug text-center">
+                        {feature.title}
+                      </h3>
+
+                      <Button
+                        className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-500/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                        size="default"
+                      >
+                        {feature.buttonText}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Navigation Dots */}
+        <div className="flex justify-center gap-2 mt-8">
+          {features.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`
+                h-2 rounded-full transition-all duration-300
+                ${currentIndex === index ? 'w-8 bg-primary' : 'w-2 bg-primary/30 hover:bg-primary/50'}
+              `}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
       </div>
     </section>
