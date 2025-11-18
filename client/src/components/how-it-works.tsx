@@ -22,10 +22,10 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="pt-20 lg:pt-28 pb-0 bg-background" id="how-it-works">
+    <section className="pt-16 lg:pt-20 pb-0 bg-background" id="how-it-works">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent"></div>
       <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
-        <div className="text-center space-y-6 mb-20">
+        <div className="text-center space-y-6 mb-12">
           <Badge className="text-sm px-4 py-2">Simple & Secure</Badge>
           <h2 className="text-4xl lg:text-5xl font-bold text-foreground">How It Works</h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
