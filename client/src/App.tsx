@@ -76,6 +76,7 @@ import AMLPolicy from "@/pages/aml-policy";
 import RestrictedCountries from "@/pages/restricted-countries";
 import VIPTerms from "@/pages/vip-terms";
 import VendorReminder from "@/pages/vendor-reminder";
+import SubmitIdea from "@/pages/submit-idea";
 
 function Router() {
   return (
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/about" component={About} />
       <Route path="/markets" component={MarketsPage} />
+      <Route path="/submit-idea" component={SubmitIdea} />
       <Route path="/buy" component={Buy} />
       <Route path="/p2p" component={P2P} />
       <Route path="/spot" component={Spot} />
