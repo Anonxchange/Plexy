@@ -706,12 +706,12 @@ export default function Wallet() {
 
                 <div className="mb-2">
                   <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
-                    {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
+                    {balanceVisible ? `${totalBalance.toFixed(8)} ${preferredCurrency}` : "••••••"}
                   </div>
                   {balanceVisible && (
                     <div className="flex items-center gap-2 text-sm">
                       <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
+                        {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(8)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
                       </span>
                     </div>
                   )}
@@ -824,7 +824,7 @@ export default function Wallet() {
                             </div>
                             <div className="text-right">
                               <div className="font-medium text-sm sm:text-base">
-                                {balanceVisible ? asset.balance.toFixed(7) : "••••••"}
+                                {balanceVisible ? asset.balance.toFixed(8) : "••••••"}
                               </div>
                               <div className="text-xs sm:text-sm text-muted-foreground">
                                 {balanceVisible ? `≈ ${asset.usdValue.toFixed(2)} USD` : "••••••"}
