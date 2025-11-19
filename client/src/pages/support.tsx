@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { FloatingHelpButton } from "@/components/floating-help-button";
 import { Link } from "wouter";
 
 export default function Support() {
@@ -243,6 +244,9 @@ export default function Support() {
       </section>
 
       <PexlyFooter />
+      
+      {/* Floating Help Button */}
+      <FloatingHelpButton />
     </div>
   );
 }
