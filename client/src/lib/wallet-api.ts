@@ -177,5 +177,13 @@ export async function getWalletTransactions(
     .limit(limit);
 
   if (error) throw error;
-  return data || [];
+  
+  return (data || []).map(tx => ({
+    ...tx,
+    amount: typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount,
+    fee: typeof tx.fee === 'string' ? parseFloat(tx.fee) : tx.fee,
+    confirmations: tx.confirmations !== null && tx.confirmations !== undefined
+      ? (typeof tx.confirmations === 'string' ? parseInt(tx.confirmations, 10) : tx.confirmations)
+      : null,
+  }));
 }
