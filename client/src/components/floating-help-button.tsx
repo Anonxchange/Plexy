@@ -24,17 +24,14 @@ export function FloatingHelpButton({ onClick }: FloatingHelpButtonProps) {
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 bg-lime-400 hover:bg-lime-500 text-black font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out group"
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground border border-primary-border rounded-full shadow-md hover:shadow-lg transition-all duration-200 ease-in-out hover-elevate active-elevate-2"
       style={{
-        borderRadius: "50px",
-        transform: isHovered ? "scale(1.05)" : "scale(1)",
+        transform: isHovered ? "scale(1.02)" : "scale(1)",
       }}
       aria-label="Open help chat"
     >
-      <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-        <HelpCircle className="w-5 h-5 text-black" strokeWidth={2.5} />
-      </div>
-      <span className="text-lg font-bold">Help</span>
+      <HelpCircle className="w-4 h-4" strokeWidth={2.5} />
+      <span className="text-sm font-medium">Help</span>
     </button>
   );
 }
