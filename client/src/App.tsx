@@ -155,7 +155,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/affiliate", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder"].includes(location) || location.startsWith("/trade/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/affiliate", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea"].includes(location) || location.startsWith("/trade/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email"].includes(location);
 
   return (
