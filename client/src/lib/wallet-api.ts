@@ -25,6 +25,7 @@ export interface WalletTransaction {
   to_address: string | null;
   reference_id: string | null;
   notes: string | null;
+  confirmations: number | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -39,7 +40,12 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     .order('crypto_symbol', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  
+  return (data || []).map(wallet => ({
+    ...wallet,
+    balance: typeof wallet.balance === 'string' ? parseFloat(wallet.balance) : wallet.balance,
+    locked_balance: typeof wallet.locked_balance === 'string' ? parseFloat(wallet.locked_balance) : wallet.locked_balance,
+  }));
 }
 
 export async function getWalletBalance(userId: string, cryptoSymbol: string): Promise<Wallet | null> {
@@ -56,7 +62,14 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
     if (error.code === 'PGRST116') return null;
     throw error;
   }
-  return data;
+  
+  if (!data) return null;
+  
+  return {
+    ...data,
+    balance: typeof data.balance === 'string' ? parseFloat(data.balance) : data.balance,
+    locked_balance: typeof data.locked_balance === 'string' ? parseFloat(data.locked_balance) : data.locked_balance,
+  };
 }
 
 export async function sendCrypto(
