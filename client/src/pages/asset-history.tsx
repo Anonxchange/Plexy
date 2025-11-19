@@ -72,7 +72,15 @@ export default function AssetHistory() {
         console.error("Error loading transactions:", error);
         setTransactions([]);
       } else {
-        setTransactions(data || []);
+        const parsedData = (data || []).map(tx => ({
+          ...tx,
+          amount: typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount,
+          fee: typeof tx.fee === 'string' ? parseFloat(tx.fee) : tx.fee,
+          confirmations: tx.confirmations !== null && tx.confirmations !== undefined
+            ? (typeof tx.confirmations === 'string' ? parseInt(tx.confirmations, 10) : tx.confirmations)
+            : null,
+        }));
+        setTransactions(parsedData);
       }
     } catch (error) {
       console.error("Error loading transactions:", error);
