@@ -69,11 +69,15 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
   const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
   
   // Get network-specific symbol for fee calculation
-  const networkSpecificSymbol = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+  const networkSpecificSymbol = selectedCrypto && selectedNetwork 
+    ? getNetworkSpecificSymbol(selectedCrypto, selectedNetwork)
+    : selectedCrypto;
   
-  // Use the fee system to calculate fees
-  const { data: feeData, isLoading: feeLoading } = useSendFee(
-    selectedNetwork ? networkSpecificSymbol : selectedCrypto,
+  // Use the fee system to calculate fees - only when we have all required data
+  const shouldFetchFee = !!(selectedCrypto && selectedNetwork && amount && parseFloat(amount) > 0);
+  
+  const { data: feeData, isLoading: feeLoading, error: feeError } = useSendFee(
+    networkSpecificSymbol || '',
     parseFloat(amount) || 0,
     false // assuming external send, set to true for internal transfers
   );
@@ -338,7 +342,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
             </div>
 
             {/* Fee Breakdown */}
-            {amount && parseFloat(amount) > 0 && selectedCrypto && (
+            {amount && parseFloat(amount) > 0 && selectedCrypto && selectedNetwork && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
@@ -367,9 +371,13 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                       <span className="font-semibold">{total.toFixed(8)} {selectedCrypto}</span>
                     </div>
                   </>
+                ) : feeError ? (
+                  <div className="flex justify-between">
+                    <span className="text-destructive text-xs">Error calculating fee</span>
+                  </div>
                 ) : (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground text-xs">Fee calculation unavailable</span>
+                    <span className="text-muted-foreground text-xs">Waiting for fee data...</span>
                   </div>
                 )}
               </div>
