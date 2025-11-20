@@ -46,9 +46,12 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
 
   const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
   
+  // Get network-specific symbol for fee calculation
+  const networkSpecificSymbol = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+  
   // Use the fee system to calculate fees
   const { data: feeData, isLoading: feeLoading } = useSendFee(
-    selectedCrypto,
+    networkSpecificSymbol,
     parseFloat(amount) || 0,
     false // assuming external send, set to true for internal transfers
   );
@@ -66,13 +69,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
   };
 
-  const handleSelectCrypto = (symbol: string) => {
-    setSelectedCrypto(symbol);
-    const networks = networkMap[symbol] || [];
-    setSelectedNetwork(networks[0] || "");
-    setStep("details");
-  };
-
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
     // For USDT and USDC, append network suffix based on selection
     if (crypto === 'USDT' || crypto === 'USDC') {
@@ -83,6 +79,13 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     }
     // For native coins, return as-is
     return crypto;
+  };
+
+  const handleSelectCrypto = (symbol: string) => {
+    setSelectedCrypto(symbol);
+    const networks = networkMap[symbol] || [];
+    setSelectedNetwork(networks[0] || "");
+    setStep("details");
   };
 
   const handleSend = async () => {
