@@ -44,21 +44,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState(false);
 
-  const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
-  
-  // Get network-specific symbol for fee calculation
-  const networkSpecificSymbol = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-  
-  // Use the fee system to calculate fees
-  const { data: feeData, isLoading: feeLoading } = useSendFee(
-    networkSpecificSymbol,
-    parseFloat(amount) || 0,
-    false // assuming external send, set to true for internal transfers
-  );
-  
-  const fee = feeData?.totalFee || 0;
-  const total = parseFloat(amount) + fee || 0;
-
   const networkMap: Record<string, string[]> = {
     BTC: ["Bitcoin (SegWit)"],
     ETH: ["Ethereum (ERC-20)"],
@@ -80,6 +65,21 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     // For native coins, return as-is
     return crypto;
   };
+
+  const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
+  
+  // Get network-specific symbol for fee calculation
+  const networkSpecificSymbol = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+  
+  // Use the fee system to calculate fees
+  const { data: feeData, isLoading: feeLoading } = useSendFee(
+    networkSpecificSymbol,
+    parseFloat(amount) || 0,
+    false // assuming external send, set to true for internal transfers
+  );
+  
+  const fee = feeData?.totalFee || 0;
+  const total = parseFloat(amount) + fee || 0;
 
   const handleSelectCrypto = (symbol: string) => {
     setSelectedCrypto(symbol);
