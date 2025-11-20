@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import { sendCrypto } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSendFee } from "@/hooks/use-fees";
+import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 
 interface SendCryptoDialogProps {
   open: boolean;
@@ -43,6 +44,9 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("NGN");
+  const [cryptoAmount, setCryptoAmount] = useState<string>("");
+  const [cryptoPrice, setCryptoPrice] = useState<number>(0);
 
   const networkMap: Record<string, string[]> = {
     BTC: ["Bitcoin (SegWit)"],
@@ -53,6 +57,44 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
     USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
   };
+
+  // Fetch crypto price when crypto is selected
+  useEffect(() => {
+    const fetchPrice = async () => {
+      if (!selectedCrypto) return;
+      
+      try {
+        const prices = await getCryptoPrices([selectedCrypto]);
+        if (prices[selectedCrypto]) {
+          const priceInSelectedCurrency = selectedCurrency === "NGN"
+            ? await convertCurrency(prices[selectedCrypto].current_price, "NGN")
+            : prices[selectedCrypto].current_price;
+          setCryptoPrice(priceInSelectedCurrency);
+        }
+      } catch (error) {
+        console.error("Error fetching crypto price:", error);
+      }
+    };
+
+    fetchPrice();
+  }, [selectedCrypto, selectedCurrency]);
+
+  // Convert fiat amount to crypto amount
+  useEffect(() => {
+    if (!amount || !cryptoPrice || cryptoPrice === 0) {
+      setCryptoAmount("");
+      return;
+    }
+
+    const fiatAmount = parseFloat(amount);
+    if (isNaN(fiatAmount)) {
+      setCryptoAmount("");
+      return;
+    }
+
+    const calculatedCryptoAmount = fiatAmount / cryptoPrice;
+    setCryptoAmount(calculatedCryptoAmount.toFixed(8));
+  }, [amount, cryptoPrice]);
 
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
     // For USDT and USDC, append network suffix based on selection
@@ -73,17 +115,17 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     ? getNetworkSpecificSymbol(selectedCrypto, selectedNetwork)
     : selectedCrypto;
   
-  // Use the fee system to calculate fees - only when we have all required data
-  const shouldFetchFee = !!(selectedCrypto && selectedNetwork && amount && parseFloat(amount) > 0);
+  // Use crypto amount for fee calculation, not fiat amount
+  const cryptoAmountForFee = parseFloat(cryptoAmount) || 0;
   
   const { data: feeData, isLoading: feeLoading, error: feeError } = useSendFee(
     networkSpecificSymbol || '',
-    parseFloat(amount) || 0,
+    cryptoAmountForFee,
     false // assuming external send, set to true for internal transfers
   );
   
   const fee = feeData?.totalFee || 0;
-  const total = parseFloat(amount) + fee || 0;
+  const total = cryptoAmountForFee + fee || 0;
 
   const handleSelectCrypto = (symbol: string) => {
     setSelectedCrypto(symbol);
@@ -94,13 +136,13 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
 
   const handleSend = async () => {
     if (!user) return;
-    if (!selectedCrypto || !toAddress || !amount) {
+    if (!selectedCrypto || !toAddress || !amount || !cryptoAmount) {
       setError("Please fill in all required fields");
       return;
     }
 
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
+    const cryptoAmountNum = parseFloat(cryptoAmount);
+    if (isNaN(cryptoAmountNum) || cryptoAmountNum <= 0) {
       setError("Please enter a valid amount");
       return;
     }
@@ -115,7 +157,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
 
     try {
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-      await sendCrypto(user.id, symbolToUse, toAddress, amountNum, notes);
+      await sendCrypto(user.id, symbolToUse, toAddress, cryptoAmountNum, notes);
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -144,8 +186,11 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     setSelectedCrypto("");
     setToAddress("");
     setAmount("");
+    setCryptoAmount("");
     setNotes("");
     setSelectedNetwork("");
+    setSelectedCurrency("NGN");
+    setCryptoPrice(0);
     setError("");
     setSuccess(false);
   };
@@ -296,7 +341,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-sm font-medium">Enter amount in</Label>
-                <Select defaultValue="NGN">
+                <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
                   <SelectTrigger className="w-24 h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -309,22 +354,33 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
               <div className="text-center py-4">
                 <Input
                   type="number"
-                  step="0.00000001"
+                  step="0.01"
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="text-4xl font-bold text-center border-0 bg-transparent h-auto p-0"
                 />
-                {selectedWallet && (
+                {cryptoAmount && (
                   <p className="text-sm text-muted-foreground mt-2">
+                    ≈ {cryptoAmount} {selectedCrypto}
+                  </p>
+                )}
+                {selectedWallet && (
+                  <p className="text-sm text-muted-foreground mt-1">
                     Available: {selectedWallet.balance.toFixed(8)} {selectedCrypto}
                   </p>
                 )}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => selectedWallet && setAmount(selectedWallet.balance.toString())}
+                  onClick={() => {
+                    if (selectedWallet && cryptoPrice) {
+                      const maxFiatAmount = selectedWallet.balance * cryptoPrice;
+                      setAmount(maxFiatAmount.toFixed(2));
+                    }
+                  }}
                   className="mt-2"
+                  disabled={!cryptoPrice}
                 >
                   Max
                 </Button>
@@ -342,15 +398,16 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
             </div>
 
             {/* Fee Breakdown */}
-            {amount && parseFloat(amount) > 0 && selectedCrypto && selectedNetwork && (
+            {cryptoAmount && parseFloat(cryptoAmount) > 0 && selectedCrypto && selectedNetwork && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">{parseFloat(amount).toFixed(8)} {selectedCrypto}</span>
+                  <span className="font-medium">{parseFloat(cryptoAmount).toFixed(8)} {selectedCrypto}</span>
                 </div>
                 {feeLoading ? (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Calculating fees...</span>
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   </div>
                 ) : feeData ? (
                   <>
@@ -373,11 +430,11 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                   </>
                 ) : feeError ? (
                   <div className="flex justify-between">
-                    <span className="text-destructive text-xs">Error calculating fee</span>
+                    <span className="text-destructive text-xs">Error calculating fee: {feeError.message}</span>
                   </div>
                 ) : (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground text-xs">Waiting for fee data...</span>
+                    <span className="text-muted-foreground text-xs">Enter an amount to see fees</span>
                   </div>
                 )}
               </div>
