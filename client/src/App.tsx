@@ -21,6 +21,7 @@ import { P2P } from "@/pages/p2p";
 import { Swap } from "@/pages/swap";
 import { Profile } from "@/pages/profile";
 import { Shop } from "@/pages/shop";
+import { ShopPost } from "@/pages/shop-post";
 import { CreateOffer } from "@/pages/create-offer";
 import { CreateOfferAdvanced } from "@/pages/create-offer-advanced";
 import { MyOffers } from "@/pages/my-offers";
@@ -121,6 +122,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/profile" component={Profile} />
       <Route path="/shop" component={Shop} />
+      <Route path="/shop-post" component={ShopPost} />
       <Route path="/create-offer" component={CreateOffer} />
       <Route path="/edit-offer/:offerId" component={CreateOffer} />
       <Route path="/create-offer-advanced" component={CreateOfferAdvanced} />
@@ -155,7 +157,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/affiliate", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea"].includes(location) || location.startsWith("/trade/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/dashboard", "/profile", "/shop", "/shop-post", "/create-offer", "/my-offers", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/affiliate", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea"].includes(location) || location.startsWith("/trade/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email"].includes(location);
 
   return (
