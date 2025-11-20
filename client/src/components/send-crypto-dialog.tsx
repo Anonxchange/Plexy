@@ -45,7 +45,9 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<string>("NGN");
+  const [amountInputMode, setAmountInputMode] = useState<"fiat" | "crypto">("fiat");
   const [cryptoAmount, setCryptoAmount] = useState<string>("");
+  const [fiatAmount, setFiatAmount] = useState<string>("");
   const [cryptoPrice, setCryptoPrice] = useState<number>(0);
 
   const networkMap: Record<string, string[]> = {
@@ -79,22 +81,30 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     fetchPrice();
   }, [selectedCrypto, selectedCurrency]);
 
-  // Convert fiat amount to crypto amount
+  // Convert between fiat and crypto amounts
   useEffect(() => {
-    if (!amount || !cryptoPrice || cryptoPrice === 0) {
-      setCryptoAmount("");
+    if (!cryptoPrice || cryptoPrice === 0) {
       return;
     }
 
-    const fiatAmount = parseFloat(amount);
-    if (isNaN(fiatAmount)) {
-      setCryptoAmount("");
-      return;
+    if (amountInputMode === "fiat") {
+      const fiatValue = parseFloat(amount);
+      if (isNaN(fiatValue) || !amount) {
+        setCryptoAmount("");
+        return;
+      }
+      const calculatedCryptoAmount = fiatValue / cryptoPrice;
+      setCryptoAmount(calculatedCryptoAmount.toFixed(8));
+    } else {
+      const cryptoValue = parseFloat(amount);
+      if (isNaN(cryptoValue) || !amount) {
+        setFiatAmount("");
+        return;
+      }
+      const calculatedFiatAmount = cryptoValue * cryptoPrice;
+      setFiatAmount(calculatedFiatAmount.toFixed(2));
     }
-
-    const calculatedCryptoAmount = fiatAmount / cryptoPrice;
-    setCryptoAmount(calculatedCryptoAmount.toFixed(8));
-  }, [amount, cryptoPrice]);
+  }, [amount, cryptoPrice, amountInputMode]);
 
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
     // For USDT and USDC, append network suffix based on selection
@@ -115,8 +125,10 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     ? getNetworkSpecificSymbol(selectedCrypto, selectedNetwork)
     : selectedCrypto;
   
-  // Use crypto amount for fee calculation, not fiat amount
-  const cryptoAmountForFee = parseFloat(cryptoAmount) || 0;
+  // Use crypto amount for fee calculation
+  const cryptoAmountForFee = amountInputMode === "crypto" 
+    ? parseFloat(amount) || 0 
+    : parseFloat(cryptoAmount) || 0;
   
   const { data: feeData, isLoading: feeLoading, error: feeError } = useSendFee(
     networkSpecificSymbol || '',
@@ -136,12 +148,15 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
 
   const handleSend = async () => {
     if (!user) return;
-    if (!selectedCrypto || !toAddress || !amount || !cryptoAmount) {
+    if (!selectedCrypto || !toAddress || !amount) {
       setError("Please fill in all required fields");
       return;
     }
 
-    const cryptoAmountNum = parseFloat(cryptoAmount);
+    const cryptoAmountNum = amountInputMode === "crypto" 
+      ? parseFloat(amount) 
+      : parseFloat(cryptoAmount);
+      
     if (isNaN(cryptoAmountNum) || cryptoAmountNum <= 0) {
       setError("Please enter a valid amount");
       return;
@@ -187,9 +202,11 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     setToAddress("");
     setAmount("");
     setCryptoAmount("");
+    setFiatAmount("");
     setNotes("");
     setSelectedNetwork("");
     setSelectedCurrency("NGN");
+    setAmountInputMode("fiat");
     setCryptoPrice(0);
     setError("");
     setSuccess(false);
@@ -341,28 +358,52 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-sm font-medium">Enter amount in</Label>
-                <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                  <SelectTrigger className="w-24 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NGN">NGN</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  {amountInputMode === "fiat" ? (
+                    <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+                      <SelectTrigger className="w-24 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NGN">NGN</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="w-24 h-8 flex items-center justify-center text-xs font-medium border rounded-md px-3">
+                      {selectedCrypto}
+                    </div>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setAmountInputMode(amountInputMode === "fiat" ? "crypto" : "fiat");
+                      setAmount("");
+                    }}
+                    className="h-8 text-xs"
+                  >
+                    Switch
+                  </Button>
+                </div>
               </div>
               <div className="text-center py-4">
                 <Input
                   type="number"
-                  step="0.01"
+                  step={amountInputMode === "crypto" ? "0.00000001" : "0.01"}
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="text-4xl font-bold text-center border-0 bg-transparent h-auto p-0"
                 />
-                {cryptoAmount && (
+                {amountInputMode === "fiat" && cryptoAmount && (
                   <p className="text-sm text-muted-foreground mt-2">
                     ≈ {cryptoAmount} {selectedCrypto}
+                  </p>
+                )}
+                {amountInputMode === "crypto" && fiatAmount && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    ≈ {selectedCurrency} {fiatAmount}
                   </p>
                 )}
                 {selectedWallet && (
@@ -374,13 +415,17 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    if (selectedWallet && cryptoPrice) {
-                      const maxFiatAmount = selectedWallet.balance * cryptoPrice;
-                      setAmount(maxFiatAmount.toFixed(2));
+                    if (selectedWallet) {
+                      if (amountInputMode === "fiat" && cryptoPrice) {
+                        const maxFiatAmount = selectedWallet.balance * cryptoPrice;
+                        setAmount(maxFiatAmount.toFixed(2));
+                      } else {
+                        setAmount(selectedWallet.balance.toFixed(8));
+                      }
                     }
                   }}
                   className="mt-2"
-                  disabled={!cryptoPrice}
+                  disabled={amountInputMode === "fiat" && !cryptoPrice}
                 >
                   Max
                 </Button>
