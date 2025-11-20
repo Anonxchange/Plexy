@@ -136,8 +136,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     false // assuming external send, set to true for internal transfers
   );
   
-  const fee = feeData?.totalFee || 0;
-  const total = cryptoAmountForFee + fee || 0;
+  const networkFee = feeData?.networkFee || 0;
+  const total = (cryptoAmountForFee || 0) + (networkFee || 0);
 
   const handleSelectCrypto = (symbol: string) => {
     setSelectedCrypto(symbol);
@@ -443,11 +443,11 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
             </div>
 
             {/* Fee Breakdown */}
-            {cryptoAmount && parseFloat(cryptoAmount) > 0 && selectedCrypto && selectedNetwork && (
+            {cryptoAmountForFee > 0 && selectedCrypto && selectedNetwork && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">{parseFloat(cryptoAmount).toFixed(8)} {selectedCrypto}</span>
+                  <span className="font-medium">{cryptoAmountForFee.toFixed(8)} {selectedCrypto}</span>
                 </div>
                 {feeLoading ? (
                   <div className="flex justify-between">
@@ -456,12 +456,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                   </div>
                 ) : feeData ? (
                   <>
-                    {feeData.platformFee > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Platform Fee</span>
-                        <span>{feeData.platformFee.toFixed(8)} {selectedCrypto}</span>
-                      </div>
-                    )}
                     {feeData.networkFee > 0 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Network Fee</span>
