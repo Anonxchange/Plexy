@@ -38,6 +38,7 @@ import { createClient } from "@/lib/supabase";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { Sparkline } from "@/components/ui/sparkline";
 import { useToast } from "@/hooks/use-toast";
+import { useWalletMonitoring } from "@/hooks/use-wallet-monitoring";
 
 const cryptoAssets = [
   { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.BTC, color: "text-orange-500", avgCost: 0 },
@@ -208,6 +209,8 @@ export default function Wallet() {
   const [lifetimeSendVolume, setLifetimeSendVolume] = useState<number>(0);
   const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
   const { toast } = useToast();
+
+  useWalletMonitoring(['BTC', 'ETH', 'SOL', 'BNB', 'TRX', 'USDC', 'USDT'], !!user);
 
   // Check authentication only once on mount - wait for loading to complete
   useEffect(() => {
