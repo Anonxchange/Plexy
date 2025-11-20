@@ -477,7 +477,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
                 </div>
 
                 <div className="space-y-1 text-xs text-muted-foreground mt-2">
-                  <p><strong>Minimum deposit:</strong> {selectedCrypto === 'BTC' ? '0.0001 BTC' : selectedCrypto === 'ETH' ? '0.001 ETH' : '1 ' + selectedCrypto}</p>
+                  <p><strong>Minimum deposit:</strong> {selectedCrypto === 'BTC' ? '0.00001 BTC' : selectedCrypto === 'ETH' ? '0.001 ETH' : '1 ' + selectedCrypto}</p>
                   <p><strong>Confirmations required:</strong> {selectedCrypto === 'BTC' ? '3' : '12'} network confirmations</p>
                 </div>
                   </div>
