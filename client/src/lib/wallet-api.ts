@@ -81,55 +81,48 @@ export async function sendCrypto(
 ): Promise<WalletTransaction> {
   const supabase = createClient();
   
-  const wallet = await getWalletBalance(userId, cryptoSymbol);
-  if (!wallet) throw new Error('Wallet not found');
-  if (wallet.balance < amount) throw new Error('Insufficient balance');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
 
-  const fee = amount * 0.001;
-  const totalAmount = amount + fee;
-
-  if (wallet.balance < totalAmount) throw new Error('Insufficient balance for transaction + fee');
-
-  const { data: transaction, error: txError } = await supabase
-    .from('wallet_transactions')
-    .insert({
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-withdrawal`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
       user_id: userId,
-      wallet_id: wallet.id,
-      type: 'withdrawal',
       crypto_symbol: cryptoSymbol,
-      amount: -amount,
-      fee: fee,
-      status: 'pending',
+      amount: amount,
       to_address: toAddress,
-      notes: notes || null
-    })
-    .select()
-    .single();
+    }),
+  });
 
-  if (txError) throw txError;
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to process withdrawal');
+  }
 
-  const { error: updateError } = await supabase
-    .from('wallets')
-    .update({ 
-      balance: wallet.balance - totalAmount,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', wallet.id);
-
-  if (updateError) throw updateError;
-
-  setTimeout(async () => {
-    await supabase
-      .from('wallet_transactions')
-      .update({ 
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        tx_hash: `0x${Math.random().toString(16).substr(2, 64)}`
-      })
-      .eq('id', transaction.id);
-  }, 2000);
-
-  return transaction;
+  const result = await response.json();
+  
+  return {
+    id: result.transaction.id,
+    user_id: userId,
+    wallet_id: result.transaction.wallet_id,
+    type: 'withdrawal',
+    crypto_symbol: cryptoSymbol,
+    amount: -amount,
+    fee: result.transaction.fee,
+    status: result.transaction.status,
+    tx_hash: result.tx_hash || null,
+    from_address: null,
+    to_address: toAddress,
+    reference_id: null,
+    notes: notes || null,
+    confirmations: 0,
+    created_at: new Date().toISOString(),
+    completed_at: null,
+  };
 }
 
 export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
@@ -186,4 +179,114 @@ export async function getWalletTransactions(
       ? (typeof tx.confirmations === 'string' ? parseInt(tx.confirmations, 10) : tx.confirmations)
       : null,
   }));
+}
+
+export async function monitorDeposits(userId: string, cryptoSymbol: string): Promise<{
+  detected: boolean;
+  transactions?: any[];
+  message?: string;
+}> {
+  const supabase = createClient();
+  
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const wallet = await getWalletBalance(userId, cryptoSymbol);
+  if (!wallet?.deposit_address) {
+    throw new Error('No deposit address found. Please generate a deposit address first.');
+  }
+
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monitor-deposits`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      user_id: userId,
+      crypto_symbol: cryptoSymbol,
+      deposit_address: wallet.deposit_address,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to monitor deposits');
+  }
+
+  return await response.json();
+}
+
+export async function monitorWithdrawals(userId: string): Promise<{
+  monitored: number;
+  updated: any[];
+  message?: string;
+}> {
+  const supabase = createClient();
+  
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monitor-withdrawals`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      user_id: userId,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to monitor withdrawals');
+  }
+
+  return await response.json();
+}
+
+export function startDepositMonitoring(
+  userId: string,
+  cryptoSymbol: string,
+  onDeposit: (transactions: any[]) => void,
+  intervalMs: number = 30000
+): () => void {
+  const checkDeposits = async () => {
+    try {
+      const result = await monitorDeposits(userId, cryptoSymbol);
+      if (result.detected && result.transactions && result.transactions.length > 0) {
+        onDeposit(result.transactions);
+      }
+    } catch (error) {
+      console.error('Deposit monitoring error:', error);
+    }
+  };
+
+  const intervalId = setInterval(checkDeposits, intervalMs);
+  checkDeposits();
+
+  return () => clearInterval(intervalId);
+}
+
+export function startWithdrawalMonitoring(
+  userId: string,
+  onUpdate: (transactions: any[]) => void,
+  intervalMs: number = 30000
+): () => void {
+  const checkWithdrawals = async () => {
+    try {
+      const result = await monitorWithdrawals(userId);
+      if (result.updated && result.updated.length > 0) {
+        onUpdate(result.updated);
+      }
+    } catch (error) {
+      console.error('Withdrawal monitoring error:', error);
+    }
+  };
+
+  const intervalId = setInterval(checkWithdrawals, intervalMs);
+  checkWithdrawals();
+
+  return () => clearInterval(intervalId);
 }
