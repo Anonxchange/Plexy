@@ -22,9 +22,12 @@ const RPC_ENDPOINTS = {
   ],
   SOL: [
     'https://api.mainnet-beta.solana.com',
-    'https://solana.public-rpc.com',
-    'https://rpc.ankr.com/solana',
-    'https://solana-mainnet.rpc.extrnode.com'
+    'https://solana.drpc.org',
+    'https://solana.api.onfinality.io/public',
+    'https://solana.lavenderfive.com',
+    'https://public.rpc.solanavibestation.com',
+    'https://solana-rpc.publicnode.com',
+    'https://rpc.ankr.com/solana'
   ],
   TRX: [
     'https://apilist.tronscanapi.com',
@@ -735,4 +738,3 @@ Deno.serve(async (req) => {
       }
     )
   }
-})
