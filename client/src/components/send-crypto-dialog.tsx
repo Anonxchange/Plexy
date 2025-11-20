@@ -73,7 +73,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
   
   // Use the fee system to calculate fees
   const { data: feeData, isLoading: feeLoading } = useSendFee(
-    networkSpecificSymbol,
+    selectedNetwork ? networkSpecificSymbol : selectedCrypto,
     parseFloat(amount) || 0,
     false // assuming external send, set to true for internal transfers
   );
@@ -338,28 +338,40 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
             </div>
 
             {/* Fee Breakdown */}
-            {feeData && parseFloat(amount) > 0 && (
+            {amount && parseFloat(amount) > 0 && selectedCrypto && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
                   <span className="font-medium">{parseFloat(amount).toFixed(8)} {selectedCrypto}</span>
                 </div>
-                {feeData.platformFee > 0 && (
+                {feeLoading ? (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Platform Fee</span>
-                    <span>{feeData.platformFee.toFixed(8)} {selectedCrypto}</span>
+                    <span className="text-muted-foreground">Calculating fees...</span>
+                  </div>
+                ) : feeData ? (
+                  <>
+                    {feeData.platformFee > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Platform Fee</span>
+                        <span>{feeData.platformFee.toFixed(8)} {selectedCrypto}</span>
+                      </div>
+                    )}
+                    {feeData.networkFee > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Network Fee</span>
+                        <span>{feeData.networkFee.toFixed(8)} {selectedCrypto}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-2 border-t border-border">
+                      <span className="font-semibold">Total</span>
+                      <span className="font-semibold">{total.toFixed(8)} {selectedCrypto}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-xs">Fee calculation unavailable</span>
                   </div>
                 )}
-                {feeData.networkFee > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Network Fee</span>
-                    <span>{feeData.networkFee.toFixed(8)} {selectedCrypto}</span>
-                  </div>
-                )}
-                <div className="flex justify-between pt-2 border-t border-border">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-semibold">{total.toFixed(8)} {selectedCrypto}</span>
-                </div>
               </div>
             )}
 
