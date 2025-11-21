@@ -13,6 +13,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Circle, ThumbsUp, Bitcoin, X, ChevronDown } from "lucide-react";
 import { OfferCardProps } from "./offer-card";
+import { createClient } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 interface TradeDialogProps {
   open: boolean;
@@ -21,6 +24,9 @@ interface TradeDialogProps {
 }
 
 export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const supabase = createClient();
   const [, setLocation] = useLocation();
   const [amount, setAmount] = useState("");
   const [showMoreTerms, setShowMoreTerms] = useState(false);
@@ -30,38 +36,50 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
   const [showBankSelection, setShowBankSelection] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState<any | null>(null);
+  const [availableBalance, setAvailableBalance] = useState<number>(0);
 
-  // Fetch bank accounts for sellers
+  // Fetch available balance and bank accounts
   useEffect(() => {
-    const fetchBankAccounts = async () => {
-      // Only fetch if this is a sell offer (seller needs to provide bank details)
-      if (offer.type !== 'sell') return;
+    const fetchUserData = async () => {
+      if (!user || !open) return;
 
       try {
-        const { createClient } = await import("@/lib/supabase");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) return;
-
-        const { data, error } = await supabase
-          .from('payment_methods')
-          .select('*')
+        // Fetch available balance for the crypto being traded
+        const { data: walletData, error: walletError } = await supabase
+          .from('wallets')
+          .select('balance, locked_balance')
           .eq('user_id', user.id)
-          .eq('status', 'active');
+          .eq('crypto_symbol', offer.cryptoSymbol || 'BTC')
+          .single();
 
-        if (!error && data) {
-          setBankAccounts(data);
+        if (!walletError && walletData) {
+          // Calculate available balance (balance - locked_balance)
+          const balance = parseFloat(walletData.balance?.toString() || '0');
+          const locked = parseFloat(walletData.locked_balance?.toString() || '0');
+          setAvailableBalance(balance);
+        } else {
+          setAvailableBalance(0);
+        }
+
+        // Fetch bank accounts for sellers
+        if (offer.type === 'sell') {
+          const { data, error } = await supabase
+            .from('payment_methods')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('status', 'active');
+
+          if (!error && data) {
+            setBankAccounts(data);
+          }
         }
       } catch (error) {
-        console.error("Error fetching bank accounts:", error);
+        console.error("Error fetching user data:", error);
       }
     };
 
-    if (open) {
-      fetchBankAccounts();
-    }
-  }, [open, offer.type]);
+    fetchUserData();
+  }, [open, offer.type, offer.cryptoSymbol, user]);
 
   // Calculate fee data when amount or offer changes
   useEffect(() => {
@@ -132,14 +150,26 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       return; // Prevent duplicate submissions
     }
 
-    // If this is a sell offer and no bank account is selected, show bank selection
-    if (offer.type === 'sell' && !selectedBankAccount) {
-      if (bankAccounts.length === 0) {
-        alert("Please add a payment method first in your settings");
+    // If this is a sell offer, validate available balance
+    if (offer.type === 'sell' && user) {
+      if (cryptoAmount > availableBalance) {
+        toast({
+          title: "Insufficient Available Balance",
+          description: `You only have ${availableBalance.toFixed(8)} ${offer.cryptoSymbol || 'BTC'} available. Your locked balance will be released once pending trades are completed.`,
+          variant: "destructive",
+        });
         return;
       }
-      setShowBankSelection(true);
-      return;
+
+      // Check for bank account selection
+      if (!selectedBankAccount) {
+        if (bankAccounts.length === 0) {
+          alert("Please add a payment method first in your settings");
+          return;
+        }
+        setShowBankSelection(true);
+        return;
+      }
     }
 
     setIsCreatingTrade(true);
@@ -521,6 +551,16 @@ ${selectedBankAccount.account_number}`;
                 </p>
               </div>
             </div>
+
+            {/* Available Balance Display */}
+            {offer.type === 'sell' && user && (
+              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Available Balance:</span>
+                  <span className="font-bold text-primary">{availableBalance.toFixed(8)} {offer.cryptoSymbol || 'BTC'}</span>
+                </div>
+              </div>
+            )}
             
             {platformFee > 0 && (
               <div className="p-2 sm:p-3 bg-muted/50 rounded-lg border border-border/50">
