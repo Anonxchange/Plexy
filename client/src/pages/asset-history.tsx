@@ -80,7 +80,17 @@ export default function AssetHistory() {
             ? (typeof tx.confirmations === 'string' ? parseInt(tx.confirmations, 10) : tx.confirmations)
             : null,
         }));
-        setTransactions(parsedData);
+        
+        const uniqueTransactions = parsedData.filter((tx, index, self) => {
+          if (!tx.tx_hash) return true;
+          return index === self.findIndex((t) => 
+            t.tx_hash === tx.tx_hash && 
+            t.crypto_symbol === tx.crypto_symbol &&
+            t.type === tx.type
+          );
+        });
+        
+        setTransactions(uniqueTransactions);
       }
     } catch (error) {
       console.error("Error loading transactions:", error);
