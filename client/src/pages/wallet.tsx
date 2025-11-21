@@ -226,15 +226,15 @@ export default function Wallet() {
     loadUserProfile();
     loadWalletData();
     loadCryptoPrices();
-    
+
     // Increase price update interval to reduce calls
     const priceInterval = setInterval(loadCryptoPrices, 120000); // 2 minutes instead of 1
 
     const supabase = createClient();
-    
+
     // Debounce wallet updates to prevent rapid successive calls
     let walletUpdateTimeout: NodeJS.Timeout;
-    
+
     // Subscribe to wallet changes for real-time balance updates
     const walletChannel = supabase
       .channel('wallet-changes')
@@ -270,7 +270,7 @@ export default function Wallet() {
         },
         (payload) => {
           console.log('New transaction detected:', payload);
-          
+
           // Debounce wallet reload
           clearTimeout(walletUpdateTimeout);
           walletUpdateTimeout = setTimeout(() => {
@@ -404,11 +404,13 @@ export default function Wallet() {
     const wallet = wallets.find(w => w.crypto_symbol === asset.symbol);
     const priceData = cryptoPrices[asset.symbol];
     const balance = wallet?.balance || asset.balance;
+    const lockedBalance = wallet?.locked_balance || 0;
+    const totalAssetBalance = balance + lockedBalance; // Sum both balances
     const currentPrice = priceData?.current_price || 0;
-    const usdValue = balance * currentPrice;
+    const usdValue = totalAssetBalance * currentPrice; // Use total for display
 
-    if (balance > 0) {
-      console.log(`Wallet Page - ${asset.symbol}: ${balance} × $${currentPrice} = $${usdValue.toFixed(2)}`);
+    if (totalAssetBalance > 0) {
+      console.log(`Wallet Page - ${asset.symbol}: ${totalAssetBalance} (${balance} available + ${lockedBalance} locked) × $${currentPrice} = $${usdValue.toFixed(2)}`);
     }
     const ngnValue = convertToNGN(usdValue);
 
@@ -423,7 +425,9 @@ export default function Wallet() {
 
     return {
       ...asset,
-      balance,
+      balance: totalAssetBalance, // Show total in display
+      availableBalance: balance, // Keep track of available separately
+      lockedBalance: lockedBalance, // Keep track of locked separately
       ngnValue,
       usdValue,
       currentPrice,
@@ -457,12 +461,15 @@ export default function Wallet() {
     ? mergedAssets.filter(asset => asset.balance > 0)
     : mergedAssets;
 
-  const walletsForDialog = cryptoAssets.map(asset => ({
-    symbol: asset.symbol,
-    name: asset.name,
-    icon: asset.symbol,
-    balance: mergedAssets.find(a => a.symbol === asset.symbol)?.balance || 0
-  }));
+  const walletsForDialog = cryptoAssets.map(asset => {
+    const merged = mergedAssets.find(a => a.symbol === asset.symbol);
+    return {
+      symbol: asset.symbol,
+      name: asset.name,
+      icon: asset.symbol,
+      balance: merged?.availableBalance || 0 // Use available balance for transactions
+    };
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -472,7 +479,7 @@ export default function Wallet() {
 
         {/* 3-Column Layout for Desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
+
           {/* LEFT COLUMN - Navigation Sidebar */}
           <div className="lg:col-span-3">
             <div className="space-y-4 lg:sticky lg:top-6">
@@ -515,7 +522,7 @@ export default function Wallet() {
                           {getVerificationLevel(userVerificationLevel).description}
                         </p>
                       </div>
-                      
+
                       {/* Limits */}
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
@@ -551,7 +558,7 @@ export default function Wallet() {
                         </div>
                       )}
                     </div>
-                    
+
                     {userVerificationLevel < 3 && (
                       <Link href="/verification" className="block">
                         <Button size="sm" className="w-full" variant="default">
@@ -1073,7 +1080,7 @@ export default function Wallet() {
           {/* RIGHT COLUMN - Rewards & Referrals */}
           <div className="lg:col-span-3">
             <div className="space-y-4 lg:sticky lg:top-6">
-            
+
             {/* Rewards Card */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
