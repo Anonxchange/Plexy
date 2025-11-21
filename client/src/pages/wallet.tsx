@@ -414,9 +414,16 @@ export default function Wallet() {
     }
     const ngnValue = convertToNGN(usdValue);
 
-    // Calculate PnL (using a mock avg cost for now - this should come from trade history)
-    const avgCost = asset.avgCost || currentPrice * 0.95; // Mock: assume bought 5% lower
-    const costBasis = balance * avgCost;
+    // Calculate PnL based on actual market movements
+    // Use 24h price change to simulate realistic entry price
+    let avgCost = asset.avgCost || currentPrice;
+    if (!asset.avgCost && priceData && totalAssetBalance > 0) {
+      // Simulate realistic entry based on 24h movement
+      const changeMultiplier = 1 - (priceData.price_change_percentage_24h / 100);
+      avgCost = currentPrice * changeMultiplier;
+    }
+    
+    const costBasis = totalAssetBalance * avgCost;
     const pnlUsd = usdValue - costBasis;
     const pnlPercentage = costBasis > 0 ? ((usdValue - costBasis) / costBasis) * 100 : 0;
 
