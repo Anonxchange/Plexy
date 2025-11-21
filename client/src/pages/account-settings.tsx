@@ -219,6 +219,9 @@ export function AccountSettings() {
 
   const fetchProfileData = async () => {
     try {
+      // First get the latest auth user data
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -238,13 +241,13 @@ export function AccountSettings() {
           setBio(data.bio || '');
         }
         
-        // Load phone number from phone_number field and parse country code
+        // Load phone number - prioritize auth user phone, then profile phone_number
         // Only update if user is not currently editing the phone field
         if (!isEditingPhone) {
-          const fullPhone = data.phone_number || data.phone || '';
+          const fullPhone = authUser?.phone || data.phone_number || data.phone || '';
           if (fullPhone) {
             // Try to extract country code
-            const codes = ['+234', '+1', '+44', '+91'];
+            const codes = ['+234', '+1', '+44', '+91', '+254', '+233', '+27'];
             const matchedCode = codes.find(code => fullPhone.startsWith(code));
             if (matchedCode) {
               setCountryCodeForPhone(matchedCode);
@@ -255,7 +258,9 @@ export function AccountSettings() {
           }
         }
         
-        setPhoneVerified(data.phone_verified || false);
+        // Check phone verification from both auth and profile
+        const isVerified = authUser?.phone_confirmed_at ? true : (data.phone_verified || false);
+        setPhoneVerified(isVerified);
         setCurrency(data.preferred_currency || 'usd');
       }
     } catch (error) {
@@ -586,8 +591,12 @@ export function AccountSettings() {
 
   const handleSaveProfile = async () => {
     try {
+      // Get current auth user to check for phone
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const authPhone = authUser?.phone || '';
+      
       // Check if phone number has changed
-      const currentPhone = profileData?.phone_number || '';
+      const currentPhone = authPhone || profileData?.phone_number || '';
       const newPhone = phone.trim();
       const newFullPhoneNumber = countryCodeForPhone + newPhone;
       
@@ -606,8 +615,11 @@ export function AccountSettings() {
         preferred_currency: currency,
       };
 
-      // Only update phone if it hasn't changed (phone changes handled by PhoneLinkingDialog)
-      if (newFullPhoneNumber === currentPhone) {
+      // Sync phone from auth to profile if it exists
+      if (authPhone) {
+        updateData.phone_number = authPhone;
+        updateData.phone_verified = authUser?.phone_confirmed_at ? true : false;
+      } else if (newFullPhoneNumber === currentPhone) {
         updateData.phone_number = newFullPhoneNumber;
       }
 
@@ -1153,12 +1165,12 @@ export function AccountSettings() {
               placeholder="1234567890"
               className="flex-1 h-12"
             />
-            {phoneVerified && phone && (countryCodeForPhone + phone) === (profileData?.phone_number || '') && (
+            {phoneVerified && phone && (
               <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10">
                 <Check className="h-5 w-5 text-primary" />
               </div>
             )}
-            {((phone !== (profileData?.phone_number || '').replace(countryCodeForPhone, '')) || (countryCodeForPhone + phone) !== (profileData?.phone_number || '')) && phone && (
+            {!phoneVerified && phone && (
               <Button
                 variant="outline"
                 size="sm"
@@ -1169,12 +1181,12 @@ export function AccountSettings() {
             )}
           </div>
         </div>
-        {phoneVerified && phone && (countryCodeForPhone + phone) === (profileData?.phone_number || '') && (
+        {phoneVerified && phone && (
           <p className="text-sm text-muted-foreground">
             ✓ Phone number verified
           </p>
         )}
-        {((phone !== (profileData?.phone_number || '').replace(countryCodeForPhone, '')) || (countryCodeForPhone + phone) !== (profileData?.phone_number || '')) && phone && (
+        {!phoneVerified && phone && (
           <p className="text-sm text-orange-600 dark:text-orange-400">
             ⚠ Phone number needs verification
           </p>
@@ -1228,8 +1240,19 @@ export function AccountSettings() {
         phoneNumber={pendingPhoneNumber}
         countryCode={pendingCountryCode}
         userId={user?.id || ''}
-        onSuccess={() => {
+        onSuccess={async () => {
           setPhoneVerified(true);
+          // Fetch latest auth user data and sync to profile
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser?.phone) {
+            await supabase
+              .from('user_profiles')
+              .update({
+                phone_number: authUser.phone,
+                phone_verified: true
+              })
+              .eq('id', user?.id);
+          }
           fetchProfileData();
         }}
       />
