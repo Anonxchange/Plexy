@@ -21,12 +21,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Minimum confirmations required per crypto (matching backend)
+const MIN_CONFIRMATIONS: Record<string, number> = {
+  BTC: 2,
+  ETH: 64,
+  BSC: 15,
+  BNB: 15,
+  SOL: 32,
+  TRX: 19,
+  'USDT-ETH': 64,
+  'USDC-ETH': 64,
+  'USDT-BSC': 15,
+  'USDC-BSC': 15,
+  'USDT-TRX': 19,
+  'USDT-SOL': 32,
+  'USDC-SOL': 32,
+};
+
 export default function AssetHistory() {
   const { user } = useAuth();
   const [, params] = useRoute("/wallet/history/:symbol");
   const [, setLocation] = useLocation();
   const symbol = params?.symbol || "";
-  
+
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +75,7 @@ export default function AssetHistory() {
 
   const loadTransactions = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       const supabase = createClient();
@@ -80,7 +97,7 @@ export default function AssetHistory() {
             ? (typeof tx.confirmations === 'string' ? parseInt(tx.confirmations, 10) : tx.confirmations)
             : null,
         }));
-        
+
         const uniqueTransactions = parsedData.filter((tx, index, self) => {
           if (!tx.tx_hash) return true;
           return index === self.findIndex((t) => 
@@ -89,7 +106,7 @@ export default function AssetHistory() {
             t.type === tx.type
           );
         });
-        
+
         setTransactions(uniqueTransactions);
       }
     } catch (error) {
@@ -139,7 +156,7 @@ export default function AssetHistory() {
 
   const getBlockExplorerUrl = (tx: WalletTransaction) => {
     if (!tx.tx_hash) return null;
-    
+
     const explorers: Record<string, string> = {
       'BTC': `https://mempool.space/tx/${tx.tx_hash}`,
       'ETH': `https://etherscan.io/tx/${tx.tx_hash}`,
@@ -235,13 +252,21 @@ export default function AssetHistory() {
       </div>
 
       {/* Self-service assistance */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 space-y-2">
         <p className="text-sm text-muted-foreground">
           Deposit not received?{" "}
           <button className="text-orange-500 underline">
             Click here for self-service assistance →
           </button>
         </p>
+        {filteredTransactions.some(tx => {
+          const minConf = MIN_CONFIRMATIONS[tx.crypto_symbol] || 6;
+          return tx.type === 'deposit' && tx.status === 'pending' && tx.confirmations !== null && tx.confirmations < minConf;
+        }) && (
+          <p className="text-xs text-yellow-500 bg-yellow-500/10 p-2 rounded border border-yellow-500/20">
+            ℹ️ Pending deposits are locked until blockchain confirmations complete. You cannot use locked funds until they're confirmed.
+          </p>
+        )}
       </div>
 
       {/* Transaction List */}
@@ -266,15 +291,23 @@ export default function AssetHistory() {
                   <div className="font-medium text-base mb-1">{tx.crypto_symbol}</div>
                   <div className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <div className="font-medium text-base mb-1">
                       {Math.abs(tx.amount).toFixed(8)}
                     </div>
                     <div className="flex items-center gap-1.5 justify-end">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                      <span className="text-xs text-muted-foreground capitalize">{tx.status === 'completed' ? 'Succeeded' : tx.status}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        tx.status === 'completed' ? 'bg-green-500' : 
+                        tx.status === 'pending' ? 'bg-yellow-500' : 
+                        'bg-red-500'
+                      }`}></div>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {tx.status === 'completed' ? 'Succeeded' : 
+                         tx.type === 'deposit' && tx.status === 'pending' && tx.confirmations !== null && tx.confirmations < (MIN_CONFIRMATIONS[tx.crypto_symbol] || 6) ? 'Locked' : 
+                         tx.status}
+                      </span>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -291,7 +324,7 @@ export default function AssetHistory() {
           <DialogHeader>
             <DialogTitle>Transaction Details</DialogTitle>
           </DialogHeader>
-          
+
           {selectedTransaction && (
             <div className="space-y-4">
               {/* Status */}
@@ -312,9 +345,16 @@ export default function AssetHistory() {
               {/* Amount */}
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <span className="text-muted-foreground">Amount</span>
-                <span className="font-medium text-lg">
-                  {selectedTransaction.amount >= 0 ? '+' : ''}{selectedTransaction.amount.toFixed(8)} {selectedTransaction.crypto_symbol}
-                </span>
+                <div className="text-right">
+                  <span className="font-medium text-lg block">
+                    {selectedTransaction.amount >= 0 ? '+' : ''}{selectedTransaction.amount.toFixed(8)} {selectedTransaction.crypto_symbol}
+                  </span>
+                  {selectedTransaction.type === 'deposit' && selectedTransaction.status === 'pending' && selectedTransaction.confirmations !== null && selectedTransaction.confirmations < (MIN_CONFIRMATIONS[selectedTransaction.crypto_symbol] || 6) && (
+                    <span className="text-xs text-yellow-500 block mt-1">
+                      Locked - Confirming ({selectedTransaction.confirmations}/{MIN_CONFIRMATIONS[selectedTransaction.crypto_symbol] || 6})
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Type */}
@@ -341,7 +381,7 @@ export default function AssetHistory() {
               {selectedTransaction.confirmations !== null && (
                 <div className="flex items-center justify-between py-3 border-b border-border">
                   <span className="text-muted-foreground">Confirmations</span>
-                  <span className="font-medium">{selectedTransaction.confirmations}/6</span>
+                  <span className="font-medium">{selectedTransaction.confirmations}/{MIN_CONFIRMATIONS[selectedTransaction.crypto_symbol] || 6}</span>
                 </div>
               )}
 
