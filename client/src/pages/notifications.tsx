@@ -348,21 +348,22 @@ export default function NotificationsPage() {
                                 </span>
                               </div>
                               
-                              {/* Trade Details - Give and Get */}
-                              {(notification.metadata?.giveAmount || notification.metadata?.getAmount) && (
-                                <div className="text-xs text-muted-foreground space-y-0.5 mb-1">
-                                  {notification.metadata?.giveAmount && notification.metadata?.givePaymentMethod && (
-                                    <div>Give: {notification.metadata.giveAmount} {notification.metadata.givePaymentMethod}</div>
-                                  )}
-                                  {notification.metadata?.getAmount && notification.metadata?.getCurrency && (
-                                    <div>Get: {notification.metadata.getAmount} in {notification.metadata.getCurrency}</div>
+                              {/* Trade Details - Give and Get with Status */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  {(notification.metadata?.giveAmount || notification.metadata?.getAmount) && (
+                                    <div className="text-xs text-muted-foreground space-y-0.5">
+                                      {notification.metadata?.giveAmount && notification.metadata?.givePaymentMethod && (
+                                        <div>Give: {notification.metadata.giveAmount} {notification.metadata.givePaymentMethod}</div>
+                                      )}
+                                      {notification.metadata?.getAmount && notification.metadata?.getCurrency && (
+                                        <div>Get: {notification.metadata.getAmount} in {notification.metadata.getCurrency}</div>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
-                              )}
-                              
-                              <div className="flex items-center justify-between">
                                 {statusBadge && (
-                                  <div className="mt-0.5">
+                                  <div className="flex-shrink-0">
                                     {statusBadge}
                                   </div>
                                 )}
