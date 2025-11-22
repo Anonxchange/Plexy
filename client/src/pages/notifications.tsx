@@ -21,12 +21,14 @@ import {
 } from "@/lib/notifications-api";
 import { useAuth } from "@/lib/auth-context";
 import { notificationSounds } from "@/lib/notification-sounds";
+import { presenceTracker } from "@/lib/presence";
 
 export default function NotificationsPage() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState("trades");
+  const [userPresenceMap, setUserPresenceMap] = useState<Record<string, { isOnline: boolean; lastSeen: string | null }>>({});
 
   useEffect(() => {
     if (user) {
@@ -41,6 +43,46 @@ export default function NotificationsPage() {
       notificationSounds.play('message_received');
     }
   }, [notifications.length]);
+
+  // Track presence for all trade chat users
+  useEffect(() => {
+    const chatNotifs = notifications.filter(n => 
+      n.type === 'trade' && n.metadata?.messageType === 'chat' && n.metadata?.counterpart_id
+    );
+
+    const subscriptions: any[] = [];
+
+    // Fetch initial presence and subscribe to updates for each user
+    chatNotifs.forEach(async (notification) => {
+      const counterpartId = notification.metadata?.counterpart_id;
+      if (counterpartId) {
+        // Get initial presence
+        const presence = await presenceTracker.getUserPresence(counterpartId);
+        setUserPresenceMap(prev => ({
+          ...prev,
+          [counterpartId]: presence
+        }));
+
+        // Subscribe to presence updates
+        const channel = presenceTracker.subscribeToUserPresence(counterpartId, (updatedPresence) => {
+          setUserPresenceMap(prev => ({
+            ...prev,
+            [counterpartId]: updatedPresence
+          }));
+        });
+        subscriptions.push(channel);
+      }
+    });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      subscriptions.forEach(channel => {
+        if (channel && typeof channel.unsubscribe === 'function') {
+          channel.unsubscribe();
+        }
+      });
+    };
+  }, [notifications]);
 
   const loadNotifications = async () => {
     const data = await getNotifications();
@@ -239,7 +281,21 @@ export default function NotificationsPage() {
                         const isCancelled = notification.metadata?.tradeStatus === 'cancelled';
                         const isExpired = notification.metadata?.tradeStatus === 'expired';
                         const isCompleted = notification.metadata?.tradeStatus === 'completed';
-                        const countryFlag = notification.metadata?.counterpart_country === 'Nigeria' ? '🇳🇬' : '🌍';
+                        const isActive = notification.metadata?.tradeStatus === 'active';
+                        const counterpartId = notification.metadata?.counterpart_id;
+                        const counterpartCountry = notification.metadata?.counterpart_country || '';
+                        
+                        // Get country flag
+                        let countryFlag = '🌍';
+                        if (counterpartCountry === 'Nigeria' || counterpartCountry === 'NG') countryFlag = '🇳🇬';
+                        else if (counterpartCountry === 'India' || counterpartCountry === 'IN') countryFlag = '🇮🇳';
+                        else if (counterpartCountry === 'Mexico' || counterpartCountry === 'MX') countryFlag = '🇲🇽';
+                        else if (counterpartCountry === 'USA' || counterpartCountry === 'US') countryFlag = '🇺🇸';
+                        else if (counterpartCountry === 'UK' || counterpartCountry === 'GB') countryFlag = '🇬🇧';
+                        
+                        // Get online status
+                        const userPresence = counterpartId ? userPresenceMap[counterpartId] : null;
+                        const isOnline = userPresence?.isOnline || false;
                         
                         let statusBadge = null;
                         
@@ -249,6 +305,8 @@ export default function NotificationsPage() {
                           statusBadge = <Badge className="text-[10px] px-2 py-0.5 h-5 bg-red-500 hover:bg-red-600">Cancelled</Badge>;
                         } else if (isExpired) {
                           statusBadge = <Badge variant="secondary" className="text-[10px] px-2 py-0.5 h-5">Expired</Badge>;
+                        } else if (isActive) {
+                          statusBadge = <Badge className="text-[10px] px-2 py-0.5 h-5 bg-cyan-500 hover:bg-cyan-600">Active</Badge>;
                         }
                         
                         // Generate avatar URL if not provided
@@ -268,38 +326,47 @@ export default function NotificationsPage() {
                                   {notification.metadata?.counterpart_name?.substring(0, 2)?.toUpperCase() || 'CU'}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="absolute -bottom-0.5 -right-0.5 text-base leading-none">
-                                {countryFlag}
-                              </div>
+                              {/* Online/Offline Status Indicator */}
+                              <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${
+                                isOnline ? 'bg-green-500' : 'bg-gray-400'
+                              }`} />
                             </div>
 
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2 mb-1">
-                                <h3 className="font-semibold text-sm">
-                                  {notification.metadata?.counterpart_name || `Trade #${notification.metadata?.tradeId?.substring(0, 8) || 'Unknown'}`}
-                                </h3>
+                                <div className="flex items-center gap-1.5">
+                                  <h3 className="font-semibold text-sm">
+                                    {notification.metadata?.counterpart_name || `Trade #${notification.metadata?.tradeId?.substring(0, 8) || 'Unknown'}`}
+                                  </h3>
+                                  <span className="text-base leading-none">{countryFlag}</span>
+                                  {notification.metadata?.verified && (
+                                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  )}
+                                </div>
                                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                                   {formatTime(notification.metadata?.lastMessageAt || notification.created_at)}
                                 </span>
                               </div>
                               
-                              {/* Trade Details */}
+                              {/* Trade Details - Give and Get */}
                               {(notification.metadata?.giveAmount || notification.metadata?.getAmount) && (
-                                <div className="text-xs text-muted-foreground mb-0.5">
-                                  {notification.metadata?.giveAmount && (
-                                    <div>Give: {notification.metadata.giveAmount}</div>
+                                <div className="text-xs text-muted-foreground space-y-0.5 mb-1">
+                                  {notification.metadata?.giveAmount && notification.metadata?.givePaymentMethod && (
+                                    <div>Give: {notification.metadata.giveAmount} {notification.metadata.givePaymentMethod}</div>
                                   )}
-                                  {notification.metadata?.getAmount && (
-                                    <div>Get: {notification.metadata.getAmount}</div>
+                                  {notification.metadata?.getAmount && notification.metadata?.getCurrency && (
+                                    <div>Get: {notification.metadata.getAmount} in {notification.metadata.getCurrency}</div>
                                   )}
                                 </div>
                               )}
                               
-                              {statusBadge && (
-                                <div className="mt-0.5">
-                                  {statusBadge}
-                                </div>
-                              )}
+                              <div className="flex items-center justify-between">
+                                {statusBadge && (
+                                  <div className="mt-0.5">
+                                    {statusBadge}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
