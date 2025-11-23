@@ -1,167 +1,145 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef } from "react";
+import useEmblaCarousel from "embla-carousel-react";
+import { CryptoCard } from "./crypto-card";
 
-const features = [
+const cards = [
   {
-    id: 1,
+    title: "Pexly",
+    value: "2,000,000",
     image: "/assets/IMG_1820.jpeg",
-    title: "Secure Wallet. Your keys, your crypto.",
-    buttonText: "Create Wallet",
+    variant: "lemon" as const,
   },
   {
-    id: 2,
+    title: "Pexly",
+    value: "1,500,000",
     image: "/assets/IMG_1821.jpeg",
-    title: "Live crypto. Pay anywhere. Get 10% back.",
-    buttonText: "Get My Card",
+    variant: "black" as const,
   },
   {
-    id: 3,
+    title: "Pexly",
+    value: "3,250,000",
     image: "/assets/IMG_1824.jpeg",
-    title: "Refer friends. Earn crypto rewards.",
-    buttonText: "Start Earning",
+    variant: "default" as const,
+  },
+  {
+    title: "Pexly",
+    value: "2,000,000",
+    image: "/assets/IMG_1820.jpeg",
+    variant: "lemon" as const,
+  },
+  {
+    title: "Pexly",
+    value: "1,500,000",
+    image: "/assets/IMG_1821.jpeg",
+    variant: "black" as const,
   },
 ];
 
 export function FeatureCarousel() {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: true,
+    align: "center",
+    skipSnaps: false,
+    containScroll: "trimSnaps",
+  });
+
+  const autoplayRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % features.length);
-    }, 4000);
+    if (!emblaApi) return;
 
-    return () => clearInterval(interval);
-  }, []);
-
-  const getCardStyle = (index: number) => {
-    const position = (index - currentIndex + features.length) % features.length;
-
-    // Center card (active)
-    if (position === 0) {
-      return {
-        transform: "translateX(-50%) scale(1) rotateY(0deg) translateZ(60px)",
-        opacity: 1,
-        zIndex: 30,
-        left: "50%",
-      };
-    }
-
-    // Right card - half visible
-    if (position === 1) {
-      return {
-        transform: "translateX(20%) scale(0.75) rotateY(-20deg) translateZ(0px)",
-        opacity: 0.6,
-        zIndex: 20,
-        left: "50%",
-      };
-    }
-
-    // Left card - half visible
-    return {
-      transform: "translateX(-120%) scale(0.75) rotateY(20deg) translateZ(0px)",
-      opacity: 0.6,
-      zIndex: 10,
-      left: "50%",
+    const autoplay = () => {
+      emblaApi.scrollNext();
     };
-  };
+
+    autoplayRef.current = setInterval(autoplay, 3000);
+
+    return () => {
+      if (autoplayRef.current) {
+        clearInterval(autoplayRef.current);
+      }
+    };
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    const onSelect = () => {
+      const slides = emblaApi.slideNodes();
+      const selectedIndex = emblaApi.selectedScrollSnap();
+
+      slides.forEach((slide, index) => {
+        const offset = index - selectedIndex;
+
+        // Only show 3 cards: center (0), left (-1), and right (+1)
+        if (Math.abs(offset) > 1) {
+          slide.style.opacity = "0";
+          slide.style.pointerEvents = "none";
+        } else if (offset === 0) {
+          // Center card - straight, no rotation
+          slide.style.transform = `
+            perspective(2000px)
+            rotateY(0deg)
+            translateX(0px)
+            translateZ(0px)
+            scale(1)
+          `;
+          slide.style.opacity = "1";
+          slide.style.pointerEvents = "auto";
+          slide.style.transition = "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+        } else {
+          // Side cards - curve inward dramatically (positive rotateY for left, negative for right)
+          const rotateY = offset * 45; // Increased from 35 to 45 for even stronger curve
+          const translateX = offset * -50; // Increased offset
+          const translateZ = -250; // Push back more for depth
+          const scale = 0.8; // Smaller
+
+          slide.style.transform = `
+            perspective(2000px)
+            rotateY(${rotateY}deg)
+            translateX(${translateX}px)
+            translateZ(${translateZ}px)
+            scale(${scale})
+          `;
+          slide.style.opacity = "0.6";
+          slide.style.pointerEvents = "auto";
+          slide.style.transition = "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+        }
+      });
+    };
+
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    onSelect();
+
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi]);
 
   return (
-    <section className="relative py-1 sm:py-1 md:py-2 lg:py-2 w-full overflow-hidden">
-      {/* Cards Container */}
-      <div
-        className="relative w-full h-[420px] sm:h-[440px] md:h-[480px] lg:h-[520px]"
-        style={{ 
-          perspective: "2000px", 
-          perspectiveOrigin: "center center"
-        }}
-      >
-            <div className="relative w-full h-full">
-              {features.map((feature, index) => {
-                const style = getCardStyle(index);
-                const position = (index - currentIndex + features.length) % features.length;
-                const isCenter = position === 0;
-
-                return (
-                  <div
-                    key={feature.id}
-                    className="absolute top-1/2 md:top-[43%] lg:top-[42%] -translate-y-1/2 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[420px]"
-                    style={{
-                      ...style,
-                      transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                    }}
-                  >
-                    <div 
-                      className={`
-                        flex flex-col gap-1
-                        ${isCenter ? 'drop-shadow-2xl' : 'drop-shadow-md'}
-                      `}
-                      style={{
-                        filter: isCenter 
-                          ? 'drop-shadow(0 25px 50px rgba(0, 0, 0, 0.3))' 
-                          : 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.2))',
-                      }}
-                    >
-                      {/* Image with border and glow */}
-                      <div 
-                        className={`
-                          relative overflow-hidden rounded-2xl
-                          ${isCenter ? 'ring-2 ring-primary/30' : ''}
-                        `}
-                        style={{
-                          boxShadow: isCenter 
-                            ? '0 0 50px rgba(79, 172, 254, 0.35), 0 25px 70px rgba(0, 0, 0, 0.35)' 
-                            : '0 15px 40px rgba(0, 0, 0, 0.25)',
-                        }}
-                      >
-                        <img
-                          src={feature.image}
-                          alt={feature.title}
-                          className="w-full h-auto object-cover"
-                          loading="eager"
-                        />
-                        {/* Glossy overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"/>
-                      </div>
-
-                      {/* Content - only visible on center card */}
-                      <div 
-                        className={`
-                          transition-all duration-700
-                          ${isCenter ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
-                        `}
-                      >
-                        <h3 className="text-xs sm:text-sm md:text-base font-bold text-foreground leading-tight text-center mb-1 px-1">
-                          {feature.title}
-                        </h3>
-
-                        <Button
-                          className="w-full bg-primary hover:opacity-90 text-black font-semibold shadow-xl hover:shadow-2xl transition-all text-xs sm:text-sm"
-                          size="sm"
-                        >
-                          {feature.buttonText}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+    <div className="w-full py-12 md:py-20 lg:py-24 overflow-hidden relative" style={{ perspective: "2000px" }}>
+      <div ref={emblaRef} className="overflow-visible">
+        <div 
+          className="flex items-center gap-12 md:gap-16 lg:gap-20" 
+          style={{ 
+            transformStyle: "preserve-3d",
+            paddingLeft: "calc(50% - 140px)",
+            paddingRight: "calc(50% - 140px)"
+          }}
+        >
+          {cards.map((card, index) => (
+            <div 
+              key={index} 
+              className="flex-shrink-0"
+              style={{ transformStyle: "preserve-3d" }}
+            >
+              <CryptoCard {...card} />
             </div>
-          </div>
-
-          {/* Navigation Dots */}
-          <div className="flex justify-center gap-2 mt-3">
-            {features.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className={`
-                  h-2 rounded-full transition-all duration-300
-                  ${currentIndex === index ? 'w-8 bg-primary' : 'w-2 bg-primary/30 hover:bg-primary/50'}
-                `}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
-    </section>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
