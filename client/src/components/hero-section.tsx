@@ -9,6 +9,7 @@ import heroImage from "@assets/generated_images/Crypto_P2P_trading_hero_641f4218
 import { currencies, cryptoCurrencies } from "@/lib/currencies";
 import { paymentMethods } from "@/lib/payment-methods";
 import { Globe } from "@/components/globe";
+import { getCryptoPrices } from "@/lib/crypto-prices";
 
 export function HeroSection() {
   const [tradeType, setTradeType] = useState("buy");
@@ -21,24 +22,48 @@ export function HeroSection() {
   const [openCrypto, setOpenCrypto] = useState(false);
 
   useEffect(() => {
-    const mockPrices = {
-      BTC: 98750.50,
-      ETH: 3420.75,
-      USDT: 1.00,
-      BNB: 680.25,
-      SOL: 245.80,
-      XRP: 2.45,
-      ADA: 1.05,
-      DOGE: 0.38,
-      AVAX: 89.50,
-      DOT: 18.75,
-      MATIC: 2.15,
-      SHIB: 0.00003,
-      LTC: 165.40,
-      TRX: 0.25,
-      LINK: 28.90
+    const fetchPrices = async () => {
+      try {
+        const symbols = ['BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'SHIB', 'LTC', 'TRX', 'LINK'];
+        const prices = await getCryptoPrices(symbols);
+        
+        // Convert to the format needed for display
+        const pricesMap: Record<string, number> = {};
+        Object.values(prices).forEach((crypto) => {
+          pricesMap[crypto.symbol] = crypto.current_price;
+        });
+        
+        if (Object.keys(pricesMap).length > 0) {
+          setCryptoPrices(pricesMap);
+        }
+      } catch (error) {
+        console.error("Failed to fetch crypto prices:", error);
+        // Fallback to mock prices on error
+        const mockPrices = {
+          BTC: 98750.50,
+          ETH: 3420.75,
+          USDT: 1.00,
+          BNB: 680.25,
+          SOL: 245.80,
+          XRP: 2.45,
+          ADA: 1.05,
+          DOGE: 0.38,
+          AVAX: 89.50,
+          DOT: 18.75,
+          MATIC: 2.15,
+          SHIB: 0.00003,
+          LTC: 165.40,
+          TRX: 0.25,
+          LINK: 28.90
+        };
+        setCryptoPrices(mockPrices);
+      }
     };
-    setCryptoPrices(mockPrices);
+
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   const currentPrice = cryptoPrices[crypto] || 0;
