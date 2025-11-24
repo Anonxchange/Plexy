@@ -122,7 +122,7 @@ export function FeatureCarousel() {
     <div className="w-full py-12 md:py-20 lg:py-24 overflow-hidden relative">
       {/* Text Section */}
       <div className="text-center mb-8 md:mb-12">
-        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
+       <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-black dark:text-white mb-3">
           Live Crypto. Pay Anywhere. Get 10% Back.
         </h2>
       </div>
