@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +18,9 @@ import {
   Gift,
   MoreHorizontal,
   CreditCard,
+  Copy,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { SendPexlyDialog } from "@/components/send-pexly-dialog";
@@ -28,10 +29,12 @@ import { ReferralDialog } from "@/components/referral-dialog";
 import { QRScannerDialog } from "@/components/qr-scanner-dialog";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useWallets } from "@/hooks/use-wallets";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function PexlyPay() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
@@ -39,17 +42,22 @@ export default function PexlyPay() {
   const [scannerDialogOpen, setScannerDialogOpen] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
 
-  const balance = 0.00;
   const cashback = 1.23;
   const cashbackRate = 2;
   const { toast } = useToast();
   const supabase = createClient();
+  const { data: wallets, isLoading: walletsLoading } = useWallets();
+
+  // Calculate total balance in USD equivalent (simplified - would need price conversion in production)
+  const totalBalance = wallets?.reduce((sum, wallet) => sum + (wallet.balance || 0), 0) || 0;
 
   useEffect(() => {
-    if (user?.id) {
+    if (!loading && !user) {
+      setLocation("/signin");
+    } else if (user?.id) {
       fetchProfileData();
     }
-  }, [user]);
+  }, [user, loading, setLocation]);
 
   const fetchProfileData = async () => {
     try {
@@ -61,11 +69,36 @@ export default function PexlyPay() {
 
       if (!error && data) {
         setProfileData(data);
+      } else if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist yet, generate pexly_pay_id
+        const pexlyPayId = `PX${user?.id?.substring(0, 8).toUpperCase()}`;
+        const { data: newProfile } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: user?.id,
+            pexly_pay_id: pexlyPayId,
+            username: `user_${user?.id?.substring(0, 8)}`,
+            country: 'Global',
+          })
+          .select()
+          .single();
+        
+        if (newProfile) {
+          setProfileData(newProfile);
+        }
       }
     } catch (error) {
       console.error('Error fetching profile data:', error);
     }
   };
+
+  if (loading || walletsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   const copyPexlyPayId = () => {
     if (profileData?.pexly_pay_id) {
@@ -187,7 +220,7 @@ export default function PexlyPay() {
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">
-                    {balanceVisible ? balance.toFixed(2) : "••••"}
+                    {balanceVisible ? totalBalance.toFixed(2) : "••••"}
                   </span>
                   <span className="text-lg text-muted-foreground">USD</span>
                 </div>
@@ -315,8 +348,16 @@ export default function PexlyPay() {
           setSendDialogOpen(true);
         }}
       />
-      <SendPexlyDialog open={sendDialogOpen} onOpenChange={setSendDialogOpen} />
-      <ReceivePexlyDialog open={receiveDialogOpen} onOpenChange={setReceiveDialogOpen} />
+      <SendPexlyDialog 
+        open={sendDialogOpen} 
+        onOpenChange={setSendDialogOpen} 
+        availableWallets={wallets || []}
+      />
+      <ReceivePexlyDialog 
+        open={receiveDialogOpen} 
+        onOpenChange={setReceiveDialogOpen} 
+        pexlyPayId={profileData?.pexly_pay_id}
+      />
       <ReferralDialog open={referralDialogOpen} onOpenChange={setReferralDialogOpen} />
 
       <PexlyFooter />
