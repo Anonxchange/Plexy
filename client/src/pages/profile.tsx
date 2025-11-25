@@ -65,6 +65,7 @@ interface UserProfile {
   phone_verified: boolean;
   avatar_type: string | null;
   avatar_url: string | null;
+  pexly_pay_id: string | null;
 }
 
 interface Offer {
@@ -608,6 +609,31 @@ export function Profile() {
                   <p className="font-medium">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
               </div>
+
+              {profileData?.pexly_pay_id && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">UIID:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-3 py-1.5 rounded font-mono text-sm font-semibold">
+                      {profileData.pexly_pay_id}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-primary hover:text-primary/80"
+                      onClick={() => {
+                        navigator.clipboard.writeText(profileData.pexly_pay_id);
+                        toast({
+                          title: "Copied!",
+                          description: "UIID copied to clipboard"
+                        });
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
