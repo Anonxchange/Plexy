@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,13 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Info, ArrowRight, Loader2 } from "lucide-react";
+import { Info, ArrowRight, Loader2, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { createClient } from "@/lib/supabase";
 import type { Wallet } from "@/lib/wallet-api";
 import { PaymentSuccessDialog } from "./payment-success-dialog";
+import { getCryptoPrices } from "@/lib/crypto-prices";
 
 interface SendPexlyDialogProps {
   open: boolean;
