@@ -25,6 +25,7 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 interface ReceivePexlyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  pexlyPayId?: string | null;
 }
 
 const currencies = [
@@ -37,14 +38,14 @@ const currencies = [
   { symbol: "XMR", name: "Monero", iconUrl: cryptoIconUrls.XMR },
 ];
 
-export function ReceivePexlyDialog({ open, onOpenChange }: ReceivePexlyDialogProps) {
+export function ReceivePexlyDialog({ open, onOpenChange, pexlyPayId }: ReceivePexlyDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [amount, setAmount] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState("USDT");
   const [showAmountInput, setShowAmountInput] = useState(false);
 
-  const pexlyId = user?.id?.slice(0, 8) || "12345678";
+  const displayPexlyId = pexlyPayId || user?.id?.slice(0, 8) || "Not set";
   const maskedContact = user?.email 
     ? `${user.email.slice(0, 4)}***@****`
     : "user***@****";
@@ -52,7 +53,7 @@ export function ReceivePexlyDialog({ open, onOpenChange }: ReceivePexlyDialogPro
   const qrData = JSON.stringify({
     type: "pexly_pay",
     userId: user?.id,
-    pexlyId: pexlyId,
+    pexlyId: displayPexlyId,
     amount: amount || undefined,
     currency: selectedCurrency,
   });
@@ -60,11 +61,19 @@ export function ReceivePexlyDialog({ open, onOpenChange }: ReceivePexlyDialogPro
   const selectedCurrencyData = currencies.find(c => c.symbol === selectedCurrency);
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(pexlyId);
-    toast({
-      title: "Copied",
-      description: "Pexly ID copied to clipboard",
-    });
+    if (displayPexlyId && displayPexlyId !== "Not set") {
+      navigator.clipboard.writeText(displayPexlyId);
+      toast({
+        title: "Copied",
+        description: "UIID copied to clipboard",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "UIID not set. Please visit your profile to set it up.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveQR = () => {
@@ -72,7 +81,7 @@ export function ReceivePexlyDialog({ open, onOpenChange }: ReceivePexlyDialogPro
     if (canvas) {
       const url = canvas.toDataURL();
       const link = document.createElement("a");
-      link.download = `pexly-pay-qr-${pexlyId}.png`;
+      link.download = `pexly-pay-qr-${displayPexlyId}.png`;
       link.href = url;
       link.click();
       toast({
@@ -112,7 +121,7 @@ export function ReceivePexlyDialog({ open, onOpenChange }: ReceivePexlyDialogPro
             <p className="font-medium">{maskedContact}</p>
             <div className="flex items-center justify-center gap-2">
               <p className="text-sm text-muted-foreground">
-                {pexlyId}(Pexly ID)
+                <span className="font-bold">{displayPexlyId}</span> (UIID)
               </p>
               <Button
                 variant="ghost"
