@@ -61,6 +61,7 @@ export default function PexlyPay() {
 
   const fetchProfileData = async () => {
     try {
+      console.log('Fetching profile data for user:', user?.id);
       const { data, error } = await supabase
         .from('user_profiles')
         .select('pexly_pay_id')
@@ -68,11 +69,13 @@ export default function PexlyPay() {
         .single();
 
       if (!error && data) {
+        console.log('Profile data fetched:', data);
         setProfileData(data);
       } else if (error && error.code === 'PGRST116') {
+        console.log('Profile not found, creating new one');
         // Profile doesn't exist yet, generate pexly_pay_id
         const pexlyPayId = `PX${user?.id?.substring(0, 8).toUpperCase()}`;
-        const { data: newProfile } = await supabase
+        const { data: newProfile, error: upsertError } = await supabase
           .from('user_profiles')
           .upsert({
             id: user?.id,
@@ -83,21 +86,35 @@ export default function PexlyPay() {
           .select()
           .single();
 
-        if (newProfile) {
+        if (upsertError) {
+          console.error('Error creating profile:', upsertError);
+        } else if (newProfile) {
+          console.log('New profile created:', newProfile);
           setProfileData(newProfile);
         }
+      } else {
+        console.error('Error fetching profile:', error);
       }
     } catch (error) {
-      console.error('Error fetching profile data:', error);
+      console.error('Error in fetchProfileData:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load profile data",
+        variant: "destructive"
+      });
     }
   };
 
-  if (loading || walletsLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner />
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   const copyPexlyPayId = () => {
