@@ -316,8 +316,18 @@ export async function sendPexlyPayment(
       return { success: false, error: 'Sender wallet not found' };
     }
 
+    console.log(`💰 Pexly Pay Balance Check:`, {
+      cryptoSymbol,
+      available: senderWallet.balance,
+      requested: amount,
+      locked: senderWallet.locked_balance
+    });
+
     if (senderWallet.balance < amount) {
-      return { success: false, error: 'Insufficient balance' };
+      return { 
+        success: false, 
+        error: `Insufficient balance. Available: ${senderWallet.balance} ${cryptoSymbol}, Required: ${amount} ${cryptoSymbol}` 
+      };
     }
 
     // Get or create recipient's wallet
