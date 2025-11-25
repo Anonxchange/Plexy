@@ -553,28 +553,6 @@ export function Profile() {
                 </div>
 
                 <div className="flex-1 text-center sm:text-left w-full sm:w-auto">
-                  {isOwnProfile && profileData?.pexly_pay_id && (
-                    <div className="mb-3 p-3 bg-primary/10 border border-primary/20 rounded-md flex items-center justify-between">
-                      <div>
-                        <span className="text-xs text-muted-foreground">Your UIID</span>
-                        <p className="font-bold text-base">{profileData.pexly_pay_id}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                          navigator.clipboard.writeText(profileData.pexly_pay_id || '');
-                          toast({
-                            title: "Copied!",
-                            description: "UIID copied to clipboard"
-                          });
-                        }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
                   <div className="flex flex-col sm:flex-row items-center gap-2 mb-2">
                     <h2 className="text-lg sm:text-xl md:text-2xl font-bold break-all flex items-center gap-2">
                       @{username} <span className="text-lg">🇳🇬</span>
@@ -632,31 +610,7 @@ export function Profile() {
                 </div>
               </div>
 
-              {profileData?.pexly_pay_id && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">UIID:</p>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-muted px-3 py-1.5 rounded font-mono text-sm font-semibold">
-                      {profileData.pexly_pay_id}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-primary hover:text-primary/80"
-                      onClick={() => {
-                        navigator.clipboard.writeText(profileData.pexly_pay_id);
-                        toast({
-                          title: "Copied!",
-                          description: "UIID copied to clipboard"
-                        });
-                      }}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
           </CardContent>
         </Card>
 
