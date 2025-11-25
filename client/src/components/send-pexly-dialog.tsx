@@ -41,7 +41,10 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
   const [recipientPexlyId, setRecipientPexlyId] = useState("");
   const [lookingUpRecipient, setLookingUpRecipient] = useState(false);
   const [amount, setAmount] = useState("");
+  const [fiatAmount, setFiatAmount] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState(availableWallets[0]?.crypto_symbol || "USDT");
+  const [amountInputMode, setAmountInputMode] = useState<"crypto" | "fiat">("fiat");
+  const [cryptoPrice, setCryptoPrice] = useState<number>(0);
   const [step, setStep] = useState<"recipient" | "amount" | "confirm">("recipient");
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
@@ -52,6 +55,49 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
     iconUrl: cryptoIconUrls[wallet.crypto_symbol as keyof typeof cryptoIconUrls] || cryptoIconUrls.BTC,
     balance: wallet.balance,
   }));
+
+  // Fetch crypto price when currency changes
+  useEffect(() => {
+    const fetchPrice = async () => {
+      if (!selectedCurrency) return;
+      
+      try {
+        const prices = await getCryptoPrices([selectedCurrency]);
+        if (prices[selectedCurrency]) {
+          setCryptoPrice(prices[selectedCurrency].current_price);
+        }
+      } catch (error) {
+        console.error("Error fetching crypto price:", error);
+      }
+    };
+
+    fetchPrice();
+  }, [selectedCurrency]);
+
+  // Convert between fiat and crypto amounts
+  useEffect(() => {
+    if (!cryptoPrice || cryptoPrice === 0) {
+      return;
+    }
+
+    if (amountInputMode === "fiat") {
+      const fiatValue = parseFloat(fiatAmount);
+      if (isNaN(fiatValue) || !fiatAmount) {
+        setAmount("");
+        return;
+      }
+      const calculatedCryptoAmount = fiatValue / cryptoPrice;
+      setAmount(calculatedCryptoAmount.toFixed(8));
+    } else {
+      const cryptoValue = parseFloat(amount);
+      if (isNaN(cryptoValue) || !amount) {
+        setFiatAmount("");
+        return;
+      }
+      const calculatedFiatAmount = cryptoValue * cryptoPrice;
+      setFiatAmount(calculatedFiatAmount.toFixed(2));
+    }
+  }, [amount, fiatAmount, cryptoPrice, amountInputMode]);
 
   const lookupRecipient = async (value: string, type: 'pexly-id' | 'email' | 'phone') => {
     if (!value) return;
@@ -138,7 +184,9 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
     setRecipientName("");
     setRecipientPexlyId("");
     setAmount("");
+    setFiatAmount("");
     setSelectedCurrency(availableWallets[0]?.crypto_symbol || "USDT");
+    setAmountInputMode("fiat");
     setStep("recipient");
     onOpenChange(false);
   };
@@ -286,22 +334,50 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="amount">Amount</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAmountInputMode(amountInputMode === "fiat" ? "crypto" : "fiat")}
+                  className="h-7 gap-1 text-xs"
+                >
+                  <ArrowUpDown className="h-3 w-3" />
+                  {amountInputMode === "fiat" ? "USD" : selectedCurrency}
+                </Button>
+              </div>
               <div className="relative">
                 <Input
                   id="amount"
                   type="number"
                   placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  value={amountInputMode === "fiat" ? fiatAmount : amount}
+                  onChange={(e) => {
+                    if (amountInputMode === "fiat") {
+                      setFiatAmount(e.target.value);
+                    } else {
+                      setAmount(e.target.value);
+                    }
+                  }}
                   min="0"
-                  step="0.01"
+                  step={amountInputMode === "fiat" ? "0.01" : "0.00000001"}
                   className="pr-16"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  {selectedCurrency}
+                  {amountInputMode === "fiat" ? "USD" : selectedCurrency}
                 </span>
               </div>
+              {amountInputMode === "fiat" && amount && (
+                <p className="text-xs text-muted-foreground">
+                  ≈ {amount} {selectedCurrency}
+                </p>
+              )}
+              {amountInputMode === "crypto" && fiatAmount && (
+                <p className="text-xs text-muted-foreground">
+                  ≈ ${fiatAmount} USD
+                </p>
+              )}
             </div>
 
             <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
