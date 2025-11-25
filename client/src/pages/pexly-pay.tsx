@@ -42,14 +42,61 @@ export default function PexlyPay() {
   const [scannerDialogOpen, setScannerDialogOpen] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
 
-  const cashback = 1.23;
-  const cashbackRate = 2;
   const { toast } = useToast();
   const supabase = createClient();
   const { data: wallets, isLoading: walletsLoading } = useWallets();
 
-  // Calculate total balance in USD equivalent (simplified - would need price conversion in production)
-  const totalBalance = wallets?.reduce((sum, wallet) => sum + (wallet.balance || 0), 0) || 0;
+  // Use USDT wallet balance for Pexly Pay
+  const usdtWallet = wallets?.find(w => w.crypto_symbol === 'USDT');
+  const totalBalance = usdtWallet ? parseFloat(usdtWallet.balance.toString()) : 0;
+  
+  // Fetch user's Pexly Pay metadata (cashback, auto-earn)
+  const [pexlyMetadata, setPexlyMetadata] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchPexlyMetadata = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('pexly_balances')
+          .select('cashback_earned, auto_earn_balance')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error && error.code === 'PGRST116') {
+          // Create metadata if doesn't exist
+          const { data: newMetadata, error: insertError } = await supabase
+            .from('pexly_balances')
+            .insert({
+              user_id: user.id,
+              balance: 0,
+              locked_balance: 0,
+              total_received: 0,
+              total_sent: 0,
+              cashback_earned: 0,
+              auto_earn_balance: 0,
+            })
+            .select('cashback_earned, auto_earn_balance')
+            .single();
+
+          if (!insertError && newMetadata) {
+            setPexlyMetadata(newMetadata);
+          }
+        } else if (!error && data) {
+          setPexlyMetadata(data);
+        }
+      } catch (error) {
+        console.error('Error fetching Pexly metadata:', error);
+      }
+    };
+
+    fetchPexlyMetadata();
+  }, [user?.id]);
+
+  const cashback = pexlyMetadata ? parseFloat(pexlyMetadata.cashback_earned || 0) : 0;
+  const autoEarnBalance = pexlyMetadata ? parseFloat(pexlyMetadata.auto_earn_balance || 0) : 0;
+  const cashbackRate = 2;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -239,7 +286,7 @@ export default function PexlyPay() {
                   <span className="text-3xl font-bold">
                     {balanceVisible ? totalBalance.toFixed(2) : "••••"}
                   </span>
-                  <span className="text-lg text-muted-foreground">USD</span>
+                  <span className="text-lg text-muted-foreground">USDT</span>
                 </div>
               </div>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -333,7 +380,7 @@ export default function PexlyPay() {
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground mb-1">Cashback</p>
               <p className="text-2xl font-bold text-green-600">
-                +{cashback.toFixed(2)} USD
+                +{cashback.toFixed(2)} USDT
               </p>
               <Badge variant="secondary" className="mt-2 bg-pink-100 text-pink-700 border-0">
                 Base: {cashbackRate}%
@@ -344,7 +391,7 @@ export default function PexlyPay() {
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground mb-1">Auto-Earn</p>
               <p className="text-2xl font-bold text-orange-600">
-                0.02 USD
+                {autoEarnBalance.toFixed(2)} USDT
               </p>
               <div className="mt-2 flex items-center gap-1">
                 <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 text-xs">
