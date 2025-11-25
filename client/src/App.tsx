@@ -29,7 +29,7 @@ import Spot from "@/pages/spot";
 import NotFound from "@/pages/not-found";
 import { GiftCards } from "@/pages/gift-cards";
 import { TradeHistory } from "@/pages/trade-history";
-import { AccountSettings } from "@/pages/account-settings";
+import AccountSettings from "@/pages/account-settings";
 import VisaCard from "@/pages/visa-card";
 import VisaCardDetails from "@/pages/visa-card-details";
 import MobileTopup from "@/pages/mobile-topup";
@@ -44,7 +44,6 @@ import AdminBlog from "@/pages/admin-blog";
 import AssetDetail from "@/pages/asset-detail";
 import AssetHistory from "@/pages/asset-history";
 import { Profile as ProfilePage } from "@/pages/profile";
-import { AccountSettings as AccountSettingsPage } from "@/pages/account-settings";
 import MedalsPage from "@/pages/medals";
 import { Fees } from "@/pages/fees";
 import Affiliate from "@/pages/affiliate";
@@ -129,7 +128,6 @@ function Router() {
       <Route path="/my-offers" component={MyOffers} />
       <Route path="/trade/:tradeId" component={ActiveTrade} />
       <Route path="/profile/:userId" component={ProfilePage} />
-      <Route path="/account-settings" component={AccountSettingsPage} />
       <Route path="/medals" component={MedalsPage} />
       <Route path="/fees" component={Fees} />
       <Route path="/affiliate" component={Affiliate} />
