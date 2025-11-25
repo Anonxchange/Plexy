@@ -896,6 +896,35 @@ export function AccountSettings() {
 
   const ProfileSection = () => (
     <div className="space-y-6">
+      {/* UIID Section */}
+      {profileData?.pexly_pay_id && (
+        <div className="space-y-3">
+          <Label className="text-lg font-semibold">UIID</Label>
+          <div className="flex items-center gap-2">
+            <code className="bg-muted px-3 py-1.5 rounded font-mono text-sm font-semibold flex-1">
+              {profileData.pexly_pay_id}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                navigator.clipboard.writeText(profileData.pexly_pay_id || '');
+                toast({
+                  title: "Copied!",
+                  description: "UIID copied to clipboard"
+                });
+              }}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Your unique identifier for Pexly Pay
+          </p>
+        </div>
+      )}
+
       {/* Email and Verification */}
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Email Address</Label>
