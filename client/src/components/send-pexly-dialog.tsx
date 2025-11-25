@@ -23,8 +23,10 @@ import { useToast } from "@/hooks/use-toast";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { createClient } from "@/lib/supabase";
 import type { Wallet } from "@/lib/wallet-api";
+import { sendPexlyPayment } from "@/lib/wallet-api";
 import { PaymentSuccessDialog } from "./payment-success-dialog";
 import { getCryptoPrices } from "@/lib/crypto-prices";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SendPexlyDialogProps {
   open: boolean;
@@ -36,11 +38,14 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
   const { user } = useAuth();
   const { toast } = useToast();
   const supabase = createClient();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("pexly-id");
   const [recipientValue, setRecipientValue] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPexlyId, setRecipientPexlyId] = useState("");
+  const [recipientUserId, setRecipientUserId] = useState("");
   const [lookingUpRecipient, setLookingUpRecipient] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [amount, setAmount] = useState("");
   const [fiatAmount, setFiatAmount] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState(availableWallets[0]?.crypto_symbol || "USDT");
@@ -122,9 +127,11 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
       if (!error && data) {
         setRecipientName(data.username);
         setRecipientPexlyId(data.pexly_pay_id || '');
+        setRecipientUserId(data.id);
       } else {
         setRecipientName("");
         setRecipientPexlyId("");
+        setRecipientUserId("");
         toast({
           title: "User not found",
           description: `No user found with this ${type}`,
@@ -174,9 +181,39 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
       }
       setStep("confirm");
     } else {
-      // Show success dialog instead of just a toast
-      onOpenChange(false);
-      setShowSuccessDialog(true);
+      if (!user?.id || !recipientUserId) {
+        toast({
+          title: "Error",
+          description: "Missing user information",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setProcessing(true);
+      
+      const result = await sendPexlyPayment(
+        user.id,
+        recipientUserId,
+        parseFloat(amount),
+        selectedCurrency,
+        `Pexly Pay transfer to ${recipientName || recipientValue}`
+      );
+
+      setProcessing(false);
+
+      if (result.success) {
+        await queryClient.invalidateQueries({ queryKey: ['wallets'] });
+        
+        onOpenChange(false);
+        setShowSuccessDialog(true);
+      } else {
+        toast({
+          title: "Transfer Failed",
+          description: result.error || "Failed to process transfer",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -184,11 +221,13 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
     setRecipientValue("");
     setRecipientName("");
     setRecipientPexlyId("");
+    setRecipientUserId("");
     setAmount("");
     setFiatAmount("");
     setSelectedCurrency(availableWallets[0]?.crypto_symbol || "USDT");
     setAmountInputMode("fiat");
     setStep("recipient");
+    setProcessing(false);
     onOpenChange(false);
   };
 
@@ -471,11 +510,27 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
             </Alert>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep("amount")} className="flex-1">
+              <Button 
+                variant="outline" 
+                onClick={() => setStep("amount")} 
+                className="flex-1"
+                disabled={processing}
+              >
                 Back
               </Button>
-              <Button onClick={handleNext} className="flex-1">
-                Confirm Transfer
+              <Button 
+                onClick={handleNext} 
+                className="flex-1"
+                disabled={processing}
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Confirm Transfer"
+                )}
               </Button>
             </div>
           </div>
