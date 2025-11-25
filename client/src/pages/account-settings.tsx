@@ -84,7 +84,7 @@ const settingsSections = [
   { id: "security-questions", label: "Security Questions", icon: Info },
 ];
 
-export function AccountSettings() {
+export default function AccountSettings() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
