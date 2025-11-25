@@ -162,16 +162,34 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
       setStep("amount");
     } else if (step === "amount") {
       const selectedWallet = availableWallets.find(w => w.crypto_symbol === selectedCurrency);
-      if (!selectedWallet || selectedWallet.balance < parseFloat(amount)) {
+      const requestedAmount = parseFloat(amount);
+      
+      console.log('Balance check:', {
+        wallet: selectedWallet?.crypto_symbol,
+        available: selectedWallet?.balance,
+        requested: requestedAmount,
+        locked: selectedWallet?.locked_balance
+      });
+      
+      if (!selectedWallet) {
         toast({
-          title: "Insufficient balance",
-          description: `You only have ${selectedWallet?.balance || 0} ${selectedCurrency}`,
+          title: "Wallet not found",
+          description: `${selectedCurrency} wallet not found`,
           variant: "destructive",
         });
         return;
       }
       
-      if (!amount || parseFloat(amount) <= 0) {
+      if (selectedWallet.balance < requestedAmount) {
+        toast({
+          title: "Insufficient balance",
+          description: `Available: ${selectedWallet.balance.toFixed(8)} ${selectedCurrency}\nRequired: ${requestedAmount.toFixed(8)} ${selectedCurrency}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!amount || requestedAmount <= 0) {
         toast({
           title: "Error",
           description: "Please enter a valid amount",
@@ -431,9 +449,19 @@ export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: S
                 </div>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Available</span>
-                <span className="font-medium">{selectedCurrencyData?.balance || 0} {selectedCurrency}</span>
+                <span className="text-muted-foreground">Available Balance</span>
+                <span className="font-medium text-green-600">
+                  {selectedCurrencyData?.balance.toFixed(8) || '0.00000000'} {selectedCurrency}
+                </span>
               </div>
+              {parseFloat(amount) > 0 && selectedCurrencyData && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">After Transfer</span>
+                  <span className={`font-medium ${(selectedCurrencyData.balance - parseFloat(amount)) >= 0 ? 'text-muted-foreground' : 'text-red-600'}`}>
+                    {(selectedCurrencyData.balance - parseFloat(amount)).toFixed(8)} {selectedCurrency}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Network Fee</span>
                 <span className="font-medium text-green-600">Free</span>
