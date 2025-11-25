@@ -26,6 +26,9 @@ import { SendPexlyDialog } from "@/components/send-pexly-dialog";
 import { ReceivePexlyDialog } from "@/components/receive-pexly-dialog";
 import { ReferralDialog } from "@/components/referral-dialog";
 import { QRScannerDialog } from "@/components/qr-scanner-dialog";
+import { createClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export default function PexlyPay() {
   const { user } = useAuth();
@@ -34,10 +37,45 @@ export default function PexlyPay() {
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [referralDialogOpen, setReferralDialogOpen] = useState(false);
   const [scannerDialogOpen, setScannerDialogOpen] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
 
   const balance = 0.00;
   const cashback = 1.23;
   const cashbackRate = 2;
+  const { toast } = useToast();
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfileData();
+    }
+  }, [user]);
+
+  const fetchProfileData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('pexly_pay_id')
+        .eq('id', user?.id)
+        .single();
+
+      if (!error && data) {
+        setProfileData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+    }
+  };
+
+  const copyPexlyPayId = () => {
+    if (profileData?.pexly_pay_id) {
+      navigator.clipboard.writeText(profileData.pexly_pay_id);
+      toast({
+        title: "Copied!",
+        description: "UIID copied to clipboard"
+      });
+    }
+  };
 
   const quickActions = [
     { icon: QrCode, label: "QR Pay", onClick: () => setScannerDialogOpen(true) },
@@ -100,6 +138,34 @@ export default function PexlyPay() {
       </div>
 
       <div className="px-4 py-6 space-y-6">
+        {profileData?.pexly_pay_id && (
+          <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground mb-1">Your UIID</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background px-3 py-1.5 rounded font-mono text-sm font-bold">
+                      {profileData.pexly_pay_id}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={copyPexlyPayId}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Share this ID to receive instant payments
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="flex items-center justify-between">
