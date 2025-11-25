@@ -82,7 +82,7 @@ export default function PexlyPay() {
           })
           .select()
           .single();
-        
+
         if (newProfile) {
           setProfileData(newProfile);
         }
