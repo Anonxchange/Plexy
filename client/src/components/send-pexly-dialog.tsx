@@ -17,36 +17,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Info, ArrowRight } from "lucide-react";
+import { Info, ArrowRight, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { createClient } from "@/lib/supabase";
+import type { Wallet } from "@/lib/wallet-api";
+import { PaymentSuccessDialog } from "./payment-success-dialog";
 
 interface SendPexlyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  availableWallets?: Wallet[];
 }
 
-const currencies = [
-  { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC },
-  { symbol: "ETH", name: "Ethereum", iconUrl: cryptoIconUrls.ETH },
-  { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT },
-  { symbol: "USDC", name: "USD Coin", iconUrl: cryptoIconUrls.USDC },
-  { symbol: "SOL", name: "Solana", iconUrl: cryptoIconUrls.SOL },
-  { symbol: "TON", name: "Toncoin", iconUrl: cryptoIconUrls.TON },
-  { symbol: "XMR", name: "Monero", iconUrl: cryptoIconUrls.XMR },
-];
-
-export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
+export function SendPexlyDialog({ open, onOpenChange, availableWallets = [] }: SendPexlyDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const supabase = createClient();
   const [activeTab, setActiveTab] = useState("pexly-id");
   const [recipientValue, setRecipientValue] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPexlyId, setRecipientPexlyId] = useState("");
+  const [lookingUpRecipient, setLookingUpRecipient] = useState(false);
   const [amount, setAmount] = useState("");
-  const [selectedCurrency, setSelectedCurrency] = useState("USDT");
+  const [selectedCurrency, setSelectedCurrency] = useState(availableWallets[0]?.crypto_symbol || "USDT");
   const [step, setStep] = useState<"recipient" | "amount" | "confirm">("recipient");
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
-  const handleNext = () => {
+  // Build currencies from available wallets
+  const currencies = availableWallets.map(wallet => ({
+    symbol: wallet.crypto_symbol,
+    name: wallet.crypto_symbol,
+    iconUrl: cryptoIconUrls[wallet.crypto_symbol as keyof typeof cryptoIconUrls] || cryptoIconUrls.BTC,
+    balance: wallet.balance,
+  }));
+
+  const lookupRecipient = async (value: string, type: 'pexly-id' | 'email' | 'phone') => {
+    if (!value) return;
+    
+    setLookingUpRecipient(true);
+    try {
+      let query = supabase.from('user_profiles').select('username, pexly_pay_id, id, email, phone_number');
+      
+      if (type === 'pexly-id') {
+        query = query.eq('pexly_pay_id', value);
+      } else if (type === 'email') {
+        // Look up by email directly from user_profiles
+        query = query.eq('email', value.toLowerCase());
+      } else if (type === 'phone') {
+        // Look up by phone_number directly from user_profiles
+        query = query.eq('phone_number', value);
+      }
+      
+      const { data, error } = await query.single();
+      
+      if (!error && data) {
+        setRecipientName(data.username);
+        setRecipientPexlyId(data.pexly_pay_id || '');
+      } else {
+        setRecipientName("");
+        setRecipientPexlyId("");
+        toast({
+          title: "User not found",
+          description: `No user found with this ${type}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error looking up recipient:', error);
+      setRecipientName("");
+    } finally {
+      setLookingUpRecipient(false);
+    }
+  };
+
+  const handleNext = async () => {
     if (step === "recipient") {
       if (!recipientValue) {
         toast({
@@ -56,8 +102,21 @@ export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
         });
         return;
       }
+      
+      // Look up recipient before proceeding
+      await lookupRecipient(recipientValue, activeTab as any);
       setStep("amount");
     } else if (step === "amount") {
+      const selectedWallet = availableWallets.find(w => w.crypto_symbol === selectedCurrency);
+      if (!selectedWallet || selectedWallet.balance < parseFloat(amount)) {
+        toast({
+          title: "Insufficient balance",
+          description: `You only have ${selectedWallet?.balance || 0} ${selectedCurrency}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
       if (!amount || parseFloat(amount) <= 0) {
         toast({
           title: "Error",
@@ -68,34 +127,40 @@ export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
       }
       setStep("confirm");
     } else {
-      toast({
-        title: "Success",
-        description: "Transfer initiated successfully",
-      });
-      handleClose();
+      // Show success dialog instead of just a toast
+      onOpenChange(false);
+      setShowSuccessDialog(true);
     }
   };
 
   const handleClose = () => {
     setRecipientValue("");
+    setRecipientName("");
+    setRecipientPexlyId("");
     setAmount("");
-    setSelectedCurrency("USDT");
+    setSelectedCurrency(availableWallets[0]?.crypto_symbol || "USDT");
     setStep("recipient");
     onOpenChange(false);
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessDialog(false);
+    handleClose();
   };
 
   const selectedCurrencyData = currencies.find(c => c.symbol === selectedCurrency);
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {step === "recipient" && "Send to Pexly user"}
-            {step === "amount" && "Enter amount"}
-            {step === "confirm" && "Confirm transfer"}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {step === "recipient" && "Send to Pexly user"}
+              {step === "amount" && "Enter amount"}
+              {step === "confirm" && "Confirm transfer"}
+            </DialogTitle>
+          </DialogHeader>
 
         {step === "recipient" && (
           <div className="space-y-4">
@@ -142,6 +207,15 @@ export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
               </TabsContent>
             </Tabs>
 
+            {recipientName && (
+              <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
+                <Info className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-xs text-green-700 dark:text-green-300">
+                  User found: <strong>{recipientName}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription className="text-xs">
@@ -150,9 +224,18 @@ export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
               </AlertDescription>
             </Alert>
 
-            <Button onClick={handleNext} className="w-full">
-              Next
-              <ArrowRight className="h-4 w-4 ml-2" />
+            <Button onClick={handleNext} className="w-full" disabled={lookingUpRecipient}>
+              {lookingUpRecipient ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Looking up user...
+                </>
+              ) : (
+                <>
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </>
+              )}
             </Button>
           </div>
         )}
@@ -224,11 +307,20 @@ export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
             <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Recipient</span>
-                <span className="font-medium">{recipientValue}</span>
+                <div className="flex flex-col items-end">
+                  <span className="font-medium">{recipientValue}</span>
+                  {recipientName && (
+                    <span className="text-xs text-muted-foreground">{recipientName}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Available</span>
+                <span className="font-medium">{selectedCurrencyData?.balance || 0} {selectedCurrency}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Network Fee</span>
-                <span className="font-medium">Free</span>
+                <span className="font-medium text-green-600">Free</span>
               </div>
             </div>
 
@@ -249,7 +341,12 @@ export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
             <div className="bg-muted p-4 rounded-lg space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">To</span>
-                <span className="font-medium">{recipientValue}</span>
+                <div className="flex flex-col items-end">
+                  <span className="font-medium">{recipientValue}</span>
+                  {recipientName && (
+                    <span className="text-xs text-muted-foreground">{recipientName}</span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground text-sm">Amount</span>
@@ -306,7 +403,20 @@ export function SendPexlyDialog({ open, onOpenChange }: SendPexlyDialogProps) {
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <PaymentSuccessDialog
+        open={showSuccessDialog}
+        onOpenChange={setShowSuccessDialog}
+        amount={amount}
+        currency={selectedCurrency}
+        recipientValue={recipientValue}
+        recipientName={recipientName}
+        recipientType={activeTab as any}
+        recipientPexlyId={recipientPexlyId}
+        onDone={handleSuccessClose}
+      />
+    </>
   );
 }
