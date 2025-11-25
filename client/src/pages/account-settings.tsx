@@ -58,7 +58,8 @@ import {
   Wallet,
   Search,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Copy
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { cn } from "@/lib/utils";
