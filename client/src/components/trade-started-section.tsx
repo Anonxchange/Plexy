@@ -64,7 +64,6 @@ export function TradeStartedSection({
               onTradeUpdate={onTradeUpdate}
             />
 
-            {/* Report Bad Behaviour - after paid button */}
             {!isPaid && (
               <Button
                 variant="outline"
@@ -75,9 +74,7 @@ export function TradeStartedSection({
               </Button>
             )}
 
-            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
-              Keep trades within Pexly. Some users may ask you to trade outside the Pexly platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within Pexly. If you choose to proceed outside Pexly, note that we cannot help or support you if you are scammed during such trades.
-            </div>
+            {/* Removed the warning block here */}
 
             <Button
               variant="destructive"
@@ -88,7 +85,6 @@ export function TradeStartedSection({
               Cancel Trade
             </Button>
 
-            {/* "You've paid already?" - under cancel button */}
             {!isPaid && (
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <Info className="w-4 h-4" />
@@ -124,9 +120,7 @@ export function TradeStartedSection({
               Raise Dispute
             </Button>
 
-            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
-              Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt.
-            </div>
+            {/* Removed second warning block here */}
 
             {!isPaid && (
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
