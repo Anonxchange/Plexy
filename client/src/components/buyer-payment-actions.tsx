@@ -12,14 +12,17 @@ interface BuyerPaymentActionsProps {
     status: string;
     crypto_symbol: string;
     buyer_paid_at?: string | null;
+    seller_released_at?: string | null;
   };
   onTradeUpdate?: () => void;
+  onShowCancelModal?: () => void;
 }
 
 export function BuyerPaymentActions({
   isPaid,
   trade,
   onTradeUpdate,
+  onShowCancelModal,
 }: BuyerPaymentActionsProps) {
   const { toast } = useToast();
   const supabase = createClient();
@@ -100,19 +103,26 @@ export function BuyerPaymentActions({
 
   return (
     <div className="space-y-4">
-      {/* Paid Button (only shown before marking as paid) */}
+      {/* Payment Time Warning - bigger text like "please make payment" */}
+      {!isPaid && (
+        <div className="bg-muted/50 p-4 rounded-lg border border-primary/30">
+          <div className="text-base sm:text-lg font-medium">
+            <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
+            <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled.
+          </div>
+        </div>
+      )}
+
+      {/* Paid Button - tiny with nice style */}
       {!isPaid && (
         <Button
           onClick={handleMarkAsPaid}
           disabled={isProcessing || trade.status !== 'pending'}
-          className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
+          size="sm"
+          className="px-6 py-2 h-9 bg-green-600 hover:bg-green-700 text-sm font-semibold rounded-full shadow-sm"
         >
-          <div className="flex items-center justify-between w-full">
-            <div className="text-left">
-              <div className="font-bold text-lg">Paid</div>
-              <div className="text-sm">Time left {formatTime(disputeCountdown)}</div>
-            </div>
-          </div>
+          <span className="mr-2">Paid</span>
+          <span className="text-xs opacity-80">({formatTime(disputeCountdown)})</span>
         </Button>
       )}
 
@@ -166,21 +176,36 @@ export function BuyerPaymentActions({
         </div>
       )}
 
-      {/* Report Bad Behaviour - moved after dispute section */}
-      {isPaid && (
+      {/* Cancel Trade - always available unless released */}
+      {!trade.seller_released_at && trade.status !== 'completed' && trade.status !== 'cancelled' && (
         <Button
           variant="outline"
-          className="w-full"
+          size="sm"
+          className="w-full text-sm text-muted-foreground hover:text-foreground"
+          onClick={onShowCancelModal}
+          disabled={isProcessing}
         >
-          Report Bad Behaviour
+          Cancel Trade
         </Button>
       )}
 
+      {/* "You've paid already" - shown before marking as paid */}
       {!isPaid && (
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Info className="w-5 h-5" />
-          <span>You have paid already</span>
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Info className="w-4 h-4" />
+          <span>You've paid already?</span>
         </div>
+      )}
+
+      {/* Report Bad Behaviour - shown after paid */}
+      {isPaid && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-sm"
+        >
+          Report Bad Behaviour
+        </Button>
       )}
     </div>
   );
