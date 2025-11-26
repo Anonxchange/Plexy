@@ -319,36 +319,7 @@ export default function ActiveTrade() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const markAsPaid = async () => {
-    if (!tradeId) return;
-
-    try {
-      const { error } = await supabase
-        .from("p2p_trades")
-        .update({
-          buyer_paid_at: new Date().toISOString(),
-        })
-        .eq("id", tradeId);
-
-      if (error) throw error;
-
-      setIsPaid(true);
-      notificationSounds.play('message_received');
-      toast({
-        title: "Success",
-        description: "Payment marked as sent.",
-      });
-
-      fetchTradeData();
-    } catch (error) {
-      console.error("Error marking as paid:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update trade status",
-        variant: "destructive",
-      });
-    }
-  };
+  
 
   const cancelTrade = async () => {
     if (!tradeId || !confirmNotPaid || !cancelReason) {
@@ -364,18 +335,33 @@ export default function ActiveTrade() {
       // Get trade details first
       const { data: tradeData, error: tradeError } = await supabase
         .from("p2p_trades")
-        .select("escrow_id, seller_id, crypto_amount, crypto_symbol, status")
+        .select("escrow_id, seller_id, crypto_amount, crypto_symbol, status, buyer_paid_at")
         .eq("id", tradeId)
         .single();
 
       if (tradeError || !tradeData) {
-        throw new Error("Trade not found");
+        console.error("Trade fetch error:", tradeError);
+        toast({
+          title: "Error",
+          description: "Could not find trade details",
+          variant: "destructive",
+        });
+        return;
       }
 
       if (tradeData.status !== 'pending') {
         toast({
           title: "Cannot Cancel",
           description: "This trade cannot be cancelled because it's no longer pending.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (tradeData.buyer_paid_at) {
+        toast({
+          title: "Cannot Cancel",
+          description: "You cannot cancel after marking payment as sent.",
           variant: "destructive",
         });
         return;
@@ -470,36 +456,7 @@ export default function ActiveTrade() {
     }
   };
 
-  const releaseCrypto = async () => {
-    if (!tradeId) return;
-
-    try {
-      const { error } = await supabase
-        .from("p2p_trades")
-        .update({
-          seller_released_at: new Date().toISOString(),
-          status: "completed",
-        })
-        .eq("id", tradeId);
-
-      if (error) throw error;
-
-      notificationSounds.play('trade_completed');
-      toast({
-        title: "Success",
-        description: "Crypto released to buyer",
-      });
-
-      fetchTradeData();
-    } catch (error) {
-      console.error("Error releasing crypto:", error);
-      toast({
-        title: "Error",
-        description: "Failed to release crypto",
-        variant: "destructive",
-      });
-    }
-  };
+  
 
   const handleAutoCancelTrade = async () => {
     if (!tradeId) return;
@@ -759,9 +716,8 @@ export default function ActiveTrade() {
               counterpartyUsername={counterparty?.username}
               isPaid={isPaid}
               timer={timer}
-              onMarkAsPaid={markAsPaid}
-              onReleaseCrypto={releaseCrypto}
-              onCancelTrade={() => setShowCancelWarning(true)}
+              onTradeUpdate={fetchTradeData}
+              onShowCancelModal={() => setShowCancelWarning(true)}
               formatTime={formatTime}
             />
           </div>
@@ -929,9 +885,8 @@ export default function ActiveTrade() {
                     counterpartyUsername={counterparty?.username}
                     isPaid={isPaid}
                     timer={timer}
-                    onMarkAsPaid={markAsPaid}
-                    onReleaseCrypto={releaseCrypto}
-                    onCancelTrade={() => setShowCancelWarning(true)}
+                    onTradeUpdate={fetchTradeData}
+                    onShowCancelModal={() => setShowCancelWarning(true)}
                     formatTime={formatTime}
                   />
                 )}
