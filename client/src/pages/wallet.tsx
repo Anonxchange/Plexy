@@ -662,7 +662,7 @@ export default function Wallet() {
                     Spot
                   </Button>
                 </Link>
-                <Link href="/visa-card">
+                <Link href="/wallet/visa-card">
                   <Button
                     variant="outline"
                     className="h-9 text-sm whitespace-nowrap"
@@ -671,7 +671,7 @@ export default function Wallet() {
                     Visa card
                   </Button>
                 </Link>
-                <Link href="/pexly-pay">
+                <Link href="/wallet/pexly-pay">
                   <Button
                     variant="outline"
                     className="h-9 text-sm whitespace-nowrap"
@@ -680,7 +680,7 @@ export default function Wallet() {
                     Pexly Pay
                   </Button>
                 </Link>
-                <Link href="/mobile-topup">
+                <Link href="/wallet/mobile-topup">
                   <Button
                     variant="outline"
                     className="h-9 text-sm whitespace-nowrap"
