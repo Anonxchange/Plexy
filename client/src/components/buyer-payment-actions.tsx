@@ -106,11 +106,17 @@ export function BuyerPaymentActions({
         <Button
           onClick={handleMarkAsPaid}
           disabled={isProcessing || trade.status !== 'pending'}
-          size="sm"
-          className="px-6 py-2 h-9 bg-green-600 hover:bg-green-700 text-sm font-semibold rounded-full shadow-sm"
+          className="w-full bg-green-600 hover:bg-green-700 text-white p-4 h-auto rounded-lg shadow-md"
         >
-          <span className="mr-2">Paid</span>
-          <span className="text-xs opacity-80">({formatTime(disputeCountdown)})</span>
+          <div className="flex items-center justify-between w-full">
+            <span className="text-base font-semibold">Paid</span>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="text-left w-full mt-1">
+            <span className="text-xs opacity-90">Time left {formatTime(disputeCountdown)}</span>
+          </div>
         </Button>
       )}
 
