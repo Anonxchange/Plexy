@@ -12,17 +12,14 @@ interface BuyerPaymentActionsProps {
     status: string;
     crypto_symbol: string;
     buyer_paid_at?: string | null;
-    seller_released_at?: string | null;
   };
   onTradeUpdate?: () => void;
-  onShowCancelModal?: () => void;
 }
 
 export function BuyerPaymentActions({
   isPaid,
   trade,
   onTradeUpdate,
-  onShowCancelModal,
 }: BuyerPaymentActionsProps) {
   const { toast } = useToast();
   const supabase = createClient();
@@ -176,27 +173,6 @@ export function BuyerPaymentActions({
         </div>
       )}
 
-      {/* Cancel Trade - always available unless released */}
-      {!trade.seller_released_at && trade.status !== 'completed' && trade.status !== 'cancelled' && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full text-sm text-muted-foreground hover:text-foreground"
-          onClick={onShowCancelModal}
-          disabled={isProcessing}
-        >
-          Cancel Trade
-        </Button>
-      )}
-
-      {/* "You've paid already" - shown before marking as paid */}
-      {!isPaid && (
-        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <Info className="w-4 h-4" />
-          <span>You've paid already?</span>
-        </div>
-      )}
-
       {/* Report Bad Behaviour - shown after paid */}
       {isPaid && (
         <Button
@@ -206,6 +182,23 @@ export function BuyerPaymentActions({
         >
           Report Bad Behaviour
         </Button>
+      )}
+
+      {/* Cancel and "You've paid already" together - under cancel */}
+      {!isPaid && (
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-sm text-muted-foreground hover:text-foreground"
+          >
+            Cancel Trade
+          </Button>
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <Info className="w-4 h-4" />
+            <span>You've paid already?</span>
+          </div>
+        </div>
       )}
     </div>
   );
