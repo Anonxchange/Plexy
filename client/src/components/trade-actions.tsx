@@ -1,42 +1,186 @@
-import { Info } from "lucide-react";
+
+import { useState } from "react";
+import { Info, XCircle, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { createClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { notificationSounds } from "@/lib/notification-sounds";
 
 interface TradeActionsProps {
   isUserBuyer: boolean;
   isPaid: boolean;
   counterpartyUsername?: string;
   trade: {
+    id: string;
     status: string;
     crypto_symbol: string;
+    fiat_amount?: number;
+    fiat_currency?: string;
+    crypto_amount?: number;
+    cancelled_at?: string;
+    cancel_reason?: string;
+    buyer_paid_at?: string;
+    escrow_id?: string | null;
+    seller_id?: string;
   };
-  onMarkAsPaid: () => void;
-  onReleaseCrypto: () => void;
-  onCancelTrade: () => void;
+  onTradeUpdate?: () => void;
+  onShowCancelModal?: () => void;
 }
+
+const getCancelReasonText = (reason: string | undefined) => {
+  switch (reason) {
+    case 'unresponsive':
+      return 'The other party was unresponsive';
+    case 'asked_to_cancel':
+      return 'Trade was cancelled by request';
+    case 'payment_not_accepted':
+      return 'Payment method was not accepted';
+    case 'expired':
+      return 'Trade expired due to timeout';
+    case 'other':
+      return 'Trade was cancelled';
+    default:
+      return 'Trade was cancelled';
+  }
+};
 
 export function TradeActions({
   isUserBuyer,
   isPaid,
   counterpartyUsername,
   trade,
-  onMarkAsPaid,
-  onReleaseCrypto,
-  onCancelTrade,
+  onTradeUpdate,
+  onShowCancelModal,
 }: TradeActionsProps) {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const supabase = createClient();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleMarkAsPaid = async () => {
+    if (!trade.id || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from("p2p_trades")
+        .update({
+          buyer_paid_at: new Date().toISOString(),
+        })
+        .eq("id", trade.id);
+
+      if (error) throw error;
+
+      notificationSounds.play('message_received');
+      toast({
+        title: "Success",
+        description: "Payment marked as sent.",
+      });
+
+      onTradeUpdate?.();
+    } catch (error) {
+      console.error("Error marking as paid:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update trade status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReleaseCrypto = async () => {
+    if (!trade.id || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from("p2p_trades")
+        .update({
+          seller_released_at: new Date().toISOString(),
+          status: "completed",
+        })
+        .eq("id", trade.id);
+
+      if (error) throw error;
+
+      notificationSounds.play('trade_completed');
+      toast({
+        title: "Success",
+        description: "Crypto released to buyer",
+      });
+
+      onTradeUpdate?.();
+    } catch (error) {
+      console.error("Error releasing crypto:", error);
+      toast({
+        title: "Error",
+        description: "Failed to release crypto",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (trade.status === "completed") {
     return (
-      <div className="bg-green-500/10 border border-green-500/20 p-3 sm:p-4 rounded-lg text-center">
-        <div className="text-green-600 font-semibold text-sm sm:text-base">Trade Completed Successfully!</div>
+      <div className="space-y-4">
+        <div className="bg-green-500/10 border border-green-500/20 p-4 sm:p-5 rounded-lg text-center">
+          <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600 mx-auto mb-3" />
+          <div className="text-green-600 font-bold text-lg sm:text-xl mb-2">Trade Completed Successfully!</div>
+          <div className="text-sm text-muted-foreground">
+            {trade.crypto_amount?.toFixed(8)} {trade.crypto_symbol} has been transferred.
+          </div>
+        </div>
+        <Button 
+          variant="outline" 
+          className="w-full"
+          onClick={() => setLocation("/p2p")}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Marketplace
+        </Button>
       </div>
     );
   }
 
   if (trade.status === "cancelled") {
     return (
-      <div className="bg-destructive/10 border border-destructive/20 p-3 sm:p-4 rounded-lg">
-        <div className="text-sm sm:text-base text-destructive">
-          This trade was canceled and {trade.crypto_symbol} is no longer reserved.
+      <div className="space-y-4">
+        <div className="bg-destructive/10 border border-destructive/20 p-4 sm:p-5 rounded-lg text-center">
+          <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-destructive mx-auto mb-3" />
+          <div className="text-destructive font-bold text-lg sm:text-xl mb-2">Trade Cancelled</div>
+          <div className="text-sm text-muted-foreground mb-2">
+            {getCancelReasonText(trade.cancel_reason)}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {trade.crypto_symbol} funds have been released back to the seller's wallet.
+          </div>
+          {trade.cancelled_at && (
+            <div className="text-xs text-muted-foreground mt-2">
+              Cancelled on {new Date(trade.cancelled_at).toLocaleString()}
+            </div>
+          )}
         </div>
+        <div className="bg-muted/50 p-3 rounded-lg border">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-muted-foreground">
+              If you believe this cancellation was made in error or need assistance, please contact support.
+            </div>
+          </div>
+        </div>
+        <Button 
+          variant="outline" 
+          className="w-full"
+          onClick={() => setLocation("/p2p")}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Marketplace
+        </Button>
       </div>
     );
   }
@@ -52,11 +196,13 @@ export function TradeActions({
 
             <Button 
               className="w-full p-3 sm:p-4 h-auto bg-primary hover:bg-primary/90"
-              onClick={onMarkAsPaid}
-              disabled={isPaid}
+              onClick={handleMarkAsPaid}
+              disabled={isPaid || isProcessing}
             >
               <div className="text-left w-full">
-                <div className="font-bold text-base sm:text-lg">Mark as Paid</div>
+                <div className="font-bold text-base sm:text-lg">
+                  {isProcessing ? "Processing..." : "Mark as Paid"}
+                </div>
                 <div className="text-xs sm:text-sm">
                   {isPaid ? 'Already marked as paid' : 'Click after sending payment'}
                 </div>
@@ -67,13 +213,14 @@ export function TradeActions({
           <Button 
             variant="outline" 
             className="w-full text-xs sm:text-sm h-9 sm:h-10"
-            onClick={onCancelTrade}
+            onClick={onShowCancelModal}
+            disabled={isPaid || isProcessing}
           >
             Cancel Trade
           </Button>
 
           <div className="border-2 border-primary rounded-lg p-3 sm:p-4 text-xs sm:text-sm bg-primary/5">
-            Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt.
+            Keep trades within {import.meta.env.VITE_APP_NAME || "Pexly"}. Some users may ask you to trade outside the platform. This is against our Terms of Service and likely a scam attempt.
           </div>
         </>
       ) : (
@@ -85,11 +232,13 @@ export function TradeActions({
 
             <Button 
               className="w-full p-3 sm:p-4 h-auto bg-green-500 hover:bg-green-600"
-              onClick={onReleaseCrypto}
-              disabled={!isPaid}
+              onClick={handleReleaseCrypto}
+              disabled={!isPaid || isProcessing}
             >
               <div className="text-left w-full">
-                <div className="font-bold text-base sm:text-lg">Release Crypto</div>
+                <div className="font-bold text-base sm:text-lg">
+                  {isProcessing ? "Processing..." : "Release Crypto"}
+                </div>
                 <div className="text-xs sm:text-sm">
                   {isPaid ? 'Buyer has marked as paid' : 'Waiting for buyer payment'}
                 </div>
@@ -102,7 +251,7 @@ export function TradeActions({
           </Button>
 
           <div className="border-2 border-primary rounded-lg p-3 sm:p-4 text-xs sm:text-sm bg-primary/5">
-            Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt.
+            Keep trades within {import.meta.env.VITE_APP_NAME || "Pexly"}. Some users may ask you to trade outside the platform. This is against our Terms of Service and likely a scam attempt.
           </div>
         </>
       )}
