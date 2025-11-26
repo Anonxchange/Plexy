@@ -62,6 +62,10 @@ export function TradeStartedSection({
               formatTime={formatTime}
             />
 
+            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
+              Keep trades within Pexly. Some users may ask you to trade outside the Pexly platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within Pexly. If you choose to proceed outside Pexly, note that we cannot help or support you if you are scammed during such trades.
+            </div>
+
             <Button 
               variant="destructive"
               className="w-full"
