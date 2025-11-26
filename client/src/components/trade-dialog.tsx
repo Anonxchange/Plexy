@@ -31,8 +31,6 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
   const [amount, setAmount] = useState("");
   const [showMoreTerms, setShowMoreTerms] = useState(false);
   const [isCreatingTrade, setIsCreatingTrade] = useState(false);
-  const [platformFee, setPlatformFee] = useState(0);
-  const [feePercentage, setFeePercentage] = useState<number | null>(null);
   const [showBankSelection, setShowBankSelection] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState<any | null>(null);
@@ -81,64 +79,9 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
     fetchUserData();
   }, [open, offer.type, offer.cryptoSymbol, user]);
 
-  // Calculate fee data when amount or offer changes
-  useEffect(() => {
-    const fetchFeeData = async () => {
-      if (!amount || parseFloat(amount) <= 0) {
-        setPlatformFee(0);
-        setFeePercentage(null);
-        return;
-      }
-
-      try {
-        const { createClient } = await import("@/lib/supabase");
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session) return;
-
-        // Determine transaction type based on offer type
-        const transactionType = offer.type === 'buy' ? 'marketplace_sell' : 'marketplace_buy';
-
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calculate-fee`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            transaction_type: transactionType,
-            crypto_symbol: offer.cryptoSymbol || 'BTC',
-            amount: parseFloat(amount),
-            payment_method: offer.paymentMethod,
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setPlatformFee(data.platform_fee || 0);
-          setFeePercentage(data.fee_percentage);
-        } else {
-          console.error("Failed to fetch fee:", await response.text());
-          setPlatformFee(0);
-          setFeePercentage(null);
-        }
-      } catch (error) {
-        console.error("Error fetching fee data:", error);
-        setPlatformFee(0);
-        setFeePercentage(null);
-      }
-    };
-
-    fetchFeeData();
-  }, [amount, offer.type, offer.cryptoSymbol, offer.paymentMethod]);
 
   // Calculate crypto amount based on fiat amount and offer price
   const cryptoAmount = amount ? parseFloat(amount) / offer.pricePerBTC : 0;
-
-  // Total amount the user will receive after fees (for sellers)
-  // Or total amount the user pays (for buyers)
-  const receiveAmount = amount ? parseFloat(amount) - platformFee : 0;
 
 
   const handleProceed = async () => {
@@ -263,14 +206,12 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
           seller_id: sellerId,
           crypto_symbol: offer.cryptoSymbol,
           fiat_currency: offer.currency,
-          crypto_amount: cryptoAmount, // Use the calculated crypto amount
-          fiat_amount: fiatAmount, // This is the amount the buyer pays
+          crypto_amount: cryptoAmount,
+          fiat_amount: fiatAmount,
           price: offer.pricePerBTC,
           payment_method: offer.paymentMethod,
           status: "pending",
           payment_deadline: paymentDeadline.toISOString(),
-          platform_fee: platformFee,
-          platform_fee_percentage: feePercentage,
         })
         .select()
         .single();
@@ -558,19 +499,6 @@ ${selectedBankAccount.account_number}`;
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Available Balance:</span>
                   <span className="font-bold text-primary">{availableBalance.toFixed(8)} {offer.cryptoSymbol || 'BTC'}</span>
-                </div>
-              </div>
-            )}
-            
-            {platformFee > 0 && (
-              <div className="p-2 sm:p-3 bg-muted/50 rounded-lg border border-border/50">
-                <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="text-muted-foreground">Platform fee {feePercentage ? `(${feePercentage}%)` : ''}</span>
-                  <span className="font-semibold">-{platformFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {offer.currency}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm mt-1 pt-1 border-t border-border/30">
-                  <span className="text-muted-foreground">Net amount</span>
-                  <span className="font-bold">{receiveAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {offer.currency}</span>
                 </div>
               </div>
             )}
