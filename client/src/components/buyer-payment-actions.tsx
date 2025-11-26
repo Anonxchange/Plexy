@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
@@ -53,73 +52,59 @@ export function BuyerPaymentActions({
 
   return (
     <div className="space-y-4">
-      {/* Paid Button */}
+      {/* Paid/Dispute Button */}
       <div className="bg-black/50 p-4 rounded">
-        <div className="mb-4 text-xs sm:text-sm">
-          <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
-          <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the crypto will be returned to the seller's wallet.
-        </div>
+        {!isPaid && (
+          <div className="mb-4 text-xs sm:text-sm">
+            <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
+            <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the crypto will be returned to the seller's wallet.
+          </div>
+        )}
 
-        <Button 
-          className={`w-full p-4 h-auto ${isPaid ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
-          onClick={onMarkAsPaid}
-          disabled={isPaid || tradeStatus !== 'pending'}
+        <Button
+          className={`w-full p-4 h-auto ${
+            isPaid
+              ? canDispute
+                ? 'bg-yellow-600 hover:bg-yellow-700'
+                : 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
+          onClick={isPaid ? undefined : onMarkAsPaid}
+          disabled={isPaid ? !canDispute : tradeStatus !== 'pending'}
         >
           <div className="flex items-center justify-between w-full">
             <div className="text-left">
-              <div className="font-bold text-lg">Paid</div>
+              <div className="font-bold text-lg">
+                {isPaid ? 'Start a Dispute' : 'Paid'}
+              </div>
               <div className="text-sm">
-                {isPaid ? 'Payment marked' : `Time left ${formatTime(timer)}`}
+                {isPaid
+                  ? canDispute
+                    ? 'Dispute now available'
+                    : `Available in ${formatDisputeTime(disputeCountdown)}`
+                  : `Time left ${formatTime(timer)}`
+                }
               </div>
             </div>
-            {isPaid && <span className="text-2xl">✓</span>}
+            {isPaid && !canDispute && <span className="text-2xl">✓</span>}
+            {isPaid && canDispute && <span className="text-2xl">⚖️</span>}
           </div>
         </Button>
+
+        {isPaid && !canDispute && (
+          <div className="mt-3 text-xs text-muted-foreground text-center">
+            Payment marked. Wait 1 hour before disputing if needed.
+          </div>
+        )}
       </div>
 
       {/* Report Bad Behaviour */}
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         className="w-full"
       >
         Report Bad Behaviour
       </Button>
-
-      {/* Dispute Section */}
-      <div className="bg-card border rounded-lg overflow-hidden">
-        <div className="bg-muted p-3 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-lg">⚖️</span>
-          </div>
-          <span className="font-semibold text-sm">Dispute</span>
-        </div>
-        
-        <div className="p-4 space-y-3">
-          <div className="text-sm text-muted-foreground">
-            Need help? <span className="font-semibold text-foreground">Start a dispute</span> if you run into an issue and are unable to resolve it.
-          </div>
-
-          <Button 
-            variant="outline" 
-            className="w-full"
-            disabled={!canDispute || tradeStatus !== 'pending'}
-          >
-            <div className="w-full">
-              <div className="font-semibold">Start a Dispute</div>
-              {!canDispute && isPaid && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  Available in {formatDisputeTime(disputeCountdown)}
-                </div>
-              )}
-              {!isPaid && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  Mark payment as sent first
-                </div>
-              )}
-            </div>
-          </Button>
-        </div>
-      </div>
 
       {/* Keep all trades on platform warning */}
       <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
