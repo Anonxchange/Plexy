@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Info, ChevronDown } from "lucide-react";
@@ -14,12 +15,14 @@ interface BuyerPaymentActionsProps {
     buyer_paid_at?: string | null;
   };
   onTradeUpdate?: () => void;
+  onShowCancelModal?: () => void;
 }
 
 export function BuyerPaymentActions({
   isPaid,
   trade,
   onTradeUpdate,
+  onShowCancelModal,
 }: BuyerPaymentActionsProps) {
   const { toast } = useToast();
   const supabase = createClient();
@@ -90,27 +93,25 @@ export function BuyerPaymentActions({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // Placeholder for timer formatting, assuming it's passed or derived elsewhere
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-
   return (
     <div className="space-y-4">
-      {/* Payment Time Warning - bigger text like "please make payment" */}
+      {/* Payment instruction - single version with medium size */}
       {!isPaid && (
         <div className="bg-muted/50 p-4 rounded-lg border border-primary/30">
-          <div className="text-base sm:text-lg font-medium">
+          <div className="text-sm sm:text-base">
             <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
             <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled.
           </div>
         </div>
       )}
 
-      {/* Paid Button - tiny with nice style */}
+      {/* Paid Button */}
       {!isPaid && (
         <Button
           onClick={handleMarkAsPaid}
@@ -184,20 +185,24 @@ export function BuyerPaymentActions({
         </Button>
       )}
 
-      {/* Cancel and "You've paid already" together - under cancel */}
+      {/* Cancel button (red) - only show before paid */}
       {!isPaid && (
-        <div className="space-y-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-sm text-muted-foreground hover:text-foreground"
-          >
-            Cancel Trade
-          </Button>
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <Info className="w-4 h-4" />
-            <span>You've paid already?</span>
-          </div>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="w-full text-sm"
+          onClick={onShowCancelModal}
+          disabled={trade.status !== 'pending'}
+        >
+          Cancel Trade
+        </Button>
+      )}
+
+      {/* "You've paid already?" - under cancel button */}
+      {!isPaid && (
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Info className="w-4 h-4" />
+          <span>You've paid already?</span>
         </div>
       )}
     </div>
