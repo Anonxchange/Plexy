@@ -101,16 +101,6 @@ export function BuyerPaymentActions({
 
   return (
     <div className="space-y-4">
-      {/* Payment instruction - single version with medium size */}
-      {!isPaid && (
-        <div className="bg-muted/50 p-4 rounded-lg border border-primary/30">
-          <div className="text-sm sm:text-base">
-            <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
-            <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled.
-          </div>
-        </div>
-      )}
-
       {/* Paid Button */}
       {!isPaid && (
         <Button
@@ -171,38 +161,6 @@ export function BuyerPaymentActions({
               </Button>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Report Bad Behaviour - shown after paid */}
-      {isPaid && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full text-sm"
-        >
-          Report Bad Behaviour
-        </Button>
-      )}
-
-      {/* Cancel button (red) - only show before paid */}
-      {!isPaid && (
-        <Button
-          variant="destructive"
-          size="sm"
-          className="w-full text-sm"
-          onClick={onShowCancelModal}
-          disabled={trade.status !== 'pending'}
-        >
-          Cancel Trade
-        </Button>
-      )}
-
-      {/* "You've paid already?" - under cancel button */}
-      {!isPaid && (
-        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <Info className="w-4 h-4" />
-          <span>You've paid already?</span>
         </div>
       )}
     </div>
