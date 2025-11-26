@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import { BuyerPaymentActions } from "./buyer-payment-actions";
@@ -6,20 +5,20 @@ import { BuyerPaymentActions } from "./buyer-payment-actions";
 interface TradeStartedSectionProps {
   isUserBuyer: boolean;
   trade: {
+    id: string;
+    status: string;
+    crypto_symbol: string;
+    crypto_amount: number;
     fiat_amount: number;
     fiat_currency: string;
     payment_method: string;
-    crypto_amount: number;
-    crypto_symbol: string;
-    status: string;
-    buyer_paid_at: string | null;
+    buyer_paid_at?: string | null;
   };
   counterpartyUsername?: string;
   isPaid: boolean;
   timer: number;
-  onMarkAsPaid: () => void;
-  onReleaseCrypto: () => void;
-  onCancelTrade: () => void;
+  onTradeUpdate?: () => void;
+  onShowCancelModal?: () => void;
   formatTime: (seconds: number) => string;
 }
 
@@ -29,9 +28,8 @@ export function TradeStartedSection({
   counterpartyUsername,
   isPaid,
   timer,
-  onMarkAsPaid,
-  onReleaseCrypto,
-  onCancelTrade,
+  onTradeUpdate,
+  onShowCancelModal,
   formatTime,
 }: TradeStartedSectionProps) {
   return (
@@ -55,22 +53,19 @@ export function TradeStartedSection({
 
             <BuyerPaymentActions
               isPaid={isPaid}
-              buyerPaidAt={trade.buyer_paid_at}
-              timer={timer}
-              tradeStatus={trade.status}
-              onMarkAsPaid={onMarkAsPaid}
-              formatTime={formatTime}
+              trade={trade}
+              onTradeUpdate={onTradeUpdate}
             />
 
             <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
               Keep trades within Pexly. Some users may ask you to trade outside the Pexly platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within Pexly. If you choose to proceed outside Pexly, note that we cannot help or support you if you are scammed during such trades.
             </div>
 
-            <Button 
+            <Button
               variant="destructive"
               className="w-full"
-              onClick={onCancelTrade}
-              disabled={trade.status !== 'pending'}
+              onClick={onShowCancelModal}
+              disabled={trade.status !== 'pending' || isPaid}
             >
               Cancel Trade
             </Button>
@@ -86,9 +81,9 @@ export function TradeStartedSection({
               </div>
             </div>
 
-            <Button 
+            <Button
               className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
-              onClick={onReleaseCrypto}
+              onClick={onTradeUpdate}
               disabled={!isPaid || trade.status !== 'pending'}
             >
               <div className="text-left w-full">
