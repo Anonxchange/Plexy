@@ -10,6 +10,8 @@ interface BuyerPaymentActionsProps {
   trade: {
     id: string;
     status: string;
+    crypto_symbol: string;
+    buyer_paid_at?: string | null;
   };
   onTradeUpdate?: () => void;
 }
@@ -61,14 +63,14 @@ export function BuyerPaymentActions({
   };
 
   useEffect(() => {
-    if (!trade.buyerPaidAt) { // Assuming buyerPaidAt is available in trade object
+    if (!trade.buyer_paid_at) {
       setCanDispute(false);
       setDisputeCountdown(3600);
       return;
     }
 
     const updateDisputeTimer = () => {
-      const paidTime = new Date(trade.buyerPaidAt).getTime(); // Assuming buyerPaidAt is available in trade object
+      const paidTime = new Date(trade.buyer_paid_at).getTime();
       const elapsedMs = Date.now() - paidTime;
       const elapsedSeconds = Math.floor(elapsedMs / 1000);
       const remainingSeconds = Math.max(0, 3600 - elapsedSeconds);
@@ -80,7 +82,7 @@ export function BuyerPaymentActions({
     updateDisputeTimer();
     const interval = setInterval(updateDisputeTimer, 1000);
     return () => clearInterval(interval);
-  }, [trade.buyerPaidAt]); // Assuming buyerPaidAt is available in trade object
+  }, [trade.buyer_paid_at]);
 
   const formatDisputeTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -100,25 +102,18 @@ export function BuyerPaymentActions({
     <div className="space-y-4">
       {/* Paid Button (only shown before marking as paid) */}
       {!isPaid && (
-        <div className="bg-black/50 p-4 rounded">
-          <div className="mb-4 text-xs sm:text-sm">
-            <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
-            <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the crypto will be returned to the seller's wallet.
-          </div>
-
-          <Button
-            onClick={handleMarkAsPaid}
-            disabled={isProcessing || trade.status !== 'pending'}
-            className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
-          >
-            <div className="flex items-center justify-between w-full">
-              <div className="text-left">
-                <div className="font-bold text-lg">Paid</div>
-                <div className="text-sm">Time left {formatTime(disputeCountdown)}</div>
-              </div>
+        <Button
+          onClick={handleMarkAsPaid}
+          disabled={isProcessing || trade.status !== 'pending'}
+          className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
+        >
+          <div className="flex items-center justify-between w-full">
+            <div className="text-left">
+              <div className="font-bold text-lg">Paid</div>
+              <div className="text-sm">Time left {formatTime(disputeCountdown)}</div>
             </div>
-          </Button>
-        </div>
+          </div>
+        </Button>
       )}
 
       {/* Keep all trades on platform warning */}
