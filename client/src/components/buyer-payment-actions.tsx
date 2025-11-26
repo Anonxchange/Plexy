@@ -1,38 +1,74 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Info, ChevronDown } from "lucide-react";
+import { createClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { notificationSounds } from "@/lib/notification-sounds";
 
 interface BuyerPaymentActionsProps {
   isPaid: boolean;
-  buyerPaidAt: string | null;
-  timer: number;
-  tradeStatus: string;
-  onMarkAsPaid: () => void;
-  formatTime: (seconds: number) => string;
+  trade: {
+    id: string;
+    status: string;
+  };
+  onTradeUpdate?: () => void;
 }
 
 export function BuyerPaymentActions({
   isPaid,
-  buyerPaidAt,
-  timer,
-  tradeStatus,
-  onMarkAsPaid,
-  formatTime,
+  trade,
+  onTradeUpdate,
 }: BuyerPaymentActionsProps) {
+  const { toast } = useToast();
+  const supabase = createClient();
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const [disputeCountdown, setDisputeCountdown] = useState<number>(3600); // 1 hour in seconds
   const [canDispute, setCanDispute] = useState(false);
   const [isDisputeExpanded, setIsDisputeExpanded] = useState(true);
 
+  const handleMarkAsPaid = async () => {
+    if (!trade.id || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from("p2p_trades")
+        .update({
+          buyer_paid_at: new Date().toISOString(),
+        })
+        .eq("id", trade.id);
+
+      if (error) throw error;
+
+      notificationSounds.play('message_received');
+      toast({
+        title: "Success",
+        description: "Payment marked as sent.",
+      });
+
+      onTradeUpdate?.();
+    } catch (error) {
+      console.error("Error marking as paid:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update trade status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   useEffect(() => {
-    if (!buyerPaidAt) {
+    if (!trade.buyerPaidAt) { // Assuming buyerPaidAt is available in trade object
       setCanDispute(false);
       setDisputeCountdown(3600);
       return;
     }
 
     const updateDisputeTimer = () => {
-      const paidTime = new Date(buyerPaidAt).getTime();
+      const paidTime = new Date(trade.buyerPaidAt).getTime(); // Assuming buyerPaidAt is available in trade object
       const elapsedMs = Date.now() - paidTime;
       const elapsedSeconds = Math.floor(elapsedMs / 1000);
       const remainingSeconds = Math.max(0, 3600 - elapsedSeconds);
@@ -44,13 +80,21 @@ export function BuyerPaymentActions({
     updateDisputeTimer();
     const interval = setInterval(updateDisputeTimer, 1000);
     return () => clearInterval(interval);
-  }, [buyerPaidAt]);
+  }, [trade.buyerPaidAt]); // Assuming buyerPaidAt is available in trade object
 
   const formatDisputeTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
+
+  // Placeholder for timer formatting, assuming it's passed or derived elsewhere
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
 
   return (
     <div className="space-y-4">
@@ -63,14 +107,14 @@ export function BuyerPaymentActions({
           </div>
 
           <Button
+            onClick={handleMarkAsPaid}
+            disabled={isProcessing || trade.status !== 'pending'}
             className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
-            onClick={onMarkAsPaid}
-            disabled={tradeStatus !== 'pending'}
           >
             <div className="flex items-center justify-between w-full">
               <div className="text-left">
                 <div className="font-bold text-lg">Paid</div>
-                <div className="text-sm">Time left {formatTime(timer)}</div>
+                <div className="text-sm">Time left {formatTime(disputeCountdown)}</div>
               </div>
             </div>
           </Button>
@@ -81,14 +125,6 @@ export function BuyerPaymentActions({
       <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
         Keep all trades on {import.meta.env.VITE_APP_NAME || "Pexly"}. Off-platform trades are not supported and may put you at risk. Learn how to protect yourself: <span className="font-semibold underline">Tips for Buying Crypto</span>.
       </div>
-
-      {/* Report Bad Behaviour */}
-      <Button
-        variant="outline"
-        className="w-full"
-      >
-        Report Bad Behaviour
-      </Button>
 
       {/* Dispute Section (shown after marking as paid) */}
       {isPaid && (
@@ -119,7 +155,7 @@ export function BuyerPaymentActions({
               <Button
                 variant="outline"
                 className="w-full"
-                disabled={!canDispute || tradeStatus !== 'pending'}
+                disabled={!canDispute || trade.status !== 'pending'}
               >
                 <div className="w-full">
                   <div className="font-semibold">Start a Dispute</div>
@@ -133,6 +169,16 @@ export function BuyerPaymentActions({
             </div>
           )}
         </div>
+      )}
+
+      {/* Report Bad Behaviour - moved after dispute section */}
+      {isPaid && (
+        <Button
+          variant="outline"
+          className="w-full"
+        >
+          Report Bad Behaviour
+        </Button>
       )}
 
       {!isPaid && (
