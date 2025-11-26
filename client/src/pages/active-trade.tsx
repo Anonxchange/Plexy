@@ -19,6 +19,48 @@ import { CancelTradeModal } from "@/components/cancel-trade-modal";
 import { MessageInput } from "@/components/message-input";
 import { TabNavigation } from "@/components/tab-navigation";
 
+// Define BuyerPaymentActions component
+const BuyerPaymentActions = ({
+  isPaid,
+  buyerPaidAt,
+  timer,
+  tradeStatus,
+  onMarkAsPaid,
+  formatTime,
+}: {
+  isPaid: boolean;
+  buyerPaidAt: string | null;
+  timer: number;
+  tradeStatus: string;
+  onMarkAsPaid: () => void;
+  formatTime: (seconds: number) => string;
+}) => {
+  return (
+    <div className="bg-black/50 p-4 rounded">
+      <div className="mb-4 text-sm">
+        <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
+        <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the crypto will be returned to the seller's wallet.
+      </div>
+
+      <Button
+        className={`w-full p-4 h-auto ${isPaid ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
+        onClick={onMarkAsPaid}
+        disabled={isPaid || tradeStatus !== 'pending'}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="text-left">
+            <div className="font-bold text-lg">Paid</div>
+            <div className="text-sm">
+              {isPaid ? 'Payment marked' : `Time left ${formatTime(timer)}`}
+            </div>
+          </div>
+          {isPaid && <span className="text-2xl">✓</span>}
+        </div>
+      </Button>
+    </div>
+  );
+};
+
 interface Trade {
   id: string;
   offer_id: string;
@@ -147,7 +189,7 @@ export default function ActiveTrade() {
         { event: 'INSERT', schema: 'public', table: 'trade_messages', filter: `trade_id=eq.${tradeId}` },
         (payload) => {
           const newMessage = payload.new as TradeMessage;
-          
+
           setMessages((prev) => {
             const exists = prev.some(msg => msg.id === newMessage.id);
             if (exists) return prev;
@@ -164,10 +206,10 @@ export default function ActiveTrade() {
         (payload) => {
           const updatedTrade = payload.new as Partial<Trade>;
           const oldTrade = payload.old as Partial<Trade>;
-          
+
           setTrade((prev) => prev ? { ...prev, ...updatedTrade } : null);
           setIsPaid(!!updatedTrade.buyer_paid_at);
-          
+
           if (updatedTrade.status === 'completed') {
             notificationSounds.play('trade_completed');
           } else if (updatedTrade.status === 'cancelled') {
@@ -360,25 +402,110 @@ export default function ActiveTrade() {
     }
 
     try {
-      const { error } = await supabase
+      // Get trade details first
+      const { data: tradeData, error: tradeError } = await supabase
         .from("p2p_trades")
-        .update({ status: "cancelled" })
+        .select("escrow_id, seller_id, crypto_amount, crypto_symbol, status")
+        .eq("id", tradeId)
+        .single();
+
+      if (tradeError || !tradeData) {
+        throw new Error("Trade not found");
+      }
+
+      if (tradeData.status !== 'pending') {
+        toast({
+          title: "Cannot Cancel",
+          description: "This trade cannot be cancelled because it's no longer pending.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If there's an escrow to release, handle wallet update first
+      let walletUpdated = false;
+      if (tradeData.escrow_id) {
+        const { data: escrowData } = await supabase
+          .from("escrows")
+          .select("status")
+          .eq("id", tradeData.escrow_id)
+          .single();
+
+        if (escrowData?.status === 'locked') {
+          // Get current wallet balances
+          const { data: wallet, error: walletError } = await supabase
+            .from("wallets")
+            .select("balance, locked_balance")
+            .eq("user_id", tradeData.seller_id)
+            .eq("crypto_symbol", tradeData.crypto_symbol)
+            .single();
+
+          if (walletError || !wallet) {
+            throw new Error("Failed to load seller wallet");
+          }
+
+          const currentBalance = Number(wallet.balance) || 0;
+          const currentLocked = Number(wallet.locked_balance) || 0;
+          const releaseAmount = Number(tradeData.crypto_amount) || 0;
+
+          const newBalance = currentBalance + releaseAmount;
+          const newLockedBalance = Math.max(0, currentLocked - releaseAmount);
+
+          // Update wallet - release funds back to available balance
+          const { error: walletUpdateError } = await supabase
+            .from("wallets")
+            .update({
+              balance: newBalance,
+              locked_balance: newLockedBalance,
+            })
+            .eq("user_id", tradeData.seller_id)
+            .eq("crypto_symbol", tradeData.crypto_symbol);
+
+          if (walletUpdateError) {
+            throw new Error("Failed to update wallet balances");
+          }
+          walletUpdated = true;
+
+          // Only update escrow status after wallet is successfully updated
+          await supabase
+            .from("escrows")
+            .update({ status: "cancelled" })
+            .eq("id", tradeData.escrow_id);
+        }
+      }
+
+      // Update the trade status to cancelled
+      const { error: cancelError } = await supabase
+        .from("p2p_trades")
+        .update({ 
+          status: "cancelled",
+          cancelled_at: new Date().toISOString(),
+          cancel_reason: cancelReason,
+        })
         .eq("id", tradeId);
 
-      if (error) throw error;
+      if (cancelError) throw cancelError;
+
+      // Close the cancel modal
+      setShowCancelWarning(false);
+      setCancelReason("");
+      setConfirmNotPaid(false);
 
       notificationSounds.play('trade_cancelled');
       toast({
         title: "Trade Cancelled",
-        description: "The trade has been cancelled",
+        description: walletUpdated 
+          ? "The trade has been cancelled and funds have been released back to the seller."
+          : "The trade has been cancelled.",
       });
 
-      setLocation("/p2p");
+      // Refresh trade data to show updated status
+      fetchTradeData();
     } catch (error) {
       console.error("Error cancelling trade:", error);
       toast({
         title: "Error",
-        description: "Failed to cancel trade",
+        description: error instanceof Error ? error.message : "Failed to cancel trade. Please try again.",
         variant: "destructive",
       });
     }
@@ -419,16 +546,69 @@ export default function ActiveTrade() {
     if (!tradeId) return;
 
     try {
-      const { error } = await supabase
+      // First, update the trade status to cancelled
+      const { error: cancelError } = await supabase
         .from("p2p_trades")
         .update({ 
-          status: "cancelled"
+          status: "cancelled",
+          cancelled_at: new Date().toISOString(),
+          cancel_reason: "expired",
         })
-        .eq("id", tradeId);
+        .eq("id", tradeId)
+        .eq("status", "pending"); // Only cancel if still pending
 
-      if (error) throw error;
+      if (cancelError) return; // Trade might have already been processed
+
+      // Get trade details to release escrow
+      const { data: tradeData } = await supabase
+        .from("p2p_trades")
+        .select("escrow_id, seller_id, crypto_amount, crypto_symbol")
+        .eq("id", tradeId)
+        .single();
+
+      // Release escrow if exists
+      if (tradeData?.escrow_id) {
+        const { data: escrowData } = await supabase
+          .from("escrows")
+          .select("status")
+          .eq("id", tradeData.escrow_id)
+          .single();
+
+        if (escrowData?.status === 'locked') {
+          const { data: wallet } = await supabase
+            .from("wallets")
+            .select("balance, locked_balance")
+            .eq("user_id", tradeData.seller_id)
+            .eq("crypto_symbol", tradeData.crypto_symbol)
+            .single();
+
+          if (wallet) {
+            const currentBalance = Number(wallet.balance) || 0;
+            const currentLocked = Number(wallet.locked_balance) || 0;
+            const releaseAmount = Number(tradeData.crypto_amount) || 0;
+
+            const newBalance = currentBalance + releaseAmount;
+            const newLockedBalance = Math.max(0, currentLocked - releaseAmount);
+
+            await supabase
+              .from("wallets")
+              .update({ balance: newBalance, locked_balance: newLockedBalance })
+              .eq("user_id", tradeData.seller_id)
+              .eq("crypto_symbol", tradeData.crypto_symbol);
+          }
+
+          await supabase
+            .from("escrows")
+            .update({ status: "cancelled" })
+            .eq("id", tradeData.escrow_id);
+        }
+      }
 
       notificationSounds.play('trade_cancelled');
+      toast({
+        title: "Trade Expired",
+        description: "The trade has been automatically cancelled due to timeout.",
+      });
       fetchTradeData();
     } catch (error) {
       console.error("Error auto-cancelling trade:", error);
@@ -609,7 +789,7 @@ export default function ActiveTrade() {
     <div className="min-h-screen bg-background">
       {/* Desktop: Two-column layout, Mobile: Single column */}
       <div className="max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-6 lg:p-6">
-        
+
         {/* Right Column: Trade Info Section (Desktop only, appears first in grid) */}
         <div className="hidden lg:block bg-card rounded-lg p-6 overflow-y-auto lg:order-1">
           {/* Trade Started Card */}
@@ -618,7 +798,7 @@ export default function ActiveTrade() {
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <span className="font-semibold text-sm text-primary-foreground">Trade Started</span>
             </div>
-            
+
             <div className="p-4 space-y-4">
               {!isUserBuyer ? (
                 <>
@@ -794,11 +974,17 @@ export default function ActiveTrade() {
 
                 {trade.status === "cancelled" && (
                   <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3">
-                    <div className="text-sm text-muted-foreground text-center">
-                      TRADE CANCELLED - {new Date(trade.created_at).toLocaleString().toUpperCase()}
+                    <div className="flex items-center justify-center mb-2">
+                      <XCircle className="w-8 h-8 text-destructive" />
                     </div>
-                    <p className="text-sm text-destructive leading-relaxed">
-                      This trade was cancelled and {trade.crypto_symbol} is no longer reserved. To continue, ask your trade partner to reopen this trade, and make sure {trade.crypto_symbol} is reserved, before you make the payment.
+                    <div className="text-sm text-muted-foreground text-center font-semibold">
+                      TRADE CANCELLED
+                    </div>
+                    <p className="text-sm text-destructive leading-relaxed text-center">
+                      This trade was cancelled and {trade.crypto_symbol} funds have been released back to the seller's wallet.
+                    </p>
+                    <p className="text-xs text-muted-foreground text-center">
+                      To trade again, please create a new trade from the marketplace.
                     </p>
                   </div>
                 )}
@@ -809,7 +995,7 @@ export default function ActiveTrade() {
                       TRADE COMPLETED - {new Date(trade.completed_at || trade.created_at).toLocaleString().toUpperCase()}
                     </div>
                     <p className="text-sm text-green-500 leading-relaxed text-center">
-                      This trade has been successfully completed. The {trade.crypto_symbol} has been released to the buyer.
+                      This trade has been successfully completed. The {trade.crypto_symbol} has been transferred to the buyer.
                     </p>
                   </div>
                 )}
@@ -833,13 +1019,61 @@ export default function ActiveTrade() {
 
             {activeTab === "actions" && (
               <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 overflow-y-auto">
-                {/* Trade Started Card */}
+                {/* Trade Status Display for Cancelled/Completed */}
+                {trade.status === "cancelled" && (
+                  <div className="bg-card rounded-lg overflow-hidden border shadow-xs">
+                    <div className="bg-destructive p-3 flex items-center gap-2">
+                      <XCircle className="w-5 h-5 text-destructive-foreground" />
+                      <span className="font-semibold text-sm text-destructive-foreground">Trade Cancelled</span>
+                    </div>
+                    <div className="p-5 space-y-4 text-center">
+                      <XCircle className="w-12 h-12 text-destructive mx-auto" />
+                      <div className="text-destructive font-bold text-lg">This Trade Was Cancelled</div>
+                      <p className="text-sm text-muted-foreground">
+                        {trade.crypto_symbol} funds have been released back to the seller's wallet.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setLocation("/p2p")}
+                      >
+                        Back to Marketplace
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {trade.status === "completed" && (
+                  <div className="bg-card rounded-lg overflow-hidden border shadow-xs">
+                    <div className="bg-green-600 p-3 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                      <span className="font-semibold text-sm text-white">Trade Completed</span>
+                    </div>
+                    <div className="p-5 space-y-4 text-center">
+                      <CheckCircle className="w-12 h-12 text-green-600 mx-auto" />
+                      <div className="text-green-600 font-bold text-lg">Trade Completed Successfully!</div>
+                      <p className="text-sm text-muted-foreground">
+                        {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} has been transferred to the buyer.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setLocation("/p2p")}
+                      >
+                        Back to Marketplace
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Trade Started Card - Only show for active trades */}
+                {trade.status !== "cancelled" && trade.status !== "completed" && (
                 <div className="bg-card rounded-lg overflow-hidden border shadow-xs">
                   <div className="bg-primary p-3 flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                     <span className="font-semibold text-sm text-primary-foreground">Trade Started</span>
                   </div>
-                  
+
                   <div className="p-4 space-y-4">
                     {!isUserBuyer ? (
                       <>
@@ -852,46 +1086,14 @@ export default function ActiveTrade() {
                           </div>
                         </div>
 
-                        <div className="bg-black/50 p-4 rounded">
-                          <div className="mb-4 text-xs sm:text-sm">
-                            <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
-                            <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
-                          </div>
-
-                          <Button 
-                            className={`w-full p-4 h-auto ${isPaid ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
-                            onClick={markAsPaid}
-                            disabled={isPaid || trade.status !== 'pending'}
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <div className="text-left">
-                                <div className="font-bold text-lg">Paid</div>
-                                <div className="text-sm">
-                                  {isPaid ? 'Payment marked' : `Time left ${formatTime(timer)}`}
-                                </div>
-                              </div>
-                              {isPaid && <span className="text-2xl">✓</span>}
-                            </div>
-                          </Button>
-                        </div>
-
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                        >
-                          Report Bad Behaviour
-                        </Button>
-
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                        >
-                          Raise Dispute
-                        </Button>
-
-                        <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
-                          Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within {import.meta.env.VITE_APP_NAME || "NoOnes"}. If you choose to proceed outside {import.meta.env.VITE_APP_NAME || "NoOnes"}, note that we cannot help or support you if you are scammed during such trades.
-                        </div>
+                        <BuyerPaymentActions
+                          isPaid={isPaid}
+                          buyerPaidAt={trade.buyer_paid_at}
+                          timer={timer}
+                          tradeStatus={trade.status}
+                          onMarkAsPaid={markAsPaid}
+                          formatTime={formatTime}
+                        />
 
                         <Button 
                           variant="destructive"
@@ -901,13 +1103,6 @@ export default function ActiveTrade() {
                         >
                           Cancel Trade
                         </Button>
-
-                        {!isPaid && (
-                          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                            <Info className="w-5 h-5" />
-                            <span>You haven't paid yet</span>
-                          </div>
-                        )}
                       </>
                     ) : (
                       <>
@@ -951,6 +1146,7 @@ export default function ActiveTrade() {
                     )}
                   </div>
                 </div>
+                )}
 
                 {/* Trade Partner Terms */}
                 {trade.offer_terms && (
@@ -968,7 +1164,7 @@ export default function ActiveTrade() {
                 {/* Trade Information */}
                 <div className="mt-6">
                   <h3 className="text-lg sm:text-xl font-semibold mb-4">Trade Information</h3>
-                  
+
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <div className="text-xs sm:text-sm text-muted-foreground mb-1">RATE</div>
@@ -1004,15 +1200,15 @@ export default function ActiveTrade() {
                         const created = new Date(trade.created_at);
                         const diffMs = now.getTime() - created.getTime();
                         const diffMins = Math.floor(diffMs / 60000);
-                        
+
                         if (diffMins < 1) return 'just now';
                         if (diffMins === 1) return 'a minute ago';
                         if (diffMins < 60) return `${diffMins} minutes ago`;
-                        
+
                         const diffHours = Math.floor(diffMins / 60);
                         if (diffHours === 1) return 'an hour ago';
                         if (diffHours < 24) return `${diffHours} hours ago`;
-                        
+
                         return created.toLocaleDateString();
                       })()}
                     </div>
