@@ -13,7 +13,6 @@ interface TradeStartedSectionProps {
     fiat_currency: string;
     payment_method: string;
     buyer_paid_at?: string | null;
-    seller_released_at?: string | null;
   };
   counterpartyUsername?: string;
   isPaid: boolean;
@@ -63,8 +62,20 @@ export function TradeStartedSection({
               isPaid={isPaid}
               trade={trade}
               onTradeUpdate={onTradeUpdate}
-              onShowCancelModal={onShowCancelModal}
             />
+
+            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
+              Keep trades within Pexly. Some users may ask you to trade outside the Pexly platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within Pexly. If you choose to proceed outside Pexly, note that we cannot help or support you if you are scammed during such trades.
+            </div>
+
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={onShowCancelModal}
+              disabled={isPaid}
+            >
+              Cancel Trade
+            </Button>
           </>
         ) : (
           <>
