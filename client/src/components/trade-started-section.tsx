@@ -51,6 +51,13 @@ export function TradeStartedSection({
               </div>
             </div>
 
+            <div className="bg-muted/50 p-4 rounded border border-primary/30">
+              <div className="text-xs sm:text-sm">
+                <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
+                <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
+              </div>
+            </div>
+
             <BuyerPaymentActions
               isPaid={isPaid}
               trade={trade}
@@ -65,7 +72,7 @@ export function TradeStartedSection({
               variant="destructive"
               className="w-full"
               onClick={onShowCancelModal}
-              disabled={trade.status !== 'pending' || isPaid}
+              disabled={isPaid}
             >
               Cancel Trade
             </Button>
