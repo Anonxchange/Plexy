@@ -52,7 +52,7 @@ export function TradeStartedSection({
             </div>
 
             <div className="bg-muted/50 p-4 rounded border border-primary/30">
-              <div className="text-xs sm:text-sm">
+              <div className="text-sm sm:text-base">
                 <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
                 <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
               </div>
