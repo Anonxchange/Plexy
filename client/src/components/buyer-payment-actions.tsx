@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Info } from "lucide-react";
+import { Info, ChevronDown } from "lucide-react";
 
 interface BuyerPaymentActionsProps {
   isPaid: boolean;
@@ -21,6 +22,7 @@ export function BuyerPaymentActions({
 }: BuyerPaymentActionsProps) {
   const [disputeCountdown, setDisputeCountdown] = useState<number>(3600); // 1 hour in seconds
   const [canDispute, setCanDispute] = useState(false);
+  const [isDisputeExpanded, setIsDisputeExpanded] = useState(true);
 
   useEffect(() => {
     if (!buyerPaidAt) {
@@ -52,50 +54,32 @@ export function BuyerPaymentActions({
 
   return (
     <div className="space-y-4">
-      {/* Paid/Dispute Button */}
-      <div className="bg-black/50 p-4 rounded">
-        {!isPaid && (
+      {/* Paid Button (only shown before marking as paid) */}
+      {!isPaid && (
+        <div className="bg-black/50 p-4 rounded">
           <div className="mb-4 text-xs sm:text-sm">
             <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
             <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the crypto will be returned to the seller's wallet.
           </div>
-        )}
 
-        <Button
-          className={`w-full p-4 h-auto ${
-            isPaid
-              ? canDispute
-                ? 'bg-yellow-600 hover:bg-yellow-700'
-                : 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700'
-          }`}
-          onClick={isPaid ? undefined : onMarkAsPaid}
-          disabled={isPaid ? !canDispute : tradeStatus !== 'pending'}
-        >
-          <div className="flex items-center justify-between w-full">
-            <div className="text-left">
-              <div className="font-bold text-lg">
-                {isPaid ? 'Start a Dispute' : 'Paid'}
-              </div>
-              <div className="text-sm">
-                {isPaid
-                  ? canDispute
-                    ? 'Dispute now available'
-                    : `Available in ${formatDisputeTime(disputeCountdown)}`
-                  : `Time left ${formatTime(timer)}`
-                }
+          <Button
+            className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
+            onClick={onMarkAsPaid}
+            disabled={tradeStatus !== 'pending'}
+          >
+            <div className="flex items-center justify-between w-full">
+              <div className="text-left">
+                <div className="font-bold text-lg">Paid</div>
+                <div className="text-sm">Time left {formatTime(timer)}</div>
               </div>
             </div>
-            {isPaid && !canDispute && <span className="text-2xl">✓</span>}
-            {isPaid && canDispute && <span className="text-2xl">⚖️</span>}
-          </div>
-        </Button>
+          </Button>
+        </div>
+      )}
 
-        {isPaid && !canDispute && (
-          <div className="mt-3 text-xs text-muted-foreground text-center">
-            Payment marked. Wait 1 hour before disputing if needed.
-          </div>
-        )}
+      {/* Keep all trades on platform warning */}
+      <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
+        Keep all trades on {import.meta.env.VITE_APP_NAME || "Pexly"}. Off-platform trades are not supported and may put you at risk. Learn how to protect yourself: <span className="font-semibold underline">Tips for Buying Crypto</span>.
       </div>
 
       {/* Report Bad Behaviour */}
@@ -106,10 +90,50 @@ export function BuyerPaymentActions({
         Report Bad Behaviour
       </Button>
 
-      {/* Keep all trades on platform warning */}
-      <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
-        Keep all trades on {import.meta.env.VITE_APP_NAME || "NoOnes"}. Off-platform trades are not supported and may put you at risk. Learn how to protect yourself: <span className="font-semibold underline">Tips for Buying Crypto</span>.
-      </div>
+      {/* Dispute Section (shown after marking as paid) */}
+      {isPaid && (
+        <div className="bg-card border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setIsDisputeExpanded(!isDisputeExpanded)}
+            className="w-full bg-muted p-3 flex items-center justify-between hover:bg-muted/80 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-lg">⚖️</span>
+              </div>
+              <span className="font-semibold text-sm">Dispute</span>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 transition-transform ${
+                isDisputeExpanded ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {isDisputeExpanded && (
+            <div className="p-4 space-y-3">
+              <div className="text-sm text-muted-foreground">
+                Need help? <span className="font-semibold text-foreground">Start a dispute</span> if you run into an issue and are unable to resolve it.
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={!canDispute || tradeStatus !== 'pending'}
+              >
+                <div className="w-full">
+                  <div className="font-semibold">Start a Dispute</div>
+                  {!canDispute && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Available in {formatDisputeTime(disputeCountdown)}
+                    </div>
+                  )}
+                </div>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {!isPaid && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
