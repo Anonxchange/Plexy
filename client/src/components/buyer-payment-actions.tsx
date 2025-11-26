@@ -121,9 +121,7 @@ export function BuyerPaymentActions({
       )}
 
       {/* Keep all trades on platform warning */}
-      <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
-        Keep all trades on {import.meta.env.VITE_APP_NAME || "Pexly"}. Off-platform trades are not supported and may put you at risk. Learn how to protect yourself: <span className="font-semibold underline">Tips for Buying Crypto</span>.
-      </div>
+     
 
       {/* Dispute Section (shown after marking as paid) */}
       {isPaid && (
