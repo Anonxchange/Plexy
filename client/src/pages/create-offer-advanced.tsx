@@ -173,7 +173,8 @@ export function CreateOfferAdvanced() {
       return;
     }
 
-    // Check offer limits - allow up to the max (not blocking at max-1)
+    // Check offer limits only when creating new offers (skip when editing)
+    // Note: Advanced mode doesn't have edit functionality yet, but adding for consistency
     if (offerLimits.maxOffers && userOfferCount !== undefined && userOfferCount >= offerLimits.maxOffers) {
       toast({
         title: "Offer Limit Reached",
