@@ -278,23 +278,28 @@ export function P2P() {
           (userProfiles || []).map((profile: any) => [profile.id, profile])
         );
 
-        const offersWithProfiles = offersData.map((offer: any) => ({
-          ...offer,
-          user_profile: profilesMap.get(offer.user_id) || {
-            id: offer.user_id,
-            username: "Unknown User",
-            display_name: null,
-            avatar_url: null,
-            avatar_type: null,
-            positive_ratings: 0,
-            total_trades: 0,
-            response_time_avg: 300,
-            country: null,
-            merchant_status: "none"
-          }
-        }));
+        const offersWithProfiles = offersData.map((offer: any) => {
+          const profile = profilesMap.get(offer.user_id);
+          console.log("Offer user_id:", offer.user_id, "Profile found:", profile);
+          return {
+            ...offer,
+            user_profile: profile || {
+              id: offer.user_id,
+              username: "Unknown User",
+              display_name: null,
+              avatar_url: null,
+              avatar_type: null,
+              positive_ratings: 0,
+              total_trades: 0,
+              response_time_avg: 300,
+              country: null,
+              merchant_status: "none"
+            }
+          };
+        });
 
         console.log("Offers with profiles:", offersWithProfiles.length);
+        console.log("First offer sample:", offersWithProfiles[0]);
         setRawOffers(offersWithProfiles);
       } else {
         console.log("No offers found");
@@ -311,7 +316,9 @@ export function P2P() {
   const offers: OfferCardProps[] = useMemo(() => {
     return rawOffers.map((offer: any) => {
       const user = offer.user_profile;
-      const vendorName = user?.username || user?.display_name || "Trader";
+      
+      // Use display_name if available, otherwise username
+      const vendorName = user?.display_name || user?.username || "Trader";
 
       let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`;
 
