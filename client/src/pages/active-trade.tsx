@@ -42,6 +42,14 @@ interface Trade {
   completed_at: string | null;
   time_limit_minutes?: number;
   offer_terms?: string;
+  counterparty_requirements?: {
+    completedOrders?: number;
+    completionRate?: number;
+    requireMobile?: boolean;
+    requireEmail?: boolean;
+    requireVerification?: boolean;
+    registeredDays?: number;
+  } | null;
   buyer_profile?: {
     username: string;
     avatar_url: string | null;
@@ -257,7 +265,7 @@ export default function ActiveTrade() {
 
       const { data: offerData } = await supabase
         .from("p2p_offers")
-        .select("time_limit_minutes, terms")
+        .select("time_limit_minutes, offer_terms, counterparty_requirements")
         .eq("id", tradeData.offer_id)
         .single();
 
@@ -276,7 +284,8 @@ export default function ActiveTrade() {
       const fullTradeData = {
         ...tradeData,
         time_limit_minutes: offerData?.time_limit_minutes || 30,
-        offer_terms: offerData?.terms || "",
+        offer_terms: offerData?.offer_terms || "",
+        counterparty_requirements: offerData?.counterparty_requirements || null,
         buyer_profile: buyerProfile,
         seller_profile: sellerProfile,
       } as Trade;
@@ -320,7 +329,7 @@ export default function ActiveTrade() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  
+
 
   const cancelTrade = async () => {
     if (!tradeId || !confirmNotPaid || !cancelReason) {
@@ -457,7 +466,7 @@ export default function ActiveTrade() {
     }
   };
 
-  
+
 
   const handleAutoCancelTrade = async () => {
     if (!tradeId) return;
@@ -727,6 +736,7 @@ export default function ActiveTrade() {
           <TradeTerms
             offerTerms={trade.offer_terms}
             counterpartyUsername={counterparty?.username}
+            counterpartyRequirements={trade.counterparty_requirements}
           />
 
           {/* Trade Information */}
@@ -890,6 +900,7 @@ export default function ActiveTrade() {
                 <TradeTerms
                   offerTerms={trade.offer_terms}
                   counterpartyUsername={counterparty?.username}
+                  counterpartyRequirements={trade.counterparty_requirements}
                 />
 
                 {/* Trade Information */}
