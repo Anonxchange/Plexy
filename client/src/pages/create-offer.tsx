@@ -374,6 +374,18 @@ export function CreateOffer() {
         }
 
         const walletBalance = parseFloat(wallet.balance.toString());
+        
+        // Check minimum balance requirement
+        const minBalanceRequired = 0.0001; // Minimum balance to create an offer
+        if (walletBalance < minBalanceRequired) {
+          toast({
+            title: "Balance Too Low",
+            description: `You need at least ${minBalanceRequired} ${crypto} to create a sell offer. Current balance: ${walletBalance} ${crypto}`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
         if (totalQuantityNum > walletBalance) {
           toast({
             title: "Insufficient Balance",
@@ -442,10 +454,24 @@ export function CreateOffer() {
       }
 
       let totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
+      let cryptoAmountToSave = totalQuantityNum;
       
-      // Convert fiat to crypto if user entered in fiat mode (for BUY offers only)
-      if (offerType === "buy" && quantityInputMode === "fiat" && totalQuantityNum && marketRate > 0) {
-        totalQuantityNum = totalQuantityNum / marketRate;
+      // For BUY offers: Always save as crypto amount
+      if (offerType === "buy" && totalQuantityNum && marketRate > 0) {
+        if (quantityInputMode === "fiat") {
+          // User entered fiat, convert to crypto
+          cryptoAmountToSave = totalQuantityNum / marketRate;
+        }
+        // If in crypto mode, cryptoAmountToSave is already correct
+      }
+      
+      // For SELL offers: Always save as crypto amount
+      if (offerType === "sell" && totalQuantityNum && marketRate > 0) {
+        if (quantityInputMode === "fiat") {
+          // User entered fiat, convert to crypto
+          cryptoAmountToSave = totalQuantityNum / marketRate;
+        }
+        // If in crypto mode, cryptoAmountToSave is already correct
       }
 
       const offerData = {
@@ -459,8 +485,8 @@ export function CreateOffer() {
         floating_margin: priceType === "floating" ? priceOffset[0] : null,
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
-        available_amount: totalQuantityNum, // This should be the total available
-        total_available: totalQuantityNum, // Store total quantity separately
+        available_amount: cryptoAmountToSave, // Always save as crypto amount
+        total_available: cryptoAmountToSave, // Always save as crypto amount
         country_restrictions: country ? [country] : null,
         payment_method_id: selectedPaymentMethodId || null,
         time_limit_minutes: parseInt(timeLimit),
@@ -982,46 +1008,44 @@ export function CreateOffer() {
                   : `Total amount of ${crypto} you intend to sell`}
               </Label>
               <div className="flex items-center gap-2">
-                {offerType === "buy" && (
-                  <div className="flex items-center bg-elevate-1 rounded-lg p-1">
-                    <Button
-                      type="button"
-                      variant={quantityInputMode === "crypto" ? "default" : "ghost"}
-                      size="sm"
-                      className="h-7 px-3 text-xs"
-                      onClick={() => {
-                        if (quantityInputMode === "fiat" && totalQuantity && marketRate > 0) {
-                          const fiatAmount = parseFloat(totalQuantity);
-                          if (!isNaN(fiatAmount)) {
-                            const cryptoAmount = fiatAmount / marketRate;
-                            setTotalQuantity(cryptoAmount.toFixed(8));
-                          }
+                <div className="flex items-center bg-elevate-1 rounded-lg p-1">
+                  <Button
+                    type="button"
+                    variant={quantityInputMode === "crypto" ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 px-3 text-xs"
+                    onClick={() => {
+                      if (quantityInputMode === "fiat" && totalQuantity && marketRate > 0) {
+                        const fiatAmount = parseFloat(totalQuantity);
+                        if (!isNaN(fiatAmount)) {
+                          const cryptoAmount = fiatAmount / marketRate;
+                          setTotalQuantity(cryptoAmount.toFixed(8));
                         }
-                        setQuantityInputMode("crypto");
-                      }}
-                    >
-                      {crypto}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={quantityInputMode === "fiat" ? "default" : "ghost"}
-                      size="sm"
-                      className="h-7 px-3 text-xs"
-                      onClick={() => {
-                        if (quantityInputMode === "crypto" && totalQuantity && marketRate > 0) {
-                          const cryptoAmount = parseFloat(totalQuantity);
-                          if (!isNaN(cryptoAmount)) {
-                            const fiatAmount = cryptoAmount * marketRate;
-                            setTotalQuantity(Math.round(fiatAmount).toString());
-                          }
+                      }
+                      setQuantityInputMode("crypto");
+                    }}
+                  >
+                    {crypto}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={quantityInputMode === "fiat" ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 px-3 text-xs"
+                    onClick={() => {
+                      if (quantityInputMode === "crypto" && totalQuantity && marketRate > 0) {
+                        const cryptoAmount = parseFloat(totalQuantity);
+                        if (!isNaN(cryptoAmount)) {
+                          const fiatAmount = cryptoAmount * marketRate;
+                          setTotalQuantity(Math.round(fiatAmount).toString());
                         }
-                        setQuantityInputMode("fiat");
-                      }}
-                    >
-                      {currency}
-                    </Button>
-                  </div>
-                )}
+                      }
+                      setQuantityInputMode("fiat");
+                    }}
+                  >
+                    {currency}
+                  </Button>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -1042,7 +1066,12 @@ export function CreateOffer() {
                           
                           if (wallet && wallet.balance) {
                             const balance = parseFloat(wallet.balance.toString());
-                            setTotalQuantity(balance.toString());
+                            if (quantityInputMode === "fiat" && marketRate > 0) {
+                              const fiatEquivalent = balance * marketRate;
+                              setTotalQuantity(Math.round(fiatEquivalent).toString());
+                            } else {
+                              setTotalQuantity(balance.toString());
+                            }
                             toast({
                               title: "Wallet Balance Loaded",
                               description: `Available: ${balance} ${crypto}`,
@@ -1086,19 +1115,17 @@ export function CreateOffer() {
                 value={totalQuantity}
                 onChange={(e) => setTotalQuantity(e.target.value)}
                 placeholder={
-                  offerType === "buy" 
-                    ? quantityInputMode === "crypto" 
-                      ? `Enter amount in ${crypto}` 
-                      : `Enter amount in ${currency}`
-                    : "Enter total amount to sell"
+                  quantityInputMode === "crypto" 
+                    ? `Enter amount in ${crypto}` 
+                    : `Enter amount in ${currency}`
                 }
                 className="bg-elevate-1 text-lg font-bold pr-20"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
-                {offerType === "buy" ? (quantityInputMode === "crypto" ? crypto : currency) : crypto}
+                {quantityInputMode === "crypto" ? crypto : currency}
               </span>
             </div>
-            {offerType === "buy" && totalQuantity && marketRate > 0 && (
+            {totalQuantity && marketRate > 0 && (
               <p className="text-sm text-primary mt-2 font-medium">
                 {quantityInputMode === "crypto" 
                   ? `≈ ${(parseFloat(totalQuantity) * marketRate).toLocaleString()} ${currency}`
@@ -1109,7 +1136,7 @@ export function CreateOffer() {
             <p className="text-xs text-muted-foreground mt-2">
               {offerType === "buy" 
                 ? "The total amount of cryptocurrency you want to purchase. You can enter in crypto or fiat." 
-                : "The total amount from your wallet you're willing to sell"}
+                : "The total amount you're willing to sell. You can enter in crypto or fiat."}
             </p>
           </div>
 
