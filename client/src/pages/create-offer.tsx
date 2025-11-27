@@ -289,8 +289,8 @@ export function CreateOffer() {
       return;
     }
 
-    // Check offer limits - allow up to the max (not blocking at max-1)
-    if (offerLimits.maxOffers && userOfferCount !== undefined && userOfferCount >= offerLimits.maxOffers) {
+    // Check offer limits only when creating new offers (skip when editing)
+    if (!isEditMode && offerLimits.maxOffers && userOfferCount !== undefined && userOfferCount >= offerLimits.maxOffers) {
       toast({
         title: "Offer Limit Reached",
         description: `You have ${userOfferCount} active offers out of ${offerLimits.maxOffers} allowed. Please deactivate an existing offer or upgrade to Merchant for unlimited offers.`,
