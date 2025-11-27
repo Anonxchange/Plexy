@@ -51,55 +51,40 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
     try {
       setLoading(true);
 
-      // Fetch user profile
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+      // Run all queries in parallel for faster loading
+      const [
+        profileResult,
+        positiveFeedbackResult,
+        negativeFeedbackResult,
+        buyerTradesResult,
+        sellerTradesResult,
+        completedTradesResult
+      ] = await Promise.all([
+        supabase.from("user_profiles").select("*").eq("id", userId).single(),
+        supabase.from("trade_feedback").select("*", { count: "exact" }).eq("recipient_id", userId).eq("rating", "positive"),
+        supabase.from("trade_feedback").select("*", { count: "exact" }).eq("recipient_id", userId).eq("rating", "negative"),
+        supabase.from("p2p_trades").select("seller_id").eq("buyer_id", userId).eq("status", "completed"),
+        supabase.from("p2p_trades").select("buyer_id").eq("seller_id", userId).eq("status", "completed"),
+        supabase.from("p2p_trades").select("created_at, completed_at").eq("seller_id", userId).eq("status", "completed").not("completed_at", "is", null)
+      ]);
 
-      // Fetch feedback
-      const { data: positiveFeedback, count: positiveCount } = await supabase
-        .from("trade_feedback")
-        .select("*", { count: "exact" })
-        .eq("recipient_id", userId)
-        .eq("rating", "positive");
-
-      const { data: negativeFeedback, count: negativeCount } = await supabase
-        .from("trade_feedback")
-        .select("*", { count: "exact" })
-        .eq("recipient_id", userId)
-        .eq("rating", "negative");
+      const profile = profileResult.data;
+      const positiveFeedback = positiveFeedbackResult.data;
+      const positiveCount = positiveFeedbackResult.count;
+      const negativeFeedback = negativeFeedbackResult.data;
+      const negativeCount = negativeFeedbackResult.count;
+      const buyerTrades = buyerTradesResult.data;
+      const sellerTrades = sellerTradesResult.data;
+      const completedTrades = completedTradesResult.data;
 
       // Calculate stats
       const totalTrades = (positiveCount || 0) + (negativeCount || 0);
       const successRate = totalTrades > 0 ? ((positiveCount || 0) / totalTrades * 100).toFixed(2) : "0.00";
 
-      // Count trade partners
-      const { data: buyerTrades } = await supabase
-        .from("p2p_trades")
-        .select("seller_id")
-        .eq("buyer_id", userId)
-        .eq("status", "completed");
-
-      const { data: sellerTrades } = await supabase
-        .from("p2p_trades")
-        .select("buyer_id")
-        .eq("seller_id", userId)
-        .eq("status", "completed");
-
       const uniquePartners = new Set([
         ...(buyerTrades?.map(t => t.seller_id) || []),
         ...(sellerTrades?.map(t => t.buyer_id) || [])
       ]);
-
-      // Calculate trade release stats
-      const { data: completedTrades } = await supabase
-        .from("p2p_trades")
-        .select("created_at, completed_at")
-        .eq("seller_id", userId)
-        .eq("status", "completed")
-        .not("completed_at", "is", null);
 
       let avgReleaseTime = "0m 0s";
       let avgPaymentTime = "0m 0s";
@@ -116,7 +101,7 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
         avgPaymentTime = `${minutes}m ${seconds}s`;
       }
 
-      setUserData({
+      const userData = {
         profile,
         positiveCount: positiveCount || 0,
         negativeCount: negativeCount || 0,
@@ -128,23 +113,13 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
         avgReleaseTime,
         avgPaymentTime,
         tradesReleased: completedTrades?.length || 0,
-      });
+      };
+
+      setUserData(userData);
 
       // Store in cache
       profileCache.set(userId, {
-        data: {
-          profile,
-          positiveCount: positiveCount || 0,
-          negativeCount: negativeCount || 0,
-          successRate,
-          totalTrades,
-          tradePartners: uniquePartners.size,
-          positiveFeedback: positiveFeedback || [],
-          negativeFeedback: negativeFeedback || [],
-          avgReleaseTime,
-          avgPaymentTime,
-          tradesReleased: completedTrades?.length || 0,
-        },
+        data: userData,
         timestamp: Date.now()
       });
     } catch (error) {
