@@ -60,12 +60,26 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
           setAvailableBalance(0);
         }
 
-        // Fetch bank accounts for sellers
-        if (offer.type === 'sell') {
+        // Fetch bank accounts:
+        // - If offer.type === 'buy', vendor wants to buy, so current user is SELLING → fetch current user's accounts
+        // - If offer.type === 'sell', vendor is selling, so current user is BUYING → fetch vendor's accounts
+        if (offer.type === 'buy') {
+          // Current user is selling - fetch their own payment methods
           const { data, error } = await supabase
             .from('payment_methods')
             .select('*')
             .eq('user_id', user.id)
+            .eq('status', 'active');
+
+          if (!error && data) {
+            setBankAccounts(data);
+          }
+        } else if (offer.type === 'sell' && offer.vendor?.id) {
+          // Current user is buying - fetch vendor's payment methods
+          const { data, error } = await supabase
+            .from('payment_methods')
+            .select('*')
+            .eq('user_id', offer.vendor.id)
             .eq('status', 'active');
 
           if (!error && data) {
@@ -94,8 +108,9 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       return; // Prevent duplicate submissions
     }
 
-    // If this is a sell offer, validate available balance
-    if (offer.type === 'sell' && user) {
+    // If current user is SELLING (offer.type === 'buy' means vendor wants to buy, so we're selling)
+    if (offer.type === 'buy' && user) {
+      // Validate seller's available balance
       if (cryptoAmount > availableBalance) {
         toast({
           title: "Insufficient Available Balance",
@@ -105,10 +120,14 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
         return;
       }
 
-      // Check for bank account selection
+      // Check for bank account selection (seller needs to select where to receive payment)
       if (!selectedBankAccount) {
         if (bankAccounts.length === 0) {
-          alert("Please add a payment method first in your settings");
+          toast({
+            title: "No Payment Method",
+            description: "Please add a payment method first in your settings",
+            variant: "destructive",
+          });
           return;
         }
         setShowBankSelection(true);
@@ -116,6 +135,29 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       }
     }
 
+    // If current user is BUYING (offer.type === 'sell' means vendor is selling, so we're buying)
+    if (offer.type === 'sell' && user) {
+      // Buyer needs to see seller's bank account
+      if (!selectedBankAccount) {
+        if (bankAccounts.length === 0) {
+          toast({
+            title: "No Payment Method Available",
+            description: "The seller hasn't added any payment methods yet.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (bankAccounts.length === 1) {
+          setSelectedBankAccount(bankAccounts[0]);
+          // Don't return here - continue with trade creation
+        } else {
+          setShowBankSelection(true);
+          return;
+        }
+      }
+    }
+
+    // If we reach here, all validations passed
     setIsCreatingTrade(true);
 
     try {
@@ -221,10 +263,30 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
       console.log("Trade created successfully:", trade);
 
-      // If seller, post bank account details to chat
-      if (offer.type === 'sell' && selectedBankAccount) {
+      // Post bank account details to chat
+      // If current user is SELLING (offer.type === 'buy'), post their own bank details
+      // If current user is BUYING (offer.type === 'sell'), post the seller's bank details
+      if (selectedBankAccount) {
         try {
-          const bankDetailsMessage = `A payment of ${fiatAmount.toLocaleString()} ${offer.currency} is being made to your payment method:
+          const isBuyer = offer.type === 'sell';
+          const bankDetailsMessage = isBuyer 
+            ? `Payment of ${fiatAmount.toLocaleString()} ${offer.currency} should be made to:
+
+AMOUNT
+${fiatAmount.toLocaleString()} ${offer.currency}
+
+PAYMENT TYPE
+${selectedBankAccount.payment_type}
+
+ACCOUNT HOLDER
+${selectedBankAccount.account_holder || selectedBankAccount.account_name}
+
+BANK/PROVIDER NAME
+${selectedBankAccount.bank_name}
+
+ACCOUNT NUMBER
+${selectedBankAccount.account_number}`
+            : `Please send payment of ${fiatAmount.toLocaleString()} ${offer.currency} to:
 
 AMOUNT
 ${fiatAmount.toLocaleString()} ${offer.currency}
@@ -494,8 +556,8 @@ ${selectedBankAccount.account_number}`;
               </div>
             </div>
 
-            {/* Available Balance Display */}
-            {offer.type === 'sell' && user && (
+            {/* Available Balance Display - only show for sellers */}
+            {offer.type === 'buy' && user && (
               <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Available Balance:</span>
@@ -537,16 +599,16 @@ ${selectedBankAccount.account_number}`;
             </div>
           </div>
 
-          {/* Bank Account Selector */}
+          {/* Bank Account Selector - show for both buyers and sellers */}
           <BankAccountSelector
-            open={showBankSelection && offer.type === 'sell'}
+            open={showBankSelection}
             onOpenChange={setShowBankSelection}
             onSelectAccount={setSelectedBankAccount}
             selectedAccountId={selectedBankAccount?.id}
           />
 
           {/* Selected Bank Account Display */}
-          {selectedBankAccount && offer.type === 'sell' && !showBankSelection && (
+          {selectedBankAccount && !showBankSelection && (
             <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
@@ -574,14 +636,14 @@ ${selectedBankAccount.account_number}`;
           {/* Proceed Button */}
           <Button
             className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max || isCreatingTrade || (offer.type === 'sell' && !selectedBankAccount)}
+            disabled={!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max || isCreatingTrade}
             onClick={(e) => {
               e.preventDefault();
               handleProceed();
             }}
             type="button"
           >
-            {isCreatingTrade ? "Creating Trade..." : (offer.type === 'sell' && !selectedBankAccount ? "Select Payment Method" : "Proceed")}
+            {isCreatingTrade ? "Creating Trade..." : "Proceed"}
             <Bitcoin className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
 
