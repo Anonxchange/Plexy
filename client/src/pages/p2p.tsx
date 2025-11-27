@@ -319,22 +319,11 @@ export function P2P() {
   };
 
   const offers: OfferCardProps[] = useMemo(() => {
-    console.log("Creating offers from rawOffers:", rawOffers.length);
     return rawOffers.map((offer: any) => {
       const user = offer.user_profile;
-      console.log("Processing offer:", { 
-        offerId: offer.id, 
-        userId: offer.user_id,
-        userProfile: user,
-        hasUsername: !!user?.username,
-        hasDisplayName: !!user?.display_name,
-        hasCountry: !!user?.country,
-        hasAvatar: !!user?.avatar_url
-      });
       
       // Use display_name if available, otherwise username, fallback to "Trader"
       const vendorName = user?.display_name || user?.username || "Trader";
-      console.log("Vendor name resolved to:", vendorName);
 
       let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`;
 
@@ -389,8 +378,7 @@ export function P2P() {
         time_limit_minutes: offer.time_limit_minutes || 30,
         created_at: offer.created_at
       };
-
-      console.log("Mapped offer vendor:", mappedOffer.vendor);
+      
       return mappedOffer;
     });
   }, [rawOffers, cryptoPrices, activeTab]);
