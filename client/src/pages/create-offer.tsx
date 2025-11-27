@@ -442,10 +442,18 @@ export function CreateOffer() {
       }
 
       let totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
+      let fiatAmountToSave = totalQuantityNum;
       
-      // Convert fiat to crypto if user entered in fiat mode (for BUY offers only)
-      if (offerType === "buy" && quantityInputMode === "fiat" && totalQuantityNum && marketRate > 0) {
-        totalQuantityNum = totalQuantityNum / marketRate;
+      // Convert crypto to fiat if user entered in crypto mode (for BUY offers)
+      // We always save the FIAT amount, not crypto amount
+      if (offerType === "buy" && quantityInputMode === "crypto" && totalQuantityNum && marketRate > 0) {
+        fiatAmountToSave = totalQuantityNum * marketRate;
+      }
+      // If in fiat mode, fiatAmountToSave is already the correct value
+      
+      // For SELL offers, always convert crypto to fiat for storage
+      if (offerType === "sell" && totalQuantityNum && marketRate > 0) {
+        fiatAmountToSave = totalQuantityNum * marketRate;
       }
 
       const offerData = {
@@ -459,8 +467,8 @@ export function CreateOffer() {
         floating_margin: priceType === "floating" ? priceOffset[0] : null,
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
-        available_amount: totalQuantityNum, // This should be the total available
-        total_available: totalQuantityNum, // Store total quantity separately
+        available_amount: fiatAmountToSave, // Always save as fiat amount
+        total_available: fiatAmountToSave, // Always save as fiat amount
         country_restrictions: country ? [country] : null,
         payment_method_id: selectedPaymentMethodId || null,
         time_limit_minutes: parseInt(timeLimit),
