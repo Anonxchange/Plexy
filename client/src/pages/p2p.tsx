@@ -151,7 +151,6 @@ export function P2P() {
         if (Object.keys(prices).length > 0) {
           setCryptoPrices(prices);
         } else {
-          // Use fallback prices if API fails
           setCryptoPrices({
             'BTC': { symbol: 'BTC', name: 'Bitcoin', current_price: 95000, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
             'ETH': { symbol: 'ETH', name: 'Ethereum', current_price: 3500, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
@@ -160,7 +159,6 @@ export function P2P() {
         }
       } catch (error) {
         console.warn('Failed to load crypto prices, using fallback prices');
-        // Use fallback prices
         setCryptoPrices({
           'BTC': { symbol: 'BTC', name: 'Bitcoin', current_price: 95000, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
           'ETH': { symbol: 'ETH', name: 'Ethereum', current_price: 3500, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
@@ -170,10 +168,15 @@ export function P2P() {
     };
     
     loadCryptoPrices();
+  }, []);
+
+  useEffect(() => {
     fetchOffers();
+  }, [activeTab, selectedCrypto]);
+
+  useEffect(() => {
     fetchActiveTrades();
 
-    // Subscribe to trade status changes
     if (user?.id) {
       const channel = supabase
         .channel('active-trades-changes')
@@ -185,7 +188,6 @@ export function P2P() {
             table: 'p2p_trades',
           },
           () => {
-            // Refresh active trades when any trade is updated
             fetchActiveTrades();
           }
         )
@@ -195,55 +197,30 @@ export function P2P() {
         channel.unsubscribe();
       };
     }
-  }, [activeTab, selectedCrypto, user?.id, cryptoPrices]);
+  }, [user?.id]);
 
   const fetchActiveTrades = async () => {
     if (!user?.id) return;
 
     try {
-
-      const { data: userProfile } = await supabase
-        .from("user_profiles")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-      if (!userProfile) return;
-
-      // Fetch active trades where user is buyer or seller (only pending and payment_sent)
       const { data: trades, error } = await supabase
         .from("p2p_trades")
-        .select("*")
-        .or(`buyer_id.eq.${userProfile.id},seller_id.eq.${userProfile.id}`)
+        .select(`
+          *,
+          buyer_profile:user_profiles!p2p_trades_buyer_id_fkey(
+            username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country
+          ),
+          seller_profile:user_profiles!p2p_trades_seller_id_fkey(
+            username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country
+          )
+        `)
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
         .in("status", ["pending", "payment_sent"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Fetch user profiles separately for each trade
-      const tradesWithProfiles = await Promise.all(
-        (trades || []).map(async (trade) => {
-          const { data: buyerProfile } = await supabase
-            .from("user_profiles")
-            .select("username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
-            .eq("id", trade.buyer_id)
-            .single();
-
-          const { data: sellerProfile } = await supabase
-            .from("user_profiles")
-            .select("username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
-            .eq("id", trade.seller_id)
-            .single();
-
-          return {
-            ...trade,
-            buyer_profile: buyerProfile,
-            seller_profile: sellerProfile,
-          };
-        })
-      );
-
-      setActiveTrades(tradesWithProfiles);
+      setActiveTrades(trades || []);
     } catch (error) {
       console.error("Error fetching active trades:", error);
     }
@@ -252,55 +229,38 @@ export function P2P() {
   const fetchOffers = async () => {
     setLoading(true);
     try {
-      // When user wants to BUY crypto, show SELL offers (from sellers)
-      // When user wants to SELL crypto, show BUY offers (from buyers)
       const offerTypeToFetch = activeTab === "buy" ? "sell" : "buy";
       
-      // Fetch offers first
-      const { data: basicOffersData, error: basicError } = await supabase
+      const { data: offersData, error } = await supabase
         .from("p2p_offers")
-        .select("*")
+        .select(`
+          *,
+          user_profiles(
+            id, username, display_name, avatar_url, avatar_type, 
+            positive_ratings, total_trades, response_time_avg, country
+          )
+        `)
         .eq("crypto_symbol", selectedCrypto)
         .eq("offer_type", offerTypeToFetch)
         .eq("is_active", true);
 
-      if (basicError) {
-        console.error("Error fetching offers:", basicError);
+      if (error) {
+        console.error("Error fetching offers:", error);
         setOffers([]);
         setLoading(false);
         return;
       }
 
-      // If we have offers, fetch user profiles for each one
-      if (basicOffersData && basicOffersData.length > 0) {
-        const offersWithProfiles = await Promise.all(
-          basicOffersData.map(async (offer: any) => {
-            const { data: userProfile } = await supabase
-              .from("user_profiles")
-              .select("id, username, display_name, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
-              .eq("id", offer.user_id)
-              .single();
-
-            return {
-              ...offer,
-              user_profiles: userProfile
-            };
-          })
-        );
-
-        // Format offers with user profile data
-        const formattedOffers: OfferCardProps[] = offersWithProfiles.map((offer: any) => {
+      if (offersData && offersData.length > 0) {
+        const formattedOffers: OfferCardProps[] = offersData.map((offer: any) => {
           const user = offer.user_profiles;
           const vendorName = user?.username || user?.display_name || "Trader";
 
-          // Use the user's actual avatar from profile
           let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`;
 
           if (user?.avatar_url) {
-            // User has uploaded a custom avatar
             avatarUrl = user.avatar_url;
           } else if (user?.avatar_type) {
-            // User has selected an avatar type
             const avatarTypes = [
               { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
               { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
@@ -352,7 +312,6 @@ export function P2P() {
 
         setOffers(formattedOffers);
       } else {
-        // No offers found
         setOffers([]);
       }
     } catch (error) {
