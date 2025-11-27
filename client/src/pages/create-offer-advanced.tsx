@@ -195,6 +195,7 @@ export function CreateOfferAdvanced() {
 
     const minAmountNum = parseFloat(minAmount);
     const maxAmountNum = parseFloat(maxAmount);
+    const totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
 
     if (isNaN(minAmountNum) || isNaN(maxAmountNum) || minAmountNum <= 0 || maxAmountNum <= 0) {
       toast({
@@ -212,6 +213,40 @@ export function CreateOfferAdvanced() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Validate wallet balance for sell offers
+    if (offerType === "sell" && totalQuantityNum) {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('user_id', user.id)
+          .eq('crypto_symbol', crypto)
+          .single();
+        
+        if (!wallet || !wallet.balance) {
+          toast({
+            title: "No Wallet Found",
+            description: `You don't have a ${crypto} wallet yet`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const walletBalance = parseFloat(wallet.balance.toString());
+        if (totalQuantityNum > walletBalance) {
+          toast({
+            title: "Insufficient Balance",
+            description: `You only have ${walletBalance} ${crypto} available. Cannot create offer for ${totalQuantityNum} ${crypto}`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
     }
 
     try {
@@ -661,7 +696,46 @@ export function CreateOfferAdvanced() {
                 variant="ghost"
                 size="sm"
                 className="h-auto py-1 px-2 text-primary hover:text-primary/80"
-                onClick={() => setTotalQuantity(maxAmount)}
+                onClick={async () => {
+                  if (offerType === "sell") {
+                    try {
+                      const supabase = createClient();
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (user) {
+                        const { data: wallet } = await supabase
+                          .from('wallets')
+                          .select('balance')
+                          .eq('user_id', user.id)
+                          .eq('crypto_symbol', crypto)
+                          .single();
+                        
+                        if (wallet && wallet.balance) {
+                          const balance = parseFloat(wallet.balance.toString());
+                          setTotalQuantity(balance.toString());
+                          toast({
+                            title: "Wallet Balance Loaded",
+                            description: `Available: ${balance} ${crypto}`,
+                          });
+                        } else {
+                          toast({
+                            title: "No Wallet Found",
+                            description: `You don't have a ${crypto} wallet yet`,
+                            variant: "destructive",
+                          });
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Error fetching wallet balance:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to fetch wallet balance",
+                        variant: "destructive",
+                      });
+                    }
+                  } else {
+                    setTotalQuantity(maxAmount);
+                  }
+                }}
               >
                 Max
               </Button>
