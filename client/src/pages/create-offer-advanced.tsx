@@ -330,24 +330,18 @@ export function CreateOfferAdvanced() {
       }
 
       let totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
-      let cryptoAmountToSave = totalQuantityNum;
+      let fiatAmountToSave = totalQuantityNum;
       
-      // For BUY offers: Always save as crypto amount
-      if (offerType === "buy" && totalQuantityNum && marketRate > 0) {
-        if (quantityInputMode === "fiat") {
-          // User entered fiat, convert to crypto
-          cryptoAmountToSave = totalQuantityNum / marketRate;
-        }
-        // If in crypto mode, cryptoAmountToSave is already correct
+      // For BUY offers: Convert crypto to fiat if user entered in crypto mode
+      if (offerType === "buy" && quantityInputMode === "crypto" && totalQuantityNum && marketRate > 0) {
+        fiatAmountToSave = totalQuantityNum * marketRate;
       }
+      // If in fiat mode for BUY, fiatAmountToSave is already the correct value
       
-      // For SELL offers: Always save as crypto amount
+      // For SELL offers: Always convert crypto amount to fiat for storage
+      // Sell offers are always entered in crypto amount (BTC, ETH, etc.)
       if (offerType === "sell" && totalQuantityNum && marketRate > 0) {
-        if (quantityInputMode === "fiat") {
-          // User entered fiat, convert to crypto
-          cryptoAmountToSave = totalQuantityNum / marketRate;
-        }
-        // If in crypto mode, cryptoAmountToSave is already correct
+        fiatAmountToSave = totalQuantityNum * marketRate;
       }
 
       const { error } = await supabase.from("p2p_offers").insert({
@@ -361,8 +355,8 @@ export function CreateOfferAdvanced() {
         floating_margin: priceType === "floating" ? priceOffset[0] : null,
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
-        available_amount: cryptoAmountToSave, // Always save as crypto amount
-        total_available: cryptoAmountToSave, // Always save as crypto amount
+        available_amount: fiatAmountToSave, // Always save as fiat amount
+        total_available: fiatAmountToSave, // Always save as fiat amount
         country_restrictions: country && country !== "ALL" ? [country] : null,
         // Payment method reference
         payment_method_id: selectedPaymentMethodId || null,
