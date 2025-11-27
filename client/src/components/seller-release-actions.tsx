@@ -1,0 +1,169 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Info, ChevronDown, CheckCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { notificationSounds } from "@/lib/notification-sounds";
+
+interface SellerReleaseActionsProps {
+  isPaid: boolean;
+  trade: {
+    id: string;
+    status: string;
+    crypto_symbol: string;
+    crypto_amount: number;
+    buyer_paid_at?: string | null;
+  };
+  counterpartyUsername?: string;
+  onTradeUpdate?: () => void;
+}
+
+export function SellerReleaseActions({
+  isPaid,
+  trade,
+  counterpartyUsername,
+  onTradeUpdate,
+}: SellerReleaseActionsProps) {
+  const { toast } = useToast();
+  const supabase = createClient();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDisputeExpanded, setIsDisputeExpanded] = useState(true);
+  const [disputeCountdown, setDisputeCountdown] = useState<number>(3600);
+  const [canDispute, setCanDispute] = useState(false);
+
+  useEffect(() => {
+    if (!trade.buyer_paid_at) {
+      setCanDispute(false);
+      setDisputeCountdown(3600);
+      return;
+    }
+
+    const updateDisputeTimer = () => {
+      const paidTime = new Date(trade.buyer_paid_at!).getTime();
+      const elapsedMs = Date.now() - paidTime;
+      const elapsedSeconds = Math.floor(elapsedMs / 1000);
+      const remainingSeconds = Math.max(0, 3600 - elapsedSeconds);
+
+      setDisputeCountdown(remainingSeconds);
+      setCanDispute(remainingSeconds === 0);
+    };
+
+    updateDisputeTimer();
+    const interval = setInterval(updateDisputeTimer, 1000);
+    return () => clearInterval(interval);
+  }, [trade.buyer_paid_at]);
+
+  const formatDisputeTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const handleReleaseCrypto = async () => {
+    if (!trade.id || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from("p2p_trades")
+        .update({
+          seller_released_at: new Date().toISOString(),
+          status: "completed",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", trade.id);
+
+      if (error) throw error;
+
+      notificationSounds.play('trade_completed');
+      toast({
+        title: "Success",
+        description: `${trade.crypto_amount.toFixed(8)} ${trade.crypto_symbol} has been released to ${counterpartyUsername || 'the buyer'}.`,
+      });
+
+      onTradeUpdate?.();
+    } catch (error) {
+      console.error("Error releasing crypto:", error);
+      toast({
+        title: "Error",
+        description: "Failed to release crypto. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Button
+        onClick={handleReleaseCrypto}
+        disabled={!isPaid || isProcessing || (trade.status !== 'pending' && trade.status !== 'payment_sent')}
+        className="w-full bg-green-600 hover:bg-green-700 text-white p-4 h-auto rounded-lg shadow-md"
+      >
+        <div className="flex items-center justify-between w-full">
+          <span className="text-base font-semibold">
+            {isProcessing ? "Processing..." : "Release Crypto"}
+          </span>
+          <CheckCircle className="w-5 h-5" />
+        </div>
+        <div className="text-left w-full mt-1">
+          <span className="text-xs opacity-90">
+            {isPaid ? 'Buyer has marked payment as sent' : 'Waiting for buyer payment'}
+          </span>
+        </div>
+      </Button>
+
+      {isPaid && (
+        <div className="bg-card border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setIsDisputeExpanded(!isDisputeExpanded)}
+            className="w-full bg-muted p-3 flex items-center justify-between hover:bg-muted/80 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-lg">⚖️</span>
+              </div>
+              <span className="font-semibold text-sm">Dispute</span>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 transition-transform ${
+                isDisputeExpanded ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {isDisputeExpanded && (
+            <div className="p-4 space-y-3">
+              <div className="text-sm text-muted-foreground">
+                Having issues with this trade? <span className="font-semibold text-foreground">Start a dispute</span> if you need help resolving a problem.
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={!canDispute || (trade.status !== 'pending' && trade.status !== 'payment_sent')}
+              >
+                <div className="w-full">
+                  <div className="font-semibold">Start a Dispute</div>
+                  {!canDispute && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Available in {formatDisputeTime(disputeCountdown)}
+                    </div>
+                  )}
+                </div>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isPaid && (
+        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Info className="w-5 h-5" />
+          <span>Payment not yet marked</span>
+        </div>
+      )}
+    </div>
+  );
+}
