@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,30 +8,25 @@ import { createClient } from "@/lib/supabase";
 import { formatLastSeen } from "@/lib/presence";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
 
 interface UserProfileDialogProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
+  prefetch?: boolean;
 }
 
-export function UserProfileDialog({
-  isOpen,
-  onClose,
-  userId,
-}: UserProfileDialogProps) {
+// Cache for user profile data
+const profileCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 60000; // 1 minute cache
+
+export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }: UserProfileDialogProps) {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userPresence, setUserPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
   const supabase = createClient();
   const isMobile = useIsMobile();
-
-  useEffect(() => {
-    if (isOpen && userId) {
-      fetchUserData();
-      fetchPresence();
-    }
-  }, [isOpen, userId]);
 
   const fetchPresence = async () => {
     if (userId) {
@@ -134,12 +128,53 @@ export function UserProfileDialog({
         avgPaymentTime,
         tradesReleased: completedTrades?.length || 0,
       });
+
+      // Store in cache
+      profileCache.set(userId, {
+        data: {
+          profile,
+          positiveCount: positiveCount || 0,
+          negativeCount: negativeCount || 0,
+          successRate,
+          totalTrades,
+          tradePartners: uniquePartners.size,
+          positiveFeedback: positiveFeedback || [],
+          negativeFeedback: negativeFeedback || [],
+          avgReleaseTime,
+          avgPaymentTime,
+          tradesReleased: completedTrades?.length || 0,
+        },
+        timestamp: Date.now()
+      });
     } catch (error) {
       console.error("Error fetching user data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load user profile",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if ((isOpen || prefetch) && userId) {
+      // Check cache first
+      const cached = profileCache.get(userId);
+      const now = Date.now();
+
+      if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+        // Use cached data
+        setUserData(cached.data);
+        setLoading(false);
+      } else {
+        // Fetch fresh data
+        fetchUserData();
+      }
+      fetchPresence();
+    }
+  }, [isOpen, prefetch, userId]);
 
   if (loading || !userData) {
     return (
