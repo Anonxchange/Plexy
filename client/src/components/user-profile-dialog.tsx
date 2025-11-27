@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase";
 import { formatLastSeen } from "@/lib/presence";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -27,6 +27,7 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
   const [userPresence, setUserPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
   const supabase = createClient();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   const fetchPresence = async () => {
     if (userId) {
