@@ -250,18 +250,6 @@ export function CreateOfferAdvanced() {
         }
 
         const walletBalance = parseFloat(wallet.balance.toString());
-        
-        // Check minimum balance requirement
-        const minBalanceRequired = 0.0001; // Minimum balance to create an offer
-        if (walletBalance < minBalanceRequired) {
-          toast({
-            title: "Balance Too Low",
-            description: `You need at least ${minBalanceRequired} ${crypto} to create a sell offer. Current balance: ${walletBalance} ${crypto}`,
-            variant: "destructive",
-          });
-          return;
-        }
-        
         if (totalQuantityNum > walletBalance) {
           toast({
             title: "Insufficient Balance",
@@ -330,18 +318,10 @@ export function CreateOfferAdvanced() {
       }
 
       let totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
-      let fiatAmountToSave = totalQuantityNum;
       
-      // For BUY offers: Convert crypto to fiat if user entered in crypto mode
-      if (offerType === "buy" && quantityInputMode === "crypto" && totalQuantityNum && marketRate > 0) {
-        fiatAmountToSave = totalQuantityNum * marketRate;
-      }
-      // If in fiat mode for BUY, fiatAmountToSave is already the correct value
-      
-      // For SELL offers: Always convert crypto amount to fiat for storage
-      // Sell offers are always entered in crypto amount (BTC, ETH, etc.)
-      if (offerType === "sell" && totalQuantityNum && marketRate > 0) {
-        fiatAmountToSave = totalQuantityNum * marketRate;
+      // Convert fiat to crypto if user entered in fiat mode (for BUY offers only)
+      if (offerType === "buy" && quantityInputMode === "fiat" && totalQuantityNum && marketRate > 0) {
+        totalQuantityNum = totalQuantityNum / marketRate;
       }
 
       const { error } = await supabase.from("p2p_offers").insert({
@@ -355,8 +335,8 @@ export function CreateOfferAdvanced() {
         floating_margin: priceType === "floating" ? priceOffset[0] : null,
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
-        available_amount: fiatAmountToSave, // Always save as fiat amount
-        total_available: fiatAmountToSave, // Always save as fiat amount
+        available_amount: totalQuantityNum, // This should be the total available
+        total_available: totalQuantityNum, // Store total quantity separately
         country_restrictions: country && country !== "ALL" ? [country] : null,
         // Payment method reference
         payment_method_id: selectedPaymentMethodId || null,
