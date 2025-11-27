@@ -267,7 +267,7 @@ export function P2P() {
         
         const { data: userProfiles, error: profilesError } = await supabase
           .from("user_profiles")
-          .select("id, username, display_name, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
+          .select("id, username, display_name, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country, merchant_status")
           .in("id", userIds);
 
         if (profilesError) {
