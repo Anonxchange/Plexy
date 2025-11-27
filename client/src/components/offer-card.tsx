@@ -343,15 +343,15 @@ export function OfferCard({
                   {currency === "AED" && "🇦🇪"}
                   {currency === "SAR" && "🇸🇦"}
                 </span>
-                <span className="truncate">{limits.min.toLocaleString()} {currency}</span>
+                <span className="truncate">{availableRange.max.toLocaleString()} {currency}</span>
               </div>
             </div>
             <div className="min-w-0">
               <div className="text-[10px] sm:text-sm text-muted-foreground mb-1 truncate">
-                {type === "buy" ? "Receive" : "Pay"} ({cryptoSymbol})
+                Available ({cryptoSymbol})
               </div>
               <div className="text-base sm:text-xl font-bold truncate">
-                {cryptoAmount.toLocaleString('en-US', {
+                {(availableRange.max / pricePerBTC).toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 8
                 })} {cryptoSymbol}
