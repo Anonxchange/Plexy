@@ -216,8 +216,18 @@ export function CreateOfferAdvanced() {
       return;
     }
 
-    // Validate wallet balance for sell offers
-    if (offerType === "sell" && totalQuantityNum) {
+    // Validate wallet balance for SELL offers only
+    // For BUY offers, total quantity can be any amount (no wallet balance check needed)
+    if (offerType === "sell") {
+      if (!totalQuantityNum || totalQuantityNum <= 0) {
+        toast({
+          title: "Total Quantity Required",
+          description: `Please enter the total amount of ${crypto} you want to sell`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -247,6 +257,16 @@ export function CreateOfferAdvanced() {
           });
           return;
         }
+      }
+    } else if (offerType === "buy") {
+      // For BUY offers, ensure a total quantity is entered but no wallet balance check
+      if (!totalQuantityNum || totalQuantityNum <= 0) {
+        toast({
+          title: "Total Quantity Required",
+          description: `Please enter the total amount of ${crypto} you want to buy`,
+          variant: "destructive",
+        });
+        return;
       }
     }
 
