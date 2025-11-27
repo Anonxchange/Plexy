@@ -278,6 +278,8 @@ export function CreateOfferAdvanced() {
         country_restrictions: country && country !== "ALL" ? [country] : null,
         // Payment method reference
         payment_method_id: selectedPaymentMethodId || null,
+        time_limit_minutes: parseInt(timeLimit),
+        offer_terms: offerTerms || null,
         is_active: true,
       });
 
