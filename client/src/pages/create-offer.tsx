@@ -89,6 +89,7 @@ export function CreateOffer() {
   const [minAmount, setMinAmount] = useState("4500");
   const [maxAmount, setMaxAmount] = useState("23000000");
   const [totalQuantity, setTotalQuantity] = useState("");
+  const [quantityInputMode, setQuantityInputMode] = useState<"crypto" | "fiat">("crypto");
   const [timeLimit, setTimeLimit] = useState("30");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marketRate, setMarketRate] = useState(0);
@@ -440,7 +441,12 @@ export function CreateOffer() {
         return;
       }
 
-      const totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
+      let totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
+      
+      // Convert fiat to crypto if user entered in fiat mode (for BUY offers only)
+      if (offerType === "buy" && quantityInputMode === "fiat" && totalQuantityNum && marketRate > 0) {
+        totalQuantityNum = totalQuantityNum / marketRate;
+      }
 
       const offerData = {
         user_id: user.id,
@@ -972,68 +978,137 @@ export function CreateOffer() {
             <div className="flex items-center justify-between mb-2">
               <Label className="text-sm text-muted-foreground">
                 {offerType === "buy" 
-                  ? `Total amount you plan to buy (${crypto})` 
+                  ? `Total amount you plan to buy` 
                   : `Total amount of ${crypto} you intend to sell`}
               </Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-auto py-1 px-2 text-primary hover:text-primary/80"
-                onClick={async () => {
-                  if (offerType === "sell") {
-                    try {
-                      const supabase = createClient();
-                      const { data: { user } } = await supabase.auth.getUser();
-                      if (user) {
-                        const { data: wallet } = await supabase
-                          .from('wallets')
-                          .select('balance')
-                          .eq('user_id', user.id)
-                          .eq('crypto_symbol', crypto)
-                          .single();
-                        
-                        if (wallet && wallet.balance) {
-                          const balance = parseFloat(wallet.balance.toString());
-                          setTotalQuantity(balance.toString());
-                          toast({
-                            title: "Wallet Balance Loaded",
-                            description: `Available: ${balance} ${crypto}`,
-                          });
-                        } else {
-                          toast({
-                            title: "No Wallet Found",
-                            description: `You don't have a ${crypto} wallet yet`,
-                            variant: "destructive",
-                          });
+              <div className="flex items-center gap-2">
+                {offerType === "buy" && (
+                  <div className="flex items-center bg-elevate-1 rounded-lg p-1">
+                    <Button
+                      type="button"
+                      variant={quantityInputMode === "crypto" ? "default" : "ghost"}
+                      size="sm"
+                      className="h-7 px-3 text-xs"
+                      onClick={() => {
+                        if (quantityInputMode === "fiat" && totalQuantity && marketRate > 0) {
+                          const fiatAmount = parseFloat(totalQuantity);
+                          if (!isNaN(fiatAmount)) {
+                            const cryptoAmount = fiatAmount / marketRate;
+                            setTotalQuantity(cryptoAmount.toFixed(8));
+                          }
+                        }
+                        setQuantityInputMode("crypto");
+                      }}
+                    >
+                      {crypto}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={quantityInputMode === "fiat" ? "default" : "ghost"}
+                      size="sm"
+                      className="h-7 px-3 text-xs"
+                      onClick={() => {
+                        if (quantityInputMode === "crypto" && totalQuantity && marketRate > 0) {
+                          const cryptoAmount = parseFloat(totalQuantity);
+                          if (!isNaN(cryptoAmount)) {
+                            const fiatAmount = cryptoAmount * marketRate;
+                            setTotalQuantity(Math.round(fiatAmount).toString());
+                          }
+                        }
+                        setQuantityInputMode("fiat");
+                      }}
+                    >
+                      {currency}
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto py-1 px-2 text-primary hover:text-primary/80"
+                  onClick={async () => {
+                    if (offerType === "sell") {
+                      try {
+                        const supabase = createClient();
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (user) {
+                          const { data: wallet } = await supabase
+                            .from('wallets')
+                            .select('balance')
+                            .eq('user_id', user.id)
+                            .eq('crypto_symbol', crypto)
+                            .single();
+                          
+                          if (wallet && wallet.balance) {
+                            const balance = parseFloat(wallet.balance.toString());
+                            setTotalQuantity(balance.toString());
+                            toast({
+                              title: "Wallet Balance Loaded",
+                              description: `Available: ${balance} ${crypto}`,
+                            });
+                          } else {
+                            toast({
+                              title: "No Wallet Found",
+                              description: `You don't have a ${crypto} wallet yet`,
+                              variant: "destructive",
+                            });
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error fetching wallet balance:', error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to fetch wallet balance",
+                          variant: "destructive",
+                        });
+                      }
+                    } else {
+                      if (quantityInputMode === "fiat") {
+                        setTotalQuantity(maxAmount);
+                      } else {
+                        if (marketRate > 0) {
+                          const maxFiat = parseFloat(maxAmount);
+                          const cryptoEquivalent = maxFiat / marketRate;
+                          setTotalQuantity(cryptoEquivalent.toFixed(8));
                         }
                       }
-                    } catch (error) {
-                      console.error('Error fetching wallet balance:', error);
-                      toast({
-                        title: "Error",
-                        description: "Failed to fetch wallet balance",
-                        variant: "destructive",
-                      });
                     }
-                  } else {
-                    setTotalQuantity(maxAmount);
-                  }
-                }}
-              >
-                Max
-              </Button>
+                  }}
+                >
+                  Max
+                </Button>
+              </div>
             </div>
-            <Input 
-              type="number"
-              value={totalQuantity}
-              onChange={(e) => setTotalQuantity(e.target.value)}
-              placeholder={offerType === "buy" ? "Enter total amount to buy" : "Enter total amount to sell"}
-              className="bg-elevate-1 text-lg font-bold"
-            />
+            <div className="relative">
+              <Input 
+                type="number"
+                value={totalQuantity}
+                onChange={(e) => setTotalQuantity(e.target.value)}
+                placeholder={
+                  offerType === "buy" 
+                    ? quantityInputMode === "crypto" 
+                      ? `Enter amount in ${crypto}` 
+                      : `Enter amount in ${currency}`
+                    : "Enter total amount to sell"
+                }
+                className="bg-elevate-1 text-lg font-bold pr-20"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                {offerType === "buy" ? (quantityInputMode === "crypto" ? crypto : currency) : crypto}
+              </span>
+            </div>
+            {offerType === "buy" && totalQuantity && marketRate > 0 && (
+              <p className="text-sm text-primary mt-2 font-medium">
+                {quantityInputMode === "crypto" 
+                  ? `≈ ${(parseFloat(totalQuantity) * marketRate).toLocaleString()} ${currency}`
+                  : `≈ ${(parseFloat(totalQuantity) / marketRate).toFixed(8)} ${crypto}`
+                }
+              </p>
+            )}
             <p className="text-xs text-muted-foreground mt-2">
               {offerType === "buy" 
-                ? "The total amount of cryptocurrency you want to purchase" 
+                ? "The total amount of cryptocurrency you want to purchase. You can enter in crypto or fiat." 
                 : "The total amount from your wallet you're willing to sell"}
             </p>
           </div>
