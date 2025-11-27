@@ -109,7 +109,7 @@ export function P2P() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("All Payment Methods");
   const [paymentSearchQuery, setPaymentSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [offers, setOffers] = useState<OfferCardProps[]>([]);
+  const [rawOffers, setRawOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTrades, setActiveTrades] = useState<any[]>([]);
   const [openFiltersDialog, setOpenFiltersDialog] = useState(false);
@@ -205,22 +205,35 @@ export function P2P() {
     try {
       const { data: trades, error } = await supabase
         .from("p2p_trades")
-        .select(`
-          *,
-          buyer_profile:user_profiles!p2p_trades_buyer_id_fkey(
-            username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country
-          ),
-          seller_profile:user_profiles!p2p_trades_seller_id_fkey(
-            username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country
-          )
-        `)
+        .select("*")
         .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
         .in("status", ["pending", "payment_sent"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      setActiveTrades(trades || []);
+      if (trades && trades.length > 0) {
+        const userIds = Array.from(new Set(trades.flatMap((trade: any) => [trade.buyer_id, trade.seller_id])));
+        
+        const { data: userProfiles } = await supabase
+          .from("user_profiles")
+          .select("id, username, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country")
+          .in("id", userIds);
+
+        const profilesMap = new Map(
+          (userProfiles || []).map((profile: any) => [profile.id, profile])
+        );
+
+        const tradesWithProfiles = trades.map((trade: any) => ({
+          ...trade,
+          buyer_profile: profilesMap.get(trade.buyer_id) || null,
+          seller_profile: profilesMap.get(trade.seller_id) || null,
+        }));
+
+        setActiveTrades(tradesWithProfiles);
+      } else {
+        setActiveTrades([]);
+      }
     } catch (error) {
       console.error("Error fetching active trades:", error);
     }
@@ -230,97 +243,131 @@ export function P2P() {
     setLoading(true);
     try {
       const offerTypeToFetch = activeTab === "buy" ? "sell" : "buy";
+      console.log("Fetching offers for:", { crypto: selectedCrypto, offerType: offerTypeToFetch });
       
-      const { data: offersData, error } = await supabase
+      const { data: offersData, error: offersError } = await supabase
         .from("p2p_offers")
-        .select(`
-          *,
-          user_profiles(
-            id, username, display_name, avatar_url, avatar_type, 
-            positive_ratings, total_trades, response_time_avg, country
-          )
-        `)
+        .select("*")
         .eq("crypto_symbol", selectedCrypto)
         .eq("offer_type", offerTypeToFetch)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .gt("available_amount", 0);
 
-      if (error) {
-        console.error("Error fetching offers:", error);
-        setOffers([]);
+      console.log("Offers fetched:", offersData?.length || 0, "Error:", offersError);
+
+      if (offersError) {
+        console.error("Error fetching offers:", offersError);
+        setRawOffers([]);
         setLoading(false);
         return;
       }
 
       if (offersData && offersData.length > 0) {
-        const formattedOffers: OfferCardProps[] = offersData.map((offer: any) => {
-          const user = offer.user_profiles;
-          const vendorName = user?.username || user?.display_name || "Trader";
+        const userIds = Array.from(new Set(offersData.map((offer: any) => offer.user_id)));
+        
+        const { data: userProfiles, error: profilesError } = await supabase
+          .from("user_profiles")
+          .select("id, username, display_name, avatar_url, avatar_type, positive_ratings, total_trades, response_time_avg, country, merchant_status")
+          .in("id", userIds);
 
-          let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`;
+        if (profilesError) {
+          console.error("Error fetching user profiles:", profilesError);
+        }
 
-          if (user?.avatar_url) {
-            avatarUrl = user.avatar_url;
-          } else if (user?.avatar_type) {
-            const avatarTypes = [
-              { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
-              { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
-              { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
-              { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
-              { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
-              { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
-              { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
-              { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
-            ];
-            const selectedAvatar = avatarTypes.find(a => a.id === user.avatar_type);
-            if (selectedAvatar) {
-              avatarUrl = selectedAvatar.image;
-            }
+        const profilesMap = new Map(
+          (userProfiles || []).map((profile: any) => [profile.id, profile])
+        );
+
+        const offersWithProfiles = offersData.map((offer: any) => ({
+          ...offer,
+          user_profile: profilesMap.get(offer.user_id) || {
+            id: offer.user_id,
+            username: "Unknown User",
+            display_name: null,
+            avatar_url: null,
+            avatar_type: null,
+            positive_ratings: 0,
+            total_trades: 0,
+            response_time_avg: 300,
+            country: null,
+            merchant_status: "none"
           }
+        }));
 
-          return {
-            id: offer.id,
-            vendor: {
-              id: user?.id || offer.user_id,
-              name: vendorName,
-              avatar: avatarUrl,
-              isVerified: (user?.positive_ratings || 0) > 10,
-              trades: user?.total_trades || 0,
-              responseTime: user?.response_time_avg 
-                ? `${Math.floor(user.response_time_avg / 60)} min` 
-                : "5 min",
-              country: user?.country || undefined,
-            },
-            paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
-            pricePerBTC: offer.price_type === "fixed" 
-              ? offer.fixed_price 
-              : (cryptoPrices[offer.crypto_symbol]?.current_price || (offer.crypto_symbol === 'BTC' ? 95000 : offer.crypto_symbol === 'ETH' ? 3500 : 1)),
-            currency: offer.fiat_currency,
-            availableRange: { 
-              min: offer.min_amount, 
-              max: offer.available_amount || offer.max_amount 
-            },
-            limits: { 
-              min: offer.min_amount, 
-              max: offer.max_amount 
-            },
-            type: activeTab,
-            cryptoSymbol: offer.crypto_symbol,
-            time_limit_minutes: offer.time_limit_minutes || 30,
-            created_at: offer.created_at
-          };
-        });
-
-        setOffers(formattedOffers);
+        console.log("Offers with profiles:", offersWithProfiles.length);
+        setRawOffers(offersWithProfiles);
       } else {
-        setOffers([]);
+        console.log("No offers found");
+        setRawOffers([]);
       }
     } catch (error) {
       console.error("Error fetching offers:", error);
-      setOffers([]);
+      setRawOffers([]);
     } finally {
       setLoading(false);
     }
   };
+
+  const offers: OfferCardProps[] = useMemo(() => {
+    return rawOffers.map((offer: any) => {
+      const user = offer.user_profile;
+      const vendorName = user?.username || user?.display_name || "Trader";
+
+      let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendorName}`;
+
+      if (user?.avatar_url) {
+        avatarUrl = user.avatar_url;
+      } else if (user?.avatar_type) {
+        const avatarTypes = [
+          { id: 'default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
+          { id: 'trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
+          { id: 'crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
+          { id: 'robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
+          { id: 'ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
+          { id: 'astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
+          { id: 'developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
+          { id: 'artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
+        ];
+        const selectedAvatar = avatarTypes.find(a => a.id === user.avatar_type);
+        if (selectedAvatar) {
+          avatarUrl = selectedAvatar.image;
+        }
+      }
+
+      return {
+        id: offer.id,
+        vendor: {
+          id: user?.id || offer.user_id,
+          name: vendorName,
+          avatar: avatarUrl,
+          isVerified: (user?.positive_ratings || 0) > 10,
+          trades: user?.total_trades || 0,
+          responseTime: user?.response_time_avg 
+            ? `${Math.floor(user.response_time_avg / 60)} min` 
+            : "5 min",
+          country: user?.country || undefined,
+          merchantStatus: user?.merchant_status || "none",
+        },
+        paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
+        pricePerBTC: offer.price_type === "fixed" 
+          ? offer.fixed_price 
+          : (cryptoPrices[offer.crypto_symbol]?.current_price || (offer.crypto_symbol === 'BTC' ? 95000 : offer.crypto_symbol === 'ETH' ? 3500 : 1)),
+        currency: offer.fiat_currency,
+        availableRange: { 
+          min: offer.min_amount, 
+          max: offer.available_amount || offer.max_amount 
+        },
+        limits: { 
+          min: offer.min_amount, 
+          max: offer.max_amount 
+        },
+        type: activeTab,
+        cryptoSymbol: offer.crypto_symbol,
+        time_limit_minutes: offer.time_limit_minutes || 30,
+        created_at: offer.created_at
+      };
+    });
+  }, [rawOffers, cryptoPrices, activeTab]);
 
   const paymentCategories = [
     { id: "all", name: "All payment methods" },
