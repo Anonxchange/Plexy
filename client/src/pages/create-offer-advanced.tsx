@@ -335,8 +335,8 @@ export function CreateOfferAdvanced() {
         floating_margin: priceType === "floating" ? priceOffset[0] : null,
         min_amount: minAmountNum,
         max_amount: maxAmountNum,
-        available_amount: maxAmountNum,
-        total_quantity: totalQuantityNum,
+        available_amount: totalQuantityNum, // This should be the total available
+        total_available: totalQuantityNum, // Store total quantity separately
         country_restrictions: country && country !== "ALL" ? [country] : null,
         // Payment method reference
         payment_method_id: selectedPaymentMethodId || null,
