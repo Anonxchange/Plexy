@@ -106,14 +106,7 @@ export function OfferCard({
   const { checkCanTrade, isLevel0 } = useVerificationGuard();
   const [userMedals, setUserMedals] = useState<any[]>([]);
   const [vendorPresence, setVendorPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
-  const [isHovering, setIsHovering] = useState(false);
-
-  // Debug logging
-  console.log("=== OFFER CARD RENDERED ===");
-  console.log("Vendor prop:", vendor);
-  console.log("Vendor name:", vendor.name);
-  console.log("Vendor avatar:", vendor.avatar);
-  console.log("Vendor country:", vendor.country);
+  const [isPrefetching, setIsPrefetching] = useState(false);
 
   useEffect(() => {
     const fetchUserMedals = async () => {
@@ -217,7 +210,7 @@ export function OfferCard({
           isOpen={showUserProfileDialog}
           onClose={() => setShowUserProfileDialog(false)}
           userId={vendor.id}
-          prefetch={isHovering}
+          prefetch={isPrefetching}
         />
       )}
       <Card className="hover:shadow-lg transition-shadow border-purple-100 dark:border-purple-900/30" data-testid={`card-offer-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -238,8 +231,11 @@ export function OfferCard({
                       e.stopPropagation();
                       if (vendor.id) setShowUserProfileDialog(true);
                     }}
-                    onMouseEnter={() => setIsHovering(true)}
-                    onMouseLeave={() => setIsHovering(false)}
+                    onMouseEnter={() => {
+                      if (vendor.id && !isPrefetching) {
+                        setIsPrefetching(true);
+                      }
+                    }}
                     className="font-semibold text-sm sm:text-base truncate hover:underline cursor-pointer transition-colors"
                   >
                     {vendor.name}
