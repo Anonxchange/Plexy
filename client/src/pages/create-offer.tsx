@@ -374,6 +374,18 @@ export function CreateOffer() {
         }
 
         const walletBalance = parseFloat(wallet.balance.toString());
+        
+        // Check minimum balance requirement
+        const minBalanceRequired = 0.0001; // Minimum balance to create an offer
+        if (walletBalance < minBalanceRequired) {
+          toast({
+            title: "Balance Too Low",
+            description: `You need at least ${minBalanceRequired} ${crypto} to create a sell offer. Current balance: ${walletBalance} ${crypto}`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
         if (totalQuantityNum > walletBalance) {
           toast({
             title: "Insufficient Balance",
@@ -444,14 +456,14 @@ export function CreateOffer() {
       let totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
       let fiatAmountToSave = totalQuantityNum;
       
-      // Convert crypto to fiat if user entered in crypto mode (for BUY offers)
-      // We always save the FIAT amount, not crypto amount
+      // For BUY offers: Convert crypto to fiat if user entered in crypto mode
       if (offerType === "buy" && quantityInputMode === "crypto" && totalQuantityNum && marketRate > 0) {
         fiatAmountToSave = totalQuantityNum * marketRate;
       }
-      // If in fiat mode, fiatAmountToSave is already the correct value
+      // If in fiat mode for BUY, fiatAmountToSave is already the correct value
       
-      // For SELL offers, always convert crypto to fiat for storage
+      // For SELL offers: Always convert crypto amount to fiat for storage
+      // Sell offers are always entered in crypto amount (BTC, ETH, etc.)
       if (offerType === "sell" && totalQuantityNum && marketRate > 0) {
         fiatAmountToSave = totalQuantityNum * marketRate;
       }
