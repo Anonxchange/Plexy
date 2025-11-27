@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import { BuyerPaymentActions } from "./buyer-payment-actions";
+import { SellerReleaseActions } from "./seller-release-actions";
 
 interface TradeStartedSectionProps {
   isUserBuyer: boolean;
@@ -107,33 +108,32 @@ export function TradeStartedSection({
               </div>
             </div>
 
-            <Button
-              className="w-full p-4 h-auto bg-green-600 hover:bg-green-700"
-              onClick={onTradeUpdate}
-              disabled={!isPaid || trade.status !== 'pending'}
-            >
-              <div className="text-left w-full">
-                <div className="font-bold text-lg">Release Crypto</div>
-                <div className="text-sm">
-                  {isPaid ? 'Buyer has marked as paid' : 'Waiting for buyer payment'}
-                </div>
+            <div className="bg-muted/50 p-4 rounded border border-primary/30">
+              <div className="text-sm sm:text-base">
+                <span className="font-semibold">Wait for the buyer to mark payment as sent.</span> Once they confirm payment, verify you have received the {trade.fiat_currency} before releasing the {trade.crypto_symbol}.
               </div>
-            </Button>
-
-            <Button variant="outline" className="w-full">
-              Raise Dispute
-            </Button>
-
-            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
-              Keep trades within {import.meta.env.VITE_APP_NAME || "NoOnes"}. Some users may ask you to trade outside the {import.meta.env.VITE_APP_NAME || "NoOnes"} platform. This is against our Terms of Service and likely a scam attempt.
             </div>
 
+            <SellerReleaseActions
+              isPaid={isPaid}
+              trade={trade}
+              counterpartyUsername={counterpartyUsername}
+              onTradeUpdate={onTradeUpdate}
+            />
+
             {!isPaid && (
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Info className="w-5 h-5" />
-                <span>Payment not yet marked</span>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-sm"
+              >
+                Report Bad Behaviour
+              </Button>
             )}
+
+            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
+              Keep trades within Pexly. Some users may ask you to trade outside the Pexly platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within Pexly. If you choose to proceed outside Pexly, note that we cannot help or support you if you are scammed during such trades.
+            </div>
           </>
         )}
       </div>
