@@ -19,6 +19,7 @@ import { CancelTradeModal } from "@/components/cancel-trade-modal";
 import { MessageInput } from "@/components/message-input";
 import { TabNavigation } from "@/components/tab-navigation";
 import { TradeStartedSection } from "@/components/trade-started-section";
+import { TradeTerms } from "@/components/trade-terms";
 
 interface Trade {
   id: string;
@@ -722,17 +723,11 @@ export default function ActiveTrade() {
             />
           </div>
 
-          {/* Trade Partner Terms */}
-          {trade.offer_terms && (
-            <div className="mb-6">
-              <div className="text-center text-muted-foreground text-sm mb-2">
-                Please follow {counterparty?.username}'s terms
-              </div>
-              <div className="bg-muted p-4 rounded text-sm space-y-2 whitespace-pre-wrap">
-                {trade.offer_terms}
-              </div>
-            </div>
-          )}
+          {/* Trade Terms */}
+          <TradeTerms
+            offerTerms={trade.offer_terms}
+            counterpartyUsername={counterparty?.username}
+          />
 
           {/* Trade Information */}
           <TradeInfo
@@ -891,18 +886,11 @@ export default function ActiveTrade() {
                   />
                 )}
 
-                {/* Trade Partner Terms */}
-                {trade.offer_terms && (
-                  <>
-                    <div className="text-center text-muted-foreground text-sm sm:text-base">
-                      Please follow {counterparty?.username}'s terms
-                    </div>
-
-                    <div className="bg-card p-4 rounded text-xs sm:text-sm space-y-2 whitespace-pre-wrap">
-                      {trade.offer_terms}
-                    </div>
-                  </>
-                )}
+                {/* Trade Terms */}
+                <TradeTerms
+                  offerTerms={trade.offer_terms}
+                  counterpartyUsername={counterparty?.username}
+                />
 
                 {/* Trade Information */}
                 <div className="mt-6">
