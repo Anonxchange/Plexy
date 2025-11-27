@@ -16,6 +16,7 @@ import { OfferCardProps } from "./offer-card";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { BankAccountSelector } from "./bank-account-selector";
 
 interface TradeDialogProps {
   open: boolean;
@@ -536,44 +537,13 @@ ${selectedBankAccount.account_number}`;
             </div>
           </div>
 
-          {/* Bank Account Selection (for sellers) */}
-          {showBankSelection && offer.type === 'sell' && (
-            <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm sm:text-base">Select Payment Method</h3>
-                <button
-                  onClick={() => setShowBankSelection(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Cancel
-                </button>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Select the payment method where you want to receive payment
-              </p>
-              <div className="space-y-2">
-                {bankAccounts.map((account) => (
-                  <button
-                    key={account.id}
-                    onClick={() => {
-                      setSelectedBankAccount(account);
-                      setShowBankSelection(false);
-                    }}
-                    className={`w-full p-3 rounded-lg border text-left transition-all ${
-                      selectedBankAccount?.id === account.id
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <div className="font-semibold text-sm">{account.bank_name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {account.account_number} • {account.account_holder || account.account_name}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Bank Account Selector */}
+          <BankAccountSelector
+            open={showBankSelection && offer.type === 'sell'}
+            onOpenChange={setShowBankSelection}
+            onSelectAccount={setSelectedBankAccount}
+            selectedAccountId={selectedBankAccount?.id}
+          />
 
           {/* Selected Bank Account Display */}
           {selectedBankAccount && offer.type === 'sell' && !showBankSelection && (
