@@ -987,39 +987,48 @@ export function P2P() {
                   return (
                     <Card 
                       key={trade.id} 
-                      className="hover:shadow-lg transition-shadow border-2 border-primary/50 cursor-pointer"
+                      className="hover:shadow-lg transition-shadow border-purple-100 dark:border-purple-900/30 cursor-pointer"
                       onClick={() => window.location.href = `/trade/${trade.id}`}
                     >
-                      <CardContent className="p-4 space-y-3">
+                      <CardContent className="p-3 sm:p-4 space-y-3">
                         {/* Vendor Info Row */}
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-14 w-14">
-                            <AvatarImage src={vendorAvatarUrl} />
-                            <AvatarFallback className="text-base font-semibold bg-primary/10">
-                              {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-semibold text-base">{counterparty?.username || "Vendor"}</span>
-                              {counterparty?.country && (
-                                <span className="text-base">
-                                  {getCountryFlag(counterparty.country)}
-                                </span>
-                              )}
-                              {(counterparty?.positive_ratings || 0) > 10 && (
-                                <span className="text-xs font-medium text-green-600 flex items-center gap-1">
-                                  <Circle className="h-2 w-2 fill-green-600" />
-                                  POWER
-                                </span>
-                              )}
+                        <div className="flex items-center justify-between gap-2 sm:gap-3">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                            <Avatar className="h-10 w-10 sm:h-14 sm:w-14 bg-purple-500 flex-shrink-0">
+                              <AvatarImage src={vendorAvatarUrl} />
+                              <AvatarFallback className="text-sm sm:text-base font-semibold bg-purple-500 text-white">
+                                {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                                <span className="font-semibold text-sm sm:text-base truncate">{counterparty?.username || "Vendor"}</span>
+                                {counterparty?.country && (
+                                  <span className="text-sm sm:text-base flex-shrink-0">
+                                    {getCountryFlag(counterparty.country)}
+                                  </span>
+                                )}
+                                {(counterparty?.positive_ratings || 0) > 10 && (
+                                  <span className="text-[10px] sm:text-xs font-medium text-green-600 flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                                    <Circle className="h-1.5 w-1.5 sm:h-2 sm:w-2 fill-green-600" />
+                                    <span className="hidden xs:inline">POWER</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
+                                <ThumbsUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                <span>100%</span>
+                                <span className="hidden xs:inline">{counterparty?.total_trades || 0} Trades</span>
+                                <span className="xs:hidden">{counterparty?.total_trades || 0}T</span>
+                                <Circle className="h-1 w-1 fill-green-500" />
+                                <span className="text-green-500">Active</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                              <ThumbsUp className="h-3 w-3" />
-                              <span>100%</span>
-                              <span>{counterparty?.total_trades || 0} Trades</span>
-                              <Circle className="h-1 w-1 fill-green-500" />
-                              <span className="text-green-500">Active now</span>
+                          </div>
+                          <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                            <div className="text-[10px] sm:text-xs font-medium px-2 py-1 rounded-full bg-green-500/10 text-green-600 flex items-center gap-1">
+                              <Circle className="h-1.5 w-1.5 fill-green-600 animate-pulse" />
+                              <span className="hidden sm:inline">{trade.buyer_paid_at ? "Paid" : "Pending"}</span>
                             </div>
                           </div>
                         </div>
@@ -1027,49 +1036,61 @@ export function P2P() {
                         <Separator className="my-1" />
 
                         {/* Pay and Receive Row */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                              {isUserBuyer ? "Pay" : "Receive"} {trade.payment_method}
-                              {trade.fiat_currency === "NGN" && " 🇳🇬"}
-                              {trade.fiat_currency === "USD" && " 🇺🇸"}
-                              {trade.fiat_currency === "EUR" && " 🇪🇺"}
-                              {trade.fiat_currency === "GBP" && " 🇬🇧"}
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                          <div className="min-w-0">
+                            <div className="text-[10px] sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                              <div className="w-0.5 sm:w-1 h-3 sm:h-4 bg-purple-500 rounded flex-shrink-0"></div>
+                              <span className="truncate">{trade.payment_method}</span>
                             </div>
-                            <div className="text-xl font-bold">
-                              {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
+                            <div className="text-base sm:text-xl font-bold flex items-center gap-1 sm:gap-1.5">
+                              <span className="flex-shrink-0">
+                                {trade.fiat_currency === "NGN" && "🇳🇬"}
+                                {trade.fiat_currency === "USD" && "🇺🇸"}
+                                {trade.fiat_currency === "EUR" && "🇪🇺"}
+                                {trade.fiat_currency === "GBP" && "🇬🇧"}
+                                {trade.fiat_currency === "CAD" && "🇨🇦"}
+                                {trade.fiat_currency === "AUD" && "🇦🇺"}
+                                {trade.fiat_currency === "INR" && "🇮🇳"}
+                                {trade.fiat_currency === "KES" && "🇰🇪"}
+                              </span>
+                              <span className="truncate">{trade.fiat_amount.toLocaleString()} {trade.fiat_currency}</span>
                             </div>
                           </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground mb-1">
-                              {isUserBuyer ? "Receive" : "Pay"} ({trade.crypto_symbol})
+                          <div className="min-w-0">
+                            <div className="text-[10px] sm:text-sm text-muted-foreground mb-1 truncate">
+                              {isUserBuyer ? "Receive" : "Send"} ({trade.crypto_symbol})
                             </div>
-                            <div className="text-xl font-bold">
-                              {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                            <div className="text-base sm:text-xl font-bold truncate">
+                              {trade.crypto_amount.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 8
+                              })} {trade.crypto_symbol}
                             </div>
                           </div>
                         </div>
 
-                        {/* Status and Button Row */}
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-green-600 flex items-center gap-1">
-                              <Circle className="h-2 w-2 fill-green-600 animate-pulse" />
-                              {trade.buyer_paid_at ? "Waiting for release" : "Awaiting payment"}
+                        {/* Price and Button Row */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+                          <div className="flex-1 min-w-0 w-full sm:w-auto order-1 sm:order-first">
+                            <div className="text-sm font-medium flex items-center gap-1.5 mb-0.5">
+                              <Circle className="h-2 w-2 fill-green-600 animate-pulse flex-shrink-0" />
+                              <span className={trade.buyer_paid_at ? "text-amber-600" : "text-green-600"}>
+                                {trade.buyer_paid_at ? "Waiting for release" : "Awaiting payment"}
+                              </span>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              Trade ID: {trade.id.substring(0, 8)}...
+                            <div className="text-[10px] sm:text-xs text-muted-foreground">
+                              Trade ID: {trade.id.substring(0, 11)}
                             </div>
                           </div>
                           <Button 
-                            className="bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold gap-2 shrink-0"
+                            className="bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto h-9 sm:h-10 text-sm sm:text-base order-2 sm:order-last"
                             onClick={(e) => {
                               e.stopPropagation();
                               window.location.href = `/trade/${trade.id}`;
                             }}
                           >
                             View Trade
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </CardContent>
@@ -1856,60 +1877,107 @@ export function P2P() {
                         return (
                           <Card 
                             key={trade.id} 
-                            className="hover:shadow-lg transition-shadow border-2 border-primary/50 cursor-pointer"
+                            className="hover:shadow-lg transition-shadow border-purple-100 dark:border-purple-900/30 cursor-pointer"
                             onClick={() => window.location.href = `/trade/${trade.id}`}
                           >
                             <CardContent className="p-4 space-y-3">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-12 w-12">
-                                  <AvatarImage src={vendorAvatarUrl} />
-                                  <AvatarFallback className="text-sm font-semibold bg-primary/10">
-                                    {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
-                                  </AvatarFallback>
-                                </Avatar>
+                              {/* Vendor Info Row */}
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <Avatar className="h-12 w-12 bg-purple-500 flex-shrink-0">
+                                    <AvatarImage src={vendorAvatarUrl} />
+                                    <AvatarFallback className="text-sm font-semibold bg-purple-500 text-white">
+                                      {counterparty?.username?.substring(0, 2).toUpperCase() || "??"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-semibold text-sm truncate">{counterparty?.username || "Vendor"}</span>
+                                      {counterparty?.country && (
+                                        <span className="text-sm flex-shrink-0">{getCountryFlag(counterparty.country)}</span>
+                                      )}
+                                      {(counterparty?.positive_ratings || 0) > 10 && (
+                                        <span className="text-xs font-medium text-green-600 flex items-center gap-1 flex-shrink-0">
+                                          <Circle className="h-2 w-2 fill-green-600" />
+                                          POWER
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <ThumbsUp className="h-3 w-3" />
+                                      <span>100%</span>
+                                      <span>{counterparty?.total_trades || 0} Trades</span>
+                                      <Circle className="h-1 w-1 fill-green-500" />
+                                      <span className="text-green-500">Active</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-xs font-medium px-2 py-1 rounded-full bg-green-500/10 text-green-600 flex items-center gap-1 flex-shrink-0">
+                                  <Circle className="h-1.5 w-1.5 fill-green-600 animate-pulse" />
+                                  {trade.buyer_paid_at ? "Paid" : "Pending"}
+                                </div>
+                              </div>
+
+                              <Separator className="my-1" />
+
+                              {/* Pay and Receive Row */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="min-w-0">
+                                  <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                                    <div className="w-1 h-4 bg-purple-500 rounded flex-shrink-0"></div>
+                                    <span className="truncate">{trade.payment_method}</span>
+                                  </div>
+                                  <div className="text-xl font-bold flex items-center gap-1.5">
+                                    <span className="flex-shrink-0">
+                                      {trade.fiat_currency === "NGN" && "🇳🇬"}
+                                      {trade.fiat_currency === "USD" && "🇺🇸"}
+                                      {trade.fiat_currency === "EUR" && "🇪🇺"}
+                                      {trade.fiat_currency === "GBP" && "🇬🇧"}
+                                      {trade.fiat_currency === "CAD" && "🇨🇦"}
+                                      {trade.fiat_currency === "AUD" && "🇦🇺"}
+                                      {trade.fiat_currency === "INR" && "🇮🇳"}
+                                      {trade.fiat_currency === "KES" && "🇰🇪"}
+                                    </span>
+                                    <span className="truncate">{trade.fiat_amount.toLocaleString()} {trade.fiat_currency}</span>
+                                  </div>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-sm text-muted-foreground mb-1 truncate">
+                                    {isUserBuyer ? "Receive" : "Send"} ({trade.crypto_symbol})
+                                  </div>
+                                  <div className="text-xl font-bold truncate">
+                                    {trade.crypto_amount.toLocaleString('en-US', {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 8
+                                    })} {trade.crypto_symbol}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Status and Button Row */}
+                              <div className="flex items-center justify-between gap-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-semibold text-sm">{counterparty?.username || "Vendor"}</span>
-                                    {counterparty?.country && (
-                                      <span className="text-sm">{getCountryFlag(counterparty.country)}</span>
-                                    )}
+                                  <div className="text-sm font-medium flex items-center gap-1.5 mb-0.5">
+                                    <Circle className="h-2 w-2 fill-green-600 animate-pulse flex-shrink-0" />
+                                    <span className={trade.buyer_paid_at ? "text-amber-600" : "text-green-600"}>
+                                      {trade.buyer_paid_at ? "Waiting for release" : "Awaiting payment"}
+                                    </span>
                                   </div>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <ThumbsUp className="h-3 w-3" />
-                                    <span>100%</span>
-                                    <span>{counterparty?.total_trades || 0} Trades</span>
+                                  <div className="text-xs text-muted-foreground">
+                                    Trade ID: {trade.id.substring(0, 11)}
                                   </div>
                                 </div>
+                                <Button 
+                                  className="bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold gap-2 shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.location.href = `/trade/${trade.id}`;
+                                  }}
+                                >
+                                  View Trade
+                                  <ArrowRight className="h-4 w-4" />
+                                </Button>
                               </div>
-                              <Separator />
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <div className="text-xs text-muted-foreground mb-1">
-                                    {isUserBuyer ? "Pay" : "Receive"}
-                                  </div>
-                                  <div className="text-lg font-bold">
-                                    {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-muted-foreground mb-1">
-                                    {isUserBuyer ? "Receive" : "Pay"}
-                                  </div>
-                                  <div className="text-lg font-bold">
-                                    {trade.crypto_amount.toFixed(6)} {trade.crypto_symbol}
-                                  </div>
-                                </div>
-                              </div>
-                              <Button 
-                                className="w-full bg-[#C4F82A] hover:bg-[#b5e625] text-black font-bold"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.location.href = `/trade/${trade.id}`;
-                                }}
-                              >
-                                View Trade <ArrowRight className="h-4 w-4 ml-2" />
-                              </Button>
                             </CardContent>
                           </Card>
                         );
