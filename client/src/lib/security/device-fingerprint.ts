@@ -25,18 +25,14 @@ class DeviceFingerprintManager {
   private async generateFingerprint(): Promise<string> {
     const components = [];
 
-    // Browser/Platform info
     components.push(navigator.userAgent);
     components.push(navigator.platform);
     components.push(navigator.language);
     
-    // Screen info
     components.push(`${screen.width}x${screen.height}x${screen.colorDepth}`);
     
-    // Timezone
     components.push(Intl.DateTimeFormat().resolvedOptions().timeZone);
     
-    // Canvas fingerprint (more advanced)
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (ctx) {
@@ -46,7 +42,6 @@ class DeviceFingerprintManager {
       components.push(canvas.toDataURL());
     }
 
-    // Generate hash from components
     const fingerprint = components.join('|||');
     return await this.hashString(fingerprint);
   }
@@ -63,10 +58,21 @@ class DeviceFingerprintManager {
     return await this.generateFingerprint();
   }
 
-  async registerDevice(): Promise<DeviceFingerprint> {
+  async registerDevice(userId: string): Promise<DeviceFingerprint> {
+    if (!userId) {
+      throw new Error('User ID is required to register a device');
+    }
+
     const fingerprint = await this.generateFingerprint();
-    const ipResponse = await fetch('https://api.ipify.org?format=json');
-    const { ip } = await ipResponse.json();
+    
+    let ip = null;
+    try {
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const data = await ipResponse.json();
+      ip = data.ip;
+    } catch (error) {
+      console.warn('Could not fetch IP address:', error);
+    }
 
     const deviceInfo = {
       platform: navigator.platform,
@@ -79,6 +85,7 @@ class DeviceFingerprintManager {
     const { data, error } = await supabase
       .from('device_fingerprints')
       .upsert({
+        user_id: userId,
         fingerprint_hash: fingerprint,
         device_info: deviceInfo,
         ip_address: ip,
@@ -93,45 +100,77 @@ class DeviceFingerprintManager {
     return data;
   }
 
-  async getDevices(): Promise<DeviceFingerprint[]> {
+  async getDevices(userId: string): Promise<DeviceFingerprint[]> {
+    if (!userId) {
+      throw new Error('User ID is required to get devices');
+    }
+
     const { data, error } = await supabase
       .from('device_fingerprints')
       .select('*')
+      .eq('user_id', userId)
       .order('last_seen_at', { ascending: false });
 
     if (error) throw error;
     return data || [];
   }
 
-  async trustDevice(deviceId: string): Promise<void> {
+  async trustDevice(userId: string, deviceId: string): Promise<void> {
+    if (!userId) {
+      throw new Error('User ID is required to trust a device');
+    }
+
     const { error } = await supabase
       .from('device_fingerprints')
       .update({ trusted: true })
-      .eq('id', deviceId);
+      .eq('id', deviceId)
+      .eq('user_id', userId);
 
     if (error) throw error;
   }
 
-  async revokeDevice(deviceId: string): Promise<void> {
+  async revokeDevice(userId: string, deviceId: string): Promise<void> {
+    if (!userId) {
+      throw new Error('User ID is required to revoke a device');
+    }
+
     const { error } = await supabase
       .from('device_fingerprints')
       .delete()
-      .eq('id', deviceId);
+      .eq('id', deviceId)
+      .eq('user_id', userId);
 
     if (error) throw error;
   }
 
-  async isDeviceTrusted(): Promise<boolean> {
+  async isDeviceTrusted(userId: string): Promise<boolean> {
+    if (!userId) {
+      return false;
+    }
+
     const fingerprint = await this.generateFingerprint();
 
     const { data, error } = await supabase
       .from('device_fingerprints')
       .select('trusted')
+      .eq('user_id', userId)
       .eq('fingerprint_hash', fingerprint)
       .single();
 
     if (error || !data) return false;
     return data.trusted;
+  }
+
+  async updateLastSeen(userId: string): Promise<void> {
+    if (!userId) return;
+
+    const fingerprint = await this.generateFingerprint();
+
+    await supabase
+      .from('device_fingerprints')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('fingerprint_hash', fingerprint);
   }
 }
 
