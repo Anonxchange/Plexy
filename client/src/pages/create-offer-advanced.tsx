@@ -20,7 +20,7 @@ import { ArrowLeft, Bitcoin, Building2, Lock, Shield, Award, TrendingUp, CheckCi
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { getCryptoPrices, convertToNGN, getOfferLimits } from "@/lib/crypto-prices";
+import { getCryptoPrices, getRealtimeCryptoPrices, convertToNGN, getOfferLimits, calculateFloatingPrice, getPriceRange, getExchangeRates } from "@/lib/crypto-prices";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
 import { canCreateOffer } from "@shared/verification-levels";
 import { getMerchantLevel } from "@shared/merchant-levels";
@@ -96,7 +96,11 @@ export function CreateOfferAdvanced() {
   const [blockList, setBlockList] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marketRate, setMarketRate] = useState(0);
+  const [marketRateUSD, setMarketRateUSD] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [exchangeRate, setExchangeRate] = useState(1);
+  const [premiumInput, setPremiumInput] = useState("");
 
   // Counterparty requirements
   const [completedOrders, setCompletedOrders] = useState("60");
@@ -116,23 +120,38 @@ export function CreateOfferAdvanced() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    const fetchExchangeRate = async () => {
+      if (currency !== "USD") {
+        const rates = await getExchangeRates();
+        setExchangeRate(rates[currency] || 1);
+      } else {
+        setExchangeRate(1);
+      }
+    };
+    fetchExchangeRate();
+  }, [currency]);
+
+  useEffect(() => {
     const fetchLivePrices = async () => {
-      setLoading(true);
-      const prices = await getCryptoPrices([crypto]);
+      if (loading) setLoading(true);
+      
+      const prices = await getRealtimeCryptoPrices([crypto]);
       if (prices[crypto]) {
-        const priceInNGN = currency === "NGN" 
-          ? convertToNGN(prices[crypto].current_price)
-          : prices[crypto].current_price;
-        setMarketRate(priceInNGN);
+        const usdPrice = prices[crypto].current_price;
+        setMarketRateUSD(usdPrice);
+        
+        const priceInCurrency = usdPrice * exchangeRate;
+        setMarketRate(priceInCurrency);
+        setLastUpdated(new Date());
       }
       setLoading(false);
     };
 
     fetchLivePrices();
-    const interval = setInterval(fetchLivePrices, 30000); // Update every 30 seconds
+    const interval = setInterval(fetchLivePrices, 3000);
 
     return () => clearInterval(interval);
-  }, [crypto, currency]);
+  }, [crypto, currency, exchangeRate]);
 
   useEffect(() => {
     const fetchPaymentMethods = async () => {
@@ -161,7 +180,22 @@ export function CreateOfferAdvanced() {
 
   const yourRate = priceType === "fixed" 
     ? parseFloat(fixedPrice) || marketRate
-    : marketRate * (1 + priceOffset[0] / 100);
+    : calculateFloatingPrice(marketRate, priceOffset[0]);
+  
+  const priceRange = getPriceRange(marketRate, -10, 100);
+  
+  const handlePremiumInputChange = (value: string) => {
+    setPremiumInput(value);
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= -10 && numValue <= 100) {
+      setPriceOffset([numValue]);
+    }
+  };
+  
+  const handlePremiumSliderChange = (value: number[]) => {
+    setPriceOffset(value);
+    setPremiumInput(value[0].toFixed(1));
+  };
 
   const handleCreateOffer = async () => {
     if (!checkCanCreateOffer()) {
@@ -645,59 +679,147 @@ export function CreateOfferAdvanced() {
                 {priceType === "fixed" ? (
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm mb-2 block">Fixed Price</Label>
-                      <Input
-                        type="number"
-                        value={fixedPrice}
-                        onChange={(e) => setFixedPrice(e.target.value)}
-                        placeholder="Enter fixed price"
-                        className="bg-background"
-                      />
+                      <Label className="text-sm mb-2 block">Fixed Price per {crypto}</Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          value={fixedPrice}
+                          onChange={(e) => setFixedPrice(e.target.value)}
+                          placeholder={`Enter price in ${currency}`}
+                          className="bg-background pr-16"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                          {currency}
+                        </span>
+                      </div>
+                      {fixedPrice && marketRate > 0 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          This is {((parseFloat(fixedPrice) / marketRate - 1) * 100).toFixed(2)}% {parseFloat(fixedPrice) >= marketRate ? "above" : "below"} market price
+                        </p>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="flex items-center justify-between mb-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setPriceOffset([Math.max(-10, priceOffset[0] - 1)])}
-                      >
-                        -1%
-                      </Button>
-                      <span className="text-lg font-bold">
-                        {priceOffset[0] > 0 ? "+" : ""}{priceOffset[0]}%
-                      </span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setPriceOffset([Math.min(100, priceOffset[0] + 1)])}
-                      >
-                        +1%
-                      </Button>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm mb-2 block">Premium Percentage</Label>
+                      <div className="flex items-center gap-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-10 w-10"
+                          onClick={() => {
+                            const newValue = Math.max(-10, priceOffset[0] - 1);
+                            setPriceOffset([newValue]);
+                            setPremiumInput(newValue.toFixed(1));
+                          }}
+                        >
+                          -
+                        </Button>
+                        <div className="relative flex-1">
+                          <Input
+                            type="number"
+                            value={premiumInput || priceOffset[0].toString()}
+                            onChange={(e) => handlePremiumInputChange(e.target.value)}
+                            className="bg-background text-center text-lg font-bold pr-8"
+                            step="0.1"
+                            min="-10"
+                            max="100"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
+                            %
+                          </span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-10 w-10"
+                          onClick={() => {
+                            const newValue = Math.min(100, priceOffset[0] + 1);
+                            setPriceOffset([newValue]);
+                            setPremiumInput(newValue.toFixed(1));
+                          }}
+                        >
+                          +
+                        </Button>
+                      </div>
                     </div>
                     <Slider
                       value={priceOffset}
-                      onValueChange={setPriceOffset}
+                      onValueChange={handlePremiumSliderChange}
                       min={-10}
                       max={100}
                       step={0.1}
-                      className="mb-6"
+                      className="mt-2"
                     />
-                  </>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>-10%</span>
+                      <span>0%</span>
+                      <span>+50%</span>
+                      <span>+100%</span>
+                    </div>
+                    
+                    <div className="bg-background/50 rounded-lg p-3 border border-border/50">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                        <span>Premium Indicator</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Price range: </span>
+                        <span className="font-mono">{priceRange.minPrice.toLocaleString()} - {priceRange.maxPrice.toLocaleString()} {currency}</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Market rate ({crypto}):</span>
-                    <span className="font-mono">
-                      {loading ? "Loading..." : `${marketRate.toFixed(2)} ${currency}`}
+                
+                <div className="mt-6 pt-4 border-t border-border/50 space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Market rate ({crypto}):</span>
+                      {lastUpdated && (
+                        <span className="text-xs text-green-500 flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                          Live
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-mono font-medium">
+                      {loading ? "Loading..." : `${marketRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  {marketRateUSD > 0 && currency !== "USD" && (
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>USD rate:</span>
+                      <span className="font-mono">${marketRateUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Your rate ({crypto}):</span>
-                    <span className="font-bold font-mono">{yourRate.toFixed(2)} {currency}</span>
+                    <span className={`font-bold font-mono ${priceType === "floating" && priceOffset[0] > 0 ? "text-green-500" : priceType === "floating" && priceOffset[0] < 0 ? "text-red-500" : ""}`}>
+                      {yourRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+                    </span>
                   </div>
+                  {priceType === "floating" && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Difference:</span>
+                      <span className={`font-mono ${priceOffset[0] > 0 ? "text-green-500" : priceOffset[0] < 0 ? "text-red-500" : ""}`}>
+                        {priceOffset[0] >= 0 ? "+" : ""}{(yourRate - marketRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+                      </span>
+                    </div>
+                  )}
                 </div>
+                
+                {priceType === "floating" && (
+                  <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                    <p className="text-xs text-muted-foreground">
+                      {offerType === "sell" ? (
+                        <>Your offer will sell at <span className="font-bold text-foreground">market price {priceOffset[0] >= 0 ? "+" : ""}{priceOffset[0]}%</span>. Price updates every 3 seconds.</>
+                      ) : (
+                        <>Your offer will buy at <span className="font-bold text-foreground">market price {priceOffset[0] >= 0 ? "+" : ""}{priceOffset[0]}%</span>. Price updates every 3 seconds.</>
+                      )}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
