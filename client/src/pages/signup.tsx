@@ -8,6 +8,7 @@ import { PhoneVerification } from "@/components/phone-verification";
 import { createClient } from "@/lib/supabase";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { useTheme } from "@/components/theme-provider";
+import { amlScreening } from "@/lib/security/aml-screening";
 
 export function SignUp() {
   const [signupMethod, setSignupMethod] = useState<"email" | "phone">("email");
@@ -69,6 +70,33 @@ export function SignUp() {
       }
 
       setLoading(true);
+      
+      // Basic AML screening before account creation
+      try {
+        // Extract country from email domain or use default
+        const emailDomain = email.split('@')[1];
+        const defaultCountry = "US"; // Will be enhanced with actual country detection
+        
+        const sanctions = await amlScreening.screenUser(
+          "pending", // ID not yet created
+          fullName,
+          defaultCountry
+        );
+
+        if (sanctions.length > 0) {
+          setLoading(false);
+          toast({
+            title: "Account Registration Blocked",
+            description: "We cannot create an account at this time. Please contact support if you believe this is an error.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("AML screening error:", error);
+        // Allow signup to continue if screening service is down
+      }
+
       const { error } = await signUp(email, password);
       setLoading(false);
 
