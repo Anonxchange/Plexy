@@ -7,6 +7,7 @@ export interface WebAuthnCredential {
   public_key: string;
   counter: number;
   device_name: string;
+  credential_type: 'hardware_key' | 'passkey';
   created_at: string;
 }
 
@@ -17,12 +18,36 @@ class WebAuthnService {
     return !!window.PublicKeyCredential;
   }
 
+  async isPlatformAuthenticatorAvailable(): Promise<boolean> {
+    if (!await this.isSupported()) return false;
+    try {
+      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch {
+      return false;
+    }
+  }
+
   async register(userId: string, deviceName: string): Promise<void> {
+    await this.registerCredential(userId, deviceName, 'hardware_key');
+  }
+
+  async registerPasskey(userId: string, email: string): Promise<void> {
+    await this.registerCredential(userId, email, 'passkey');
+  }
+
+  private async registerCredential(
+    userId: string, 
+    displayName: string, 
+    credentialType: 'hardware_key' | 'passkey'
+  ): Promise<void> {
     if (!await this.isSupported()) {
       throw new Error('WebAuthn is not supported on this browser');
     }
 
-    // Generate challenge from server
+    if (credentialType === 'passkey' && !await this.isPlatformAuthenticatorAvailable()) {
+      throw new Error('Passkeys are not supported on this device');
+    }
+
     const challenge = crypto.getRandomValues(new Uint8Array(32));
 
     const publicKeyOptions: PublicKeyCredentialCreationOptions = {
@@ -33,15 +58,20 @@ class WebAuthnService {
       },
       user: {
         id: new TextEncoder().encode(userId),
-        name: userId,
-        displayName: deviceName,
+        name: displayName,
+        displayName: displayName,
       },
       pubKeyCredParams: [
         { type: 'public-key', alg: -7 },  // ES256
         { type: 'public-key', alg: -257 }, // RS256
       ],
-      authenticatorSelection: {
-        authenticatorAttachment: 'cross-platform', // Hardware key
+      authenticatorSelection: credentialType === 'passkey' ? {
+        authenticatorAttachment: 'platform',
+        userVerification: 'required',
+        residentKey: 'required',
+        requireResidentKey: true,
+      } : {
+        authenticatorAttachment: 'cross-platform',
         userVerification: 'preferred',
         requireResidentKey: false,
       },
@@ -59,14 +89,16 @@ class WebAuthnService {
 
     const response = credential.response as AuthenticatorAttestationResponse;
     
-    // Store credential in database
     const credentialId = Array.from(new Uint8Array(credential.rawId))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    const publicKey = Array.from(new Uint8Array(response.getPublicKey()!))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    const publicKeyBytes = response.getPublicKey();
+    const publicKey = publicKeyBytes 
+      ? Array.from(new Uint8Array(publicKeyBytes))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')
+      : '';
 
     await this.supabase
       .from('webauthn_credentials')
@@ -75,7 +107,8 @@ class WebAuthnService {
         credential_id: credentialId,
         public_key: publicKey,
         counter: 0,
-        device_name: deviceName,
+        device_name: displayName,
+        credential_type: credentialType,
       });
   }
 
@@ -98,7 +131,7 @@ class WebAuthnService {
 
     const allowCredentials = credentials.map(cred => ({
       type: 'public-key' as const,
-      id: Uint8Array.from(cred.credential_id.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))),
+      id: Uint8Array.from(cred.credential_id.match(/.{1,2}/g)!.map((byte: string) => parseInt(byte, 16))),
     }));
 
     const publicKeyOptions: PublicKeyCredentialRequestOptions = {
@@ -126,6 +159,28 @@ class WebAuthnService {
       .from('webauthn_credentials')
       .select('*')
       .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    return data || [];
+  }
+
+  async listHardwareKeys(userId: string): Promise<WebAuthnCredential[]> {
+    const { data } = await this.supabase
+      .from('webauthn_credentials')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('credential_type', 'hardware_key')
+      .order('created_at', { ascending: false });
+
+    return data || [];
+  }
+
+  async listPasskeys(userId: string): Promise<WebAuthnCredential[]> {
+    const { data } = await this.supabase
+      .from('webauthn_credentials')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('credential_type', 'passkey')
       .order('created_at', { ascending: false });
 
     return data || [];
