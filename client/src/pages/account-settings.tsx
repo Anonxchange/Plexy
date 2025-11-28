@@ -1415,18 +1415,20 @@ export default function AccountSettings() {
           .eq('id', user?.id)
           .single();
 
-        if (error && error.code !== 'PGRST116') throw error;
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching withdrawal whitelist status:', error);
+          setWhitelistEnabled(false);
+          return;
+        }
 
         if (data) {
           setWhitelistEnabled(data.withdrawal_whitelist_enabled || false);
+        } else {
+          setWhitelistEnabled(false);
         }
       } catch (error) {
         console.error('Error fetching withdrawal whitelist status:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch withdrawal whitelist status.",
-          variant: "destructive",
-        });
+        setWhitelistEnabled(false);
       } finally {
         setLoadingWhitelist(false);
       }
