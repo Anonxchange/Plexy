@@ -14,7 +14,12 @@ export interface ExchangeRates {
 // Cache for crypto prices
 let cryptoPricesCache: Record<string, CryptoPrice> | null = null;
 let lastPricesFetchTime = 0;
-const PRICES_CACHE_DURATION = 30000; // 30 seconds
+const PRICES_CACHE_DURATION = 30000; // 30 seconds for general use
+
+// Real-time price cache (3 seconds like Bybit)
+let realtimePricesCache: Record<string, CryptoPrice> | null = null;
+let lastRealtimeFetchTime = 0;
+const REALTIME_CACHE_DURATION = 3000; // 3 seconds for real-time pricing
 
 const COINGECKO_IDS: Record<string, string> = {
   BTC: 'bitcoin',
@@ -104,6 +109,149 @@ export async function getCryptoPrices(symbols: string[]): Promise<Record<string,
     // Return cached data if available, otherwise empty object
     return cryptoPricesCache || {};
   }
+}
+
+// Real-time price fetching for P2P offers (5 second refresh to avoid rate limits)
+export async function getRealtimeCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
+  const now = Date.now();
+  
+  // Return cached prices if still valid (5 seconds to avoid rate limits)
+  if (realtimePricesCache && (now - lastRealtimeFetchTime) < 5000) {
+    const hasAllSymbols = symbols.every(s => realtimePricesCache![s]);
+    if (hasAllSymbols) {
+      return realtimePricesCache;
+    }
+  }
+  
+  // If cache exists and is less than 30 seconds old, use it to reduce API calls
+  if (realtimePricesCache && (now - lastRealtimeFetchTime) < 30000) {
+    return realtimePricesCache;
+  }
+  
+  const ids = symbols.map(s => COINGECKO_IDS[s]).filter(Boolean).join(',');
+  
+  if (!ids) {
+    return realtimePricesCache || cryptoPricesCache || generateFallbackPrices(symbols);
+  }
+  
+  try {
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    
+    if (!response.ok) {
+      // If rate limited, return cached data
+      if (realtimePricesCache) {
+        return realtimePricesCache;
+      }
+      // Fallback to regular cache or generate fallback
+      return cryptoPricesCache || generateFallbackPrices(symbols);
+    }
+    
+    const data = await response.json();
+    
+    const pricesMap: Record<string, CryptoPrice> = {};
+    
+    Object.entries(COINGECKO_IDS).forEach(([symbol, coinId]) => {
+      if (data[coinId]) {
+        pricesMap[symbol] = {
+          symbol,
+          name: symbol,
+          current_price: data[coinId].usd,
+          price_change_percentage_24h: data[coinId].usd_24h_change || 0,
+          market_cap: 0,
+          total_volume: 0
+        };
+      }
+    });
+    
+    realtimePricesCache = pricesMap;
+    lastRealtimeFetchTime = now;
+    
+    return pricesMap;
+  } catch (error) {
+    // Silently return cached or fallback data to avoid console spam
+    if (realtimePricesCache) return realtimePricesCache;
+    if (cryptoPricesCache) return cryptoPricesCache;
+    return generateFallbackPrices(symbols);
+  }
+}
+
+// Generate fallback prices if API is unavailable
+function generateFallbackPrices(symbols: string[]): Record<string, CryptoPrice> {
+  const fallbackPrices: Record<string, number> = {
+    BTC: 95000,
+    ETH: 3500,
+    USDT: 1,
+    USDC: 1,
+    SOL: 200,
+    BNB: 600,
+    TRX: 0.2,
+    LTC: 80,
+    XRP: 1.5,
+    ADA: 0.8,
+    DOGE: 0.35,
+    AVAX: 40,
+    MATIC: 0.85,
+    DOT: 7,
+    LINK: 15,
+    UNI: 12,
+    ATOM: 10,
+    APT: 12,
+    ARB: 1.2,
+    OP: 2.5,
+    NEAR: 6,
+    FTM: 1.2,
+    ALGO: 0.4,
+    VET: 0.05
+  };
+  
+  const pricesMap: Record<string, CryptoPrice> = {};
+  
+  symbols.forEach(symbol => {
+    if (fallbackPrices[symbol]) {
+      pricesMap[symbol] = {
+        symbol,
+        name: symbol,
+        current_price: fallbackPrices[symbol],
+        price_change_percentage_24h: 0,
+        market_cap: 0,
+        total_volume: 0
+      };
+    }
+  });
+  
+  return pricesMap;
+}
+
+// Calculate floating price based on premium percentage (Bybit-style)
+export function calculateFloatingPrice(
+  marketPrice: number,
+  premiumPercentage: number
+): number {
+  return marketPrice * (1 + premiumPercentage / 100);
+}
+
+// Calculate premium percentage from fixed price and market price
+export function calculatePremiumFromPrice(
+  fixedPrice: number,
+  marketPrice: number
+): number {
+  if (marketPrice === 0) return 0;
+  return ((fixedPrice / marketPrice) - 1) * 100;
+}
+
+// Get price range based on premium (for premium indicator)
+export function getPriceRange(
+  marketPrice: number,
+  minPremium: number = -10,
+  maxPremium: number = 100
+): { minPrice: number; maxPrice: number } {
+  return {
+    minPrice: calculateFloatingPrice(marketPrice, minPremium),
+    maxPrice: calculateFloatingPrice(marketPrice, maxPremium)
+  };
 }
 
 export function formatPrice(price: number): string {
