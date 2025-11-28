@@ -39,7 +39,7 @@ export function HardwareKeySetup({ userId }: HardwareKeySetupProps) {
   };
 
   const loadCredentials = async () => {
-    const creds = await webAuthnService.listCredentials(userId);
+    const creds = await webAuthnService.listHardwareKeys(userId);
     setCredentials(creds);
   };
 
