@@ -129,6 +129,37 @@ class AMLScreening {
 
     return matrix[str2.length][str1.length];
   }
+
+  async getCountryFromIP(): Promise<string> {
+    try {
+      // Use a free IP geolocation service
+      const response = await fetch('https://ipapi.co/json/');
+      const data = await response.json();
+      return data.country_code || 'US';
+    } catch (error) {
+      console.error('Failed to get country from IP:', error);
+      return 'US'; // Default to US if detection fails
+    }
+  }
+
+  async logAMLEvent(
+    userId: string,
+    eventType: string,
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    details: any
+  ): Promise<void> {
+    try {
+      await supabase.from('security_logs').insert({
+        user_id: userId,
+        event_type: eventType,
+        severity,
+        details,
+        created_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to log AML event:', error);
+    }
+  }
 }
 
 export const amlScreening = new AMLScreening();
