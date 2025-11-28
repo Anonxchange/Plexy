@@ -19,6 +19,7 @@ import { LivenessResult } from "@/lib/liveness-api";
 import { uploadToR2, uploadBase64ToR2 } from "@/lib/r2-storage";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { amlScreening } from "@/lib/security/aml-screening";
 
 export default function VerificationPage() {
   const supabase = createClient();
@@ -113,6 +114,55 @@ export default function VerificationPage() {
         throw new Error("You must be at least 18 years old to use this platform");
       }
 
+      // AML SCREENING - Level 1 (Name + Country Check)
+      try {
+        // Get user's country from profile or detect from IP
+        const country = userProfile?.country || "US";
+        
+        const sanctions = await amlScreening.screenUser(
+          user.id,
+          nameToUse,
+          country
+        );
+
+        if (sanctions.length > 0) {
+          // Log sanctions match for admin review
+          await supabase.from('security_logs').insert({
+            user_id: user.id,
+            event_type: 'aml_sanctions_match',
+            severity: 'critical',
+            details: {
+              matches: sanctions,
+              verification_level: 1,
+              action: 'blocked'
+            }
+          });
+
+          throw new Error("Your account cannot be verified at this time. Our compliance team will review your application.");
+        }
+
+        // Check for structured deposits (if user has any transaction history)
+        const hasStructuredDeposits = await amlScreening.checkStructuredDeposits(user.id);
+        
+        if (hasStructuredDeposits) {
+          await supabase.from('security_logs').insert({
+            user_id: user.id,
+            event_type: 'structured_deposits_detected',
+            severity: 'high',
+            details: {
+              verification_level: 1,
+              action: 'flagged_for_review'
+            }
+          });
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("cannot be verified")) {
+          throw error;
+        }
+        console.error("AML screening error:", error);
+        // Log but don't block if screening service fails
+      }
+
       const { error } = await supabase
         .from("user_profiles")
         .update({ 
@@ -138,6 +188,64 @@ export default function VerificationPage() {
 
       if (!user?.id) {
         throw new Error("Not authenticated");
+      }
+
+      // AML SCREENING - Enhanced checks for Level 2 and 3
+      if (level >= 2) {
+        try {
+          const country = userProfile?.country || "US";
+          const fullNameToCheck = userProfile?.full_name || "";
+
+          // Re-screen user with current data
+          const sanctions = await amlScreening.screenUser(
+            user.id,
+            fullNameToCheck,
+            country
+          );
+
+          if (sanctions.length > 0) {
+            await supabase.from('security_logs').insert({
+              user_id: user.id,
+              event_type: 'aml_sanctions_match',
+              severity: 'critical',
+              details: {
+                matches: sanctions,
+                verification_level: level,
+                action: 'verification_blocked'
+              }
+            });
+
+            throw new Error("Verification cannot be completed. Please contact support.");
+          }
+
+          // Enhanced due diligence for Level 3
+          if (level === 3) {
+            const hasStructuredDeposits = await amlScreening.checkStructuredDeposits(user.id);
+            
+            if (hasStructuredDeposits) {
+              await supabase.from('security_logs').insert({
+                user_id: user.id,
+                event_type: 'structured_deposits_detected',
+                severity: 'high',
+                details: {
+                  verification_level: 3,
+                  action: 'flagged_for_manual_review'
+                }
+              });
+
+              // Don't block but flag for admin review
+              toast({
+                title: "Additional Review Required",
+                description: "Your verification will undergo enhanced review. This may take 3-5 business days.",
+              });
+            }
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.includes("cannot be completed")) {
+            throw error;
+          }
+          console.error("AML screening error:", error);
+        }
       }
 
       let documentUrl = "";
