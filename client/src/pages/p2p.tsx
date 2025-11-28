@@ -47,7 +47,7 @@ import {
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Separator } from "@/components/ui/separator";
 import { P2PFiltersDialog } from "@/components/p2p-filters-dialog";
-import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { getCryptoPrices, getRealtimeCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 
 // Helper function to get country flag emoji
 const getCountryFlag = (countryName: string | undefined | null): string => {
@@ -147,7 +147,7 @@ export function P2P() {
   useEffect(() => {
     const loadCryptoPrices = async () => {
       try {
-        const prices = await getCryptoPrices(['BTC', 'ETH', 'USDT']);
+        const prices = await getRealtimeCryptoPrices(['BTC', 'ETH', 'USDT']);
         if (Object.keys(prices).length > 0) {
           setCryptoPrices(prices);
         } else {
@@ -168,6 +168,9 @@ export function P2P() {
     };
     
     loadCryptoPrices();
+    const interval = setInterval(loadCryptoPrices, 3000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -362,7 +365,11 @@ export function P2P() {
         paymentMethod: Array.isArray(offer.payment_methods) ? offer.payment_methods[0] : "Bank Transfer",
         pricePerBTC: offer.price_type === "fixed" 
           ? offer.fixed_price 
-          : (cryptoPrices[offer.crypto_symbol]?.current_price || (offer.crypto_symbol === 'BTC' ? 95000 : offer.crypto_symbol === 'ETH' ? 3500 : 1)),
+          : (() => {
+              const basePrice = cryptoPrices[offer.crypto_symbol]?.current_price || (offer.crypto_symbol === 'BTC' ? 95000 : offer.crypto_symbol === 'ETH' ? 3500 : 1);
+              const margin = offer.floating_margin || 0;
+              return basePrice * (1 + margin / 100);
+            })(),
         currency: offer.fiat_currency,
         availableRange: { 
           min: offer.min_amount, 
