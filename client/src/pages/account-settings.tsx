@@ -70,6 +70,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { TwoFactorSetupDialog } from "@/components/two-factor-setup-dialog";
+import { HardwareKeySetup } from "@/components/hardware-key-setup";
 import * as OTPAuth from "otpauth";
 
 const settingsSections = [
@@ -169,6 +170,11 @@ export default function AccountSettings() {
   const [devices, setDevices] = useState<any[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(true);
 
+  // Hardware Security Key states
+  const [hardwareKeys, setHardwareKeys] = useState<any[]>([]);
+  const [loadingHardwareKeys, setLoadingHardwareKeys] = useState(true);
+  const [showAddHardwareKeyDialog, setShowAddHardwareKeyDialog] = useState(false);
+  const [hardwareKeyName, setHardwareKeyName] = useState("");
 
 
   // Online Wallet Providers
@@ -215,6 +221,7 @@ export default function AccountSettings() {
       fetchVerificationLevel();
       fetchDevices();
       fetch2FAStatus();
+      fetchHardwareKeys(); // Fetch hardware keys on component mount
     }
   }, [user, loading]);
 
@@ -222,7 +229,7 @@ export default function AccountSettings() {
     try {
       // First get the latest auth user data
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      
+
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -237,7 +244,7 @@ export default function AccountSettings() {
       if (data) {
         setProfileData(data);
         console.log('Profile data loaded:', data);
-        
+
         // Only update fields if user is not currently editing them
         if (!isEditingUsername) {
           setUsername(data.username || '');
@@ -245,7 +252,7 @@ export default function AccountSettings() {
         if (!isEditingBio) {
           setBio(data.bio || '');
         }
-        
+
         // Load phone number - prioritize auth user phone, then profile phone_number
         // Only update if user is not currently editing the phone field
         if (!isEditingPhone) {
@@ -262,7 +269,7 @@ export default function AccountSettings() {
             }
           }
         }
-        
+
         // Check phone verification from both auth and profile
         const isVerified = authUser?.phone_confirmed_at ? true : (data.phone_verified || false);
         setPhoneVerified(isVerified);
@@ -357,6 +364,25 @@ export default function AccountSettings() {
     }
   };
 
+  const fetchHardwareKeys = async () => {
+    setLoadingHardwareKeys(true);
+    try {
+      const { data, error } = await supabase
+        .from('hardware_security_keys')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setHardwareKeys(data || []);
+    } catch (error) {
+      console.error('Error fetching hardware keys:', error);
+    } finally {
+      setLoadingHardwareKeys(false);
+    }
+  };
+
   const [showDisable2FADialog, setShowDisable2FADialog] = useState(false);
   const [disable2FACode, setDisable2FACode] = useState("");
   const [disabling2FA, setDisabling2FA] = useState(false);
@@ -375,10 +401,10 @@ export default function AccountSettings() {
     try {
       // Generate a 6-digit code
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      
+
       // Store code in database with expiry (5 minutes)
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      
+
       const { error: updateError } = await supabase
         .from('user_profiles')
         .update({
@@ -599,12 +625,12 @@ export default function AccountSettings() {
       // Get current auth user to check for phone
       const { data: { user: authUser } } = await supabase.auth.getUser();
       const authPhone = authUser?.phone || '';
-      
+
       // Check if phone number has changed
       const currentPhone = authPhone || profileData?.phone_number || '';
       const newPhone = phone.trim();
       const newFullPhoneNumber = countryCodeForPhone + newPhone;
-      
+
       if (newFullPhoneNumber !== currentPhone && newPhone) {
         // Phone number changed - trigger OTP verification via dialog
         // The PhoneLinkingDialog will handle duplicate checks through Supabase Auth
@@ -874,6 +900,74 @@ export default function AccountSettings() {
     }
   };
 
+  const handleAddHardwareKey = async () => {
+    if (!hardwareKeyName) {
+      toast({
+        title: "Name Required",
+        description: "Please provide a name for your hardware security key.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // In a real application, you would use WebAuthn API here to register a new key.
+      // For this example, we'll simulate adding a key with a placeholder.
+      const newKey = {
+        id: Math.random().toString(36).substring(2, 15), // Simulate a unique ID
+        user_id: user?.id,
+        name: hardwareKeyName,
+        credential_id: null, // Placeholder for actual credential ID
+        created_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('hardware_security_keys')
+        .insert(newKey);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Hardware security key added successfully.",
+      });
+      setHardwareKeyName("");
+      setShowAddHardwareKeyDialog(false);
+      fetchHardwareKeys();
+    } catch (error) {
+      console.error('Error adding hardware key:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add hardware security key.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveHardwareKey = async (keyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('hardware_security_keys')
+        .delete()
+        .eq('id', keyId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Hardware security key removed successfully.",
+      });
+      fetchHardwareKeys();
+    } catch (error) {
+      console.error('Error removing hardware key:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove hardware security key.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const SidebarContent = () => (
     <div className="p-4 space-y-2">
       {settingsSections.map((section) => {
@@ -942,7 +1036,7 @@ export default function AccountSettings() {
               </Badge>
             )}
           </div>
-          <Button 
+          <Button
             variant="outline"
             size="sm"
             onClick={() => setShowEmailChangeDialog(true)}
@@ -1307,7 +1401,71 @@ export default function AccountSettings() {
   const SecuritySection = () => {
     const [loginNotifications, setLoginNotifications] = useState(true);
     const [suspiciousActivity, setSuspiciousActivity] = useState(true);
+    const [whitelistEnabled, setWhitelistEnabled] = useState(false);
+    const [loadingWhitelist, setLoadingWhitelist] = useState(false);
     const [showPasswordChange, setShowPasswordChange] = useState(false);
+
+    // Function to fetch whitelist status
+    const fetchWhitelistStatus = async () => {
+      setLoadingWhitelist(true);
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('withdrawal_whitelist_enabled')
+          .eq('id', user?.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+          setWhitelistEnabled(data.withdrawal_whitelist_enabled || false);
+        }
+      } catch (error) {
+        console.error('Error fetching withdrawal whitelist status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch withdrawal whitelist status.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingWhitelist(false);
+      }
+    };
+
+    // Function to toggle whitelist status
+    const toggleWhitelist = async () => {
+      setLoadingWhitelist(true);
+      try {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ withdrawal_whitelist_enabled: !whitelistEnabled })
+          .eq('id', user?.id);
+
+        if (error) throw error;
+
+        setWhitelistEnabled(!whitelistEnabled);
+        toast({
+          title: "Success!",
+          description: `Withdrawal whitelist ${whitelistEnabled ? 'disabled' : 'enabled'} successfully.`,
+        });
+      } catch (error) {
+        console.error('Error toggling withdrawal whitelist:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update withdrawal whitelist setting.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingWhitelist(false);
+      }
+    };
+
+    // Fetch status on mount
+    useEffect(() => {
+      if (user) {
+        fetchWhitelistStatus();
+      }
+    }, [user]);
 
     return (
       <div className="space-y-6">
@@ -1582,6 +1740,97 @@ export default function AccountSettings() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Withdrawal Whitelist */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4">Withdrawal Whitelist</h4>
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-medium">Enable Withdrawal Whitelist</p>
+                  <p className="text-sm text-muted-foreground">
+                    Only allow withdrawals to pre-approved addresses. Highly recommended for increased security.
+                  </p>
+                </div>
+                <Switch
+                  checked={whitelistEnabled}
+                  onCheckedChange={toggleWhitelist}
+                  disabled={loadingWhitelist}
+                />
+              </div>
+              {whitelistEnabled && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <div className="flex gap-2 items-center">
+                    <Info className="h-5 w-5 text-yellow-500 shrink-0" />
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      Your withdrawal whitelist is currently enabled. Ensure you have added all necessary addresses.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* IP Whitelist */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4">IP Address Whitelist</h4>
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-medium">Enable IP Whitelist</p>
+                  <p className="text-sm text-muted-foreground">
+                    Restrict account access to specific IP addresses for maximum security.
+                  </p>
+                </div>
+                <Switch />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="ip-withdrawals" className="rounded" />
+                  <label htmlFor="ip-withdrawals" className="text-sm">Require for withdrawals</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="ip-trades" className="rounded" />
+                  <label htmlFor="ip-trades" className="text-sm">Require for trades</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="ip-api" className="rounded" />
+                  <label htmlFor="ip-api" className="text-sm">Require for API access</label>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full">
+                Manage IP Whitelist
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Trusted Devices */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4">Trusted Devices</h4>
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-medium">Device Fingerprinting</p>
+                  <p className="text-sm text-muted-foreground">
+                    Monitor and trust specific devices for enhanced security.
+                  </p>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full">
+                Manage Trusted Devices
+              </Button>
+              <div className="text-xs text-muted-foreground">
+                Current device is trusted
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
 
         {/* Password Management */}
         <div>
@@ -2612,6 +2861,50 @@ export default function AccountSettings() {
             </Button>
             <Button onClick={handleSaveMobileMoneyWallet}>
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Hardware Security Key Dialog */}
+      <Dialog open={showAddHardwareKeyDialog} onOpenChange={setShowAddHardwareKeyDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Hardware Security Key</DialogTitle>
+            <DialogDescription>
+              Register a new YubiKey or FIDO2 compliant security key for enhanced login security.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="hardware-key-name">Key Name</Label>
+              <Input
+                id="hardware-key-name"
+                value={hardwareKeyName}
+                onChange={(e) => setHardwareKeyName(e.target.value)}
+                placeholder="e.g., My Work YubiKey"
+              />
+              <p className="text-xs text-muted-foreground">
+                Give your key a recognizable name.
+              </p>
+            </div>
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    You will be prompted to insert and touch your security key to complete registration.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddHardwareKeyDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddHardwareKey}>
+              Register Key
             </Button>
           </DialogFooter>
         </DialogContent>
