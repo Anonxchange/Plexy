@@ -71,6 +71,10 @@ import {
 } from "@/components/ui/accordion";
 import { TwoFactorSetupDialog } from "@/components/two-factor-setup-dialog";
 import { HardwareKeySetup } from "@/components/hardware-key-setup";
+import { PasskeySetup } from "@/components/passkey-setup";
+import { WithdrawalWhitelistDialog } from "@/components/withdrawal-whitelist-dialog";
+import { IPWhitelistDialog } from "@/components/ip-whitelist-dialog";
+import { TrustedDevicesDialog } from "@/components/trusted-devices-dialog";
 import * as OTPAuth from "otpauth";
 
 const settingsSections = [
@@ -1404,6 +1408,14 @@ export default function AccountSettings() {
     const [whitelistEnabled, setWhitelistEnabled] = useState(false);
     const [loadingWhitelist, setLoadingWhitelist] = useState(false);
     const [showPasswordChange, setShowPasswordChange] = useState(false);
+    const [showWithdrawalWhitelistDialog, setShowWithdrawalWhitelistDialog] = useState(false);
+    const [showIPWhitelistDialog, setShowIPWhitelistDialog] = useState(false);
+    const [showTrustedDevicesDialog, setShowTrustedDevicesDialog] = useState(false);
+    const [ipWhitelistEnabled, setIPWhitelistEnabled] = useState(false);
+    const [ipRequireWithdrawals, setIPRequireWithdrawals] = useState(false);
+    const [ipRequireTrades, setIPRequireTrades] = useState(false);
+    const [ipRequireAPI, setIPRequireAPI] = useState(false);
+    const [loadingIPWhitelist, setLoadingIPWhitelist] = useState(false);
 
     // Function to fetch whitelist status
     const fetchWhitelistStatus = async () => {
@@ -1771,9 +1783,20 @@ export default function AccountSettings() {
                   </div>
                 </div>
               )}
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowWithdrawalWhitelistDialog(true)}
+              >
+                Manage Whitelisted Addresses
+              </Button>
             </CardContent>
           </Card>
         </div>
+        <WithdrawalWhitelistDialog
+          open={showWithdrawalWhitelistDialog}
+          onOpenChange={setShowWithdrawalWhitelistDialog}
+        />
 
         {/* IP Whitelist */}
         <div>
@@ -1787,28 +1810,65 @@ export default function AccountSettings() {
                     Restrict account access to specific IP addresses for maximum security.
                   </p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={ipWhitelistEnabled}
+                  onCheckedChange={setIPWhitelistEnabled}
+                  disabled={loadingIPWhitelist}
+                />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="ip-withdrawals" className="rounded" />
-                  <label htmlFor="ip-withdrawals" className="text-sm">Require for withdrawals</label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="ip-trades" className="rounded" />
-                  <label htmlFor="ip-trades" className="text-sm">Require for trades</label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="ip-api" className="rounded" />
-                  <label htmlFor="ip-api" className="text-sm">Require for API access</label>
-                </div>
-              </div>
-              <Button variant="outline" className="w-full">
+              {ipWhitelistEnabled && (
+                <>
+                  <div className="space-y-2 pt-2 border-t">
+                    <p className="text-sm font-medium mb-2">Require IP verification for:</p>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="ip-withdrawals"
+                        checked={ipRequireWithdrawals}
+                        onCheckedChange={setIPRequireWithdrawals}
+                      />
+                      <label htmlFor="ip-withdrawals" className="text-sm">Withdrawals</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="ip-trades"
+                        checked={ipRequireTrades}
+                        onCheckedChange={setIPRequireTrades}
+                      />
+                      <label htmlFor="ip-trades" className="text-sm">Trades</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="ip-api"
+                        checked={ipRequireAPI}
+                        onCheckedChange={setIPRequireAPI}
+                      />
+                      <label htmlFor="ip-api" className="text-sm">API access</label>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <div className="flex gap-2 items-center">
+                      <Info className="h-5 w-5 text-blue-500 shrink-0" />
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        Make sure to add your current IP address before enabling restrictions.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowIPWhitelistDialog(true)}
+              >
                 Manage IP Whitelist
               </Button>
             </CardContent>
           </Card>
         </div>
+        <IPWhitelistDialog
+          open={showIPWhitelistDialog}
+          onOpenChange={setShowIPWhitelistDialog}
+        />
 
         {/* Trusted Devices */}
         <div>
@@ -1823,16 +1883,36 @@ export default function AccountSettings() {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowTrustedDevicesDialog(true)}
+              >
                 Manage Trusted Devices
               </Button>
-              <div className="text-xs text-muted-foreground">
-                Current device is trusted
-              </div>
             </CardContent>
           </Card>
         </div>
+        <TrustedDevicesDialog
+          open={showTrustedDevicesDialog}
+          onOpenChange={setShowTrustedDevicesDialog}
+        />
 
+        {/* Hardware Security Keys */}
+        {user?.id && (
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Hardware Security Keys</h4>
+            <HardwareKeySetup userId={user.id} />
+          </div>
+        )}
+
+        {/* Passkeys */}
+        {user?.id && user?.email && (
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Passkeys</h4>
+            <PasskeySetup userId={user.id} userEmail={user.email} />
+          </div>
+        )}
 
         {/* Password Management */}
         <div>
