@@ -321,7 +321,7 @@ export function OfferCard({
             <div className="min-w-0">
               <div className="text-[10px] sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
                 <div className="w-0.5 sm:w-1 h-3 sm:h-4 bg-purple-500 rounded flex-shrink-0"></div>
-                <span className="truncate">{paymentMethod}</span>
+                <span className="truncate">{type === "buy" ? "You'll pay" : "You'll receive"}</span>
               </div>
               <div className="text-base sm:text-xl font-bold flex items-center gap-1 sm:gap-1.5">
                 <span className="flex-shrink-0">
@@ -355,13 +355,16 @@ export function OfferCard({
             </div>
             <div className="min-w-0">
               <div className="text-[10px] sm:text-sm text-muted-foreground mb-1 truncate">
-                Available ({cryptoSymbol})
+                {type === "buy" ? "You'll receive" : "You'll send"}
               </div>
-              <div className="text-base sm:text-xl font-bold truncate">
-                {(availableRange.max / pricePerBTC).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 8
-                })} {cryptoSymbol}
+              <div className="text-base sm:text-xl font-bold truncate flex items-center gap-1">
+                {getCryptoIcon(cryptoSymbol)}
+                <span>
+                  {(availableRange.max / pricePerBTC).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 8
+                  })} {cryptoSymbol}
+                </span>
               </div>
             </div>
           </div>
