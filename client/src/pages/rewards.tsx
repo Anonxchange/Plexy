@@ -158,7 +158,7 @@ export default function RewardsPage() {
             <CardContent className="p-6 text-center space-y-4">
               <div className="w-24 h-24 mx-auto flex items-center justify-center">
                 <img 
-                  src="/attached_assets/IMG_2677_1764516315550.png" 
+                  src="/attached_assets/IMG_2672.png" 
                   alt="Lucky wheel"
                   className="w-full h-full object-contain"
                 />
@@ -208,7 +208,7 @@ export default function RewardsPage() {
             <CardContent className="p-6 text-center space-y-4">
               <div className="w-24 h-24 mx-auto flex items-center justify-center">
                 <img 
-                  src="/attached_assets/IMG_2676_1764516315550.png" 
+                  src="/attached_assets/IMG_2673.png" 
                   alt="Cashback voucher"
                   className="w-full h-full object-contain"
                 />
