@@ -1,380 +1,313 @@
-
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Users, TrendingUp, DollarSign, Globe, Clock, UserPlus, Share2, Wallet, ChevronRight } from "lucide-react";
+import { Crown, Users, Coins, Layers, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
+import { PexlyFooter } from "@/components/pexly-footer";
 
 export default function Affiliate() {
-  const [email, setEmail] = useState("");
-
-  const commissionTiers = [
+  const partnerTypes = [
     {
-      icon: <Users className="h-6 w-6" />,
-      users: "5+ Users",
-      commission: "30%",
-      description: "P2P Trading & Spot"
+      icon: <Crown className="h-8 w-8 text-[#B4F22E]" />,
+      title: "Strategic Partners",
+      description: "These collaborative ventures expand services, enhance user experiences, and amplify Pexly's reach within the cryptocurrency and financial landscapes.",
+      cta: "Become a strategic partner"
     },
     {
-      icon: <Users className="h-6 w-6" />,
-      users: "3+ Users",
-      commission: "3%",
-      description: "Earn Products & Staking"
+      icon: <Users className="h-8 w-8 text-[#B4F22E]" />,
+      title: "Service Partners",
+      description: "Pexly collaborates with a trustworthy network of service partners, fortifying ours commitment to delivering a secure and user-centric trading environment.",
+      cta: "Become a service partner"
     },
     {
-      icon: <Users className="h-6 w-6" />,
-      users: "2+ Users",
-      commission: "5%",
-      description: "Sub-Affiliates"
-    }
-  ];
-
-  const benefits = [
-    {
-      title: "We Help You Grow Your Audience",
-      description: "Pexly's affiliate portal not only provides the latest insights to your earnings, it is an information hub for the latest campaigns, video & design assets on Pexly's latest products and more!",
-      image: "/assets/IMG_1939.jpeg"
+      icon: <Coins className="h-8 w-8 text-[#B4F22E]" />,
+      title: "Referral Partners",
+      description: "Pexly's referral partners foster a thriving cryptocurrency community through their network and earn rewards from Pexly.",
+      cta: "Become a referral partner"
     },
     {
-      title: "Timely Compensation",
-      description: "Payments are calculated and processed on a daily basis. We seek to complete payments to our affiliates as fast as possible.",
-      image: "/assets/IMG_1955.jpeg"
-    },
-    {
-      title: "Worldwide Networking Events",
-      description: "Meet like-minded and passionate professionals in the Crypto space to grow your influence!",
-      image: "/assets/IMG_1821.jpeg"
-    }
-  ];
-
-  const steps = [
-    {
-      icon: <UserPlus className="h-8 w-8" />,
-      title: "Apply",
-      description: "It takes less than 5mins to apply! All applications will be reviewed within 24h."
-    },
-    {
-      icon: <Share2 className="h-8 w-8" />,
-      title: "Share",
-      description: "Customize and share your affiliate exclusive invitation link to friends and users."
-    },
-    {
-      icon: <Wallet className="h-8 w-8" />,
-      title: "Earn",
-      description: "Earn up to 30% in commissions. Extra 5% if your user becomes an Affiliate, and more!"
+      icon: <Layers className="h-8 w-8 text-[#B4F22E]" />,
+      title: "Fiat Partners",
+      description: "Pexly's fiat partners support the facilitation of swift exchanges between cryptocurrencies and fiat currencies within ours platform.",
+      cta: "Become a fiat partner"
     }
   ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background py-20 px-4">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
-        
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#B4F22E]/10 to-white dark:from-[#B4F22E]/5 dark:to-background py-12 md:py-20 px-4">
         <div className="max-w-4xl mx-auto relative z-10 text-center">
-          {/* Illustration */}
+          {/* Partners Illustration */}
           <div className="mb-8 flex justify-center">
             <div className="relative w-full max-w-md">
-              <img 
-                src="/assets/IMG_1935.jpeg" 
-                alt="Affiliate Program Illustration" 
-                className="w-full h-auto"
-              />
+              <div className="grid grid-cols-2 gap-4 transform rotate-45 scale-90">
+                <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E]/30 dark:bg-[#B4F22E]/20 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-cyan-400 rounded-full"></div>
+                </div>
+                <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E]/50 dark:bg-[#B4F22E]/30 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-[#8BC34A] rounded-full"></div>
+                </div>
+                <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E]/70 dark:bg-[#B4F22E]/40 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-yellow-400 rounded-full"></div>
+                </div>
+                <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E] dark:bg-[#B4F22E]/60 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-400 rounded-full"></div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="block text-foreground">Boost your Earnings</span>
-            <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
-              through Pexly's Affiliate Program
-            </span>
+          <h1 className="text-3xl md:text-5xl font-bold mb-4 text-foreground">
+            Pexly Partners Space
           </h1>
           
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Monetize your influence. Grow through robust analytics. Join a tight-knit community.
+          <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
+            Build connection, unlock opportunities together!
           </p>
 
-          <Button size="lg" className="h-16 px-12 text-lg font-bold shadow-xl hover:shadow-2xl">
-            Join Our Affiliate Program
-            <ChevronRight className="ml-2 h-5 w-5" />
+          <Button 
+            size="lg" 
+            className="h-14 px-12 text-lg font-semibold bg-[#B4F22E] hover:bg-[#9FD624] text-black shadow-xl"
+          >
+            Become our Partner
           </Button>
         </div>
       </section>
 
-      {/* Commission Tiers */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-bold text-center mb-12">
-            <span className="text-primary">Pexly</span> Affiliate Commission
+      {/* 4 Types of Partners */}
+      <section className="py-12 md:py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-4xl font-bold text-center mb-10">
+            Pexly 4 types of partners
           </h2>
-          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Receive monthly revenue for every user you bring into Pexly's trading platform.
-          </p>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {commissionTiers.map((tier, index) => (
-              <Card key={index} className="p-8 text-center hover:border-primary/50 transition-all">
-                <div className="flex justify-center mb-4">
-                  <div className="flex gap-1">
-                    {Array.from({ length: parseInt(tier.users) }).map((_, i) => (
-                      <div key={i} className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Users className="h-4 w-4 text-primary" />
-                      </div>
-                    ))}
+          <div className="space-y-6">
+            {partnerTypes.map((partner, index) => (
+              <Card key={index} className="border-2 hover:border-[#B4F22E]/50 dark:hover:border-[#B4F22E]/30 transition-colors">
+                <CardContent className="p-6 md:p-8">
+                  <div className="mb-4">
+                    {partner.icon}
                   </div>
-                </div>
-                <div className="mb-4">
-                  <span className="text-sm text-muted-foreground">up to </span>
-                  <span className="text-5xl font-bold text-primary">{tier.commission}</span>
-                  <span className="text-sm text-muted-foreground"> Commission</span>
-                </div>
-                <p className="text-muted-foreground">{tier.description}</p>
+                  <h3 className="text-xl md:text-2xl font-bold mb-3 text-foreground">
+                    {partner.title}
+                  </h3>
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
+                    {partner.description}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-[#B4F22E] text-[#8BC34A] hover:bg-[#B4F22E]/10 dark:hover:bg-[#B4F22E]/20"
+                  >
+                    {partner.cta}
+                  </Button>
+                </CardContent>
               </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-bold text-center mb-12">
-            Pexly Affiliate Benefits
+      {/* Service Partners Logos */}
+      <section className="py-12 md:py-16 px-4 bg-muted/30">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
+            Our service partners
           </h2>
-          <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
-            Pexly stands out from other affiliate programs through the innovation of our affiliate exclusive portal to view earnings and new products, coupled with world class account services and a strong community. We aim to provide the first in class affiliate program in the industry.
-          </p>
 
-          <div className="space-y-12">
-            {benefits.slice(0, 2).map((benefit, index) => (
-              <Card key={index} className="p-8 md:p-12">
-                <h3 className="text-2xl md:text-3xl font-bold text-primary mb-4">
-                  {benefit.title}
-                </h3>
-                <p className="text-lg text-muted-foreground mb-6">
-                  {benefit.description}
-                </p>
-                {benefit.image && (
-                  <div className="rounded-xl overflow-hidden">
-                    <img 
-                      src={benefit.image} 
-                      alt={benefit.title}
-                      className="w-full h-auto"
-                    />
-                  </div>
-                )}
-                {benefit.icon && (
-                  <div className="flex justify-center">
-                    {benefit.icon}
-                  </div>
-                )}
-              </Card>
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
+              <span className="text-2xl font-bold text-muted-foreground">aws</span>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
+              <span className="text-lg font-semibold text-muted-foreground flex items-center gap-2">
+                <span className="text-blue-500">G</span>
+                <span className="text-red-500">o</span>
+                <span className="text-yellow-500">o</span>
+                <span className="text-blue-500">g</span>
+                <span className="text-green-500">l</span>
+                <span className="text-red-500">e</span>
+                <span className="ml-1 text-muted-foreground">Cloud</span>
+              </span>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
+              <span className="text-xl font-bold text-muted-foreground">INTERCOM</span>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
+              <span className="text-xl font-bold text-muted-foreground">h1ackerone</span>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
+              <span className="text-xl font-bold text-muted-foreground">circleci</span>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
+              <span className="text-xl font-bold text-muted-foreground">sumsub</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Worldwide Networking Events Section */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-6" style={{ color: '#FFB800' }}>
-            Worldwide Networking Events
-          </h2>
-          <p className="text-lg text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Meet like-minded and passionate professionals in the Crypto space to grow your influence!
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="aspect-video overflow-hidden">
-                <img 
-                  src="/assets/IMG_1957.jpeg" 
-                  alt="Global Crypto Conferences"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">Global Crypto Conferences</h3>
-                <p className="text-sm text-muted-foreground">
-                  Network with industry leaders and enthusiasts at major crypto events worldwide
-                </p>
-              </div>
-            </Card>
-
-            <Card className="overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="aspect-video overflow-hidden">
-                <img 
-                  src="/assets/IMG_1958.jpeg" 
-                  alt="F1 Redbull Racing VIP Passes"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">F1 Redbull Racing VIP Passes</h3>
-                <p className="text-sm text-muted-foreground">
-                  Experience exclusive VIP access to Formula 1 racing events with fellow affiliates
-                </p>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Pexly Parties */}
-      <section className="py-16 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ color: '#FFB800' }}>
-            Pexly Parties for Affiliates, Institutions and VIP Traders
-          </h2>
-          <p className="text-lg text-muted-foreground mb-12 max-w-3xl mx-auto">
-            Join exclusive networking events and celebrations with fellow affiliates and VIP traders from around the world
-          </p>
-
-          <div className="mb-8 rounded-xl overflow-hidden max-w-4xl mx-auto">
-            <img 
-              src="/assets/IMG_1956.jpeg" 
-              alt="Pexly Parties Event"
-              className="w-full h-auto"
-            />
-          </div>
-
-          <p className="text-sm text-muted-foreground italic">
-            Bybit Parties for Affiliates, Institutions and VIP Traders
-          </p>
-        </div>
-      </section>
-
-      {/* 1:1 Account Services */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-primary mb-6">
-              1:1 Account Services
+      {/* Referral Partners Section */}
+      <section className="py-12 md:py-20 px-4 bg-gradient-to-b from-[#B4F22E]/20 to-[#B4F22E]/5 dark:from-[#B4F22E]/10 dark:to-[#B4F22E]/5">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-sm font-medium text-[#8BC34A] uppercase tracking-wider mb-2">
+              REFERRAL PARTNERS
+            </p>
+            <h2 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
+              Invite your friends, earn Bitcoin together
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Our experienced team members are here to provide a comprehensive guide to the program and update you with timely promotions once you've joined! You will also be served by a dedicated 1-to-1 Account Manager
+            <p className="text-muted-foreground">
+              You and your qualified referees can each earn rewards in Bitcoin.
             </p>
           </div>
 
-          {/* Horizontally Scrollable Account Managers */}
-          <div className="relative">
-            <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {[
-                { name: "Sarah", image: "/assets/IMG_1962.jpeg" },
-                { name: "David", image: "/assets/IMG_1961.jpeg" },
-                { name: "Melanie", image: "/assets/IMG_1963.jpeg" }
-              ].map((manager, index) => (
-                <div key={index} className="flex-shrink-0 w-64 snap-center">
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                    <div className="aspect-square overflow-hidden">
-                      <img 
-                        src={manager.image}
-                        alt={manager.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <CardContent className="p-6 text-center">
-                      <h3 className="font-bold text-lg mb-1">{manager.name}</h3>
-                      <p className="text-sm text-muted-foreground">Account Manager</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              ))}
+          {/* Bitcoin Illustration */}
+          <div className="flex justify-center mb-8">
+            <div className="relative w-full max-w-md h-64 flex items-center justify-center">
+              <div className="absolute w-32 h-32 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-2xl">
+                <span className="text-4xl font-bold text-white">₿</span>
+              </div>
+              <div className="absolute -left-4 top-8 w-12 h-12 bg-[#B4F22E] rounded-full opacity-70"></div>
+              <div className="absolute -right-4 bottom-8 w-16 h-16 bg-teal-400 rounded-lg opacity-70"></div>
+              <div className="absolute left-16 bottom-4 w-8 h-8 bg-[#9FD624] rounded-full opacity-60"></div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* How It Works */}
-      <section className="py-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-bold text-center mb-12">
-            Becoming an Affiliate is Easy
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((step, index) => (
-              <div key={index} className="text-center">
-                <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6 text-primary">
-                  {step.icon}
+          {/* Phone Mockup */}
+          <div className="flex justify-center">
+            <Card className="w-full max-w-sm mx-auto shadow-2xl">
+              <CardContent className="p-6">
+                <div className="text-center mb-4">
+                  <p className="text-sm text-muted-foreground">Profile</p>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{step.title}</h3>
-                <p className="text-muted-foreground">{step.description}</p>
-                {index < steps.length - 1 && (
-                  <div className="hidden md:block mt-8">
-                    <div className="border-t-2 border-dashed border-muted-foreground/30"></div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-[#B4F22E] rounded-full flex items-center justify-center text-black font-bold">
+                    P
                   </div>
-                )}
+                  <div>
+                    <p className="font-semibold">pexlyUser</p>
+                    <p className="text-sm text-muted-foreground">Today's bonus points</p>
+                    <p className="text-xl font-bold text-[#B4F22E]">23,5 points</p>
+                  </div>
+                  <Button size="sm" className="ml-auto bg-[#B4F22E] hover:bg-[#9FD624] text-black">
+                    Analysis
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="font-semibold">Today's achievements</p>
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <p className="font-medium">Deposit supported</p>
+                      <p className="text-xs text-muted-foreground">1,000,000 VNDR - 1 point</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">3,000,000 VNDR</p>
+                      <p className="text-xs text-[#B4F22E]">+3 points</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <p className="font-medium">Withdraw supported</p>
+                      <p className="text-xs text-muted-foreground">1,000,000 VNDR - 1 point x2</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">7,500,000 VNDR</p>
+                      <p className="text-xs text-[#B4F22E]">+15 points</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Fiat Partners Section */}
+      <section className="py-12 md:py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-sm font-medium text-[#8BC34A] uppercase tracking-wider mb-2">
+              FIAT PARTNERS
+            </p>
+            <h2 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
+              Earn more with your capital
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Maximize income potential through Pexly Fiat Partners Program
+            </p>
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-6 max-w-md mx-auto mb-8">
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full border-2 border-[#B4F22E] flex items-center justify-center">
+                  <span className="text-[#B4F22E] font-bold">1</span>
+                </div>
+                <div className="w-0.5 h-16 bg-[#B4F22E]/30 dark:bg-[#B4F22E]/20 mt-2"></div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <div>
+                <h3 className="font-bold text-lg mb-2">Get ready with your package</h3>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Pexly account</li>
+                  <li>• Capital</li>
+                  <li>• Phone/Laptop for transactions</li>
+                </ul>
+              </div>
+            </div>
 
-      {/* Community Section */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-8">
-            Join A Growing Community<br />
-            of Over <span className="text-primary">100,000</span> Affiliates
-          </h2>
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full border-2 border-[#B4F22E] flex items-center justify-center">
+                  <span className="text-[#B4F22E] font-bold">2</span>
+                </div>
+                <div className="w-0.5 h-16 bg-[#B4F22E]/30 dark:bg-[#B4F22E]/20 mt-2"></div>
+              </div>
+              <div>
+                <h3 className="font-bold text-lg mb-2">Complete your first buying/selling ads</h3>
+              </div>
+            </div>
 
-          <div className="flex justify-center mb-12">
-            <div className="relative w-64 h-32">
-              {/* Network visualization */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
-                  P
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full border-2 border-[#B4F22E] flex items-center justify-center">
+                  <span className="text-[#B4F22E] font-bold">3</span>
                 </div>
               </div>
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-8 h-8 rounded-full bg-muted-foreground/20 border-2 border-background"
-                  style={{
-                    top: `${50 + 40 * Math.sin((i * Math.PI) / 4)}%`,
-                    left: `${50 + 40 * Math.cos((i * Math.PI) / 4)}%`,
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                >
-                  <Users className="h-4 w-4 text-muted-foreground m-auto mt-1" />
-                </div>
-              ))}
+              <div>
+                <h3 className="font-bold text-lg mb-2">Follow earning commissions table</h3>
+              </div>
             </div>
+          </div>
+
+          <div className="text-center">
+            <Button className="bg-[#B4F22E] hover:bg-[#9FD624] text-black">
+              Explore now
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-8">
-            Join Our Affiliate Program Today!
-          </h2>
-
-          <Button size="lg" className="h-16 px-12 text-lg font-bold shadow-xl hover:shadow-2xl mb-12">
-            Join Now
-            <ChevronRight className="ml-2 h-5 w-5" />
-          </Button>
-
-          <div className="space-y-4 text-sm text-muted-foreground">
-            <p>Copyright © 2024 Pexly. All Rights Reserved.</p>
-            <div className="flex justify-center gap-6">
-              <Link href="/terms" className="hover:text-primary">Affiliate Agreement</Link>
-              <Link href="/privacy" className="hover:text-primary">Privacy Policy</Link>
-            </div>
-            <div className="flex justify-center gap-4 mt-6">
-              {["facebook", "twitter", "youtube", "linkedin"].map((social) => (
-                <div key={social} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer">
-                  <Globe className="h-5 w-5 text-muted-foreground" />
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* CTA Section */}
+      <section className="py-12 md:py-16 px-4">
+        <div className="max-w-md mx-auto">
+          <Card className="bg-gradient-to-br from-[#B4F22E]/10 to-white dark:from-[#B4F22E]/10 dark:to-background border-2">
+            <CardContent className="p-8 text-center">
+              <h3 className="text-xl font-bold mb-6">
+                Apply to become our partners today
+              </h3>
+              <Button 
+                className="bg-[#B4F22E] hover:bg-[#9FD624] text-black px-8"
+              >
+                Become Pexly Partner
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </section>
+
+      {/* Pexly Footer */}
+      <PexlyFooter />
     </div>
   );
 }
