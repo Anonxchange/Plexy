@@ -4,9 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Gift, Volume2, Tag } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
-import rewardsHeroImage from "@assets/IMG_2671.png";
-import loyaltyBadgeImage from "@assets/IMG_1764.png";
-import cryptoDepositImage from "@assets/IMG_1765.png";
 
 export default function RewardsPage() {
   return (
@@ -37,7 +34,7 @@ export default function RewardsPage() {
               {/* 3D Gift Illustration Image */}
               <div className="relative w-full max-w-sm flex items-center justify-center">
                 <img 
-                  src={rewardsHeroImage}
+                  src="/assets/IMG_2671.png"
                   alt="Rewards center illustration"
                   className="w-full h-auto object-contain"
                 />
@@ -159,7 +156,7 @@ export default function RewardsPage() {
               <CardContent className="p-6 text-center space-y-4">
                 <div className="w-24 h-24 mx-auto flex items-center justify-center">
                   <img 
-                    src="/attached_assets/IMG_1766.png" 
+                    src="/assets/IMG_2672.png" 
                     alt="Lucky wheel"
                     className="w-full h-full object-contain"
                   />
@@ -176,7 +173,7 @@ export default function RewardsPage() {
               <CardContent className="p-6 text-center space-y-4">
                 <div className="w-24 h-24 mx-auto flex items-center justify-center">
                   <img 
-                    src={loyaltyBadgeImage}
+                    src="/assets/IMG_1764.png"
                     alt="Loyalty badges"
                     className="w-full h-full object-contain"
                   />
@@ -193,7 +190,7 @@ export default function RewardsPage() {
               <CardContent className="p-6 text-center space-y-4">
                 <div className="w-24 h-24 mx-auto flex items-center justify-center">
                   <img 
-                    src={cryptoDepositImage}
+                    src="/assets/IMG_1765.png"
                     alt="Crypto deposit rewards"
                     className="w-full h-full object-contain"
                   />
@@ -210,7 +207,7 @@ export default function RewardsPage() {
               <CardContent className="p-6 text-center space-y-4">
                 <div className="w-24 h-24 mx-auto flex items-center justify-center">
                   <img 
-                    src="/attached_assets/IMG_1767.jpeg" 
+                    src="/assets/IMG_2673.png" 
                     alt="Cashback voucher"
                     className="w-full h-full object-contain"
                   />
