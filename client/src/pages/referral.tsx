@@ -386,7 +386,7 @@ export default function ReferralPage() {
       {/* Earn More Deals Section */}
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         <h2 className="text-2xl font-bold mb-6">Earn more deals</h2>
-        <div className="grid md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-4 mb-8">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
