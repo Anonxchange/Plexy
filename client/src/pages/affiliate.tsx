@@ -40,7 +40,7 @@ export default function Affiliate() {
           {/* Partners Illustration */}
           <div className="mb-8 flex justify-center">
             <img 
-              src="/assets/IMG_2645.png" 
+              src="/assets/partners-puzzle.png" 
               alt="Partners collaboration illustration" 
               className="w-full max-w-2xl h-auto mx-auto"
             />
@@ -171,14 +171,11 @@ export default function Affiliate() {
 
           {/* Bitcoin Illustration */}
           <div className="flex justify-center mb-8">
-            <div className="relative w-full max-w-md h-64 flex items-center justify-center">
-              <div className="absolute w-32 h-32 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-2xl">
-                <span className="text-4xl font-bold text-white">₿</span>
-              </div>
-              <div className="absolute -left-4 top-8 w-12 h-12 bg-[#B4F22E] rounded-full opacity-70"></div>
-              <div className="absolute -right-4 bottom-8 w-16 h-16 bg-teal-400 rounded-lg opacity-70"></div>
-              <div className="absolute left-16 bottom-4 w-8 h-8 bg-[#9FD624] rounded-full opacity-60"></div>
-            </div>
+            <img 
+              src="/assets/bitcoin-referral-3d.png" 
+              alt="Bitcoin referral rewards illustration" 
+              className="w-full max-w-lg h-auto"
+            />
           </div>
 
           {/* Phone Mockup */}
