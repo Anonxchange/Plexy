@@ -40,7 +40,7 @@ export default function Affiliate() {
           {/* Partners Illustration */}
           <div className="mb-8 flex justify-center">
             <img 
-              src="/assets/partners-puzzle.png" 
+              src="/assets/IMG_2645.png" 
               alt="Partners collaboration illustration" 
               className="w-full max-w-2xl h-auto mx-auto"
             />
