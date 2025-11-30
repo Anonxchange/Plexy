@@ -500,204 +500,82 @@ export function AppHeader() {
                   >
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 hover:bg-red-600 text-xs">
+                      <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 bg-red-500 hover:bg-red-600 text-[10px] rounded-full flex items-center justify-center">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </Badge>
                     )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[400px] max-h-[500px] overflow-y-auto">
-                  <div className="flex items-center justify-between px-2 py-2">
-                    <DropdownMenuLabel className="text-base">Notifications</DropdownMenuLabel>
-                    {unreadCount > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleMarkAllAsRead}
-                        className="text-xs h-7"
-                      >
-                        Mark all as read
-                      </Button>
+                <DropdownMenuContent align="end" className="w-[380px] p-0">
+                  {/* Tabs: System, Notifications, Campaign */}
+                  <div className="grid grid-cols-3 border-b bg-transparent">
+                    <button className="py-3 text-sm font-medium text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-purple-500/50 transition-colors">
+                      <span>System</span>
+                      {notifications.filter(n => n.type === 'system' && !n.read).length > 0 && (
+                        <Badge className="ml-1.5 h-5 min-w-5 px-1.5 bg-purple-500 hover:bg-purple-600 text-xs rounded-full">
+                          {notifications.filter(n => n.type === 'system' && !n.read).length}
+                        </Badge>
+                      )}
+                    </button>
+                    <button className="py-3 text-sm font-medium text-primary border-b-2 border-purple-500 transition-colors">
+                      <span>Notifications</span>
+                      {unreadCount > 0 && (
+                        <Badge className="ml-1.5 h-5 min-w-5 px-1.5 bg-purple-500 hover:bg-purple-600 text-xs rounded-full">
+                          {unreadCount}
+                        </Badge>
+                      )}
+                    </button>
+                    <button className="py-3 text-sm font-medium text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-purple-500/50 transition-colors">
+                      <span>Campaign</span>
+                    </button>
+                  </div>
+
+                  {/* Notification Items */}
+                  <div className="max-h-[350px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        No notifications yet
+                      </div>
+                    ) : (
+                      notifications.slice(0, 8).map((notification) => (
+                        <div
+                          key={notification.id}
+                          onClick={() => {
+                            handleNotificationClick(notification);
+                            setNotificationOpen(false);
+                          }}
+                          className={`flex items-start gap-3 p-4 cursor-pointer hover:bg-accent transition-colors ${
+                            !notification.read ? 'bg-purple-500/5' : ''
+                          }`}
+                        >
+                          <div className="flex-shrink-0 mt-1">
+                            <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+                              <Bell className="h-5 w-5 text-purple-500" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground leading-relaxed">
+                              {notification.message || notification.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {formatTimeAgo(notification.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                      ))
                     )}
                   </div>
-                  <DropdownMenuSeparator />
-                  {notifications.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      No notifications yet
-                    </div>
-                  ) : (
-                    <div className="max-h-[400px] overflow-y-auto">
-                      {(() => {
-                        const now = new Date();
-                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                        const yesterday = new Date(today);
-                        yesterday.setDate(yesterday.getDate() - 1);
 
-                        const groupedNotifications: { [key: string]: typeof notifications } = {
-                          today: [],
-                          yesterday: [],
-                          older: []
-                        };
-
-                        notifications.slice(0, 10).forEach((notification) => {
-                          const notificationDate = new Date(notification.created_at);
-                          const notificationDay = new Date(
-                            notificationDate.getFullYear(),
-                            notificationDate.getMonth(),
-                            notificationDate.getDate()
-                          );
-
-                          if (notificationDay.getTime() === today.getTime()) {
-                            groupedNotifications.today.push(notification);
-                          } else if (notificationDay.getTime() === yesterday.getTime()) {
-                            groupedNotifications.yesterday.push(notification);
-                          } else {
-                            groupedNotifications.older.push(notification);
-                          }
-                        });
-
-                        return (
-                          <>
-                            {groupedNotifications.today.length > 0 && (
-                              <>
-                                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/30">
-                                  Today
-                                </div>
-                                {groupedNotifications.today.map((notification) => (
-                                  <DropdownMenuItem
-                                    key={notification.id}
-                                    onClick={() => {
-                                      handleNotificationClick(notification);
-                                      setNotificationOpen(false);
-                                    }}
-                                    className={`cursor-pointer p-3 ${
-                                      !notification.read ? 'bg-accent/30' : ''
-                                    }`}
-                                  >
-                                    <div className="flex gap-3 w-full">
-                                      <Avatar className="h-8 w-8 flex-shrink-0">
-                                        <AvatarFallback className={`text-xs ${
-                                          notification.type === 'payment' || notification.type === 'system'
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-primary text-primary-foreground'
-                                        }`}>
-                                          <Bell className="h-4 w-4" />
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm line-clamp-1">
-                                          {notification.title}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground line-clamp-2">
-                                          {notification.message}
-                                        </p>
-                                      </div>
-                                      <span className="text-xs text-muted-foreground/70">
-                                        {formatTimeAgo(notification.created_at)}
-                                      </span>
-                                    </div>
-                                  </DropdownMenuItem>
-                                ))}
-                              </>
-                            )}
-
-                            {groupedNotifications.yesterday.length > 0 && (
-                              <>
-                                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/30">
-                                  Yesterday
-                                </div>
-                                {groupedNotifications.yesterday.map((notification) => (
-                                  <DropdownMenuItem
-                                    key={notification.id}
-                                    onClick={() => {
-                                      handleNotificationClick(notification);
-                                      setNotificationOpen(false);
-                                    }}
-                                    className={`cursor-pointer p-3 ${
-                                      !notification.read ? 'bg-accent/30' : ''
-                                    }`}
-                                  >
-                                    <div className="flex gap-3 w-full">
-                                      <Avatar className="h-8 w-8 flex-shrink-0">
-                                        <AvatarFallback className={`text-xs ${
-                                          notification.type === 'payment' || notification.type === 'system'
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-primary text-primary-foreground'
-                                        }`}>
-                                          <Bell className="h-4 w-4" />
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm line-clamp-1">
-                                          {notification.title}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground line-clamp-2">
-                                          {notification.message}
-                                        </p>
-                                      </div>
-                                      <span className="text-xs text-muted-foreground/70">
-                                        {formatTimeAgo(notification.created_at)}
-                                      </span>
-                                    </div>
-                                  </DropdownMenuItem>
-                                ))}
-                              </>
-                            )}
-
-                            {groupedNotifications.older.length > 0 && (
-                              <>
-                                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/30">
-                                  Earlier
-                                </div>
-                                {groupedNotifications.older.map((notification) => (
-                                  <DropdownMenuItem
-                                    key={notification.id}
-                                    onClick={() => {
-                                      handleNotificationClick(notification);
-                                      setNotificationOpen(false);
-                                    }}
-                                    className={`cursor-pointer p-3 ${
-                                      !notification.read ? 'bg-accent/30' : ''
-                                    }`}
-                                  >
-                                    <div className="flex gap-3 w-full">
-                                      <Avatar className="h-8 w-8 flex-shrink-0">
-                                        <AvatarFallback className={`text-xs ${
-                                          notification.type === 'payment' || notification.type === 'system'
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-primary text-primary-foreground'
-                                        }`}>
-                                          <Bell className="h-4 w-4" />
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm line-clamp-1">
-                                          {notification.title}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground line-clamp-2">
-                                          {notification.message}
-                                        </p>
-                                      </div>
-                                      <span className="text-xs text-muted-foreground/70">
-                                        {formatTimeAgo(notification.created_at)}
-                                      </span>
-                                    </div>
-                                  </DropdownMenuItem>
-                                ))}
-                              </>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => navigate('/notifications')}
-                    className="cursor-pointer justify-center font-medium text-primary"
+                  {/* View All Link */}
+                  <div
+                    onClick={() => {
+                      navigate('/notifications');
+                      setNotificationOpen(false);
+                    }}
+                    className="p-3 text-center text-sm font-medium text-primary hover:bg-accent/50 cursor-pointer border-t"
                   >
                     View all notifications
-                  </DropdownMenuItem>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
 
