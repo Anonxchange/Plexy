@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Gift, Volume2, Tag } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
-import rewardsHeroImage from "@assets/IMG_2671_1764536602263.png";
+import rewardsHeroImage from "@assets/IMG_2671.png";
 import loyaltyBadgeImage from "@assets/IMG_1764.png";
 import cryptoDepositImage from "@assets/IMG_1765.png";
 
