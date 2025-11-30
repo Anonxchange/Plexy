@@ -39,6 +39,15 @@ export default function Affiliate() {
         <div className="max-w-4xl mx-auto relative z-10 text-center">
           {/* Partners Illustration */}
           <div className="mb-8 flex justify-center">
+            <img 
+              src="/assets/partners-puzzle.png" 
+              alt="Partners collaboration illustration" 
+              className="w-full max-w-2xl h-auto mx-auto"
+            />
+          </div>
+          
+          {/* Old illustration - keeping as fallback */}
+          <div className="mb-8 flex justify-center hidden">
             <div className="relative w-full max-w-md">
               <div className="grid grid-cols-2 gap-4 transform rotate-45 scale-90">
                 <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E]/30 dark:bg-[#B4F22E]/20 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
