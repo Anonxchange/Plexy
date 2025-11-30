@@ -158,7 +158,7 @@ export default function RewardsPage() {
             <CardContent className="p-6 text-center space-y-4">
               <div className="w-24 h-24 mx-auto flex items-center justify-center">
                 <img 
-                  src="/public/assets/IMG_2672.png" 
+                  src="/assets/IMG_2672.png" 
                   alt="Lucky wheel"
                   className="w-full h-full object-contain"
                 />
