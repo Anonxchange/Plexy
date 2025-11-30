@@ -188,13 +188,11 @@ export default function RewardsPage() {
                   <div className="flex items-start justify-between gap-4">
                     {/* Left side - Chances */}
                     <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                      <div className="w-12 h-12 bg-purple-500/30 rounded-lg flex items-center justify-center border border-purple-500/40">
-                        <img 
-                          src="/assets/IMG_2645.png" 
-                          alt="Lucky draw icon"
-                          className="w-7 h-7"
-                        />
-                      </div>
+                      <img 
+                        src="/assets/IMG_2645.png" 
+                        alt="Lucky draw icon"
+                        className="w-7 h-7"
+                      />
                       <div className="text-center">
                         <div className="text-lg font-bold text-[#B4F22E]">
                           {task.chances} Chance(s)
