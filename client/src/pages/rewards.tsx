@@ -1,416 +1,232 @@
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Gift, TrendingUp, Calendar, Zap, Users, BadgeCheck, Wallet, ArrowUpDown } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Gift, Bell, MessageCircle, Sparkles } from "lucide-react";
 
 export default function RewardsPage() {
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="relative bg-gradient-to-br from-primary/20 via-background to-background border-b">
-        <div className="container mx-auto px-4 py-12 max-w-6xl">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="relative w-48 h-48 flex items-center justify-center">
-              <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl"></div>
-              <div className="relative">
-                <Gift className="h-24 w-24 text-primary animate-pulse" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Limited-time new user perks</p>
-              <h1 className="text-4xl md:text-5xl font-bold">Get up to 6,200 USDT</h1>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b bg-background sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4 max-w-6xl">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">My gift</h1>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon">
+                <Bell className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon">
+                <MessageCircle className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <Tabs defaultValue="welcome" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
-            <TabsTrigger value="welcome">Welcome pack</TabsTrigger>
-            <TabsTrigger value="deposit">Deposit challenge</TabsTrigger>
-            <TabsTrigger value="new-earn">New Earn</TabsTrigger>
-            <TabsTrigger value="daily">Daily tasks</TabsTrigger>
-            <TabsTrigger value="limited">Limited-time</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="welcome" className="space-y-4">
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-2">New user BTC reward</h2>
-              <p className="text-sm text-muted-foreground mb-6">Complete any of the tasks below to unlock rewards</p>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border hover:border-primary transition-colors">
-                  <div className="flex gap-4 flex-1">
-                    <div className="flex flex-col items-center justify-center">
-                      <span className="text-3xl font-bold text-primary">200</span>
-                      <span className="text-xs text-muted-foreground">USDT</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold mb-1">BTC USDT-M Futures position boost voucher</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Requirement: You must invest 10 USDT of your own funds to use this voucher
-                      </p>
-                    </div>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    <BadgeCheck className="h-5 w-5 text-muted-foreground" />
-                  </div>
+      {/* Hero Section with 3D Gift Illustration */}
+      <div className="bg-gradient-to-b from-purple-100 to-background dark:from-purple-950/20 dark:to-background py-12">
+        <div className="container mx-auto px-4 max-w-2xl">
+          <div className="flex flex-col items-center text-center space-y-6">
+            {/* 3D Gift Illustration */}
+            <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-400/20 via-blue-400/20 to-green-400/20 rounded-3xl blur-3xl"></div>
+              <div className="relative">
+                <Gift className="h-32 w-32 text-purple-500 animate-pulse" />
+                <div className="absolute -top-4 -right-4 w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  %
                 </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-semibold mb-1">Refer to sign up</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Refer 1 friends to sign up and complete identity verification.
-                      </p>
-                    </div>
-                    <Button>Invite</Button>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">Check in for 3 days</h3>
-                        <BadgeCheck className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">0/3</span>
-                      </div>
-                    </div>
-                    <Button variant="outline">Check-in</Button>
-                  </div>
-                  <Progress value={0} className="h-2" />
+                <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-xl">$</span>
                 </div>
               </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Deposit & trading challenge</h2>
-                <BadgeCheck className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground mb-6">
-                Complete net deposit and futures trading tasks to get up to 6,000 USDT
-              </p>
-
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                {[
-                  { amount: "50 USDT", locked: false },
-                  { amount: "400 USDT", locked: true },
-                  { amount: "6,000 USDT", locked: true },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="p-4 bg-muted/50 rounded-lg border text-center flex flex-col items-center justify-center gap-2"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <Gift className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <span className="text-sm font-semibold">{item.amount}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">Net deposit ≥ 1,000 USDT</h3>
-                        <BadgeCheck className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">0/1,000</span>
-                      </div>
-                    </div>
-                    <Button>Deposit</Button>
-                  </div>
-                  <Progress value={0} className="h-2" />
-                </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">Futures trading volume ≥ 100,000 USDT</h3>
-                        <BadgeCheck className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">0/100,000</span>
-                      </div>
-                    </div>
-                    <Button>Trade</Button>
-                  </div>
-                  <Progress value={0} className="h-2" />
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-muted/30 rounded text-xs text-muted-foreground space-y-1">
-                <p>Data is updated every 10 minutes.</p>
-                <p>
-                  A 3-day monitoring period begins once the promotion ends. After this period, users must manually claim their rewards within two days in the Rewards Center; otherwise, the rewards will expire.
-                </p>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="deposit" className="space-y-4">
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Deposit & trading challenge</h2>
-                <BadgeCheck className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground mb-6">
-                Complete net deposit and futures trading tasks to get up to 6,000 USDT
-              </p>
-
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                {[
-                  { amount: "50 USDT", locked: false },
-                  { amount: "400 USDT", locked: true },
-                  { amount: "6,000 USDT", locked: true },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="p-4 bg-muted/50 rounded-lg border text-center flex flex-col items-center justify-center gap-2"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <Gift className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <span className="text-sm font-semibold">{item.amount}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">Net deposit ≥ 1,000 USDT</h3>
-                        <BadgeCheck className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">0/1,000</span>
-                      </div>
-                    </div>
-                    <Button>Deposit</Button>
-                  </div>
-                  <Progress value={0} className="h-2" />
-                </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">Futures trading volume ≥ 100,000 USDT</h3>
-                        <BadgeCheck className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">0/100,000</span>
-                      </div>
-                    </div>
-                    <Button>Trade</Button>
-                  </div>
-                  <Progress value={0} className="h-2" />
-                </div>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="new-earn" className="space-y-4">
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">New Earn users only</h2>
-              <p className="text-sm text-muted-foreground mb-6">First investment ≥ 1,000 USDT</p>
-
-              <div className="p-6 bg-muted/50 rounded-lg border text-center space-y-4">
-                <div>
-                  <span className="text-4xl font-bold text-primary">50</span>
-                  <span className="text-sm text-muted-foreground ml-2">Points</span>
-                </div>
-                <div className="text-lg">80% 3-day APR: USDT</div>
-                <Button className="w-full">Subscribe</Button>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="daily" className="space-y-4">
-            <div className="flex gap-2 mb-4">
-              <Button variant="default" size="sm">Daily tasks</Button>
-              <Button variant="ghost" size="sm">Limited-time tasks</Button>
             </div>
 
-            <div className="grid gap-2">
-              <Button variant="ghost" className="justify-start h-auto py-0 px-0">
-                <div className="w-full">
-                  <div className="flex items-center text-sm text-muted-foreground border-b pb-2">
-                    <span className="flex-1">Trading task</span>
-                    <span className="text-primary">Insights task</span>
-                  </div>
-                </div>
-              </Button>
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold">Rewards center</h2>
+              <p className="text-muted-foreground max-w-md">
+                Collect and manage valuable gifts from Pexly just for you. Join activities for a chance to receive more attractive rewards!
+              </p>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Daily futures trade</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Reach 200 USDT in futures trading volume.</p>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">0/200</span>
-                  </div>
-                  <Progress value={0} className="h-2 mb-3" />
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">20</span>
-                    <span className="text-xs text-muted-foreground">Points</span>
-                  </div>
-                </div>
-                <Button className="ml-4">Trade</Button>
-              </div>
-            </Card>
+      {/* Your Rewards Section */}
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <h2 className="text-xl font-bold mb-4">Your rewards</h2>
 
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Daily deposit</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Complete a valid deposit of any amount.</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">10</span>
-                    <span className="text-xs text-muted-foreground">Points</span>
-                  </div>
-                </div>
-                <Button className="ml-4">Deposit</Button>
-              </div>
-            </Card>
+        {/* Tabs for Latest/Expired */}
+        <Tabs defaultValue="latest" className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <TabsList className="bg-transparent p-0 h-auto">
+              <TabsTrigger
+                value="latest"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-foreground rounded-none px-0 mr-6"
+              >
+                Latest
+              </TabsTrigger>
+              <TabsTrigger
+                value="expired"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-foreground rounded-none px-0"
+              >
+                Expired
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Daily net assets</h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    The net asset in your account reaches at least 5000 USDT and no withdrawals are performed on that day.
+          {/* Promotion Code Input */}
+          <div className="flex gap-2 mb-6">
+            <Input
+              placeholder="Enter promotion code here"
+              className="flex-1"
+            />
+            <Button variant="outline" className="text-purple-600 border-purple-600 hover:bg-purple-50">
+              Apply
+            </Button>
+          </div>
+
+          <TabsContent value="latest">
+            <Card>
+              <CardContent className="py-16 text-center">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center">
+                    <Gift className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold">You have no reward!</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Complete tasks and challenges to earn rewards
                   </p>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">0/5000</span>
-                  </div>
-                  <Progress value={0} className="h-2 mb-3" />
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">100</span>
-                    <span className="text-xs text-muted-foreground">Points</span>
-                  </div>
                 </div>
-                <Button className="ml-4" variant="outline">Pending</Button>
-              </div>
+              </CardContent>
             </Card>
-
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Daily spot trade</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Complete a spot trade of at least 20 USDT</p>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">0/20</span>
-                  </div>
-                  <Progress value={0} className="h-2 mb-3" />
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">10</span>
-                    <span className="text-xs text-muted-foreground">Points</span>
-                  </div>
-                </div>
-                <Button className="ml-4">Trade</Button>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Daily copy trade</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Reach 50 USDT in daily copy trading volume.</p>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">0/50</span>
-                  </div>
-                  <Progress value={0} className="h-2 mb-3" />
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">10</span>
-                    <span className="text-xs text-muted-foreground">Points</span>
-                  </div>
-                </div>
-                <Button className="ml-4">Trade</Button>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Daily spot margin trade</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Reach 50 USDT in spot margin trading volume.</p>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">0/50</span>
-                  </div>
-                  <Progress value={0} className="h-2 mb-3" />
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">10</span>
-                    <span className="text-xs text-muted-foreground">Points</span>
-                  </div>
-                </div>
-                <Button className="ml-4">Trade</Button>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Daily trading bot</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Reach 50 USDT in trading bot volume.</p>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">0/50</span>
-                  </div>
-                  <Progress value={0} className="h-2 mb-3" />
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">10</span>
-                    <span className="text-xs text-muted-foreground">Points</span>
-                  </div>
-                </div>
-                <Button className="ml-4">Trade</Button>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Daily referral</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Invite 1 friend to sign up on Pexly.</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">10</span>
-                    <span className="text-xs text-muted-foreground">Points</span>
-                  </div>
-                </div>
-                <Button className="ml-4">Invite</Button>
-              </div>
-            </Card>
-
-            <div className="text-center text-xs text-muted-foreground py-4">
-              Tasks are reset at 12:00 AM (UTC+8) every day.
-            </div>
           </TabsContent>
 
-          <TabsContent value="limited" className="space-y-4">
-            <Card className="p-6 text-center">
-              <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                <Zap className="h-16 w-16 text-muted-foreground" />
-                <h3 className="text-xl font-semibold">No limited-time tasks available</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  Check back later for special limited-time rewards and challenges.
-                </p>
-              </div>
+          <TabsContent value="expired">
+            <Card>
+              <CardContent className="py-16 text-center">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center">
+                    <Gift className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">No expired rewards</p>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Lucky Draw Section */}
+        <Card className="overflow-hidden mb-8">
+          <div className="bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 p-8 text-white text-center relative">
+            {/* Background decorative circles */}
+            <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/30 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 right-0 w-40 h-40 bg-purple-400/20 rounded-full blur-3xl"></div>
+
+            <div className="relative z-10">
+              <h2 className="text-2xl font-bold mb-2">Lucky Draw</h2>
+              <p className="text-purple-100 mb-6">You have 1 FREE chance</p>
+
+              {/* Wheel illustration placeholder */}
+              <div className="relative w-48 h-48 mx-auto mb-6">
+                <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-full"></div>
+                <div className="absolute inset-4 bg-gradient-to-br from-purple-300 via-purple-200 to-purple-100 rounded-full flex items-center justify-center">
+                  <div className="text-4xl font-bold text-purple-700">%</div>
+                </div>
+                {/* Decorative dots */}
+                <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-white rounded-full"></div>
+                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-white rounded-full"></div>
+                <div className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-white rounded-full"></div>
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-white rounded-full"></div>
+              </div>
+
+              <Button className="bg-white text-purple-700 hover:bg-purple-50 font-semibold px-8">
+                Spin Now
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Earn More Rewards Section */}
+      <div className="container mx-auto px-4 py-8 max-w-2xl pb-24">
+        <h2 className="text-xl font-bold mb-6">Earn more rewards</h2>
+
+        <div className="grid grid-cols-2 gap-4">
+          {/* Lucky Spins */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="w-24 h-24 mx-auto flex items-center justify-center">
+                <img 
+                  src="/attached_assets/IMG_2677_1764516315550.png" 
+                  alt="Lucky wheel"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <h3 className="font-semibold text-lg">Lucky spins</h3>
+              <Button variant="outline" className="w-full text-purple-600 border-purple-600 hover:bg-purple-50">
+                Hunt for rewards
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Loyalty Badges */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/10 rounded-2xl flex items-center justify-center">
+                <div className="relative w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                  R
+                </div>
+              </div>
+              <h3 className="font-semibold text-lg">Loyalty badges</h3>
+              <Button variant="outline" className="w-full text-purple-600 border-purple-600 hover:bg-purple-50">
+                Hunt for rewards
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Crypto Deposit Rewards */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/20 dark:to-green-800/10 rounded-2xl flex items-center justify-center">
+                <div className="relative">
+                  <Gift className="h-12 w-12 text-green-500" />
+                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs">
+                    ?
+                  </div>
+                </div>
+              </div>
+              <h3 className="font-semibold text-lg">Crypto Deposit Rewards</h3>
+              <Button variant="outline" className="w-full text-purple-600 border-purple-600 hover:bg-purple-50">
+                Hunt for rewards
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Cashback Vouchers */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="w-24 h-24 mx-auto flex items-center justify-center">
+                <img 
+                  src="/attached_assets/IMG_2676_1764516315550.png" 
+                  alt="Cashback voucher"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <h3 className="font-semibold text-lg">Cashback vouchers</h3>
+              <Button variant="outline" className="w-full text-purple-600 border-purple-600 hover:bg-purple-50">
+                Hunt for rewards
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Floating Chat Button */}
+      <div className="fixed bottom-24 right-6 z-50">
+        <Button size="icon" className="h-14 w-14 rounded-full bg-purple-500 hover:bg-purple-600 shadow-lg">
+          <MessageCircle className="h-6 w-6" />
+        </Button>
       </div>
     </div>
   );
