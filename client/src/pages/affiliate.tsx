@@ -172,7 +172,7 @@ export default function Affiliate() {
           {/* Bitcoin Illustration */}
           <div className="flex justify-center mb-8">
             <img 
-              src="/assets/bitcoin-referral-3d.png" 
+              src="/assets/IMG_2657.png" 
               alt="Bitcoin referral rewards illustration" 
               className="w-full max-w-lg h-auto"
             />
