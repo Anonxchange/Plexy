@@ -187,13 +187,15 @@ export default function RewardsPage() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     {/* Left side - Chances */}
-                    <div className="flex-shrink-0 bg-gradient-to-br from-purple-600/40 to-purple-700/30 rounded-lg p-4 min-w-fit border border-purple-500/30">
-                      <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                      <div className="w-12 h-12 bg-purple-500/30 rounded-lg flex items-center justify-center border border-purple-500/40">
                         <img 
                           src="/assets/IMG_2645.png" 
                           alt="Lucky draw icon"
-                          className="w-6 h-6 mb-2"
+                          className="w-7 h-7"
                         />
+                      </div>
+                      <div className="text-center">
                         <div className="text-lg font-bold text-[#B4F22E]">
                           {task.chances} Chance(s)
                         </div>
