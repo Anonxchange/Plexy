@@ -68,7 +68,7 @@ export default function ReferralPage() {
             <div className="mb-8 flex justify-center">
               <div className="relative w-64 h-64">
                 <img 
-                  src="/assets/IMG_2668.png" 
+                  src="/assets/IMG_1961.jpeg" 
                   alt="Referral illustration" 
                   className="w-full h-full object-contain"
                 />
@@ -238,7 +238,7 @@ export default function ReferralPage() {
             <div className="mb-6 flex justify-center">
               <div className="relative w-48 h-48">
                 <img 
-                  src="/assets/IMG_2668.png" 
+                  src="/assets/IMG_1961.jpeg" 
                   alt="Refer & Win" 
                   className="w-full h-full object-contain"
                 />
