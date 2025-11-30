@@ -358,11 +358,13 @@ export default function ReferralPage() {
 
             {/* Tabs for referral status */}
             <div className="mb-4">
-              <div className="flex gap-4 border-b">
-                <button className="pb-2 px-4 text-sm font-medium border-b-2 border-primary">All</button>
-                <button className="pb-2 px-4 text-sm font-medium text-muted-foreground">Completed</button>
-                <button className="pb-2 px-4 text-sm font-medium text-muted-foreground">In progress</button>
-                <button className="pb-2 px-4 text-sm font-medium text-muted-foreground">Expired</button>
+              <div className="overflow-x-auto scrollbar-hide border-b">
+                <div className="flex gap-4 min-w-max">
+                  <button className="pb-2 px-4 text-sm font-medium border-b-2 border-primary whitespace-nowrap">All</button>
+                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">Completed</button>
+                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">In progress</button>
+                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">Expired</button>
+                </div>
               </div>
             </div>
 
