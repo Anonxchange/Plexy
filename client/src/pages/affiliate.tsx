@@ -1,529 +1,332 @@
-
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Users, 
-  Copy, 
-  Share2, 
-  DollarSign, 
-  Gift, 
-  TrendingUp,
-  CheckCircle2,
-  ArrowRight,
-  Info,
-  ChevronDown,
-  HelpCircle,
-  Award
-} from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useLocation } from "wouter";
+import { Card, CardContent } from "@/components/ui/card";
+import { Crown, Users, Coins, Layers, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { SiAmazonwebservices, SiGooglecloud, SiIntercom, SiHackerone, SiCircleci } from "react-icons/si";
 
-export default function ReferralPage() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [showTerms, setShowTerms] = useState(false);
-  const [, navigate] = useLocation();
-
-  const referralCode = user?.id ? `PEX${user.id.slice(0, 8).toUpperCase()}` : "PEXUSER123";
-  const referralLink = `https://pexly.com/signup?ref=${referralCode}`;
-  const totalReferrals = 12;
-  const totalEarnings = 847.50;
-  const currentCommissionRate = 25;
-
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied!",
-      description: `${label} copied to clipboard`,
-    });
-  };
-
-  const shareReferral = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Join Pexly',
-        text: `Join Pexly using my referral code and earn rewards! Use code: ${referralCode}`,
-        url: referralLink,
-      });
-    } else {
-      copyToClipboard(referralLink, "Referral link");
+export default function Affiliate() {
+  const partnerTypes = [
+    {
+      icon: <Crown className="h-8 w-8 text-[#B4F22E]" />,
+      title: "Strategic Partners",
+      description: "These collaborative ventures expand services, enhance user experiences, and amplify Pexly's reach within the cryptocurrency and financial landscapes.",
+      cta: "Become a strategic partner"
+    },
+    {
+      icon: <Users className="h-8 w-8 text-[#B4F22E]" />,
+      title: "Service Partners",
+      description: "Pexly collaborates with a trustworthy network of service partners, fortifying ours commitment to delivering a secure and user-centric trading environment.",
+      cta: "Become a service partner"
+    },
+    {
+      icon: <Coins className="h-8 w-8 text-[#B4F22E]" />,
+      title: "Referral Partners",
+      description: "Pexly's referral partners foster a thriving cryptocurrency community through their network and earn rewards from Pexly.",
+      cta: "Become a referral partner"
+    },
+    {
+      icon: <Layers className="h-8 w-8 text-[#B4F22E]" />,
+      title: "Fiat Partners",
+      description: "Pexly's fiat partners support the facilitation of swift exchanges between cryptocurrencies and fiat currencies within ours platform.",
+      cta: "Become a fiat partner"
     }
-  };
+  ];
 
-  // Guest view (not logged in)
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          {/* Hero Section */}
-          <div className="text-center mb-12">
-            <div className="mb-8 flex justify-center">
-              <div className="relative w-64 h-64">
-                <img 
-                  src="/assets/IMG_1961.jpeg" 
-                  alt="Referral illustration" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </div>
-            
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              Refer Your Friends and Earn<br />
-              <span className="text-primary">40% Commission</span>
-            </h1>
-            
-            <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
-              Invite your friends to create an account and start trading. You can earn up to{" "}
-              <span className="text-primary font-semibold">40% Commission</span> from their trading fees!
-            </p>
-
-            <Button 
-              size="lg" 
-              className="w-full max-w-md h-14 text-lg"
-              onClick={() => navigate("/signup")}
-            >
-              Register / Login to invite friends
-            </Button>
-          </div>
-
-          {/* How to Join Section */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="text-2xl">How to join</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-bold text-lg">1</span>
-                  </div>
-                  <div className="w-0.5 h-16 bg-primary/20 ml-5 mt-2"></div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">Choose commission split</h3>
-                  <p className="text-muted-foreground">
-                    Determine commissions split between you and your friends
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-bold text-lg">2</span>
-                  </div>
-                  <div className="w-0.5 h-16 bg-primary/20 ml-5 mt-2"></div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">Invite friends</h3>
-                  <p className="text-muted-foreground">
-                    Send your friends referral links and guide them to sign up, start trading!
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-bold text-lg">3</span>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">Earn commission</h3>
-                  <p className="text-muted-foreground">
-                    You can earn up to 40% commission of tier-1 referrals' trading fees and 10% of tier-2's trading feeds
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* FAQs Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">FAQs</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    What trading products does this program commission apply to?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  The referral commission applies to all trading products on Pexly including P2P Trading, Spot Trading, and Swap. You'll earn commission from all trading fees generated by your referrals.
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    Why does my friend referral code is from someone else, not mine?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  The referral code is assigned to the first person who referred your friend. If they signed up using someone else's referral link first, that code will be associated with their account permanently.
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    What are terms and conditions of the program?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  Please refer to our Terms & Conditions section at the bottom of this page for detailed information about the referral program rules, commission structure, and eligibility requirements.
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    When will this program end?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  The Pexly referral program is ongoing. However, we reserve the right to modify or terminate the program at any time. Any changes will be communicated in advance to all participants.
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    What pairs are considered for $3000 trading volume?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  All trading pairs on Pexly count towards the trading volume calculation, including all cryptocurrency pairs available on our Spot Trading platform. The volume is calculated in USDT equivalent.
-                </CollapsibleContent>
-              </Collapsible>
-            </CardContent>
-          </Card>
-        </div>
-
-        <PexlyFooter />
-      </div>
-    );
-  }
-
-  // Logged in user view
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="bg-gradient-to-b from-primary/5 to-background py-12">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <div className="text-center mb-8">
-            <div className="mb-6 flex justify-center">
-              <div className="relative w-48 h-48">
-                <img 
-                  src="/assets/IMG_1961.jpeg" 
-                  alt="Refer & Win" 
-                  className="w-full h-full object-contain"
-                />
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#B4F22E]/10 to-white dark:from-[#B4F22E]/5 dark:to-background py-12 md:py-20 px-4">
+        <div className="max-w-4xl mx-auto relative z-10 text-center">
+          {/* Partners Illustration */}
+          <div className="mb-8 flex justify-center">
+            <img 
+              src="/assets/IMG_2645.png" 
+              alt="Partners collaboration illustration" 
+              className="w-full max-w-2xl h-auto mx-auto"
+            />
+          </div>
+          
+          {/* Old illustration - keeping as fallback */}
+          <div className="mb-8 flex justify-center hidden">
+            <div className="relative w-full max-w-md">
+              <div className="grid grid-cols-2 gap-4 transform rotate-45 scale-90">
+                <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E]/30 dark:bg-[#B4F22E]/20 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-cyan-400 rounded-full"></div>
+                </div>
+                <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E]/50 dark:bg-[#B4F22E]/30 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-[#8BC34A] rounded-full"></div>
+                </div>
+                <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E]/70 dark:bg-[#B4F22E]/40 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-yellow-400 rounded-full"></div>
+                </div>
+                <div className="w-28 h-28 md:w-36 md:h-36 bg-[#B4F22E] dark:bg-[#B4F22E]/60 rounded-2xl flex items-center justify-center transform -rotate-45 shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-400 rounded-full"></div>
+                </div>
               </div>
             </div>
-            
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              Refer & Win: Easy Rewards for<br />You and Friends!
-            </h1>
-            
-            <p className="text-muted-foreground text-base max-w-2xl mx-auto mb-8">
-              Share the joy with friends and earn exciting rewards. Enjoy vouchers, spins, and coins with every invite. The more you share, the more you win!
+          </div>
+
+          <h1 className="text-3xl md:text-5xl font-bold mb-4 text-foreground">
+            Pexly Partners Space
+          </h1>
+          
+          <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
+            Build connection, unlock opportunities together!
+          </p>
+
+          <Button 
+            size="lg" 
+            className="h-14 px-12 text-lg font-semibold bg-[#B4F22E] hover:bg-[#9FD624] text-black shadow-xl"
+          >
+            Become our Partner
+          </Button>
+        </div>
+      </section>
+
+      {/* 4 Types of Partners */}
+      <section className="py-12 md:py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-4xl font-bold text-center mb-10">
+            Pexly 4 types of partners
+          </h2>
+
+          <div className="space-y-6">
+            {partnerTypes.map((partner, index) => (
+              <Card key={index} className="border-2 hover:border-[#B4F22E]/50 dark:hover:border-[#B4F22E]/30 transition-colors">
+                <CardContent className="p-6 md:p-8">
+                  <div className="mb-4">
+                    {partner.icon}
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-bold mb-3 text-foreground">
+                    {partner.title}
+                  </h3>
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
+                    {partner.description}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-[#B4F22E] text-[#8BC34A] hover:bg-[#B4F22E]/10 dark:hover:bg-[#B4F22E]/20"
+                  >
+                    {partner.cta}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Service Partners Logos */}
+      <section className="py-12 md:py-16 px-4 bg-muted/30">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
+            Our service partners
+          </h2>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiAmazonwebservices className="w-10 h-10 text-[#FF9900] group-hover:text-[#FF9900]" />
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-[#FF9900]">AWS</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiGooglecloud className="w-8 h-8 text-[#4285F4] group-hover:text-[#4285F4]" />
+                <span className="text-lg font-semibold text-muted-foreground group-hover:text-[#4285F4]">Google Cloud</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiIntercom className="w-8 h-8 text-[#1F8DED] group-hover:text-[#1F8DED]" />
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-[#1F8DED]">Intercom</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiHackerone className="w-8 h-8 text-[#494649] group-hover:text-foreground" />
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-foreground">HackerOne</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiCircleci className="w-8 h-8 text-[#343434] group-hover:text-foreground" />
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-foreground">CircleCI</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <svg className="w-8 h-8" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100" height="100" rx="12" className="fill-[#21B573] group-hover:fill-[#21B573]"/>
+                  <path d="M25 35h50v8H25v-8zm0 14h35v8H25v-8zm0 14h50v8H25v-8z" className="fill-white"/>
+                </svg>
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-[#21B573]">Sumsub</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Referral Partners Section */}
+      <section className="py-12 md:py-20 px-4 bg-gradient-to-b from-[#B4F22E]/20 to-[#B4F22E]/5 dark:from-[#B4F22E]/10 dark:to-[#B4F22E]/5">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-sm font-medium text-[#8BC34A] uppercase tracking-wider mb-2">
+              REFERRAL PARTNERS
+            </p>
+            <h2 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
+              Invite your friends, earn Bitcoin together
+            </h2>
+            <p className="text-muted-foreground">
+              You and your qualified referees can each earn rewards in Bitcoin.
             </p>
           </div>
 
-          {/* Referral Code & Link */}
-          <div className="space-y-3 mb-6">
-            <div className="flex items-center justify-between px-4 py-3 border border-border rounded-xl bg-card">
-              <span className="text-muted-foreground text-sm">Referral code</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-foreground">{referralCode}</span>
-                <Button 
-                  size="icon" 
-                  variant="ghost"
-                  className="h-8 w-8 text-primary hover:text-primary/80"
-                  onClick={() => copyToClipboard(referralCode, "Referral code")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between px-4 py-3 border border-border rounded-xl bg-card">
-              <span className="text-muted-foreground text-sm">Referral link</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-foreground truncate max-w-[180px]">{referralLink}</span>
-                <Button 
-                  size="icon" 
-                  variant="ghost"
-                  className="h-8 w-8 text-primary hover:text-primary/80"
-                  onClick={() => copyToClipboard(referralLink, "Referral link")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <Button className="w-full h-12 text-base font-semibold rounded-xl" size="lg" onClick={shareReferral}>
-              Invite and Earn
-            </Button>
+          {/* Bitcoin Illustration */}
+          <div className="flex justify-center mb-8">
+            <img 
+              src="/assets/IMG_2657.png" 
+              alt="Bitcoin referral rewards illustration" 
+              className="w-full max-w-lg h-auto"
+            />
           </div>
 
-          {/* Rewards Section */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-4">Rewards</h2>
-            <Card>
-              <CardContent className="py-12 text-center">
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                    <Gift className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold">You have no reward!</h3>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    Invite your friends to get more rewards
-                  </p>
-                  <Button variant="outline" onClick={shareReferral}>
-                    Invite and Earn
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Referrals Tracking */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-4">Referrals</h2>
-            <Card className="mb-4">
+          {/* Phone Mockup */}
+          <div className="flex justify-center">
+            <Card className="w-full max-w-sm mx-auto shadow-2xl">
               <CardContent className="p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Users className="h-6 w-6 text-primary" />
+                <div className="text-center mb-4">
+                  <p className="text-sm text-muted-foreground">Profile</p>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-[#B4F22E] rounded-full flex items-center justify-center text-black font-bold">
+                    P
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Invited Friends</div>
-                    <div className="text-3xl font-bold">{totalReferrals}</div>
+                    <p className="font-semibold">pexlyUser</p>
+                    <p className="text-sm text-muted-foreground">Today's bonus points</p>
+                    <p className="text-xl font-bold text-[#B4F22E]">23,5 points</p>
                   </div>
+                  <Button size="sm" className="ml-auto bg-[#B4F22E] hover:bg-[#9FD624] text-black">
+                    Analysis
+                  </Button>
                 </div>
-
-                <Separator className="my-4" />
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Open referral link</span>
-                    <span className="font-medium">0</span>
+                  <p className="font-semibold">Today's achievements</p>
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <p className="font-medium">Deposit supported</p>
+                      <p className="text-xs text-muted-foreground">1,000,000 VNDR - 1 point</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">3,000,000 VNDR</p>
+                      <p className="text-xs text-[#B4F22E]">+3 points</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Register & KYC LV2</span>
-                    <span className="font-medium">0</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <p className="font-medium">Withdraw supported</p>
+                      <p className="text-xs text-muted-foreground">1,000,000 VNDR - 1 point x2</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">7,500,000 VNDR</p>
+                      <p className="text-xs text-[#B4F22E]">+15 points</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Complete first trade</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Reach $1500 coin-to-fiat volume</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tabs for referral status */}
-            <div className="mb-4">
-              <div className="overflow-x-auto scrollbar-hide border-b">
-                <div className="flex gap-4 min-w-max">
-                  <button className="pb-2 px-4 text-sm font-medium border-b-2 border-primary whitespace-nowrap">All</button>
-                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">Completed</button>
-                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">In progress</button>
-                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">Expired</button>
-                </div>
-              </div>
-            </div>
-
-            <Card>
-              <CardContent className="py-12 text-center">
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                    <Users className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <div className="text-muted-foreground">No data</div>
-                  <Button variant="default" onClick={shareReferral}>
-                    Invite and Earn
-                  </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Earn More Deals Section */}
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
-        <h2 className="text-2xl font-bold mb-6">Earn more deals</h2>
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                <TrendingUp className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-4">Lucky spins</h3>
-              <Button variant="outline" className="w-full">
-                Hunt for rewards
-              </Button>
-            </CardContent>
-          </Card>
+      {/* Fiat Partners Section */}
+      <section className="py-12 md:py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-sm font-medium text-[#8BC34A] uppercase tracking-wider mb-2">
+              FIAT PARTNERS
+            </p>
+            <h2 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
+              Earn more with your capital
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Maximize income potential through Pexly Fiat Partners Program
+            </p>
+          </div>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                <Award className="h-10 w-10 text-primary" />
+          {/* Steps */}
+          <div className="space-y-6 max-w-md mx-auto mb-8">
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full border-2 border-[#B4F22E] flex items-center justify-center">
+                  <span className="text-[#B4F22E] font-bold">1</span>
+                </div>
+                <div className="w-0.5 h-16 bg-[#B4F22E]/30 dark:bg-[#B4F22E]/20 mt-2"></div>
               </div>
-              <h3 className="font-semibold mb-4">Loyalty badges</h3>
-              <Button variant="outline" className="w-full">
-                Hunt for rewards
-              </Button>
-            </CardContent>
-          </Card>
+              <div>
+                <h3 className="font-bold text-lg mb-2">Get ready with your package</h3>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Pexly account</li>
+                  <li>• Capital</li>
+                  <li>• Phone/Laptop for transactions</li>
+                </ul>
+              </div>
+            </div>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                <Gift className="h-10 w-10 text-primary" />
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full border-2 border-[#B4F22E] flex items-center justify-center">
+                  <span className="text-[#B4F22E] font-bold">2</span>
+                </div>
+                <div className="w-0.5 h-16 bg-[#B4F22E]/30 dark:bg-[#B4F22E]/20 mt-2"></div>
               </div>
-              <h3 className="font-semibold mb-4">Cashback vouchers</h3>
-              <Button variant="outline" className="w-full">
-                Hunt for rewards
-              </Button>
-            </CardContent>
-          </Card>
+              <div>
+                <h3 className="font-bold text-lg mb-2">Complete your first buying/selling ads</h3>
+              </div>
+            </div>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                <DollarSign className="h-10 w-10 text-primary" />
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full border-2 border-[#B4F22E] flex items-center justify-center">
+                  <span className="text-[#B4F22E] font-bold">3</span>
+                </div>
               </div>
-              <h3 className="font-semibold mb-4">Crypto Deposit Rewards</h3>
-              <Button variant="outline" className="w-full">
-                Hunt for rewards
+              <div>
+                <h3 className="font-bold text-lg mb-2">Follow earning commissions table</h3>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Button className="bg-[#B4F22E] hover:bg-[#9FD624] text-black">
+              Explore now
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-12 md:py-16 px-4">
+        <div className="max-w-md mx-auto">
+          <Card className="bg-gradient-to-br from-[#B4F22E]/10 to-white dark:from-[#B4F22E]/10 dark:to-background border-2">
+            <CardContent className="p-8 text-center">
+              <h3 className="text-xl font-bold mb-6">
+                Apply to become our partners today
+              </h3>
+              <Button 
+                className="bg-[#B4F22E] hover:bg-[#9FD624] text-black px-8"
+              >
+                Become Pexly Partner
               </Button>
             </CardContent>
           </Card>
         </div>
-      </div>
+      </section>
 
-      {/* FAQs Section */}
-      <div className="px-4 py-12">
-
-      <h2 className="text-2xl font-bold mb-6">FAQs</h2>
-        <Card>
-          <CardContent className="p-0">
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  What are terms and conditions of the program?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                Please refer to our Terms & Conditions. The referral program applies to all trading on Pexly. Commissions are distributed daily at 4AM UTC based on your referees' net trading fees.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  What trading products does this program commission apply to?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                The referral commission applies to all trading products on Pexly including P2P Trading, Spot Trading, and Swap. You'll earn commission from all trading fees generated by your referrals.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  Why does my friend referral code is from someone else, not mine?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                The referral code is assigned to the first person who referred your friend. If they signed up using someone else's referral link first, that code will be associated with their account permanently.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  How to earn referral bonus?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                Share your referral code or link with friends. When they sign up and complete trades, you earn commissions. The more active your referrals, the more you earn.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  When will this program end?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                The Pexly referral program is ongoing. However, we reserve the right to modify or terminate the program at any time. Any changes will be communicated in advance to all participants.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  What pairs are considered for $3000 trading volume?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                All trading pairs on Pexly count towards the trading volume calculation, including all cryptocurrency pairs available on our Spot Trading platform. The volume is calculated in USDT equivalent.
-              </CollapsibleContent>
-            </Collapsible>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Pexly Footer */}
       <PexlyFooter />
     </div>
   );
