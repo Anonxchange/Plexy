@@ -175,7 +175,7 @@ export default function NotificationsPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full rounded-none border-b bg-transparent h-auto p-0 justify-start px-4">
+          <TabsList className="w-full grid grid-cols-3 rounded-none border-b bg-transparent h-auto p-0">
             <TabsTrigger 
               value="system" 
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent px-4 py-3 relative"
