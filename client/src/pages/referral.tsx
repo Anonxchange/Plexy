@@ -68,7 +68,7 @@ export default function ReferralPage() {
             <div className="mb-8 flex justify-center">
               <div className="relative w-64 h-64">
                 <img 
-                  src="/assets/IMG_2668.png" 
+                  src="/assets/IMG_1961.jpeg" 
                   alt="Referral illustration" 
                   className="w-full h-full object-contain"
                 />
@@ -238,7 +238,7 @@ export default function ReferralPage() {
             <div className="mb-6 flex justify-center">
               <div className="relative w-48 h-48">
                 <img 
-                  src="/assets/IMG_2668.png" 
+                  src="/assets/IMG_1961.jpeg" 
                   alt="Refer & Win" 
                   className="w-full h-full object-contain"
                 />
@@ -255,47 +255,41 @@ export default function ReferralPage() {
           </div>
 
           {/* Referral Code & Link */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Referral code</label>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-lg">{referralCode}</span>
-                    <Button 
-                      size="icon" 
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => copyToClipboard(referralCode, "Referral code")}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Referral link</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-mono truncate max-w-[200px]">{referralLink}</span>
-                    <Button 
-                      size="icon" 
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => copyToClipboard(referralLink, "Referral link")}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center justify-between px-4 py-3 border border-border rounded-xl bg-card">
+              <span className="text-muted-foreground text-sm">Referral code</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground">{referralCode}</span>
+                <Button 
+                  size="icon" 
+                  variant="ghost"
+                  className="h-8 w-8 text-primary hover:text-primary/80"
+                  onClick={() => copyToClipboard(referralCode, "Referral code")}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
               </div>
+            </div>
 
-              <Button className="w-full mt-6" size="lg" onClick={shareReferral}>
-                Invite and Earn
-              </Button>
-            </CardContent>
-          </Card>
+            <div className="flex items-center justify-between px-4 py-3 border border-border rounded-xl bg-card">
+              <span className="text-muted-foreground text-sm">Referral link</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-foreground truncate max-w-[180px]">{referralLink}</span>
+                <Button 
+                  size="icon" 
+                  variant="ghost"
+                  className="h-8 w-8 text-primary hover:text-primary/80"
+                  onClick={() => copyToClipboard(referralLink, "Referral link")}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <Button className="w-full h-12 text-base font-semibold rounded-xl" size="lg" onClick={shareReferral}>
+              Invite and Earn
+            </Button>
+          </div>
 
           {/* Rewards Section */}
           <div className="mb-6">
