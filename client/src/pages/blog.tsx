@@ -1,307 +1,345 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  Search, 
-  Calendar, 
-  Clock, 
-  ArrowRight,
-  TrendingUp,
-  BookOpen,
-  Newspaper,
-  Trophy
-} from "lucide-react";
-import { Link } from "wouter";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 
-const categories = ["All", "News", "Guides", "Trading Tips", "Security", "Product Updates", "Market Analysis"];
+const categories = [
+  "Latest news",
+  "Announcement",
+  "Promotion",
+  "Series",
+  "Knowledge",
+  "Forum"
+];
 
-const featuredPost = {
-  id: 1,
-  title: "The Future of P2P Cryptocurrency Trading in 2025",
-  excerpt: "Explore how decentralized trading is reshaping the financial landscape and what it means for everyday users around the world.",
-  category: "Market Analysis",
-  author: "Sarah Chen",
-  date: "2025-01-15",
-  readTime: "8 min read",
-  image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&h=500&fit=crop"
-};
-
-const blogPosts = [
+const featuredPosts = [
+  {
+    id: 1,
+    title: "Pexly Will Soon Launch A New Look, Now Opening An Early Beta Access For Users",
+    category: "Announcement",
+    image: "/featured-1.jpg",
+    gradient: "from-[#B4F22E]/80 via-[#8BC34A]/60 to-[#4CAF50]/80"
+  },
   {
     id: 2,
-    title: "10 Essential Security Tips for Crypto Traders",
-    excerpt: "Protect your digital assets with these proven security practices that every cryptocurrency trader should follow.",
+    title: "The Role of Bug Bounties in Strengthening Pexly's Security",
     category: "Security",
-    author: "Michael Rodriguez",
-    date: "2025-01-12",
-    readTime: "6 min read",
-    featured: false
+    image: "/featured-2.jpg",
+    gradient: "from-[#B4F22E]/70 via-[#9FD624]/60 to-[#7CB342]/80"
   },
   {
     id: 3,
-    title: "How to Start Trading Cryptocurrency: A Beginner's Guide",
-    excerpt: "New to crypto trading? This comprehensive guide covers everything you need to know to get started safely.",
-    category: "Guides",
-    author: "Emma Thompson",
-    date: "2025-01-10",
-    readTime: "10 min read",
-    featured: false
+    title: "How to Earn Crypto Without Trading: The Smart Guide for Beginners",
+    category: "Knowledge",
+    image: "/featured-3.jpg",
+    gradient: "from-[#8BC34A]/80 via-[#B4F22E]/60 to-[#CDDC39]/80"
   },
   {
     id: 4,
-    title: "Pexly Introduces Lightning Network Support",
-    excerpt: "We're excited to announce support for Bitcoin's Lightning Network, enabling instant, low-fee transactions.",
-    category: "Product Updates",
-    author: "Pexly Team",
-    date: "2025-01-08",
-    readTime: "4 min read",
-    featured: false
+    title: "More Friends, More Coins - Earn Up to $130 With Referrals",
+    category: "Promotion",
+    image: "/featured-4.jpg",
+    gradient: "from-[#B4F22E]/90 via-[#9FD624]/70 to-[#8BC34A]/80"
   },
   {
     id: 5,
-    title: "Understanding Payment Methods in P2P Trading",
-    excerpt: "A deep dive into the 500+ payment methods available on Pexly and how to choose the right one for your needs.",
-    category: "Guides",
-    author: "David Park",
-    date: "2025-01-05",
-    readTime: "7 min read",
-    featured: false
+    title: "Understanding P2P Trading: Complete Guide for 2025",
+    category: "Knowledge",
+    image: "/featured-5.jpg",
+    gradient: "from-[#7CB342]/80 via-[#B4F22E]/60 to-[#9FD624]/80"
+  }
+];
+
+const blogPosts = [
+  {
+    id: 1,
+    title: "How to Earn Crypto Without Trading: The Smart Guide for Beginners",
+    category: "Knowledge",
+    date: "2025/11/28",
+    gradient: "from-[#B4F22E] via-[#9FD624] to-[#8BC34A]",
+    hasCoins: true
+  },
+  {
+    id: 2,
+    title: "More Friends, More Coins - Earn Up to $130 With Referrals",
+    category: "Promotion",
+    date: "2025/11/25",
+    gradient: "from-[#8BC34A] via-[#B4F22E] to-[#CDDC39]",
+    promo: "$130"
+  },
+  {
+    id: 3,
+    title: "The Role of Bug Bounties in Strengthening Pexly's Security",
+    category: "Security",
+    date: "2025/11/22",
+    gradient: "from-[#B4F22E]/90 via-[#7CB342] to-[#558B2F]"
+  },
+  {
+    id: 4,
+    title: "10 Essential Security Tips for Crypto Traders",
+    category: "Security",
+    date: "2025/11/20",
+    gradient: "from-[#9FD624] via-[#B4F22E] to-[#C6FF00]"
+  },
+  {
+    id: 5,
+    title: "Pexly Introduces Lightning Network Support",
+    category: "Announcement",
+    date: "2025/11/18",
+    gradient: "from-[#8BC34A] via-[#9FD624] to-[#B4F22E]"
   },
   {
     id: 6,
-    title: "Bitcoin Price Analysis: What's Driving the Market?",
-    excerpt: "Our expert analysis of recent Bitcoin price movements and what factors are influencing the cryptocurrency market.",
-    category: "Market Analysis",
-    author: "Jennifer Liu",
-    date: "2025-01-03",
-    readTime: "9 min read",
-    featured: false
+    title: "Understanding Payment Methods in P2P Trading",
+    category: "Knowledge",
+    date: "2025/11/15",
+    gradient: "from-[#B4F22E] via-[#8BC34A] to-[#689F38]"
   },
   {
     id: 7,
-    title: "Top 5 Trading Strategies for 2025",
-    excerpt: "Learn the most effective cryptocurrency trading strategies that professionals use to maximize their returns.",
-    category: "Trading Tips",
-    author: "Alex Kumar",
-    date: "2025-01-01",
-    readTime: "8 min read",
-    featured: false
+    title: "Bitcoin Price Analysis: What's Driving the Market?",
+    category: "Latest news",
+    date: "2025/11/12",
+    gradient: "from-[#9FD624] via-[#B4F22E] to-[#CDDC39]"
   },
   {
     id: 8,
-    title: "Pexly Reaches 5 Million Users Milestone",
-    excerpt: "Celebrating a major milestone as we welcome our 5 millionth user to the Pexly platform.",
-    category: "News",
-    author: "Pexly Team",
-    date: "2024-12-28",
-    readTime: "3 min read",
-    featured: false
-  },
-  {
-    id: 9,
-    title: "How to Avoid Common Scams in Crypto Trading",
-    excerpt: "Stay safe with our comprehensive guide to identifying and avoiding the most common cryptocurrency scams.",
-    category: "Security",
-    author: "Rachel Green",
-    date: "2024-12-25",
-    readTime: "11 min read",
-    featured: false
-  },
-  {
-    id: 10,
-    title: "The Rise of Stablecoins in P2P Trading",
-    excerpt: "Exploring why stablecoins are becoming increasingly popular in peer-to-peer cryptocurrency transactions.",
-    category: "Market Analysis",
-    author: "Tom Wilson",
-    date: "2024-12-22",
-    readTime: "6 min read",
-    featured: false
+    title: "Top 5 Trading Strategies for 2025",
+    category: "Knowledge",
+    date: "2025/11/10",
+    gradient: "from-[#7CB342] via-[#B4F22E] to-[#9FD624]"
   }
 ];
 
 export default function Blog() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("Latest news");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % featuredPosts.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const filteredPosts = blogPosts.filter(post => {
-    const matchesCategory = selectedCategory === "All" || post.category === selectedCategory;
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         post.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "Latest news" || post.category === selectedCategory;
+    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % featuredPosts.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + featuredPosts.length) % featuredPosts.length);
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary/10 via-background to-background border-b">
-        <div className="container mx-auto px-4 lg:px-8 py-16 lg:py-24 max-w-6xl">
-          <div className="text-center space-y-6">
-            <Badge className="mb-4" variant="secondary">
-              <BookOpen className="h-3 w-3 mr-1" />
-              Pexly Blog
-            </Badge>
-            <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-              Insights & <span className="text-primary">Stories</span>
-            </h1>
-            <p className="text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Stay updated with the latest news, guides, and insights from the world of cryptocurrency trading.
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* Featured Carousel */}
+      <section className="px-4 pt-6 pb-4">
+        <div className="max-w-lg mx-auto">
+          <div className="relative">
+            {/* Carousel Container */}
+            <div className="relative overflow-hidden rounded-2xl">
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              >
+                {featuredPosts.map((post) => (
+                  <div key={post.id} className="w-full flex-shrink-0">
+                    <div className={`relative h-56 md:h-72 bg-gradient-to-br ${post.gradient} rounded-2xl overflow-hidden`}>
+                      {/* Pexly Logo */}
+                      <div className="absolute top-4 left-4">
+                        <span className="text-white/90 font-bold text-lg">Pexly</span>
+                      </div>
+                      
+                      {/* Decorative Elements */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="relative w-full h-full">
+                          {/* Abstract shapes */}
+                          <div className="absolute top-1/4 left-1/4 w-20 h-20 bg-white/20 rounded-lg transform rotate-12"></div>
+                          <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-white/15 rounded-full"></div>
+                          <div className="absolute bottom-1/4 left-1/3 w-12 h-12 bg-white/10 rounded-lg transform -rotate-12"></div>
+                          
+                          {/* Content hint */}
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm rounded-xl p-3 w-32 md:w-40">
+                            <div className="space-y-2">
+                              <div className="h-2 bg-white/40 rounded w-full"></div>
+                              <div className="h-2 bg-white/30 rounded w-3/4"></div>
+                              <div className="h-2 bg-white/20 rounded w-1/2"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-      {/* Featured Post */}
-      <section className="py-12 lg:py-16">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <div className="flex items-center gap-2 mb-6">
-            <Trophy className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">Featured Article</h2>
-          </div>
-          <Card className="overflow-hidden hover:shadow-xl transition-shadow cursor-pointer">
-            <div className="grid lg:grid-cols-2 gap-0">
-              <div className="relative h-64 lg:h-auto bg-muted">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Newspaper className="h-24 w-24 text-primary/20" />
-                </div>
+                      {/* Badge */}
+                      <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
+                        <span className="text-white text-xs font-medium">#{post.category}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <CardContent className="p-8 lg:p-10 flex flex-col justify-center">
-                <Badge className="w-fit mb-4">{featuredPost.category}</Badge>
-                <h3 className="text-2xl lg:text-3xl font-bold mb-4">{featuredPost.title}</h3>
-                <p className="text-muted-foreground mb-6">{featuredPost.excerpt}</p>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(featuredPost.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{featuredPost.readTime}</span>
-                  </div>
-                </div>
-                <Button>
-                  Read Full Article
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </CardContent>
-            </div>
-          </Card>
-        </div>
-      </section>
 
-      {/* Search and Filter */}
-      <section className="py-8 border-y bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <div className="space-y-4">
-            <div className="relative max-w-xl mx-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search articles..."
-                className="pl-10 h-12"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              {/* Navigation Arrows */}
+              <button 
+                onClick={prevSlide}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={nextSlide}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {categories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                  className="rounded-full"
-                >
-                  {category}
-                </Button>
+
+            {/* Featured Title */}
+            <div className="mt-4 px-2">
+              <h2 className="text-xl md:text-2xl font-bold text-foreground text-center leading-tight">
+                {featuredPosts[currentSlide].title}
+              </h2>
+            </div>
+
+            {/* Carousel Dots */}
+            <div className="flex justify-center gap-2 mt-4">
+              {featuredPosts.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    index === currentSlide ? "bg-[#B4F22E]" : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                />
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Blog Posts Grid */}
-      <section className="py-12 lg:py-20">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
+      {/* Category Tabs */}
+      <section className="px-4 py-4 border-b">
+        <div className="max-w-lg mx-auto">
+          <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-hide">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`whitespace-nowrap text-sm font-medium pb-2 border-b-2 transition-colors ${
+                  selectedCategory === category
+                    ? "text-[#B4F22E] border-[#B4F22E]"
+                    : "text-muted-foreground border-transparent hover:text-foreground"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Search Bar */}
+      <section className="px-4 py-4">
+        <div className="max-w-lg mx-auto">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Search"
+              className="pl-12 h-12 rounded-full border-2 bg-background"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Blog Posts */}
+      <section className="px-4 pb-8">
+        <div className="max-w-lg mx-auto space-y-6">
           {filteredPosts.length === 0 ? (
             <Card>
-              <CardContent className="p-12 text-center">
+              <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground">No articles found. Try adjusting your search.</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPosts.map((post) => (
-                <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
-                  <div className="relative h-48 bg-muted">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent group-hover:from-primary/30 transition-colors" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {post.category === "News" && <Newspaper className="h-16 w-16 text-primary/20" />}
-                      {post.category === "Guides" && <BookOpen className="h-16 w-16 text-primary/20" />}
-                      {post.category === "Market Analysis" && <TrendingUp className="h-16 w-16 text-primary/20" />}
-                      {!["News", "Guides", "Market Analysis"].includes(post.category) && <Newspaper className="h-16 w-16 text-primary/20" />}
-                    </div>
+            filteredPosts.map((post) => (
+              <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                {/* Article Banner */}
+                <div className={`relative h-48 md:h-56 bg-gradient-to-br ${post.gradient} overflow-hidden`}>
+                  {/* Pexly Logo */}
+                  <div className="absolute top-4 right-4">
+                    <span className="text-white/90 font-bold text-lg">Pexly</span>
                   </div>
-                  <CardContent className="p-6">
-                    <Badge variant="secondary" className="mb-3">{post.category}</Badge>
-                    <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
-                      {post.title}
-                    </h3>
-                    <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-                      {post.excerpt}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{post.readTime}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
 
-          {/* Load More */}
-          {filteredPosts.length > 0 && (
-            <div className="text-center mt-12">
-              <Button variant="outline" size="lg">
-                Load More Articles
-              </Button>
-            </div>
-          )}
-        </div>
-      </section>
+                  {/* Content */}
+                  <div className="absolute inset-0 p-6 flex flex-col justify-center">
+                    {post.hasCoins && (
+                      <>
+                        {/* Decorative coins */}
+                        <div className="absolute left-6 top-1/2 -translate-y-1/2">
+                          <div className="relative">
+                            <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                              <span className="text-2xl font-bold text-white">₿</span>
+                            </div>
+                            <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full"></div>
+                            <div className="absolute -bottom-2 -left-2 w-10 h-10 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full"></div>
+                          </div>
+                        </div>
+                        <div className="ml-auto mr-4 text-right text-white">
+                          <p className="text-2xl md:text-3xl font-bold">How to</p>
+                          <p className="text-2xl md:text-3xl font-bold">Earn Crypto</p>
+                          <p className="text-2xl md:text-3xl font-bold">without Trading</p>
+                          <p className="text-sm mt-2 text-white/80">The Smart Guide for Beginners</p>
+                        </div>
+                      </>
+                    )}
+                    
+                    {post.promo && (
+                      <>
+                        <div className="text-white">
+                          <p className="text-sm font-bold uppercase tracking-wider text-yellow-300">More Friends, More Coins</p>
+                          <p className="text-5xl md:text-6xl font-bold mt-2">{post.promo}</p>
+                        </div>
+                      </>
+                    )}
 
-      {/* Newsletter Section */}
-      <section className="py-12 lg:py-20 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="p-8 lg:p-12 text-center">
-              <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-                Subscribe to Our Newsletter
-              </h2>
-              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Get the latest articles, trading tips, and market insights delivered directly to your inbox.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="h-12"
-                />
-                <Button size="lg" className="sm:w-auto">
-                  Subscribe
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                    {!post.hasCoins && !post.promo && (
+                      <div className="text-white text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+                          <span className="text-2xl">📰</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category badge */}
+                  <div className="absolute bottom-4 right-4 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
+                    <span className="text-white text-xs font-medium">#{post.category}</span>
+                  </div>
+                </div>
+
+                {/* Article Info */}
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[#B4F22E] text-sm font-medium">{post.category}</span>
+                    <span className="text-muted-foreground text-sm">•</span>
+                    <span className="text-muted-foreground text-sm">{post.date}</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground leading-tight">
+                    {post.title}
+                  </h3>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </section>
 
