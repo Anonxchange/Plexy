@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Crown, Users, Coins, Layers, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { SiAmazonwebservices, SiGooglecloud, SiIntercom, SiHackerone, SiCircleci } from "react-icons/si";
 
 export default function Affiliate() {
   const partnerTypes = [
@@ -124,31 +125,44 @@ export default function Affiliate() {
           </h2>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
-            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
-              <span className="text-2xl font-bold text-muted-foreground">aws</span>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiAmazonwebservices className="w-10 h-10 text-[#FF9900] group-hover:text-[#FF9900]" />
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-[#FF9900]">AWS</span>
+              </div>
             </div>
-            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
-              <span className="text-lg font-semibold text-muted-foreground flex items-center gap-2">
-                <span className="text-blue-500">G</span>
-                <span className="text-red-500">o</span>
-                <span className="text-yellow-500">o</span>
-                <span className="text-blue-500">g</span>
-                <span className="text-green-500">l</span>
-                <span className="text-red-500">e</span>
-                <span className="ml-1 text-muted-foreground">Cloud</span>
-              </span>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiGooglecloud className="w-8 h-8 text-[#4285F4] group-hover:text-[#4285F4]" />
+                <span className="text-lg font-semibold text-muted-foreground group-hover:text-[#4285F4]">Google Cloud</span>
+              </div>
             </div>
-            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
-              <span className="text-xl font-bold text-muted-foreground">INTERCOM</span>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiIntercom className="w-8 h-8 text-[#1F8DED] group-hover:text-[#1F8DED]" />
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-[#1F8DED]">Intercom</span>
+              </div>
             </div>
-            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
-              <span className="text-xl font-bold text-muted-foreground">h1ackerone</span>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiHackerone className="w-8 h-8 text-[#494649] group-hover:text-foreground" />
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-foreground">HackerOne</span>
+              </div>
             </div>
-            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
-              <span className="text-xl font-bold text-muted-foreground">circleci</span>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <SiCircleci className="w-8 h-8 text-[#343434] group-hover:text-foreground" />
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-foreground">CircleCI</span>
+              </div>
             </div>
-            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all">
-              <span className="text-xl font-bold text-muted-foreground">sumsub</span>
+            <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <svg className="w-8 h-8" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100" height="100" rx="12" className="fill-[#21B573] group-hover:fill-[#21B573]"/>
+                  <path d="M25 35h50v8H25v-8zm0 14h35v8H25v-8zm0 14h50v8H25v-8z" className="fill-white"/>
+                </svg>
+                <span className="text-xl font-bold text-muted-foreground group-hover:text-[#21B573]">Sumsub</span>
+              </div>
             </div>
           </div>
         </div>
