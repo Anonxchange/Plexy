@@ -120,6 +120,12 @@ export function CreateOfferAdvanced() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    const defaultValue = 0;
+    setPriceOffset([defaultValue]);
+    setPremiumInput(defaultValue.toFixed(1));
+  }, [offerType]);
+
+  useEffect(() => {
     const fetchExchangeRate = async () => {
       if (currency !== "USD") {
         const rates = await getExchangeRates();
@@ -182,12 +188,16 @@ export function CreateOfferAdvanced() {
     ? parseFloat(fixedPrice) || marketRate
     : calculateFloatingPrice(marketRate, priceOffset[0]);
   
-  const priceRange = getPriceRange(marketRate, -10, 100);
+  const marginLimits = offerType === "buy" 
+    ? { min: -3, max: 0 }  
+    : { min: 0, max: 5 };   
+  
+  const priceRange = getPriceRange(marketRate, marginLimits.min, marginLimits.max);
   
   const handlePremiumInputChange = (value: string) => {
     setPremiumInput(value);
     const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue >= -10 && numValue <= 100) {
+    if (!isNaN(numValue) && numValue >= marginLimits.min && numValue <= marginLimits.max) {
       setPriceOffset([numValue]);
     }
   };
@@ -709,7 +719,7 @@ export function CreateOfferAdvanced() {
                           size="sm"
                           className="h-10 w-10"
                           onClick={() => {
-                            const newValue = Math.max(-10, priceOffset[0] - 1);
+                            const newValue = Math.max(marginLimits.min, priceOffset[0] - 0.5);
                             setPriceOffset([newValue]);
                             setPremiumInput(newValue.toFixed(1));
                           }}
@@ -723,8 +733,8 @@ export function CreateOfferAdvanced() {
                             onChange={(e) => handlePremiumInputChange(e.target.value)}
                             className="bg-background text-center text-lg font-bold pr-8"
                             step="0.1"
-                            min="-10"
-                            max="100"
+                            min={marginLimits.min}
+                            max={marginLimits.max}
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
                             %
@@ -735,7 +745,7 @@ export function CreateOfferAdvanced() {
                           size="sm"
                           className="h-10 w-10"
                           onClick={() => {
-                            const newValue = Math.min(100, priceOffset[0] + 1);
+                            const newValue = Math.min(marginLimits.max, priceOffset[0] + 0.5);
                             setPriceOffset([newValue]);
                             setPremiumInput(newValue.toFixed(1));
                           }}
@@ -747,16 +757,15 @@ export function CreateOfferAdvanced() {
                     <Slider
                       value={priceOffset}
                       onValueChange={handlePremiumSliderChange}
-                      min={-10}
-                      max={100}
+                      min={marginLimits.min}
+                      max={marginLimits.max}
                       step={0.1}
                       className="mt-2"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>-10%</span>
-                      <span>0%</span>
-                      <span>+50%</span>
-                      <span>+100%</span>
+                      <span>{marginLimits.min}%</span>
+                      <span>{marginLimits.max > 0 ? "0%" : ""}</span>
+                      <span>{marginLimits.max > 0 ? `+${marginLimits.max}%` : `${marginLimits.max}%`}</span>
                     </div>
                     
                     <div className="bg-background/50 rounded-lg p-3 border border-border/50">
