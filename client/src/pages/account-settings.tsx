@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
-import { getCountryInfo, getCountryPhoneCode, getAllCountryNames } from "@/lib/localization";
+import { getCountryInfo, getCountryPhoneCode, getAllCountryNames, countries } from "@/lib/localization";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -1184,55 +1184,11 @@ export default function AccountSettings() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              <SelectItem value="usd">🇺🇸 US Dollar (USD)</SelectItem>
-              <SelectItem value="eur">🇪🇺 Euro (EUR)</SelectItem>
-              <SelectItem value="gbp">🇬🇧 British Pound (GBP)</SelectItem>
-              <SelectItem value="ngn">🇳🇬 Nigerian Naira (NGN)</SelectItem>
-              <SelectItem value="ghs">🇬🇭 Ghanaian Cedi (GHS)</SelectItem>
-              <SelectItem value="kes">🇰🇪 Kenyan Shilling (KES)</SelectItem>
-              <SelectItem value="zar">🇿🇦 South African Rand (ZAR)</SelectItem>
-              <SelectItem value="egp">🇪🇬 Egyptian Pound (EGP)</SelectItem>
-              <SelectItem value="etb">🇪🇹 Ethiopian Birr (ETB)</SelectItem>
-              <SelectItem value="tzs">🇹🇿 Tanzanian Shilling (TZS)</SelectItem>
-              <SelectItem value="ugx">🇺🇬 Ugandan Shilling (UGX)</SelectItem>
-              <SelectItem value="mad">🇲🇦 Moroccan Dirham (MAD)</SelectItem>
-              <SelectItem value="dzd">🇩🇿 Algerian Dinar (DZD)</SelectItem>
-              <SelectItem value="xof">🇸🇳 West African CFA Franc (XOF)</SelectItem>
-              <SelectItem value="rwf">🇷🇼 Rwandan Franc (RWF)</SelectItem>
-              <SelectItem value="zmw">🇿🇲 Zambian Kwacha (ZMW)</SelectItem>
-              <SelectItem value="cad">🇨🇦 Canadian Dollar (CAD)</SelectItem>
-              <SelectItem value="aud">🇦🇺 Australian Dollar (AUD)</SelectItem>
-              <SelectItem value="jpy">🇯🇵 Japanese Yen (JPY)</SelectItem>
-              <SelectItem value="chf">🇨🇭 Swiss Franc (CHF)</SelectItem>
-              <SelectItem value="cny">🇨🇳 Chinese Yuan (CNY)</SelectItem>
-              <SelectItem value="inr">🇮🇳 Indian Rupee (INR)</SelectItem>
-              <SelectItem value="krw">🇰🇷 South Korean Won (KRW)</SelectItem>
-              <SelectItem value="sgd">🇸🇬 Singapore Dollar (SGD)</SelectItem>
-              <SelectItem value="hkd">🇭🇰 Hong Kong Dollar (HKD)</SelectItem>
-              <SelectItem value="myr">🇲🇾 Malaysian Ringgit (MYR)</SelectItem>
-              <SelectItem value="thb">🇹🇭 Thai Baht (THB)</SelectItem>
-              <SelectItem value="php">🇵🇭 Philippine Peso (PHP)</SelectItem>
-              <SelectItem value="idr">🇮🇩 Indonesian Rupiah (IDR)</SelectItem>
-              <SelectItem value="vnd">🇻🇳 Vietnamese Dong (VND)</SelectItem>
-              <SelectItem value="pkr">🇵🇰 Pakistani Rupee (PKR)</SelectItem>
-              <SelectItem value="bdt">🇧🇩 Bangladeshi Taka (BDT)</SelectItem>
-              <SelectItem value="brl">🇧🇷 Brazilian Real (BRL)</SelectItem>
-              <SelectItem value="mxn">🇲🇽 Mexican Peso (MXN)</SelectItem>
-              <SelectItem value="ars">🇦🇷 Argentine Peso (ARS)</SelectItem>
-              <SelectItem value="cop">🇨🇴 Colombian Peso (COP)</SelectItem>
-              <SelectItem value="clp">🇨🇱 Chilean Peso (CLP)</SelectItem>
-              <SelectItem value="pen">🇵🇪 Peruvian Sol (PEN)</SelectItem>
-              <SelectItem value="aed">🇦🇪 UAE Dirham (AED)</SelectItem>
-              <SelectItem value="sar">🇸🇦 Saudi Riyal (SAR)</SelectItem>
-              <SelectItem value="try">🇹🇷 Turkish Lira (TRY)</SelectItem>
-              <SelectItem value="ils">🇮🇱 Israeli Shekel (ILS)</SelectItem>
-              <SelectItem value="rub">🇷🇺 Russian Ruble (RUB)</SelectItem>
-              <SelectItem value="uah">🇺🇦 Ukrainian Hryvnia (UAH)</SelectItem>
-              <SelectItem value="nzd">🇳🇿 New Zealand Dollar (NZD)</SelectItem>
-              <SelectItem value="sek">🇸🇪 Swedish Krona (SEK)</SelectItem>
-              <SelectItem value="nok">🇳🇴 Norwegian Krone (NOK)</SelectItem>
-              <SelectItem value="dkk">🇩🇰 Danish Krone (DKK)</SelectItem>
-              <SelectItem value="pln">🇵🇱 Polish Zloty (PLN)</SelectItem>
+              {countries.map((country) => (
+                <SelectItem key={country.currencyCode} value={country.currencyCode.toLowerCase()}>
+                  {country.flag} {country.currency} ({country.currencyCode})
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button
@@ -1310,31 +1266,15 @@ export default function AccountSettings() {
               <SelectTrigger className="w-full h-12">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="+234">
-                  <div className="flex items-center gap-2">
-                    <span>🇳🇬</span>
-                    <span>Nigeria (+234)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="+1">
-                  <div className="flex items-center gap-2">
-                    <span>🇺🇸</span>
-                    <span>United States (+1)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="+44">
-                  <div className="flex items-center gap-2">
-                    <span>🇬🇧</span>
-                    <span>United Kingdom (+44)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="+91">
-                  <div className="flex items-center gap-2">
-                    <span>🇮🇳</span>
-                    <span>India (+91)</span>
-                  </div>
-                </SelectItem>
+              <SelectContent className="max-h-[300px]">
+                {countries.map((country) => (
+                  <SelectItem key={country.phoneCode} value={country.phoneCode}>
+                    <div className="flex items-center gap-2">
+                      <span>{country.flag}</span>
+                      <span>{country.name} ({country.phoneCode})</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1355,15 +1295,25 @@ export default function AccountSettings() {
                 <Check className="h-5 w-5 text-primary" />
               </div>
             )}
-            {!phoneVerified && phone && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSaveProfile}
-              >
-                Verify
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (phone.trim()) {
+                  setPendingPhoneNumber(phone.trim());
+                  setPendingCountryCode(countryCodeForPhone);
+                  setShowPhoneVerificationDialog(true);
+                } else {
+                  toast({
+                    title: "Error",
+                    description: "Please enter a phone number",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              {phoneVerified && phone ? "Change" : "Verify"}
+            </Button>
           </div>
         </div>
         {phoneVerified && phone && (
