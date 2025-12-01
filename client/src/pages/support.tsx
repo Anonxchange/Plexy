@@ -5,247 +5,208 @@ import {
   MessageCircle,
   Mail,
   Phone,
-  BookOpen,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { FloatingHelpButton } from "@/components/floating-help-button";
-import { Link } from "wouter";
 
 export default function Support() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showHelpCenter, setShowHelpCenter] = useState(false);
 
-  const knowledgeBaseCategories = [
+  const helpCategories = [
     {
-      title: "Getting Started",
-      articles: [
-        "How to create a Pexly account",
-        "Verifying your identity",
-        "How to deposit cryptocurrency",
-        "Understanding P2P trading",
-      ],
+      title: "Get Started",
+      description: "Get started with secure trading",
+      icon: "🚀",
     },
     {
-      title: "Trading",
-      articles: [
-        "How to buy crypto on P2P",
-        "How to sell crypto on P2P",
-        "Understanding escrow system",
-        "Dispute resolution process",
-      ],
+      title: "Account - Security & Privacy",
+      description: "Your privacy. Our priority.",
+      icon: "🔒",
     },
     {
-      title: "Wallet & Security",
-      articles: [
-        "Securing your wallet",
-        "Two-factor authentication setup",
-        "Withdrawal guidelines",
-        "Transaction fees explained",
-      ],
+      title: "Wallet & Bank Transfer",
+      description: "Manage your wallet and transfers",
+      icon: "💳",
     },
     {
-      title: "Payment Methods",
-      articles: [
-        "Supported payment methods",
-        "Adding a payment method",
-        "Bank transfer guide",
-        "Mobile money transfers",
-      ],
-    },
-  ];
-
-  const supportOptions = [
-    {
-      icon: MessageCircle,
-      title: "Live Chat",
-      description: "Chat with our support team in real-time",
-      action: "Start Chat",
-      available: "24/7",
+      title: "Swap - Buy & Sell Crypto",
+      description: "Buy & sell crypto instantly with Swap",
+      icon: "🔄",
     },
     {
-      icon: Mail,
-      title: "Email Support",
-      description: "Send us an email and we'll respond within 24 hours",
-      action: "Send Email",
-      email: "support@pexly.com",
+      title: "P2P Trading Guide",
+      description: "Learn P2P trading on Pexly",
+      icon: "👥",
     },
     {
-      icon: Phone,
-      title: "Phone Support",
-      description: "Speak directly with our support team",
-      action: "Call Now",
-      available: "Mon–Fri, 9AM–6PM EST",
+      title: "Gift Cards & Rewards",
+      description: "Earn rewards with Pexly",
+      icon: "🎁",
+    },
+    {
+      title: "Affiliate & Referral Program",
+      description: "Earn crypto by inviting friends",
+      icon: "🤝",
+    },
+    {
+      title: "Other Knowledge",
+      description: "Explore crypto & blockchain tips",
+      icon: "📚",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section (image removed) */}
-      <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-background py-20 px-4">
-        <div className="max-w-6xl mx-auto text-center space-y-8">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold">
-            Hi, how can we help you?
-          </h1>
-          <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
-            Find answers, explore guides, or reach out to our support team.
-          </p>
-          <div className="relative max-w-2xl mx-auto px-2">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-purple-600/80 to-purple-700/60 text-white px-4 py-12 relative">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-start justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold mb-4">Hi</h1>
+              <p className="text-lg opacity-90">How can we help you today?</p>
+            </div>
+            <button
+              onClick={() => setShowHelpCenter(false)}
+              className="p-2 hover:bg-white/20 rounded-full transition"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative max-w-2xl">
             <Input
               type="text"
-              placeholder="Enter your question here..."
+              placeholder="Search for help"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12 sm:h-14 pl-4 pr-12 text-base sm:text-lg rounded-xl"
+              className="h-12 pl-4 pr-12 text-base rounded-lg bg-white/20 text-white placeholder:text-white/60 border-0"
             />
             <Button
               size="icon"
               variant="ghost"
-              className="absolute right-3 top-1/2 -translate-y-1/2"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
             >
-              <Search className="h-5 w-5 text-muted-foreground" />
+              <Search className="h-5 w-5" />
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Browse Articles */}
-      <section className="max-w-4xl mx-auto px-4 -mt-10 mb-12">
-        <Card className="bg-card hover:shadow-lg transition-shadow cursor-pointer rounded-xl">
-          <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <BookOpen className="w-12 h-12 text-lime-600" />
+      {/* Help Center Content */}
+      <section className="flex-1 max-w-6xl mx-auto w-full px-4 py-8">
+        {/* Ask a Question Card */}
+        <Card className="mb-6 border-0 shadow-md">
+          <CardContent className="p-6 flex items-start gap-4">
+            <MessageCircle className="w-6 h-6 text-[#B4F22E] flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1">Ask a question</h3>
+              <p className="text-sm text-muted-foreground">We are here to help.</p>
             </div>
-            <div className="flex-1 text-center sm:text-left">
-              <h2 className="text-2xl font-bold mb-2">Browse articles</h2>
-              <p className="text-muted-foreground">
-                Explore How-To guides and learn best practices from our knowledge base
-              </p>
-            </div>
-            <ChevronRight className="h-6 w-6 text-muted-foreground hidden sm:block" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />
           </CardContent>
         </Card>
-      </section>
 
-      {/* Knowledge Base */}
-      <section className="max-w-6xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <img
-            src="/assets/IMG_2014.jpeg"
-            alt="Knowledge base"
-            className="w-full max-w-5xl mx-auto h-48 sm:h-64 md:h-80 object-cover rounded-xl mb-8"
-          />
-          <h2 className="text-3xl font-bold mb-2">Knowledge Base</h2>
-          <p className="text-muted-foreground">View all articles</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {knowledgeBaseCategories.map((category, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow rounded-xl">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">{category.title}</h3>
-                <ul className="space-y-3">
-                  {category.articles.map((article, i) => (
-                    <li key={i}>
-                      <a
-                        href="#"
-                        className="text-muted-foreground hover:text-primary transition flex items-center gap-2"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                        {article}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Contact Support Options */}
-      <section className="max-w-6xl mx-auto px-4 py-12 bg-muted/30 rounded-xl">
-        <div className="text-center mb-12">
-          <img
-            src="/assets/IMG_2013.jpeg"
-            alt="Need help"
-            className="w-full max-w-5xl mx-auto h-48 sm:h-64 md:h-80 object-cover rounded-xl mb-8"
-          />
-          <h2 className="text-3xl font-bold mb-2">Need More Help?</h2>
-          <p className="text-muted-foreground">Choose how you'd like to reach us</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {supportOptions.map((option, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow rounded-xl">
-              <CardContent className="p-6 text-center space-y-4">
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto">
-                  <option.icon className="w-12 h-12 text-lime-600" />
+        {/* Help Categories */}
+        <div className="space-y-3">
+          {helpCategories.map((category, index) => (
+            <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4 flex items-start gap-4">
+                <span className="text-2xl">{category.icon}</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground">{category.title}</h3>
+                  <p className="text-sm text-muted-foreground">{category.description}</p>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-1">{option.title}</h3>
-                  <p className="text-sm text-muted-foreground">{option.description}</p>
-                  {option.available && (
-                    <p className="text-xs text-muted-foreground">
-                      Available: {option.available}
-                    </p>
-                  )}
-                  {option.email && (
-                    <p className="text-xs text-muted-foreground">{option.email}</p>
-                  )}
-                </div>
-                <Button className="w-full">{option.action}</Button>
+                <ChevronRight className="w-5 h-5 text-[#B4F22E] flex-shrink-0 mt-1" />
               </CardContent>
             </Card>
           ))}
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="max-w-4xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <img
-            src="/assets/IMG_2012.jpeg"
-            alt="FAQ"
-            className="w-full max-w-5xl mx-auto h-48 sm:h-64 md:h-80 object-cover rounded-xl mb-8"
-          />
-          <h2 className="text-3xl font-bold mb-2">Frequently Asked Questions</h2>
-          <p className="text-muted-foreground">Quick answers to common questions</p>
+      {/* Bottom Navigation (for mobile-like experience) */}
+      <div className="border-t bg-background sticky bottom-0">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-around">
+          <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition">
+            <div className="w-6 h-6 rounded bg-purple-500/20 flex items-center justify-center">
+              <span className="text-sm">🏠</span>
+            </div>
+            <span className="text-xs">Home</span>
+          </button>
+          <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition">
+            <MessageCircle className="w-6 h-6" />
+            <span className="text-xs">Messages</span>
+          </button>
+          <button className="flex flex-col items-center gap-1 text-[#B4F22E]">
+            <span className="text-lg">❓</span>
+            <span className="text-xs">Help</span>
+          </button>
         </div>
+      </div>
 
-        <div className="space-y-4">
-          {[
-            {
-              q: "How long does verification take?",
-              a: "Basic verification usually takes 5–10 minutes. Advanced verification may take up to 24 hours.",
-            },
-            {
-              q: "What are the trading fees?",
-              a: "P2P trading is free. Standard trading fees range from 0.1% to 0.5% depending on your volume.",
-            },
-            {
-              q: "How do I withdraw my funds?",
-              a: "Go to Wallet > Select asset > Withdraw. Enter the amount and destination address.",
-            },
-            {
-              q: "Is my crypto safe on Pexly?",
-              a: "Yes, we use industry-leading security including cold storage and multi-signature wallets.",
-            },
-          ].map((faq, index) => (
-            <Card key={index} className="rounded-xl">
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">{faq.q}</h3>
-                <p className="text-muted-foreground">{faq.a}</p>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Messages Section Modal (hidden by default) */}
+      {showHelpCenter && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4 max-h-96">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Messages</h2>
+                <button onClick={() => setShowHelpCenter(false)}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <Tabs defaultValue="open" className="w-full">
+                <TabsList className="w-full bg-transparent p-0 border-b">
+                  <TabsTrigger
+                    value="open"
+                    className="flex-1 border-b-2 border-transparent data-[state=active]:border-[#B4F22E] data-[state=active]:bg-transparent rounded-none"
+                  >
+                    Open
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="done"
+                    className="flex-1 border-b-2 border-transparent data-[state=active]:border-[#B4F22E] data-[state=active]:bg-transparent rounded-none"
+                  >
+                    Done
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="open" className="mt-8 text-center space-y-4">
+                  <div className="flex justify-center">
+                    <MessageCircle className="w-12 h-12 text-muted-foreground/30" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Messages</h3>
+                    <p className="text-sm text-muted-foreground">No messages yet</p>
+                  </div>
+                  <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold">
+                    Send us a message
+                  </Button>
+                </TabsContent>
+
+                <TabsContent value="done" className="mt-8 text-center space-y-4">
+                  <div className="flex justify-center">
+                    <MessageCircle className="w-12 h-12 text-muted-foreground/30" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Messages</h3>
+                    <p className="text-sm text-muted-foreground">No completed messages</p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         </div>
-      </section>
+      )}
 
       <PexlyFooter />
-      
-      {/* Floating Help Button */}
       <FloatingHelpButton />
     </div>
   );
