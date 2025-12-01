@@ -123,6 +123,7 @@ export default function AccountSettings() {
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
+  const [country, setCountry] = useState(""); // Added state for country
 
   // Security settings
   const [smsAuth, setSmsAuth] = useState(false);
@@ -245,6 +246,17 @@ export default function AccountSettings() {
     }
   }, [profileData]);
 
+  // Load country from profile on mount
+  useEffect(() => {
+    if (user) {
+      fetchProfileData();
+      // Also try to load country from user metadata if not in profile
+      if (!country && user.user_metadata?.country) {
+        setCountry(user.user_metadata.country);
+      }
+    }
+  }, [user]);
+
   const fetchProfileData = async () => {
     try {
       // First get the latest auth user data
@@ -306,6 +318,11 @@ export default function AccountSettings() {
         const isVerified = authUser?.phone_confirmed_at ? true : (data.phone_verified || false);
         setPhoneVerified(isVerified);
         setCurrency(data.preferred_currency || 'usd');
+
+        // Set country from profile if available
+        if (data.country && !country) {
+          setCountry(data.country);
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -676,6 +693,7 @@ export default function AccountSettings() {
         username: username.trim(),
         bio: bio,
         preferred_currency: currency,
+        country: country, // Save the selected country
       };
 
       // Sync phone from auth to profile if it exists
@@ -755,7 +773,7 @@ export default function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to upload avatar",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setUploadingAvatar(false);
@@ -792,7 +810,7 @@ export default function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to update password",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -841,7 +859,7 @@ export default function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to save payment method",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -884,7 +902,7 @@ export default function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to save online wallet",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -927,7 +945,7 @@ export default function AccountSettings() {
       toast({
         title: "Error",
         description: "Failed to save mobile money wallet",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -3417,7 +3435,7 @@ export default function AccountSettings() {
       default:
         return (
           <Card>
-            <CardContent className="p-12 text-center">
+            <CardContent className="p-12">
               <p className="text-muted-foreground">This section is coming soon</p>
             </CardContent>
           </Card>
