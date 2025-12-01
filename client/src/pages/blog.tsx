@@ -1,9 +1,19 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Clock, User } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { createClient } from "@/lib/supabase";
+
+function calculateReadTime(content: string): string {
+  if (!content) return "1 min read";
+  const wordsPerMinute = 200;
+  const textContent = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  const wordCount = textContent.split(' ').filter(word => word.length > 0).length;
+  const readTime = Math.ceil(wordCount / wordsPerMinute);
+  return `${readTime} min read`;
+}
 
 const categories = [
   "Latest news",
@@ -65,6 +75,7 @@ const gradients = [
 
 export default function Blog() {
   const supabase = createClient();
+  const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState("Latest news");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -268,71 +279,71 @@ export default function Blog() {
             </Card>
           ) : (
             filteredPosts.map((post) => (
-              <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                {/* Article Banner */}
-                <div className={`relative h-48 md:h-56 bg-gradient-to-br ${post.gradient} overflow-hidden`}>
-                  {/* Pexly Logo */}
-                  <div className="absolute top-4 right-4">
-                    <span className="text-white/90 font-bold text-lg">Pexly</span>
-                  </div>
-
-                  {/* Content */}
-                  <div className="absolute inset-0 p-6 flex flex-col justify-center">
-                    {post.hasCoins && (
-                      <>
-                        {/* Decorative coins */}
-                        <div className="absolute left-6 top-1/2 -translate-y-1/2">
-                          <div className="relative">
-                            <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                              <span className="text-2xl font-bold text-white">₿</span>
-                            </div>
-                            <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full"></div>
-                            <div className="absolute -bottom-2 -left-2 w-10 h-10 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full"></div>
+              <Card 
+                key={post.id} 
+                className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                onClick={() => setLocation(`/blog/${post.id}`)}
+              >
+                {/* Cover Image or Gradient Banner */}
+                <div className="relative h-48 md:h-56 overflow-hidden">
+                  {post.image_url ? (
+                    <>
+                      <img
+                        src={post.image_url}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                    </>
+                  ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${post.gradient}`}>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center text-white">
+                          <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+                            <span className="text-2xl">📰</span>
                           </div>
                         </div>
-                        <div className="ml-auto mr-4 text-right text-white">
-                          <p className="text-2xl md:text-3xl font-bold">How to</p>
-                          <p className="text-2xl md:text-3xl font-bold">Earn Crypto</p>
-                          <p className="text-2xl md:text-3xl font-bold">without Trading</p>
-                          <p className="text-sm mt-2 text-white/80">The Smart Guide for Beginners</p>
-                        </div>
-                      </>
-                    )}
-
-                    {post.promo && (
-                      <>
-                        <div className="text-white">
-                          <p className="text-sm font-bold uppercase tracking-wider text-yellow-300">More Friends, More Coins</p>
-                          <p className="text-5xl md:text-6xl font-bold mt-2">{post.promo}</p>
-                        </div>
-                      </>
-                    )}
-
-                    {!post.hasCoins && !post.promo && (
-                      <div className="text-white text-center">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
-                          <span className="text-2xl">📰</span>
-                        </div>
                       </div>
-                    )}
+                    </div>
+                  )}
+                  
+                  {/* Pexly Logo */}
+                  <div className="absolute top-4 left-4">
+                    <span className="text-white/90 font-bold text-lg drop-shadow-md">Pexly</span>
                   </div>
 
                   {/* Category badge */}
-                  <div className="absolute bottom-4 right-4 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
-                    <span className="text-white text-xs font-medium">#{post.category}</span>
+                  <div className="absolute top-4 right-4 bg-[#B4F22E] backdrop-blur-sm rounded-full px-3 py-1">
+                    <span className="text-black text-xs font-semibold">{post.category}</span>
                   </div>
                 </div>
 
                 {/* Article Info */}
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[#B4F22E] text-sm font-medium">{post.category}</span>
-                    <span className="text-muted-foreground text-sm">•</span>
-                    <span className="text-muted-foreground text-sm">{post.date}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-foreground leading-tight">
+                <CardContent className="p-5">
+                  <h3 className="text-lg font-bold text-foreground leading-tight mb-3 line-clamp-2 group-hover:text-[#B4F22E] transition-colors">
                     {post.title}
                   </h3>
+                  
+                  {post.excerpt && (
+                    <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                      {post.excerpt}
+                    </p>
+                  )}
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        <span>{post.author || 'Pexly Team'}</span>
+                      </div>
+                      <span>•</span>
+                      <span>{post.date}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[#B4F22E] font-medium">
+                      <Clock className="h-4 w-4" />
+                      <span>{post.read_time || calculateReadTime(post.content)}</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))
