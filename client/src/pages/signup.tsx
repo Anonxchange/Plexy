@@ -2,13 +2,63 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Sun, Moon, Zap } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon, Zap, MapPin } from "lucide-react";
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
 import { createClient } from "@/lib/supabase";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { useTheme } from "@/components/theme-provider";
 import { amlScreening } from "@/lib/security/aml-screening";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const countries = [
+  { code: "NG", name: "Nigeria", flag: "🇳🇬" },
+  { code: "US", name: "United States", flag: "🇺🇸" },
+  { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "GH", name: "Ghana", flag: "🇬🇭" },
+  { code: "KE", name: "Kenya", flag: "🇰🇪" },
+  { code: "ZA", name: "South Africa", flag: "🇿🇦" },
+  { code: "EG", name: "Egypt", flag: "🇪🇬" },
+  { code: "MA", name: "Morocco", flag: "🇲🇦" },
+  { code: "CA", name: "Canada", flag: "🇨🇦" },
+  { code: "AU", name: "Australia", flag: "🇦🇺" },
+  { code: "IN", name: "India", flag: "🇮🇳" },
+  { code: "PH", name: "Philippines", flag: "🇵🇭" },
+  { code: "ID", name: "Indonesia", flag: "🇮🇩" },
+  { code: "MY", name: "Malaysia", flag: "🇲🇾" },
+  { code: "SG", name: "Singapore", flag: "🇸🇬" },
+  { code: "TH", name: "Thailand", flag: "🇹🇭" },
+  { code: "VN", name: "Vietnam", flag: "🇻🇳" },
+  { code: "AE", name: "United Arab Emirates", flag: "🇦🇪" },
+  { code: "SA", name: "Saudi Arabia", flag: "🇸🇦" },
+  { code: "BR", name: "Brazil", flag: "🇧🇷" },
+  { code: "MX", name: "Mexico", flag: "🇲🇽" },
+  { code: "AR", name: "Argentina", flag: "🇦🇷" },
+  { code: "CL", name: "Chile", flag: "🇨🇱" },
+  { code: "CO", name: "Colombia", flag: "🇨🇴" },
+  { code: "FR", name: "France", flag: "🇫🇷" },
+  { code: "DE", name: "Germany", flag: "🇩🇪" },
+  { code: "IT", name: "Italy", flag: "🇮🇹" },
+  { code: "ES", name: "Spain", flag: "🇪🇸" },
+  { code: "NL", name: "Netherlands", flag: "🇳🇱" },
+  { code: "BE", name: "Belgium", flag: "🇧🇪" },
+  { code: "CH", name: "Switzerland", flag: "🇨🇭" },
+  { code: "SE", name: "Sweden", flag: "🇸🇪" },
+  { code: "NO", name: "Norway", flag: "🇳🇴" },
+  { code: "DK", name: "Denmark", flag: "🇩🇰" },
+  { code: "PL", name: "Poland", flag: "🇵🇱" },
+  { code: "CN", name: "China", flag: "🇨🇳" },
+  { code: "JP", name: "Japan", flag: "🇯🇵" },
+  { code: "KR", name: "South Korea", flag: "🇰🇷" },
+  { code: "PK", name: "Pakistan", flag: "🇵🇰" },
+  { code: "BD", name: "Bangladesh", flag: "🇧🇩" },
+];
 
 export function SignUp() {
   const [signupMethod, setSignupMethod] = useState<"email" | "phone">("email");
@@ -16,6 +66,8 @@ export function SignUp() {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [countryCode, setCountryCode] = useState("+234");
+  const [country, setCountry] = useState("NG");
+  const [detectingCountry, setDetectingCountry] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -30,6 +82,79 @@ export function SignUp() {
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
+
+  // Auto-detect country on mount
+  useEffect(() => {
+    detectCountry();
+  }, []);
+
+  const detectCountry = async () => {
+    setDetectingCountry(true);
+    try {
+      const response = await fetch('https://ipapi.co/json/');
+      const data = await response.json();
+      
+      if (data.country_code) {
+        const detectedCountry = countries.find(c => c.code === data.country_code);
+        if (detectedCountry) {
+          setCountry(data.country_code);
+          
+          // Also update phone country code based on detected country
+          const countryToPhoneCode: { [key: string]: string } = {
+            'NG': '+234',
+            'US': '+1',
+            'GB': '+44',
+            'GH': '+233',
+            'KE': '+254',
+            'ZA': '+27',
+            'EG': '+20',
+            'MA': '+212',
+            'CA': '+1',
+            'AU': '+61',
+            'IN': '+91',
+            'PH': '+63',
+            'ID': '+62',
+            'MY': '+60',
+            'SG': '+65',
+            'TH': '+66',
+            'VN': '+84',
+            'AE': '+971',
+            'SA': '+966',
+            'BR': '+55',
+            'MX': '+52',
+            'AR': '+54',
+            'CL': '+56',
+            'CO': '+57',
+            'FR': '+33',
+            'DE': '+49',
+            'IT': '+39',
+            'ES': '+34',
+            'NL': '+31',
+            'BE': '+32',
+            'CH': '+41',
+            'SE': '+46',
+            'NO': '+47',
+            'DK': '+45',
+            'PL': '+48',
+            'CN': '+86',
+            'JP': '+81',
+            'KR': '+82',
+            'PK': '+92',
+            'BD': '+880',
+          };
+          
+          if (countryToPhoneCode[data.country_code]) {
+            setCountryCode(countryToPhoneCode[data.country_code]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to detect country:', error);
+      // Keep default Nigeria if detection fails
+    } finally {
+      setDetectingCountry(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -73,14 +198,10 @@ export function SignUp() {
       
       // Basic AML screening before account creation
       try {
-        // Extract country from email domain or use default
-        const emailDomain = email.split('@')[1];
-        const defaultCountry = "US"; // Will be enhanced with actual country detection
-        
         const sanctions = await amlScreening.screenUser(
           "pending", // ID not yet created
           fullName,
-          defaultCountry
+          country
         );
 
         if (sanctions.length > 0) {
@@ -113,6 +234,15 @@ export function SignUp() {
         });
         const { data } = await supabase.auth.getUser();
         if (data.user) {
+          // Save country to user profile
+          await supabase.from('user_profiles').upsert({
+            id: data.user.id,
+            country: country,
+            display_name: fullName,
+          }, {
+            onConflict: 'id'
+          });
+          
           setUserId(data.user.id);
           setStep("phone");
         }
@@ -145,6 +275,7 @@ export function SignUp() {
           phone_number: verifiedPhoneNumber,
           phone_verified: true,
           display_name: fullName,
+          country: country,
         }, {
           onConflict: 'id'
         });
@@ -297,6 +428,38 @@ export function SignUp() {
                       : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
                   } focus:outline-none transition-colors`}
                 />
+              </div>
+
+              {/* Country Selection */}
+              <div className="mb-6">
+                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Country<span className="text-red-500">*</span>
+                  {detectingCountry && (
+                    <span className="ml-2 text-xs text-lime-400">Detecting...</span>
+                  )}
+                </label>
+                <Select value={country} onValueChange={setCountry}>
+                  <SelectTrigger className={`w-full h-12 ${
+                    isDark 
+                      ? 'bg-gray-900 text-white border border-gray-800' 
+                      : 'bg-gray-50 text-black border border-gray-200'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {countries.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        <span className="flex items-center gap-2">
+                          <span>{c.flag}</span>
+                          <span>{c.name}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Email or Phone */}
