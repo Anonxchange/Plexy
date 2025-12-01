@@ -233,23 +233,9 @@ export default function AccountSettings() {
   useEffect(() => {
     if (profileData) {
       if (profileData.country) {
-        setAccountCountry(profileData.country);
-        // Map country to default currency
-        const countryToCurrency: { [key: string]: string } = {
-          'NG': 'Nigerian Naira',
-          'GH': 'Ghanaian Cedi',
-          'KE': 'Kenyan Shilling',
-          'ZA': 'South African Rand',
-          'EG': 'Egyptian Pound',
-          'US': 'US Dollar',
-          'GB': 'British Pound',
-          'CA': 'Canadian Dollar',
-          'AU': 'Australian Dollar',
-          'IN': 'Indian Rupee',
-        };
-        // Only set accountCurrency if it's not already set or if it's a default value that needs overriding
-        if (!accountCurrency || accountCurrency === 'Nigerian Naira') { // Assuming 'Nigerian Naira' is a default, adjust if needed
-          setAccountCurrency(countryToCurrency[profileData.country] || 'Nigerian Naira');
+        // Only update if we don't have a country set yet
+        if (!accountCountry) {
+          setAccountCountry(profileData.country);
         }
       }
       if (profileData.phone_number) {
