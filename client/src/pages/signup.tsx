@@ -399,11 +399,14 @@ export function SignUp() {
           onConflict: 'id'
         });
 
+        // Sign out the user after successful signup
+        await supabase.auth.signOut();
+
         toast({
           title: "Success!",
-          description: "Phone verified! Account created successfully!",
+          description: "Account created successfully! Please sign in to continue.",
         });
-        setLocation("/dashboard");
+        setLocation("/signin");
       }
     } else if (userId && userId !== "pending") {
       // Email signup → Adding phone to existing email account
@@ -412,20 +415,26 @@ export function SignUp() {
         phone_verified: true,
       }).eq('id', userId);
 
+      // Sign out the user after successful signup
+      await supabase.auth.signOut();
+
       toast({
         title: "Success!",
-        description: "Phone verified successfully!",
+        description: "Account created successfully! Please sign in to continue.",
       });
-      setLocation("/dashboard");
+      setLocation("/signin");
     }
   };
 
-  const handleSkipPhone = () => {
+  const handleSkipPhone = async () => {
+    // Sign out the user after successful signup
+    await supabase.auth.signOut();
+
     toast({
-      title: "Skipped",
-      description: "You can verify your phone later in settings",
+      title: "Account Created!",
+      description: "Please sign in to continue. You can verify your phone later in settings.",
     });
-    setLocation("/dashboard");
+    setLocation("/signin");
   };
 
   return (
