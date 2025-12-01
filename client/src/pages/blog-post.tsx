@@ -147,85 +147,101 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="sticky top-16 z-40 bg-background/95 backdrop-blur border-b">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation('/blog')}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Blog
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={handleShare}>
-              <Share2 className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Bookmark className="h-4 w-4" />
-            </Button>
-          </div>
+      {/* Full-width image */}
+      {post.image_url && (
+        <div className="relative w-full h-64 md:h-96 overflow-hidden">
+          <img
+            src={post.image_url}
+            alt={post.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
-      </div>
+      )}
 
-      <article className="max-w-4xl mx-auto px-4 py-8">
-        {post.image_url && (
-          <div className="relative w-full h-64 md:h-96 rounded-2xl overflow-hidden mb-8">
-            <img
-              src={post.image_url}
-              alt={post.title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-4 left-4">
-              <Badge className="bg-[#B4F22E] text-black hover:bg-[#9FD624]">
-                {post.category}
-              </Badge>
-            </div>
-          </div>
-        )}
-
-        {!post.image_url && (
-          <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden mb-8 bg-gradient-to-br from-[#B4F22E]/80 via-[#8BC34A]/60 to-[#4CAF50]/80">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center text-white">
-                <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
-                  <span className="text-3xl">📰</span>
-                </div>
+      {!post.image_url && (
+        <div className="relative w-full h-48 md:h-64 overflow-hidden bg-gradient-to-br from-[#B4F22E]/80 via-[#8BC34A]/60 to-[#4CAF50]/80">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-white">
+              <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+                <span className="text-3xl">📰</span>
               </div>
             </div>
-            <div className="absolute bottom-4 left-4">
-              <Badge className="bg-white/20 backdrop-blur text-white hover:bg-white/30">
-                {post.category}
-              </Badge>
-            </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Back button and content */}
+      <article className="max-w-4xl mx-auto px-4 py-8">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setLocation('/blog')}
+          className="mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Blog
+        </Button>
 
         <header className="mb-8">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight mb-6">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight mb-4">
             {post.title}
           </h1>
           
-          <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-[#B4F22E]/20 flex items-center justify-center">
-                <User className="h-5 w-5 text-[#B4F22E]" />
-              </div>
-              <div>
-                <p className="font-medium text-foreground">{post.author}</p>
-                <p className="text-sm">Author</p>
-              </div>
+              <Badge variant="outline">{post.category}</Badge>
             </div>
             
-            <Separator orientation="vertical" className="h-8" />
+            <Separator orientation="vertical" className="h-4" />
             
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              <span>{formattedDate}</span>
+              <span className="text-sm">{formattedDate}</span>
             </div>
             
+            <Separator orientation="vertical" className="h-4" />
+            
             <div className="flex items-center gap-2">
+              <span className="text-sm">by {post.author}</span>
+            </div>
+          </div>
+
+          {/* Social Sharing Icons */}
+          <div className="flex items-center gap-3 pb-4 border-b">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full w-10 h-10"
+              onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank')}
+            >
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full w-10 h-10"
+              onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(post.title)}`, '_blank')}
+            >
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full w-10 h-10"
+              onClick={async () => {
+                await navigator.clipboard.writeText(window.location.href);
+              }}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </Button>
+            <div className="flex items-center gap-2 ml-auto text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
               <span>{readTime}</span>
             </div>
@@ -258,7 +274,7 @@ export default function BlogPost() {
 
         <Separator className="my-12" />
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-[#B4F22E]/20 flex items-center justify-center">
               <User className="h-6 w-6 text-[#B4F22E]" />
@@ -272,6 +288,31 @@ export default function BlogPost() {
             <Share2 className="h-4 w-4 mr-2" />
             Share Article
           </Button>
+        </div>
+
+        {/* Comments Section */}
+        <div className="border-t pt-8">
+          <h3 className="text-2xl font-bold mb-6">Comments</h3>
+          
+          {/* Comment Form */}
+          <div className="mb-8">
+            <textarea
+              className="w-full min-h-[120px] p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#B4F22E] bg-background"
+              placeholder="Share your thoughts..."
+            />
+            <div className="flex justify-end mt-3">
+              <Button className="bg-[#B4F22E] text-black hover:bg-[#9FD624]">
+                Post Comment
+              </Button>
+            </div>
+          </div>
+
+          {/* Sample Comments */}
+          <div className="space-y-6">
+            <div className="text-center text-muted-foreground py-8">
+              <p>No comments yet. Be the first to share your thoughts!</p>
+            </div>
+          </div>
         </div>
       </article>
 
