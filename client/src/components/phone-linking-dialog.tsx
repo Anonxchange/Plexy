@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { CountryCodeSelector } from "./country-code-selector";
+import { Eye, EyeOff } from "lucide-react";
 
 interface PhoneLinkingDialogProps {
   open: boolean;
@@ -34,10 +35,31 @@ export function PhoneLinkingDialog({
   const supabase = createClient();
   const [phoneNumber, setPhoneNumber] = useState(initialPhoneNumber);
   const [countryCode, setCountryCode] = useState(initialCountryCode);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [hasExistingPhone, setHasExistingPhone] = useState(false);
+
+  // Check if user has an existing phone number
+  useState(() => {
+    const checkExistingPhone = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.phone) {
+          setHasExistingPhone(true);
+        }
+      } catch (error) {
+        console.error('Error checking existing phone:', error);
+      }
+    };
+    
+    if (open) {
+      checkExistingPhone();
+    }
+  });
 
   const handleSendCode = async () => {
     if (!phoneNumber.trim()) {
@@ -47,6 +69,43 @@ export function PhoneLinkingDialog({
         variant: "destructive",
       });
       return;
+    }
+
+    // Require password verification if changing existing phone
+    if (hasExistingPhone && !password) {
+      toast({
+        title: "Password Required",
+        description: "Please enter your password to change your phone number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verify password if user has existing phone
+    if (hasExistingPhone && password) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        toast({
+          title: "Error",
+          description: "Email is required to verify password",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: password,
+      });
+
+      if (signInError) {
+        toast({
+          title: "Incorrect Password",
+          description: "The password you entered is incorrect",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setSending(true);
@@ -173,6 +232,8 @@ export function PhoneLinkingDialog({
   const handleClose = () => {
     setCodeSent(false);
     setVerificationCode("");
+    setPassword("");
+    setShowPassword(false);
     onOpenChange(false);
   };
 
@@ -189,6 +250,14 @@ export function PhoneLinkingDialog({
         <div className="space-y-4 py-4">
           {!codeSent ? (
             <>
+              {hasExistingPhone && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    You are changing your phone number. Password verification is required.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Country Code</Label>
                 <CountryCodeSelector value={countryCode} onChange={setCountryCode} />
@@ -204,9 +273,31 @@ export function PhoneLinkingDialog({
                 />
               </div>
 
+              {hasExistingPhone && (
+                <div className="space-y-2 relative">
+                  <Label htmlFor="password">Current Password<span className="text-red-500">*</span></Label>
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={sending}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground top-6"
+                    disabled={sending}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              )}
+
               <Button
                 onClick={handleSendCode}
-                disabled={sending || !phoneNumber.trim()}
+                disabled={sending || !phoneNumber.trim() || (hasExistingPhone && !password)}
                 className="w-full"
               >
                 {sending ? "Sending..." : "Send Verification Code"}
