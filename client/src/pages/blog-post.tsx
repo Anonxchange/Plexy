@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface BlogPost {
   id: string;
@@ -66,10 +69,16 @@ export default function BlogPost() {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (params?.postId) {
       fetchPost(params.postId);
+      fetchComments(params.postId);
     }
   }, [params?.postId]);
 
@@ -98,6 +107,74 @@ export default function BlogPost() {
       console.error('Error fetching post:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchComments = async (postId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('blog_comments')
+        .select(`
+          *,
+          user_profiles (username)
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setComments(data || []);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
+  const handleSubmitComment = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to post a comment",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newComment.trim()) {
+      toast({
+        title: "Comment Required",
+        description: "Please enter a comment",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('blog_comments')
+        .insert({
+          post_id: params?.postId,
+          user_id: user.id,
+          content: newComment.trim(),
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Comment posted successfully",
+      });
+
+      setNewComment("");
+      fetchComments(params?.postId!);
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to post comment",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -147,9 +224,9 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Full-width image */}
+      {/* Full-width responsive image */}
       {post.image_url && (
-        <div className="relative w-full h-64 md:h-96 overflow-hidden">
+        <div className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 overflow-hidden">
           <img
             src={post.image_url}
             alt={post.title}
@@ -160,7 +237,7 @@ export default function BlogPost() {
       )}
 
       {!post.image_url && (
-        <div className="relative w-full h-48 md:h-64 overflow-hidden bg-gradient-to-br from-[#B4F22E]/80 via-[#8BC34A]/60 to-[#4CAF50]/80">
+        <div className="relative w-full h-48 sm:h-56 md:h-64 overflow-hidden bg-gradient-to-br from-[#B4F22E]/80 via-[#8BC34A]/60 to-[#4CAF50]/80">
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-white">
               <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
@@ -292,26 +369,70 @@ export default function BlogPost() {
 
         {/* Comments Section */}
         <div className="border-t pt-8">
-          <h3 className="text-2xl font-bold mb-6">Comments</h3>
+          <h3 className="text-2xl font-bold mb-6">Comments ({comments.length})</h3>
           
           {/* Comment Form */}
-          <div className="mb-8">
-            <textarea
-              className="w-full min-h-[120px] p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#B4F22E] bg-background"
-              placeholder="Share your thoughts..."
-            />
-            <div className="flex justify-end mt-3">
-              <Button className="bg-[#B4F22E] text-black hover:bg-[#9FD624]">
-                Post Comment
+          {user ? (
+            <div className="mb-8">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                className="w-full min-h-[120px] p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#B4F22E] bg-background"
+                placeholder="Share your thoughts..."
+              />
+              <div className="flex justify-end mt-3">
+                <Button 
+                  onClick={handleSubmitComment}
+                  disabled={submitting || !newComment.trim()}
+                  className="bg-[#B4F22E] text-black hover:bg-[#9FD624]"
+                >
+                  {submitting ? "Posting..." : "Post Comment"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-8 p-6 border rounded-lg bg-muted/50 text-center">
+              <p className="text-muted-foreground mb-4">Please sign in to post a comment</p>
+              <Button onClick={() => setLocation('/signin')} variant="outline">
+                Sign In
               </Button>
             </div>
-          </div>
+          )}
 
-          {/* Sample Comments */}
+          {/* Comments List */}
           <div className="space-y-6">
-            <div className="text-center text-muted-foreground py-8">
-              <p>No comments yet. Be the first to share your thoughts!</p>
-            </div>
+            {comments.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                <p>No comments yet. Be the first to share your thoughts!</p>
+              </div>
+            ) : (
+              comments.map((comment) => (
+                <div key={comment.id} className="border-b pb-6 last:border-b-0">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-[#B4F22E]/20 text-[#B4F22E]">
+                        {comment.user_profiles?.username?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-semibold">
+                          {comment.user_profiles?.username || 'Anonymous'}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(comment.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-foreground/90">{comment.content}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </article>
