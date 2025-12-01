@@ -14,6 +14,7 @@ import { useVerificationGuard } from "@/hooks/use-verification-guard";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { medals, isMedalEarned } from "@/lib/medals";
 import { getUserMedalStats } from "@/lib/medals-api";
+import { getCountryFlag as getCountryFlagFromLib } from "@/lib/localization";
 
 export interface OfferCardProps {
   id?: string;
@@ -50,39 +51,7 @@ const getCryptoIcon = (symbol: string) => {
 };
 
 const getCountryFlag = (country: string) => {
-  // Map of country names to flag emojis
-  const flagsByName: Record<string, string> = {
-    "Nigeria": "🇳🇬",
-    "United States": "🇺🇸",
-    "United Kingdom": "🇬🇧",
-    "Ghana": "🇬🇭",
-    "Kenya": "🇰🇪",
-    "South Africa": "🇿🇦",
-    "Canada": "🇨🇦",
-    "Australia": "🇦🇺",
-    "India": "🇮🇳",
-    "Philippines": "🇵🇭",
-    "Indonesia": "🇮🇩",
-    "Malaysia": "🇲🇾",
-    "Singapore": "🇸🇬",
-    "Thailand": "🇹🇭",
-    "Vietnam": "🇻🇳",
-    "UAE": "🇦🇪",
-    "Saudi Arabia": "🇸🇦",
-    "Egypt": "🇪🇬",
-    "Algeria": "🇩🇿",
-    "Ethiopia": "🇪🇹",
-    "France": "🇫🇷",
-    "Germany": "🇩🇪",
-    "Italy": "🇮🇹",
-    "Spain": "🇪🇸",
-    "Brazil": "🇧🇷",
-    "Mexico": "🇲🇽",
-    "Argentina": "🇦🇷",
-    "Dominican Republic": "🇩🇴",
-  };
-
-  return flagsByName[country] || "🌍";
+  return getCountryFlagFromLib(country);
 };
 
 export function OfferCard({
@@ -103,7 +72,7 @@ export function OfferCard({
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { checkCanTrade, isLevel0 } = useVerificationGuard();
+  const { checkCanTrade, isLevel0, levelConfig } = useVerificationGuard();
   const [userMedals, setUserMedals] = useState<any[]>([]);
   const [vendorPresence, setVendorPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
   const [isPrefetching, setIsPrefetching] = useState(false);
