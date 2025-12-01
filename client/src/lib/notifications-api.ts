@@ -5,10 +5,22 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'trade' | 'price_alert' | 'offer' | 'system' | 'payment';
+  type: 'trade' | 'price_alert' | 'offer' | 'system' | 'payment' | 'announcement';
   read: boolean;
   created_at: string;
   metadata?: Record<string, any>;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  image_url: string | null;
+  author: string;
+  read_time: string;
+  created_at: string;
 }
 
 export async function getNotifications(): Promise<Notification[]> {
@@ -210,6 +222,50 @@ export function subscribeToNotifications(
       },
       (payload) => {
         callback(payload.new as Notification);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+export async function getAnnouncements(): Promise<Announcement[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('id, title, excerpt, content, category, image_url, author, read_time, created_at')
+    .eq('category', 'Announcement')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error('Error fetching announcements:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export function subscribeToAnnouncements(
+  callback: (announcement: Announcement) => void
+) {
+  const supabase = createClient();
+
+  const channel = supabase
+    .channel('announcements')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'blog_posts',
+        filter: `category=eq.Announcement`
+      },
+      (payload) => {
+        callback(payload.new as Announcement);
       }
     )
     .subscribe();
