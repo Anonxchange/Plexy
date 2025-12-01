@@ -208,10 +208,10 @@ export function CreateOfferAdvanced() {
   };
 
   const handleCreateOffer = async () => {
-    if (!checkCanCreateOffer()) {
+    if (!checkCanCreateOffer().allowed) {
       toast({
         title: "Verification Required",
-        description: `You need to be at least Level 1 to create offers. Please complete verification first.`,
+        description: checkCanCreateOffer().reason || "You need to be at least Level 2 to create offers. Please complete verification first.",
         variant: "destructive",
       });
       setLocation("/verification");
@@ -256,6 +256,17 @@ export function CreateOfferAdvanced() {
       toast({
         title: "Invalid Range",
         description: "Minimum amount cannot be greater than maximum amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if offer amount exceeds user's per-trade limit based on verification level
+    const perTradeLimit = levelConfig.perTradeLimit;
+    if (perTradeLimit && maxAmountNum > perTradeLimit) {
+      toast({
+        title: "Amount Exceeds Per-Trade Limit",
+        description: `Your per-trade limit is ${perTradeLimit.toLocaleString()} ${currency}. You cannot create an offer with a maximum of ${maxAmountNum.toLocaleString()} ${currency}. Please reduce the maximum amount to ${perTradeLimit.toLocaleString()} ${currency} or less.`,
         variant: "destructive",
       });
       return;
