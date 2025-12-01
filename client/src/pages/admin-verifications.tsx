@@ -660,8 +660,11 @@ export default function AdminVerificationsPage() {
                 <div className="border rounded-lg p-4 bg-primary/5">
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    Update User Information
+                    Update User Information (Level {selectedVerification.requested_level})
                   </h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Update or verify the user's country and full name before approval
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor="fullName">Full Name</Label>
