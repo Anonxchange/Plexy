@@ -2,10 +2,12 @@ import { useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase';
 import { notificationSounds } from '@/lib/notification-sounds';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 export function GlobalNotificationListener() {
   const { user } = useAuth();
   const supabase = createClient();
+  const { toast } = useToast();
   const lastProcessedIds = useRef<Set<string>>(new Set());
   const hasPlayedLoginSound = useRef(false);
 
@@ -108,12 +110,41 @@ export function GlobalNotificationListener() {
       )
       .subscribe();
 
+    const announcementsChannel = supabase
+      .channel('global-announcements')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'blog_posts',
+          filter: 'category=eq.Announcement'
+        },
+        (payload) => {
+          const announcement = payload.new as any;
+          const announcementKey = `announcement-${announcement.id}`;
+          
+          if (!lastProcessedIds.current.has(announcementKey)) {
+            lastProcessedIds.current.add(announcementKey);
+            notificationSounds.play('message_received');
+            
+            toast({
+              title: "New Announcement",
+              description: announcement.title,
+              duration: 5000,
+            });
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       clearInterval(unreadCheckInterval);
       supabase.removeChannel(notificationsChannel);
       supabase.removeChannel(tradesChannel);
+      supabase.removeChannel(announcementsChannel);
     };
-  }, [user?.id]);
+  }, [user?.id, toast]);
 
   return null;
 }
