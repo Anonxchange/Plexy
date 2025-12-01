@@ -684,14 +684,12 @@ export function Profile() {
                 {profileData?.is_verified && (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="text-sm">🇳🇬</span>
                     <span className="font-medium">ID verified</span>
                   </div>
                 )}
                 {profileData?.phone_verified && (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="text-sm">🇳🇬</span>
                     <span className="font-medium">Phone verified</span>
                   </div>
                 )}
@@ -830,14 +828,12 @@ export function Profile() {
                 {profileData?.is_verified && (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="text-sm">🇳🇬</span>
                     <span className="font-medium">ID verified</span>
                   </div>
                 )}
                 {profileData?.phone_verified && (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="text-sm">🇳🇬</span>
                     <span className="font-medium">Phone verified</span>
                   </div>
                 )}
