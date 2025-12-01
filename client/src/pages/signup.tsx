@@ -73,8 +73,10 @@ export function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"details" | "phone">("details");
+  const [step, setStep] = useState<"details" | "email_verify" | "phone">("details");
   const [userId, setUserId] = useState<string | null>(null);
+  const [emailOtp, setEmailOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const { signUp, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -199,7 +201,7 @@ export function SignUp() {
       // Basic AML screening before account creation
       try {
         const sanctions = await amlScreening.screenUser(
-          "pending", // ID not yet created
+          "pending",
           fullName,
           country
         );
@@ -215,38 +217,36 @@ export function SignUp() {
         }
       } catch (error) {
         console.error("AML screening error:", error);
-        // Allow signup to continue if screening service is down
       }
 
-      const { error } = await signUp(email, password);
+      // Send OTP email
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email, type: 'signup' }),
+      });
+
       setLoading(false);
 
-      if (error) {
+      if (!response.ok) {
         toast({
           title: "Error",
-          description: error.message,
+          description: "Failed to send verification code. Please try again.",
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Check your email!",
-          description: "We've sent you a verification link. Please check your email to verify your account.",
-        });
-        const { data } = await supabase.auth.getUser();
-        if (data.user) {
-          // Save country and full name to user profile (country is immutable after creation)
-          await supabase.from('user_profiles').upsert({
-            id: data.user.id,
-            country: country,
-            full_name: fullName,
-          }, {
-            onConflict: 'id'
-          });
-          
-          setUserId(data.user.id);
-          setStep("phone");
-        }
+        return;
       }
+
+      toast({
+        title: "Check your email!",
+        description: "We've sent a 6-digit verification code to your email.",
+      });
+      
+      setOtpSent(true);
+      setStep("email_verify");
     } else {
       // Phone signup → OTP only, no password required
       if (!phoneNumber) {
@@ -260,6 +260,51 @@ export function SignUp() {
 
       setUserId("pending");
       setLoading(false);
+      setStep("phone");
+    }
+  };
+
+  const handleEmailOtpVerify = async () => {
+    setLoading(true);
+    
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-email-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        email,
+        otp: emailOtp,
+        password,
+        fullName,
+        country,
+      }),
+    });
+
+    const data = await response.json();
+    setLoading(false);
+
+    if (!response.ok) {
+      toast({
+        title: "Verification Failed",
+        description: data.error || "Invalid verification code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Sign in the user
+    await signIn(email, password);
+    
+    toast({
+      title: "Success!",
+      description: "Email verified! Account created successfully!",
+    });
+    
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) {
+      setUserId(userData.user.id);
       setStep("phone");
     }
   };
@@ -346,7 +391,58 @@ export function SignUp() {
 
         {/* Right Column: Form */}
         <div className="px-6 pt-12 lg:pt-32 max-w-md mx-auto pb-12 lg:flex lg:flex-col lg:justify-center">
-        {step === "details" ? (
+        {step === "email_verify" ? (
+          <div className={`rounded-2xl p-6 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
+            <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
+              Verify Your Email
+            </h2>
+            <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              We've sent a 6-digit code to {email}
+            </p>
+            
+            <div className="mb-6">
+              <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Verification Code
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                maxLength={6}
+                value={emailOtp}
+                onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
+                className={`w-full px-4 py-4 rounded-xl text-center text-2xl tracking-widest font-mono ${
+                  isDark 
+                    ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                    : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                } focus:outline-none transition-colors`}
+                autoFocus
+              />
+            </div>
+
+            <button
+              onClick={handleEmailOtpVerify}
+              disabled={loading || emailOtp.length !== 6}
+              className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50 mb-4"
+            >
+              {loading ? "Verifying..." : "Verify & Continue"}
+            </button>
+
+            <button
+              onClick={() => {
+                setStep("details");
+                setEmailOtp("");
+              }}
+              className={`w-full py-3 rounded-xl text-sm transition-colors ${
+                isDark 
+                  ? 'text-gray-400 hover:text-white hover:bg-gray-800' 
+                  : 'text-gray-600 hover:text-black hover:bg-gray-100'
+              }`}
+            >
+              Back
+            </button>
+          </div>
+        ) : step === "details" ? (
           <>
             <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
               Create your account
