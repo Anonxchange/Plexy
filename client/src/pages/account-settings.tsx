@@ -221,13 +221,42 @@ export default function AccountSettings() {
       setLocation("/signin");
     } else if (user) {
       fetchProfileData();
-      fetchPaymentMethods();
       fetchVerificationLevel();
+      fetchPaymentMethods();
       fetchDevices();
       fetch2FAStatus();
       fetchHardwareKeys(); // Fetch hardware keys on component mount
     }
   }, [user, loading]);
+
+  // Set country and currency from profile data
+  useEffect(() => {
+    if (profileData) {
+      if (profileData.country) {
+        setAccountCountry(profileData.country);
+        // Map country to default currency
+        const countryToCurrency: { [key: string]: string } = {
+          'NG': 'Nigerian Naira',
+          'GH': 'Ghanaian Cedi',
+          'KE': 'Kenyan Shilling',
+          'ZA': 'South African Rand',
+          'EG': 'Egyptian Pound',
+          'US': 'US Dollar',
+          'GB': 'British Pound',
+          'CA': 'Canadian Dollar',
+          'AU': 'Australian Dollar',
+          'IN': 'Indian Rupee',
+        };
+        // Only set accountCurrency if it's not already set or if it's a default value that needs overriding
+        if (!accountCurrency || accountCurrency === 'Nigerian Naira') { // Assuming 'Nigerian Naira' is a default, adjust if needed
+          setAccountCurrency(countryToCurrency[profileData.country] || 'Nigerian Naira');
+        }
+      }
+      if (profileData.phone_number) {
+        setPhone(profileData.phone_number);
+      }
+    }
+  }, [profileData]);
 
   const fetchProfileData = async () => {
     try {
@@ -1736,6 +1765,7 @@ export default function AccountSettings() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
               {!smsAuth && !appAuth && (
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mt-4">
                   <div className="flex gap-3">
@@ -1783,8 +1813,8 @@ export default function AccountSettings() {
                   </div>
                 </div>
               )}
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => setShowWithdrawalWhitelistDialog(true)}
               >
@@ -1855,8 +1885,8 @@ export default function AccountSettings() {
                   </div>
                 </>
               )}
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => setShowIPWhitelistDialog(true)}
               >
@@ -1883,8 +1913,8 @@ export default function AccountSettings() {
                   </p>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => setShowTrustedDevicesDialog(true)}
               >
