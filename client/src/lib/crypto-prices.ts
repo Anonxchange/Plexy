@@ -341,6 +341,23 @@ export async function convertFromNGN(ngnAmount: number, toCurrency: string): Pro
   return usdAmount * targetRate;
 }
 
+// Convert any currency amount to USD
+export async function convertToUSD(amount: number, fromCurrency: string): Promise<number> {
+  if (fromCurrency === 'USD') {
+    return amount;
+  }
+  
+  const rates = await getExchangeRates();
+  const fromRate = rates[fromCurrency];
+  
+  if (!fromRate || fromRate === 0) {
+    throw new Error(`Exchange rate for ${fromCurrency} not available`);
+  }
+  
+  // Convert to USD (rates are relative to USD = 1)
+  return amount / fromRate;
+}
+
 // Get minimum and maximum offer limits in the specified currency
 export async function getOfferLimits(currency: string): Promise<{ min: number; max: number }> {
   const MIN_NGN = 4500;
