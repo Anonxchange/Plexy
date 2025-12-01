@@ -4,13 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CountryCodeSelector } from "./country-code-selector";
+import { getCountryByPhoneCode } from "@/lib/localization";
 
 interface PhoneVerificationProps {
   onVerified: (phoneNumber: string) => void;
@@ -80,15 +75,26 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
       
       if (error) throw error;
 
-      // Update user profile to mark phone as verified
+      // Determine country from phone code
+      const countryFromPhone = getCountryByPhoneCode(countryCode);
+
+      // Update user profile to mark phone as verified and update country
       if (data.user) {
+        const updateData: any = {
+          id: data.user.id,
+          phone_number: fullPhoneNumber,
+          phone_verified: true,
+        };
+
+        // Update country based on phone code
+        if (countryFromPhone) {
+          updateData.country = countryFromPhone.name;
+          updateData.preferred_currency = countryFromPhone.currencyCode.toLowerCase();
+        }
+
         const { error: profileError } = await supabase
           .from('user_profiles')
-          .upsert({
-            id: data.user.id,
-            phone_number: fullPhoneNumber,
-            phone_verified: true,
-          }, {
+          .upsert(updateData, {
             onConflict: 'id'
           });
 
@@ -97,9 +103,13 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
         }
       }
       
+      const successMessage = countryFromPhone 
+        ? `Phone number verified! Your country has been set to ${countryFromPhone.name}.`
+        : "Phone number verified successfully";
+      
       toast({
         title: "Success!",
-        description: "Phone number verified successfully",
+        description: successMessage,
       });
       
       onVerified(fullPhoneNumber);
@@ -127,37 +137,7 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
           
           <div className="space-y-2">
             <Label>Country Code</Label>
-            <Select value={countryCode} onValueChange={setCountryCode}>
-              <SelectTrigger className="w-full h-12">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="+234">
-                  <div className="flex items-center gap-2">
-                    <span>🇳🇬</span>
-                    <span>Nigeria (+234)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="+1">
-                  <div className="flex items-center gap-2">
-                    <span>🇺🇸</span>
-                    <span>United States (+1)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="+44">
-                  <div className="flex items-center gap-2">
-                    <span>🇬🇧</span>
-                    <span>United Kingdom (+44)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="+91">
-                  <div className="flex items-center gap-2">
-                    <span>🇮🇳</span>
-                    <span>India (+91)</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <CountryCodeSelector value={countryCode} onChange={setCountryCode} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
