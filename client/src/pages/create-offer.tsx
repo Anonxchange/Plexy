@@ -32,6 +32,7 @@ import { canCreateOffer } from "@shared/verification-levels";
 import { getMerchantLevel } from "@shared/merchant-levels";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCountryInfo } from "@/lib/localization";
 
 export function CreateOffer() {
   const { 
@@ -50,7 +51,7 @@ export function CreateOffer() {
 
       const { data } = await supabase
         .from("user_profiles")
-        .select("merchant_status, verification_level")
+        .select("merchant_status, verification_level, country, preferred_currency")
         .eq("id", user.id)
         .single();
 
@@ -84,8 +85,9 @@ export function CreateOffer() {
   const [crypto, setCrypto] = useState("BTC");
   const [offerType, setOfferType] = useState<"buy" | "sell">("sell");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [currency, setCurrency] = useState("NGN");
+  const [currency, setCurrency] = useState("USD");
   const [country, setCountry] = useState("");
+  const [currencyInitialized, setCurrencyInitialized] = useState(false);
   const [minAmount, setMinAmount] = useState("4500");
   const [maxAmount, setMaxAmount] = useState("23000000");
   const [totalQuantity, setTotalQuantity] = useState("");
@@ -116,6 +118,18 @@ export function CreateOffer() {
       setPremiumInput(defaultValue.toFixed(1));
     }
   }, [offerType, isEditMode]);
+
+  useEffect(() => {
+    if (!currencyInitialized && userProfile) {
+      if (userProfile.preferred_currency) {
+        setCurrency(userProfile.preferred_currency.toUpperCase());
+      } else if (userProfile.country) {
+        const countryInfo = getCountryInfo(userProfile.country);
+        setCurrency(countryInfo.currencyCode);
+      }
+      setCurrencyInitialized(true);
+    }
+  }, [userProfile, currencyInitialized]);
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -389,13 +403,19 @@ export function CreateOffer() {
 
     // Check if offer amount exceeds user's per-trade limit based on verification level
     const perTradeLimit = levelConfig.perTradeLimit;
-    if (perTradeLimit && maxAmountNum > perTradeLimit) {
-      toast({
-        title: "Amount Exceeds Per-Trade Limit",
-        description: `Your per-trade limit is ${perTradeLimit.toLocaleString()} ${currency}. You cannot create an offer with a maximum of ${maxAmountNum.toLocaleString()} ${currency}. Please reduce the maximum amount to ${perTradeLimit.toLocaleString()} ${currency} or less.`,
-        variant: "destructive",
-      });
-      return;
+    if (perTradeLimit) {
+      // Convert the max amount to USD for comparison
+      const { convertToUSD } = await import("@/lib/crypto-prices");
+      const maxInUSD = currency === 'USD' ? maxAmountNum : await convertToUSD(maxAmountNum, currency);
+      
+      if (maxInUSD > perTradeLimit) {
+        toast({
+          title: "Amount Exceeds Per-Trade Limit",
+          description: `Your per-trade limit is $${perTradeLimit.toLocaleString()} USD. You cannot create an offer with a maximum of ${maxAmountNum.toLocaleString()} ${currency}. Please reduce the maximum amount or upgrade your verification level.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // Validate wallet balance for SELL offers only
