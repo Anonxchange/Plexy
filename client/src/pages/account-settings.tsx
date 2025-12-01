@@ -20,6 +20,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -238,6 +250,13 @@ export default function AccountSettings() {
         // Only update if we don't have a country set yet
         if (!accountCountry) {
           setAccountCountry(profileData.country);
+        }
+        // Set currency based on user's country
+        if (profileData.preferred_currency) {
+          setCurrency(profileData.preferred_currency.toLowerCase());
+        } else {
+          const countryInfo = getCountryInfo(profileData.country);
+          setCurrency(countryInfo.currencyCode.toLowerCase());
         }
       }
       if (profileData.phone_number) {
@@ -1179,18 +1198,53 @@ export default function AccountSettings() {
       <div className="space-y-3">
         <Label className="text-lg font-semibold">Preferred currency</Label>
         <div className="flex gap-2">
-          <Select value={currency} onValueChange={setCurrency}>
-            <SelectTrigger className="flex-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {countries.map((country) => (
-                <SelectItem key={country.currencyCode} value={country.currencyCode.toLowerCase()}>
-                  {country.flag} {country.currency} ({country.currencyCode})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="flex-1 justify-between"
+              >
+                {currency ? (
+                  <>
+                    {countries.find((c) => c.currencyCode.toLowerCase() === currency)?.flag}{" "}
+                    {countries.find((c) => c.currencyCode.toLowerCase() === currency)?.name} - {currency.toUpperCase()}
+                  </>
+                ) : (
+                  "Select currency..."
+                )}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search currency or country..." />
+                <CommandEmpty>No currency found.</CommandEmpty>
+                <CommandGroup className="max-h-[300px] overflow-auto">
+                  {countries.map((country) => (
+                    <CommandItem
+                      key={`${country.code}-${country.currencyCode}`}
+                      value={`${country.name} ${country.currency} ${country.currencyCode}`}
+                      onSelect={() => {
+                        setCurrency(country.currencyCode.toLowerCase());
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          currency === country.currencyCode.toLowerCase()
+                            ? "opacity-100"
+                            : "opacity-0"
+                        )}
+                      />
+                      <span className="mr-2">{country.flag}</span>
+                      <span>{country.name} - {country.currency} ({country.currencyCode})</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <Button
             className="bg-primary hover:bg-primary/90"
             onClick={handleSaveProfile}
