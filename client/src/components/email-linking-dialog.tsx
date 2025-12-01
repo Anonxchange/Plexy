@@ -29,8 +29,10 @@ export function EmailLinkingDialog({
   onSuccess,
 }: EmailLinkingDialogProps) {
   const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [sending, setSending] = useState(false);
@@ -45,6 +47,33 @@ export function EmailLinkingDialog({
         variant: "destructive",
       });
       return;
+    }
+
+    // Verify current password first for existing email users
+    if (currentEmail) {
+      if (!currentPassword) {
+        toast({
+          title: "Password Required",
+          description: "Please enter your current password to change your email",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Verify the current password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: currentEmail,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        toast({
+          title: "Incorrect Password",
+          description: "The password you entered is incorrect",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // For first-time email linking, require password
@@ -80,10 +109,14 @@ export function EmailLinkingDialog({
     setSending(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        email: newEmail,
-        password: password,
-      });
+      const updateData: any = { email: newEmail };
+      
+      // Only set password for first-time email linking
+      if (!currentEmail && password) {
+        updateData.password = password;
+      }
+
+      const { error } = await supabase.auth.updateUser(updateData);
 
       if (error) {
         console.error("Email update error:", error);
@@ -153,6 +186,28 @@ export function EmailLinkingDialog({
             </div>
           )}
 
+          {currentEmail && (
+            <div className="relative">
+              <Label htmlFor="current-password">Current Password<span className="text-red-500">*</span></Label>
+              <Input
+                id="current-password"
+                type={showCurrentPassword ? "text" : "password"}
+                placeholder="Enter your current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                disabled={sending}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground top-6"
+                disabled={sending}
+              >
+                {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="new-email">{currentEmail ? "New Email" : "Email Address"}</Label>
             <Input
@@ -162,7 +217,7 @@ export function EmailLinkingDialog({
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               disabled={sending}
-              autoFocus
+              autoFocus={!currentEmail}
             />
           </div>
 
@@ -181,7 +236,7 @@ export function EmailLinkingDialog({
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground top-6"
                   disabled={sending}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -200,7 +255,7 @@ export function EmailLinkingDialog({
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground top-6"
                   disabled={sending}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -211,7 +266,7 @@ export function EmailLinkingDialog({
 
           <Button 
             onClick={handleLinkEmail} 
-            disabled={!newEmail || (!currentEmail && !password) || sending}
+            disabled={!newEmail || (currentEmail && !currentPassword) || (!currentEmail && !password) || sending}
             className="w-full"
           >
             {sending ? "Sending Verification..." : currentEmail ? "Update Email" : "Link Email"}
