@@ -7,6 +7,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OfferCard, type OfferCardProps } from "@/components/offer-card";
+import { getCountryFlag } from "@/lib/localization";
 import { 
   User, 
   Copy,
@@ -165,7 +166,7 @@ export function Profile() {
         const defaultProfile = {
           id: user?.id,
           username: `user_${user?.id?.substring(0, 8)}`,
-          country: user?.user_metadata?.country || 'Nigeria',
+          country: user?.user_metadata?.country || '',
           bio: null,
           languages: ['English'],
           positive_feedback: 0,
@@ -196,7 +197,7 @@ export function Profile() {
       const defaultProfile = {
         id: user?.id || '',
         username: `user_${user?.id?.substring(0, 8)}`,
-        country: user?.user_metadata?.country || 'Nigeria',
+        country: user?.user_metadata?.country || '',
         bio: null,
         languages: ['English'],
         positive_feedback: 0,
@@ -487,7 +488,7 @@ export function Profile() {
       <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-primary break-words flex items-center gap-2 flex-wrap">
-            {username} <span className="text-2xl">🇳🇬</span> Profile
+            {username} <span className="text-2xl">{getCountryFlag(profileData?.country)}</span> Profile
           </h1>
         </div>
 
@@ -555,7 +556,7 @@ export function Profile() {
                 <div className="flex-1 text-center sm:text-left w-full sm:w-auto">
                   <div className="flex flex-col sm:flex-row items-center gap-2 mb-2">
                     <h2 className="text-lg sm:text-xl md:text-2xl font-bold break-all flex items-center gap-2">
-                      @{username} <span className="text-lg">🇳🇬</span>
+                      @{username} <span className="text-lg">{getCountryFlag(profileData?.country)}</span>
                     </h2>
                     <Button 
                       variant="ghost" 
@@ -566,7 +567,7 @@ export function Profile() {
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">{profileData?.country || 'Nigeria'}</p>
+                  <p className="text-sm text-muted-foreground mb-4">{profileData?.country || ''}</p>
                   {isOwnProfile && (
                     <Button 
                       variant="ghost" 
