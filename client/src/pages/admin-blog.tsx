@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Edit, Trash2, Plus, ArrowLeft, Upload, Image as ImageIcon, X } from "lucide-react";
+import { Calendar, Edit, Trash2, Plus, ArrowLeft, Upload, Image as ImageIcon, X, Clock, Copy, CheckCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToR2 } from "@/lib/r2-storage";
@@ -15,18 +15,31 @@ import { useAuth } from "@/lib/auth-context";
 
 const categories = ["Announcement", "Promotion", "Series", "Knowledge", "Forum"];
 
+function calculateReadTime(content: string): string {
+  const wordsPerMinute = 200;
+  const textContent = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  const wordCount = textContent.split(' ').filter(word => word.length > 0).length;
+  const readTime = Math.ceil(wordCount / wordsPerMinute);
+  return `${readTime} min read`;
+}
+
 export default function AdminBlog() {
   const supabase = createClient();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const contentImageInputRef = useRef<HTMLInputElement>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPost, setEditingPost] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingContentImage, setUploadingContentImage] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [contentImages, setContentImages] = useState<string[]>([]);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -88,14 +101,78 @@ export default function AdminBlog() {
 
   const copyImageUrl = (url: string) => {
     navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
     toast({
       title: "Copied",
       description: "Image URL copied to clipboard",
     });
+    setTimeout(() => setCopiedUrl(null), 2000);
   };
 
   const removeImage = () => {
     setFormData({ ...formData, image_url: "" });
+  };
+
+  const handleContentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingContentImage(true);
+    try {
+      const uploadResult = await uploadToR2(file, 'blog-images', user.id);
+
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+
+      setContentImages([...contentImages, uploadResult.url]);
+      
+      const textarea = contentTextareaRef.current;
+      if (textarea) {
+        const cursorPos = textarea.selectionStart;
+        const textBefore = formData.content.substring(0, cursorPos);
+        const textAfter = formData.content.substring(cursorPos);
+        const imageMarkup = `\n\n${uploadResult.url}\n\n`;
+        setFormData({ ...formData, content: textBefore + imageMarkup + textAfter });
+      } else {
+        setFormData({ ...formData, content: formData.content + `\n\n${uploadResult.url}\n\n` });
+      }
+
+      toast({
+        title: "Success",
+        description: "Image uploaded and inserted into content",
+      });
+    } catch (error) {
+      console.error('Error uploading content image:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingContentImage(false);
+      if (contentImageInputRef.current) {
+        contentImageInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    setFormData({ 
+      ...formData, 
+      content: newContent,
+      read_time: calculateReadTime(newContent)
+    });
   };
 
   const fetchPosts = async () => {
@@ -250,6 +327,7 @@ export default function AdminBlog() {
       image_url: ""
     });
     setUploadedImages([]);
+    setContentImages([]);
     setEditingPost(null);
     setShowForm(false);
   };
@@ -311,14 +389,81 @@ export default function AdminBlog() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="content">Full Content</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="content">Full Content</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={contentImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleContentImageUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => contentImageInputRef.current?.click()}
+                      disabled={uploadingContentImage}
+                    >
+                      {uploadingContentImage ? (
+                        <>Uploading...</>
+                      ) : (
+                        <>
+                          <ImageIcon className="h-4 w-4 mr-2" />
+                          Insert Image
+                        </>
+                      )}
+                    </Button>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span>{formData.read_time || calculateReadTime(formData.content)}</span>
+                    </div>
+                  </div>
+                </div>
                 <Textarea
+                  ref={contentTextareaRef}
                   id="content"
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  rows={10}
+                  onChange={handleContentChange}
+                  rows={15}
                   required
+                  placeholder="Write your blog post content here. Use **text** for bold, ## for headings, and paste image URLs on their own line to embed images."
+                  className="font-mono text-sm"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Tip: Click "Insert Image" to upload and automatically insert images into your content. Images will be displayed in the blog post.
+                </p>
+                
+                {contentImages.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <Label className="text-sm">Uploaded Content Images</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {contentImages.map((url, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={url}
+                            alt={`Content image ${index + 1}`}
+                            className="w-20 h-20 object-cover rounded border"
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-100 bg-black/50 flex items-center justify-center transition-opacity"
+                            onClick={() => copyImageUrl(url)}
+                          >
+                            {copiedUrl === url ? (
+                              <CheckCircle className="h-4 w-4 text-green-400" />
+                            ) : (
+                              <Copy className="h-4 w-4 text-white" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
