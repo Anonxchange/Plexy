@@ -173,6 +173,18 @@ export function OfferCard({
       return;
     }
 
+    // Check against user's maximum per-trade limit from verification level
+    const maxPerTradeLimit = levelConfig.perTradeLimit;
+    if (maxPerTradeLimit && limits.max > maxPerTradeLimit) {
+      toast({
+        title: "Trade Limit Exceeded",
+        description: `This offer's maximum (${limits.max.toLocaleString()} ${currency}) exceeds your per-trade limit of ${maxPerTradeLimit.toLocaleString()} ${currency}. You can trade up to ${maxPerTradeLimit.toLocaleString()} ${currency} per trade.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check the minimum amount against user's limits
     const tradeAmount = limits.min;
     const tradeCheck = checkCanTrade(tradeAmount);
 
@@ -191,12 +203,12 @@ export function OfferCard({
 
   const cryptoAmount = limits.min / pricePerBTC;
 
-  // Get the country flag - use vendor's country, or first country from restrictions
+  // Get the country flag - prioritize vendor's country
   const countryFlag = vendor.country
     ? getCountryFlag(vendor.country)
     : (country_restrictions && country_restrictions.length > 0
       ? getCountryFlag(country_restrictions[0])
-      : null);
+      : "🌍"); // Default to globe emoji if no country specified
 
   return (
     <>
@@ -240,13 +252,9 @@ export function OfferCard({
                   >
                     {vendor.name}
                   </button>
-                  {countryFlag ? (
-                    <span className="text-sm sm:text-base flex-shrink-0">
-                      {countryFlag}
-                    </span>
-                  ) : (
-                    <Globe className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground flex-shrink-0" />
-                  )}
+                  <span className="text-sm sm:text-base flex-shrink-0" title={vendor.country || "Location"}>
+                    {countryFlag}
+                  </span>
                   {vendor.isVerified && (
                     <span className="text-[10px] sm:text-xs font-medium text-green-600 flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
                       <Circle className="h-1.5 w-1.5 sm:h-2 sm:w-2 fill-green-600" />
