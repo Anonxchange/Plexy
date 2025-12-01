@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { CountryCodeSelector } from "./country-code-selector";
+import { getCountryByPhoneCode } from "@/lib/localization";
 import { Eye, EyeOff } from "lucide-react";
 
 interface PhoneLinkingDialogProps {
@@ -178,31 +179,56 @@ export function PhoneLinkingDialog({
     try {
       const fullPhoneNumber = countryCode + phoneNumber.trim();
 
-      // Verify the OTP
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      // Try phone_change type first (for users changing their phone)
+      // If that fails, try sms type (for users adding phone for first time)
+      let verifyError = null;
+      
+      // First try 'phone_change' type
+      const { error: phoneChangeError } = await supabase.auth.verifyOtp({
         phone: fullPhoneNumber,
         token: verificationCode,
         type: 'phone_change',
       });
 
+      if (phoneChangeError) {
+        console.log("phone_change verification failed, trying sms type...");
+        // If phone_change fails, try 'sms' type
+        const { error: smsError } = await supabase.auth.verifyOtp({
+          phone: fullPhoneNumber,
+          token: verificationCode,
+          type: 'sms',
+        });
+        verifyError = smsError;
+      }
+
       if (verifyError) {
         console.error("Error verifying OTP:", verifyError);
         toast({
           title: "Invalid Code",
-          description: "The verification code is incorrect. Please try again.",
+          description: "The verification code is incorrect or has expired. Please try again.",
           variant: "destructive",
         });
         setVerifying(false);
         return;
       }
 
-      // Update profile to mark phone as verified
+      // Determine country from phone code and update profile
+      const countryFromPhone = getCountryByPhoneCode(countryCode);
+      const updateData: any = {
+        phone_number: fullPhoneNumber,
+        phone_verified: true,
+      };
+
+      // If we found a matching country from the phone code, update the user's country
+      if (countryFromPhone) {
+        updateData.country = countryFromPhone.name;
+        updateData.preferred_currency = countryFromPhone.currencyCode.toLowerCase();
+      }
+
+      // Update profile to mark phone as verified and update country
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .update({
-          phone_number: fullPhoneNumber,
-          phone_verified: true,
-        })
+        .update(updateData)
         .eq('id', userId);
 
       if (profileError) {
@@ -210,9 +236,13 @@ export function PhoneLinkingDialog({
         throw profileError;
       }
 
+      const successMessage = countryFromPhone 
+        ? `Phone number verified and linked! Your country has been updated to ${countryFromPhone.name}.`
+        : "Phone number verified and linked! You can now login with this phone number.";
+
       toast({
         title: "Success!",
-        description: "Phone number verified and linked! You can now login with this phone number.",
+        description: successMessage,
       });
 
       onOpenChange(false);
