@@ -165,7 +165,7 @@ export function Profile() {
         const defaultProfile = {
           id: user?.id,
           username: `user_${user?.id?.substring(0, 8)}`,
-          country: 'Nigeria',
+          country: user?.user_metadata?.country || 'Nigeria',
           bio: null,
           languages: ['English'],
           positive_feedback: 0,
@@ -196,7 +196,7 @@ export function Profile() {
       const defaultProfile = {
         id: user?.id || '',
         username: `user_${user?.id?.substring(0, 8)}`,
-        country: 'Nigeria',
+        country: user?.user_metadata?.country || 'Nigeria',
         bio: null,
         languages: ['English'],
         positive_feedback: 0,
