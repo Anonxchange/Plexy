@@ -121,7 +121,7 @@ export function OfferCard({
     };
   }, [vendor.id]);
 
-  const handleTrade = () => {
+  const handleTrade = async () => {
     if (!user) {
       toast({
         title: "Authentication required",
