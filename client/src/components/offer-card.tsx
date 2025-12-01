@@ -144,13 +144,19 @@ export function OfferCard({
 
     // Check against user's maximum per-trade limit from verification level
     const maxPerTradeLimit = levelConfig.perTradeLimit;
-    if (maxPerTradeLimit && limits.max > maxPerTradeLimit) {
-      toast({
-        title: "Trade Limit Exceeded",
-        description: `This offer's maximum (${limits.max.toLocaleString()} ${currency}) exceeds your per-trade limit of ${maxPerTradeLimit.toLocaleString()} ${currency}. You can trade up to ${maxPerTradeLimit.toLocaleString()} ${currency} per trade.`,
-        variant: "destructive",
-      });
-      return;
+    if (maxPerTradeLimit) {
+      // Convert the offer's max amount to USD for comparison
+      const { convertToUSD } = await import("@/lib/crypto-prices");
+      const maxInUSD = currency === 'USD' ? limits.max : await convertToUSD(limits.max, currency);
+      
+      if (maxInUSD > maxPerTradeLimit) {
+        toast({
+          title: "Trade Limit Exceeded",
+          description: `This offer's maximum (${limits.max.toLocaleString()} ${currency}) exceeds your per-trade limit of $${maxPerTradeLimit.toLocaleString()} USD. You can trade up to $${maxPerTradeLimit.toLocaleString()} USD per trade.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // Check the minimum amount against user's limits
