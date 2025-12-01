@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { useAuth } from "@/lib/auth-context";
 
-const categories = ["News", "Guides", "Trading Tips", "Security", "Product Updates", "Market Analysis"];
+const categories = ["Announcement", "Promotion", "Series", "Knowledge", "Forum"];
 
 export default function AdminBlog() {
   const supabase = createClient();
@@ -28,12 +27,12 @@ export default function AdminBlog() {
   const [showForm, setShowForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  
+
   const [formData, setFormData] = useState({
     title: "",
     excerpt: "",
     content: "",
-    category: "News",
+    category: "Announcement",
     author: "",
     featured: false,
     read_time: "",
@@ -117,7 +116,7 @@ export default function AdminBlog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (editingPost) {
         const { error } = await supabase
@@ -126,7 +125,7 @@ export default function AdminBlog() {
           .eq('id', editingPost.id);
 
         if (error) throw error;
-        
+
         toast({
           title: "Success",
           description: "Blog post updated successfully",
@@ -137,7 +136,7 @@ export default function AdminBlog() {
           .insert([formData]);
 
         if (error) throw error;
-        
+
         toast({
           title: "Success",
           description: "Blog post created successfully",
@@ -148,7 +147,7 @@ export default function AdminBlog() {
         title: "",
         excerpt: "",
         content: "",
-        category: "News",
+        category: "Announcement",
         author: "",
         featured: false,
         read_time: "",
@@ -196,7 +195,7 @@ export default function AdminBlog() {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       toast({
         title: "Success",
         description: "Blog post deleted successfully",
@@ -217,7 +216,7 @@ export default function AdminBlog() {
       title: "",
       excerpt: "",
       content: "",
-      category: "News",
+      category: "Announcement",
       author: "",
       featured: false,
       read_time: "",
