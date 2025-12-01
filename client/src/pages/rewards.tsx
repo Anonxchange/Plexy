@@ -282,7 +282,7 @@ export default function RewardsPage() {
               <CardContent className="p-6 text-center space-y-4">
                 <div className="w-24 h-24 mx-auto flex items-center justify-center">
                   <img 
-                    src="/assets/IMG_1764.png"
+                    src="/assets/IMG_2689.png"
                     alt="Loyalty badges"
                     className="w-full h-full object-contain"
                   />
@@ -299,7 +299,7 @@ export default function RewardsPage() {
               <CardContent className="p-6 text-center space-y-4">
                 <div className="w-24 h-24 mx-auto flex items-center justify-center">
                   <img 
-                    src="/assets/IMG_1765.png"
+                    src="/assets/IMG_2690.png"
                     alt="Crypto deposit rewards"
                     className="w-full h-full object-contain"
                   />
