@@ -70,11 +70,45 @@ export const countries: CountryInfo[] = [
   { name: "Switzerland", code: "CH", flag: "🇨🇭", currency: "Swiss Franc", currencyCode: "CHF", phoneCode: "+41" },
   { name: "Hong Kong", code: "HK", flag: "🇭🇰", currency: "Hong Kong Dollar", currencyCode: "HKD", phoneCode: "+852" },
   { name: "Taiwan", code: "TW", flag: "🇹🇼", currency: "Taiwan Dollar", currencyCode: "TWD", phoneCode: "+886" },
+  { name: "Austria", code: "AT", flag: "🇦🇹", currency: "Euro", currencyCode: "EUR", phoneCode: "+43" },
+  { name: "Ireland", code: "IE", flag: "🇮🇪", currency: "Euro", currencyCode: "EUR", phoneCode: "+353" },
+  { name: "Finland", code: "FI", flag: "🇫🇮", currency: "Euro", currencyCode: "EUR", phoneCode: "+358" },
+  { name: "Greece", code: "GR", flag: "🇬🇷", currency: "Euro", currencyCode: "EUR", phoneCode: "+30" },
+  { name: "Slovakia", code: "SK", flag: "🇸🇰", currency: "Euro", currencyCode: "EUR", phoneCode: "+421" },
+  { name: "Slovenia", code: "SI", flag: "🇸🇮", currency: "Euro", currencyCode: "EUR", phoneCode: "+386" },
+  { name: "Estonia", code: "EE", flag: "🇪🇪", currency: "Euro", currencyCode: "EUR", phoneCode: "+372" },
+  { name: "Latvia", code: "LV", flag: "🇱🇻", currency: "Euro", currencyCode: "EUR", phoneCode: "+371" },
+  { name: "Lithuania", code: "LT", flag: "🇱🇹", currency: "Euro", currencyCode: "EUR", phoneCode: "+370" },
+  { name: "Luxembourg", code: "LU", flag: "🇱🇺", currency: "Euro", currencyCode: "EUR", phoneCode: "+352" },
+  { name: "Malta", code: "MT", flag: "🇲🇹", currency: "Euro", currencyCode: "EUR", phoneCode: "+356" },
+  { name: "Cyprus", code: "CY", flag: "🇨🇾", currency: "Euro", currencyCode: "EUR", phoneCode: "+357" },
+  { name: "Croatia", code: "HR", flag: "🇭🇷", currency: "Euro", currencyCode: "EUR", phoneCode: "+385" },
+  { name: "Iceland", code: "IS", flag: "🇮🇸", currency: "Icelandic Krona", currencyCode: "ISK", phoneCode: "+354" },
+  { name: "Ethiopia", code: "ET", flag: "🇪🇹", currency: "Ethiopian Birr", currencyCode: "ETB", phoneCode: "+251" },
+  { name: "Cameroon", code: "CM", flag: "🇨🇲", currency: "CFA Franc", currencyCode: "XAF", phoneCode: "+237" },
+  { name: "Senegal", code: "SN", flag: "🇸🇳", currency: "CFA Franc", currencyCode: "XOF", phoneCode: "+221" },
+  { name: "Ivory Coast", code: "CI", flag: "🇨🇮", currency: "CFA Franc", currencyCode: "XOF", phoneCode: "+225" },
+  { name: "Algeria", code: "DZ", flag: "🇩🇿", currency: "Algerian Dinar", currencyCode: "DZD", phoneCode: "+213" },
+  { name: "Tunisia", code: "TN", flag: "🇹🇳", currency: "Tunisian Dinar", currencyCode: "TND", phoneCode: "+216" },
+  { name: "Nepal", code: "NP", flag: "🇳🇵", currency: "Nepalese Rupee", currencyCode: "NPR", phoneCode: "+977" },
+  { name: "Myanmar", code: "MM", flag: "🇲🇲", currency: "Burmese Kyat", currencyCode: "MMK", phoneCode: "+95" },
+  { name: "Cambodia", code: "KH", flag: "🇰🇭", currency: "Cambodian Riel", currencyCode: "KHR", phoneCode: "+855" },
+  { name: "Laos", code: "LA", flag: "🇱🇦", currency: "Lao Kip", currencyCode: "LAK", phoneCode: "+856" },
+  { name: "Bolivia", code: "BO", flag: "🇧🇴", currency: "Bolivian Boliviano", currencyCode: "BOB", phoneCode: "+591" },
+  { name: "Paraguay", code: "PY", flag: "🇵🇾", currency: "Paraguayan Guarani", currencyCode: "PYG", phoneCode: "+595" },
+  { name: "Uruguay", code: "UY", flag: "🇺🇾", currency: "Uruguayan Peso", currencyCode: "UYU", phoneCode: "+598" },
+  { name: "Ecuador", code: "EC", flag: "🇪🇨", currency: "US Dollar", currencyCode: "USD", phoneCode: "+593" },
+  { name: "Venezuela", code: "VE", flag: "🇻🇪", currency: "Venezuelan Bolivar", currencyCode: "VES", phoneCode: "+58" },
+  { name: "Costa Rica", code: "CR", flag: "🇨🇷", currency: "Costa Rican Colon", currencyCode: "CRC", phoneCode: "+506" },
+  { name: "Panama", code: "PA", flag: "🇵🇦", currency: "US Dollar", currencyCode: "USD", phoneCode: "+507" },
+  { name: "Jamaica", code: "JM", flag: "🇯🇲", currency: "Jamaican Dollar", currencyCode: "JMD", phoneCode: "+1876" },
+  { name: "Trinidad and Tobago", code: "TT", flag: "🇹🇹", currency: "Trinidad Dollar", currencyCode: "TTD", phoneCode: "+1868" },
+  { name: "Dominican Republic", code: "DO", flag: "🇩🇴", currency: "Dominican Peso", currencyCode: "DOP", phoneCode: "+1809" },
 ];
 
 export function getCountryInfo(countryName: string | null | undefined): CountryInfo {
   if (!countryName) {
-    return countries.find(c => c.name === "Ghana") || countries[0];
+    return countries.find(c => c.name === "United States") || countries[0];
   }
   
   const normalizedName = countryName.trim().toLowerCase();
@@ -84,7 +118,16 @@ export function getCountryInfo(countryName: string | null | undefined): CountryI
     c.code.toLowerCase() === normalizedName
   );
   
-  return found || countries.find(c => c.name === "Ghana") || countries[0];
+  return found || countries.find(c => c.name === "United States") || countries[0];
+}
+
+export function getCountryByPhoneCode(phoneCode: string): CountryInfo | null {
+  if (!phoneCode) return null;
+  
+  const normalizedCode = phoneCode.startsWith('+') ? phoneCode : '+' + phoneCode;
+  
+  const found = countries.find(c => c.phoneCode === normalizedCode);
+  return found || null;
 }
 
 export function getCountryFlag(countryName: string | null | undefined): string {
