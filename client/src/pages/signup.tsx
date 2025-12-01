@@ -234,11 +234,11 @@ export function SignUp() {
         });
         const { data } = await supabase.auth.getUser();
         if (data.user) {
-          // Save country to user profile
+          // Save country and full name to user profile (country is immutable after creation)
           await supabase.from('user_profiles').upsert({
             id: data.user.id,
             country: country,
-            display_name: fullName,
+            full_name: fullName,
           }, {
             onConflict: 'id'
           });
@@ -274,7 +274,7 @@ export function SignUp() {
           id: data.user.id,
           phone_number: verifiedPhoneNumber,
           phone_verified: true,
-          display_name: fullName,
+          full_name: fullName,
           country: country,
         }, {
           onConflict: 'id'
