@@ -7,6 +7,7 @@ export interface CountryInfo {
   phoneCode: string;
 }
 
+// Export countries array to be used in components
 export const countries: CountryInfo[] = [
   { name: "Ghana", code: "GH", flag: "🇬🇭", currency: "Ghanaian Cedi", currencyCode: "GHS", phoneCode: "+233" },
   { name: "Nigeria", code: "NG", flag: "🇳🇬", currency: "Nigerian Naira", currencyCode: "NGN", phoneCode: "+234" },
