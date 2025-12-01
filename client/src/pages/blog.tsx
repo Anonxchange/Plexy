@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { createClient } from "@/lib/supabase";
 
 const categories = [
   "Latest news",
@@ -51,78 +52,66 @@ const featuredPosts = [
   }
 ];
 
-const blogPosts = [
-  {
-    id: 1,
-    title: "How to Earn Crypto Without Trading: The Smart Guide for Beginners",
-    category: "Knowledge",
-    date: "2025/11/28",
-    gradient: "from-[#B4F22E] via-[#9FD624] to-[#8BC34A]",
-    hasCoins: true
-  },
-  {
-    id: 2,
-    title: "More Friends, More Coins - Earn Up to $130 With Referrals",
-    category: "Promotion",
-    date: "2025/11/25",
-    gradient: "from-[#8BC34A] via-[#B4F22E] to-[#CDDC39]",
-    promo: "$130"
-  },
-  {
-    id: 3,
-    title: "The Role of Bug Bounties in Strengthening Pexly's Security",
-    category: "Security",
-    date: "2025/11/22",
-    gradient: "from-[#B4F22E]/90 via-[#7CB342] to-[#558B2F]"
-  },
-  {
-    id: 4,
-    title: "10 Essential Security Tips for Crypto Traders",
-    category: "Security",
-    date: "2025/11/20",
-    gradient: "from-[#9FD624] via-[#B4F22E] to-[#C6FF00]"
-  },
-  {
-    id: 5,
-    title: "Pexly Introduces Lightning Network Support",
-    category: "Announcement",
-    date: "2025/11/18",
-    gradient: "from-[#8BC34A] via-[#9FD624] to-[#B4F22E]"
-  },
-  {
-    id: 6,
-    title: "Understanding Payment Methods in P2P Trading",
-    category: "Knowledge",
-    date: "2025/11/15",
-    gradient: "from-[#B4F22E] via-[#8BC34A] to-[#689F38]"
-  },
-  {
-    id: 7,
-    title: "Bitcoin Price Analysis: What's Driving the Market?",
-    category: "Latest news",
-    date: "2025/11/12",
-    gradient: "from-[#9FD624] via-[#B4F22E] to-[#CDDC39]"
-  },
-  {
-    id: 8,
-    title: "Top 5 Trading Strategies for 2025",
-    category: "Knowledge",
-    date: "2025/11/10",
-    gradient: "from-[#7CB342] via-[#B4F22E] to-[#9FD624]"
-  }
+const gradients = [
+  "from-[#B4F22E] via-[#9FD624] to-[#8BC34A]",
+  "from-[#8BC34A] via-[#B4F22E] to-[#CDDC39]",
+  "from-[#B4F22E]/90 via-[#7CB342] to-[#558B2F]",
+  "from-[#9FD624] via-[#B4F22E] to-[#C6FF00]",
+  "from-[#8BC34A] via-[#9FD624] to-[#B4F22E]",
+  "from-[#B4F22E] via-[#8BC34A] to-[#689F38]",
+  "from-[#9FD624] via-[#B4F22E] to-[#CDDC39]",
+  "from-[#7CB342] via-[#B4F22E] to-[#9FD624]"
 ];
 
 export default function Blog() {
+  const supabase = createClient();
   const [selectedCategory, setSelectedCategory] = useState("Latest news");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % featuredPosts.length);
-    }, 5000);
-    return () => clearInterval(timer);
+    fetchBlogPosts();
   }, []);
+
+  const fetchBlogPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const postsWithGradients = (data || []).map((post: any, index: number) => ({
+        ...post,
+        gradient: gradients[index % gradients.length],
+        date: new Date(post.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).replace(/\//g, '/')
+      }));
+
+      setBlogPosts(postsWithGradients);
+    } catch (error) {
+      console.error('Error fetching blog posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const featuredPosts = blogPosts.filter(post => post.featured).slice(0, 5);
+
+  useEffect(() => {
+    if (featuredPosts.length > 0) {
+      const timer = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % featuredPosts.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [featuredPosts.length]);
 
   const filteredPosts = blogPosts.filter(post => {
     const matchesCategory = selectedCategory === "Latest news" || post.category === selectedCategory;
@@ -143,6 +132,7 @@ export default function Blog() {
       {/* Featured Carousel */}
       <section className="px-4 pt-6 pb-4">
         <div className="max-w-lg mx-auto">
+          {featuredPosts.length > 0 ? (
           <div className="relative">
             {/* Carousel Container */}
             <div className="relative overflow-hidden rounded-2xl">
@@ -157,7 +147,7 @@ export default function Blog() {
                       <div className="absolute top-4 left-4">
                         <span className="text-white/90 font-bold text-lg">Pexly</span>
                       </div>
-                      
+
                       {/* Decorative Elements */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="relative w-full h-full">
@@ -165,7 +155,7 @@ export default function Blog() {
                           <div className="absolute top-1/4 left-1/4 w-20 h-20 bg-white/20 rounded-lg transform rotate-12"></div>
                           <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-white/15 rounded-full"></div>
                           <div className="absolute bottom-1/4 left-1/3 w-12 h-12 bg-white/10 rounded-lg transform -rotate-12"></div>
-                          
+
                           {/* Content hint */}
                           <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm rounded-xl p-3 w-32 md:w-40">
                             <div className="space-y-2">
@@ -221,6 +211,7 @@ export default function Blog() {
               ))}
             </div>
           </div>
+          ) : null}
         </div>
       </section>
 
@@ -263,7 +254,13 @@ export default function Blog() {
       {/* Blog Posts */}
       <section className="px-4 pb-8">
         <div className="max-w-lg mx-auto space-y-6">
-          {filteredPosts.length === 0 ? (
+          {loading ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">Loading articles...</p>
+              </CardContent>
+            </Card>
+          ) : filteredPosts.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground">No articles found. Try adjusting your search.</p>
@@ -301,7 +298,7 @@ export default function Blog() {
                         </div>
                       </>
                     )}
-                    
+
                     {post.promo && (
                       <>
                         <div className="text-white">
