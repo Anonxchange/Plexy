@@ -119,23 +119,50 @@ export default function AdminBlog() {
 
     try {
       if (editingPost) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('blog_posts')
-          .update(formData)
-          .eq('id', editingPost.id);
+          .update({
+            title: formData.title,
+            excerpt: formData.excerpt,
+            content: formData.content,
+            category: formData.category,
+            author: formData.author,
+            featured: formData.featured,
+            read_time: formData.read_time,
+            image_url: formData.image_url || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingPost.id)
+          .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
 
         toast({
           title: "Success",
           description: "Blog post updated successfully",
         });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('blog_posts')
-          .insert([formData]);
+          .insert([{
+            title: formData.title,
+            excerpt: formData.excerpt,
+            content: formData.content,
+            category: formData.category,
+            author: formData.author,
+            featured: formData.featured,
+            read_time: formData.read_time,
+            image_url: formData.image_url || null
+          }])
+          .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
 
         toast({
           title: "Success",
@@ -157,11 +184,11 @@ export default function AdminBlog() {
       setEditingPost(null);
       setShowForm(false);
       fetchPosts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving post:', error);
       toast({
         title: "Error",
-        description: "Failed to save blog post",
+        description: error?.message || "Failed to save blog post. Please check the console for details.",
         variant: "destructive",
       });
     }
