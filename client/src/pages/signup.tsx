@@ -267,7 +267,7 @@ export function SignUp() {
   const handleEmailOtpVerify = async () => {
     setLoading(true);
     
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-email-otp`, {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
