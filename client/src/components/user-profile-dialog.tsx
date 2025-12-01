@@ -9,6 +9,7 @@ import { formatLastSeen } from "@/lib/presence";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { getCountryFlag } from "@/lib/localization";
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -185,7 +186,7 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
                 {profile?.country && (
-                  <span className="text-base">🇳🇬</span>
+                  <span className="text-base">{getCountryFlag(profile.country)}</span>
                 )}
                 <h3 className="font-semibold text-sm truncate">{profile?.username || "Unknown"}</h3>
               </div>
@@ -252,15 +253,15 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Country</div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-base">🇳🇬</span>
-                  <span className="font-medium text-sm">Nigeria</span>
+                  <span className="text-base">{getCountryFlag(profile?.country)}</span>
+                  <span className="font-medium text-sm">{profile?.country || 'Unknown'}</span>
                 </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground mb-1">IP location</div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-base">🇳🇬</span>
-                  <span className="font-medium text-sm">Nigeria</span>
+                  <span className="text-base">{getCountryFlag(profile?.country)}</span>
+                  <span className="font-medium text-sm">{profile?.country || 'Unknown'}</span>
                 </div>
               </div>
               <div>
