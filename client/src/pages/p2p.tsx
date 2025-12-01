@@ -25,7 +25,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { currencies } from "@/lib/currencies";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { 
   Bitcoin, 
@@ -42,12 +41,14 @@ import {
   Smartphone,
   Circle,
   ArrowRight,
-  ThumbsUp
+  ThumbsUp,
+  ChevronsUpDown
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Separator } from "@/components/ui/separator";
 import { P2PFiltersDialog } from "@/components/p2p-filters-dialog";
 import { getCryptoPrices, getRealtimeCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { countries as localizationCountries } from "@/lib/localization";
 
 // Helper function to get country flag emoji
 const getCountryFlag = (countryName: string | undefined | null): string => {
@@ -101,7 +102,7 @@ export function P2P() {
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
   const [selectedCrypto, setSelectedCrypto] = useState("BTC");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("");
   const [offerLocation, setOfferLocation] = useState("worldwide");
   const [traderLocation, setTraderLocation] = useState("usa");
   const [openCurrencyDialog, setOpenCurrencyDialog] = useState(false);
@@ -176,6 +177,47 @@ export function P2P() {
   useEffect(() => {
     fetchOffers();
   }, [activeTab, selectedCrypto]);
+
+  useEffect(() => {
+    const loadUserCurrency = async () => {
+      if (user?.id && !currency) {
+        try {
+          const { data: profileData } = await supabase
+            .from("user_profiles")
+            .select("country, preferred_currency")
+            .eq("id", user.id)
+            .single();
+
+          if (profileData) {
+            if (profileData.preferred_currency) {
+              setCurrency(profileData.preferred_currency);
+            } else if (profileData.country) {
+              const userCountry = localizationCountries.find(
+                c => c.name.toLowerCase() === profileData.country.toLowerCase() || 
+                     c.code.toLowerCase() === profileData.country.toLowerCase()
+              );
+              if (userCountry) {
+                setCurrency(userCountry.currencyCode);
+              } else {
+                setCurrency("USD");
+              }
+            } else {
+              setCurrency("USD");
+            }
+          } else {
+            setCurrency("USD");
+          }
+        } catch (error) {
+          console.error("Error loading user currency:", error);
+          setCurrency("USD");
+        }
+      } else if (!user?.id && !currency) {
+        setCurrency("USD");
+      }
+    };
+
+    loadUserCurrency();
+  }, [user?.id]);
 
   useEffect(() => {
     fetchActiveTrades();
@@ -464,8 +506,19 @@ export function P2P() {
     { id: "vouchers", name: "Vouchers", icon: Gift, category: "goods" },
   ];
 
-  const popularCurrencies = ["USD", "GBP", "CAD", "EUR", "INR", "KES", "NGN", "CNY"];
-  const selectedCurrencyData = currencies.find(c => c.code === currency);
+  const popularCurrencies = ["USD", "GBP", "CAD", "EUR", "INR", "KES", "NGN", "GHS"];
+  
+  // Create a unique list of currencies from localization countries
+  const uniqueCurrencies = Array.from(
+    new Map(
+      localizationCountries.map(country => [
+        country.currencyCode,
+        { code: country.currencyCode, name: country.currency, flag: country.flag }
+      ])
+    ).values()
+  );
+  
+  const selectedCurrencyData = localizationCountries.find(c => c.currencyCode === currency);
 
 
   const selectedCryptoData = cryptocurrencies.find(c => c.symbol === selectedCrypto) || cryptocurrencies[0];
@@ -794,32 +847,18 @@ export function P2P() {
                       <DialogTitle>Preferred currency</DialogTitle>
                     </DialogHeader>
                     <Command>
-                      <CommandInput placeholder="Search for your currency" />
+                      <CommandInput placeholder="Search currency or country..." />
                       <CommandEmpty>No currency found.</CommandEmpty>
 
                       <div className="max-h-[400px] overflow-y-auto">
                         <CommandGroup heading="MOST POPULAR">
-                          <CommandItem
-                            value="any"
-                            onSelect={() => {
-                              setCurrency("USD");
-                              setOpenCurrencyDialog(false);
-                            }}
-                            className="flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-xl">🌐</span>
-                              <span>Any currency</span>
-                            </div>
-                            <span className="text-sm font-semibold">$£€</span>
-                          </CommandItem>
                           {popularCurrencies.map((code) => {
-                            const curr = currencies.find(c => c.code === code);
-                            if (!curr) return null;
+                            const country = localizationCountries.find(c => c.currencyCode === code);
+                            if (!country) return null;
                             return (
                               <CommandItem
-                                key={code}
-                                value={code}
+                                key={`popular-${country.code}-${code}`}
+                                value={`${country.name} ${country.currency} ${code}`}
                                 onSelect={() => {
                                   setCurrency(code);
                                   setOpenCurrencyDialog(false);
@@ -830,8 +869,8 @@ export function P2P() {
                                 )}
                               >
                                 <div className="flex items-center gap-3">
-                                  <span className="text-xl">{curr.flag}</span>
-                                  <span>{curr.name}</span>
+                                  <span className="text-xl">{country.flag}</span>
+                                  <span>{country.name} - {country.currency}</span>
                                 </div>
                                 <span className={cn(
                                   "text-sm font-semibold px-3 py-1 rounded",
@@ -845,28 +884,30 @@ export function P2P() {
                         </CommandGroup>
 
                         <CommandGroup heading="ALL CURRENCIES">
-                          {currencies.filter(c => !popularCurrencies.includes(c.code)).map((curr) => (
+                          {localizationCountries
+                            .filter(c => !popularCurrencies.includes(c.currencyCode))
+                            .map((country) => (
                             <CommandItem
-                              key={curr.code}
-                              value={curr.code}
+                              key={`${country.code}-${country.currencyCode}`}
+                              value={`${country.name} ${country.currency} ${country.currencyCode}`}
                               onSelect={() => {
-                                setCurrency(curr.code);
+                                setCurrency(country.currencyCode);
                                 setOpenCurrencyDialog(false);
                               }}
                               className={cn(
                                 "flex items-center justify-between",
-                                currency === curr.code && "bg-primary/10"
+                                currency === country.currencyCode && "bg-primary/10"
                               )}
                             >
                               <div className="flex items-center gap-3">
-                                <span className="text-xl">{curr.flag}</span>
-                                <span>{curr.name}</span>
+                                <span className="text-xl">{country.flag}</span>
+                                <span>{country.name} - {country.currency}</span>
                               </div>
                               <span className={cn(
                                 "text-sm font-semibold px-3 py-1 rounded",
-                                currency === curr.code ? "bg-green-500 text-white" : "bg-muted"
+                                currency === country.currencyCode ? "bg-green-500 text-white" : "bg-muted"
                               )}>
-                                {curr.code}
+                                {country.currencyCode}
                               </span>
                             </CommandItem>
                           ))}
@@ -1736,31 +1777,17 @@ export function P2P() {
                               <DialogTitle>Preferred currency</DialogTitle>
                             </DialogHeader>
                             <Command>
-                              <CommandInput placeholder="Search for your currency" />
+                              <CommandInput placeholder="Search currency or country..." />
                               <CommandEmpty>No currency found.</CommandEmpty>
                               <div className="max-h-[400px] overflow-y-auto">
                                 <CommandGroup heading="MOST POPULAR">
-                                  <CommandItem
-                                    value="any"
-                                    onSelect={() => {
-                                      setCurrency("USD");
-                                      setOpenCurrencyDialog(false);
-                                    }}
-                                    className="flex items-center justify-between"
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-xl">🌐</span>
-                                      <span>Any currency</span>
-                                    </div>
-                                    <span className="text-sm font-semibold">$£€</span>
-                                  </CommandItem>
                                   {popularCurrencies.map((code) => {
-                                    const curr = currencies.find(c => c.code === code);
-                                    if (!curr) return null;
+                                    const country = localizationCountries.find(c => c.currencyCode === code);
+                                    if (!country) return null;
                                     return (
                                       <CommandItem
-                                        key={code}
-                                        value={code}
+                                        key={`popular-desktop-${country.code}-${code}`}
+                                        value={`${country.name} ${country.currency} ${code}`}
                                         onSelect={() => {
                                           setCurrency(code);
                                           setOpenCurrencyDialog(false);
@@ -1771,8 +1798,8 @@ export function P2P() {
                                         )}
                                       >
                                         <div className="flex items-center gap-3">
-                                          <span className="text-xl">{curr.flag}</span>
-                                          <span>{curr.name}</span>
+                                          <span className="text-xl">{country.flag}</span>
+                                          <span>{country.name} - {country.currency}</span>
                                         </div>
                                         <span className={cn(
                                           "text-sm font-semibold px-3 py-1 rounded",
@@ -1785,28 +1812,30 @@ export function P2P() {
                                   })}
                                 </CommandGroup>
                                 <CommandGroup heading="ALL CURRENCIES">
-                                  {currencies.filter(c => !popularCurrencies.includes(c.code)).map((curr) => (
+                                  {localizationCountries
+                                    .filter(c => !popularCurrencies.includes(c.currencyCode))
+                                    .map((country) => (
                                     <CommandItem
-                                      key={curr.code}
-                                      value={curr.code}
+                                      key={`desktop-${country.code}-${country.currencyCode}`}
+                                      value={`${country.name} ${country.currency} ${country.currencyCode}`}
                                       onSelect={() => {
-                                        setCurrency(curr.code);
+                                        setCurrency(country.currencyCode);
                                         setOpenCurrencyDialog(false);
                                       }}
                                       className={cn(
                                         "flex items-center justify-between",
-                                        currency === curr.code && "bg-primary/10"
+                                        currency === country.currencyCode && "bg-primary/10"
                                       )}
                                     >
                                       <div className="flex items-center gap-3">
-                                        <span className="text-xl">{curr.flag}</span>
-                                        <span>{curr.name}</span>
+                                        <span className="text-xl">{country.flag}</span>
+                                        <span>{country.name} - {country.currency}</span>
                                       </div>
                                       <span className={cn(
                                         "text-sm font-semibold px-3 py-1 rounded",
-                                        currency === curr.code ? "bg-green-500 text-white" : "bg-muted"
+                                        currency === country.currencyCode ? "bg-green-500 text-white" : "bg-muted"
                                       )}>
-                                        {curr.code}
+                                        {country.currencyCode}
                                       </span>
                                     </CommandItem>
                                   ))}
