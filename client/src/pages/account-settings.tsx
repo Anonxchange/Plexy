@@ -128,7 +128,7 @@ export default function AccountSettings() {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [phone, setPhone] = useState("");
-  const [currency, setCurrency] = useState("usd");
+  const [currency, setCurrency] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [countryCodeForPhone, setCountryCodeForPhone] = useState("");
@@ -251,19 +251,26 @@ export default function AccountSettings() {
         if (!accountCountry) {
           setAccountCountry(profileData.country);
         }
-        // Set currency based on user's country
+      }
+
+      // Set currency - prefer user's saved currency, then country's currency
+      if (!currency) {
         if (profileData.preferred_currency) {
-          setCurrency(profileData.preferred_currency.toLowerCase());
-        } else {
+          setCurrency(profileData.preferred_currency);
+        } else if (profileData.country) {
           const countryInfo = getCountryInfo(profileData.country);
-          setCurrency(countryInfo.currencyCode.toLowerCase());
+          setCurrency(countryInfo.currencyCode);
+        } else {
+          // Default to USD only if no country is set
+          setCurrency("USD");
         }
       }
+
       if (profileData.phone_number) {
         setPhone(profileData.phone_number);
       }
     }
-  }, [profileData]);
+  }, [profileData, currency]);
 
   // Load country from profile on mount
   useEffect(() => {
@@ -1207,8 +1214,8 @@ export default function AccountSettings() {
               >
                 {currency ? (
                   <>
-                    {countries.find((c) => c.currencyCode.toLowerCase() === currency)?.flag}{" "}
-                    {countries.find((c) => c.currencyCode.toLowerCase() === currency)?.name} - {currency.toUpperCase()}
+                    {countries.find((c) => c.currencyCode === currency)?.flag}{" "}
+                    {countries.find((c) => c.currencyCode === currency)?.name} - {currency}
                   </>
                 ) : (
                   "Select currency..."
@@ -1226,13 +1233,13 @@ export default function AccountSettings() {
                       key={`${country.code}-${country.currencyCode}`}
                       value={`${country.name} ${country.currency} ${country.currencyCode}`}
                       onSelect={() => {
-                        setCurrency(country.currencyCode.toLowerCase());
+                        setCurrency(country.currencyCode);
                       }}
                     >
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          currency === country.currencyCode.toLowerCase()
+                          currency === country.currencyCode
                             ? "opacity-100"
                             : "opacity-0"
                         )}
@@ -3500,3 +3507,4 @@ export default function AccountSettings() {
     </div>
   );
 }
+
