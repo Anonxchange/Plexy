@@ -18,10 +18,10 @@ import {
 } from "@/components/ui/select";
 
 const countries = [
+  { code: "GH", name: "Ghana", flag: "🇬🇭" },
   { code: "NG", name: "Nigeria", flag: "🇳🇬" },
   { code: "US", name: "United States", flag: "🇺🇸" },
   { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
-  { code: "GH", name: "Ghana", flag: "🇬🇭" },
   { code: "KE", name: "Kenya", flag: "🇰🇪" },
   { code: "ZA", name: "South Africa", flag: "🇿🇦" },
   { code: "EG", name: "Egypt", flag: "🇪🇬" },
@@ -65,8 +65,8 @@ export function SignUp() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [countryCode, setCountryCode] = useState("+234");
-  const [country, setCountry] = useState("NG");
+  const [countryCode, setCountryCode] = useState("");
+  const [country, setCountry] = useState("");
   const [detectingCountry, setDetectingCountry] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -150,7 +150,7 @@ export function SignUp() {
       }
     } catch (error) {
       console.error('Failed to detect country:', error);
-      // Keep default Nigeria if detection fails
+      // IP detection failed - user will need to select manually
     } finally {
       setDetectingCountry(false);
     }
