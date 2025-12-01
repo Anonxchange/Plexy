@@ -12,7 +12,7 @@ import { useTheme } from "@/components/theme-provider";
 
 export function SignIn() {
   const [inputValue, setInputValue] = useState("");
-  const [countryCode, setCountryCode] = useState("+234");
+  const [countryCode, setCountryCode] = useState("");
   const [isPhoneNumber, setIsPhoneNumber] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -30,6 +30,22 @@ export function SignIn() {
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
+
+  // Auto-detect country from IP on mount
+  useEffect(() => {
+    const detectCountry = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        if (data.country_calling_code) {
+          setCountryCode(data.country_calling_code);
+        }
+      } catch (error) {
+        console.error('Failed to detect country:', error);
+      }
+    };
+    detectCountry();
+  }, []);
 
   useEffect(() => {
     if (user && !checking2FA && !show2FAInput) {
