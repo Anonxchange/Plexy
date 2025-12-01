@@ -157,7 +157,7 @@ export function getVerificationRequirements(currentLevel: number) {
         "Date of birth confirmation (must be 18+)",
         "Email AND phone verification (both required)"
       ],
-      benefits: ["Start trading", "Create offers", "$1,000 daily limit", "$10,000 lifetime trade limit"]
+      benefits: ["Open trades on existing offers", "$1,000 daily limit", "$10,000 lifetime trade limit"]
     };
   }
   if (currentLevel === 1) {
