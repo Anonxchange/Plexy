@@ -163,10 +163,15 @@ export function Profile() {
         setProfileData(data);
       } else {
         // Create default profile if doesn't exist
+        // Try to get country from user metadata or profile data
+        const userCountry = user?.user_metadata?.country || 
+                          user?.user_metadata?.Country || 
+                          '';
+        
         const defaultProfile = {
           id: user?.id,
           username: `user_${user?.id?.substring(0, 8)}`,
-          country: user?.user_metadata?.country || '',
+          country: userCountry,
           bio: null,
           languages: ['English'],
           positive_feedback: 0,
@@ -194,10 +199,14 @@ export function Profile() {
     } catch (error) {
       console.error('Error fetching profile:', error);
       // Set a default profile even on error to prevent blank page
+      const userCountry = user?.user_metadata?.country || 
+                        user?.user_metadata?.Country || 
+                        '';
+      
       const defaultProfile = {
         id: user?.id || '',
         username: `user_${user?.id?.substring(0, 8)}`,
-        country: user?.user_metadata?.country || '',
+        country: userCountry,
         bio: null,
         languages: ['English'],
         positive_feedback: 0,
