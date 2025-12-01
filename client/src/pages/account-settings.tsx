@@ -1090,7 +1090,14 @@ export default function AccountSettings() {
         </div>
         <div className="p-4 border rounded-lg">
           <p className="text-sm text-muted-foreground mb-1">Country</p>
-          <p className="font-semibold">{profileData?.country || "Not set"}</p>
+          <p className="font-semibold">
+            {profileData?.country ? (
+              <span className="flex items-center gap-2">
+                <span>{getCountryInfo(profileData.country).flag}</span>
+                <span>{getCountryInfo(profileData.country).name}</span>
+              </span>
+            ) : "Not set"}
+          </p>
         </div>
       </div>
 
