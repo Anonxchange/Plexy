@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
+import { getCountryInfo, getCountryPhoneCode, getAllCountryNames } from "@/lib/localization";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -102,7 +103,7 @@ export default function AccountSettings() {
   const [phoneVerified, setPhoneVerified] = useState(true);
   const [showPhoneVerificationDialog, setShowPhoneVerificationDialog] = useState(false);
   const [pendingPhoneNumber, setPendingPhoneNumber] = useState("");
-  const [pendingCountryCode, setPendingCountryCode] = useState("+234");
+  const [pendingCountryCode, setPendingCountryCode] = useState("");
   // Email change states
   const [showEmailChangeDialog, setShowEmailChangeDialog] = useState(false);
 
@@ -118,7 +119,7 @@ export default function AccountSettings() {
   const [currency, setCurrency] = useState("usd");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [countryCodeForPhone, setCountryCodeForPhone] = useState("+234");
+  const [countryCodeForPhone, setCountryCodeForPhone] = useState("");
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -148,8 +149,8 @@ export default function AccountSettings() {
   const [showMobileMoneyDialog, setShowMobileMoneyDialog] = useState(false);
   const [bankDialogStep, setBankDialogStep] = useState(1);
   const [accountType, setAccountType] = useState("Personal");
-  const [accountCountry, setAccountCountry] = useState("Nigeria");
-  const [accountCurrency, setAccountCurrency] = useState("Nigerian Naira");
+  const [accountCountry, setAccountCountry] = useState("");
+  const [accountCurrency, setAccountCurrency] = useState("");
   const [paymentBankName, setPaymentBankName] = useState("");
   const [paymentAccountNumber, setPaymentAccountNumber] = useState("");
   const [paymentAccountName, setPaymentAccountName] = useState("");
@@ -272,13 +273,25 @@ export default function AccountSettings() {
           setBio(data.bio || '');
         }
 
+        // Set country and currency based on user's profile
+        if (data.country) {
+          setAccountCountry(data.country);
+          const countryInfo = getCountryInfo(data.country);
+          setAccountCurrency(countryInfo.currency);
+          // Set phone code based on user's country if not editing
+          if (!isEditingPhone) {
+            setCountryCodeForPhone(countryInfo.phoneCode);
+          }
+        }
+
         // Load phone number - prioritize auth user phone, then profile phone_number
         // Only update if user is not currently editing the phone field
         if (!isEditingPhone) {
           const fullPhone = authUser?.phone || data.phone_number || data.phone || '';
           if (fullPhone) {
-            // Try to extract country code
-            const codes = ['+234', '+1', '+44', '+91', '+254', '+233', '+27'];
+            // Try to extract country code from the phone number
+            const userCountryCode = getCountryPhoneCode(data.country);
+            const codes = [userCountryCode, '+234', '+1', '+44', '+91', '+254', '+233', '+27'];
             const matchedCode = codes.find(code => fullPhone.startsWith(code));
             if (matchedCode) {
               setCountryCodeForPhone(matchedCode);
