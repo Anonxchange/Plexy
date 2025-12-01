@@ -42,23 +42,60 @@ const countries = [
   { code: "AR", name: "Argentina", flag: "🇦🇷" },
   { code: "CL", name: "Chile", flag: "🇨🇱" },
   { code: "CO", name: "Colombia", flag: "🇨🇴" },
+  { code: "PE", name: "Peru", flag: "🇵🇪" },
   { code: "FR", name: "France", flag: "🇫🇷" },
   { code: "DE", name: "Germany", flag: "🇩🇪" },
   { code: "IT", name: "Italy", flag: "🇮🇹" },
   { code: "ES", name: "Spain", flag: "🇪🇸" },
   { code: "NL", name: "Netherlands", flag: "🇳🇱" },
   { code: "BE", name: "Belgium", flag: "🇧🇪" },
+  { code: "PT", name: "Portugal", flag: "🇵🇹" },
   { code: "CH", name: "Switzerland", flag: "🇨🇭" },
   { code: "SE", name: "Sweden", flag: "🇸🇪" },
   { code: "NO", name: "Norway", flag: "🇳🇴" },
   { code: "DK", name: "Denmark", flag: "🇩🇰" },
+  { code: "FI", name: "Finland", flag: "🇫🇮" },
   { code: "PL", name: "Poland", flag: "🇵🇱" },
+  { code: "CZ", name: "Czech Republic", flag: "🇨🇿" },
+  { code: "HU", name: "Hungary", flag: "🇭🇺" },
+  { code: "RO", name: "Romania", flag: "🇷🇴" },
+  { code: "AT", name: "Austria", flag: "🇦🇹" },
+  { code: "IE", name: "Ireland", flag: "🇮🇪" },
+  { code: "GR", name: "Greece", flag: "🇬🇷" },
+  { code: "TR", name: "Turkey", flag: "🇹🇷" },
+  { code: "RU", name: "Russia", flag: "🇷🇺" },
+  { code: "UA", name: "Ukraine", flag: "🇺🇦" },
   { code: "CN", name: "China", flag: "🇨🇳" },
   { code: "JP", name: "Japan", flag: "🇯🇵" },
   { code: "KR", name: "South Korea", flag: "🇰🇷" },
+  { code: "TW", name: "Taiwan", flag: "🇹🇼" },
+  { code: "HK", name: "Hong Kong", flag: "🇭🇰" },
   { code: "PK", name: "Pakistan", flag: "🇵🇰" },
   { code: "BD", name: "Bangladesh", flag: "🇧🇩" },
-];
+  { code: "LK", name: "Sri Lanka", flag: "🇱🇰" },
+  { code: "NP", name: "Nepal", flag: "🇳🇵" },
+  { code: "NZ", name: "New Zealand", flag: "🇳🇿" },
+  { code: "UG", name: "Uganda", flag: "🇺🇬" },
+  { code: "TZ", name: "Tanzania", flag: "🇹🇿" },
+  { code: "RW", name: "Rwanda", flag: "🇷🇼" },
+  { code: "ET", name: "Ethiopia", flag: "🇪🇹" },
+  { code: "CM", name: "Cameroon", flag: "🇨🇲" },
+  { code: "SN", name: "Senegal", flag: "🇸🇳" },
+  { code: "CI", name: "Ivory Coast", flag: "🇨🇮" },
+  { code: "QA", name: "Qatar", flag: "🇶🇦" },
+  { code: "KW", name: "Kuwait", flag: "🇰🇼" },
+  { code: "BH", name: "Bahrain", flag: "🇧🇭" },
+  { code: "OM", name: "Oman", flag: "🇴🇲" },
+  { code: "JO", name: "Jordan", flag: "🇯🇴" },
+  { code: "IL", name: "Israel", flag: "🇮🇱" },
+  { code: "EC", name: "Ecuador", flag: "🇪🇨" },
+  { code: "VE", name: "Venezuela", flag: "🇻🇪" },
+  { code: "CR", name: "Costa Rica", flag: "🇨🇷" },
+  { code: "PA", name: "Panama", flag: "🇵🇦" },
+  { code: "DO", name: "Dominican Republic", flag: "🇩🇴" },
+  { code: "JM", name: "Jamaica", flag: "🇯🇲" },
+  { code: "TT", name: "Trinidad and Tobago", flag: "🇹🇹" },
+].sort((a, b) => a.name.localeCompare(b.name));
 
 export function SignUp() {
   const [signupMethod, setSignupMethod] = useState<"email" | "phone">("email");
@@ -77,7 +114,7 @@ export function SignUp() {
   const [userId, setUserId] = useState<string | null>(null);
   const [emailOtp, setEmailOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const { signUp, user } = useAuth();
+  const { signUp, signIn, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
@@ -127,22 +164,59 @@ export function SignUp() {
             'AR': '+54',
             'CL': '+56',
             'CO': '+57',
+            'PE': '+51',
             'FR': '+33',
             'DE': '+49',
             'IT': '+39',
             'ES': '+34',
             'NL': '+31',
             'BE': '+32',
+            'PT': '+351',
             'CH': '+41',
             'SE': '+46',
             'NO': '+47',
             'DK': '+45',
+            'FI': '+358',
             'PL': '+48',
+            'CZ': '+420',
+            'HU': '+36',
+            'RO': '+40',
+            'AT': '+43',
+            'IE': '+353',
+            'GR': '+30',
+            'TR': '+90',
+            'RU': '+7',
+            'UA': '+380',
             'CN': '+86',
             'JP': '+81',
             'KR': '+82',
+            'TW': '+886',
+            'HK': '+852',
             'PK': '+92',
             'BD': '+880',
+            'LK': '+94',
+            'NP': '+977',
+            'NZ': '+64',
+            'UG': '+256',
+            'TZ': '+255',
+            'RW': '+250',
+            'ET': '+251',
+            'CM': '+237',
+            'SN': '+221',
+            'CI': '+225',
+            'QA': '+974',
+            'KW': '+965',
+            'BH': '+973',
+            'OM': '+968',
+            'JO': '+962',
+            'IL': '+972',
+            'EC': '+593',
+            'VE': '+58',
+            'CR': '+506',
+            'PA': '+507',
+            'DO': '+1',
+            'JM': '+1',
+            'TT': '+1',
           };
           
           if (countryToPhoneCode[data.country_code]) {
@@ -581,26 +655,23 @@ export function SignUp() {
                 <>
                   <div className="mb-6">
                     <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Country
-                    </label>
-                    <CountryCodeSelector value={countryCode} onChange={setCountryCode} />
-                  </div>
-                  <div className="mb-6">
-                    <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       Phone Number<span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="tel"
-                      placeholder="Enter phone number"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      required
-                      className={`w-full px-4 py-4 rounded-xl text-base ${
-                        isDark 
-                          ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                          : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                      } focus:outline-none transition-colors`}
-                    />
+                    <div className="flex gap-2">
+                      <CountryCodeSelector value={countryCode} onChange={setCountryCode} />
+                      <input
+                        type="tel"
+                        placeholder="Enter phone number"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        required
+                        className={`flex-1 px-4 py-4 rounded-xl text-base ${
+                          isDark 
+                            ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                            : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
+                        } focus:outline-none transition-colors`}
+                      />
+                    </div>
                   </div>
                 </>
               )}
