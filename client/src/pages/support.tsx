@@ -1,213 +1,308 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
+  Home,
+  MessageSquare,
+  HelpCircle,
   Search,
-  ChevronRight,
-  MessageCircle,
-  Mail,
-  Phone,
   X,
+  ChevronRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PexlyFooter } from "@/components/pexly-footer";
-import { FloatingHelpButton } from "@/components/floating-help-button";
 
-export default function Support() {
+const SupportInterface = () => {
+  const [currentView, setCurrentView] = useState("home");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showHelpCenter, setShowHelpCenter] = useState(false);
 
-  const helpCategories = [
-    {
-      title: "Get Started",
-      description: "Get started with secure trading",
-      icon: "🚀",
-    },
-    {
-      title: "Account - Security & Privacy",
-      description: "Your privacy. Our priority.",
-      icon: "🔒",
-    },
-    {
-      title: "Wallet & Bank Transfer",
-      description: "Manage your wallet and transfers",
-      icon: "💳",
-    },
-    {
-      title: "Swap - Buy & Sell Crypto",
-      description: "Buy & sell crypto instantly with Swap",
-      icon: "🔄",
-    },
-    {
-      title: "P2P Trading Guide",
-      description: "Learn P2P trading on Pexly",
-      icon: "👥",
-    },
-    {
-      title: "Gift Cards & Rewards",
-      description: "Earn rewards with Pexly",
-      icon: "🎁",
-    },
-    {
-      title: "Affiliate & Referral Program",
-      description: "Earn crypto by inviting friends",
-      icon: "🤝",
-    },
-    {
-      title: "Other Knowledge",
-      description: "Explore crypto & blockchain tips",
-      icon: "📚",
-    },
-  ];
+  const HomeView = () => (
+    <div className="flex flex-col h-full relative">
+      {/* Lime Green Header Section - Fixed */}
+      <div className="bg-gradient-to-b from-[#B4F22E] to-[#A8D61F] px-6 pt-6 pb-32">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-black text-3xl font-bold">Pexly</h1>
+          <button className="text-black">
+            <X size={28} />
+          </button>
+        </div>
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-purple-600/80 to-purple-700/60 text-white px-4 py-12 relative">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-start justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold mb-4">Hi</h1>
-              <p className="text-lg opacity-90">How can we help you today?</p>
-            </div>
-            <button
-              onClick={() => setShowHelpCenter(false)}
-              className="p-2 hover:bg-white/20 rounded-full transition"
-            >
-              <X className="w-6 h-6" />
-            </button>
+        <div className="flex gap-3 mb-8">
+          <div className="w-14 h-14 rounded-full bg-purple-500 flex items-center justify-center">
+            <div className="text-2xl">🎮</div>
           </div>
-
-          {/* Search Bar */}
-          <div className="relative max-w-2xl">
-            <Input
-              type="text"
-              placeholder="Search for help"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12 pl-4 pr-12 text-base rounded-lg bg-white/20 text-white placeholder:text-white/60 border-0"
-            />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+          <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center">
+            <div className="text-2xl">👤</div>
+          </div>
+          <div className="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center">
+            <div className="text-2xl">🤖</div>
           </div>
         </div>
-      </section>
 
-      {/* Help Center Content */}
-      <section className="flex-1 max-w-6xl mx-auto w-full px-4 py-8">
-        {/* Ask a Question Card */}
-        <Card className="mb-6 border-0 shadow-md">
-          <CardContent className="p-6 flex items-start gap-4">
-            <MessageCircle className="w-6 h-6 text-[#B4F22E] flex-shrink-0 mt-1" />
-            <div className="flex-1">
-              <h3 className="font-semibold mb-1">Ask a question</h3>
-              <p className="text-sm text-muted-foreground">We are here to help.</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />
-          </CardContent>
-        </Card>
-
-        {/* Help Categories */}
-        <div className="space-y-3">
-          {helpCategories.map((category, index) => (
-            <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4 flex items-start gap-4">
-                <span className="text-2xl">{category.icon}</span>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">{category.title}</h3>
-                  <p className="text-sm text-muted-foreground">{category.description}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-[#B4F22E] flex-shrink-0 mt-1" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Bottom Navigation (for mobile-like experience) */}
-      <div className="border-t bg-background sticky bottom-0">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-around">
-          <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition">
-            <div className="w-6 h-6 rounded bg-purple-500/20 flex items-center justify-center">
-              <span className="text-sm">🏠</span>
-            </div>
-            <span className="text-xs">Home</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition">
-            <MessageCircle className="w-6 h-6" />
-            <span className="text-xs">Messages</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-[#B4F22E]">
-            <span className="text-lg">❓</span>
-            <span className="text-xs">Help</span>
-          </button>
+        <div className="text-black">
+          <div className="text-right text-lg mb-1">Trader User</div>
+          <div className="text-4xl font-bold mb-2">Hi</div>
+          <div className="text-lg">(Greeting)</div>
+          <div className="text-3xl font-bold mt-4">How can we help you today?</div>
         </div>
       </div>
 
-      {/* Messages Section Modal (hidden by default) */}
-      {showHelpCenter && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4 max-h-96">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Messages</h2>
-                <button onClick={() => setShowHelpCenter(false)}>
-                  <X className="w-5 h-5" />
-                </button>
+      {/* Gradient Fade Effect */}
+      <div className="absolute top-[420px] left-0 right-0 h-12 bg-gradient-to-b from-[#A8D61F] to-transparent pointer-events-none z-10"></div>
+
+      {/* Scrollable Content Area - Overlapping */}
+      <div className="flex-1 -mt-24 relative z-20 overflow-auto">
+        <div className="px-6 pb-24">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex justify-between items-center shadow-lg cursor-pointer hover:shadow-xl transition-shadow">
+            <div>
+              <div className="font-semibold text-gray-900">Ask a question</div>
+              <div className="text-gray-500 text-sm">We are here to help.</div>
+            </div>
+            <div className="bg-blue-600 p-2 rounded-lg">
+              <MessageSquare className="text-white" size={24} />
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-4 bg-white rounded-xl p-3">
+              <Search className="text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search for help"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-gray-700"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
+                <span className="text-gray-700 text-sm">
+                  How to create a Pexly account
+                </span>
+                <ChevronRight className="text-[#B4F22E]" size={20} />
               </div>
-
-              <Tabs defaultValue="open" className="w-full">
-                <TabsList className="w-full bg-transparent p-0 border-b">
-                  <TabsTrigger
-                    value="open"
-                    className="flex-1 border-b-2 border-transparent data-[state=active]:border-[#B4F22E] data-[state=active]:bg-transparent rounded-none"
-                  >
-                    Open
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="done"
-                    className="flex-1 border-b-2 border-transparent data-[state=active]:border-[#B4F22E] data-[state=active]:bg-transparent rounded-none"
-                  >
-                    Done
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="open" className="mt-8 text-center space-y-4">
-                  <div className="flex justify-center">
-                    <MessageCircle className="w-12 h-12 text-muted-foreground/30" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Messages</h3>
-                    <p className="text-sm text-muted-foreground">No messages yet</p>
-                  </div>
-                  <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold">
-                    Send us a message
-                  </Button>
-                </TabsContent>
-
-                <TabsContent value="done" className="mt-8 text-center space-y-4">
-                  <div className="flex justify-center">
-                    <MessageCircle className="w-12 h-12 text-muted-foreground/30" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Messages</h3>
-                    <p className="text-sm text-muted-foreground">No completed messages</p>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
+                <span className="text-gray-700 text-sm">How to buy crypto on P2P</span>
+                <ChevronRight className="text-[#B4F22E]" size={20} />
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
+                <span className="text-gray-700 text-sm">
+                  Understanding escrow system
+                </span>
+                <ChevronRight className="text-[#B4F22E]" size={20} />
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
+                <span className="text-gray-700 text-sm">
+                  How to enable two-factor authentication
+                </span>
+                <ChevronRight className="text-[#B4F22E]" size={20} />
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
+                <span className="text-gray-700 text-sm">
+                  Understanding trading fees
+                </span>
+                <ChevronRight className="text-[#B4F22E]" size={20} />
+              </div>
+              <div className="flex justify-between items-center py-3 cursor-pointer hover:bg-gray-100 px-2 rounded">
+                <span className="text-gray-700 text-sm">
+                  How to verify your account
+                </span>
+                <ChevronRight className="text-[#B4F22E]" size={20} />
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-
-      <PexlyFooter />
-      <FloatingHelpButton />
+      </div>
     </div>
   );
-}
+
+  const HelpView = () => (
+    <div className="flex flex-col h-full bg-white">
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Help center</h1>
+          <button onClick={() => setCurrentView("home")}>
+            <X size={28} className="text-gray-600" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 bg-gray-100 rounded-xl p-3">
+          <Search className="text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search for help"
+            className="flex-1 bg-transparent outline-none text-gray-700"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        <div className="p-6 space-y-1">
+          {[
+            {
+              title: "Get Started",
+              description: "Get started with secure trading",
+            },
+            {
+              title: "Account - Security & Privacy",
+              description: "Your privacy. Our priority.",
+            },
+            {
+              title: "Wallet & Bank Transfer",
+              description: "Pexly wallet and bank transfer tips",
+            },
+            {
+              title: "Swap - Buy & Sell Crypto",
+              description: "Buy & sell crypto instantly with Swap",
+            },
+            {
+              title: "P2P Trading Guide",
+              description: "Complete guide to P2P trading on Pexly",
+              highlight: true,
+            },
+            {
+              title: "Gift Cards & Rewards",
+              description: "Earn and redeem rewards",
+              highlight: true,
+            },
+            {
+              title: "Referral Program - Event",
+              description: "Earn crypto by inviting friends",
+            },
+            {
+              title: "Other Knowledge",
+              description: "Explore crypto & blockchain tips",
+            },
+          ].map((item, index) => (
+            <div key={index} className="py-4 border-b border-gray-100">
+              <div className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity">
+                <div>
+                  <div
+                    className={`mb-1 ${
+                      item.highlight
+                        ? "font-semibold text-[#B4F22E]"
+                        : "font-semibold text-gray-900"
+                    }`}
+                  >
+                    {item.title}
+                  </div>
+                  <div className="text-gray-500 text-sm">{item.description}</div>
+                </div>
+                <ChevronRight
+                  className={item.highlight ? "text-[#B4F22E]" : "text-gray-400"}
+                  size={24}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const MessagesView = () => (
+    <div className="flex flex-col h-full bg-white">
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          <button onClick={() => setCurrentView("home")}>
+            <X size={28} className="text-gray-600" />
+          </button>
+        </div>
+
+        <div className="flex gap-6">
+          <button className="text-[#B4F22E] font-semibold border-b-2 border-[#B4F22E] pb-2">
+            Open
+          </button>
+          <button className="text-gray-500 font-semibold pb-2">Done</button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        <div className="bg-gray-200 p-6 rounded-2xl mb-4">
+          <MessageSquare size={32} className="text-gray-500" />
+        </div>
+        <div className="text-2xl font-bold text-gray-900 mb-2">Messages</div>
+        <div className="text-gray-500 mb-8">No messages yet</div>
+        <button className="bg-[#B4F22E] text-black font-semibold px-8 py-4 rounded-full flex items-center gap-2 hover:bg-[#A8D61F] transition-colors shadow-lg">
+          Send us a message
+          <ChevronRight size={20} />
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-screen max-w-md mx-auto bg-white flex flex-col">
+      <div className="flex-1 overflow-hidden">
+        {currentView === "home" && <HomeView />}
+        {currentView === "help" && <HelpView />}
+        {currentView === "messages" && <MessagesView />}
+      </div>
+
+      <div className="border-t border-gray-200 bg-white">
+        <div className="flex justify-around items-center py-3">
+          <button
+            onClick={() => setCurrentView("home")}
+            className="flex flex-col items-center gap-1"
+          >
+            <Home
+              size={24}
+              className={
+                currentView === "home" ? "text-[#B4F22E]" : "text-gray-600"
+              }
+            />
+            <span
+              className={`text-xs ${
+                currentView === "home"
+                  ? "text-[#B4F22E] font-semibold"
+                  : "text-gray-600"
+              }`}
+            >
+              Home
+            </span>
+          </button>
+          <button
+            onClick={() => setCurrentView("messages")}
+            className="flex flex-col items-center gap-1"
+          >
+            <MessageSquare
+              size={24}
+              className={
+                currentView === "messages" ? "text-[#B4F22E]" : "text-gray-600"
+              }
+            />
+            <span
+              className={`text-xs ${
+                currentView === "messages"
+                  ? "text-[#B4F22E] font-semibold"
+                  : "text-gray-600"
+              }`}
+            >
+              Messages
+            </span>
+          </button>
+          <button
+            onClick={() => setCurrentView("help")}
+            className="flex flex-col items-center gap-1"
+          >
+            <HelpCircle
+              size={24}
+              className={
+                currentView === "help" ? "text-[#B4F22E]" : "text-gray-600"
+              }
+            />
+            <span
+              className={`text-xs ${
+                currentView === "help"
+                  ? "text-[#B4F22E] font-semibold"
+                  : "text-gray-600"
+              }`}
+            >
+              Help
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SupportInterface;
