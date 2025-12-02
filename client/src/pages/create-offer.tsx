@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCountryInfo } from "@/lib/localization";
 
 export function CreateOffer() {
+  const { user } = useAuth();
   const { 
     checkCanCreateOffer, 
     isLevel0, 
@@ -620,27 +621,65 @@ export function CreateOffer() {
           }
         </p>
 
-        {/* Verification Alert */}
-        {isLevel0 && (
-          <Alert className="mb-6 border-orange-500/50 bg-orange-500/10">
-            <Lock className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800 dark:text-orange-200">
-              <p className="font-semibold mb-1">Cannot Create Offers</p>
-              <p className="text-sm">
-                Level 0 users cannot create offers. Please{" "}
-                <button 
-                  onClick={() => setLocation("/verification")}
-                  className="underline font-semibold hover:text-orange-900"
+        {/* Not Logged In Prompt */}
+        {!user && (
+          <Card className="bg-elevate-1 border-border mb-6">
+            <CardContent className="p-8 text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-8 w-8 text-primary" />
+                </div>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Create an account to continue</h2>
+                <p className="text-muted-foreground">
+                  To proceed, please create an account or sign in
+                </p>
+              </div>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  size="lg"
+                  onClick={() => setLocation("/signup")}
+                  className="bg-primary hover:bg-primary/90"
                 >
-                  complete verification
-                </button>{" "}
-                to Level 1 or higher to start creating offers.
-              </p>
-            </AlertDescription>
-          </Alert>
+                  Sign up
+                </Button>
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setLocation("/signin")}
+                >
+                  Log in
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {!isLevel0 && levelConfig && (
+        {/* Only show form if user is logged in */}
+        {user && (
+          <>
+            {/* Verification Alert */}
+            {isLevel0 && (
+              <Alert className="mb-6 border-orange-500/50 bg-orange-500/10">
+                <Lock className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800 dark:text-orange-200">
+                  <p className="font-semibold mb-1">Cannot Create Offers</p>
+                  <p className="text-sm">
+                    Level 0 users cannot create offers. Please{" "}
+                    <button 
+                      onClick={() => setLocation("/verification")}
+                      className="underline font-semibold hover:text-orange-900"
+                    >
+                      complete verification
+                    </button>{" "}
+                    to Level 1 or higher to start creating offers.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!isLevel0 && levelConfig && (
           <Alert className="mb-6 border-green-500/50 bg-green-500/10">
             <Shield className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800 dark:text-green-200">
@@ -1412,6 +1451,8 @@ export function CreateOffer() {
               : (isEditMode ? "Update offer" : "Place an offer")}
           </Button>
         </div>
+          </>
+        )}
       </main>
 
       <PexlyFooter />
