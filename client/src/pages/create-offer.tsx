@@ -1434,6 +1434,7 @@ export function CreateOffer() {
             </div>
           )}
         </div>
+        </>
       </main>
 
       <PexlyFooter />
