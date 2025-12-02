@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin, Lock, Shield, Award, TrendingUp, CheckCircle } from "lucide-react";
+import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin, Lock, Shield, Award, TrendingUp, CheckCircle, User } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useRoute } from "wouter";
@@ -33,6 +33,7 @@ import { getMerchantLevel } from "@shared/merchant-levels";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCountryInfo } from "@/lib/localization";
+import { useAuth } from "@/lib/auth-context";
 
 export function CreateOffer() {
   const { user } = useAuth();
@@ -621,44 +622,8 @@ export function CreateOffer() {
           }
         </p>
 
-        {/* Not Logged In Prompt */}
-        {!user && (
-          <Card className="bg-elevate-1 border-border mb-6">
-            <CardContent className="p-8 text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-8 w-8 text-primary" />
-                </div>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Create an account to continue</h2>
-                <p className="text-muted-foreground">
-                  To proceed, please create an account or sign in
-                </p>
-              </div>
-              <div className="flex gap-3 justify-center">
-                <Button 
-                  size="lg"
-                  onClick={() => setLocation("/signup")}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  Sign up
-                </Button>
-                <Button 
-                  size="lg"
-                  variant="outline"
-                  onClick={() => setLocation("/signin")}
-                >
-                  Log in
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Only show form if user is logged in */}
-        {user && (
-          <>
+        {/* Show form for all users */}
+        <>
             {/* Verification Alert */}
             {isLevel0 && (
               <Alert className="mb-6 border-orange-500/50 bg-orange-500/10">
@@ -1441,18 +1406,34 @@ export function CreateOffer() {
           </Button>
 
           {/* Submit button */}
-          <Button 
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6"
-            onClick={handleCreateOffer}
-            disabled={isSubmitting}
-          >
-            {isSubmitting 
-              ? (isEditMode ? "Updating offer..." : "Creating offer...") 
-              : (isEditMode ? "Update offer" : "Place an offer")}
-          </Button>
+          {user ? (
+            <Button 
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6"
+              onClick={handleCreateOffer}
+              disabled={isSubmitting}
+            >
+              {isSubmitting 
+                ? (isEditMode ? "Updating offer..." : "Creating offer...") 
+                : (isEditMode ? "Update offer" : "Place an offer")}
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <Button 
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6"
+                onClick={() => setLocation("/signup")}
+              >
+                Sign up to place offer
+              </Button>
+              <Button 
+                variant="outline"
+                className="w-full font-medium text-base py-6"
+                onClick={() => setLocation("/signin")}
+              >
+                Log in
+              </Button>
+            </div>
+          )}
         </div>
-          </>
-        )}
       </main>
 
       <PexlyFooter />
