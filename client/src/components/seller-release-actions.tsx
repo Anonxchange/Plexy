@@ -71,16 +71,26 @@ export function SellerReleaseActions({
 
       // Update trade status to completed (no escrow or wallet changes)
       const supabase = createClient();
-      const { error } = await supabase
+      
+      console.log("Updating trade:", trade.id);
+      
+      const { data, error } = await supabase
         .from("p2p_trades")
         .update({
           seller_released_at: new Date().toISOString(),
           status: "completed",
           completed_at: new Date().toISOString(),
         })
-        .eq("id", trade.id);
+        .eq("id", trade.id)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw new Error(error.message || "Database update failed");
+      }
+
+      console.log("Trade updated successfully:", data);
 
       // Show success notification and play sound
       notificationSounds.play('trade_completed');
