@@ -84,8 +84,13 @@ export function ChatMessages({ messages, currentUserProfileId }: ChatMessagesPro
                   {message.content}
                 </div>
               )}
-              <p className={`text-xs text-muted-foreground mt-1 ${isOwnMessage ? 'text-right' : 'text-left'}`}>
-                {new Date(message.created_at).toLocaleTimeString()}
+              <p className={`text-xs text-muted-foreground mt-1 flex items-center gap-1 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                <span>{new Date(message.created_at).toLocaleTimeString()}</span>
+                {isOwnMessage && (
+                  <span className="text-xs">
+                    {message.read_at ? '✓✓' : '✓'}
+                  </span>
+                )}
               </p>
             </div>
           </div>
