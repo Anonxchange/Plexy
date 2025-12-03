@@ -137,7 +137,7 @@ export default function ActiveTrade() {
       if (unreadMessages.length > 0) {
         const markMessagesAsRead = async () => {
           const messageIds = unreadMessages.map(msg => msg.id);
-          
+
           await supabase
             .from('trade_messages')
             .update({ read_at: new Date().toISOString() })
@@ -370,17 +370,46 @@ export default function ActiveTrade() {
 
 
   const cancelTrade = async () => {
-    if (!tradeId || !confirmNotPaid || !cancelReason) {
+    if (!tradeId || !cancelReason) {
       toast({
         title: "Error",
-        description: "Please select a reason and confirm you have not paid",
+        description: "Please select a reason for cancellation",
         variant: "destructive",
       });
       return;
     }
 
-    // Check if current user is the buyer before proceeding
-    if (!isUserBuyer) {
+    // Get trade details first to verify user role
+    const { data: tradeData, error: tradeError } = await supabase
+      .from("p2p_trades")
+      .select("buyer_id, seller_id, status, buyer_paid_at")
+      .eq("id", tradeId)
+      .single();
+
+    if (tradeError || !tradeData) {
+      toast({
+        title: "Error",
+        description: "Could not verify trade details",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if current user is the buyer
+    const userIsBuyer = user?.id === tradeData.buyer_id || currentUserProfileId === tradeData.buyer_id;
+
+    // Buyer must confirm they haven't paid
+    if (userIsBuyer && !confirmNotPaid) {
+      toast({
+        title: "Error",
+        description: "Please confirm you have not paid",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If the user is not the buyer, deny cancellation
+    if (!userIsBuyer) {
       toast({
         title: "Permission Denied",
         description: "Only the buyer can cancel this trade",
@@ -390,33 +419,7 @@ export default function ActiveTrade() {
     }
 
     try {
-      // Get trade details first with proper error handling
-      const { data: tradeData, error: tradeError } = await supabase
-        .from("p2p_trades")
-        .select("escrow_id, seller_id, crypto_amount, crypto_symbol, status, buyer_paid_at, buyer_id")
-        .eq("id", tradeId)
-        .single();
-
-      if (tradeError) {
-        console.error("Trade fetch error:", tradeError);
-        toast({
-          title: "Database Error",
-          description: `Failed to fetch trade: ${tradeError.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!tradeData) {
-        console.error("No trade data returned");
-        toast({
-          title: "Error",
-          description: "Could not find trade details",
-          variant: "destructive",
-        });
-        return;
-      }
-
+      // If trade status is not pending, cannot cancel
       if (tradeData.status !== 'pending') {
         toast({
           title: "Cannot Cancel",
@@ -429,6 +432,7 @@ export default function ActiveTrade() {
         return;
       }
 
+      // If buyer already marked payment as sent, cannot cancel
       if (tradeData.buyer_paid_at) {
         toast({
           title: "Cannot Cancel",
@@ -441,13 +445,30 @@ export default function ActiveTrade() {
         return;
       }
 
+      // Get trade details again for escrow and wallet operations
+      const { data: fullTradeDetails, error: fetchDetailsError } = await supabase
+        .from("p2p_trades")
+        .select("escrow_id, seller_id, crypto_amount, crypto_symbol, status, buyer_paid_at, buyer_id")
+        .eq("id", tradeId)
+        .single();
+
+      if (fetchDetailsError || !fullTradeDetails) {
+        console.error("Trade details fetch error for cancellation:", fetchDetailsError);
+        toast({
+          title: "Database Error",
+          description: `Failed to fetch trade details for cancellation: ${fetchDetailsError?.message || 'Unknown error'}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // If there's an escrow to release, handle wallet update first
       let walletUpdated = false;
-      if (tradeData.escrow_id) {
+      if (fullTradeDetails.escrow_id) {
         const { data: escrowData } = await supabase
           .from("escrows")
           .select("status")
-          .eq("id", tradeData.escrow_id)
+          .eq("id", fullTradeDetails.escrow_id)
           .single();
 
         if (escrowData?.status === 'locked') {
@@ -455,8 +476,8 @@ export default function ActiveTrade() {
           const { data: wallet, error: walletError } = await supabase
             .from("wallets")
             .select("balance, locked_balance")
-            .eq("user_id", tradeData.seller_id)
-            .eq("crypto_symbol", tradeData.crypto_symbol)
+            .eq("user_id", fullTradeDetails.seller_id)
+            .eq("crypto_symbol", fullTradeDetails.crypto_symbol)
             .single();
 
           if (walletError || !wallet) {
@@ -465,7 +486,7 @@ export default function ActiveTrade() {
 
           const currentBalance = Number(wallet.balance) || 0;
           const currentLocked = Number(wallet.locked_balance) || 0;
-          const releaseAmount = Number(tradeData.crypto_amount) || 0;
+          const releaseAmount = Number(fullTradeDetails.crypto_amount) || 0;
 
           const newBalance = currentBalance + releaseAmount;
           const newLockedBalance = Math.max(0, currentLocked - releaseAmount);
@@ -477,8 +498,8 @@ export default function ActiveTrade() {
               balance: newBalance,
               locked_balance: newLockedBalance,
             })
-            .eq("user_id", tradeData.seller_id)
-            .eq("crypto_symbol", tradeData.crypto_symbol);
+            .eq("user_id", fullTradeDetails.seller_id)
+            .eq("crypto_symbol", fullTradeDetails.crypto_symbol);
 
           if (walletUpdateError) {
             console.error("Wallet update error:", walletUpdateError);
@@ -490,7 +511,7 @@ export default function ActiveTrade() {
           await supabase
             .from("escrows")
             .update({ status: "cancelled" })
-            .eq("id", tradeData.escrow_id);
+            .eq("id", fullTradeDetails.escrow_id);
         }
       }
 
