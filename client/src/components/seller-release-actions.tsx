@@ -78,7 +78,7 @@ export function SellerReleaseActions({
         .from("p2p_trades")
         .update({
           seller_released_at: new Date().toISOString(),
-          status: "completed",
+          status: "released",
           completed_at: new Date().toISOString(),
         })
         .eq("id", trade.id)
