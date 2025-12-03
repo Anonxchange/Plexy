@@ -67,6 +67,7 @@ export function TradeActions({
         .from("p2p_trades")
         .update({
           buyer_paid_at: new Date().toISOString(),
+          status: "payment_sent",
         })
         .eq("id", trade.id);
 
@@ -96,11 +97,61 @@ export function TradeActions({
 
     setIsProcessing(true);
     try {
+      const { data: tradeData, error: fetchError } = await supabase
+        .from("p2p_trades")
+        .select("escrow_id, buyer_id, crypto_amount, crypto_symbol, seller_id")
+        .eq("id", trade.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (tradeData?.escrow_id) {
+        const { data: wallet } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("user_id", tradeData.buyer_id)
+          .eq("crypto_symbol", tradeData.crypto_symbol)
+          .single();
+
+        const currentBalance = Number(wallet?.balance) || 0;
+        const releaseAmount = Number(tradeData.crypto_amount) || 0;
+
+        await supabase
+          .from("wallets")
+          .upsert({
+            user_id: tradeData.buyer_id,
+            crypto_symbol: tradeData.crypto_symbol,
+            balance: currentBalance + releaseAmount,
+          }, { onConflict: 'user_id,crypto_symbol' });
+
+        const { data: sellerWallet } = await supabase
+          .from("wallets")
+          .select("locked_balance")
+          .eq("user_id", tradeData.seller_id)
+          .eq("crypto_symbol", tradeData.crypto_symbol)
+          .single();
+
+        const currentLocked = Number(sellerWallet?.locked_balance) || 0;
+        await supabase
+          .from("wallets")
+          .update({
+            locked_balance: Math.max(0, currentLocked - releaseAmount),
+          })
+          .eq("user_id", tradeData.seller_id)
+          .eq("crypto_symbol", tradeData.crypto_symbol);
+
+        await supabase
+          .from("escrows")
+          .update({ status: "released" })
+          .eq("id", tradeData.escrow_id);
+      }
+
       const { error } = await supabase
         .from("p2p_trades")
         .update({
           seller_released_at: new Date().toISOString(),
           status: "completed",
+          completed_at: new Date().toISOString(),
         })
         .eq("id", trade.id);
 
@@ -117,7 +168,7 @@ export function TradeActions({
       console.error("Error releasing crypto:", error);
       toast({
         title: "Error",
-        description: "Failed to release crypto",
+        description: error instanceof Error ? error.message : "Failed to release crypto. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -187,7 +238,7 @@ export function TradeActions({
 
   return (
     <>
-      {!isUserBuyer ? (
+      {isUserBuyer ? (
         <>
           <div className="bg-muted p-3 sm:p-4 rounded-lg border">
             <div className="mb-3 sm:mb-4 text-xs sm:text-sm">
