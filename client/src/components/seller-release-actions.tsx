@@ -64,6 +64,7 @@ export function SellerReleaseActions({
 
     setIsProcessing(true);
     try {
+      // Simply update trade status to completed (mock version without escrow)
       const { error } = await supabase
         .from("p2p_trades")
         .update({
@@ -78,7 +79,7 @@ export function SellerReleaseActions({
       notificationSounds.play('trade_completed');
       toast({
         title: "Success",
-        description: `${trade.crypto_amount.toFixed(8)} ${trade.crypto_symbol} has been released to ${counterpartyUsername || 'the buyer'}.`,
+        description: `${trade.crypto_amount.toFixed(8)} ${trade.crypto_symbol} has been released successfully.`,
       });
 
       onTradeUpdate?.();
@@ -86,7 +87,7 @@ export function SellerReleaseActions({
       console.error("Error releasing crypto:", error);
       toast({
         title: "Error",
-        description: "Failed to release crypto. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to release crypto. Please try again.",
         variant: "destructive",
       });
     } finally {
