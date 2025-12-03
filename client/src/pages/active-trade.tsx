@@ -365,6 +365,9 @@ export default function ActiveTrade() {
           description: "This trade cannot be cancelled because it's no longer pending.",
           variant: "destructive",
         });
+        setShowCancelWarning(false);
+        setCancelReason("");
+        setConfirmNotPaid(false);
         return;
       }
 
@@ -374,6 +377,9 @@ export default function ActiveTrade() {
           description: "You cannot cancel after marking payment as sent.",
           variant: "destructive",
         });
+        setShowCancelWarning(false);
+        setCancelReason("");
+        setConfirmNotPaid(false);
         return;
       }
 
@@ -441,7 +447,7 @@ export default function ActiveTrade() {
 
       if (cancelError) throw cancelError;
 
-      // Close the cancel modal
+      // Close the cancel modal and reset state
       setShowCancelWarning(false);
       setCancelReason("");
       setConfirmNotPaid(false);
@@ -455,7 +461,7 @@ export default function ActiveTrade() {
       });
 
       // Refresh trade data to show updated status
-      fetchTradeData();
+      await fetchTradeData();
     } catch (error) {
       console.error("Error cancelling trade:", error);
       toast({
@@ -749,26 +755,32 @@ export default function ActiveTrade() {
         {/* Left Column: Chat Section (Mobile: Full width, Desktop: Right side) */}
         <div className="lg:bg-card lg:rounded-lg lg:order-2">
           <div className="max-w-md mx-auto lg:max-w-full">
-            <TradeHeader
-              counterparty={counterparty}
-              isUserBuyer={isUserBuyer}
-              trade={trade}
-              timer={timer}
-              isPaid={isPaid}
-              formatTime={formatTime}
-              formatTradeTime={formatTradeTime}
-              onCounterpartyClick={handleCounterpartyClick}
-              counterpartyPresence={counterpartyPresence}
-            />
+            {/* Hide trade header on mobile when in actions tab */}
+            <div className={activeTab === "actions" ? "hidden lg:block" : ""}>
+              <TradeHeader
+                counterparty={counterparty}
+                isUserBuyer={isUserBuyer}
+                trade={trade}
+                timer={timer}
+                isPaid={isPaid}
+                formatTime={formatTime}
+                formatTradeTime={formatTradeTime}
+                onCounterpartyClick={handleCounterpartyClick}
+                counterpartyPresence={counterpartyPresence}
+              />
+            </div>
 
-            <TradeTimer isUserBuyer={isUserBuyer} trade={trade} />
+            {/* Hide trade timer on mobile when in actions tab */}
+            <div className={activeTab === "actions" ? "hidden lg:block" : ""}>
+              <TradeTimer isUserBuyer={isUserBuyer} trade={trade} />
 
-            <div className="bg-muted p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
+              <div className="bg-muted p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
               {isPaid ? (
                 <span>Payment marked as sent. Waiting for seller to release crypto.</span>
               ) : (
                 <span>Follow the instructions to complete your trade safely.</span>
               )}
+              </div>
             </div>
 
             {activeTab === "chat" && (
@@ -1011,13 +1023,14 @@ export default function ActiveTrade() {
         isOpen={showCancelWarning}
         cancelReason={cancelReason}
         confirmNotPaid={confirmNotPaid}
-        onClose={() => setShowCancelWarning(false)}
+        onClose={() => {
+          setShowCancelWarning(false);
+          setCancelReason("");
+          setConfirmNotPaid(false);
+        }}
         onReasonSelect={setCancelReason}
         onConfirmNotPaidToggle={() => setConfirmNotPaid(!confirmNotPaid)}
-        onConfirmCancel={() => {
-          cancelTrade();
-          setShowCancelWarning(false);
-        }}
+        onConfirmCancel={cancelTrade}
       />
     </div>
   );
