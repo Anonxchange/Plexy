@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Info, ChevronDown, CheckCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { notificationSounds } from "@/lib/notification-sounds";
 
@@ -25,7 +24,6 @@ export function SellerReleaseActions({
   onTradeUpdate,
 }: SellerReleaseActionsProps) {
   const { toast } = useToast();
-  const supabase = createClient();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDisputeExpanded, setIsDisputeExpanded] = useState(true);
   const [disputeCountdown, setDisputeCountdown] = useState<number>(3600);
@@ -64,17 +62,8 @@ export function SellerReleaseActions({
 
     setIsProcessing(true);
     try {
-      // Simply update trade status to completed (mock version without escrow)
-      const { error } = await supabase
-        .from("p2p_trades")
-        .update({
-          seller_released_at: new Date().toISOString(),
-          status: "completed",
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", trade.id);
-
-      if (error) throw error;
+      // Mock mode: simulate a successful release with a small delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       notificationSounds.play('trade_completed');
       toast({
