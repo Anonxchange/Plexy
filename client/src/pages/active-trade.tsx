@@ -373,6 +373,16 @@ export default function ActiveTrade() {
       return;
     }
 
+    // Check if current user is the buyer before proceeding
+    if (!isUserBuyer) {
+      toast({
+        title: "Permission Denied",
+        description: "Only the buyer can cancel this trade",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Get trade details first with proper error handling
       const { data: tradeData, error: tradeError } = await supabase
@@ -396,22 +406,6 @@ export default function ActiveTrade() {
         toast({
           title: "Error",
           description: "Could not find trade details",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Verify user is the buyer (also check against user.id as fallback)
-      const isBuyer = tradeData.buyer_id === currentUserProfileId || tradeData.buyer_id === user?.id;
-      if (!isBuyer) {
-        console.error("Cancel permission check failed:", {
-          buyer_id: tradeData.buyer_id,
-          currentUserProfileId,
-          user_id: user?.id
-        });
-        toast({
-          title: "Permission Denied",
-          description: "Only the buyer can cancel this trade",
           variant: "destructive",
         });
         return;
