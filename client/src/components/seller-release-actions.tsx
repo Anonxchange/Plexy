@@ -99,7 +99,7 @@ export function SellerReleaseActions({
     <div className="space-y-4">
       <Button
         onClick={handleReleaseCrypto}
-        disabled={!isPaid || isProcessing || (trade.status !== 'pending' && trade.status !== 'payment_sent')}
+        disabled={isProcessing || trade.status === 'completed' || trade.status === 'cancelled'}
         className="w-full bg-green-600 hover:bg-green-700 text-white p-4 h-auto rounded-lg shadow-md"
       >
         <div className="flex items-center justify-between w-full">
@@ -143,7 +143,7 @@ export function SellerReleaseActions({
               <Button
                 variant="outline"
                 className="w-full"
-                disabled={!canDispute || (trade.status !== 'pending' && trade.status !== 'payment_sent')}
+                disabled={!canDispute || trade.status === 'completed' || trade.status === 'cancelled'}
               >
                 <div className="w-full">
                   <div className="font-semibold">Start a Dispute</div>
