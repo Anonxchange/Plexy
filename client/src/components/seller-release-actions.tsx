@@ -4,6 +4,9 @@ import { Info, ChevronDown, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { notificationSounds } from "@/lib/notification-sounds";
 
+// Import Supabase client
+import { createClient } from "@/lib/supabase";
+
 interface SellerReleaseActionsProps {
   isPaid: boolean;
   trade: {
@@ -15,6 +18,7 @@ interface SellerReleaseActionsProps {
   };
   counterpartyUsername?: string;
   onTradeUpdate?: () => void;
+  onMockComplete?: () => void;
 }
 
 export function SellerReleaseActions({
@@ -62,15 +66,30 @@ export function SellerReleaseActions({
 
     setIsProcessing(true);
     try {
-      // Mock mode: simulate a successful release with a small delay
+      // Simulate a small delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // Update trade status to completed in the database
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("p2p_trades")
+        .update({
+          seller_released_at: new Date().toISOString(),
+          status: "completed",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", trade.id);
+
+      if (error) throw error;
+
+      // Show success notification and play sound
       notificationSounds.play('trade_completed');
       toast({
         title: "Success",
         description: `${trade.crypto_amount.toFixed(8)} ${trade.crypto_symbol} has been released successfully.`,
       });
 
+      // Trigger trade update to show the completed section
       onTradeUpdate?.();
     } catch (error) {
       console.error("Error releasing crypto:", error);
