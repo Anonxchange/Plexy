@@ -72,7 +72,9 @@ import {
   Search,
   Check,
   ChevronsUpDown,
-  Copy
+  Copy,
+  AlertTriangle,
+  Trash2
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { cn } from "@/lib/utils";
@@ -140,15 +142,25 @@ export default function AccountSettings() {
   // Security settings
   const [smsAuth, setSmsAuth] = useState(false);
   const [appAuth, setAppAuth] = useState(false);
+  const [emailAuth, setEmailAuth] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [show2FADialog, setShow2FADialog] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [showSMS2FADialog, setShowSMS2FADialog] = useState(false);
+  const [showEmail2FADialog, setShowEmail2FADialog] = useState(false);
   const [smsVerificationCode, setSmsVerificationCode] = useState("");
+  const [emailVerificationCode, setEmailVerificationCode] = useState("");
   const [smsSent, setSmsSent] = useState(false);
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
   const [sendingSMS, setSendingSMS] = useState(false);
+  const [sendingEmailCode, setSendingEmailCode] = useState(false);
+
+  // Delete account states
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Notification settings
   const [tradeUpdates, setTradeUpdates] = useState(true);
@@ -423,7 +435,7 @@ export default function AccountSettings() {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('two_factor_enabled, sms_two_factor_enabled')
+        .select('two_factor_enabled, sms_two_factor_enabled, email_two_factor_enabled')
         .eq('id', user?.id)
         .single();
 
@@ -433,6 +445,7 @@ export default function AccountSettings() {
         setTwoFactorEnabled(data.two_factor_enabled || false);
         setAppAuth(data.two_factor_enabled || false);
         setSmsAuth(data.sms_two_factor_enabled || false);
+        setEmailAuth(data.email_two_factor_enabled || false);
       }
     } catch (error) {
       console.error('Error fetching 2FA status:', error);
@@ -600,6 +613,191 @@ export default function AccountSettings() {
         description: "Failed to disable SMS 2FA",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSendEmailCode = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Email Required",
+        description: "No email address associated with your account",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingEmailCode(true);
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          email_verification_code: code,
+          email_code_expires_at: expiresAt
+        })
+        .eq('id', user?.id);
+
+      if (updateError) throw updateError;
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ 
+          email: user.email, 
+          type: '2fa_setup',
+          code: code 
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send email');
+
+      setEmailCodeSent(true);
+      toast({
+        title: "Code Sent",
+        description: `Verification code sent to ${user.email}`,
+      });
+    } catch (error) {
+      console.error('Error sending email code:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send verification code",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingEmailCode(false);
+    }
+  };
+
+  const handleEnableEmail2FA = async () => {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('email_verification_code, email_code_expires_at')
+        .eq('id', user?.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      if (!profileData?.email_verification_code) {
+        throw new Error('No verification code found');
+      }
+
+      const expiresAt = new Date(profileData.email_code_expires_at);
+      if (expiresAt < new Date()) {
+        throw new Error('Verification code has expired');
+      }
+
+      if (profileData.email_verification_code !== emailVerificationCode) {
+        toast({
+          title: "Invalid Code",
+          description: "The verification code is incorrect",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          email_two_factor_enabled: true,
+          email_verification_code: null,
+          email_code_expires_at: null
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      setEmailAuth(true);
+      setShowEmail2FADialog(false);
+      setEmailVerificationCode("");
+      setEmailCodeSent(false);
+
+      toast({
+        title: "Email 2FA Enabled",
+        description: "Email two-factor authentication has been enabled",
+      });
+    } catch (error: any) {
+      console.error('Error enabling Email 2FA:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to enable Email 2FA",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisableEmail2FA = async () => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          email_two_factor_enabled: false
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      setEmailAuth(false);
+      toast({
+        title: "Email 2FA Disabled",
+        description: "Email two-factor authentication has been disabled",
+      });
+    } catch (error) {
+      console.error('Error disabling Email 2FA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disable Email 2FA",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE MY ACCOUNT") {
+      toast({
+        title: "Confirmation Required",
+        description: "Please type 'DELETE MY ACCOUNT' exactly to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeletingAccount(true);
+    try {
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ 
+          account_deletion_requested: true,
+          account_deletion_requested_at: new Date().toISOString()
+        })
+        .eq('id', user?.id);
+
+      if (profileError) throw profileError;
+
+      await supabase.auth.signOut();
+      
+      toast({
+        title: "Deletion Request Submitted",
+        description: "Your request has been submitted. Our support team will process it and you will receive a confirmation email.",
+      });
+      
+      setLocation("/");
+    } catch (error) {
+      console.error('Error requesting account deletion:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit deletion request. Please contact support at support@pexly.com",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingAccount(false);
+      setShowDeleteAccountDialog(false);
+      setDeleteConfirmText("");
     }
   };
 
@@ -1592,6 +1790,37 @@ export default function AccountSettings() {
               </div>
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="flex-1">
+                  <p className="font-medium">Email Authentication</p>
+                  <p className="text-sm text-muted-foreground">
+                    Receive verification codes via email to your registered email address
+                  </p>
+                  {emailAuth && (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 mt-2">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Enabled
+                    </Badge>
+                  )}
+                </div>
+                {emailAuth ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDisableEmail2FA}
+                  >
+                    Disable
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEmail2FADialog(true)}
+                  >
+                    Enable
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex-1">
                   <p className="font-medium">Authenticator App</p>
                   <p className="text-sm text-muted-foreground">
                     Use Google Authenticator, Authy, or similar apps for enhanced security
@@ -1738,6 +1967,109 @@ export default function AccountSettings() {
                 </DialogContent>
               </Dialog>
 
+              {/* Email 2FA Setup Dialog */}
+              <Dialog open={showEmail2FADialog} onOpenChange={setShowEmail2FADialog}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Enable Email Two-Factor Authentication</DialogTitle>
+                    <DialogDescription>
+                      We'll send a verification code to your email address
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {!user?.email ? (
+                      <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                              Email Address Required
+                            </p>
+                            <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                              Please add and verify your email address in the Profile section first
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : !emailCodeSent ? (
+                      <>
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-blue-800 dark:text-blue-200">
+                                We'll send a 6-digit verification code to <strong>{user.email}</strong>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={handleSendEmailCode}
+                          disabled={sendingEmailCode}
+                          className="w-full"
+                        >
+                          {sendingEmailCode ? "Sending..." : "Send Verification Code"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                          <p className="text-sm text-green-800 dark:text-green-200">
+                            Code sent to <strong>{user.email}</strong>
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email-code">Enter Verification Code</Label>
+                          <Input
+                            id="email-code"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="000000"
+                            maxLength={6}
+                            value={emailVerificationCode}
+                            onChange={(e) => setEmailVerificationCode(e.target.value.replace(/\D/g, ""))}
+                            className="text-center text-2xl tracking-widest font-mono"
+                          />
+                          <p className="text-xs text-muted-foreground text-center">
+                            Didn't receive the code?{" "}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEmailCodeSent(false);
+                                setEmailVerificationCode("");
+                                handleSendEmailCode();
+                              }}
+                              className="text-primary hover:underline"
+                            >
+                              Resend
+                            </button>
+                          </p>
+                        </div>
+                        <Button
+                          onClick={handleEnableEmail2FA}
+                          disabled={emailVerificationCode.length !== 6}
+                          className="w-full"
+                        >
+                          Verify & Enable
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowEmail2FADialog(false);
+                        setEmailVerificationCode("");
+                        setEmailCodeSent(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               {/* Disable 2FA Verification Dialog */}
               <Dialog open={showDisable2FADialog} onOpenChange={setShowDisable2FADialog}>
                 <DialogContent className="sm:max-w-[425px]">
@@ -1801,7 +2133,7 @@ export default function AccountSettings() {
                 </DialogContent>
               </Dialog>
 
-              {!smsAuth && !appAuth && (
+              {!smsAuth && !appAuth && !emailAuth && (
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mt-4">
                   <div className="flex gap-3">
                     <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
@@ -2105,6 +2437,121 @@ export default function AccountSettings() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Delete Account Section */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4 text-destructive">Danger Zone</h4>
+          <Card className="border-destructive/50">
+            <CardContent className="p-6 space-y-4">
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-destructive">
+                      Delete Your Account
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Submit a request to permanently delete your Pexly account. Our support team will review and process your request within 30 days.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Before requesting account deletion, please note:</strong>
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
+                  <li>All your personal data, trading history, and wallet information will be permanently erased</li>
+                  <li>Any pending trades or transactions will be cancelled</li>
+                  <li>Your username will become available for other users</li>
+                  <li>You will lose access to any funds remaining in your wallets - please withdraw all funds first</li>
+                  <li>You can cancel this request by contacting support@pexly.com before processing</li>
+                  <li>Once processed, deletion is irreversible and cannot be undone</li>
+                </ul>
+              </div>
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={() => setShowDeleteAccountDialog(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Request Account Deletion
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Delete Account Confirmation Dialog */}
+        <Dialog open={showDeleteAccountDialog} onOpenChange={setShowDeleteAccountDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Request Account Deletion
+              </DialogTitle>
+              <DialogDescription>
+                Submit a deletion request for our support team to review and process.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-destructive">
+                      Final Warning
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      By submitting this request, our support team will process the following actions:
+                    </p>
+                    <ul className="text-xs text-muted-foreground mt-2 space-y-1 ml-4 list-disc">
+                      <li>All your personal information will be permanently removed</li>
+                      <li>Your trading history will be deleted</li>
+                      <li>Any pending transactions will be cancelled</li>
+                      <li>Remaining balances will be forfeited - please withdraw first</li>
+                    </ul>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      You will be signed out immediately. To cancel, email support@pexly.com before your request is processed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="delete-confirm">
+                  Type <span className="font-mono font-bold text-destructive">DELETE MY ACCOUNT</span> to confirm
+                </Label>
+                <Input
+                  id="delete-confirm"
+                  type="text"
+                  placeholder="DELETE MY ACCOUNT"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteAccountDialog(false);
+                  setDeleteConfirmText("");
+                }}
+                disabled={deletingAccount}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== "DELETE MY ACCOUNT" || deletingAccount}
+              >
+                {deletingAccount ? "Submitting..." : "Submit Request"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Security Recommendations */}
         <Card className="border-primary/20 bg-primary/5">
