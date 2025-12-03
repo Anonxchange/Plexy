@@ -421,7 +421,7 @@ export function P2P() {
           min: offer.min_amount, 
           max: offer.max_amount 
         },
-        type: offer.offer_type,
+        type: activeTab,
         cryptoSymbol: offer.crypto_symbol,
         time_limit_minutes: offer.time_limit_minutes || 30,
         created_at: offer.created_at
