@@ -109,7 +109,8 @@ export default function ActiveTrade() {
 
   const supabase = createClient();
 
-  const isUserBuyer = !!(currentUserProfileId && trade?.buyer_id === currentUserProfileId);
+  const effectiveUserId = currentUserProfileId || user?.id;
+  const isUserBuyer = !!(effectiveUserId && trade?.buyer_id === effectiveUserId);
   const counterparty = isUserBuyer ? trade?.seller_profile : trade?.buyer_profile;
   const counterpartyId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
 
