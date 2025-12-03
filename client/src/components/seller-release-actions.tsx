@@ -69,7 +69,7 @@ export function SellerReleaseActions({
       // Simulate a small delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Update trade status to completed in the database
+      // Update trade status to completed (no escrow or wallet changes)
       const supabase = createClient();
       const { error } = await supabase
         .from("p2p_trades")
@@ -86,7 +86,7 @@ export function SellerReleaseActions({
       notificationSounds.play('trade_completed');
       toast({
         title: "Success",
-        description: `${trade.crypto_amount.toFixed(8)} ${trade.crypto_symbol} has been released successfully.`,
+        description: `You released ${trade.crypto_amount.toFixed(8)} ${trade.crypto_symbol}`,
       });
 
       // Trigger trade update to show the completed section
