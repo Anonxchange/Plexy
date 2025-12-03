@@ -263,9 +263,14 @@ export default function ActiveTrade() {
 
       if (!error && data) {
         setCurrentUserProfileId(data.id);
+      } else {
+        // Fallback to user.id if profile lookup fails
+        setCurrentUserProfileId(user.id);
       }
     } catch (error) {
       console.error("Error fetching current user profile:", error);
+      // Fallback to user.id on error
+      setCurrentUserProfileId(user.id);
     }
   };
 
