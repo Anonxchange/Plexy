@@ -21,6 +21,7 @@ interface TradeStartedSectionProps {
   onTradeUpdate?: () => void;
   onShowCancelModal?: () => void;
   formatTime: (seconds: number) => string;
+  onMockComplete?: () => void;
 }
 
 export function TradeStartedSection({
@@ -32,6 +33,7 @@ export function TradeStartedSection({
   onTradeUpdate,
   onShowCancelModal,
   formatTime,
+  onMockComplete,
 }: TradeStartedSectionProps) {
   return (
     <div className="bg-card rounded-lg overflow-hidden border shadow-xs">
@@ -115,10 +117,10 @@ export function TradeStartedSection({
             </div>
 
             <SellerReleaseActions
-              isPaid={isPaid}
               trade={trade}
               counterpartyUsername={counterpartyUsername}
               onTradeUpdate={onTradeUpdate}
+              onMockComplete={onMockComplete}
             />
 
             {!isPaid && (
