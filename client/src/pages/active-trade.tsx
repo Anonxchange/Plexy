@@ -212,7 +212,7 @@ export default function ActiveTrade() {
           setTrade((prev) => prev ? { ...prev, ...updatedTrade } : null);
           setIsPaid(!!updatedTrade.buyer_paid_at);
 
-          if (updatedTrade.status === 'completed') {
+          if (updatedTrade.status === 'completed' || updatedTrade.status === 'released') {
             notificationSounds.play('trade_completed');
           } else if (updatedTrade.status === 'cancelled') {
             notificationSounds.play('trade_cancelled');
@@ -901,7 +901,7 @@ export default function ActiveTrade() {
                   </div>
                 )}
 
-                {trade.status === "completed" && (
+                {(trade.status === "completed" || trade.status === "released") && (
                   <div className="bg-black/80 border border-green-500 rounded-lg p-4 space-y-3">
                     <div className="text-sm text-muted-foreground text-center">
                       TRADE COMPLETED - {new Date(trade.completed_at || trade.created_at).toLocaleString().toUpperCase()}
