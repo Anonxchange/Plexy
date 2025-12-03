@@ -9,6 +9,7 @@ interface TradeMessage {
   attachment_type?: string | null;
   attachment_filename?: string | null;
   created_at: string;
+  read_at?: string | null;
 }
 
 interface ChatMessagesProps {
