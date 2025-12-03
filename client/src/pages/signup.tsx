@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Sun, Moon, Zap, MapPin } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon, Zap, MapPin, Check, X } from "lucide-react";
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
 import { createClient } from "@/lib/supabase";
@@ -16,6 +16,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+interface PasswordRequirement {
+  label: string;
+  regex: RegExp;
+  met: boolean;
+}
+
+function validatePassword(password: string): { isValid: boolean; requirements: PasswordRequirement[] } {
+  const requirements: PasswordRequirement[] = [
+    { label: "At least 8 characters", regex: /.{8,}/, met: false },
+    { label: "One uppercase letter (A-Z)", regex: /[A-Z]/, met: false },
+    { label: "One lowercase letter (a-z)", regex: /[a-z]/, met: false },
+    { label: "One number (0-9)", regex: /[0-9]/, met: false },
+    { label: "One special character (!@#$%^&*)", regex: /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/`~;']/, met: false },
+  ];
+
+  requirements.forEach((req) => {
+    req.met = req.regex.test(password);
+  });
+
+  const isValid = requirements.every((req) => req.met);
+  return { isValid, requirements };
+}
 
 const countries = [
   { code: "GH", name: "Ghana", flag: "🇬🇭" },
@@ -121,6 +144,8 @@ export function SignUp() {
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
+
+  const passwordValidation = useMemo(() => validatePassword(password), [password]);
 
   // Auto-detect country on mount
   useEffect(() => {
@@ -261,10 +286,14 @@ export function SignUp() {
         return;
       }
 
-      if (password.length < 6) {
+      if (!passwordValidation.isValid) {
+        const missingReqs = passwordValidation.requirements
+          .filter((r) => !r.met)
+          .map((r) => r.label)
+          .join(", ");
         toast({
-          title: "Error",
-          description: "Password must be at least 6 characters",
+          title: "Weak Password",
+          description: `Password must have: ${missingReqs}`,
           variant: "destructive",
         });
         return;
@@ -715,6 +744,32 @@ export function SignUp() {
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
+
+                    {/* Password Requirements */}
+                    {password.length > 0 && (
+                      <div className={`mt-3 p-3 rounded-lg ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
+                        <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Password must contain:
+                        </p>
+                        <ul className="space-y-1">
+                          {passwordValidation.requirements.map((req, index) => (
+                            <li key={index} className="flex items-center gap-2 text-xs">
+                              {req.met ? (
+                                <Check className="w-3 h-3 text-green-500" />
+                              ) : (
+                                <X className="w-3 h-3 text-red-400" />
+                              )}
+                              <span className={req.met 
+                                ? (isDark ? 'text-green-400' : 'text-green-600') 
+                                : (isDark ? 'text-gray-400' : 'text-gray-500')
+                              }>
+                                {req.label}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {/* Confirm Password */}
