@@ -379,21 +379,11 @@ export default function ActiveTrade() {
       return;
     }
 
-    // Buyer must confirm they haven't paid
-    if (isUserBuyer && !confirmNotPaid) {
-      toast({
-        title: "Error",
-        description: "Please confirm you have not paid",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // If the user is not the buyer, deny cancellation
-    if (!isUserBuyer) {
+    // Only seller can cancel the trade
+    if (isUserBuyer) {
       toast({
         title: "Permission Denied",
-        description: "Only the buyer can cancel this trade",
+        description: "Only the seller can cancel this trade",
         variant: "destructive",
       });
       return;
@@ -412,6 +402,19 @@ export default function ActiveTrade() {
         description: "Could not verify trade details",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Seller cannot cancel after buyer has marked payment as sent
+    if (tradeData.buyer_paid_at) {
+      toast({
+        title: "Cannot Cancel",
+        description: "You cannot cancel after buyer has marked payment as sent.",
+        variant: "destructive",
+      });
+      setShowCancelWarning(false);
+      setCancelReason("");
+      setConfirmNotPaid(false);
       return;
     }
 
