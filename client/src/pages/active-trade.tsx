@@ -379,7 +379,27 @@ export default function ActiveTrade() {
       return;
     }
 
-    // Get trade details first to verify user role
+    // Buyer must confirm they haven't paid
+    if (isUserBuyer && !confirmNotPaid) {
+      toast({
+        title: "Error",
+        description: "Please confirm you have not paid",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If the user is not the buyer, deny cancellation
+    if (!isUserBuyer) {
+      toast({
+        title: "Permission Denied",
+        description: "Only the buyer can cancel this trade",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Get trade details to verify status
     const { data: tradeData, error: tradeError } = await supabase
       .from("p2p_trades")
       .select("buyer_id, seller_id, status, buyer_paid_at")
@@ -390,29 +410,6 @@ export default function ActiveTrade() {
       toast({
         title: "Error",
         description: "Could not verify trade details",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if current user is the buyer
-    const userIsBuyer = user?.id === tradeData.buyer_id || currentUserProfileId === tradeData.buyer_id;
-
-    // Buyer must confirm they haven't paid
-    if (userIsBuyer && !confirmNotPaid) {
-      toast({
-        title: "Error",
-        description: "Please confirm you have not paid",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // If the user is not the buyer, deny cancellation
-    if (!userIsBuyer) {
-      toast({
-        title: "Permission Denied",
-        description: "Only the buyer can cancel this trade",
         variant: "destructive",
       });
       return;
