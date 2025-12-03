@@ -20,6 +20,7 @@ import { MessageInput } from "@/components/message-input";
 import { TabNavigation } from "@/components/tab-navigation";
 import { TradeStartedSection } from "@/components/trade-started-section";
 import { TradeTerms } from "@/components/trade-terms";
+import { TradeCompletedSection } from "@/components/trade-completed-section";
 
 interface Trade {
   id: string;
@@ -955,26 +956,12 @@ export default function ActiveTrade() {
                 )}
 
                 {trade.status === "completed" && (
-                  <div className="bg-card rounded-lg overflow-hidden border shadow-xs">
-                    <div className="bg-green-600 p-3 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-white" />
-                      <span className="font-semibold text-sm text-white">Trade Completed</span>
-                    </div>
-                    <div className="p-5 space-y-4 text-center">
-                      <CheckCircle className="w-12 h-12 text-green-600 mx-auto" />
-                      <div className="text-green-600 font-bold text-lg">Trade Completed Successfully!</div>
-                      <p className="text-sm text-muted-foreground">
-                        {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol} has been transferred to the buyer.
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => setLocation("/p2p")}
-                      >
-                        Back to Marketplace
-                      </Button>
-                    </div>
-                  </div>
+                  <TradeCompletedSection
+                    trade={trade}
+                    isUserBuyer={isUserBuyer}
+                    sellerProfile={trade.seller_profile}
+                    buyerProfile={trade.buyer_profile}
+                  />
                 )}
 
                 {/* Trade Started Card - Only show for active trades */}
