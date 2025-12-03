@@ -73,6 +73,7 @@ interface TradeMessage {
   attachment_type?: string | null;
   attachment_filename?: string | null;
   created_at: string;
+  read_at?: string | null;
 }
 
 export default function ActiveTrade() {
@@ -125,6 +126,28 @@ export default function ActiveTrade() {
     }
   }, [tradeId, currentUserProfileId]);
 
+  // Mark unread messages as read when viewing the chat
+  useEffect(() => {
+    if (activeTab === 'chat' && messages.length > 0 && currentUserProfileId) {
+      const unreadMessages = messages.filter(
+        msg => msg.sender_id !== currentUserProfileId && !msg.read_at
+      );
+
+      if (unreadMessages.length > 0) {
+        const markMessagesAsRead = async () => {
+          const messageIds = unreadMessages.map(msg => msg.id);
+          
+          await supabase
+            .from('trade_messages')
+            .update({ read_at: new Date().toISOString() })
+            .in('id', messageIds);
+        };
+
+        markMessagesAsRead();
+      }
+    }
+  }, [activeTab, messages, currentUserProfileId]);
+
   useEffect(() => {
     const fetchPresence = async () => {
       if (counterpartyId) {
@@ -155,7 +178,7 @@ export default function ActiveTrade() {
       .channel(`trade-${tradeId}`)
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'trade_messages', filter: `trade_id=eq.${tradeId}` },
-        (payload) => {
+        async (payload) => {
           const newMessage = payload.new as TradeMessage;
 
           setMessages((prev) => {
@@ -167,6 +190,15 @@ export default function ActiveTrade() {
           if (newMessage.sender_id !== currentUserProfileId) {
             notificationSounds.play('message_received');
           }
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'trade_messages', filter: `trade_id=eq.${tradeId}` },
+        (payload) => {
+          const updatedMessage = payload.new as TradeMessage;
+          setMessages((prev) =>
+            prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
+          );
         }
       )
       .on('postgres_changes',
@@ -342,18 +374,38 @@ export default function ActiveTrade() {
     }
 
     try {
-      // Get trade details first
+      // Get trade details first with proper error handling
       const { data: tradeData, error: tradeError } = await supabase
         .from("p2p_trades")
-        .select("escrow_id, seller_id, crypto_amount, crypto_symbol, status, buyer_paid_at")
+        .select("escrow_id, seller_id, crypto_amount, crypto_symbol, status, buyer_paid_at, buyer_id")
         .eq("id", tradeId)
         .single();
 
-      if (tradeError || !tradeData) {
+      if (tradeError) {
         console.error("Trade fetch error:", tradeError);
+        toast({
+          title: "Database Error",
+          description: `Failed to fetch trade: ${tradeError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!tradeData) {
+        console.error("No trade data returned");
         toast({
           title: "Error",
           description: "Could not find trade details",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Verify user is the buyer
+      if (tradeData.buyer_id !== currentUserProfileId) {
+        toast({
+          title: "Permission Denied",
+          description: "Only the buyer can cancel this trade",
           variant: "destructive",
         });
         return;
@@ -423,7 +475,8 @@ export default function ActiveTrade() {
             .eq("crypto_symbol", tradeData.crypto_symbol);
 
           if (walletUpdateError) {
-            throw new Error("Failed to update wallet balances");
+            console.error("Wallet update error:", walletUpdateError);
+            throw new Error(`Failed to update wallet balances: ${walletUpdateError.message}`);
           }
           walletUpdated = true;
 
@@ -445,7 +498,10 @@ export default function ActiveTrade() {
         })
         .eq("id", tradeId);
 
-      if (cancelError) throw cancelError;
+      if (cancelError) {
+        console.error("Cancel error:", cancelError);
+        throw new Error(`Failed to cancel trade: ${cancelError.message}`);
+      }
 
       // Close the cancel modal and reset state
       setShowCancelWarning(false);
