@@ -401,8 +401,14 @@ export default function ActiveTrade() {
         return;
       }
 
-      // Verify user is the buyer
-      if (tradeData.buyer_id !== currentUserProfileId) {
+      // Verify user is the buyer (also check against user.id as fallback)
+      const isBuyer = tradeData.buyer_id === currentUserProfileId || tradeData.buyer_id === user?.id;
+      if (!isBuyer) {
+        console.error("Cancel permission check failed:", {
+          buyer_id: tradeData.buyer_id,
+          currentUserProfileId,
+          user_id: user?.id
+        });
         toast({
           title: "Permission Denied",
           description: "Only the buyer can cancel this trade",
