@@ -197,7 +197,7 @@ export default function ActiveTrade() {
         (payload) => {
           const updatedMessage = payload.new as TradeMessage;
           setMessages((prev) =>
-            prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
+            prev.map((msg) => (msg.id === updatedMessage.id ? { ...msg, read_at: updatedMessage.read_at } : msg))
           );
         }
       )
