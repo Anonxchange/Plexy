@@ -21,6 +21,7 @@ import { uploadToR2, uploadBase64ToR2 } from "@/lib/r2-storage";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { amlScreening } from "@/lib/security/aml-screening";
+import { countries } from "@/lib/localization";
 
 export default function VerificationPage() {
   const supabase = createClient();
@@ -759,13 +760,18 @@ export default function VerificationPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="country">Country <span className="text-red-500">*</span></Label>
-                <Input
-                  id="country"
-                  type="text"
-                  placeholder="Enter your country"
-                  value={country || userProfile?.country || ""}
-                  onChange={(e) => setCountry(e.target.value)}
-                />
+                <Select value={country || userProfile?.country || ""} onValueChange={setCountry}>
+                  <SelectTrigger id="country" className="h-12">
+                    <SelectValue placeholder="Select your country" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {countries.map((c) => (
+                      <SelectItem key={c.code} value={c.name}>
+                        {c.flag} {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
                   You can update your country if needed
                 </p>
@@ -925,13 +931,18 @@ export default function VerificationPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="country-level2">Country <span className="text-red-500">*</span></Label>
-                <Input
-                  id="country-level2"
-                  type="text"
-                  placeholder="Enter your country"
-                  value={country || userProfile?.country || ""}
-                  onChange={(e) => setCountry(e.target.value)}
-                />
+                <Select value={country || userProfile?.country || ""} onValueChange={setCountry}>
+                  <SelectTrigger id="country-level2" className="h-12">
+                    <SelectValue placeholder="Select your country" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {countries.map((c) => (
+                      <SelectItem key={c.code} value={c.name}>
+                        {c.flag} {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
                   Confirm your country of residence
                 </p>
