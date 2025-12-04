@@ -150,8 +150,8 @@ export function TradeCompletedSection({
         </div>
 
         <div className="p-4 space-y-4">
-          <div className="bg-zinc-900 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-white mb-4">
+          <div className="bg-muted rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-4">
               You {isUserBuyer ? "purchased" : "sold"} {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
             </h3>
 
@@ -161,14 +161,14 @@ export function TradeCompletedSection({
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10">
                   <AvatarImage src={sellerProfile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-zinc-700">
+                  <AvatarFallback className="bg-secondary">
                     {sellerProfile?.username?.substring(0, 1).toUpperCase() || "S"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{sellerProfile?.username || "Seller"}</span>
-                    <span className="bg-zinc-700 text-xs px-2 py-0.5 rounded">Sold</span>
+                    <span className="bg-secondary text-xs px-2 py-0.5 rounded">Sold</span>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}  {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
@@ -179,7 +179,7 @@ export function TradeCompletedSection({
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10">
                   <AvatarImage src={buyerProfile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-zinc-700">
+                  <AvatarFallback className="bg-secondary">
                     {buyerProfile?.username?.substring(0, 1).toUpperCase() || "B"}
                   </AvatarFallback>
                 </Avatar>
@@ -197,7 +197,7 @@ export function TradeCompletedSection({
 
             <button 
               onClick={() => setIsTrusted(!isTrusted)}
-              className="flex items-center gap-2 mt-4 text-sm text-red-400 hover:text-red-300 transition-colors"
+              className="flex items-center gap-2 mt-4 text-sm text-destructive hover:text-destructive/80 transition-colors"
             >
               <X className="w-4 h-4" />
               {isTrusted ? "Remove from trusted users" : "Add to trusted users"}
@@ -238,7 +238,7 @@ export function TradeCompletedSection({
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value.slice(0, maxChars))}
                   placeholder="ak-k good+++++ the best"
-                  className="min-h-[80px] bg-zinc-900 border-zinc-700"
+                  className="min-h-[80px] bg-muted border-border"
                   maxLength={maxChars}
                 />
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -299,14 +299,14 @@ export function TradeCompletedSection({
                   value={responseText}
                   onChange={(e) => setResponseText(e.target.value)}
                   placeholder="++++ the best"
-                  className="min-h-[60px] bg-zinc-900 border-zinc-700"
+                  className="min-h-[60px] bg-muted border-border"
                 />
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Info className="w-4 h-4" />
                   Characters left: {maxChars - responseText.length}
                 </div>
 
-                <div className="bg-zinc-800 rounded-lg p-3 text-sm text-muted-foreground">
+                <div className="bg-secondary rounded-lg p-3 text-sm text-muted-foreground">
                   You're not allowed to leave a feedback.
                 </div>
 
@@ -360,7 +360,7 @@ export function TradeCompletedSection({
             View Offer
           </Button>
 
-          <div className="bg-zinc-900 rounded-lg p-4 space-y-3">
+          <div className="bg-muted rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">₿</span>
               <span className="font-medium">
@@ -368,12 +368,12 @@ export function TradeCompletedSection({
               </span>
             </div>
 
-            <div className="bg-zinc-800/50 rounded-lg p-3 text-sm text-muted-foreground flex items-start gap-2">
+            <div className="bg-secondary/50 rounded-lg p-3 text-sm text-muted-foreground flex items-start gap-2">
               <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>Trade responsibly. Pexly strives to help, but not all disputes or losses can be resolved.</span>
             </div>
 
-            <div className="bg-zinc-800/50 rounded-lg p-3 text-sm text-muted-foreground flex items-start gap-2">
+            <div className="bg-secondary/50 rounded-lg p-3 text-sm text-muted-foreground flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" />
               <span>
                 Keep all trades on Pexly. Off-platform trades are not supported and may put you at risk. 
@@ -394,9 +394,9 @@ export function TradeCompletedSection({
                 <Info className="w-4 h-4" />
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="bg-zinc-800 text-xs px-3 py-1.5 rounded">no receipt needed</span>
-                <span className="bg-zinc-800 text-xs px-3 py-1.5 rounded">no verification needed</span>
-                <span className="bg-zinc-800 text-xs px-3 py-1.5 rounded">guided trade</span>
+                <span className="bg-secondary text-xs px-3 py-1.5 rounded">no receipt needed</span>
+                <span className="bg-secondary text-xs px-3 py-1.5 rounded">no verification needed</span>
+                <span className="bg-secondary text-xs px-3 py-1.5 rounded">guided trade</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Please follow the trade instructions in the chat window to complete this transaction.
