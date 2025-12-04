@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Shield, CheckCircle, Clock, XCircle, Upload, 
   ArrowRight, QrCode, Users, DollarSign 
@@ -29,6 +30,7 @@ export default function VerificationPage() {
 
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [fullName, setFullName] = useState("");
+  const [country, setCountry] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentBackFile, setDocumentBackFile] = useState<File | null>(null);
   const [addressFile, setAddressFile] = useState<File | null>(null);
@@ -163,10 +165,16 @@ export default function VerificationPage() {
         // Log but don't block if screening service fails
       }
 
+      const countryToUse = country || userProfile?.country;
+      if (!countryToUse || countryToUse.trim().length < 2) {
+        throw new Error("Please enter your country");
+      }
+
       const { error } = await supabase
         .from("user_profiles")
         .update({ 
           full_name: nameToUse,
+          country: countryToUse,
           date_of_birth: dateOfBirth, 
           verification_level: "1"
         })
@@ -177,6 +185,7 @@ export default function VerificationPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       setFullName("");
+      setCountry("");
     },
   });
 
@@ -735,18 +744,31 @@ export default function VerificationPage() {
               </p>
 
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">Full Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="fullName"
                   type="text"
                   placeholder="Enter your full name"
                   value={fullName || userProfile?.full_name || ""}
                   onChange={(e) => setFullName(e.target.value)}
-                  disabled={!!userProfile?.full_name}
                 />
-                {userProfile?.full_name && (
-                  <p className="text-xs text-green-600">✓ Full name already set</p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  You can update your name if needed
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="country">Country <span className="text-red-500">*</span></Label>
+                <Input
+                  id="country"
+                  type="text"
+                  placeholder="Enter your country"
+                  value={country || userProfile?.country || ""}
+                  onChange={(e) => setCountry(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  You can update your country if needed
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -849,7 +871,8 @@ export default function VerificationPage() {
                 onClick={() => submitDateOfBirth.mutate()}
                 disabled={
                   !dateOfBirth || 
-                  (!fullName && !userProfile?.full_name) || 
+                  !(fullName || userProfile?.full_name) || 
+                  !(country || userProfile?.country) ||
                   !user?.email || 
                   !user?.phone ||
                   submitDateOfBirth.isPending
@@ -900,9 +923,41 @@ export default function VerificationPage() {
                 </ul>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="country-level2">Country <span className="text-red-500">*</span></Label>
+                <Input
+                  id="country-level2"
+                  type="text"
+                  placeholder="Enter your country"
+                  value={country || userProfile?.country || ""}
+                  onChange={(e) => setCountry(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Confirm your country of residence
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="document-type">Document Type <span className="text-red-500">*</span></Label>
+                <Select value={documentType} onValueChange={setDocumentType}>
+                  <SelectTrigger id="document-type">
+                    <SelectValue placeholder="Select document type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="id_card">ID card</SelectItem>
+                    <SelectItem value="passport">Passport</SelectItem>
+                    <SelectItem value="residence_permit">Residence permit</SelectItem>
+                    <SelectItem value="driving_license">Driving license</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select the type of ID document you'll upload
+                </p>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="document-front">ID Document - Front Side</Label>
+                  <Label htmlFor="document-front">ID Document - Front Side <span className="text-red-500">*</span></Label>
                   <p className="text-xs text-muted-foreground">
                     Upload clear photo of the front of your ID
                   </p>
@@ -918,7 +973,7 @@ export default function VerificationPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="document-back">ID Document - Back Side</Label>
+                  <Label htmlFor="document-back">ID Document - Back Side <span className="text-red-500">*</span></Label>
                   <p className="text-xs text-muted-foreground">
                     Upload clear photo of the back of your ID
                   </p>
