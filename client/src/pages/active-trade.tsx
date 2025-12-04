@@ -33,7 +33,7 @@ interface Trade {
   fiat_amount: number;
   price: number;
   payment_method: string;
-  status: "pending" | "payment_sent" | "completed" | "disputed" | "cancelled" | "expired";
+  status: "pending" | "payment_sent" | "completed" | "released" | "disputed" | "cancelled" | "expired";
   escrow_id: string | null;
   payment_deadline: string | null;
   buyer_paid_at: string | null;
@@ -955,7 +955,7 @@ export default function ActiveTrade() {
                   </div>
                 )}
 
-                {trade.status === "completed" && (
+                {(trade.status === "completed" || trade.status === "released") && (
                   <TradeCompletedSection
                     trade={trade}
                     isUserBuyer={isUserBuyer}
@@ -965,7 +965,7 @@ export default function ActiveTrade() {
                 )}
 
                 {/* Trade Started Card - Only show for active trades */}
-                {trade.status !== "cancelled" && trade.status !== "completed" && (
+                {trade.status !== "cancelled" && trade.status !== "completed" && trade.status !== "released" && (
                   <TradeStartedSection
                     isUserBuyer={isUserBuyer}
                     trade={trade}
