@@ -9,7 +9,7 @@ import { CTASection } from "@/components/cta-section";
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+   <div className="min-h-screen relative">
       <HeroSection />
       <CryptoTicker />
       <HowItWorks />
