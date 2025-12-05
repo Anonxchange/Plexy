@@ -20,6 +20,7 @@ import { medals, isMedalEarned } from "@/lib/medals";
 import { getUserMedalStats } from "@/lib/medals-api";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { getVerificationLevel } from "@shared/verification-levels";
 
 
 export function Dashboard() {
@@ -245,13 +246,27 @@ export function Dashboard() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Limits</span>
                   <span className="text-sm">
-                    {user?.user_metadata?.verification_level === 3 || user?.user_metadata?.verification_level === 'level_3'
-                      ? 'Unlimited' 
-                      : user?.user_metadata?.verification_level === 2 || user?.user_metadata?.verification_level === 'level_2'
-                      ? 'Unlimited'
-                      : user?.user_metadata?.verification_level === 1 || user?.user_metadata?.verification_level === 'level_1'
-                      ? '$1,000/day'
-                      : 'No trading allowed'}
+                    {(() => {
+                      const verificationLevel = typeof user?.user_metadata?.verification_level === 'number' 
+                        ? user.user_metadata.verification_level 
+                        : user?.user_metadata?.verification_level === 'level_3' 
+                        ? 3 
+                        : user?.user_metadata?.verification_level === 'level_2' 
+                        ? 2 
+                        : user?.user_metadata?.verification_level === 'level_1' 
+                        ? 1 
+                        : 0;
+                      
+                      const levelConfig = getVerificationLevel(verificationLevel);
+                      
+                      if (levelConfig.dailyLimit === null) {
+                        return 'Unlimited';
+                      } else if (levelConfig.dailyLimit === 0) {
+                        return 'No trading allowed';
+                      } else {
+                        return `$${levelConfig.dailyLimit.toLocaleString()}/day`;
+                      }
+                    })()}
                   </span>
                 </div>
               </CardContent>
