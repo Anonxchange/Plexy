@@ -1,106 +1,66 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { sessionSecurity, LoginNotification } from '@/lib/security/session-security';
+import { sessionSecurity } from '@/lib/security/session-security';
 import { toast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { Smartphone, AlertTriangle } from 'lucide-react';
-import { createClient } from '@/lib/supabase';
 
-const supabase = createClient();
+export interface LoginNotification {
+  id: string;
+  user_id: string;
+  device_name: string;
+  browser: string;
+  os: string;
+  ip_address: string;
+  location?: string;
+  login_at: string;
+  is_read: boolean;
+  notification_type: 'new_login' | 'session_invalidated' | 'new_device';
+  message?: string;
+  metadata?: {
+    device_fingerprint?: string;
+  };
+}
 
-export function SessionInvalidationListener() {
-  const { user, signOut } = useAuth();
+export function SessionInvalidationListener(): null {
+  const auth = useAuth();
   const [, setLocation] = useLocation();
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-  const hasShownNotificationRef = useRef<Set<string>>(new Set());
+  const isLoggingOutRef = useRef(false);
 
   useEffect(() => {
-    if (!user) {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-      hasShownNotificationRef.current.clear();
+    if (!auth?.user) {
+      isLoggingOutRef.current = false;
       return;
     }
 
-    sessionSecurity.startSessionValidation(user.id, async (reason) => {
-      if (reason === 'invalidated') {
-        toast({
-          title: 'Session Ended',
-          description: 'Your session was ended because you logged in from another device.',
-          variant: 'destructive',
-        });
-        await signOut();
-        setLocation('/signin?reason=session_ended');
-      } else if (reason === 'expired') {
-        toast({
-          title: 'Session Expired',
-          description: 'Your session has expired. Please log in again.',
-          variant: 'destructive',
-        });
-        await signOut();
-        setLocation('/signin?reason=session_expired');
+    const handleSessionInvalidation = async (reason: string) => {
+      if (isLoggingOutRef.current) {
+        return;
       }
-    });
+      isLoggingOutRef.current = true;
 
-    unsubscribeRef.current = sessionSecurity.subscribeToSessionInvalidation(
-      user.id,
-      (notification: LoginNotification) => {
-        if (hasShownNotificationRef.current.has(notification.id)) {
-          return;
-        }
-        hasShownNotificationRef.current.add(notification.id);
+      toast({
+        title: reason === 'expired' ? 'Session Expired' : 'Session Ended',
+        description: reason === 'expired' 
+          ? 'Your session has expired. Please log in again.'
+          : 'Your session was ended because you logged in from another device.',
+        variant: 'destructive',
+      });
 
-        const currentDeviceFingerprint = localStorage.getItem('device_fingerprint');
-
-        if (notification.notification_type === 'session_invalidated') {
-          // Only show session invalidation notification if this is NOT the device that triggered it
-          // The notification contains info about the NEW device that logged in
-          // We should only show this on OLD devices being kicked out
-          const { data: currentSession } = await supabase
-            .from('active_sessions')
-            .select('device_fingerprint')
-            .eq('user_id', user.id)
-            .eq('device_fingerprint', currentDeviceFingerprint)
-            .single();
-
-          // If we don't have an active session, we're being logged out
-          if (!currentSession) {
-            toast({
-              title: 'Session Ended',
-              description: notification.message || 'Your session was ended because you logged in from another device.',
-              variant: 'destructive',
-            });
-
-            setTimeout(async () => {
-              await signOut();
-              setLocation('/signin?reason=session_ended');
-            }, 2000);
-          }
-        } else if (notification.notification_type === 'new_login') {
-          // Only show new login notification if this is NOT the device that just logged in
-          const isCurrentDevice = currentDeviceFingerprint && 
-            notification.metadata?.device_fingerprint === currentDeviceFingerprint;
-          
-          if (!isCurrentDevice) {
-            toast({
-              title: 'New Login Detected',
-              description: `Your account was logged into from ${notification.device_name} (${notification.browser} on ${notification.os})`,
-            });
-          }
-        }
+      try {
+        await auth.signOut();
+      } catch (error) {
+        console.error('Error signing out:', error);
       }
-    );
+      setLocation(`/signin?reason=${reason === 'expired' ? 'session_expired' : 'session_ended'}`);
+    };
+
+    sessionSecurity.startSessionValidation(auth.user.id, handleSessionInvalidation);
 
     return () => {
       sessionSecurity.stopSessionValidation();
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
     };
-  }, [user, signOut, setLocation]);
+  }, [auth, setLocation]);
 
   return null;
 }
