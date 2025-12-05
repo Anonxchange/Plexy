@@ -276,18 +276,12 @@ export function AppHeader() {
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Zap className="h-5 w-5 text-primary-foreground" />
               </div>
-              <svg className="absolute -top-3 -right-2 w-7 h-7" viewBox="0 0 32 32" fill="none">
-                {/* Main red hat body */}
-                <path d="M16 4 L8 16 L24 16 Z" fill="#E63946" stroke="#B91C1C" strokeWidth="0.5"/>
-                {/* White fur trim at bottom */}
-                <ellipse cx="16" cy="16" rx="8.5" ry="2" fill="#FFFFFF"/>
-                {/* Shading on hat */}
-                <path d="M16 4 L8 16 L12 16 Z" fill="#DC2626" opacity="0.3"/>
-                {/* White pom-pom on top */}
-                <circle cx="16" cy="3" r="2.5" fill="#FFFFFF"/>
-                {/* Pom-pom shading */}
-                <circle cx="15" cy="2.5" r="1" fill="#F3F4F6" opacity="0.6"/>
-              </svg>
+              <img 
+                src="/assets/IMG_2740_1764939245956.png" 
+                alt="Christmas hat" 
+                className="absolute -top-4 -right-3 w-8 h-8 object-contain"
+                style={{ transform: 'rotate(-25deg)' }}
+              />
             </div>
             <span className="text-xl font-extrabold">Pexly</span>
           </Link>
