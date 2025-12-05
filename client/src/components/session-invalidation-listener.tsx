@@ -28,13 +28,14 @@ export function SessionInvalidationListener(): null {
   const isLoggingOutRef = useRef(false);
 
   useEffect(() => {
-    if (!auth?.user) {
+    // Ensure auth context is available
+    if (!auth || !auth.user) {
       isLoggingOutRef.current = false;
       return;
     }
 
     const handleSessionInvalidation = async (reason: string) => {
-      if (isLoggingOutRef.current) {
+      if (isLoggingOutRef.current || !auth) {
         return;
       }
       isLoggingOutRef.current = true;
@@ -48,11 +49,14 @@ export function SessionInvalidationListener(): null {
       });
 
       try {
-        await auth.signOut();
+        if (auth.signOut) {
+          await auth.signOut();
+        }
       } catch (error) {
         console.error('Error signing out:', error);
+      } finally {
+        setLocation(`/signin?reason=${reason === 'expired' ? 'session_expired' : 'session_ended'}`);
       }
-      setLocation(`/signin?reason=${reason === 'expired' ? 'session_expired' : 'session_ended'}`);
     };
 
     sessionSecurity.startSessionValidation(auth.user.id, handleSessionInvalidation);
