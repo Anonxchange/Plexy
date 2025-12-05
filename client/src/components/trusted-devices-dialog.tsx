@@ -146,6 +146,29 @@ export function TrustedDevicesDialog({
     }
   };
 
+  const handleTrustAllDeviceType = async (deviceTypes: ('mobile' | 'tablet' | 'laptop' | 'desktop')[]) => {
+    if (!user?.id) return;
+    
+    setProcessingId("bulk");
+    try {
+      await deviceFingerprint.trustDevicesByType(user.id, deviceTypes);
+      toast({
+        title: "Devices Trusted",
+        description: `All ${deviceTypes.join(' and ')} devices have been trusted.`,
+      });
+      loadDevices();
+    } catch (error) {
+      console.error("Error trusting devices:", error);
+      toast({
+        title: "Error",
+        description: "Failed to trust devices",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const getDeviceIcon = (deviceInfo: DeviceFingerprint['device_info']) => {
     const platform = deviceInfo?.platform?.toLowerCase() || '';
     const userAgent = deviceInfo?.userAgent?.toLowerCase() || '';
@@ -226,7 +249,29 @@ export function TrustedDevicesDialog({
           )}
 
           <div className="border-t pt-4">
-            <h4 className="font-medium mb-3">Registered Devices</h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium">Registered Devices</h4>
+              {devices.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTrustAllDeviceType(['laptop', 'desktop'])}
+                    disabled={processingId !== null}
+                  >
+                    Trust All Computers
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTrustAllDeviceType(['mobile', 'tablet'])}
+                    disabled={processingId !== null}
+                  >
+                    Trust All Mobile
+                  </Button>
+                </div>
+              )}
+            </div>
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
