@@ -6,6 +6,7 @@ import { Eye, EyeOff, Sun, Moon, ShieldCheck, Zap } from "lucide-react";
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { PhoneVerification } from "@/components/phone-verification";
+import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { createClient } from "@/lib/supabase";
 import * as OTPAuth from "otpauth";
 import { useTheme } from "@/components/theme-provider";
@@ -23,7 +24,7 @@ export function SignIn() {
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
-  const { signIn, signOut, user } = useAuth();
+  const { signIn, signOut, user, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
@@ -52,12 +53,24 @@ export function SignIn() {
       setLocation("/dashboard");
     }
 
-    // Check if redirected due to timeout
     const params = new URLSearchParams(window.location.search);
-    if (params.get('reason') === 'timeout') {
+    const reason = params.get('reason');
+    if (reason === 'timeout') {
       toast({
         title: "Session Expired",
         description: "You were logged out due to inactivity",
+        variant: "destructive",
+      });
+    } else if (reason === 'session_ended') {
+      toast({
+        title: "Session Ended",
+        description: "Your session was ended because you logged in from another device",
+        variant: "destructive",
+      });
+    } else if (reason === 'session_expired') {
+      toast({
+        title: "Session Expired",
+        description: "Your session has expired. Please log in again.",
         variant: "destructive",
       });
     }
@@ -121,6 +134,12 @@ export function SignIn() {
         description: authResult.error.message,
         variant: "destructive",
       });
+      return;
+    }
+
+    if (authResult.requiresOTP) {
+      setLoading(false);
+      setChecking2FA(false);
       return;
     }
 
@@ -603,6 +622,26 @@ export function SignIn() {
         )}
         </div>
       </div>
+
+      {pendingOTPVerification && (
+        <DeviceOTPVerification
+          isOpen={!!pendingOTPVerification}
+          onClose={() => {
+            cancelOTPVerification();
+          }}
+          onVerified={async () => {
+            await completeOTPVerification();
+            toast({
+              title: "Device Verified!",
+              description: "Your device has been verified and trusted.",
+            });
+            setLocation("/dashboard");
+          }}
+          userId={pendingOTPVerification.userId}
+          email={pendingOTPVerification.email}
+          deviceInfo={pendingOTPVerification.deviceInfo}
+        />
+      )}
     </div>
   );
 }
