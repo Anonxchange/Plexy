@@ -244,8 +244,8 @@ export function Dashboard() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Limits</span>
-                  <span className="text-sm">
+                  <span className="text-sm text-muted-foreground">Daily Limit</span>
+                  <span className="text-sm font-medium">
                     {(() => {
                       const verificationLevel = Number(user?.user_metadata?.verification_level) || 0;
                       const levelConfig = getVerificationLevel(verificationLevel);
@@ -253,9 +253,9 @@ export function Dashboard() {
                       if (levelConfig.dailyLimit === null) {
                         return 'Unlimited';
                       } else if (levelConfig.dailyLimit === 0) {
-                        return 'No trading allowed';
+                        return '$0 (Verify to trade)';
                       } else {
-                        return `$${levelConfig.dailyLimit.toLocaleString()}/day`;
+                        return `$${levelConfig.dailyLimit.toLocaleString()}`;
                       }
                     })()}
                   </span>
