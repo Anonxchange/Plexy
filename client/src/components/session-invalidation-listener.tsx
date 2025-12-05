@@ -23,7 +23,15 @@ export interface LoginNotification {
 }
 
 export function SessionInvalidationListener(): null {
-  const auth = useAuth();
+  // Use try-catch to handle context not ready errors
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    // Auth context not ready yet, skip rendering
+    return null;
+  }
+
   const [, setLocation] = useLocation();
   const isLoggingOutRef = useRef(false);
 
