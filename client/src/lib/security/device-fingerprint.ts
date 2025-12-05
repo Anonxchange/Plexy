@@ -14,12 +14,15 @@ export interface DeviceFingerprint {
     language?: string;
     timezone?: string;
     plugins?: string[];
+    device_type?: 'mobile' | 'tablet' | 'laptop' | 'desktop';
   };
   ip_address: string | null;
   trusted: boolean;
   last_seen_at: string;
   created_at: string;
 }
+
+export type DeviceType = 'mobile' | 'tablet' | 'laptop' | 'desktop';
 
 class DeviceFingerprintManager {
   private async generateFingerprint(): Promise<string> {
@@ -58,6 +61,29 @@ class DeviceFingerprintManager {
     return await this.generateFingerprint();
   }
 
+  private detectDeviceType(): DeviceType {
+    const ua = navigator.userAgent.toLowerCase();
+    const platform = navigator.platform.toLowerCase();
+    
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      return 'mobile';
+    }
+    if (ua.includes('ipad') || ua.includes('tablet')) {
+      return 'tablet';
+    }
+    if (platform.includes('mac') || ua.includes('macintosh')) {
+      return 'laptop';
+    }
+    if (ua.includes('windows') || ua.includes('linux')) {
+      // Could be laptop or desktop, check screen size as hint
+      if (screen.width <= 1920 && screen.height <= 1080 && window.matchMedia('(pointer: coarse)').matches) {
+        return 'laptop';
+      }
+      return 'desktop';
+    }
+    return 'desktop';
+  }
+
   async registerDevice(userId: string): Promise<DeviceFingerprint> {
     if (!userId) {
       throw new Error('User ID is required to register a device');
@@ -80,6 +106,7 @@ class DeviceFingerprintManager {
       screen: `${screen.width}x${screen.height}`,
       language: navigator.language,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      device_type: this.detectDeviceType(),
     };
 
     const { data, error } = await supabase
@@ -141,6 +168,36 @@ class DeviceFingerprintManager {
       .eq('user_id', userId);
 
     if (error) throw error;
+  }
+
+  async trustDevicesByType(userId: string, deviceTypes: DeviceType[]): Promise<void> {
+    if (!userId) {
+      throw new Error('User ID is required to trust devices by type');
+    }
+
+    const devices = await this.getDevices(userId);
+    const deviceIdsToTrust = devices
+      .filter(device => deviceTypes.includes(device.device_info.device_type as DeviceType))
+      .map(device => device.id);
+
+    if (deviceIdsToTrust.length === 0) return;
+
+    const { error } = await supabase
+      .from('device_fingerprints')
+      .update({ trusted: true })
+      .in('id', deviceIdsToTrust)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+  }
+
+  async getDevicesByType(userId: string, deviceType: DeviceType): Promise<DeviceFingerprint[]> {
+    if (!userId) {
+      throw new Error('User ID is required to get devices by type');
+    }
+
+    const devices = await this.getDevices(userId);
+    return devices.filter(device => device.device_info.device_type === deviceType);
   }
 
   async isDeviceTrusted(userId: string): Promise<boolean> {
