@@ -23,27 +23,18 @@ export interface LoginNotification {
 }
 
 export function SessionInvalidationListener(): null {
-  // Use try-catch to handle context not ready errors
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    // Auth context not ready yet, skip rendering
-    return null;
-  }
-
+  const auth = useAuth();
   const [, setLocation] = useLocation();
   const isLoggingOutRef = useRef(false);
 
   useEffect(() => {
-    // Ensure auth context is available
-    if (!auth || !auth.user) {
+    if (!auth?.user) {
       isLoggingOutRef.current = false;
       return;
     }
 
     const handleSessionInvalidation = async (reason: string) => {
-      if (isLoggingOutRef.current || !auth) {
+      if (isLoggingOutRef.current) {
         return;
       }
       isLoggingOutRef.current = true;
@@ -57,14 +48,11 @@ export function SessionInvalidationListener(): null {
       });
 
       try {
-        if (auth.signOut) {
-          await auth.signOut();
-        }
+        await auth.signOut();
       } catch (error) {
         console.error('Error signing out:', error);
-      } finally {
-        setLocation(`/signin?reason=${reason === 'expired' ? 'session_expired' : 'session_ended'}`);
       }
+      setLocation(`/signin?reason=${reason === 'expired' ? 'session_expired' : 'session_ended'}`);
     };
 
     sessionSecurity.startSessionValidation(auth.user.id, handleSessionInvalidation);
