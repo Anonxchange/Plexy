@@ -245,13 +245,13 @@ export function Dashboard() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Limits</span>
                   <span className="text-sm">
-                    {user?.user_metadata?.verification_level === 'level_3' 
+                    {user?.user_metadata?.verification_level === 3 || user?.user_metadata?.verification_level === 'level_3'
                       ? 'Unlimited' 
-                      : user?.user_metadata?.verification_level === 'level_2'
-                      ? '$50,000/day'
-                      : user?.user_metadata?.verification_level === 'level_1'
-                      ? '$10,000/day'
-                      : '$2,000/day'}
+                      : user?.user_metadata?.verification_level === 2 || user?.user_metadata?.verification_level === 'level_2'
+                      ? 'Unlimited'
+                      : user?.user_metadata?.verification_level === 1 || user?.user_metadata?.verification_level === 'level_1'
+                      ? '$1,000/day'
+                      : 'No trading allowed'}
                   </span>
                 </div>
               </CardContent>
