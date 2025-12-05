@@ -272,8 +272,15 @@ export function AppHeader() {
             </Button>
           )}
           <Link href="/" className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-lg px-2 py-1" data-testid="link-home-header">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Zap className="h-5 w-5 text-primary-foreground" />
+            <div className="relative w-8 h-8">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <Zap className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <svg className="absolute -top-2 -right-1 w-6 h-6" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L8 8h8l-4-6z" fill="#DC2626"/>
+                <ellipse cx="12" cy="8" rx="5" ry="2" fill="#DC2626"/>
+                <circle cx="12" cy="1.5" r="1" fill="#FFFFFF"/>
+              </svg>
             </div>
             <span className="text-xl font-extrabold">Pexly</span>
           </Link>
