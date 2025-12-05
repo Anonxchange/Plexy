@@ -4,6 +4,9 @@ import { sessionSecurity, LoginNotification } from '@/lib/security/session-secur
 import { toast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { Smartphone, AlertTriangle } from 'lucide-react';
+import { createClient } from '@/lib/supabase';
+
+const supabase = createClient();
 
 export function SessionInvalidationListener() {
   const { user, signOut } = useAuth();
@@ -49,28 +52,43 @@ export function SessionInvalidationListener() {
         }
         hasShownNotificationRef.current.add(notification.id);
 
+        const currentDeviceFingerprint = localStorage.getItem('device_fingerprint');
+
         if (notification.notification_type === 'session_invalidated') {
-          toast({
-            title: 'Session Ended',
-            description: notification.message || 'Your session was ended because you logged in from another device.',
-            variant: 'destructive',
-          });
+          // Only show session invalidation notification if this is NOT the device that triggered it
+          // The notification contains info about the NEW device that logged in
+          // We should only show this on OLD devices being kicked out
+          const { data: currentSession } = await supabase
+            .from('active_sessions')
+            .select('device_fingerprint')
+            .eq('user_id', user.id)
+            .eq('device_fingerprint', currentDeviceFingerprint)
+            .single();
 
-          setTimeout(async () => {
-            await signOut();
-            setLocation('/signin?reason=session_ended');
-          }, 2000);
-        } else if (notification.notification_type === 'new_login') {
-          const currentSessionToken = localStorage.getItem('session_token');
-          
-          if (currentSessionToken) {
-            return;
+          // If we don't have an active session, we're being logged out
+          if (!currentSession) {
+            toast({
+              title: 'Session Ended',
+              description: notification.message || 'Your session was ended because you logged in from another device.',
+              variant: 'destructive',
+            });
+
+            setTimeout(async () => {
+              await signOut();
+              setLocation('/signin?reason=session_ended');
+            }, 2000);
           }
-
-          toast({
-            title: 'New Login Detected',
-            description: `Your account was logged into from ${notification.device_name} (${notification.browser} on ${notification.os})`,
-          });
+        } else if (notification.notification_type === 'new_login') {
+          // Only show new login notification if this is NOT the device that just logged in
+          const isCurrentDevice = currentDeviceFingerprint && 
+            notification.metadata?.device_fingerprint === currentDeviceFingerprint;
+          
+          if (!isCurrentDevice) {
+            toast({
+              title: 'New Login Detected',
+              description: `Your account was logged into from ${notification.device_name} (${notification.browser} on ${notification.os})`,
+            });
+          }
         }
       }
     );
