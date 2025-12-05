@@ -219,19 +219,40 @@ export function Dashboard() {
                   <span className="text-sm">{user.email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Current badge</span>
+                  <span className="text-sm text-muted-foreground">Current medal</span>
                   <span className="text-sm flex items-center gap-1">
                     {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? (
-                      <img src={medals.find(m => m.id === medalStats.earnedMedals[0])?.icon} alt="Medal Icon" className="w-5 h-5" />
+                      <>
+                        <img 
+                          src={medals.find(m => m.id === medalStats.earnedMedals[0])?.icon} 
+                          alt="Medal Icon" 
+                          className="w-5 h-5 object-contain" 
+                        />
+                        <span>{medals.find(m => m.id === medalStats.earnedMedals[0])?.name}</span>
+                      </>
                     ) : (
-                      <AwardIcon className="h-5 w-5 text-yellow-500" />
+                      <>
+                        <img 
+                          src={medals.find(m => m.id === 'the-og')?.icon} 
+                          alt="The OG Medal" 
+                          className="w-5 h-5 object-contain" 
+                        />
+                        <span>{medals.find(m => m.id === 'the-og')?.name}</span>
+                      </>
                     )}
-                    {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? medals.find(m => m.id === medalStats.earnedMedals[0])?.name.toUpperCase() : "NEWBIE"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Limits</span>
-                  <span className="text-sm">Unlimited</span>
+                  <span className="text-sm">
+                    {user?.user_metadata?.verification_level === 'level_3' 
+                      ? 'Unlimited' 
+                      : user?.user_metadata?.verification_level === 'level_2'
+                      ? '$50,000/day'
+                      : user?.user_metadata?.verification_level === 'level_1'
+                      ? '$10,000/day'
+                      : '$2,000/day'}
+                  </span>
                 </div>
               </CardContent>
             </CollapsibleContent>
