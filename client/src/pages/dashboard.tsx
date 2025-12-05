@@ -247,16 +247,7 @@ export function Dashboard() {
                   <span className="text-sm text-muted-foreground">Limits</span>
                   <span className="text-sm">
                     {(() => {
-                      const verificationLevel = typeof user?.user_metadata?.verification_level === 'number' 
-                        ? user.user_metadata.verification_level 
-                        : user?.user_metadata?.verification_level === 'level_3' 
-                        ? 3 
-                        : user?.user_metadata?.verification_level === 'level_2' 
-                        ? 2 
-                        : user?.user_metadata?.verification_level === 'level_1' 
-                        ? 1 
-                        : 0;
-                      
+                      const verificationLevel = Number(user?.user_metadata?.verification_level) || 0;
                       const levelConfig = getVerificationLevel(verificationLevel);
                       
                       if (levelConfig.dailyLimit === null) {
