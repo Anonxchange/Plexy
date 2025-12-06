@@ -98,6 +98,19 @@ interface Feedback {
   };
 }
 
+interface TradeHistory {
+  id: string;
+  buyer_id: string;
+  seller_id: string;
+  crypto_symbol: string;
+  crypto_amount: string;
+  fiat_amount: string;
+  fiat_currency: string;
+  status: string;
+  created_at: string;
+  payment_method?: string;
+}
+
 export function Profile() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -111,10 +124,12 @@ export function Profile() {
   const isOwnProfile = !params?.userId || params?.userId === user?.id;
 
   const [offerFilter, setOfferFilter] = useState("buying");
-  const [feedbackFilter, setFeedbackFilter] = useState("all");
+  const [feedbackFilter, setFeedbackFilter] = useState("buyers");
+  const [historyFilter, setHistoryFilter] = useState("all");
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [tradeHistory, setTradeHistory] = useState<TradeHistory[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -360,6 +375,63 @@ export function Profile() {
       fetchFeedbacks();
     }
   }, [feedbackFilter, viewingUserId]);
+
+  const fetchTradeHistory = async () => {
+    if (!user?.id || !viewingUserId || isOwnProfile) {
+      setTradeHistory([]);
+      return;
+    }
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+
+      let query = supabase
+        .from('p2p_trades')
+        .select('*')
+        .or(`and(buyer_id.eq.${user.id},seller_id.eq.${viewingUserId}),and(buyer_id.eq.${viewingUserId},seller_id.eq.${user.id})`)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (historyFilter === 'bought') {
+        query = supabase
+          .from('p2p_trades')
+          .select('*')
+          .eq('buyer_id', user.id)
+          .eq('seller_id', viewingUserId)
+          .order('created_at', { ascending: false })
+          .limit(20);
+      } else if (historyFilter === 'sold') {
+        query = supabase
+          .from('p2p_trades')
+          .select('*')
+          .eq('seller_id', user.id)
+          .eq('buyer_id', viewingUserId)
+          .order('created_at', { ascending: false })
+          .limit(20);
+      }
+
+      const { data, error } = await Promise.race([query, timeoutPromise]) as any;
+
+      if (error) {
+        console.error('Error fetching trade history:', error);
+        setTradeHistory([]);
+        return;
+      }
+
+      setTradeHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching trade history:', error);
+      setTradeHistory([]);
+    }
+  };
+
+  useEffect(() => {
+    if (viewingUserId && !isOwnProfile && user?.id) {
+      fetchTradeHistory();
+    }
+  }, [historyFilter, viewingUserId, isOwnProfile, user?.id]);
 
   if (loading || loadingProfile) {
     return (
@@ -1075,6 +1147,80 @@ export function Profile() {
         )}
       </div>
 
+        {/* Your History with [username] Section - only shown when viewing another user's profile */}
+        {!isOwnProfile && (
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Your History with {profileData?.username || 'User'}</h3>
+              <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by"/>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Trades</SelectItem>
+                  <SelectItem value="bought">You Bought</SelectItem>
+                  <SelectItem value="sold">You Sold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {tradeHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No trade history with this user</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {tradeHistory.map((trade) => {
+                  const isBuyer = trade.buyer_id === user?.id;
+                  const tradeType = isBuyer ? 'Bought' : 'Sold';
+                  const statusColor = trade.status === 'completed' 
+                    ? 'bg-green-500/10 text-green-500 border-green-500/20' 
+                    : trade.status === 'cancelled' || trade.status === 'expired'
+                      ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                      : 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+
+                  return (
+                    <Card key={trade.id} className="bg-card border-border shadow-sm cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setLocation(`/trade/${trade.id}`)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {trade.crypto_symbol && cryptoIconUrls[trade.crypto_symbol as keyof typeof cryptoIconUrls] && (
+                              <img 
+                                src={cryptoIconUrls[trade.crypto_symbol as keyof typeof cryptoIconUrls]} 
+                                alt={trade.crypto_symbol} 
+                                className="w-8 h-8" 
+                              />
+                            )}
+                            <div>
+                              <div className="font-semibold">
+                                {tradeType} {parseFloat(trade.crypto_amount).toFixed(6)} {trade.crypto_symbol}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                for {parseFloat(trade.fiat_amount).toLocaleString()} {trade.fiat_currency}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge className={`${statusColor} border capitalize`}>
+                              {trade.status}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(trade.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: '2-digit', 
+                                year: 'numeric' 
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Feedback Section */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
@@ -1085,7 +1231,6 @@ export function Profile() {
                 <SelectValue placeholder="Filter by"/>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Feedback</SelectItem>
                 <SelectItem value="buyers">From Buyers</SelectItem>
                 <SelectItem value="sellers">From Sellers</SelectItem>
               </SelectContent>
