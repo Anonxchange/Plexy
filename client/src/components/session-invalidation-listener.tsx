@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { sessionSecurity } from '@/lib/security/session-security';
+import { createClient } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { Smartphone, AlertTriangle } from 'lucide-react';
+
+const supabase = createClient();
 
 export interface LoginNotification {
   id: string;
@@ -33,32 +35,22 @@ export function SessionInvalidationListener(): null {
       return;
     }
 
-    const handleSessionInvalidation = async (reason: string) => {
-      if (isLoggingOutRef.current) {
-        return;
+    // Supabase automatically handles session validation
+    // We just listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT' && !isLoggingOutRef.current) {
+        isLoggingOutRef.current = true;
+        toast({
+          title: 'Session Expired',
+          description: 'Your session has expired. Please log in again.',
+          variant: 'destructive',
+        });
+        setLocation('/signin?reason=session_expired');
       }
-      isLoggingOutRef.current = true;
-
-      toast({
-        title: reason === 'expired' ? 'Session Expired' : 'Session Ended',
-        description: reason === 'expired' 
-          ? 'Your session has expired. Please log in again.'
-          : 'Your session was ended because you logged in from another device.',
-        variant: 'destructive',
-      });
-
-      try {
-        await auth.signOut();
-      } catch (error) {
-        console.error('Error signing out:', error);
-      }
-      setLocation(`/signin?reason=${reason === 'expired' ? 'session_expired' : 'session_ended'}`);
-    };
-
-    sessionSecurity.startSessionValidation(auth.user.id, handleSessionInvalidation);
+    });
 
     return () => {
-      sessionSecurity.stopSessionValidation();
+      subscription.unsubscribe();
     };
   }, [auth, setLocation]);
 
