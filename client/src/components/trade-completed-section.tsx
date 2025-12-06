@@ -79,6 +79,7 @@ export function TradeCompletedSection({
   const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [showResponseForm, setShowResponseForm] = useState(false);
 
   const [myFeedback, setMyFeedback] = useState<TradeFeedback | null>(null);
   const [counterpartyFeedback, setCounterpartyFeedback] = useState<TradeFeedback | null>(null);
@@ -450,7 +451,7 @@ export function TradeCompletedSection({
                 )}
 
                 {myFeedback && !isEditing && (
-                  <div className="mt-4 pt-4 border-t border-border">
+                  <div className="bg-muted/50 rounded-lg p-4 border border-border">
                     <div className="flex items-center gap-2 mb-2">
                       {myFeedback.rating === "positive" ? (
                         <>
@@ -473,10 +474,10 @@ export function TradeCompletedSection({
                     >
                       {currentUserProfile?.username || "You"}
                     </button>
-                    <p className="text-sm text-muted-foreground mb-2">{myFeedback.comment}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{myFeedback.comment}</p>
                     <button 
                       onClick={handleEditFeedback}
-                      className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      className="flex items-center gap-2 text-sm text-primary hover:underline font-medium"
                     >
                       <Pencil className="w-4 h-4" />
                       Edit Feedback
@@ -486,79 +487,91 @@ export function TradeCompletedSection({
 
                 {counterpartyFeedback && (
                   <div className="mt-4 pt-4 border-t border-border">
-                    <div className="text-sm text-muted-foreground mb-2">
+                    <div className="text-sm text-muted-foreground mb-3">
                       Feedback from {counterparty?.username}
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      {counterpartyFeedback.rating === "positive" ? (
-                        <>
-                          <ThumbsUp className="w-4 h-4 text-green-500" />
-                          <span className="text-green-500 font-medium">Positive</span>
-                        </>
+                    <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                      <div className="flex items-center gap-2 mb-2">
+                        {counterpartyFeedback.rating === "positive" ? (
+                          <>
+                            <ThumbsUp className="w-4 h-4 text-green-500" />
+                            <span className="text-green-500 font-medium">Positive</span>
+                          </>
+                        ) : (
+                          <>
+                            <ThumbsDown className="w-4 h-4 text-red-500" />
+                            <span className="text-red-500 font-medium">Negative</span>
+                          </>
+                        )}
+                        <span className="text-sm text-muted-foreground ml-auto">
+                          {formatDate(counterpartyFeedback.created_at)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => counterpartyId && setLocation(`/profile/${counterpartyId}`)}
+                        className="text-primary font-medium mb-1 hover:underline"
+                      >
+                        {counterparty?.username}
+                      </button>
+                      <p className="text-sm text-muted-foreground mb-3">{counterpartyFeedback.comment}</p>
+
+                      {counterpartyFeedback.response ? (
+                        <div className="bg-muted rounded-lg p-3 mt-2">
+                          <div className="text-xs text-muted-foreground mb-1">Your response:</div>
+                          <p className="text-sm">{counterpartyFeedback.response}</p>
+                        </div>
+                      ) : !showResponseForm ? (
+                        <button
+                          onClick={() => setShowResponseForm(true)}
+                          className="flex items-center gap-2 text-sm text-primary hover:underline font-medium"
+                        >
+                          <span className="text-lg">+</span>
+                          Respond
+                        </button>
                       ) : (
-                        <>
-                          <ThumbsDown className="w-4 h-4 text-red-500" />
-                          <span className="text-red-500 font-medium">Negative</span>
-                        </>
+                        <div className="space-y-2 mt-3">
+                          <Textarea
+                            value={responseText}
+                            onChange={(e) => setResponseText(e.target.value.slice(0, maxChars))}
+                            placeholder="Thank you for the feedback..."
+                            className="min-h-[60px] bg-muted border-border"
+                            maxLength={maxChars}
+                          />
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Info className="w-4 h-4" />
+                            Characters left: {maxChars - responseText.length}
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleSubmitResponse}
+                              disabled={isSubmittingResponse || !responseText.trim()}
+                              size="sm"
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              {isSubmittingResponse ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Submitting...
+                                </>
+                              ) : (
+                                "Submit Response"
+                              )}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setShowResponseForm(false);
+                                setResponseText("");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
                       )}
-                      <span className="text-sm text-muted-foreground ml-auto">
-                        {formatDate(counterpartyFeedback.created_at)}
-                      </span>
                     </div>
-                    <button
-                      onClick={() => counterpartyId && setLocation(`/profile/${counterpartyId}`)}
-                      className="text-primary font-medium mb-1 hover:underline"
-                    >
-                      {counterparty?.username}
-                    </button>
-                    <p className="text-sm text-muted-foreground mb-3">{counterpartyFeedback.comment}</p>
-
-                    {counterpartyFeedback.response ? (
-                      <div className="bg-muted rounded-lg p-3 mt-2">
-                        <div className="text-xs text-muted-foreground mb-1">Your response:</div>
-                        <p className="text-sm">{counterpartyFeedback.response}</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="text-sm">Leave a response</div>
-                        <Textarea
-                          value={responseText}
-                          onChange={(e) => setResponseText(e.target.value.slice(0, maxChars))}
-                          placeholder="Thank you for the feedback..."
-                          className="min-h-[60px] bg-muted border-border"
-                          maxLength={maxChars}
-                        />
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Info className="w-4 h-4" />
-                          Characters left: {maxChars - responseText.length}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleSubmitResponse}
-                            disabled={isSubmittingResponse || !responseText.trim()}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            {isSubmittingResponse ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Submitting...
-                              </>
-                            ) : (
-                              "Submit Response"
-                            )}
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setResponseText("")}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
 
