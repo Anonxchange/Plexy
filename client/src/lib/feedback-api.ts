@@ -193,7 +193,8 @@ export async function getUserFeedback(userId: string, options?: { limit?: number
       *,
       from_user:from_user_id (
         username,
-        avatar_url
+        avatar_url,
+        country
       )
     `)
     .eq('to_user_id', userId)
