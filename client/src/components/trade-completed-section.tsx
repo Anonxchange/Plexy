@@ -99,36 +99,50 @@ export function TradeCompletedSection({
     try {
       const supabase = await import("@/lib/supabase").then(m => m.createClient());
       
-      // Get current user profile
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', user.id)
-          .single();
-        
-        if (profile) {
-          setCurrentUserProfile(profile);
-        }
+      if (!user) {
+        setIsLoading(false);
+        return;
       }
 
-      // Fetch feedback - use the current counterpartyId value
-      const currentCounterpartyId = isUserBuyer ? trade.seller_id : trade.buyer_id;
+      // Get current user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('id', user.id)
+        .single();
       
-      const [myResult, counterpartyResult] = await Promise.all([
-        getMyFeedbackForTrade(trade.id),
-        getCounterpartyFeedbackForTrade(trade.id, currentCounterpartyId),
-      ]);
-
-      if (myResult.success && myResult.feedback) {
-        setMyFeedback(myResult.feedback);
-        setFeedbackType(myResult.feedback.rating);
-        setFeedbackText(myResult.feedback.comment || "");
+      if (profile) {
+        setCurrentUserProfile(profile);
       }
 
-      if (counterpartyResult.success && counterpartyResult.feedback) {
-        setCounterpartyFeedback(counterpartyResult.feedback);
+      // Fetch ALL feedback for this trade - simpler and more reliable
+      const { data: allFeedback, error } = await supabase
+        .from('trade_feedback')
+        .select('*')
+        .eq('trade_id', trade.id);
+
+      if (error) {
+        console.error("Error fetching feedback:", error);
+        setIsLoading(false);
+        return;
+      }
+
+      if (allFeedback && allFeedback.length > 0) {
+        // My feedback = where I am the sender (from_user_id === user.id)
+        const myFb = allFeedback.find(fb => fb.from_user_id === user.id);
+        if (myFb) {
+          setMyFeedback(myFb);
+          setFeedbackType(myFb.rating);
+          setFeedbackText(myFb.comment || "");
+        }
+
+        // Counterparty feedback = where I am NOT the sender (from_user_id !== user.id)
+        const counterpartyFb = allFeedback.find(fb => fb.from_user_id !== user.id);
+        if (counterpartyFb) {
+          setCounterpartyFeedback(counterpartyFb);
+        }
       }
     } catch (error) {
       console.error("Error loading feedback:", error);
