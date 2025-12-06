@@ -170,6 +170,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setLoading(false);
               return;
             }
+
+            // Update last_active timestamp on valid session (refresh case)
+            // This keeps the session alive without generating a new token
+            await supabase
+              .from('active_sessions')
+              .update({ last_active: new Date().toISOString() })
+              .eq('session_token', sessionToken)
+              .eq('user_id', session.user.id);
+
           } catch (err) {
             console.error('Error validating session:', err);
           }
@@ -350,13 +359,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    // Set flag to indicate this is a manual logout
+    // Set flag BEFORE deleting to prevent listener from triggering
     localStorage.setItem('manual_logout', 'true');
     
     // Clean up session token
     const sessionToken = localStorage.getItem('session_token');
     if (sessionToken && user) {
       try {
+        // Delete the session from database - this will trigger DELETE event
         await supabase
           .from('active_sessions')
           .delete()
@@ -366,13 +376,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
+    // Remove session token
     localStorage.removeItem('session_token');
+    
+    // Sign out from Supabase auth
     await supabase.auth.signOut();
     
-    // Remove the flag after a short delay
+    // Clean up the flag after auth state settles
     setTimeout(() => {
       localStorage.removeItem('manual_logout');
-    }, 1000);
+    }, 2000);
   };
 
   return (
