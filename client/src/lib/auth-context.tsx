@@ -222,6 +222,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data.user && data.session) {
       await trackDevice(supabase, data.user.id);
+      
+      // Create new session and invalidate all others (single-session enforcement)
+      try {
+        const deviceInfo = getDeviceInfo();
+        let ipAddress = 'Unknown';
+        
+        try {
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          const ipData = await ipResponse.json();
+          ipAddress = ipData.ip;
+        } catch (ipError) {
+          console.error('Error fetching IP:', ipError);
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/session-create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${data.session.access_token}`,
+          },
+          body: JSON.stringify({
+            device_fingerprint: navigator.userAgent,
+            device_info: {
+              device_name: deviceInfo.deviceName,
+              browser: deviceInfo.browser,
+              os: deviceInfo.os,
+              ip_address: ipAddress,
+            },
+          }),
+        });
+
+        if (response.ok) {
+          const sessionData = await response.json();
+          if (sessionData.session_token) {
+            localStorage.setItem('session_token', sessionData.session_token);
+          }
+        }
+      } catch (err) {
+        console.error('Error creating session:', err);
+      }
     }
 
     return { error, data };
