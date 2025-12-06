@@ -355,7 +355,7 @@ export default function AccountSettings() {
         // Check phone verification from both auth and profile
         const isVerified = authUser?.phone_confirmed_at ? true : (data.phone_verified || false);
         setPhoneVerified(isVerified);
-        setCurrency(data.preferred_currency || 'usd');
+        setCurrency(data.preferred_currency?.toUpperCase() || 'USD');
 
         // Set country from profile if available
         if (data.country && !country) {
@@ -865,6 +865,30 @@ export default function AccountSettings() {
       });
     } finally {
       setDisabling2FA(false);
+    }
+  };
+
+  // Dedicated function to save just the currency without phone verification
+  const handleSaveCurrency = async () => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ preferred_currency: currency })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Preferred currency updated"
+      });
+    } catch (error) {
+      console.error('Error updating currency:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update currency",
+        variant: "destructive"
+      });
     }
   };
 
@@ -1452,7 +1476,7 @@ export default function AccountSettings() {
           </Popover>
           <Button
             className="bg-primary hover:bg-primary/90"
-            onClick={handleSaveProfile}
+            onClick={handleSaveCurrency}
           >
             Save
           </Button>
