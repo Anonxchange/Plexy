@@ -700,7 +700,7 @@ export function Profile() {
           <>
         <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-elevate-1 rounded-lg p-4 text-center">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
                 <p className="text-2xl sm:text-3xl font-bold">{profileData?.total_trades || 0}</p>
@@ -713,11 +713,6 @@ export function Profile() {
 
             <div className="mb-6">
               <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
-              <div className="flex items-center gap-2 mb-4">
-                <Trophy className="h-5 w-5 text-yellow-500" />
-                <span className="text-sm">🥇</span>
-                <span className="font-medium">The OG - Early Adopter</span>
-              </div>
               {profileData && profileData.total_trades >= 10 && (
                 <div className="flex items-center gap-2 mb-4">
                   <Trophy className="h-5 w-5 text-yellow-500" />
@@ -731,6 +726,9 @@ export function Profile() {
                   <span className="text-sm">💎</span>
                   <span className="font-medium">Top 1% Club</span>
                 </div>
+              )}
+              {!profileData || (profileData.total_trades < 10 && profileData.total_trades < 100) && (
+                <p className="text-sm text-muted-foreground">No medals earned yet</p>
               )}
             </div>
 
@@ -844,7 +842,7 @@ export function Profile() {
       <div className="lg:col-span-1 space-y-6">
         <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-elevate-1 rounded-lg p-4 text-center">
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
                 <p className="text-2xl sm:text-3xl font-bold">{profileData?.total_trades || 0}</p>
@@ -857,11 +855,6 @@ export function Profile() {
 
             <div className="mb-6">
               <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
-              <div className="flex items-center gap-2 mb-4">
-                <Trophy className="h-5 w-5 text-yellow-500" />
-                <span className="text-sm">🥇</span>
-                <span className="font-medium">The OG - Early Adopter</span>
-              </div>
               {profileData && profileData.total_trades >= 10 && (
                 <div className="flex items-center gap-2 mb-4">
                   <Trophy className="h-5 w-5 text-yellow-500" />
@@ -875,6 +868,9 @@ export function Profile() {
                   <span className="text-sm">💎</span>
                   <span className="font-medium">Top 1% Club</span>
                 </div>
+              )}
+              {!profileData || (profileData.total_trades < 10 && profileData.total_trades < 100) && (
+                <p className="text-sm text-muted-foreground">No medals earned yet</p>
               )}
             </div>
 
