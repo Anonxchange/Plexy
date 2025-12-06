@@ -80,6 +80,8 @@ import VIPTerms from "@/pages/vip-terms";
 import VendorReminder from "@/pages/vendor-reminder";
 import SubmitIdea from "@/pages/submit-idea";
 
+import { OfferDetail } from "@/pages/offer-detail";
+
 function Router() {
   return (
     <Switch>
@@ -129,7 +131,9 @@ function Router() {
       <Route path="/create-offer-advanced" component={CreateOfferAdvanced} />
       <Route path="/my-offers" component={MyOffers} />
       <Route path="/trade/:tradeId" component={ActiveTrade} />
-      <Route path="/profile/:userId" component={ProfilePage} />
+      
+              <Route path="/offers/:offerId" component={OfferDetail} />
+      <Route path="/profile/:userId?" component={ProfilePage} />
       <Route path="/medals" component={MedalsPage} />
       <Route path="/fees" component={Fees} />
       <Route path="/affiliate" component={Affiliate} />
