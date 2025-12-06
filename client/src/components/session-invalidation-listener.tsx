@@ -37,59 +37,66 @@ export function SessionInvalidationListener(): null {
 
     // Listen for session deletions (when user logs in elsewhere)
     const sessionToken = localStorage.getItem('session_token');
-    if (sessionToken) {
-      const sessionChannel = supabase
-        .channel(`session-${auth.user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'active_sessions',
-            filter: `session_token=eq.${sessionToken}`,
-          },
-          async () => {
-            // Double-check that the current token still matches the deleted one
-            const currentToken = localStorage.getItem('session_token');
-            if (currentToken !== sessionToken) {
-              // Token has changed, this deletion is for an old session, ignore it
-              return;
-            }
-            
-            // Check if this is a manual logout (user clicked logout button)
-            const isManualLogout = localStorage.getItem('manual_logout') === 'true';
-            
-            if (isManualLogout) {
-              // Don't show message for manual logout
-              isLoggingOutRef.current = true;
-              localStorage.removeItem('session_token');
-              localStorage.removeItem('manual_logout');
-              return;
-            }
-            
-            // This session was deleted - user logged in elsewhere
-            if (!isLoggingOutRef.current) {
-              isLoggingOutRef.current = true;
-              localStorage.removeItem('session_token');
-              
-              toast({
-                title: 'Logged Out',
-                description: 'You were logged in from another device/browser.',
-                variant: 'destructive',
-              });
-              
-              await supabase.auth.signOut();
-              setLocation('/signin?reason=logged_out_elsewhere');
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(sessionChannel);
-      };
+    if (!sessionToken) {
+      return;
     }
-  }, [auth, setLocation]);
+
+    // Store the session token in a ref to avoid stale closures
+    const currentSessionToken = sessionToken;
+
+    const sessionChannel = supabase
+      .channel(`session-invalidation-${auth.user.id}-${currentSessionToken}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'active_sessions',
+          filter: `session_token=eq.${currentSessionToken}`,
+        },
+        async (payload) => {
+          // Triple-check: Verify the deleted token matches our current token
+          const nowCurrentToken = localStorage.getItem('session_token');
+          const deletedToken = payload.old?.session_token;
+          
+          // If our current token has changed, this deletion is not for us
+          if (nowCurrentToken !== currentSessionToken || deletedToken !== currentSessionToken) {
+            return;
+          }
+          
+          // Check if this is a manual logout (user clicked logout button)
+          const isManualLogout = localStorage.getItem('manual_logout') === 'true';
+          
+          if (isManualLogout) {
+            // Don't show message for manual logout
+            isLoggingOutRef.current = true;
+            localStorage.removeItem('session_token');
+            localStorage.removeItem('manual_logout');
+            return;
+          }
+          
+          // This session was deleted - user logged in elsewhere
+          if (!isLoggingOutRef.current) {
+            isLoggingOutRef.current = true;
+            localStorage.removeItem('session_token');
+            
+            toast({
+              title: 'Logged Out',
+              description: 'You were logged in from another device/browser.',
+              variant: 'destructive',
+            });
+            
+            await supabase.auth.signOut();
+            setLocation('/signin?reason=logged_out_elsewhere');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sessionChannel);
+    };
+  }, [auth?.user?.id, setLocation, toast]);
 
   return null;
 }
