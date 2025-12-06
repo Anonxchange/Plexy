@@ -57,6 +57,11 @@ interface TradeCompletedSectionProps {
   };
 }
 
+interface UserProfile {
+  username: string;
+  avatar_url: string | null;
+}
+
 export function TradeCompletedSection({
   trade,
   isUserBuyer,
@@ -77,6 +82,7 @@ export function TradeCompletedSection({
 
   const [myFeedback, setMyFeedback] = useState<TradeFeedback | null>(null);
   const [counterpartyFeedback, setCounterpartyFeedback] = useState<TradeFeedback | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
 
   const counterparty = isUserBuyer ? sellerProfile : buyerProfile;
   const counterpartyId = isUserBuyer ? trade.seller_id : trade.buyer_id;
@@ -90,9 +96,25 @@ export function TradeCompletedSection({
   const loadFeedback = async () => {
     setIsLoading(true);
     try {
+      const supabase = await import("@/lib/supabase").then(m => m.createClient());
+      
+      // Get current user profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          setCurrentUserProfile(profile);
+        }
+      }
+
       const [myResult, counterpartyResult] = await Promise.all([
         getMyFeedbackForTrade(trade.id),
-        getCounterpartyFeedbackForTrade(trade.id),
+        getCounterpartyFeedbackForTrade(trade.id, counterpartyId),
       ]);
 
       if (myResult.success && myResult.feedback) {
@@ -449,7 +471,7 @@ export function TradeCompletedSection({
                       onClick={() => setLocation("/profile")}
                       className="text-primary font-medium mb-1 hover:underline"
                     >
-                      You
+                      {currentUserProfile?.username || "You"}
                     </button>
                     <p className="text-sm text-muted-foreground mb-2">{myFeedback.comment}</p>
                     <button 
@@ -540,13 +562,13 @@ export function TradeCompletedSection({
                   </div>
                 )}
 
-                {!counterpartyFeedback && !isLoading && (
+                {!counterpartyFeedback && !isLoading && myFeedback && (
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="text-sm text-muted-foreground mb-2">
-                      Feedback from {counterparty?.username || "trading partner"}
+                      Feedback from {counterparty?.username}
                     </div>
                     <div className="bg-secondary rounded-lg p-3 text-sm text-muted-foreground">
-                      No feedback received yet from your trading partner.
+                      {counterparty?.username} hasn't left feedback yet.
                     </div>
                   </div>
                 )}
