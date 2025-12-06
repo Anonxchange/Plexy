@@ -90,8 +90,11 @@ export function SessionInvalidationListener(): null {
       return;
     }
 
-    // Use user_id for channel name - filter handles session isolation
-    const channelName = `session-invalidation-${auth.user.id}`;
+    // Update the current token ref whenever sessionToken changes
+    currentSessionTokenRef.current = sessionToken;
+
+    // Use unique channel name that includes token to force recreation
+    const channelName = `session-invalidation-${auth.user.id}-${sessionToken}`;
     
     const sessionChannel = supabase
       .channel(channelName)
@@ -109,18 +112,15 @@ export function SessionInvalidationListener(): null {
           if (!payload.old || !payload.old.session_token) {
             return;
           }
-
-          // Use ref for most current token to prevent race conditions
-          const activeToken = currentSessionTokenRef.current;
           
           // Verify the deleted session matches our current session token
-          if (payload.old.session_token !== activeToken) {
+          if (payload.old.session_token !== sessionToken) {
             return;
           }
           
           // Triple-check with localStorage as final validation
           const storageToken = localStorage.getItem('session_token');
-          if (storageToken !== activeToken) {
+          if (storageToken !== sessionToken) {
             return;
           }
 
