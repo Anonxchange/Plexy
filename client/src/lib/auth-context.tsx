@@ -174,35 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [pendingOTPVerification]);
 
-  useEffect(() => {
-    if (!user) return;
-
-    let inactivityTimer: NodeJS.Timeout;
-    const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
-
-    const resetInactivityTimer = () => {
-      clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(async () => {
-        await sessionSecurity.endSession(user.id);
-        await supabase.auth.signOut();
-        window.location.href = '/signin?reason=timeout';
-      }, INACTIVITY_TIMEOUT);
-    };
-
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    events.forEach(event => {
-      window.addEventListener(event, resetInactivityTimer);
-    });
-
-    resetInactivityTimer();
-
-    return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
-      clearTimeout(inactivityTimer);
-    };
-  }, [user]);
+  // Supabase handles session refresh automatically
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -249,46 +221,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data.user && data.session) {
-      const deviceInfo = getDeviceInfo();
-      
-      const otpCheck = await sessionSecurity.checkDeviceAndGenerateOTP(
-        data.user.id,
-        data.user.email || email
-      );
-
-      if (otpCheck.requiresOTP) {
-        setPendingSession({ user: data.user, session: data.session });
-        setPendingOTPVerification({
-          userId: data.user.id,
-          email: data.user.email || email,
-          deviceInfo: {
-            deviceName: deviceInfo.deviceName,
-            browser: deviceInfo.browser,
-            os: deviceInfo.os,
-          },
-        });
-
-        await supabase.auth.signOut();
-        setUser(null);
-        setSession(null);
-
-        return { 
-          error: null, 
-          data,
-          requiresOTP: true,
-          pendingAuth: {
-            userId: data.user.id,
-            email: data.user.email || email,
-            deviceInfo: {
-              deviceName: deviceInfo.deviceName,
-              browser: deviceInfo.browser,
-              os: deviceInfo.os,
-            },
-          },
-        };
-      }
-
-      await sessionSecurity.createSession(data.user.id);
       await trackDevice(supabase, data.user.id);
     }
 
@@ -300,13 +232,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const { user: pendingUser, session: pendingSessionData } = pendingSession;
+    const { user: pendingUser } = pendingSession;
 
-    await sessionSecurity.createSession(pendingUser.id);
     await trackDevice(supabase, pendingUser.id);
-
-    setUser(pendingUser);
-    setSession(pendingSessionData);
     
     setPendingOTPVerification(null);
     setPendingSession(null);
@@ -320,9 +248,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    if (user) {
-      await sessionSecurity.endSession(user.id);
-    }
     await supabase.auth.signOut();
   };
 
