@@ -23,6 +23,7 @@ import {
   Flag,
   Wallet,
   Send,
+  FilterIcon, // Added FilterIcon for the filter button
 } from "lucide-react";
 import medalTheOg from '@assets/generated_images/IMG_1432.png';
 import medalInitiate from '@assets/generated_images/IMG_1430.png';
@@ -167,7 +168,7 @@ export function Profile() {
         const userCountry = user?.user_metadata?.country || 
                           user?.user_metadata?.Country || 
                           '';
-        
+
         const defaultProfile = {
           id: user?.id,
           username: `user_${user?.id?.substring(0, 8)}`,
@@ -202,7 +203,7 @@ export function Profile() {
       const userCountry = user?.user_metadata?.country || 
                         user?.user_metadata?.Country || 
                         '';
-      
+
       const defaultProfile = {
         id: user?.id || '',
         username: `user_${user?.id?.substring(0, 8)}`,
@@ -990,15 +991,25 @@ export function Profile() {
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold">Feedback</h3>
-            <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="buyers">As Buyer</SelectItem>
-                <SelectItem value="sellers">As Seller</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              {/* Filter Icon Button */}
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="text-primary hover:text-primary/80"
+              >
+                <FilterIcon className="h-4 w-4" />
+              </Button>
+              <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by"/>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="buyers">From Buyers</SelectItem>
+                  <SelectItem value="sellers">From Sellers</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           {feedbacks.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -1013,9 +1024,9 @@ export function Profile() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">@{feedback.from_user}</span>
                         {feedback.rating === 'positive' ? (
-                          <ThumbsUp className="h-4 w-4 text-primary" />
+                          <Badge variant="success">Positive</Badge>
                         ) : (
-                          <ThumbsDown className="h-4 w-4 text-destructive" />
+                          <Badge variant="destructive">Negative</Badge>
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground">
