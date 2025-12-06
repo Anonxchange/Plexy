@@ -1134,7 +1134,7 @@ export function Profile() {
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-xl"
                     onClick={() => {
                       if (feedback.offer_id) {
-                        setLocation(`/p2p?offer=${feedback.offer_id}`);
+                        setLocation(`/offers/${feedback.offer_id}`);
                       } else {
                         toast({
                           title: "Offer details",
