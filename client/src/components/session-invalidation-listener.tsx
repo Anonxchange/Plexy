@@ -96,7 +96,7 @@ export function SessionInvalidationListener(): null {
     return () => {
       supabase.removeChannel(sessionChannel);
     };
-  }, [auth?.user?.id, setLocation, toast]);
+  }, [auth?.user?.id, setLocation]);
 
   return null;
 }
