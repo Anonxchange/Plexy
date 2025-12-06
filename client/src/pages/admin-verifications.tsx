@@ -144,7 +144,9 @@ export default function AdminVerificationsPage() {
             id,
             username,
             email,
-            verification_level
+            verification_level,
+            full_name,
+            country
           )
         `)
         .order("submitted_at", { ascending: false });
@@ -428,8 +430,14 @@ export default function AdminVerificationsPage() {
                 <div key={verification.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-semibold">@{verification.user_profiles.username}</p>
+                      <p className="font-semibold">
+                        {verification.user_profiles.full_name || verification.user_profiles.username}
+                        <span className="text-muted-foreground ml-2">(@{verification.user_profiles.username})</span>
+                      </p>
                       <p className="text-sm text-muted-foreground">{verification.user_profiles.email}</p>
+                      {verification.user_profiles.country && (
+                        <p className="text-sm text-muted-foreground">Country: {verification.user_profiles.country}</p>
+                      )}
                       <p className="text-sm mt-1">
                         Current Level: <Badge variant="outline">{verification.user_profiles.verification_level}</Badge>
                         {" → "}
@@ -498,7 +506,10 @@ export default function AdminVerificationsPage() {
             {reviewedVerifications.slice(0, 10).map((verification) => (
               <div key={verification.id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex-1">
-                  <p className="font-semibold">@{verification.user_profiles.username}</p>
+                  <p className="font-semibold">
+                    {verification.user_profiles.full_name || verification.user_profiles.username}
+                    <span className="text-muted-foreground ml-2 text-sm">(@{verification.user_profiles.username})</span>
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     Level {verification.requested_level} · {new Date(verification.reviewed_at).toLocaleDateString()}
                   </p>
@@ -541,7 +552,8 @@ export default function AdminVerificationsPage() {
           <DialogHeader>
             <DialogTitle>Review Verification Request</DialogTitle>
             <DialogDescription>
-              User: @{selectedVerification?.user_profiles?.username}
+              User: {selectedVerification?.user_profiles?.full_name || selectedVerification?.user_profiles?.username} (@{selectedVerification?.user_profiles?.username})
+              {selectedVerification?.user_profiles?.country && ` · ${selectedVerification?.user_profiles?.country}`}
             </DialogDescription>
           </DialogHeader>
 
