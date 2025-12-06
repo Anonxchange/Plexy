@@ -322,15 +322,21 @@ export function Profile() {
       // Filter based on feedbackFilter (buyers vs sellers)
       let filteredFeedbacks = mappedFeedbacks;
       if (feedbackFilter === 'buyers') {
-        // Show feedback where the profile owner was the seller (feedback from buyers)
-        filteredFeedbacks = mappedFeedbacks.filter((f: any) => 
-          f.trade?.seller_id === viewingUserId
-        );
+        // Show feedback FROM buyers (where the profile owner was the seller)
+        // This means feedback.to_user_id is the seller (profile owner)
+        // and the feedback giver (from_user_id) was the buyer
+        filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
+          if (!f.trade) return false;
+          return f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id;
+        });
       } else if (feedbackFilter === 'sellers') {
-        // Show feedback where the profile owner was the buyer (feedback from sellers)
-        filteredFeedbacks = mappedFeedbacks.filter((f: any) => 
-          f.trade?.buyer_id === viewingUserId
-        );
+        // Show feedback FROM sellers (where the profile owner was the buyer)
+        // This means feedback.to_user_id is the buyer (profile owner)
+        // and the feedback giver (from_user_id) was the seller
+        filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
+          if (!f.trade) return false;
+          return f.trade.buyer_id === viewingUserId && f.trade.seller_id === f.from_user_id;
+        });
       }
 
       setFeedbacks(filteredFeedbacks);
