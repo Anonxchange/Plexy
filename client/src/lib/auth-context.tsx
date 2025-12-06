@@ -138,6 +138,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        // Check if login is in progress - skip validation during login flow
+        const isLoginInProgress = localStorage.getItem('session_login_in_progress') === 'true';
+        
+        if (isLoginInProgress) {
+          // During login, don't validate session token - it's being created
+          setSession(session);
+          setUser(session.user);
+          setLoading(false);
+          return;
+        }
+        
         // Validate session token exists and is valid
         const sessionToken = localStorage.getItem('session_token');
         
@@ -163,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('Error validating session:', err);
           }
         } else {
-          // No session token - sign out
+          // No session token and not logging in - sign out
           await supabase.auth.signOut();
           setSession(null);
           setUser(null);
