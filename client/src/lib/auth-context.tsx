@@ -136,15 +136,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        // Validate session token exists and is valid
+        const sessionToken = localStorage.getItem('session_token');
+        
+        if (sessionToken) {
+          try {
+            const { data: sessionData } = await supabase
+              .from('active_sessions')
+              .select('*')
+              .eq('session_token', sessionToken)
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+
+            if (!sessionData) {
+              // Session token doesn't exist - user was logged out elsewhere
+              localStorage.removeItem('session_token');
+              await supabase.auth.signOut();
+              setSession(null);
+              setUser(null);
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.error('Error validating session:', err);
+          }
+        } else {
+          // No session token - sign out
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        await trackDevice(supabase, session.user.id);
+        presenceTracker.startTracking(session.user.id);
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-
-      if (session?.user) {
-        trackDevice(supabase, session.user.id);
-        presenceTracker.startTracking(session.user.id);
-      }
     });
 
     const {
@@ -258,9 +291,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (sessionData.session_token) {
             localStorage.setItem('session_token', sessionData.session_token);
           }
+        } else {
+          // If session creation fails, sign out
+          await supabase.auth.signOut();
+          return { error: { message: 'Failed to create session' }, data: null };
         }
       } catch (err) {
         console.error('Error creating session:', err);
+        await supabase.auth.signOut();
+        return { error: { message: 'Failed to create session' }, data: null };
       }
     }
 
