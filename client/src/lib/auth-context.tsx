@@ -288,7 +288,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    // Set flag to indicate this is a manual logout
+    localStorage.setItem('manual_logout', 'true');
+    
+    // Clean up session token
+    const sessionToken = localStorage.getItem('session_token');
+    if (sessionToken && user) {
+      try {
+        await supabase
+          .from('active_sessions')
+          .delete()
+          .eq('session_token', sessionToken);
+      } catch (error) {
+        console.error('Error deleting session:', error);
+      }
+    }
+    
+    localStorage.removeItem('session_token');
     await supabase.auth.signOut();
+    
+    // Remove the flag after a short delay
+    setTimeout(() => {
+      localStorage.removeItem('manual_logout');
+    }, 1000);
   };
 
   return (
