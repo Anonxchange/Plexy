@@ -254,10 +254,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data.user && data.session) {
-      // IMPORTANT: Clear old session token BEFORE anything else
-      // This prevents SessionInvalidationListener from subscribing to the old token's delete events
-      localStorage.removeItem('session_token');
-      
       await trackDevice(supabase, data.user.id);
       
       // Create new session and invalidate all others (single-session enforcement)
@@ -293,7 +289,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const sessionData = await response.json();
           if (sessionData.session_token) {
-            // Set new token - SessionInvalidationListener will now subscribe to this new token
+            // CRITICAL: Set the new token IMMEDIATELY
+            // This ensures SessionInvalidationListener subscribes to the NEW token
+            // BEFORE old sessions are deleted
             localStorage.setItem('session_token', sessionData.session_token);
           }
         } else {
