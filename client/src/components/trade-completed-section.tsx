@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { 
-  CheckCircle, 
   ThumbsUp, 
   ThumbsDown, 
   Star, 
@@ -13,10 +12,19 @@ import {
   FileText,
   X,
   AlertTriangle,
-  Pencil
+  Pencil,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import {
+  submitFeedback,
+  updateFeedback,
+  submitResponse,
+  getMyFeedbackForTrade,
+  getCounterpartyFeedbackForTrade,
+  type TradeFeedback,
+} from "@/lib/feedback-api";
 
 interface TradeCompletedSectionProps {
   trade: {
@@ -31,6 +39,8 @@ interface TradeCompletedSectionProps {
     completed_at?: string | null;
     offer_id?: string;
     offer_terms?: string;
+    buyer_id?: string;
+    seller_id?: string;
   };
   isUserBuyer: boolean;
   sellerProfile?: {
@@ -55,31 +65,50 @@ export function TradeCompletedSection({
 }: TradeCompletedSectionProps) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [feedbackType, setFeedbackType] = useState<"positive" | "negative" | null>("positive");
+  const [feedbackType, setFeedbackType] = useState<"positive" | "negative">("positive");
   const [feedbackText, setFeedbackText] = useState("");
   const [responseText, setResponseText] = useState("");
   const [isTrusted, setIsTrusted] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(true);
-  const [showFeedbackForm, setShowFeedbackForm] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [myFeedback, setMyFeedback] = useState<TradeFeedback | null>(null);
+  const [counterpartyFeedback, setCounterpartyFeedback] = useState<TradeFeedback | null>(null);
 
   const counterparty = isUserBuyer ? sellerProfile : buyerProfile;
-  const currentUser = isUserBuyer ? buyerProfile : sellerProfile;
+  const counterpartyId = isUserBuyer ? trade.seller_id : trade.buyer_id;
   const maxChars = 500;
   const charsLeft = maxChars - feedbackText.length;
 
-  const mockPreviousFeedback = {
-    type: "positive" as const,
-    date: "Nov 5, 2023",
-    username: currentUser?.username || "User",
-    text: "ak-k good+++++ the best",
-  };
+  useEffect(() => {
+    loadFeedback();
+  }, [trade.id]);
 
-  const mockCounterpartyFeedback = {
-    type: "positive" as const,
-    date: "Aug 4, 2023",
-    username: counterparty?.username || "Trader",
-    text: "great",
+  const loadFeedback = async () => {
+    setIsLoading(true);
+    try {
+      const [myResult, counterpartyResult] = await Promise.all([
+        getMyFeedbackForTrade(trade.id),
+        getCounterpartyFeedbackForTrade(trade.id),
+      ]);
+
+      if (myResult.success && myResult.feedback) {
+        setMyFeedback(myResult.feedback);
+        setFeedbackType(myResult.feedback.rating);
+        setFeedbackText(myResult.feedback.comment || "");
+      }
+
+      if (counterpartyResult.success && counterpartyResult.feedback) {
+        setCounterpartyFeedback(counterpartyResult.feedback);
+      }
+    } catch (error) {
+      console.error("Error loading feedback:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCopyTradeId = () => {
@@ -107,6 +136,14 @@ export function TradeCompletedSection({
     return date.toLocaleDateString();
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
   const handleSaveFeedback = async () => {
     if (!feedbackText.trim()) {
       toast({
@@ -117,29 +154,125 @@ export function TradeCompletedSection({
       return;
     }
 
-    setIsSubmittingFeedback(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!counterpartyId) {
+      toast({
+        title: "Error",
+        description: "Unable to identify trading partner",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    toast({
-      title: "Feedback Saved",
-      description: "Your feedback has been submitted successfully",
-    });
-    setShowFeedbackForm(false);
-    setIsSubmittingFeedback(false);
+    setIsSubmittingFeedback(true);
+
+    try {
+      if (myFeedback) {
+        const result = await updateFeedback({
+          feedbackId: myFeedback.id,
+          rating: feedbackType,
+          comment: feedbackText,
+        });
+
+        if (result.success) {
+          setMyFeedback(result.feedback || null);
+          setIsEditing(false);
+          toast({
+            title: "Feedback Updated",
+            description: "Your feedback has been updated successfully",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to update feedback",
+            variant: "destructive",
+          });
+        }
+      } else {
+        const result = await submitFeedback({
+          tradeId: trade.id,
+          toUserId: counterpartyId,
+          rating: feedbackType,
+          comment: feedbackText,
+          paymentMethod: trade.payment_method,
+          cryptoSymbol: trade.crypto_symbol,
+          fiatCurrency: trade.fiat_currency,
+          tradeAmount: trade.crypto_amount,
+        });
+
+        if (result.success) {
+          setMyFeedback(result.feedback || null);
+          toast({
+            title: "Feedback Saved",
+            description: "Your feedback has been submitted successfully",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to submit feedback",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error saving feedback:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
   };
 
   const handleSubmitResponse = async () => {
-    if (!responseText.trim()) return;
+    if (!responseText.trim() || !counterpartyFeedback) return;
 
-    await new Promise(resolve => setTimeout(resolve, 500));
-    toast({
-      title: "Response Submitted",
-      description: "Your response has been saved",
-    });
-    setResponseText("");
+    setIsSubmittingResponse(true);
+
+    try {
+      const result = await submitResponse({
+        feedbackId: counterpartyFeedback.id,
+        response: responseText,
+      });
+
+      if (result.success) {
+        setCounterpartyFeedback(result.feedback || null);
+        setResponseText("");
+        toast({
+          title: "Response Submitted",
+          description: "Your response has been saved",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to submit response",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error submitting response:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingResponse(false);
+    }
+  };
+
+  const handleEditFeedback = () => {
+    if (myFeedback) {
+      setFeedbackType(myFeedback.rating);
+      setFeedbackText(myFeedback.comment || "");
+      setIsEditing(true);
+    }
   };
 
   const platformFee = trade.crypto_amount * 0.0075;
+
+  const showFeedbackForm = !myFeedback || isEditing;
 
   return (
     <div className="space-y-4">
@@ -171,7 +304,7 @@ export function TradeCompletedSection({
                     <span className="bg-secondary text-xs px-2 py-0.5 rounded">Sold</span>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}  {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                    {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} → {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
                   </div>
                 </div>
               </div>
@@ -189,7 +322,7 @@ export function TradeCompletedSection({
                     <span className="bg-green-600/20 text-green-500 text-xs px-2 py-0.5 rounded border border-green-600/30">Purchased</span>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}  {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
+                    {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} → {trade.crypto_amount.toFixed(8)} {trade.crypto_symbol}
                   </div>
                 </div>
               </div>
@@ -210,120 +343,207 @@ export function TradeCompletedSection({
               You can leave only one feedback for each payment method trade.
             </p>
 
-            <div className="flex gap-2 mb-4">
-              <Button
-                variant={feedbackType === "positive" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFeedbackType("positive")}
-                className={feedbackType === "positive" ? "bg-green-600 hover:bg-green-700" : ""}
-              >
-                <ThumbsUp className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={feedbackType === "negative" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFeedbackType("negative")}
-                className={feedbackType === "negative" ? "bg-red-600 hover:bg-red-700" : ""}
-              >
-                <ThumbsDown className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {showFeedbackForm && (
-              <div className="space-y-3">
-                <div className="text-sm text-muted-foreground">
-                  Leave feedback for {counterparty?.username || "trader"}
-                </div>
-                <Textarea
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value.slice(0, maxChars))}
-                  placeholder="ak-k good+++++ the best"
-                  className="min-h-[80px] bg-muted border-border"
-                  maxLength={maxChars}
-                />
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Info className="w-4 h-4" />
-                  Characters left: {charsLeft}
-                </div>
-
-                <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg p-3 text-sm text-amber-200">
-                  You need to wait at least 30 seconds before updating your feedback again.
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleSaveFeedback}
-                    disabled={isSubmittingFeedback}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    {isSubmittingFeedback ? "Saving..." : "Save Feedback"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowFeedbackForm(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
-            )}
-
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="flex items-center gap-2 mb-2">
-                <ThumbsUp className="w-4 h-4 text-green-500" />
-                <span className="text-green-500 font-medium">Positive</span>
-                <span className="text-sm text-muted-foreground ml-auto">{mockPreviousFeedback.date}</span>
-              </div>
-              <div className="text-primary font-medium mb-1">{mockPreviousFeedback.username}</div>
-              <p className="text-sm text-muted-foreground mb-2">{mockPreviousFeedback.text}</p>
-              <button className="flex items-center gap-2 text-sm text-primary hover:underline">
-                <Pencil className="w-4 h-4" />
-                Edit Feedback
-              </button>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="text-sm text-muted-foreground mb-2">Feedback from {counterparty?.username}</div>
-              <div className="flex items-center gap-2 mb-2">
-                <ThumbsUp className="w-4 h-4 text-green-500" />
-                <span className="text-green-500 font-medium">Positive</span>
-                <span className="text-sm text-muted-foreground ml-auto">{mockCounterpartyFeedback.date}</span>
-              </div>
-              <div className="text-primary font-medium mb-1">{mockCounterpartyFeedback.username}</div>
-              <p className="text-sm text-muted-foreground mb-3">{mockCounterpartyFeedback.text}</p>
-
-              <div className="space-y-2">
-                <div className="text-sm">Response</div>
-                <Textarea
-                  value={responseText}
-                  onChange={(e) => setResponseText(e.target.value)}
-                  placeholder="++++ the best"
-                  className="min-h-[60px] bg-muted border-border"
-                />
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Info className="w-4 h-4" />
-                  Characters left: {maxChars - responseText.length}
-                </div>
-
-                <div className="bg-secondary rounded-lg p-3 text-sm text-muted-foreground">
-                  You're not allowed to leave a feedback.
-                </div>
-
-                <div className="flex gap-2">
+            ) : (
+              <>
+                <div className="flex gap-2 mb-4">
                   <Button
-                    onClick={handleSubmitResponse}
+                    variant={feedbackType === "positive" ? "default" : "outline"}
                     size="sm"
-                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => setFeedbackType("positive")}
+                    className={feedbackType === "positive" ? "bg-green-600 hover:bg-green-700" : ""}
+                    disabled={!!myFeedback && !isEditing}
                   >
-                    Submit Response
+                    <ThumbsUp className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="sm">
-                    Cancel
+                  <Button
+                    variant={feedbackType === "negative" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFeedbackType("negative")}
+                    className={feedbackType === "negative" ? "bg-red-600 hover:bg-red-700" : ""}
+                    disabled={!!myFeedback && !isEditing}
+                  >
+                    <ThumbsDown className="w-4 h-4" />
                   </Button>
                 </div>
-              </div>
-            </div>
+
+                {showFeedbackForm && (
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground">
+                      {isEditing ? "Edit your feedback for" : "Leave feedback for"} {counterparty?.username || "trader"}
+                    </div>
+                    <Textarea
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value.slice(0, maxChars))}
+                      placeholder="Share your experience with this trade..."
+                      className="min-h-[80px] bg-muted border-border"
+                      maxLength={maxChars}
+                    />
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Info className="w-4 h-4" />
+                      Characters left: {charsLeft}
+                    </div>
+
+                    {isEditing && (
+                      <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg p-3 text-sm text-amber-200">
+                        You are editing your feedback. Changes will be saved when you click Save.
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleSaveFeedback}
+                        disabled={isSubmittingFeedback}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        {isSubmittingFeedback ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          isEditing ? "Update Feedback" : "Save Feedback"
+                        )}
+                      </Button>
+                      {isEditing && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing(false);
+                            if (myFeedback) {
+                              setFeedbackType(myFeedback.rating);
+                              setFeedbackText(myFeedback.comment || "");
+                            }
+                          }}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {myFeedback && !isEditing && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="flex items-center gap-2 mb-2">
+                      {myFeedback.rating === "positive" ? (
+                        <>
+                          <ThumbsUp className="w-4 h-4 text-green-500" />
+                          <span className="text-green-500 font-medium">Positive</span>
+                        </>
+                      ) : (
+                        <>
+                          <ThumbsDown className="w-4 h-4 text-red-500" />
+                          <span className="text-red-500 font-medium">Negative</span>
+                        </>
+                      )}
+                      <span className="text-sm text-muted-foreground ml-auto">
+                        {formatDate(myFeedback.created_at)}
+                      </span>
+                    </div>
+                    <div className="text-primary font-medium mb-1">You</div>
+                    <p className="text-sm text-muted-foreground mb-2">{myFeedback.comment}</p>
+                    <button 
+                      onClick={handleEditFeedback}
+                      className="flex items-center gap-2 text-sm text-primary hover:underline"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Edit Feedback
+                    </button>
+                  </div>
+                )}
+
+                {counterpartyFeedback && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Feedback from {counterpartyFeedback.from_user?.username || counterparty?.username}
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      {counterpartyFeedback.rating === "positive" ? (
+                        <>
+                          <ThumbsUp className="w-4 h-4 text-green-500" />
+                          <span className="text-green-500 font-medium">Positive</span>
+                        </>
+                      ) : (
+                        <>
+                          <ThumbsDown className="w-4 h-4 text-red-500" />
+                          <span className="text-red-500 font-medium">Negative</span>
+                        </>
+                      )}
+                      <span className="text-sm text-muted-foreground ml-auto">
+                        {formatDate(counterpartyFeedback.created_at)}
+                      </span>
+                    </div>
+                    <div className="text-primary font-medium mb-1">
+                      {counterpartyFeedback.from_user?.username || counterparty?.username}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">{counterpartyFeedback.comment}</p>
+
+                    {counterpartyFeedback.response ? (
+                      <div className="bg-muted rounded-lg p-3 mt-2">
+                        <div className="text-xs text-muted-foreground mb-1">Your response:</div>
+                        <p className="text-sm">{counterpartyFeedback.response}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-sm">Leave a response</div>
+                        <Textarea
+                          value={responseText}
+                          onChange={(e) => setResponseText(e.target.value.slice(0, maxChars))}
+                          placeholder="Thank you for the feedback..."
+                          className="min-h-[60px] bg-muted border-border"
+                          maxLength={maxChars}
+                        />
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Info className="w-4 h-4" />
+                          Characters left: {maxChars - responseText.length}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleSubmitResponse}
+                            disabled={isSubmittingResponse || !responseText.trim()}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {isSubmittingResponse ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Submitting...
+                              </>
+                            ) : (
+                              "Submit Response"
+                            )}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setResponseText("")}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!counterpartyFeedback && !isLoading && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Feedback from {counterparty?.username || "trading partner"}
+                    </div>
+                    <div className="bg-secondary rounded-lg p-3 text-sm text-muted-foreground">
+                      No feedback received yet from your trading partner.
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <div className="space-y-3 pt-4">
