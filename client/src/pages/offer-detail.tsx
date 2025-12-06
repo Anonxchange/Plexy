@@ -371,7 +371,7 @@ export function OfferDetail() {
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   {offer.user_profile?.is_verified && <span className="text-lg">🏆</span>}
                   {offer.user_profile?.phone_verified && <span className="text-lg">🛡️</span>}
-                  {offer.user_profile?.total_trades > 100 && <span className="text-lg">💰</span>}
+                  {(offer.user_profile?.total_trades ?? 0) > 100 && <span className="text-lg">💰</span>}
                   <span className="flex items-center gap-1 text-sm">
                     <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                     Active now
