@@ -987,67 +987,117 @@ export function Profile() {
       </div>
 
         {/* Feedback Section */}
-      <Card className="mt-6 bg-card border-border">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold">Feedback</h3>
-            <div className="flex items-center gap-2">
-              {/* Filter Icon Button */}
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="text-primary hover:text-primary/80"
-              >
-                <FilterIcon className="h-4 w-4" />
-              </Button>
-              <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by"/>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buyers">From Buyers</SelectItem>
-                  <SelectItem value="sellers">From Sellers</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold">Feedback</h3>
+          <div className="flex items-center gap-2">
+            {/* Filter Icon Button */}
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="text-primary hover:text-primary/80"
+            >
+              <FilterIcon className="h-4 w-4" />
+            </Button>
+            <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by"/>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="buyers">From Buyers</SelectItem>
+                <SelectItem value="sellers">From Sellers</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          {feedbacks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No feedback yet</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {feedbacks.map((feedback) => (
-                <Card key={feedback.id} className="bg-elevate-1 border-border">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">@{feedback.from_user}</span>
-                        {feedback.rating === 'positive' ? (
-                          <Badge variant="success">Positive</Badge>
-                        ) : (
-                          <Badge variant="destructive">Negative</Badge>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(feedback.created_at).toLocaleDateString()}
+        </div>
+        {feedbacks.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No feedback yet</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {feedbacks.map((feedback) => (
+              <Card key={feedback.id} className="bg-card border-border shadow-sm">
+                <CardContent className="p-6">
+                  {/* Header with username, flag, and date */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-bold">@{feedback.from_user}</h3>
+                      <span className="text-2xl">{getCountryFlag(feedback.from_user_country)}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(feedback.created_at).toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: '2-digit', 
+                        year: 'numeric' 
+                      })}
+                    </span>
+                  </div>
+
+                  {/* Rating indicator */}
+                  <div className="flex items-center gap-2 mb-4">
+                    {feedback.rating === 'positive' ? (
+                      <>
+                        <ThumbsUp className="h-5 w-5 text-primary fill-primary" />
+                        <span className="text-primary font-semibold">Positive</span>
+                      </>
+                    ) : (
+                      <>
+                        <ThumbsDown className="h-5 w-5 text-destructive fill-destructive" />
+                        <span className="text-destructive font-semibold">Negative</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Payment method badge */}
+                  <div className="mb-4">
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm font-medium">
+                      {feedback.payment_method}
+                      <span className="text-xs bg-background px-2 py-0.5 rounded">
+                        {feedback.currency || 'NGN'}
+                      </span>
+                    </span>
+                  </div>
+
+                  {/* Comment */}
+                  {feedback.comment && (
+                    <div className="mb-4">
+                      <p className="text-lg">"{feedback.comment}"</p>
+                    </div>
+                  )}
+
+                  {/* Trade count */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Trades:</span>
+                      <span className="bg-primary text-primary-foreground px-3 py-1 rounded-md font-semibold">
+                        {feedback.trade_count || 1}
                       </span>
                     </div>
-                    {feedback.comment && (
-                      <p className="text-sm mb-2">{feedback.comment}</p>
-                    )}
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{feedback.payment_method}</span>
-                      <span>•</span>
-                      <span>{feedback.trade_count} trades</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </div>
+
+                  {/* View offer details button */}
+                  <Button 
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-xl"
+                    onClick={() => {
+                      if (feedback.offer_id) {
+                        setLocation(`/p2p?offer=${feedback.offer_id}`);
+                      } else {
+                        toast({
+                          title: "Offer details",
+                          description: "This offer is no longer available",
+                        });
+                      }
+                    }}
+                  >
+                    View offer details →
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </>
       </main>
 
