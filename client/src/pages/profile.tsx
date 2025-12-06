@@ -508,45 +508,110 @@ export function Profile() {
           <div className="lg:col-span-2 space-y-6">
             <Card className="bg-card border-border overflow-hidden">
           <CardContent className="p-0">
-            <div className="bg-elevate-1 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 text-primary">
-                    <Trophy className="h-8 w-8" />
-                    <span className="text-3xl font-bold">1</span>
-                  </div>
-                  <div className="flex items-center gap-2">
+            <div className="bg-elevate-1 p-4 sm:p-6">
+              {/* Medals Row */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <Trophy className="h-6 w-6 sm:h-8 sm:w-8" />
+                  <span className="text-2xl sm:text-3xl font-bold">1</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <img 
+                    src={medalTheOg} 
+                    alt="The OG" 
+                    className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
+                  />
+                  {profileData && profileData.total_trades >= 10 && (
                     <img 
-                      src={medalTheOg} 
-                      alt="The OG" 
-                      className="h-8 w-8 object-contain"
+                      src={medalInitiate} 
+                      alt="Pexly Initiate" 
+                      className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
                     />
-                    {profileData && profileData.total_trades >= 10 && (
-                      <img 
-                        src={medalInitiate} 
-                        alt="Pexly Initiate" 
-                        className="h-8 w-8 object-contain"
-                      />
-                    )}
-                    {profileData && profileData.total_trades >= 100 && (
-                      <img 
-                        src={medalTop1} 
-                        alt="Top 1% Club" 
-                        className="h-8 w-8 object-contain"
-                      />
-                    )}
-                  </div>
+                  )}
+                  {profileData && profileData.total_trades >= 100 && (
+                    <img 
+                      src={medalTop1} 
+                      alt="Top 1% Club" 
+                      className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
+                    />
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mb-6">
+              {/* Active Status */}
+              <div className="flex items-center gap-2 mb-4">
                 <div className="w-3 h-3 rounded-sm bg-primary"></div>
-                <span className="text-primary font-medium">Active now</span>
+                <span className="text-primary font-medium text-sm">Seen 13 minutes ago</span>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start gap-6 mb-6">
-                <div className="relative mx-auto sm:mx-0">
-                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24">
+              {/* Main Profile Section - Avatar Right, Info Left */}
+              <div className="flex items-start gap-4 mb-6">
+                {/* Left Side - Username, Country, Actions */}
+                <div className="flex-1 min-w-0">
+                  {/* Username with Copy Button */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <h2 className="text-xl sm:text-2xl font-bold truncate">
+                      @{username}
+                    </h2>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-primary hover:text-primary/80 flex-shrink-0"
+                      onClick={copyUsername}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Country */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-2xl">{getCountryFlag(profileData?.country)}</span>
+                    <span className="text-muted-foreground">{profileData?.country || ''}</span>
+                  </div>
+
+                  {/* Block and Trust Buttons */}
+                  {!isOwnProfile && (
+                    <div className="flex gap-3 mb-4">
+                      <Button 
+                        variant="destructive"
+                        className="flex-1 bg-red-600 hover:bg-red-700"
+                        onClick={() => {
+                          toast({
+                            title: "Block User",
+                            description: "Block feature coming soon",
+                          });
+                        }}
+                      >
+                        Block
+                      </Button>
+                      <Button 
+                        className="flex-1 bg-primary hover:bg-primary/90"
+                        onClick={() => {
+                          toast({
+                            title: "Trust User",
+                            description: "Trust feature coming soon",
+                          });
+                        }}
+                      >
+                        UnTrust
+                      </Button>
+                    </div>
+                  )}
+
+                  {isOwnProfile && (
+                    <Button 
+                      variant="ghost" 
+                      className="text-primary hover:text-primary/80 font-medium w-full sm:w-auto mb-4"
+                      onClick={handleEditProfile}
+                    >
+                      Edit Profile
+                    </Button>
+                  )}
+                </div>
+
+                {/* Right Side - Avatar */}
+                <div className="flex-shrink-0">
+                  <Avatar className="w-20 h-20 sm:w-24 sm:w-24">
                     {profileData?.avatar_url ? (
                       <AvatarImage src={profileData.avatar_url} alt={username} />
                     ) : (
@@ -562,34 +627,9 @@ export function Profile() {
                     )}
                   </Avatar>
                 </div>
-
-                <div className="flex-1 text-center sm:text-left w-full sm:w-auto">
-                  <div className="flex flex-col sm:flex-row items-center gap-2 mb-2">
-                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold break-all flex items-center gap-2">
-                      @{username} <span className="text-lg">{getCountryFlag(profileData?.country)}</span>
-                    </h2>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-primary hover:text-primary/80 flex-shrink-0"
-                      onClick={copyUsername}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">{profileData?.country || ''}</p>
-                  {isOwnProfile && (
-                    <Button 
-                      variant="ghost" 
-                      className="text-primary hover:text-primary/80 font-medium w-full sm:w-auto"
-                      onClick={handleEditProfile}
-                    >
-                      Edit Profile
-                    </Button>
-                  )}
-                </div>
               </div>
 
+              {/* Bio Section */}
               {profileData?.bio && (
                 <div className="mb-4 pb-4 border-b border-border">
                   <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
@@ -597,27 +637,29 @@ export function Profile() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm pt-6 border-t border-border">
+              {/* Horizontal Info Row - Feedback, Languages, Joined */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground uppercase text-xs mb-2">Feedback:</p>
-                  <div className="flex items-center gap-3 justify-center sm:justify-start">
-                    <div className="flex items-center gap-1 text-primary">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 text-green-500">
                       <ThumbsUp className="h-4 w-4" />
                       <span className="font-bold text-lg">{profileData?.positive_feedback || 0}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-destructive">
+                    <div className="flex items-center gap-1 text-red-500">
                       <ThumbsDown className="h-4 w-4" />
                       <span className="font-bold text-lg">{profileData?.negative_feedback || 0}</span>
                     </div>
                   </div>
                 </div>
-                <div className="text-center sm:text-left">
+                <div>
                   <p className="text-muted-foreground uppercase text-xs mb-2">Languages:</p>
-                  <p className="font-medium">{profileData?.languages?.join(', ') || 'English'}</p>
+                  <p className="font-medium">{profileData?.languages?.join(', ') || 'English (English)'}</p>
                 </div>
-                <div className="text-center sm:text-left">
+                <div>
                   <p className="text-muted-foreground uppercase text-xs mb-2">Joined:</p>
-                  <p className="font-medium">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <p className="font-medium">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { year: 'numeric' })} years ago</p>
+                  <p className="text-xs text-muted-foreground">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
               </div>
 
