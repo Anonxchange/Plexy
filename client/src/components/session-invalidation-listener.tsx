@@ -30,37 +30,29 @@ export function SessionInvalidationListener(): null {
   const isLoggingOutRef = useRef(false);
 
   useEffect(() => {
-    if (!auth?.user) {
+    if (!auth?.user?.id) {
       isLoggingOutRef.current = false;
       return;
     }
 
-    // Listen for session deletions (when user logs in elsewhere)
-    const sessionToken = localStorage.getItem('session_token');
-    if (!sessionToken) {
-      return;
-    }
-
-    // Store the session token in a ref to avoid stale closures
-    const currentSessionToken = sessionToken;
-
+    // Subscribe to ALL session deletions for this user
     const sessionChannel = supabase
-      .channel(`session-invalidation-${auth.user.id}-${currentSessionToken}`)
+      .channel(`session-invalidation-${auth.user.id}`)
       .on(
         'postgres_changes',
         {
           event: 'DELETE',
           schema: 'public',
           table: 'active_sessions',
-          filter: `session_token=eq.${currentSessionToken}`,
+          filter: `user_id=eq.${auth.user.id}`,
         },
         async (payload) => {
-          // Triple-check: Verify the deleted token matches our current token
-          const nowCurrentToken = localStorage.getItem('session_token');
+          // Get the CURRENT token from localStorage at callback time
+          const currentToken = localStorage.getItem('session_token');
           const deletedToken = payload.old?.session_token;
           
-          // If our current token has changed, this deletion is not for us
-          if (nowCurrentToken !== currentSessionToken || deletedToken !== currentSessionToken) {
+          // Only logout if the deleted token matches our CURRENT token
+          if (!currentToken || deletedToken !== currentToken) {
             return;
           }
           
