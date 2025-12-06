@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { createClient } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -28,16 +28,70 @@ export function SessionInvalidationListener(): null {
   const auth = useAuth();
   const [, setLocation] = useLocation();
   const isLoggingOutRef = useRef(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const sessionTokenRef = useRef<string | null>(null);
+
+  const handleLogout = useCallback(async () => {
+    if (isLoggingOutRef.current) return;
+    
+    isLoggingOutRef.current = true;
+    localStorage.removeItem('session_token');
+    
+    toast({
+      title: 'Logged Out',
+      description: 'You were logged in from another device/browser.',
+      variant: 'destructive',
+    });
+    
+    await supabase.auth.signOut();
+    setLocation('/signin?reason=logged_out_elsewhere');
+  }, [setLocation]);
 
   useEffect(() => {
     if (!auth?.user?.id) {
       isLoggingOutRef.current = false;
+      setSessionToken(null);
+      sessionTokenRef.current = null;
       return;
     }
 
-    // Subscribe to ALL session deletions for this user
+    const checkSessionToken = () => {
+      const token = localStorage.getItem('session_token');
+      const isLoginInProgress = localStorage.getItem('session_login_in_progress') === 'true';
+      
+      if (isLoginInProgress) {
+        return null;
+      }
+      
+      return token;
+    };
+
+    const initialToken = checkSessionToken();
+    setSessionToken(initialToken);
+    sessionTokenRef.current = initialToken;
+
+    const intervalId = setInterval(() => {
+      const currentToken = checkSessionToken();
+      if (currentToken !== sessionTokenRef.current) {
+        sessionTokenRef.current = currentToken;
+        setSessionToken(currentToken);
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [auth?.user?.id]);
+
+  useEffect(() => {
+    if (!auth?.user?.id || !sessionToken) {
+      return;
+    }
+
+    const channelName = `session-invalidation-${auth.user.id}-${sessionToken.substring(0, 8)}`;
+    
     const sessionChannel = supabase
-      .channel(`session-invalidation-${auth.user.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -47,39 +101,46 @@ export function SessionInvalidationListener(): null {
           filter: `user_id=eq.${auth.user.id}`,
         },
         async (payload) => {
-          // Get the CURRENT token from localStorage at callback time
-          const currentToken = localStorage.getItem('session_token');
-          const deletedToken = payload.old?.session_token;
+          const currentStoredToken = localStorage.getItem('session_token');
           
-          // Only logout if the deleted token matches our CURRENT token
-          if (!currentToken || deletedToken !== currentToken) {
+          if (!currentStoredToken) {
             return;
           }
-          
-          // Check if this is a manual logout (user clicked logout button)
+
           const isManualLogout = localStorage.getItem('manual_logout') === 'true';
-          
           if (isManualLogout) {
-            // Don't show message for manual logout
             isLoggingOutRef.current = true;
             localStorage.removeItem('session_token');
             localStorage.removeItem('manual_logout');
             return;
           }
+
+          const isLoginInProgress = localStorage.getItem('session_login_in_progress') === 'true';
+          if (isLoginInProgress) {
+            return;
+          }
+
+          const deletedToken = payload.old?.session_token;
           
-          // This session was deleted - user logged in elsewhere
-          if (!isLoggingOutRef.current) {
-            isLoggingOutRef.current = true;
-            localStorage.removeItem('session_token');
-            
-            toast({
-              title: 'Logged Out',
-              description: 'You were logged in from another device/browser.',
-              variant: 'destructive',
-            });
-            
-            await supabase.auth.signOut();
-            setLocation('/signin?reason=logged_out_elsewhere');
+          if (deletedToken && deletedToken === currentStoredToken) {
+            await handleLogout();
+            return;
+          }
+          
+          if (!deletedToken) {
+            try {
+              const { data: sessionExists } = await supabase
+                .from('active_sessions')
+                .select('id')
+                .eq('session_token', currentStoredToken)
+                .maybeSingle();
+              
+              if (!sessionExists) {
+                await handleLogout();
+              }
+            } catch (error) {
+              console.error('Error checking session:', error);
+            }
           }
         }
       )
@@ -88,7 +149,7 @@ export function SessionInvalidationListener(): null {
     return () => {
       supabase.removeChannel(sessionChannel);
     };
-  }, [auth?.user?.id, setLocation]);
+  }, [auth?.user?.id, sessionToken, handleLogout]);
 
   return null;
 }
