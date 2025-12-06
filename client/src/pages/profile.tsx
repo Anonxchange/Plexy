@@ -296,7 +296,9 @@ export function Profile() {
             country
           ),
           trade:p2p_trades!trade_feedback_trade_id_fkey(
-            offer_id
+            offer_id,
+            seller_id,
+            buyer_id
           )
         `)
         .eq('to_user_id', viewingUserId)
