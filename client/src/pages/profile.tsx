@@ -111,7 +111,7 @@ export function Profile() {
   const isOwnProfile = !params?.userId || params?.userId === user?.id;
 
   const [offerFilter, setOfferFilter] = useState("buying");
-  const [feedbackFilter, setFeedbackFilter] = useState("buyers");
+  const [feedbackFilter, setFeedbackFilter] = useState("all");
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -319,25 +319,28 @@ export function Profile() {
         offer_id: feedback.trade?.offer_id || null,
       }));
 
-      // Filter based on feedbackFilter (buyers vs sellers)
+      // Filter based on feedbackFilter (all, buyers, or sellers)
       let filteredFeedbacks = mappedFeedbacks;
       if (feedbackFilter === 'buyers') {
         // Show feedback FROM buyers (where the profile owner was the seller)
         // This means feedback.to_user_id is the seller (profile owner)
         // and the feedback giver (from_user_id) was the buyer
+        // If trade relationship is missing, include the feedback anyway
         filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          if (!f.trade) return false;
+          if (!f.trade) return true; // Include if no trade relationship (can't determine role)
           return f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id;
         });
       } else if (feedbackFilter === 'sellers') {
         // Show feedback FROM sellers (where the profile owner was the buyer)
         // This means feedback.to_user_id is the buyer (profile owner)
         // and the feedback giver (from_user_id) was the seller
+        // If trade relationship is missing, include the feedback anyway
         filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          if (!f.trade) return false;
+          if (!f.trade) return true; // Include if no trade relationship (can't determine role)
           return f.trade.buyer_id === viewingUserId && f.trade.seller_id === f.from_user_id;
         });
       }
+      // For 'all' filter, we just use all mappedFeedbacks without filtering
 
       setFeedbacks(filteredFeedbacks);
     } catch (error) {
@@ -1082,6 +1085,7 @@ export function Profile() {
                 <SelectValue placeholder="Filter by"/>
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Feedback</SelectItem>
                 <SelectItem value="buyers">From Buyers</SelectItem>
                 <SelectItem value="sellers">From Sellers</SelectItem>
               </SelectContent>
