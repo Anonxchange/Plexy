@@ -289,13 +289,7 @@ export function Profile() {
 
       const fetchPromise = supabase
         .from('trade_feedback')
-        .select(`
-          *,
-          from_user_profile:user_profiles!trade_feedback_from_user_id_fkey (
-            username,
-            country
-          )
-        `)
+        .select('*')
         .eq('to_user_id', viewingUserId)
         .order('created_at', { ascending: false })
         .limit(10);
