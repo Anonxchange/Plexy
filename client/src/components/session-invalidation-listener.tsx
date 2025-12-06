@@ -49,6 +49,13 @@ export function SessionInvalidationListener(): null {
             filter: `session_token=eq.${sessionToken}`,
           },
           async () => {
+            // Double-check that the current token still matches the deleted one
+            const currentToken = localStorage.getItem('session_token');
+            if (currentToken !== sessionToken) {
+              // Token has changed, this deletion is for an old session, ignore it
+              return;
+            }
+            
             // Check if this is a manual logout (user clicked logout button)
             const isManualLogout = localStorage.getItem('manual_logout') === 'true';
             
