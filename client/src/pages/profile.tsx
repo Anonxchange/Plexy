@@ -84,11 +84,18 @@ interface Offer {
 interface Feedback {
   id: string;
   from_user: string;
+  from_user_id: string;
   rating: 'positive' | 'negative';
   comment: string;
   created_at: string;
   payment_method: string;
   trade_count: number;
+  currency?: string;
+  offer_id?: string;
+  from_user_profile?: {
+    username: string;
+    country: string;
+  };
 }
 
 export function Profile() {
@@ -282,7 +289,13 @@ export function Profile() {
 
       const fetchPromise = supabase
         .from('trade_feedback')
-        .select('*')
+        .select(`
+          *,
+          from_user_profile:user_profiles!trade_feedback_from_user_id_fkey (
+            username,
+            country
+          )
+        `)
         .eq('to_user_id', viewingUserId)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -1064,8 +1077,8 @@ export function Profile() {
                   {/* Header with username, flag, and date */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-bold">@{feedback.from_user}</h3>
-                      <span className="text-2xl">{getCountryFlag(feedback.from_user_country)}</span>
+                      <h3 className="text-xl font-bold">@{feedback.from_user_profile?.username || feedback.from_user}</h3>
+                      <span className="text-2xl">{getCountryFlag(feedback.from_user_profile?.country)}</span>
                     </div>
                     <span className="text-sm text-muted-foreground">
                       {new Date(feedback.created_at).toLocaleDateString('en-US', { 
