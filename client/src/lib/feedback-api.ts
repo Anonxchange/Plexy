@@ -247,7 +247,12 @@ export async function getCounterpartyFeedbackForTrade(tradeId: string, counterpa
     return { success: false, error: "You must be logged in" };
   }
 
-  // Query for feedback FROM the counterparty TO the current user
+  if (!counterpartyId) {
+    return { success: true, feedback: null };
+  }
+
+  // Query for feedback FROM the counterparty (for this specific trade)
+  // The counterparty's feedback is feedback they left, where from_user_id = counterpartyId
   const { data, error } = await supabase
     .from('trade_feedback')
     .select(`
@@ -258,8 +263,7 @@ export async function getCounterpartyFeedbackForTrade(tradeId: string, counterpa
       )
     `)
     .eq('trade_id', tradeId)
-    .eq('from_user_id', counterpartyId || '')
-    .eq('to_user_id', user.id)
+    .eq('from_user_id', counterpartyId)
     .single();
 
   if (error && error.code !== 'PGRST116') {
