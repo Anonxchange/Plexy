@@ -301,7 +301,7 @@ export function Profile() {
         `)
         .eq('to_user_id', viewingUserId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(50);
 
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
@@ -311,13 +311,14 @@ export function Profile() {
         return;
       }
 
-      // Map the data to include offer_id from the trade
-      const mappedFeedbacks = (data || []).map((feedback: any) => ({
+      // Map the data to include offer_id from the trade and filter based on feedbackFilter
+      const allFeedbacks = (data || []).map((feedback: any) => ({
         ...feedback,
         offer_id: feedback.trade?.offer_id || null,
       }));
 
-      setFeedbacks(mappedFeedbacks);
+      // No filtering - show all feedbacks regardless of filter
+      setFeedbacks(allFeedbacks);
     } catch (error) {
       console.error('Error fetching feedbacks:', error);
       setFeedbacks([]);
@@ -653,12 +654,10 @@ export function Profile() {
                 )}
 
                 {/* Bio Section - Show for all profiles */}
-                {profileData?.bio && (
-                  <div className="mb-4 pb-4 border-b border-border">
-                    <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
-                    <p className="text-sm leading-relaxed">{profileData.bio}</p>
-                  </div>
-                )}
+                <div className="mb-4 pb-4 border-b border-border">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
+                  <p className="text-sm leading-relaxed">{profileData?.bio || 'No bio added yet.'}</p>
+                </div>
 
                 {/* Horizontal Info Row - Feedback, Languages, Joined */}
                 <div className="grid grid-cols-3 gap-3 sm:gap-4 text-sm">
@@ -1053,26 +1052,7 @@ export function Profile() {
         {/* Feedback Section */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">Feedback</h3>
-          <div className="flex items-center gap-2">
-            {/* Filter Icon Button */}
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="text-primary hover:text-primary/80"
-            >
-              <FilterIcon className="h-4 w-4" />
-            </Button>
-            <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by"/>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="buyers">From Buyers</SelectItem>
-                <SelectItem value="sellers">From Sellers</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <h3 className="text-xl font-bold">Feedback ({feedbacks.length})</h3>
         </div>
         {feedbacks.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
