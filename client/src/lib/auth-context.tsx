@@ -289,10 +289,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const sessionData = await response.json();
           if (sessionData.session_token) {
-            // CRITICAL: Set the new token IMMEDIATELY
+            // CRITICAL: Set the new token IMMEDIATELY and wait for React to update
             // This ensures SessionInvalidationListener subscribes to the NEW token
             // BEFORE old sessions are deleted
             localStorage.setItem('session_token', sessionData.session_token);
+            
+            // Small delay to ensure the listener has time to re-subscribe with new token
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
         } else {
           // If session creation fails, sign out
