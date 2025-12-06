@@ -311,14 +311,27 @@ export function Profile() {
         return;
       }
 
-      // Map the data to include offer_id from the trade and filter based on feedbackFilter
-      const allFeedbacks = (data || []).map((feedback: any) => ({
+      // Map the data to include offer_id from the trade
+      const mappedFeedbacks = (data || []).map((feedback: any) => ({
         ...feedback,
         offer_id: feedback.trade?.offer_id || null,
       }));
 
-      // No filtering - show all feedbacks regardless of filter
-      setFeedbacks(allFeedbacks);
+      // Filter based on feedbackFilter (buyers vs sellers)
+      let filteredFeedbacks = mappedFeedbacks;
+      if (feedbackFilter === 'buyers') {
+        // Show feedback where the profile owner was the seller (feedback from buyers)
+        filteredFeedbacks = mappedFeedbacks.filter((f: any) => 
+          f.trade?.seller_id === viewingUserId
+        );
+      } else if (feedbackFilter === 'sellers') {
+        // Show feedback where the profile owner was the buyer (feedback from sellers)
+        filteredFeedbacks = mappedFeedbacks.filter((f: any) => 
+          f.trade?.buyer_id === viewingUserId
+        );
+      }
+
+      setFeedbacks(filteredFeedbacks);
     } catch (error) {
       console.error('Error fetching feedbacks:', error);
       setFeedbacks([]);
@@ -653,11 +666,13 @@ export function Profile() {
                   </Button>
                 )}
 
-                {/* Bio Section - Show for all profiles */}
-                <div className="mb-4 pb-4 border-b border-border">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
-                  <p className="text-sm leading-relaxed">{profileData?.bio || 'No bio added yet.'}</p>
-                </div>
+                {/* Bio Section - Only show if bio exists */}
+                {profileData?.bio && (
+                  <div className="mb-4 pb-4 border-b border-border">
+                    <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
+                    <p className="text-sm leading-relaxed">{profileData.bio}</p>
+                  </div>
+                )}
 
                 {/* Horizontal Info Row - Feedback, Languages, Joined */}
                 <div className="grid grid-cols-3 gap-3 sm:gap-4 text-sm">
@@ -1052,7 +1067,18 @@ export function Profile() {
         {/* Feedback Section */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">Feedback ({feedbacks.length})</h3>
+          <h3 className="text-xl font-bold">Feedback</h3>
+          <div className="flex items-center gap-2">
+            <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by"/>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="buyers">From Buyers</SelectItem>
+                <SelectItem value="sellers">From Sellers</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         {feedbacks.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
