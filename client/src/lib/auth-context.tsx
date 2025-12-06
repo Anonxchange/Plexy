@@ -244,10 +244,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    // CRITICAL: Clear any stale session token BEFORE signin
-    // This prevents the SessionInvalidationListener from subscribing to an old token
-    localStorage.removeItem('session_token');
-    
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
