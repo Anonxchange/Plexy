@@ -269,6 +269,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error fetching IP:', ipError);
         }
 
+        // IMPORTANT: Clear old session token BEFORE creating new session
+        // This prevents the SessionInvalidationListener from reacting to old session deletions
+        // because it only triggers logout if the deleted token matches localStorage token
+        localStorage.removeItem('session_token');
+        
+        // Set flag to indicate we're in the login process
+        localStorage.setItem('session_login_in_progress', 'true');
+
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/session-create`, {
           method: 'POST',
           headers: {
@@ -286,6 +294,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }),
         });
 
+        // Clear the login in progress flag
+        localStorage.removeItem('session_login_in_progress');
+
         if (response.ok) {
           const sessionData = await response.json();
           if (sessionData.session_token) {
@@ -299,6 +310,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error('Error creating session:', err);
+        localStorage.removeItem('session_login_in_progress');
         await supabase.auth.signOut();
         return { error: { message: 'Failed to create session' }, data: null };
       }
