@@ -92,7 +92,7 @@ export function TradeCompletedSection({
 
   useEffect(() => {
     loadFeedback();
-  }, [trade.id]);
+  }, [trade.id, counterpartyId]);
 
   const loadFeedback = async () => {
     setIsLoading(true);
@@ -113,9 +113,12 @@ export function TradeCompletedSection({
         }
       }
 
+      // Fetch feedback - use the current counterpartyId value
+      const currentCounterpartyId = isUserBuyer ? trade.seller_id : trade.buyer_id;
+      
       const [myResult, counterpartyResult] = await Promise.all([
         getMyFeedbackForTrade(trade.id),
-        getCounterpartyFeedbackForTrade(trade.id, counterpartyId),
+        getCounterpartyFeedbackForTrade(trade.id, currentCounterpartyId),
       ]);
 
       if (myResult.success && myResult.feedback) {
