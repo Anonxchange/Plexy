@@ -244,12 +244,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
+    // CRITICAL: Set these flags BEFORE signInWithPassword so the SessionInvalidationListener
+    // won't subscribe to old token deletions when auth.user becomes available
+    localStorage.removeItem('session_token');
+    localStorage.setItem('session_login_in_progress', 'true');
+    
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      // Clear the flag on error
+      localStorage.removeItem('session_login_in_progress');
       return { error, data };
     }
 
@@ -268,14 +275,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (ipError) {
           console.error('Error fetching IP:', ipError);
         }
-
-        // IMPORTANT: Clear old session token BEFORE creating new session
-        // This prevents the SessionInvalidationListener from reacting to old session deletions
-        // because it only triggers logout if the deleted token matches localStorage token
-        localStorage.removeItem('session_token');
-        
-        // Set flag to indicate we're in the login process
-        localStorage.setItem('session_login_in_progress', 'true');
 
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/session-create`, {
           method: 'POST',
