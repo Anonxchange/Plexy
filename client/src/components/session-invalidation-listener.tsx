@@ -35,19 +35,6 @@ export function SessionInvalidationListener(): null {
       return;
     }
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT' && !isLoggingOutRef.current) {
-        isLoggingOutRef.current = true;
-        toast({
-          title: 'Session Expired',
-          description: 'Your session has expired. Please log in again.',
-          variant: 'destructive',
-        });
-        setLocation('/signin?reason=session_expired');
-      }
-    });
-
     // Listen for session deletions (when user logs in elsewhere)
     const sessionToken = localStorage.getItem('session_token');
     if (sessionToken) {
@@ -62,6 +49,17 @@ export function SessionInvalidationListener(): null {
             filter: `session_token=eq.${sessionToken}`,
           },
           async () => {
+            // Check if this is a manual logout (user clicked logout button)
+            const isManualLogout = localStorage.getItem('manual_logout') === 'true';
+            
+            if (isManualLogout) {
+              // Don't show message for manual logout
+              isLoggingOutRef.current = true;
+              localStorage.removeItem('session_token');
+              localStorage.removeItem('manual_logout');
+              return;
+            }
+            
             // This session was deleted - user logged in elsewhere
             if (!isLoggingOutRef.current) {
               isLoggingOutRef.current = true;
@@ -81,14 +79,9 @@ export function SessionInvalidationListener(): null {
         .subscribe();
 
       return () => {
-        subscription.unsubscribe();
         supabase.removeChannel(sessionChannel);
       };
     }
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [auth, setLocation]);
 
   return null;
