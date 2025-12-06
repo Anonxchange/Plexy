@@ -1071,8 +1071,12 @@ export function Profile() {
                   {/* Header with username, flag, and date */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-bold">@{feedback.from_user_profile?.username || feedback.from_user}</h3>
-                      <span className="text-2xl">{getCountryFlag(feedback.from_user_profile?.country)}</span>
+                      <h3 className="text-xl font-bold">
+                        @{feedback.from_user_profile?.username || feedback.from_user || 'Anonymous'}
+                      </h3>
+                      {feedback.from_user_profile?.country && (
+                        <span className="text-2xl">{getCountryFlag(feedback.from_user_profile?.country)}</span>
+                      )}
                     </div>
                     <span className="text-sm text-muted-foreground">
                       {new Date(feedback.created_at).toLocaleDateString('en-US', { 
