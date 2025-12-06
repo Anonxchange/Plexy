@@ -239,7 +239,7 @@ export async function getMyFeedbackForTrade(tradeId: string): Promise<{ success:
   return { success: true, feedback: data || null };
 }
 
-export async function getCounterpartyFeedbackForTrade(tradeId: string): Promise<{ success: boolean; feedback?: TradeFeedback | null; error?: string }> {
+export async function getCounterpartyFeedbackForTrade(tradeId: string, counterpartyId?: string): Promise<{ success: boolean; feedback?: TradeFeedback | null; error?: string }> {
   const supabase = createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -247,6 +247,7 @@ export async function getCounterpartyFeedbackForTrade(tradeId: string): Promise<
     return { success: false, error: "You must be logged in" };
   }
 
+  // Query for feedback FROM the counterparty TO the current user
   const { data, error } = await supabase
     .from('trade_feedback')
     .select(`
@@ -257,6 +258,7 @@ export async function getCounterpartyFeedbackForTrade(tradeId: string): Promise<
       )
     `)
     .eq('trade_id', tradeId)
+    .eq('from_user_id', counterpartyId || '')
     .eq('to_user_id', user.id)
     .single();
 
