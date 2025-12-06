@@ -334,28 +334,27 @@ export function Profile() {
         offer_id: feedback.trade?.offer_id || null,
       }));
 
-      // Filter based on feedbackFilter (all, buyers, or sellers)
+      // Filter based on feedbackFilter (buyers or sellers)
       let filteredFeedbacks = mappedFeedbacks;
       if (feedbackFilter === 'buyers') {
         // Show feedback FROM buyers (where the profile owner was the seller)
-        // This means feedback.to_user_id is the seller (profile owner)
-        // and the feedback giver (from_user_id) was the buyer
-        // If trade relationship is missing, include the feedback anyway
+        // If trade relationship is missing or incomplete, include the feedback anyway
         filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          if (!f.trade) return true; // Include if no trade relationship (can't determine role)
+          // Include if no trade relationship or trade data is incomplete
+          if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
+          // Include if profile owner was the seller and feedback giver was the buyer
           return f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id;
         });
       } else if (feedbackFilter === 'sellers') {
         // Show feedback FROM sellers (where the profile owner was the buyer)
-        // This means feedback.to_user_id is the buyer (profile owner)
-        // and the feedback giver (from_user_id) was the seller
-        // If trade relationship is missing, include the feedback anyway
+        // If trade relationship is missing or incomplete, include the feedback anyway
         filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          if (!f.trade) return true; // Include if no trade relationship (can't determine role)
+          // Include if no trade relationship or trade data is incomplete
+          if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
+          // Include if profile owner was the buyer and feedback giver was the seller
           return f.trade.buyer_id === viewingUserId && f.trade.seller_id === f.from_user_id;
         });
       }
-      // For 'all' filter, we just use all mappedFeedbacks without filtering
 
       setFeedbacks(filteredFeedbacks);
     } catch (error) {
@@ -1140,80 +1139,7 @@ export function Profile() {
                 availableRange={{ min: offer.min_amount, max: offer.max_amount }}
                 limits={{ min: offer.min_amount, max: offer.max_amount }}
                 type={offer.type as "buy" | "sell"}
-                cryptoSymbol={offer.crypto_symbol}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-        {/* Your History with [username] Section - only shown when viewing another user's profile */}
-        {!isOwnProfile && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">Your History with {profileData?.username || 'User'}</h3>
-              <Select value={historyFilter} onValueChange={setHistoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by"/>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Trades</SelectItem>
-                  <SelectItem value="bought">You Bought</SelectItem>
-                  <SelectItem value="sold">You Sold</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {tradeHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No trade history with this user</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {tradeHistory.map((trade) => {
-                  const isBuyer = trade.buyer_id === user?.id;
-                  const tradeType = isBuyer ? 'Bought' : 'Sold';
-                  const statusColor = trade.status === 'completed' 
-                    ? 'bg-green-500/10 text-green-500 border-green-500/20' 
-                    : trade.status === 'cancelled' || trade.status === 'expired'
-                      ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                      : 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-
-                  return (
-                    <Card key={trade.id} className="bg-card border-border shadow-sm cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setLocation(`/trade/${trade.id}`)}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {trade.crypto_symbol && cryptoIconUrls[trade.crypto_symbol as keyof typeof cryptoIconUrls] && (
-                              <img 
-                                src={cryptoIconUrls[trade.crypto_symbol as keyof typeof cryptoIconUrls]} 
-                                alt={trade.crypto_symbol} 
-                                className="w-8 h-8" 
-                              />
-                            )}
-                            <div>
-                              <div className="font-semibold">
-                                {tradeType} {parseFloat(trade.crypto_amount).toFixed(6)} {trade.crypto_symbol}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                for {parseFloat(trade.fiat_amount).toLocaleString()} {trade.fiat_currency}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge className={`${statusColor} border capitalize`}>
-                              {trade.status}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(trade.created_at).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: '2-digit', 
-                                year: 'numeric' 
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+            </Card>
                   );
                 })}
               </div>
@@ -1322,7 +1248,81 @@ export function Profile() {
                     }}
                   >
                     View offer details →
-                  </Button>
+   
+        {/* Your History with [username] Section - only shown when viewing another user's profile */}
+        {!isOwnProfile && (
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Your History with {profileData?.username || 'User'}</h3>
+              <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by"/>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Trades</SelectItem>
+                  <SelectItem value="bought">You Bought</SelectItem>
+                  <SelectItem value="sold">You Sold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {tradeHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No trade history with this user</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {tradeHistory.map((trade) => {
+                  const isBuyer = trade.buyer_id === user?.id;
+                  const tradeType = isBuyer ? 'Bought' : 'Sold';
+                  const statusColor = trade.status === 'completed' 
+                    ? 'bg-green-500/10 text-green-500 border-green-500/20' 
+                    : trade.status === 'cancelled' || trade.status === 'expired'
+                      ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                      : 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+
+                  return (
+                    <Card key={trade.id} className="bg-card border-border shadow-sm cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setLocation(`/trade/${trade.id}`)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {trade.crypto_symbol && cryptoIconUrls[trade.crypto_symbol as keyof typeof cryptoIconUrls] && (
+                              <img 
+                                src={cryptoIconUrls[trade.crypto_symbol as keyof typeof cryptoIconUrls]} 
+                                alt={trade.crypto_symbol} 
+                                className="w-8 h-8" 
+                              />
+                            )}
+                            <div>
+                              <div className="font-semibold">
+                                {tradeType} {parseFloat(trade.crypto_amount).toFixed(6)} {trade.crypto_symbol}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                for {parseFloat(trade.fiat_amount).toLocaleString()} {trade.fiat_currency}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge className={`${statusColor} border capitalize`}>
+                              {trade.status}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(trade.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: '2-digit', 
+                                year: 'numeric' 
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+               </Button>
                 </CardContent>
               </Card>
             ))}
