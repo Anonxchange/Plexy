@@ -284,12 +284,21 @@ export function Profile() {
     try {
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 3000)
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
       );
 
       const fetchPromise = supabase
         .from('trade_feedback')
-        .select('*')
+        .select(`
+          *,
+          from_user_profile:user_profiles!trade_feedback_from_user_id_fkey(
+            username,
+            country
+          ),
+          trade:p2p_trades!trade_feedback_trade_id_fkey(
+            offer_id
+          )
+        `)
         .eq('to_user_id', viewingUserId)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -302,7 +311,13 @@ export function Profile() {
         return;
       }
 
-      setFeedbacks(data || []);
+      // Map the data to include offer_id from the trade
+      const mappedFeedbacks = (data || []).map((feedback: any) => ({
+        ...feedback,
+        offer_id: feedback.trade?.offer_id || null,
+      }));
+
+      setFeedbacks(mappedFeedbacks);
     } catch (error) {
       console.error('Error fetching feedbacks:', error);
       setFeedbacks([]);
