@@ -35,8 +35,7 @@ export function SessionInvalidationListener(): null {
       return;
     }
 
-    // Supabase automatically handles session validation
-    // We just listen for auth state changes
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT' && !isLoggingOutRef.current) {
         isLoggingOutRef.current = true;
@@ -48,6 +47,44 @@ export function SessionInvalidationListener(): null {
         setLocation('/signin?reason=session_expired');
       }
     });
+
+    // Listen for session deletions (when user logs in elsewhere)
+    const sessionToken = localStorage.getItem('session_token');
+    if (sessionToken) {
+      const sessionChannel = supabase
+        .channel(`session-${auth.user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'active_sessions',
+            filter: `session_token=eq.${sessionToken}`,
+          },
+          async () => {
+            // This session was deleted - user logged in elsewhere
+            if (!isLoggingOutRef.current) {
+              isLoggingOutRef.current = true;
+              localStorage.removeItem('session_token');
+              
+              toast({
+                title: 'Logged Out',
+                description: 'You were logged in from another device/browser.',
+                variant: 'destructive',
+              });
+              
+              await supabase.auth.signOut();
+              setLocation('/signin?reason=logged_out_elsewhere');
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+        supabase.removeChannel(sessionChannel);
+      };
+    }
 
     return () => {
       subscription.unsubscribe();
