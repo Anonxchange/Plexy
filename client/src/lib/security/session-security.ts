@@ -257,40 +257,51 @@ class SessionSecurityManager {
         return null;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/session-create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          device_fingerprint: fingerprint,
-          device_info: {
-            device_name: deviceInfo.deviceName,
-            browser: deviceInfo.browser,
-            os: deviceInfo.os,
-            ip_address: ipAddress,
-          },
-        }),
-      });
+      // Generate a new session token for this device
+      const sessionToken = generateSessionToken();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error creating session:', errorData);
-        return null;
-      }
-
-      const data = await response.json();
+      // First, delete all OTHER sessions for this user (not the current one if it exists)
+      const currentStoredToken = localStorage.getItem('session_token');
       
-      if (!data.success || !data.session_token) {
-        console.error('Invalid session response:', data);
+      if (currentStoredToken) {
+        // Delete all sessions EXCEPT the current one
+        await supabase
+          .from('active_sessions')
+          .delete()
+          .eq('user_id', userId)
+          .neq('session_token', currentStoredToken);
+      } else {
+        // No current session, delete all old sessions
+        await supabase
+          .from('active_sessions')
+          .delete()
+          .eq('user_id', userId);
+      }
+
+      // Create new session for this device
+      const { error: insertError } = await supabase
+        .from('active_sessions')
+        .insert({
+          user_id: userId,
+          session_token: sessionToken,
+          device_name: deviceInfo.deviceName,
+          browser: deviceInfo.browser,
+          os: deviceInfo.os,
+          ip_address: ipAddress,
+          is_current: true,
+          expires_at: expiresAt.toISOString(),
+        });
+
+      if (insertError) {
+        console.error('Error inserting session:', insertError);
         return null;
       }
 
-      this.currentSessionToken = data.session_token;
-      localStorage.setItem('session_token', data.session_token);
+      this.currentSessionToken = sessionToken;
+      localStorage.setItem('session_token', sessionToken);
 
-      return data.session_token;
+      return sessionToken;
     } catch (error) {
       console.error('Error creating session:', error);
       return null;
@@ -346,6 +357,9 @@ class SessionSecurityManager {
 
   async endSession(userId: string): Promise<void> {
     try {
+      // Mark this as a manual logout so we don't show the "logged out elsewhere" message
+      localStorage.setItem('manual_logout', 'true');
+      
       const sessionToken = localStorage.getItem('session_token');
       if (sessionToken) {
         await supabase
