@@ -544,122 +544,125 @@ export function Profile() {
                 <span className="text-primary font-medium text-sm">Seen 13 minutes ago</span>
               </div>
 
-              {/* Main Profile Section - Avatar Right, Info Left */}
-              <div className="flex items-start gap-4 mb-6">
-                {/* Left Side - Username, Country, Actions */}
-                <div className="flex-1 min-w-0">
-                  {/* Username with Copy Button */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <h2 className="text-xl sm:text-2xl font-bold truncate">
-                      @{username}
-                    </h2>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-primary hover:text-primary/80 flex-shrink-0"
-                      onClick={copyUsername}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+              {/* Main Profile Section */}
+              <div className="mb-6">
+                {/* Top Row - Avatar and Username/Country */}
+                <div className="flex items-start gap-4 mb-4">
+                  {/* Left Side - Avatar */}
+                  <div className="flex-shrink-0">
+                    <Avatar className="w-20 h-20 sm:w-24 sm:h-24">
+                      {profileData?.avatar_url ? (
+                        <AvatarImage src={profileData.avatar_url} alt={username} />
+                      ) : (
+                        <>
+                          <AvatarImage 
+                            src={avatarTypes.find(a => a.id === profileData?.avatar_type)?.image || avatarTypes[0].image} 
+                            alt={username} 
+                          />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            <User className="h-10 w-10 sm:h-12 sm:w-12" />
+                          </AvatarFallback>
+                        </>
+                      )}
+                    </Avatar>
                   </div>
 
-                  {/* Country */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-2xl">{getCountryFlag(profileData?.country)}</span>
-                    <span className="text-muted-foreground">{profileData?.country || ''}</span>
-                  </div>
-
-                  {/* Block and Trust Buttons */}
-                  {!isOwnProfile && (
-                    <div className="flex gap-3 mb-4">
+                  {/* Right Side - Username with Copy and Country */}
+                  <div className="flex-1 min-w-0">
+                    {/* Username with Copy Button */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <h2 className="text-xl sm:text-2xl font-bold truncate">
+                        @{username}
+                      </h2>
                       <Button 
-                        variant="destructive"
-                        className="flex-1 bg-red-600 hover:bg-red-700"
-                        onClick={() => {
-                          toast({
-                            title: "Block User",
-                            description: "Block feature coming soon",
-                          });
-                        }}
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-primary hover:text-primary/80 flex-shrink-0"
+                        onClick={copyUsername}
                       >
-                        Block
-                      </Button>
-                      <Button 
-                        className="flex-1 bg-primary hover:bg-primary/90"
-                        onClick={() => {
-                          toast({
-                            title: "Trust User",
-                            description: "Trust feature coming soon",
-                          });
-                        }}
-                      >
-                        UnTrust
+                        <Copy className="h-4 w-4" />
                       </Button>
                     </div>
-                  )}
 
-                  {isOwnProfile && (
-                    <Button 
-                      variant="ghost" 
-                      className="text-primary hover:text-primary/80 font-medium w-full sm:w-auto mb-4"
-                      onClick={handleEditProfile}
-                    >
-                      Edit Profile
-                    </Button>
-                  )}
-                </div>
-
-                {/* Right Side - Avatar */}
-                <div className="flex-shrink-0">
-                  <Avatar className="w-20 h-20 sm:w-24 sm:w-24">
-                    {profileData?.avatar_url ? (
-                      <AvatarImage src={profileData.avatar_url} alt={username} />
-                    ) : (
-                      <>
-                        <AvatarImage 
-                          src={avatarTypes.find(a => a.id === profileData?.avatar_type)?.image || avatarTypes[0].image} 
-                          alt={username} 
-                        />
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          <User className="h-10 w-10 sm:h-12 sm:w-12" />
-                        </AvatarFallback>
-                      </>
-                    )}
-                  </Avatar>
-                </div>
-              </div>
-
-              {/* Bio Section */}
-              {profileData?.bio && (
-                <div className="mb-4 pb-4 border-b border-border">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
-                  <p className="text-sm leading-relaxed">{profileData.bio}</p>
-                </div>
-              )}
-
-              {/* Horizontal Info Row - Feedback, Languages, Joined */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Feedback:</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 text-green-500">
-                      <ThumbsUp className="h-4 w-4" />
-                      <span className="font-bold text-lg">{profileData?.positive_feedback || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-red-500">
-                      <ThumbsDown className="h-4 w-4" />
-                      <span className="font-bold text-lg">{profileData?.negative_feedback || 0}</span>
+                    {/* Country */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{getCountryFlag(profileData?.country)}</span>
+                      <span className="text-muted-foreground">{profileData?.country || ''}</span>
                     </div>
                   </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Languages:</p>
-                  <p className="font-medium">{profileData?.languages?.join(', ') || 'English (English)'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Joined:</p>
-                  <p className="font-medium">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { year: 'numeric' })} years ago</p>
-                  <p className="text-xs text-muted-foreground">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+
+                {/* Block and Trust Buttons - Horizontal Layout */}
+                {!isOwnProfile && (
+                  <div className="flex gap-3 mb-4">
+                    <Button 
+                      variant="destructive"
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold"
+                      onClick={() => {
+                        toast({
+                          title: "Block User",
+                          description: "Block feature coming soon",
+                        });
+                      }}
+                    >
+                      Block
+                    </Button>
+                    <Button 
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold"
+                      onClick={() => {
+                        toast({
+                          title: "Trust User",
+                          description: "Trust feature coming soon",
+                        });
+                      }}
+                    >
+                      Trust
+                    </Button>
+                  </div>
+                )}
+
+                {isOwnProfile && (
+                  <Button 
+                    variant="ghost" 
+                    className="text-primary hover:text-primary/80 font-medium w-full sm:w-auto mb-4"
+                    onClick={handleEditProfile}
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+
+                {/* Bio Section */}
+                {profileData?.bio && (
+                  <div className="mb-4 pb-4 border-b border-border">
+                    <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
+                    <p className="text-sm leading-relaxed">{profileData.bio}</p>
+                  </div>
+                )}
+
+                {/* Horizontal Info Row - Feedback, Languages, Joined */}
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground uppercase text-xs mb-2">Feedback:</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <div className="flex items-center gap-1 text-green-500">
+                        <ThumbsUp className="h-4 w-4" />
+                        <span className="font-bold text-base sm:text-lg">{profileData?.positive_feedback || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-red-500">
+                        <ThumbsDown className="h-4 w-4" />
+                        <span className="font-bold text-base sm:text-lg">{profileData?.negative_feedback || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground uppercase text-xs mb-2">Languages:</p>
+                    <p className="font-medium text-xs sm:text-sm">{profileData?.languages?.join(', ') || 'English'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground uppercase text-xs mb-2">Joined:</p>
+                    <p className="font-medium text-xs sm:text-sm">{Math.floor((Date.now() - new Date(profileData?.created_at || user.created_at).getTime()) / (1000 * 60 * 60 * 24 * 365))} years ago</p>
+                    <p className="text-xs text-muted-foreground">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  </div>
                 </div>
               </div>
 
