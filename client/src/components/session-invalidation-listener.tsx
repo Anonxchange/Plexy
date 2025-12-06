@@ -104,7 +104,7 @@ export function SessionInvalidationListener(): null {
           event: 'DELETE',
           schema: 'public',
           table: 'active_sessions',
-          filter: `user_id=eq.${auth.user.id},session_token=eq.${sessionToken}`,
+          filter: `user_id=eq.${auth.user.id}`,
         },
         async (payload) => {
           // Safety check: if payload is missing session_token, ignore it
@@ -113,14 +113,16 @@ export function SessionInvalidationListener(): null {
             return;
           }
           
-          // Verify the deleted session matches our current session token
-          if (payload.old.session_token !== sessionToken) {
+          // CRITICAL: Only process if the deleted token matches OUR current token
+          // This prevents being logged out when OTHER sessions are deleted
+          const currentToken = localStorage.getItem('session_token');
+          if (payload.old.session_token !== currentToken) {
+            // A different session was deleted, not ours - ignore it
             return;
           }
           
-          // Triple-check with localStorage as final validation
-          const storageToken = localStorage.getItem('session_token');
-          if (storageToken !== sessionToken) {
+          // Double-check with state
+          if (payload.old.session_token !== sessionToken) {
             return;
           }
 
@@ -137,7 +139,24 @@ export function SessionInvalidationListener(): null {
             return;
           }
 
-          // This is a forced logout from another device or admin action
+          // Verify the session actually no longer exists in database
+          try {
+            const { data: sessionExists } = await supabase
+              .from('active_sessions')
+              .select('session_token')
+              .eq('session_token', currentToken)
+              .eq('user_id', auth.user.id)
+              .maybeSingle();
+
+            if (sessionExists) {
+              // Session still exists, false alarm
+              return;
+            }
+          } catch (err) {
+            console.error('Error verifying session deletion:', err);
+          }
+
+          // This is a legitimate forced logout from another device
           await handleLogout();
         }
       )
