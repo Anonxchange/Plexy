@@ -445,7 +445,12 @@ export function TradeCompletedSection({
                         {formatDate(myFeedback.created_at)}
                       </span>
                     </div>
-                    <div className="text-primary font-medium mb-1">You</div>
+                    <button
+                      onClick={() => setLocation("/profile")}
+                      className="text-primary font-medium mb-1 hover:underline"
+                    >
+                      You
+                    </button>
                     <p className="text-sm text-muted-foreground mb-2">{myFeedback.comment}</p>
                     <button 
                       onClick={handleEditFeedback}
@@ -460,7 +465,7 @@ export function TradeCompletedSection({
                 {counterpartyFeedback && (
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="text-sm text-muted-foreground mb-2">
-                      Feedback from {counterpartyFeedback.from_user?.username || counterparty?.username}
+                      Feedback from {counterparty?.username}
                     </div>
                     <div className="flex items-center gap-2 mb-2">
                       {counterpartyFeedback.rating === "positive" ? (
@@ -478,9 +483,12 @@ export function TradeCompletedSection({
                         {formatDate(counterpartyFeedback.created_at)}
                       </span>
                     </div>
-                    <div className="text-primary font-medium mb-1">
-                      {counterpartyFeedback.from_user?.username || counterparty?.username}
-                    </div>
+                    <button
+                      onClick={() => counterpartyId && setLocation(`/profile/${counterpartyId}`)}
+                      className="text-primary font-medium mb-1 hover:underline"
+                    >
+                      {counterparty?.username}
+                    </button>
                     <p className="text-sm text-muted-foreground mb-3">{counterpartyFeedback.comment}</p>
 
                     {counterpartyFeedback.response ? (
