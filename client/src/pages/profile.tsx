@@ -749,33 +749,33 @@ export function Profile() {
               </div>
             </div>
 
-            {/* Trade Volumes Section (Mobile) - Made bigger and better fitted */}
+            {/* Trade Volumes Section (Mobile) */}
             <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-4">Trade Volumes</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 10 BTC</span>
+              <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 10 BTC</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 10K SOL</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 10K SOL</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 10K USDT</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 10K USDT</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 10K USDC</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 10K USDC</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 1K BNB</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 1K BNB</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 100K TRX</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 100K TRX</span>
                 </div>
               </div>
             </div>
@@ -892,33 +892,33 @@ export function Profile() {
               </div>
             </div>
 
-            {/* Trade Volumes Section (Desktop) - Made bigger and better fitted */}
+            {/* Trade Volumes Section (Desktop) */}
             <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-4">Trade Volumes</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 10 BTC</span>
+              <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 10 BTC</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 10K SOL</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 10K SOL</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 10K USDT</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 10K USDT</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 10K USDC</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 10K USDC</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 1K BNB</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 1K BNB</span>
                 </div>
-                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
-                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-6 w-6" />
-                  <span className="font-medium">&lt; 100K TRX</span>
+                <div className="flex items-center gap-2">
+                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
+                  <span className="text-sm">&lt; 100K TRX</span>
                 </div>
               </div>
             </div>
