@@ -592,12 +592,11 @@ export function Profile() {
                   </div>
                 </div>
 
-                {/* Block and Trust Buttons - Horizontal Layout */}
+                {/* Block and Trust Buttons - Replaced with clickable text */}
                 {!isOwnProfile && (
                   <div className="flex gap-3 mb-4">
-                    <Button 
-                      variant="destructive"
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold"
+                    <span 
+                      className="text-red-600 font-semibold cursor-pointer flex-1 text-center py-2 rounded-md hover:bg-red-600/10"
                       onClick={() => {
                         toast({
                           title: "Block User",
@@ -606,9 +605,9 @@ export function Profile() {
                       }}
                     >
                       Block
-                    </Button>
-                    <Button 
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold"
+                    </span>
+                    <span 
+                      className="text-green-600 font-semibold cursor-pointer flex-1 text-center py-2 rounded-md hover:bg-green-600/10"
                       onClick={() => {
                         toast({
                           title: "Trust User",
@@ -617,7 +616,7 @@ export function Profile() {
                       }}
                     >
                       Trust
-                    </Button>
+                    </span>
                   </div>
                 )}
 
@@ -631,7 +630,7 @@ export function Profile() {
                   </Button>
                 )}
 
-                {/* Bio Section */}
+                {/* Bio Section - Show for all profiles */}
                 {profileData?.bio && (
                   <div className="mb-4 pb-4 border-b border-border">
                     <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
@@ -711,26 +710,26 @@ export function Profile() {
               </div>
             </div>
 
-            <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
-              {profileData && profileData.total_trades >= 10 && (
-                <div className="flex items-center gap-2 mb-4">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  <span className="text-sm">🎖️</span>
-                  <span className="font-medium">Pexly Initiate</span>
-                </div>
-              )}
-              {profileData && profileData.total_trades >= 100 && (
-                <div className="flex items-center gap-2 mb-4">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  <span className="text-sm">💎</span>
-                  <span className="font-medium">Top 1% Club</span>
-                </div>
-              )}
-              {!profileData || (profileData.total_trades < 10 && profileData.total_trades < 100) && (
-                <p className="text-sm text-muted-foreground">No medals earned yet</p>
-              )}
-            </div>
+            {/* Medals Section (Mobile) - Removed "No medals earned yet" */}
+            {(profileData && (profileData.total_trades >= 10 || profileData.total_trades >= 100)) && (
+              <div className="mb-6">
+                <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
+                {profileData.total_trades >= 10 && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    <span className="text-sm">🎖️</span>
+                    <span className="font-medium">Pexly Initiate</span>
+                  </div>
+                )}
+                {profileData.total_trades >= 100 && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    <span className="text-sm">💎</span>
+                    <span className="font-medium">Top 1% Club</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mb-6">
               <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
@@ -750,32 +749,33 @@ export function Profile() {
               </div>
             </div>
 
+            {/* Trade Volumes Section (Mobile) - Made bigger and better fitted */}
             <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
-                  <span>&lt; 10 BTC</span>
+              <p className="text-muted-foreground uppercase text-xs mb-4">Trade Volumes</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 10 BTC</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
-                  <span>&lt; 10K SOL</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 10K SOL</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
-                  <span>&lt; 10K USDT</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 10K USDT</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
-                  <span>&lt; 10K USDC</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 10K USDC</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
-                  <span>&lt; 1K BNB</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 1K BNB</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
-                  <span>&lt; 100K TRX</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 100K TRX</span>
                 </div>
               </div>
             </div>
@@ -853,26 +853,26 @@ export function Profile() {
               </div>
             </div>
 
-            <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
-              {profileData && profileData.total_trades >= 10 && (
-                <div className="flex items-center gap-2 mb-4">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  <span className="text-sm">🎖️</span>
-                  <span className="font-medium">Pexly Initiate</span>
-                </div>
-              )}
-              {profileData && profileData.total_trades >= 100 && (
-                <div className="flex items-center gap-2 mb-4">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  <span className="text-sm">💎</span>
-                  <span className="font-medium">Top 1% Club</span>
-                </div>
-              )}
-              {!profileData || (profileData.total_trades < 10 && profileData.total_trades < 100) && (
-                <p className="text-sm text-muted-foreground">No medals earned yet</p>
-              )}
-            </div>
+            {/* Medals Section (Desktop) - Removed "No medals earned yet" */}
+            {(profileData && (profileData.total_trades >= 10 || profileData.total_trades >= 100)) && (
+              <div className="mb-6">
+                <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
+                {profileData.total_trades >= 10 && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    <span className="text-sm">🎖️</span>
+                    <span className="font-medium">Pexly Initiate</span>
+                  </div>
+                )}
+                {profileData.total_trades >= 100 && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    <span className="text-sm">💎</span>
+                    <span className="font-medium">Top 1% Club</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mb-6">
               <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
@@ -892,32 +892,33 @@ export function Profile() {
               </div>
             </div>
 
+            {/* Trade Volumes Section (Desktop) - Made bigger and better fitted */}
             <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
-                  <span>&lt; 10 BTC</span>
+              <p className="text-muted-foreground uppercase text-xs mb-4">Trade Volumes</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 10 BTC</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
-                  <span>&lt; 10K SOL</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 10K SOL</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
-                  <span>&lt; 10K USDT</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 10K USDT</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
-                  <span>&lt; 10K USDC</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 10K USDC</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
-                  <span>&lt; 1K BNB</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 1K BNB</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
-                  <span>&lt; 100K TRX</span>
+                <div className="flex items-center gap-2 bg-elevate-1 rounded-lg p-3">
+                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-6 w-6" />
+                  <span className="font-medium">&lt; 100K TRX</span>
                 </div>
               </div>
             </div>
