@@ -603,13 +603,13 @@ export function CreateOffer() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-2xl">
+      <main className="flex-1 container mx-auto px-4 lg:px-8 py-6 max-w-2xl lg:max-w-4xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-4xl font-bold">{isEditMode ? "Edit offer" : "Create an offer"}</h1>
+          <h1 className="text-3xl lg:text-4xl font-bold">{isEditMode ? "Edit offer" : "Create an offer"}</h1>
           <Badge variant="outline">LITE</Badge>
         </div>
 
-        <p className="text-muted-foreground mb-8">
+        <p className="text-muted-foreground mb-8 text-base lg:text-lg">
           {isEditMode 
             ? "Update your offer details below." 
             : <>List your ad in our P2P marketplace. More settings in the{" "}
@@ -694,15 +694,15 @@ export function CreateOffer() {
           </Alert>
         )}
 
-        <div className="space-y-6">
+        <div className="space-y-6 lg:space-y-8">
           {/* Offer Type Selection */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Offer Type</Label>
-            <div className="grid grid-cols-2 gap-3">
+            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">Offer Type</Label>
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
               <Button
                 type="button"
                 variant={offerType === "buy" ? "default" : "outline"}
-                className="h-12"
+                className="h-12 lg:h-14 text-base lg:text-lg"
                 onClick={() => setOfferType("buy")}
               >
                 Buy
@@ -710,7 +710,7 @@ export function CreateOffer() {
               <Button
                 type="button"
                 variant={offerType === "sell" ? "default" : "outline"}
-                className="h-12"
+                className="h-12 lg:h-14 text-base lg:text-lg"
                 onClick={() => setOfferType("sell")}
               >
                 Sell
@@ -720,11 +720,11 @@ export function CreateOffer() {
 
           {/* Cryptocurrency Selection */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">
+            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">
               {offerType === "buy" ? "I want to buy" : "I have"}
             </Label>
             <Select value={crypto} onValueChange={setCrypto}>
-              <SelectTrigger className="h-12 bg-elevate-1">
+              <SelectTrigger className="h-12 lg:h-14 bg-elevate-1 text-base">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -752,10 +752,10 @@ export function CreateOffer() {
 
           {/* I want section */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">
+            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">
               {offerType === "buy" ? "I will pay with" : "I want"}
             </Label>
-            <div className="space-y-3">
+            <div className="space-y-3 lg:space-y-4">
               <Dialog open={openPaymentDialog} onOpenChange={setOpenPaymentDialog}>
                 <DialogTrigger asChild>
                   <div className="relative cursor-pointer">
