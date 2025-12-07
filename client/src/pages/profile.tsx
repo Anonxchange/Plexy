@@ -302,56 +302,83 @@ export function Profile() {
         setTimeout(() => reject(new Error('Request timeout')), 5000)
       );
 
+      // Step 1: Fetch feedback with a simple query (no foreign key relationships)
       const fetchPromise = supabase
         .from('trade_feedback')
-        .select(`
-          *,
-          from_user_profile:user_profiles!trade_feedback_from_user_id_fkey(
-            username,
-            country
-          ),
-          trade:p2p_trades!trade_feedback_trade_id_fkey(
-            offer_id,
-            seller_id,
-            buyer_id
-          )
-        `)
+        .select('*')
         .eq('to_user_id', viewingUserId)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      const { data: feedbackData, error: feedbackError } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
-      if (error) {
-        console.error('Error fetching feedbacks:', error);
+      if (feedbackError) {
+        console.error('Error fetching feedbacks:', feedbackError);
         setFeedbacks([]);
         return;
       }
 
-      // Map the data to include offer_id from the trade
-      const mappedFeedbacks = (data || []).map((feedback: any) => ({
+      if (!feedbackData || feedbackData.length === 0) {
+        setFeedbacks([]);
+        return;
+      }
+
+      // Step 2: Get unique user IDs from feedback to fetch their profiles
+      const fromUserIds = [...new Set(feedbackData.map((f: any) => f.from_user_id).filter(Boolean))];
+      const tradeIds = [...new Set(feedbackData.map((f: any) => f.trade_id).filter(Boolean))];
+
+      // Fetch user profiles for feedback senders
+      let userProfilesMap: Record<string, any> = {};
+      if (fromUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, username, country')
+          .in('id', fromUserIds);
+        
+        if (profiles) {
+          userProfilesMap = profiles.reduce((acc: Record<string, any>, p: any) => {
+            acc[p.id] = p;
+            return acc;
+          }, {});
+        }
+      }
+
+      // Fetch trades to get buyer/seller info for filtering
+      let tradesMap: Record<string, any> = {};
+      if (tradeIds.length > 0) {
+        const { data: trades } = await supabase
+          .from('p2p_trades')
+          .select('id, offer_id, seller_id, buyer_id')
+          .in('id', tradeIds);
+        
+        if (trades) {
+          tradesMap = trades.reduce((acc: Record<string, any>, t: any) => {
+            acc[t.id] = t;
+            return acc;
+          }, {});
+        }
+      }
+
+      // Step 3: Map the data to include user profile and trade info
+      const mappedFeedbacks = feedbackData.map((feedback: any) => ({
         ...feedback,
-        offer_id: feedback.trade?.offer_id || null,
+        from_user_profile: userProfilesMap[feedback.from_user_id] || null,
+        trade: tradesMap[feedback.trade_id] || null,
+        offer_id: tradesMap[feedback.trade_id]?.offer_id || null,
       }));
 
       // Filter based on feedbackFilter (buyers or sellers)
       let filteredFeedbacks = mappedFeedbacks;
       if (feedbackFilter === 'buyers') {
         // Show feedback FROM buyers (where the profile owner was the seller)
-        // If trade relationship is missing or incomplete, include the feedback anyway
         filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          // Include if no trade relationship or trade data is incomplete
           if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
-          // Include if profile owner was the seller and feedback giver was the buyer
           return f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id;
         });
       } else if (feedbackFilter === 'sellers') {
         // Show feedback FROM sellers (where the profile owner was the buyer)
-        // If trade relationship is missing or incomplete, include the feedback anyway
         filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          // Include if no trade relationship or trade data is incomplete
           if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
-          // Include if profile owner was the buyer and feedback giver was the seller
           return f.trade.buyer_id === viewingUserId && f.trade.seller_id === f.from_user_id;
         });
       }
