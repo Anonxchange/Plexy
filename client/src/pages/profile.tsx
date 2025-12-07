@@ -620,10 +620,10 @@ export function Profile() {
           </h1>
         </div>
 
-        {/* Desktop: Two column layout, Mobile: Single column */}
-        <div className="lg:grid lg:grid-cols-3 lg:gap-6">
-          {/* Left Column - Main Content (2/3 width on desktop) */}
-          <div className="lg:col-span-2 space-y-6">
+        {/* Desktop: 3-column layout (Profile + Stats), Mobile: stacked */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Column 1: Profile Card + Share/Send Button */}
+          <div className="lg:col-span-1 space-y-6">
             <Card className="bg-card border-border overflow-hidden">
           <CardContent className="p-0">
             <div className="bg-elevate-1 p-4 sm:p-6">
@@ -811,294 +811,147 @@ export function Profile() {
             Share Profile
           </Button>
         )}
+          </div>
 
-        {/* Mobile: Show sidebar stats before Active Offers */}
-        {isMobile && (
-          <>
-        <Card className="bg-card border-border">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-elevate-1 rounded-lg p-4 text-center">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
-                <p className="text-2xl sm:text-3xl font-bold">{profileData?.total_trades || 0}</p>
+          {/* Column 2: Trades, Verifications, Trade Volumes, Trusted By */}
+          <Card className="lg:col-span-1 bg-card border-border">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-elevate-1 rounded-lg p-4 text-center">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{profileData?.total_trades || 0}</p>
+                </div>
+                <div className="bg-elevate-1 rounded-lg p-4 text-center">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Trade Partners</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{profileData?.trade_partners || 0}</p>
+                </div>
               </div>
-              <div className="bg-elevate-1 rounded-lg p-4 text-center">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trade Partners</p>
-                <p className="text-2xl sm:text-3xl font-bold">{profileData?.trade_partners || 0}</p>
-              </div>
-            </div>
 
-            {/* Medals Section (Mobile) - Removed "No medals earned yet" */}
-            {(profileData && (profileData.total_trades >= 10 || profileData.total_trades >= 100)) && (
+              {(profileData && (profileData.total_trades >= 10 || profileData.total_trades >= 100)) && (
+                <div className="mb-6">
+                  <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
+                  {profileData.total_trades >= 10 && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                      <span className="text-sm">🎖️</span>
+                      <span className="font-medium">Pexly Initiate</span>
+                    </div>
+                  )}
+                  {profileData.total_trades >= 100 && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                      <span className="text-sm">💎</span>
+                      <span className="font-medium">Top 1% Club</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mb-6">
-                <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
-                {profileData.total_trades >= 10 && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    <span className="text-sm">🎖️</span>
-                    <span className="font-medium">Pexly Initiate</span>
-                  </div>
-                )}
-                {profileData.total_trades >= 100 && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    <span className="text-sm">💎</span>
-                    <span className="font-medium">Top 1% Club</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
-              <div className="space-y-2">
-                {profileData?.is_verified && (
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="font-medium">ID verified</span>
-                  </div>
-                )}
-                {profileData?.phone_verified && (
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="font-medium">Phone verified</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Trade Volumes Section (Mobile) */}
-            <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 10 BTC</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 10K SOL</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 10K USDT</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 10K USDC</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 1K BNB</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 100K TRX</span>
+                <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
+                <div className="space-y-2">
+                  {profileData?.is_verified && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                      <span className="font-medium">ID verified</span>
+                    </div>
+                  )}
+                  {profileData?.phone_verified && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                      <span className="font-medium">Phone verified</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
-            <div>
-              <p className="text-muted-foreground uppercase text-xs mb-2">Trusted By</p>
-              <div className="flex items-center gap-2 text-primary">
-                <Users className="h-5 w-5" />
-                <span className="font-bold text-lg">6 USERS</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="p-6">
-            <div className="space-y-4 mb-4">
-              <div>
-                <p className="text-muted-foreground uppercase text-xs mb-2">Blocked By</p>
-                <div className="flex items-center gap-2 text-primary">
-                  <Users className="h-5 w-5" />
-                  <span className="font-bold">5 USERS</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-muted-foreground uppercase text-xs mb-2">Has Blocked</p>
-                <div className="flex items-center gap-2 text-primary">
-                  <Users className="h-5 w-5" />
-                  <span className="font-bold">0 USERS</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-muted text-foreground text-center py-3 rounded mb-4">
-              For 30 days range
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="text-center sm:text-left">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Success</p>
-                <p className="text-xl">—</p>
-              </div>
-              <div className="text-center sm:text-left">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Payment</p>
-                <p className="text-xl">—</p>
-              </div>
-              <div className="col-span-1 sm:col-span-2 text-center sm:text-left">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Release</p>
-                <p className="text-xl">—</p>
-              </div>
-              <div className="col-span-1 sm:col-span-2 text-center sm:text-left">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Volume</p>
-                <p className="text-xl">&lt; 100USD</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-          </>
-        )}
-      </div>
-
-      {/* Right Column - Sidebar (1/3 width on desktop) */}
-      {!isMobile && (
-      <div className="lg:col-span-1 space-y-6">
-        <Card className="bg-card border-border">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-elevate-1 rounded-lg p-4 text-center">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
-                <p className="text-2xl sm:text-3xl font-bold">{profileData?.total_trades || 0}</p>
-              </div>
-              <div className="bg-elevate-1 rounded-lg p-4 text-center">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trade Partners</p>
-                <p className="text-2xl sm:text-3xl font-bold">{profileData?.trade_partners || 0}</p>
-              </div>
-            </div>
-
-            {/* Medals Section (Desktop) - Removed "No medals earned yet" */}
-            {(profileData && (profileData.total_trades >= 10 || profileData.total_trades >= 100)) && (
               <div className="mb-6">
-                <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
-                {profileData.total_trades >= 10 && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    <span className="text-sm">🎖️</span>
-                    <span className="font-medium">Pexly Initiate</span>
-                  </div>
-                )}
-                {profileData.total_trades >= 100 && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    <span className="text-sm">💎</span>
-                    <span className="font-medium">Top 1% Club</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
-              <div className="space-y-2">
-                {profileData?.is_verified && (
+                <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="font-medium">ID verified</span>
+                    <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
+                    <span className="text-sm">&lt; 10 BTC</span>
                   </div>
-                )}
-                {profileData?.phone_verified && (
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="font-medium">Phone verified</span>
+                    <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
+                    <span className="text-sm">&lt; 10K SOL</span>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Trade Volumes Section (Desktop) */}
-            <div className="mb-6">
-              <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 10 BTC</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 10K SOL</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 10K USDT</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 10K USDC</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 1K BNB</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
-                  <span className="text-sm">&lt; 100K TRX</span>
+                  <div className="flex items-center gap-2">
+                    <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
+                    <span className="text-sm">&lt; 10K USDT</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
+                    <span className="text-sm">&lt; 10K USDC</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
+                    <span className="text-sm">&lt; 1K BNB</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
+                    <span className="text-sm">&lt; 100K TRX</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div>
-              <p className="text-muted-foreground uppercase text-xs mb-2">Trusted By</p>
-              <div className="flex items-center gap-2 text-primary">
-                <Users className="h-5 w-5" />
-                <span className="font-bold text-lg">6 USERS</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-6 bg-card border-border">
-          <CardContent className="p-6">
-            <div className="space-y-4 mb-4">
               <div>
-                <p className="text-muted-foreground uppercase text-xs mb-2">Blocked By</p>
+                <p className="text-muted-foreground uppercase text-xs mb-2">Trusted By</p>
                 <div className="flex items-center gap-2 text-primary">
                   <Users className="h-5 w-5" />
-                  <span className="font-bold">5 USERS</span>
+                  <span className="font-bold text-lg">6 USERS</span>
                 </div>
               </div>
-              <div>
-                <p className="text-muted-foreground uppercase text-xs mb-2">Has Blocked</p>
-                <div className="flex items-center gap-2 text-primary">
-                  <Users className="h-5 w-5" />
-                  <span className="font-bold">0 USERS</span>
+            </CardContent>
+          </Card>
+
+          {/* Card 3: Block Stats & 30 Day Stats */}
+          <Card className="bg-card border-border">
+            <CardContent className="p-6">
+              <div className="space-y-4 mb-4">
+                <div>
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Blocked By</p>
+                  <div className="flex items-center gap-2 text-primary">
+                    <Users className="h-5 w-5" />
+                    <span className="font-bold">5 USERS</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Has Blocked</p>
+                  <div className="flex items-center gap-2 text-primary">
+                    <Users className="h-5 w-5" />
+                    <span className="font-bold">0 USERS</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-muted text-foreground text-center py-3 rounded mb-4">
-              For 30 days range
-            </div>
+              <div className="bg-muted text-foreground text-center py-3 rounded mb-4">
+                For 30 days range
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="text-center sm:text-left">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Success</p>
-                <p className="text-xl">—</p>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="text-center">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Trades Success</p>
+                  <p className="text-xl">—</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Payment</p>
+                  <p className="text-xl">—</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Release</p>
+                  <p className="text-xl">—</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-muted-foreground uppercase text-xs mb-2">Trades Volume</p>
+                  <p className="text-xl">&lt; 100USD</p>
+                </div>
               </div>
-              <div className="text-center sm:text-left">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Payment</p>
-                <p className="text-xl">—</p>
-              </div>
-              <div className="col-span-1 sm:col-span-2 text-center sm:text-left">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Release</p>
-                <p className="text-xl">—</p>
-              </div>
-              <div className="col-span-1 sm:col-span-2 text-center sm:text-left">
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trades Volume</p>
-                <p className="text-xl">&lt; 100USD</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      )}
-    </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Full-width sections below the grid - Active Offers and Feedback */}
+        {/* Full-width sections below the grid - Active Offers and Feedback */}
       {/* Active Offers Section */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
