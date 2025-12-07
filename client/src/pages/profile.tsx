@@ -324,8 +324,8 @@ export function Profile() {
       }
 
       // Step 2: Get unique user IDs from feedback to fetch their profiles
-      const fromUserIds = [...new Set(feedbackData.map((f: any) => f.from_user_id).filter(Boolean))];
-      const tradeIds = [...new Set(feedbackData.map((f: any) => f.trade_id).filter(Boolean))];
+      const fromUserIds = Array.from(new Set(feedbackData.map((f: any) => f.from_user_id).filter(Boolean))) as string[];
+      const tradeIds = Array.from(new Set(feedbackData.map((f: any) => f.trade_id).filter(Boolean))) as string[];
 
       // Fetch user profiles for feedback senders
       let userProfilesMap: Record<string, any> = {};
@@ -1132,6 +1132,107 @@ export function Profile() {
           </div>
         )}
       </div>
+
+      {/* Trade History Section - Only shown when viewing another user's profile */}
+      {!isOwnProfile && user?.id && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold">Trade History with {profileData?.username || 'User'}</h3>
+            <Select value={historyFilter} onValueChange={setHistoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Trades</SelectItem>
+                <SelectItem value="bought">You Bought</SelectItem>
+                <SelectItem value="sold">You Sold</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {tradeHistory.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No trade history with this user</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {tradeHistory.map((trade) => {
+                const isBuyer = trade.buyer_id === user?.id;
+                const tradeDate = new Date(trade.created_at);
+                
+                return (
+                  <Card key={trade.id} className="bg-card border-border shadow-sm">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            isBuyer ? 'bg-green-500/20 text-green-500' : 'bg-blue-500/20 text-blue-500'
+                          }`}>
+                            {isBuyer ? (
+                              <ThumbsUp className="h-5 w-5" />
+                            ) : (
+                              <ThumbsDown className="h-5 w-5" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-lg">
+                              {isBuyer ? 'You Bought' : 'You Sold'} {parseFloat(trade.crypto_amount).toFixed(8)} {trade.crypto_symbol}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              for {parseFloat(trade.fiat_amount).toLocaleString()} {trade.fiat_currency}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <Badge 
+                            variant={trade.status === 'completed' ? 'default' : 'secondary'}
+                            className={trade.status === 'completed' ? 'bg-green-500/20 text-green-500 border-green-500/30' : ''}
+                          >
+                            {trade.status.charAt(0).toUpperCase() + trade.status.slice(1)}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {tradeDate.toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {trade.payment_method && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-sm text-muted-foreground">Payment Method:</span>
+                          <Badge variant="outline">{trade.payment_method}</Badge>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Copy className="h-4 w-4" />
+                          <span className="font-mono text-xs">{trade.id.substring(0, 8)}...</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(trade.id);
+                            toast({
+                              title: "Copied!",
+                              description: "Trade ID copied to clipboard"
+                            });
+                          }}
+                        >
+                          Copy Trade ID
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
       </main>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
