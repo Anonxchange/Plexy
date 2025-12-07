@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Shield, 
   CheckCircle2, 
@@ -18,7 +20,17 @@ import {
   TrendingUp,
   Clock,
   DollarSign,
-  Lock
+  Lock,
+  Package,
+  History,
+  Users,
+  Star,
+  ThumbsUp,
+  BarChart3,
+  QrCode,
+  Medal,
+  Settings,
+  Code
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -36,6 +48,7 @@ export default function MerchantApplicationPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const isMobile = useIsMobile();
   const [selectedTab, setSelectedTab] = useState<"general" | "verified" | "block">("verified");
   const [verifiedDepositAmount, setVerifiedDepositAmount] = useState("200");
   const [blockDepositAmount, setBlockDepositAmount] = useState("500");
@@ -342,12 +355,127 @@ export default function MerchantApplicationPage() {
 
   return (
     <>
-      <div className="container max-w-4xl mx-auto p-6 pb-20">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-1">Advertiser</h1>
         </div>
 
-        <div className="space-y-4">
+        {/* Desktop: Sidebar + Content layout, Mobile: Single column */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6">
+          {/* Desktop Left Sidebar - Navigation Menu (hidden on mobile) */}
+          {!isMobile && (
+            <div className="lg:col-span-3">
+              <Card className="bg-card border-border sticky top-6">
+                <CardContent className="p-4">
+                  <h2 className="text-lg font-bold mb-4">Menu</h2>
+                  <nav className="space-y-1">
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/my-offers')}
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      My Offers
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/trade-history')}
+                    >
+                      <History className="h-4 w-4 mr-2" />
+                      Trade History
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/p2p')}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Recent Trade Partners
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/p2p')}
+                    >
+                      <Star className="h-4 w-4 mr-2" />
+                      Favorite Offers
+                    </Button>
+                    <Separator className="my-2" />
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/p2p')}
+                    >
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      Trusted Users
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/p2p')}
+                    >
+                      <Lock className="h-4 w-4 mr-2" />
+                      Blocked Users
+                    </Button>
+                    <Separator className="my-2" />
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/trade-history')}
+                    >
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Trade Statistics
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start bg-primary/10"
+                      onClick={() => setLocation('/merchant-application')}
+                    >
+                      <Award className="h-4 w-4 mr-2" />
+                      Become a Merchant
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/profile')}
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Share Profile
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/medals')}
+                    >
+                      <Medal className="h-4 w-4 mr-2" />
+                      Medals
+                    </Button>
+                    <Separator className="my-2" />
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setLocation('/account-settings')}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Account Settings
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => window.open('https://docs.replit.com', '_blank')}
+                    >
+                      <Code className="h-4 w-4 mr-2" />
+                      Developer
+                    </Button>
+                  </nav>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Main Content Area (9/12 width on desktop, full on mobile) */}
+          <div className="lg:col-span-9 space-y-4">
           <Card className="bg-gradient-to-br from-card/80 to-card/50 border-border/50 backdrop-blur">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -797,6 +925,7 @@ export default function MerchantApplicationPage() {
               </div>
             </TabsContent>
           </Tabs>
+          </div>
         </div>
       </div>
       <PexlyFooter />
