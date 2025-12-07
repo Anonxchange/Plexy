@@ -29,10 +29,10 @@ import { useLocation } from "wouter";
 
 export default function MedalsPage() {
   const { user } = useAuth();
-  const [userStats, setUserStats] = useState<UserMedalStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
   const [, setLocation] = useLocation();
+  const [userStats, setUserStats] = useState<UserMedalStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
