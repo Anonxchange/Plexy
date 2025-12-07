@@ -434,94 +434,92 @@ export function MyOffers() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {offers.map((offer) => (
                 <Card key={offer.id} className="bg-card border-border hover:bg-elevate-1 transition-colors" data-offer-id={offer.id}>
                   <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <Badge
-                              variant={offer.offer_type === "buy" ? "default" : "secondary"}
-                              className={offer.offer_type === "buy" ? "bg-primary" : ""}
-                            >
-                              {offer.offer_type.toUpperCase()}
-                            </Badge>
-                            <h3 className="text-xl font-bold">
-                              {offer.available_amount} {offer.crypto_symbol}
-                            </h3>
-                            <Badge
-                              variant="outline"
-                              className={
-                                offer.is_active
-                                  ? "border-primary text-primary"
-                                  : "border-muted-foreground text-muted-foreground"
-                              }
-                            >
-                              {offer.is_active ? "ACTIVE" : "PAUSED"}
-                            </Badge>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-primary hover:text-primary/80"
-                            onClick={() => shareOffer(offer)}
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge
+                            variant={offer.offer_type === "buy" ? "default" : "secondary"}
+                            className={offer.offer_type === "buy" ? "bg-primary" : ""}
                           >
-                            <Share2 className="h-5 w-5" />
-                          </Button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">Payment Method</p>
-                            <p className="font-medium">
-                              {Array.isArray(offer.payment_methods)
-                                ? offer.payment_methods.join(", ")
-                                : offer.payment_methods}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Currency</p>
-                            <p className="font-medium">{offer.fiat_currency}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Price</p>
-                            <p className="font-medium">
-                              {offer.fixed_price?.toLocaleString()} {offer.fiat_currency}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Limits</p>
-                            <p className="font-medium">
-                              {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Link href={`/edit-offer/${offer.id}`}>
-                            <Button variant="outline" size="sm">
-                              Edit
-                            </Button>
-                          </Link>
-                          <Button
+                            {offer.offer_type.toUpperCase()}
+                          </Badge>
+                          <h3 className="text-lg font-bold">
+                            {offer.available_amount} {offer.crypto_symbol}
+                          </h3>
+                          <Badge
                             variant="outline"
-                            size="sm"
-                            className={offer.is_active ? "text-destructive" : "text-primary"}
-                            onClick={() => toggleOfferStatus(offer.id, offer.is_active)}
+                            className={
+                              offer.is_active
+                                ? "border-primary text-primary"
+                                : "border-muted-foreground text-muted-foreground"
+                            }
                           >
-                            {offer.is_active ? "Pause" : "Activate"}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => deleteOffer(offer.id)}
-                          >
-                            Delete
-                          </Button>
+                            {offer.is_active ? "ACTIVE" : "PAUSED"}
+                          </Badge>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-primary hover:text-primary/80 flex-shrink-0"
+                          onClick={() => shareOffer(offer)}
+                        >
+                          <Share2 className="h-5 w-5" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Payment Method</p>
+                          <p className="font-medium truncate">
+                            {Array.isArray(offer.payment_methods)
+                              ? offer.payment_methods.join(", ")
+                              : offer.payment_methods}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Currency</p>
+                          <p className="font-medium">{offer.fiat_currency}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Price</p>
+                          <p className="font-medium">
+                            {offer.fixed_price?.toLocaleString()} {offer.fiat_currency}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Limits</p>
+                          <p className="font-medium">
+                            {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 flex-wrap">
+                        <Link href={`/edit-offer/${offer.id}`}>
+                          <Button variant="outline" size="sm">
+                            Edit
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={offer.is_active ? "text-destructive" : "text-primary"}
+                          onClick={() => toggleOfferStatus(offer.id, offer.is_active)}
+                        >
+                          {offer.is_active ? "Pause" : "Activate"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => deleteOffer(offer.id)}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
