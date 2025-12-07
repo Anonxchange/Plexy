@@ -17,6 +17,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +38,19 @@ import {
   Eye,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Package,
+  History,
+  Users,
+  Star,
+  ThumbsUp,
+  Lock,
+  BarChart3,
+  Award,
+  QrCode,
+  Medal,
+  Settings,
+  Code
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -68,6 +82,7 @@ export function TradeHistory() {
   const { user } = useAuth();
   const supabase = createClient();
   const isMobile = useIsMobile();
+  const [, navigate] = useLocation();
   const [selectedAccount, setSelectedAccount] = useState("all");
   const [expandedTrade, setExpandedTrade] = useState<number | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -293,10 +308,372 @@ export function TradeHistory() {
           </Collapsible>
         </div>
 
-        {/* Desktop: Two column layout, Mobile: Single column */}
-        <div className="lg:grid lg:grid-cols-3 lg:gap-6">
-          {/* Left Column - Main Trade List (2/3 width on desktop) */}
-          <div className="lg:col-span-2 space-y-6">
+        {/* Desktop: Sidebar + Content layout, Mobile: Single column */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6">
+          {/* Desktop Left Sidebar - Navigation Menu (hidden on mobile) */}
+          <div className="hidden lg:block lg:col-span-3">
+            <Card className="bg-card border-border sticky top-6">
+              <CardContent className="p-4">
+                <h2 className="text-lg font-bold mb-4">Menu</h2>
+                <nav className="space-y-1">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/my-offers')}
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    My Offers
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start bg-primary/10"
+                    onClick={() => navigate('/trade-history')}
+                  >
+                    <History className="h-4 w-4 mr-2" />
+                    Trade History
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/p2p')}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Recent Trade Partners
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/p2p')}
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    Favorite Offers
+                  </Button>
+                  <Separator className="my-2" />
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/p2p')}
+                  >
+                    <ThumbsUp className="h-4 w-4 mr-2" />
+                    Trusted Users
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/p2p')}
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    Blocked Users
+                  </Button>
+                  <Separator className="my-2" />
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/trade-history')}
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Trade Statistics
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/merchant-application')}
+                  >
+                    <Award className="h-4 w-4 mr-2" />
+                    Become a Merchant
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/profile')}
+                  >
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Share Profile
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/medals')}
+                  >
+                    <Medal className="h-4 w-4 mr-2" />
+                    Medals
+                  </Button>
+                  <Separator className="my-2" />
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => navigate('/account-settings')}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Account Settings
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start"
+                    onClick={() => window.open('https://docs.replit.com', '_blank')}
+                  >
+                    <Code className="h-4 w-4 mr-2" />
+                    Developer
+                  </Button>
+                </nav>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content Area (9/12 width on desktop, full on mobile) */}
+          <div className="lg:col-span-9 space-y-6">
+            {/* Date Range Info */}
+            <p className="text-muted-foreground">
+              You are viewing all trades from March 01, 2025 to March 31, 2025
+            </p>
+
+            {/* Desktop: Statistics (shown before filters) */}
+            {!isMobile && (
+              <div className="space-y-6">
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-between h-14"
+                      >
+                        <span>Filters</span>
+                        <SlidersHorizontal className="h-5 w-5" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Filters</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-6 pt-4">
+                        {/* Asset Selection */}
+                        <div className="space-y-3">
+                          <Label className="text-base font-semibold">Asset</Label>
+                          <div className="grid grid-cols-4 gap-2">
+                            <Button variant="outline" className="h-10">All</Button>
+                            <Button variant="outline" className="h-10">BTC</Button>
+                            <Button variant="outline" className="h-10">USDT</Button>
+                            <Button variant="outline" className="h-10">ETH</Button>
+                            <Button variant="outline" className="h-10">USDC</Button>
+                            <Button variant="outline" className="h-10">SOL</Button>
+                            <Button variant="outline" className="h-10">BNB</Button>
+                            <Button variant="outline" className="h-10">TRX</Button>
+                          </div>
+                        </div>
+
+                        {/* Status Selection */}
+                        <div className="space-y-3">
+                          <Label className="text-base font-semibold">Status</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" className="h-10">All</Button>
+                            <Button variant="outline" className="h-10">In progress</Button>
+                            <Button variant="outline" className="h-10">Completed</Button>
+                            <Button variant="outline" className="h-10">Failed</Button>
+                          </div>
+                        </div>
+
+                        {/* Date Selection */}
+                        <div className="space-y-3">
+                          <Label className="text-base font-semibold">Date</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" className="h-10">Past 7 days</Button>
+                            <Button variant="outline" className="h-10">Past 30 days</Button>
+                            <Button variant="outline" className="h-10 col-span-2">From the beginning</Button>
+                            <Button variant="outline" className="h-10 col-span-2">Custom dates</Button>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                          <Button 
+                            variant="outline" 
+                            className="h-12"
+                            onClick={() => setFiltersOpen(false)}
+                          >
+                            Clear all
+                          </Button>
+                          <Button 
+                            className="h-12"
+                            onClick={() => setFiltersOpen(false)}
+                          >
+                            Apply
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-between h-14"
+                      >
+                        <span>Export Trades</span>
+                        <Download className="h-5 w-5" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Export Trade History</DialogTitle>
+                        <DialogDescription>
+                          Download your trade history in your preferred format
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 pt-4">
+                        <Button variant="outline" className="w-full justify-start">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export as CSV
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export as PDF
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export as Excel
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {/* Trade Statistics */}
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="p-4 shadow-lg border">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-500">{activeCount}</div>
+                      <div className="text-sm text-muted-foreground">Active Trades</div>
+                    </div>
+                  </Card>
+                  <Card className="p-4 shadow-lg border">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-500">{completedCount}</div>
+                      <div className="text-sm text-muted-foreground">Completed</div>
+                    </div>
+                  </Card>
+                  <Card className="p-4 shadow-lg border">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-500">{canceledCount}</div>
+                      <div className="text-sm text-muted-foreground">Canceled</div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Completion Stats with Crypto Volumes */}
+                <Collapsible open={completedTradesOpen} onOpenChange={setCompletedTradesOpen}>
+                  <Card className="shadow-lg border">
+                    <CollapsibleTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-between h-14 px-6"
+                      >
+                        <span className="font-semibold">
+                          Completed Trades: {completionRate}% (trades {completedCount} out of {totalCount})
+                        </span>
+                        <ChevronDown className={`h-5 w-5 transition-transform ${completedTradesOpen ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="pt-4 pb-6 space-y-3">
+                        {/* BTC */}
+                        <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                              <Bitcoin className="h-5 w-5 text-orange-500" />
+                            </div>
+                            <div>
+                              <div className="font-semibold">{tradeVolumes.BTC.toFixed(8)} BTC</div>
+                              <div className="text-xs text-muted-foreground">Bitcoin Trade Volume</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* USDT */}
+                        <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                              <span className="text-lg">₮</span>
+                            </div>
+                            <div>
+                              <div className="font-semibold">{tradeVolumes.USDT.toFixed(2)} USDT</div>
+                              <div className="text-xs text-muted-foreground">Tether Trade Volume</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ETH */}
+                        <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                              <span className="text-lg">◆</span>
+                            </div>
+                            <div>
+                              <div className="font-semibold">{tradeVolumes.ETH.toFixed(6)} ETH</div>
+                              <div className="text-xs text-muted-foreground">Ethereum Trade Volume</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* USDC */}
+                        <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center">
+                              <span className="text-lg">$</span>
+                            </div>
+                            <div>
+                              <div className="font-semibold">{tradeVolumes.USDC.toFixed(2)} USDC</div>
+                              <div className="text-xs text-muted-foreground">USD Coin Trade Volume</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* SOL */}
+                        <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
+                              <span className="text-lg">◎</span>
+                            </div>
+                            <div>
+                              <div className="font-semibold">{tradeVolumes.SOL.toFixed(4)} SOL</div>
+                              <div className="text-xs text-muted-foreground">Solana Trade Volume</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* XMR */}
+                        <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-orange-600/10 flex items-center justify-center">
+                              <span className="text-lg">Ɱ</span>
+                            </div>
+                            <div>
+                              <div className="font-semibold">{tradeVolumes.XMR.toFixed(6)} XMR</div>
+                              <div className="text-xs text-muted-foreground">Monero Trade Volume</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* TON */}
+                        <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-400/10 flex items-center justify-center">
+                              <span className="text-lg">💎</span>
+                            </div>
+                            <div>
+                              <div className="font-semibold">{tradeVolumes.TON.toFixed(4)} TON</div>
+                              <div className="text-xs text-muted-foreground">TON Trade Volume</div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
+              </div>
+            )}
+
             {/* Mobile: Filters and Stats (shown before trades) */}
             {isMobile && (
               <div className="space-y-6">
@@ -544,11 +921,6 @@ export function TradeHistory() {
               </div>
             )}
 
-            {/* Date Range Info */}
-            <p className="text-muted-foreground">
-              You are viewing all trades from March 01, 2025 to March 31, 2025
-            </p>
-
             {/* My Past Trades Section */}
             <Card className="shadow-lg border">
               <div className="flex items-center justify-between p-4">
@@ -682,333 +1054,6 @@ export function TradeHistory() {
               </Card>
             )}
           </div>
-
-          {/* Right Column - Sidebar (1/3 width on desktop, hidden on mobile) */}
-          {!isMobile && (
-          <div className="lg:col-span-1 space-y-6 lg:mt-0">
-            {/* Action Buttons */}
-            <div className="space-y-4">
-          <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="w-full justify-between h-14"
-              >
-                <span>Filters</span>
-                <SlidersHorizontal className="h-5 w-5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Filters</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-6 pt-4">
-                {/* Asset Selection */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Asset</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      All
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      BTC
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      USDT
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      ETH
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      USDC
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      SOL
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      BNB
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      TRX
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Status Selection */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Status</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      All
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      In progress
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      Completed
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      Failed
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Date Selection */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      Past 7 days
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10"
-                    >
-                      Past 30 days
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10 col-span-2"
-                    >
-                      From the beginning
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10 col-span-2"
-                    >
-                      Custom dates
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <Button 
-                    variant="outline" 
-                    className="h-12"
-                    onClick={() => setFiltersOpen(false)}
-                  >
-                    Clear all
-                  </Button>
-                  <Button 
-                    className="h-12"
-                    onClick={() => setFiltersOpen(false)}
-                  >
-                    Apply
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={exportOpen} onOpenChange={setExportOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="w-full justify-between h-14"
-              >
-                <span>Export Trades</span>
-                <Download className="h-5 w-5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Export Trade History</DialogTitle>
-                <DialogDescription>
-                  Download your trade history in your preferred format
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as CSV
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as PDF
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as Excel
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-            </div>
-
-            {/* Trade Statistics */}
-            <div className="grid grid-cols-3 lg:grid-cols-1 gap-4">
-          <Card className="p-4 shadow-lg border">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-500">{activeCount}</div>
-              <div className="text-sm text-muted-foreground">Active Trades</div>
-            </div>
-          </Card>
-          <Card className="p-4 shadow-lg border">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-500">{completedCount}</div>
-              <div className="text-sm text-muted-foreground">Completed</div>
-            </div>
-          </Card>
-          <Card className="p-4 shadow-lg border">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-500">{canceledCount}</div>
-              <div className="text-sm text-muted-foreground">Canceled</div>
-            </div>
-          </Card>
-            </div>
-
-            {/* Completion Stats with Crypto Volumes */}
-            <Collapsible open={completedTradesOpen} onOpenChange={setCompletedTradesOpen}>
-          <Card className="shadow-lg border">
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant="ghost" 
-                className="w-full justify-between h-14 px-6"
-              >
-                <span className="font-semibold">
-                  Completed Trades: {completionRate}% (trades {completedCount} out of {totalCount})
-                </span>
-                <ChevronDown className={`h-5 w-5 transition-transform ${completedTradesOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-4 pb-6 space-y-3">
-                {/* BTC */}
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                      <Bitcoin className="h-5 w-5 text-orange-500" />
-                    </div>
-                    <div>
-                      <div className="font-semibold">{tradeVolumes.BTC.toFixed(8)} BTC</div>
-                      <div className="text-xs text-muted-foreground">Bitcoin Trade Volume</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* USDT */}
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                      <span className="text-lg">₮</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">{tradeVolumes.USDT.toFixed(2)} USDT</div>
-                      <div className="text-xs text-muted-foreground">Tether Trade Volume</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ETH */}
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                      <span className="text-lg">◆</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">{tradeVolumes.ETH.toFixed(6)} ETH</div>
-                      <div className="text-xs text-muted-foreground">Ethereum Trade Volume</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* USDC */}
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center">
-                      <span className="text-lg">$</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">{tradeVolumes.USDC.toFixed(2)} USDC</div>
-                      <div className="text-xs text-muted-foreground">USD Coin Trade Volume</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SOL */}
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                      <span className="text-lg">◎</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">{tradeVolumes.SOL.toFixed(4)} SOL</div>
-                      <div className="text-xs text-muted-foreground">Solana Trade Volume</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* XMR */}
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-600/10 flex items-center justify-center">
-                      <span className="text-lg">Ɱ</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">{tradeVolumes.XMR.toFixed(6)} XMR</div>
-                      <div className="text-xs text-muted-foreground">Monero Trade Volume</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* TON */}
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-400/10 flex items-center justify-center">
-                      <span className="text-lg">💎</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">{tradeVolumes.TON.toFixed(4)} TON</div>
-                      <div className="text-xs text-muted-foreground">TON Trade Volume</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-            </Collapsible>
-          </div>
-          )}
         </div>
       </div>
 
