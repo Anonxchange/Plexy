@@ -512,39 +512,6 @@ export function MyOffers() {
 
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card className="bg-card border-border">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Total Offers</span>
-                  <Package className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <p className="text-3xl font-bold">{offers.length}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Active Offers</span>
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-3xl font-bold text-primary">{activeOffers.length}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Paused Offers</span>
-                  <TrendingDown className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <p className="text-3xl font-bold">{pausedOffers.length}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <Card className="bg-card border-border">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-2">
