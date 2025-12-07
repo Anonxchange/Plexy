@@ -1098,8 +1098,7 @@ export function Profile() {
       )}
     </div>
 
-    {/* Full-width sections below the grid - Active Offers and Feedback */}
-    <>
+      {/* Full-width sections below the grid - Active Offers and Feedback */}
       {/* Active Offers Section */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
@@ -1139,13 +1138,11 @@ export function Profile() {
                 availableRange={{ min: offer.min_amount, max: offer.max_amount }}
                 limits={{ min: offer.min_amount, max: offer.max_amount }}
                 type={offer.type as "buy" | "sell"}
-            </Card>
-                  );
-                })}
-              </div>
-            )}
+              />
+            ))}
           </div>
         )}
+      </div>
 
         {/* Feedback Section */}
       <div className="mt-6">
@@ -1248,88 +1245,13 @@ export function Profile() {
                     }}
                   >
                     View offer details →
-   
-        {/* Your History with [username] Section - only shown when viewing another user's profile */}
-        {!isOwnProfile && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">Your History with {profileData?.username || 'User'}</h3>
-              <Select value={historyFilter} onValueChange={setHistoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by"/>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Trades</SelectItem>
-                  <SelectItem value="bought">You Bought</SelectItem>
-                  <SelectItem value="sold">You Sold</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {tradeHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No trade history with this user</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {tradeHistory.map((trade) => {
-                  const isBuyer = trade.buyer_id === user?.id;
-                  const tradeType = isBuyer ? 'Bought' : 'Sold';
-                  const statusColor = trade.status === 'completed' 
-                    ? 'bg-green-500/10 text-green-500 border-green-500/20' 
-                    : trade.status === 'cancelled' || trade.status === 'expired'
-                      ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                      : 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-
-                  return (
-                    <Card key={trade.id} className="bg-card border-border shadow-sm cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setLocation(`/trade/${trade.id}`)}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {trade.crypto_symbol && cryptoIconUrls[trade.crypto_symbol as keyof typeof cryptoIconUrls] && (
-                              <img 
-                                src={cryptoIconUrls[trade.crypto_symbol as keyof typeof cryptoIconUrls]} 
-                                alt={trade.crypto_symbol} 
-                                className="w-8 h-8" 
-                              />
-                            )}
-                            <div>
-                              <div className="font-semibold">
-                                {tradeType} {parseFloat(trade.crypto_amount).toFixed(6)} {trade.crypto_symbol}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                for {parseFloat(trade.fiat_amount).toLocaleString()} {trade.fiat_currency}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge className={`${statusColor} border capitalize`}>
-                              {trade.status}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(trade.created_at).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: '2-digit', 
-                                year: 'numeric' 
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-               </Button>
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
       </div>
-    </>
       </main>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
