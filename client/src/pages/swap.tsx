@@ -851,27 +851,7 @@ export function Swap() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Left Column - TradingView Chart */}
-            <Card className="bg-card/50 shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold">
-                    {fromCurrency}/{toCurrency} Chart
-                  </h3>
-                  <Badge variant="outline">Live</Badge>
-                </div>
-                <div className="h-[600px] bg-background rounded-lg overflow-hidden">
-                  <iframe
-                    key={`${fromCurrency}-${toCurrency}`}
-                    src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}&interval=60&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}`}
-                    className="w-full h-full"
-                    title="TradingView Chart"
-                  ></iframe>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Right Column - Swap Interface Card */}
+            {/* Left Column - Swap Interface Card */}
             <Card className="bg-card/50 shadow-lg">
             <CardContent className="p-8 space-y-6">
               {/* From Section */}
@@ -1026,6 +1006,26 @@ export function Swap() {
               </Button>
             </CardContent>
           </Card>
+
+            {/* Right Column - TradingView Chart */}
+            <Card className="bg-card/50 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold">
+                    {fromCurrency}/{toCurrency} Chart
+                  </h3>
+                  <Badge variant="outline">Live</Badge>
+                </div>
+                <div className="h-[600px] bg-background rounded-lg overflow-hidden">
+                  <iframe
+                    key={`${fromCurrency}-${toCurrency}`}
+                    src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}&interval=60&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}`}
+                    className="w-full h-full"
+                    title="TradingView Chart"
+                  ></iframe>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Recent Activity Card - Full Width Below */}
