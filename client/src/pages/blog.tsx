@@ -141,8 +141,8 @@ export default function Blog() {
   return (
     <div className="min-h-screen bg-background">
       {/* Featured Carousel */}
-      <section className="px-4 pt-6 pb-4">
-        <div className="max-w-lg mx-auto">
+      <section className="px-4 lg:px-8 pt-6 pb-4">
+        <div className="max-w-lg lg:max-w-7xl mx-auto">
           {featuredPosts.length > 0 ? (
           <div className="relative">
             {/* Carousel Container */}
@@ -227,9 +227,9 @@ export default function Blog() {
       </section>
 
       {/* Category Tabs */}
-      <section className="px-4 py-4 border-b">
-        <div className="max-w-lg mx-auto">
-          <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-hide">
+      <section className="px-4 lg:px-8 py-4 border-b">
+        <div className="max-w-lg lg:max-w-7xl mx-auto">
+          <div className="flex gap-6 lg:gap-8 overflow-x-auto pb-2 scrollbar-hide lg:justify-center">
             {categories.map((category) => (
               <button
                 key={category}
@@ -248,8 +248,8 @@ export default function Blog() {
       </section>
 
       {/* Search Bar */}
-      <section className="px-4 py-4">
-        <div className="max-w-lg mx-auto">
+      <section className="px-4 lg:px-8 py-4">
+        <div className="max-w-lg lg:max-w-3xl mx-auto">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
@@ -263,8 +263,9 @@ export default function Blog() {
       </section>
 
       {/* Blog Posts */}
-      <section className="px-4 pb-8">
-        <div className="max-w-lg mx-auto space-y-6">
+      <section className="px-4 lg:px-8 pb-8">
+        <div className="max-w-lg lg:max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {loading ? (
             <Card>
               <CardContent className="p-8 text-center">
@@ -348,6 +349,7 @@ export default function Blog() {
               </Card>
             ))
           )}
+          </div>
         </div>
       </section>
 
