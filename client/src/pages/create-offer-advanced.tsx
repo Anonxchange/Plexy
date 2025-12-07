@@ -441,7 +441,7 @@ export function CreateOfferAdvanced() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-2xl">
+      <main className="flex-1 container mx-auto px-4 lg:px-8 py-6 max-w-2xl lg:max-w-7xl">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button
@@ -451,12 +451,12 @@ export function CreateOfferAdvanced() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-4xl font-bold">Create Advanced Offer</h1>
+            <h1 className="text-3xl lg:text-4xl font-bold">Create Advanced Offer</h1>
           </div>
-          <Badge variant="default">ADVANCED</Badge>
+          <Badge variant="default" className="text-sm lg:text-base px-3 lg:px-4 py-1 lg:py-1.5">ADVANCED</Badge>
         </div>
 
-        <p className="text-muted-foreground mb-8">
+        <p className="text-muted-foreground mb-8 text-base lg:text-lg">
           Create a detailed P2P offer with advanced settings and custom requirements.
         </p>
 
@@ -530,15 +530,17 @@ export function CreateOfferAdvanced() {
           </Alert>
         )}
 
-        <div className="space-y-6">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-8 space-y-6 lg:space-y-0">
+          {/* Left Column */}
+          <div className="space-y-6 lg:space-y-8">
           {/* Offer Type Selection */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Offer Type</Label>
-            <div className="grid grid-cols-2 gap-3">
+            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">Offer Type</Label>
+            <div className="grid grid-cols-2 gap-3 lg:gap-4 max-w-md">
               <Button
                 type="button"
                 variant={offerType === "buy" ? "default" : "outline"}
-                className="h-12"
+                className="h-12 lg:h-14 text-base lg:text-lg"
                 onClick={() => setOfferType("buy")}
               >
                 Buy
@@ -546,7 +548,7 @@ export function CreateOfferAdvanced() {
               <Button
                 type="button"
                 variant={offerType === "sell" ? "default" : "outline"}
-                className="h-12"
+                className="h-12 lg:h-14 text-base lg:text-lg"
                 onClick={() => setOfferType("sell")}
               >
                 Sell
@@ -556,11 +558,11 @@ export function CreateOfferAdvanced() {
 
           {/* Cryptocurrency Selection */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">
+            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">
               {offerType === "buy" ? "I want to buy" : "I have"}
             </Label>
             <Select value={crypto} onValueChange={setCrypto}>
-              <SelectTrigger className="h-12 bg-elevate-1">
+              <SelectTrigger className="h-12 lg:h-14 bg-elevate-1 text-base max-w-md">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -667,209 +669,6 @@ export function CreateOfferAdvanced() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Price Type Selection */}
-          <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Price Type</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                variant={priceType === "fixed" ? "default" : "outline"}
-                className="h-12"
-                onClick={() => setPriceType("fixed")}
-              >
-                Fixed Price
-              </Button>
-              <Button
-                type="button"
-                variant={priceType === "floating" ? "default" : "outline"}
-                className="h-12"
-                onClick={() => setPriceType("floating")}
-              >
-                Floating Price
-              </Button>
-            </div>
-          </div>
-
-          {/* Price section */}
-          <div>
-            <Label className="text-sm text-muted-foreground mb-4 block">Set price</Label>
-            <Card className="bg-elevate-1 border-border">
-              <CardContent className="p-6">
-                {priceType === "fixed" ? (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm mb-2 block">Fixed Price per {crypto}</Label>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          value={fixedPrice}
-                          onChange={(e) => setFixedPrice(e.target.value)}
-                          placeholder={`Enter price in ${currency}`}
-                          className="bg-background pr-16"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                          {currency}
-                        </span>
-                      </div>
-                      {fixedPrice && marketRate > 0 && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          This is {((parseFloat(fixedPrice) / marketRate - 1) * 100).toFixed(2)}% {parseFloat(fixedPrice) >= marketRate ? "above" : "below"} market price
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm mb-2 block">Premium Percentage</Label>
-                      <div className="flex items-center gap-3">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="h-10 w-10"
-                          onClick={() => {
-                            const newValue = Math.max(marginLimits.min, priceOffset[0] - 0.5);
-                            setPriceOffset([newValue]);
-                            setPremiumInput(newValue.toFixed(1));
-                          }}
-                        >
-                          -
-                        </Button>
-                        <div className="relative flex-1">
-                          <Input
-                            type="number"
-                            value={premiumInput || priceOffset[0].toString()}
-                            onChange={(e) => handlePremiumInputChange(e.target.value)}
-                            className="bg-background text-center text-lg font-bold pr-8"
-                            step="0.1"
-                            min={marginLimits.min}
-                            max={marginLimits.max}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
-                            %
-                          </span>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="h-10 w-10"
-                          onClick={() => {
-                            const newValue = Math.min(marginLimits.max, priceOffset[0] + 0.5);
-                            setPriceOffset([newValue]);
-                            setPremiumInput(newValue.toFixed(1));
-                          }}
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </div>
-                    <Slider
-                      value={priceOffset}
-                      onValueChange={handlePremiumSliderChange}
-                      min={marginLimits.min}
-                      max={marginLimits.max}
-                      step={0.1}
-                      className="mt-2"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{marginLimits.min}%</span>
-                      <span>{marginLimits.max > 0 ? "0%" : ""}</span>
-                      <span>{marginLimits.max > 0 ? `+${marginLimits.max}%` : `${marginLimits.max}%`}</span>
-                    </div>
-                    
-                    <div className="bg-background/50 rounded-lg p-3 border border-border/50">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                        <span>Premium Indicator</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Price range: </span>
-                        <span className="font-mono">{priceRange.minPrice.toLocaleString()} - {priceRange.maxPrice.toLocaleString()} {currency}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="mt-6 pt-4 border-t border-border/50 space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Market rate ({crypto}):</span>
-                      {lastUpdated && (
-                        <span className="text-xs text-green-500 flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                          Live
-                        </span>
-                      )}
-                    </div>
-                    <span className="font-mono font-medium">
-                      {loading ? "Loading..." : `${marketRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`}
-                    </span>
-                  </div>
-                  {marketRateUSD > 0 && currency !== "USD" && (
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>USD rate:</span>
-                      <span className="font-mono">${marketRateUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Your rate ({crypto}):</span>
-                    <span className={`font-bold font-mono ${priceType === "floating" && priceOffset[0] > 0 ? "text-green-500" : priceType === "floating" && priceOffset[0] < 0 ? "text-red-500" : ""}`}>
-                      {yourRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
-                    </span>
-                  </div>
-                  {priceType === "floating" && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Difference:</span>
-                      <span className={`font-mono ${priceOffset[0] > 0 ? "text-green-500" : priceOffset[0] < 0 ? "text-red-500" : ""}`}>
-                        {priceOffset[0] >= 0 ? "+" : ""}{(yourRate - marketRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                {priceType === "floating" && (
-                  <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                    <p className="text-xs text-muted-foreground">
-                      {offerType === "sell" ? (
-                        <>Your offer will sell at <span className="font-bold text-foreground">market price {priceOffset[0] >= 0 ? "+" : ""}{priceOffset[0]}%</span>. Price updates every 3 seconds.</>
-                      ) : (
-                        <>Your offer will buy at <span className="font-bold text-foreground">market price {priceOffset[0] >= 0 ? "+" : ""}{priceOffset[0]}%</span>. Price updates every 3 seconds.</>
-                      )}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Offer Status */}
-          <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Offer Status</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                variant={offerStatus === "online" ? "default" : "outline"}
-                className="h-12"
-                onClick={() => setOfferStatus("online")}
-              >
-                Online
-              </Button>
-              <Button
-                type="button"
-                variant={offerStatus === "private" ? "default" : "outline"}
-                className="h-12"
-                onClick={() => setOfferStatus("private")}
-              >
-                Private
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {offerStatus === "online" 
-                ? "Your offer will be visible to all users" 
-                : "Your offer will only be visible to users you share the link with"}
-            </p>
           </div>
 
           {/* Total Quantity */}
@@ -1086,6 +885,212 @@ export function CreateOfferAdvanced() {
               </CardContent>
             </Card>
           )}
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6 lg:space-y-8">
+          {/* Price Type Selection */}
+          <div>
+            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">Price Type</Label>
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
+              <Button
+                type="button"
+                variant={priceType === "fixed" ? "default" : "outline"}
+                className="h-12 lg:h-14 text-base lg:text-lg"
+                onClick={() => setPriceType("fixed")}
+              >
+                Fixed Price
+              </Button>
+              <Button
+                type="button"
+                variant={priceType === "floating" ? "default" : "outline"}
+                className="h-12 lg:h-14 text-base lg:text-lg"
+                onClick={() => setPriceType("floating")}
+              >
+                Floating Price
+              </Button>
+            </div>
+          </div>
+
+          {/* Price section */}
+          <div>
+            <Label className="text-sm lg:text-base text-muted-foreground mb-4 block">Set price</Label>
+            <Card className="bg-elevate-1 border-border max-w-2xl">
+              <CardContent className="p-6 lg:p-8">
+                {priceType === "fixed" ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm mb-2 block">Fixed Price per {crypto}</Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          value={fixedPrice}
+                          onChange={(e) => setFixedPrice(e.target.value)}
+                          placeholder={`Enter price in ${currency}`}
+                          className="bg-background pr-16"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                          {currency}
+                        </span>
+                      </div>
+                      {fixedPrice && marketRate > 0 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          This is {((parseFloat(fixedPrice) / marketRate - 1) * 100).toFixed(2)}% {parseFloat(fixedPrice) >= marketRate ? "above" : "below"} market price
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm mb-2 block">Premium Percentage</Label>
+                      <div className="flex items-center gap-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-10 w-10"
+                          onClick={() => {
+                            const newValue = Math.max(marginLimits.min, priceOffset[0] - 0.5);
+                            setPriceOffset([newValue]);
+                            setPremiumInput(newValue.toFixed(1));
+                          }}
+                        >
+                          -
+                        </Button>
+                        <div className="relative flex-1">
+                          <Input
+                            type="number"
+                            value={premiumInput || priceOffset[0].toString()}
+                            onChange={(e) => handlePremiumInputChange(e.target.value)}
+                            className="bg-background text-center text-lg font-bold pr-8"
+                            step="0.1"
+                            min={marginLimits.min}
+                            max={marginLimits.max}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
+                            %
+                          </span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-10 w-10"
+                          onClick={() => {
+                            const newValue = Math.min(marginLimits.max, priceOffset[0] + 0.5);
+                            setPriceOffset([newValue]);
+                            setPremiumInput(newValue.toFixed(1));
+                          }}
+                        >
+                          +
+                        </Button>
+                      </div>
+                    </div>
+                    <Slider
+                      value={priceOffset}
+                      onValueChange={handlePremiumSliderChange}
+                      min={marginLimits.min}
+                      max={marginLimits.max}
+                      step={0.1}
+                      className="mt-2"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{marginLimits.min}%</span>
+                      <span>{marginLimits.max > 0 ? "0%" : ""}</span>
+                      <span>{marginLimits.max > 0 ? `+${marginLimits.max}%` : `${marginLimits.max}%`}</span>
+                    </div>
+                    
+                    <div className="bg-background/50 rounded-lg p-3 border border-border/50">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                        <span>Premium Indicator</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Price range: </span>
+                        <span className="font-mono">{priceRange.minPrice.toLocaleString()} - {priceRange.maxPrice.toLocaleString()} {currency}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="mt-6 pt-4 border-t border-border/50 space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Market rate ({crypto}):</span>
+                      {lastUpdated && (
+                        <span className="text-xs text-green-500 flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                          Live
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-mono font-medium">
+                      {loading ? "Loading..." : `${marketRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`}
+                    </span>
+                  </div>
+                  {marketRateUSD > 0 && currency !== "USD" && (
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>USD rate:</span>
+                      <span className="font-mono">${marketRateUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Your rate ({crypto}):</span>
+                    <span className={`font-bold font-mono ${priceType === "floating" && priceOffset[0] > 0 ? "text-green-500" : priceType === "floating" && priceOffset[0] < 0 ? "text-red-500" : ""}`}>
+                      {yourRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+                    </span>
+                  </div>
+                  {priceType === "floating" && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Difference:</span>
+                      <span className={`font-mono ${priceOffset[0] > 0 ? "text-green-500" : priceOffset[0] < 0 ? "text-red-500" : ""}`}>
+                        {priceOffset[0] >= 0 ? "+" : ""}{(yourRate - marketRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {priceType === "floating" && (
+                  <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                    <p className="text-xs text-muted-foreground">
+                      {offerType === "sell" ? (
+                        <>Your offer will sell at <span className="font-bold text-foreground">market price {priceOffset[0] >= 0 ? "+" : ""}{priceOffset[0]}%</span>. Price updates every 3 seconds.</>
+                      ) : (
+                        <>Your offer will buy at <span className="font-bold text-foreground">market price {priceOffset[0] >= 0 ? "+" : ""}{priceOffset[0]}%</span>. Price updates every 3 seconds.</>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Offer Status */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">Offer Status</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={offerStatus === "online" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferStatus("online")}
+              >
+                Online
+              </Button>
+              <Button
+                type="button"
+                variant={offerStatus === "private" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferStatus("private")}
+              >
+                Private
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {offerStatus === "online" 
+                ? "Your offer will be visible to all users" 
+                : "Your offer will only be visible to users you share the link with"}
+            </p>
+          </div>
 
           {/* Advanced Settings */}
           <Card className="bg-elevate-1 border-border">
@@ -1368,7 +1373,11 @@ export function CreateOfferAdvanced() {
               </div>
             </CardContent>
           </Card>
+          </div>
+        </div>
 
+        {/* Full-width sections below grid */}
+        <div className="space-y-6 lg:space-y-8 mt-6 lg:mt-8">
           {/* Fee info */}
           <Card className="bg-elevate-1 border-border">
             <CardContent className="p-4 flex items-center justify-between">
@@ -1379,7 +1388,7 @@ export function CreateOfferAdvanced() {
 
           {/* Submit button */}
           <Button 
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6"
+            className="w-full lg:max-w-md lg:mx-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg lg:text-xl py-6 lg:py-7"
             onClick={handleCreateOffer}
             disabled={isSubmitting}
           >
