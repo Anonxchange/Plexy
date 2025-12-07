@@ -556,6 +556,57 @@ export function CreateOfferAdvanced() {
             </div>
           </div>
 
+          {/* Price Type Selection */}
+          <div>
+            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">Price Type</Label>
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
+              <Button
+                type="button"
+                variant={priceType === "fixed" ? "default" : "outline"}
+                className="h-12 lg:h-14 text-base lg:text-lg"
+                onClick={() => setPriceType("fixed")}
+              >
+                Fixed Price
+              </Button>
+              <Button
+                type="button"
+                variant={priceType === "floating" ? "default" : "outline"}
+                className="h-12 lg:h-14 text-base lg:text-lg"
+                onClick={() => setPriceType("floating")}
+              >
+                Floating Price
+              </Button>
+            </div>
+          </div>
+
+          {/* Offer Status */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">Offer Status</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={offerStatus === "online" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferStatus("online")}
+              >
+                Online
+              </Button>
+              <Button
+                type="button"
+                variant={offerStatus === "private" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferStatus("private")}
+              >
+                Private
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {offerStatus === "online" 
+                ? "Your offer will be visible to all users" 
+                : "Your offer will only be visible to users you share the link with"}
+            </p>
+          </div>
+
           {/* Cryptocurrency Selection */}
           <div>
             <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">
@@ -889,29 +940,6 @@ export function CreateOfferAdvanced() {
 
           {/* Right Column */}
           <div className="space-y-6 lg:space-y-8">
-          {/* Price Type Selection */}
-          <div>
-            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">Price Type</Label>
-            <div className="grid grid-cols-2 gap-3 lg:gap-4">
-              <Button
-                type="button"
-                variant={priceType === "fixed" ? "default" : "outline"}
-                className="h-12 lg:h-14 text-base lg:text-lg"
-                onClick={() => setPriceType("fixed")}
-              >
-                Fixed Price
-              </Button>
-              <Button
-                type="button"
-                variant={priceType === "floating" ? "default" : "outline"}
-                className="h-12 lg:h-14 text-base lg:text-lg"
-                onClick={() => setPriceType("floating")}
-              >
-                Floating Price
-              </Button>
-            </div>
-          </div>
-
           {/* Price section */}
           <div>
             <Label className="text-sm lg:text-base text-muted-foreground mb-4 block">Set price</Label>
@@ -1062,34 +1090,6 @@ export function CreateOfferAdvanced() {
                 )}
               </CardContent>
             </Card>
-          </div>
-
-          {/* Offer Status */}
-          <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Offer Status</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                variant={offerStatus === "online" ? "default" : "outline"}
-                className="h-12"
-                onClick={() => setOfferStatus("online")}
-              >
-                Online
-              </Button>
-              <Button
-                type="button"
-                variant={offerStatus === "private" ? "default" : "outline"}
-                className="h-12"
-                onClick={() => setOfferStatus("private")}
-              >
-                Private
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {offerStatus === "online" 
-                ? "Your offer will be visible to all users" 
-                : "Your offer will only be visible to users you share the link with"}
-            </p>
           </div>
 
           {/* Advanced Settings */}
@@ -1373,11 +1373,7 @@ export function CreateOfferAdvanced() {
               </div>
             </CardContent>
           </Card>
-          </div>
-        </div>
 
-        {/* Full-width sections below grid */}
-        <div className="space-y-6 lg:space-y-8 mt-6 lg:mt-8">
           {/* Fee info */}
           <Card className="bg-elevate-1 border-border">
             <CardContent className="p-4 flex items-center justify-between">
@@ -1388,12 +1384,13 @@ export function CreateOfferAdvanced() {
 
           {/* Submit button */}
           <Button 
-            className="w-full lg:max-w-md lg:mx-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg lg:text-xl py-6 lg:py-7"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg lg:text-xl py-6 lg:py-7"
             onClick={handleCreateOffer}
             disabled={isSubmitting}
           >
             {isSubmitting ? "Creating offer..." : "Place Advanced Offer"}
           </Button>
+          </div>
         </div>
       </main>
 
