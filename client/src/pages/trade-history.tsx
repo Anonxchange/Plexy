@@ -27,6 +27,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { 
@@ -50,7 +57,8 @@ import {
   QrCode,
   Medal,
   Settings,
-  Code
+  Code,
+  MoreVertical
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -260,10 +268,78 @@ export function TradeHistory() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Header with Account */}
-        <div className="flex items-center justify-between mb-6 relative">
-          <h1 className="text-3xl font-bold">Trade History</h1>
-          <Collapsible open={accountOpen} onOpenChange={setAccountOpen}>
+        {/* Mobile Header */}
+        {isMobile && (
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold">Trade History</h1>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => navigate('/my-offers')}>
+                  <Package className="h-4 w-4 mr-2" />
+                  My Offers
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/trade-history')} className="bg-primary/10">
+                  <History className="h-4 w-4 mr-2" />
+                  Trade History
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <Users className="h-4 w-4 mr-2" />
+                  Recent Trade Partners
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <Star className="h-4 w-4 mr-2" />
+                  Favorite Offers
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  Trusted Users
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Blocked Users
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/trade-history')}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Trade Statistics
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/merchant-application')}>
+                  <Award className="h-4 w-4 mr-2" />
+                  Become a Merchant
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Share Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/medals')}>
+                  <Medal className="h-4 w-4 mr-2" />
+                  Medals
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/account-settings')}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Account Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open('https://docs.replit.com', '_blank')}>
+                  <Code className="h-4 w-4 mr-2" />
+                  Developer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
+        {/* Desktop Header with Account */}
+        {!isMobile && (
+          <div className="flex items-center justify-between mb-6 relative">
+            <h1 className="text-3xl font-bold">Trade History</h1>
+            <Collapsible open={accountOpen} onOpenChange={setAccountOpen}>
             <CollapsibleTrigger asChild>
               <Button 
                 variant="ghost" 
@@ -306,7 +382,8 @@ export function TradeHistory() {
               </Card>
             </CollapsibleContent>
           </Collapsible>
-        </div>
+          </div>
+        )}
 
         {/* Desktop: Sidebar + Content layout, Mobile: Single column */}
         <div className="lg:grid lg:grid-cols-12 lg:gap-6">
