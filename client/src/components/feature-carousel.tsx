@@ -15,9 +15,9 @@ export function FeatureCarousel() {
             loop
             playsInline
             className="w-full h-auto object-cover"
-            poster="/assets/trading-video-poster.jpg"
+            poster="/assets/person_trading_crypto_at_desk.jpg"
           >
-            <source src="/assets/trading-video.mp4" type="video/mp4" />
+            <source src="/assets/person_trading_crypto_at_desk.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
