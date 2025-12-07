@@ -30,8 +30,16 @@ import {
   QrCode,
   Medal,
   Settings,
-  Code
+  Code,
+  MoreVertical
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -356,9 +364,79 @@ export default function MerchantApplicationPage() {
   return (
     <>
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-1">Advertiser</h1>
-        </div>
+        {/* Mobile Header */}
+        {isMobile && (
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold">Advertiser</h1>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setLocation('/my-offers')}>
+                  <Package className="h-4 w-4 mr-2" />
+                  My Offers
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/trade-history')}>
+                  <History className="h-4 w-4 mr-2" />
+                  Trade History
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/p2p')}>
+                  <Users className="h-4 w-4 mr-2" />
+                  Recent Trade Partners
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/p2p')}>
+                  <Star className="h-4 w-4 mr-2" />
+                  Favorite Offers
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setLocation('/p2p')}>
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  Trusted Users
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/p2p')}>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Blocked Users
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setLocation('/trade-history')}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Trade Statistics
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/merchant-application')} className="bg-primary/10">
+                  <Award className="h-4 w-4 mr-2" />
+                  Become a Merchant
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/profile')}>
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Share Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/medals')}>
+                  <Medal className="h-4 w-4 mr-2" />
+                  Medals
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setLocation('/account-settings')}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Account Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open('https://docs.replit.com', '_blank')}>
+                  <Code className="h-4 w-4 mr-2" />
+                  Developer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
+        {/* Desktop Header */}
+        {!isMobile && (
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold mb-1">Advertiser</h1>
+          </div>
+        )}
 
         {/* Desktop: Sidebar + Content layout, Mobile: Single column */}
         <div className="lg:grid lg:grid-cols-12 lg:gap-6">
