@@ -26,13 +26,13 @@ export function HeroSection() {
       try {
         const symbols = ['BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'SHIB', 'LTC', 'TRX', 'LINK'];
         const prices = await getCryptoPrices(symbols);
-        
+
         // Convert to the format needed for display
         const pricesMap: Record<string, number> = {};
         Object.values(prices).forEach((crypto) => {
           pricesMap[crypto.symbol] = crypto.current_price;
         });
-        
+
         if (Object.keys(pricesMap).length > 0) {
           setCryptoPrices(pricesMap);
         }
@@ -75,7 +75,7 @@ export function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-      
+
       {/* Animated Globe Background */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] opacity-15 pointer-events-none">
         <Globe />
@@ -90,9 +90,9 @@ export function HeroSection() {
         <div className="lg:hidden">
           <div className="text-center space-y-6 max-w-4xl mx-auto mb-8">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 backdrop-blur-xl shadow-lg">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-              <span className="text-sm font-semibold text-primary">Trusted by 14M+ users worldwide</span>
+              <span className="text-sm font-semibold">Trusted by 14M+ users worldwide</span>
             </div>
 
             {/* Main Headline */}
@@ -316,9 +316,9 @@ export function HeroSection() {
           {/* Left Column - Content */}
           <div className="space-y-8">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 backdrop-blur-xl shadow-lg">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-              <span className="text-sm font-semibold text-primary">Trusted by 14M+ users worldwide</span>
+              <span className="text-sm font-semibold">Trusted by 14M+ users worldwide</span>
             </div>
 
             {/* Main Headline */}
