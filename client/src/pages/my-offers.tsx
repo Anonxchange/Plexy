@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Plus, Package, TrendingUp, TrendingDown, Share2, MoreVertical, History, Users, Star, ThumbsUp, Lock, BarChart3, Award, QrCode, Medal, Settings, Code } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -301,84 +302,216 @@ export function MyOffers() {
       </Dialog>
 
       <div className="min-h-screen flex flex-col bg-background">
-        <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">My Offers</h1>
-              <Link href="/create-offer">
-                <Button variant="outline" size="icon">
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </Link>
+        <main className="flex-1 container mx-auto px-4 py-6">
+          {/* Mobile Header */}
+          <div className="lg:hidden">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold">My Offers</h1>
+                <Link href="/create-offer">
+                  <Button variant="outline" size="icon">
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </Link>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreVertical className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => navigate('/trade-history')}>
+                    <History className="h-4 w-4 mr-2" />
+                    Trade History
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Recent Trade Partners
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/my-offers')} className="bg-primary/10">
+                    <Package className="h-4 w-4 mr-2" />
+                    My Offers
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                    <Star className="h-4 w-4 mr-2" />
+                    Favorite Offers
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                    <ThumbsUp className="h-4 w-4 mr-2" />
+                    Trusted Users
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Blocked Users
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/trade-history')}>
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Trade Statistics
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/merchant-application')}>
+                    <Award className="h-4 w-4 mr-2" />
+                    Become a Merchant 
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Share Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/medals')}>
+                    <Medal className="h-4 w-4 mr-2" />
+                    Medals
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/account-settings')}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Account Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.open('https://docs.replit.com', '_blank')}>
+                    <Code className="h-4 w-4 mr-2" />
+                    Developer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreVertical className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => navigate('/trade-history')}>
-                  <History className="h-4 w-4 mr-2" />
-                  Trade History
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/p2p')}>
-                  <Users className="h-4 w-4 mr-2" />
-                  Recent Trade Partners
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/my-offers')} className="bg-primary/10">
-                  <Package className="h-4 w-4 mr-2" />
-                  My Offers
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/p2p')}>
-                  <Star className="h-4 w-4 mr-2" />
-                  Favorite Offers
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/p2p')}>
-                  <ThumbsUp className="h-4 w-4 mr-2" />
-                  Trusted Users
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/p2p')}>
-                  <Lock className="h-4 w-4 mr-2" />
-                  Blocked Users
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/trade-history')}>
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Trade Statistics
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/merchant-application')}>
-                  <Award className="h-4 w-4 mr-2" />
-                  Become a Merchant 
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Share Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/medals')}>
-                  <Medal className="h-4 w-4 mr-2" />
-                  Medals
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/account-settings')}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Account Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.open('https://docs.replit.com', '_blank')}>
-                  <Code className="h-4 w-4 mr-2" />
-                  Developer
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+
+            <p className="text-muted-foreground mb-8">
+              View and manage your created offers
+            </p>
           </div>
 
-          <p className="text-muted-foreground mb-8">
-            View and manage your created offers
-          </p>
+          {/* Desktop 2-Column Layout */}
+          <div className="hidden lg:grid lg:grid-cols-12 lg:gap-6">
+            {/* Left Sidebar - Navigation Menu */}
+            <div className="lg:col-span-3">
+              <Card className="bg-card border-border sticky top-6">
+                <CardContent className="p-4">
+                  <h2 className="text-lg font-bold mb-4">Menu</h2>
+                  <nav className="space-y-1">
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start bg-primary/10"
+                      onClick={() => navigate('/my-offers')}
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      My Offers
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/trade-history')}
+                    >
+                      <History className="h-4 w-4 mr-2" />
+                      Trade History
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/p2p')}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Recent Trade Partners
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/p2p')}
+                    >
+                      <Star className="h-4 w-4 mr-2" />
+                      Favorite Offers
+                    </Button>
+                    <Separator className="my-2" />
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/p2p')}
+                    >
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      Trusted Users
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/p2p')}
+                    >
+                      <Lock className="h-4 w-4 mr-2" />
+                      Blocked Users
+                    </Button>
+                    <Separator className="my-2" />
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/trade-history')}
+                    >
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Trade Statistics
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/merchant-application')}
+                    >
+                      <Award className="h-4 w-4 mr-2" />
+                      Become a Merchant
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/profile')}
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Share Profile
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/medals')}
+                    >
+                      <Medal className="h-4 w-4 mr-2" />
+                      Medals
+                    </Button>
+                    <Separator className="my-2" />
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/account-settings')}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Account Settings
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => window.open('https://docs.replit.com', '_blank')}
+                    >
+                      <Code className="h-4 w-4 mr-2" />
+                      Developer
+                    </Button>
+                  </nav>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            {/* Right Content Area */}
+            <div className="lg:col-span-9">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold">My Offers</h1>
+                  <Link href="/create-offer">
+                    <Button variant="outline" size="icon">
+                      <Plus className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              <p className="text-muted-foreground mb-8">
+                View and manage your created offers
+              </p>
+
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <Card className="bg-card border-border">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-2">
@@ -410,123 +543,312 @@ export function MyOffers() {
             </Card>
           </div>
 
-          {/* Offers List */}
-          {loading ? (
-            <Card className="bg-card border-border">
-              <CardContent className="p-12 text-center">
-                <p className="text-muted-foreground">Loading your offers...</p>
-              </CardContent>
-            </Card>
-          ) : offers.length === 0 ? (
-            <Card className="bg-card border-border">
-              <CardContent className="p-12 text-center">
-                <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold mb-2">No offers yet</h3>
-                <p className="text-muted-foreground mb-6">
-                  Create your first offer to start trading
-                </p>
-                <Link href="/create-offer">
-                  <Button className="bg-primary hover:bg-primary/90">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Offer
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {offers.map((offer) => (
-                <Card key={offer.id} className="bg-card border-border hover:bg-elevate-1 transition-colors" data-offer-id={offer.id}>
+          {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <Card className="bg-card border-border">
                   <CardContent className="p-6">
-                    <div className="flex flex-col">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge
-                            variant={offer.offer_type === "buy" ? "default" : "secondary"}
-                            className={offer.offer_type === "buy" ? "bg-primary" : ""}
-                          >
-                            {offer.offer_type.toUpperCase()}
-                          </Badge>
-                          <h3 className="text-lg font-bold">
-                            {offer.available_amount} {offer.crypto_symbol}
-                          </h3>
-                          <Badge
-                            variant="outline"
-                            className={
-                              offer.is_active
-                                ? "border-primary text-primary"
-                                : "border-muted-foreground text-muted-foreground"
-                            }
-                          >
-                            {offer.is_active ? "ACTIVE" : "PAUSED"}
-                          </Badge>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-primary hover:text-primary/80 flex-shrink-0"
-                          onClick={() => shareOffer(offer)}
-                        >
-                          <Share2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Payment Method</p>
-                          <p className="font-medium truncate">
-                            {Array.isArray(offer.payment_methods)
-                              ? offer.payment_methods.join(", ")
-                              : offer.payment_methods}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Currency</p>
-                          <p className="font-medium">{offer.fiat_currency}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Price</p>
-                          <p className="font-medium">
-                            {offer.fixed_price?.toLocaleString()} {offer.fiat_currency}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Limits</p>
-                          <p className="font-medium">
-                            {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 flex-wrap">
-                        <Link href={`/edit-offer/${offer.id}`}>
-                          <Button variant="outline" size="sm">
-                            Edit
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className={offer.is_active ? "text-destructive" : "text-primary"}
-                          onClick={() => toggleOfferStatus(offer.id, offer.is_active)}
-                        >
-                          {offer.is_active ? "Pause" : "Activate"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => deleteOffer(offer.id)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Total Offers</span>
+                      <Package className="h-5 w-5 text-muted-foreground" />
                     </div>
+                    <p className="text-3xl font-bold">{offers.length}</p>
                   </CardContent>
                 </Card>
-              ))}
+
+                <Card className="bg-card border-border">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Active Offers</span>
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                    </div>
+                    <p className="text-3xl font-bold text-primary">{activeOffers.length}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Paused Offers</span>
+                      <TrendingDown className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-3xl font-bold">{pausedOffers.length}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Offers List */}
+              {loading ? (
+                <Card className="bg-card border-border">
+                  <CardContent className="p-12 text-center">
+                    <p className="text-muted-foreground">Loading your offers...</p>
+                  </CardContent>
+                </Card>
+              ) : offers.length === 0 ? (
+                <Card className="bg-card border-border">
+                  <CardContent className="p-12 text-center">
+                    <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-xl font-semibold mb-2">No offers yet</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Create your first offer to start trading
+                    </p>
+                    <Link href="/create-offer">
+                      <Button className="bg-primary hover:bg-primary/90">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Your First Offer
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {offers.map((offer) => (
+                    <Card key={offer.id} className="bg-card border-border hover:bg-elevate-1 transition-colors" data-offer-id={offer.id}>
+                      <CardContent className="p-6">
+                        <div className="flex flex-col">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge
+                                variant={offer.offer_type === "buy" ? "default" : "secondary"}
+                                className={offer.offer_type === "buy" ? "bg-primary" : ""}
+                              >
+                                {offer.offer_type.toUpperCase()}
+                              </Badge>
+                              <h3 className="text-lg font-bold">
+                                {offer.available_amount} {offer.crypto_symbol}
+                              </h3>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  offer.is_active
+                                    ? "border-primary text-primary"
+                                    : "border-muted-foreground text-muted-foreground"
+                                }
+                              >
+                                {offer.is_active ? "ACTIVE" : "PAUSED"}
+                              </Badge>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-primary hover:text-primary/80 flex-shrink-0"
+                              onClick={() => shareOffer(offer)}
+                            >
+                              <Share2 className="h-5 w-5" />
+                            </Button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Payment Method</p>
+                              <p className="font-medium truncate">
+                                {Array.isArray(offer.payment_methods)
+                                  ? offer.payment_methods.join(", ")
+                                  : offer.payment_methods}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Currency</p>
+                              <p className="font-medium">{offer.fiat_currency}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Price</p>
+                              <p className="font-medium">
+                                {offer.fixed_price?.toLocaleString()} {offer.fiat_currency}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Limits</p>
+                              <p className="font-medium">
+                                {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 flex-wrap">
+                            <Link href={`/edit-offer/${offer.id}`}>
+                              <Button variant="outline" size="sm">
+                                Edit
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={offer.is_active ? "text-destructive" : "text-primary"}
+                              onClick={() => toggleOfferStatus(offer.id, offer.is_active)}
+                            >
+                              {offer.is_active ? "Pause" : "Activate"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => deleteOffer(offer.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Mobile Stats and Offers - Only show on mobile */}
+          <div className="lg:hidden">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <Card className="bg-card border-border">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Total Offers</span>
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-3xl font-bold">{offers.length}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Active Offers</span>
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="text-3xl font-bold text-primary">{activeOffers.length}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Paused Offers</span>
+                    <TrendingDown className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-3xl font-bold">{pausedOffers.length}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Offers List */}
+            {loading ? (
+              <Card className="bg-card border-border">
+                <CardContent className="p-12 text-center">
+                  <p className="text-muted-foreground">Loading your offers...</p>
+                </CardContent>
+              </Card>
+            ) : offers.length === 0 ? (
+              <Card className="bg-card border-border">
+                <CardContent className="p-12 text-center">
+                  <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-2">No offers yet</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Create your first offer to start trading
+                  </p>
+                  <Link href="/create-offer">
+                    <Button className="bg-primary hover:bg-primary/90">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Offer
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {offers.map((offer) => (
+                  <Card key={offer.id} className="bg-card border-border hover:bg-elevate-1 transition-colors" data-offer-id={offer.id}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge
+                              variant={offer.offer_type === "buy" ? "default" : "secondary"}
+                              className={offer.offer_type === "buy" ? "bg-primary" : ""}
+                            >
+                              {offer.offer_type.toUpperCase()}
+                            </Badge>
+                            <h3 className="text-lg font-bold">
+                              {offer.available_amount} {offer.crypto_symbol}
+                            </h3>
+                            <Badge
+                              variant="outline"
+                              className={
+                                offer.is_active
+                                  ? "border-primary text-primary"
+                                  : "border-muted-foreground text-muted-foreground"
+                              }
+                            >
+                              {offer.is_active ? "ACTIVE" : "PAUSED"}
+                            </Badge>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-primary hover:text-primary/80 flex-shrink-0"
+                            onClick={() => shareOffer(offer)}
+                          >
+                            <Share2 className="h-5 w-5" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Payment Method</p>
+                            <p className="font-medium truncate">
+                              {Array.isArray(offer.payment_methods)
+                                ? offer.payment_methods.join(", ")
+                                : offer.payment_methods}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Currency</p>
+                            <p className="font-medium">{offer.fiat_currency}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Price</p>
+                            <p className="font-medium">
+                              {offer.fixed_price?.toLocaleString()} {offer.fiat_currency}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Limits</p>
+                            <p className="font-medium">
+                              {offer.min_amount} - {offer.max_amount} {offer.fiat_currency}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          <Link href={`/edit-offer/${offer.id}`}>
+                            <Button variant="outline" size="sm">
+                              Edit
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={offer.is_active ? "text-destructive" : "text-primary"}
+                            onClick={() => toggleOfferStatus(offer.id, offer.is_active)}
+                          >
+                            {offer.is_active ? "Pause" : "Activate"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => deleteOffer(offer.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </main>
 
         <PexlyFooter />
