@@ -655,6 +655,19 @@ export function Swap() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Mobile Layout */}
       <div className="flex-1 px-4 py-8 lg:hidden">
+        {/* Chart on Mobile */}
+        <Card className="bg-card/50 mb-6">
+          <CardContent className="p-4">
+            <div className="h-[300px] bg-background rounded-lg overflow-hidden">
+              <iframe
+                key={`${fromCurrency}-${toCurrency}`}
+                src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}&interval=60&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}`}
+                className="w-full h-full"
+                title="TradingView Chart"
+              ></iframe>
+            </div>
+          </CardContent>
+        </Card>
         {/* Swap Interface */}
         <Card className="bg-card/50 mb-8">
           <CardContent className="p-6 space-y-6">
@@ -826,9 +839,9 @@ export function Swap() {
         </Card>
       </div>
 
-      {/* Desktop Layout - Centered with max-width */}
+      {/* Desktop Layout - 2 Column with Chart */}
       <div className="hidden lg:block flex-1">
-        <div className="container mx-auto px-6 py-12 max-w-4xl">
+        <div className="container mx-auto px-6 py-8 max-w-7xl">
           {/* Page Title */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-3">Swap Cryptocurrency</h1>
@@ -837,8 +850,29 @@ export function Swap() {
             </p>
           </div>
 
-          {/* Swap Interface Card */}
-          <Card className="bg-card/50 mb-8 shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Left Column - TradingView Chart */}
+            <Card className="bg-card/50 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold">
+                    {fromCurrency}/{toCurrency} Chart
+                  </h3>
+                  <Badge variant="outline">Live</Badge>
+                </div>
+                <div className="h-[600px] bg-background rounded-lg overflow-hidden">
+                  <iframe
+                    key={`${fromCurrency}-${toCurrency}`}
+                    src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}&interval=60&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}`}
+                    className="w-full h-full"
+                    title="TradingView Chart"
+                  ></iframe>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Right Column - Swap Interface Card */}
+            <Card className="bg-card/50 shadow-lg">
             <CardContent className="p-8 space-y-6">
               {/* From Section */}
               <div className="space-y-3">
@@ -992,8 +1026,9 @@ export function Swap() {
               </Button>
             </CardContent>
           </Card>
+          </div>
 
-          {/* Recent Activity Card */}
+          {/* Recent Activity Card - Full Width Below */}
           <Card className="bg-card/50 shadow-lg">
             <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">
