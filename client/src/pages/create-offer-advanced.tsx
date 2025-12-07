@@ -556,57 +556,6 @@ export function CreateOfferAdvanced() {
             </div>
           </div>
 
-          {/* Price Type Selection */}
-          <div>
-            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">Price Type</Label>
-            <div className="grid grid-cols-2 gap-3 lg:gap-4">
-              <Button
-                type="button"
-                variant={priceType === "fixed" ? "default" : "outline"}
-                className="h-12 lg:h-14 text-base lg:text-lg"
-                onClick={() => setPriceType("fixed")}
-              >
-                Fixed Price
-              </Button>
-              <Button
-                type="button"
-                variant={priceType === "floating" ? "default" : "outline"}
-                className="h-12 lg:h-14 text-base lg:text-lg"
-                onClick={() => setPriceType("floating")}
-              >
-                Floating Price
-              </Button>
-            </div>
-          </div>
-
-          {/* Offer Status */}
-          <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Offer Status</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                variant={offerStatus === "online" ? "default" : "outline"}
-                className="h-12"
-                onClick={() => setOfferStatus("online")}
-              >
-                Online
-              </Button>
-              <Button
-                type="button"
-                variant={offerStatus === "private" ? "default" : "outline"}
-                className="h-12"
-                onClick={() => setOfferStatus("private")}
-              >
-                Private
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {offerStatus === "online" 
-                ? "Your offer will be visible to all users" 
-                : "Your offer will only be visible to users you share the link with"}
-            </p>
-          </div>
-
           {/* Cryptocurrency Selection */}
           <div>
             <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">
@@ -890,56 +839,57 @@ export function CreateOfferAdvanced() {
             </div>
           </div>
 
-          {/* Bank Payment Method Selection */}
-          {paymentMethod === "Bank Transfer" && (
-            <Card className="bg-elevate-1 border-border">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold">Bank Payment Method</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setLocation("/account-settings")}
-                  >
-                    Add New Bank
-                  </Button>
-                </div>
-
-                {paymentMethods.length > 0 ? (
-                  <div>
-                    <Label className="text-sm mb-2 block">Select Bank Account</Label>
-                    <Select value={selectedPaymentMethodId} onValueChange={setSelectedPaymentMethodId}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Choose a bank account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {paymentMethods.map((method) => (
-                          <SelectItem key={method.id} value={method.id}>
-                            {method.bank_name} - {method.account_number} ({method.account_name})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
-                    <p className="text-muted-foreground mb-4">No bank accounts added yet</p>
-                    <Button 
-                      variant="outline"
-                      onClick={() => setLocation("/account-settings")}
-                    >
-                      Add Bank Account in Settings
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* Price Type Selection */}
+          <div>
+            <Label className="text-sm lg:text-base text-muted-foreground mb-3 block">Price Type</Label>
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
+              <Button
+                type="button"
+                variant={priceType === "fixed" ? "default" : "outline"}
+                className="h-12 lg:h-14 text-base lg:text-lg"
+                onClick={() => setPriceType("fixed")}
+              >
+                Fixed Price
+              </Button>
+              <Button
+                type="button"
+                variant={priceType === "floating" ? "default" : "outline"}
+                className="h-12 lg:h-14 text-base lg:text-lg"
+                onClick={() => setPriceType("floating")}
+              >
+                Floating Price
+              </Button>
+            </div>
           </div>
 
-          {/* Right Column */}
-          <div className="space-y-6 lg:space-y-8">
+          {/* Offer Status */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">Offer Status</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={offerStatus === "online" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferStatus("online")}
+              >
+                Online
+              </Button>
+              <Button
+                type="button"
+                variant={offerStatus === "private" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setOfferStatus("private")}
+              >
+                Private
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {offerStatus === "online" 
+                ? "Your offer will be visible to all users" 
+                : "Your offer will only be visible to users you share the link with"}
+            </p>
+          </div>
+
           {/* Price section */}
           <div>
             <Label className="text-sm lg:text-base text-muted-foreground mb-4 block">Set price</Label>
@@ -1092,6 +1042,56 @@ export function CreateOfferAdvanced() {
             </Card>
           </div>
 
+          {/* Bank Payment Method Selection */}
+          {paymentMethod === "Bank Transfer" && (
+            <Card className="bg-elevate-1 border-border">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold">Bank Payment Method</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setLocation("/account-settings")}
+                  >
+                    Add New Bank
+                  </Button>
+                </div>
+
+                {paymentMethods.length > 0 ? (
+                  <div>
+                    <Label className="text-sm mb-2 block">Select Bank Account</Label>
+                    <Select value={selectedPaymentMethodId} onValueChange={setSelectedPaymentMethodId}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Choose a bank account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentMethods.map((method) => (
+                          <SelectItem key={method.id} value={method.id}>
+                            {method.bank_name} - {method.account_number} ({method.account_name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No bank accounts added yet</p>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setLocation("/account-settings")}
+                    >
+                      Add Bank Account in Settings
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6 lg:space-y-8">
           {/* Advanced Settings */}
           <Card className="bg-elevate-1 border-border">
             <CardContent className="p-6 space-y-6">
