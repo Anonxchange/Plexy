@@ -106,14 +106,14 @@ export function TradeHistory() {
 
   const fetchCurrentUserProfile = async () => {
     if (!user?.id) return;
-    
+
     try {
       const { data, error } = await supabase
         .from("user_profiles")
         .select("id")
         .eq("id", user.id)
         .single();
-      
+
       if (!error && data) {
         setCurrentUserProfileId(data.id);
       }
@@ -136,11 +136,11 @@ export function TradeHistory() {
 
       if (tradesData) {
         setTotalCount(tradesData.length);
-        
+
         const active = tradesData.filter(t => t.status === 'active' || t.status === 'pending' || t.status === 'payment_made');
         const completed = tradesData.filter(t => t.status === 'completed');
         const canceled = tradesData.filter(t => t.status === 'cancelled' || t.status === 'expired');
-        
+
         setActiveCount(active.length);
         setCompletedCount(completed.length);
         setCanceledCount(canceled.length);
@@ -297,11 +297,6 @@ export function TradeHistory() {
         <div className="lg:grid lg:grid-cols-3 lg:gap-6">
           {/* Left Column - Main Trade List (2/3 width on desktop) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Date Range Info */}
-            <p className="text-muted-foreground">
-              You are viewing all trades from March 01, 2025 to March 31, 2025
-            </p>
-
             {/* Mobile: Filters and Stats (shown before trades) */}
             {isMobile && (
               <div className="space-y-6">
@@ -548,6 +543,11 @@ export function TradeHistory() {
                 </Collapsible>
               </div>
             )}
+
+            {/* Date Range Info */}
+            <p className="text-muted-foreground">
+              You are viewing all trades from March 01, 2025 to March 31, 2025
+            </p>
 
             {/* My Past Trades Section */}
             <Card className="shadow-lg border">
