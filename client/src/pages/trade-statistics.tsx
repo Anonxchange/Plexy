@@ -18,7 +18,7 @@ import {
   Settings,
   Code,
   ChevronDown,
-  Menu,
+  MoreVertical,
   ExternalLink,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
