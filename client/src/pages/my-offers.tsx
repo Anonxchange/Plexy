@@ -368,7 +368,7 @@ export function MyOffers() {
                     <Settings className="h-4 w-4 mr-2" />
                     Account Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.open('https://docs.replit.com', '_blank')}>
+                  <DropdownMenuItem onClick={() => navigate('/developer')}>
                     <Code className="h-4 w-4 mr-2" />
                     Developer
                   </DropdownMenuItem>
@@ -483,7 +483,7 @@ export function MyOffers() {
                     <Button 
                       variant="ghost" 
                       className="w-full justify-start"
-                      onClick={() => window.open('https://docs.replit.com', '_blank')}
+                      onClick={() => navigate('/developer')}
                     >
                       <Code className="h-4 w-4 mr-2" />
                       Developer
