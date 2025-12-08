@@ -83,6 +83,7 @@ import { FavoriteOffers } from "@/pages/favorite-offers";
 import { TrustedUsers } from "@/pages/trusted-users";
 import { BlockedUsers } from "@/pages/blocked-users";
 import { TradeStatistics } from "@/pages/trade-statistics";
+import { Developer } from "./pages/developer";
 
 import { OfferDetail } from "@/pages/offer-detail";
 
@@ -139,10 +140,13 @@ function Router() {
       <Route path="/blocked-users" component={BlockedUsers} />
       <Route path="/trade-statistics" component={TradeStatistics} />
       <Route path="/trade/:tradeId" component={ActiveTrade} />
-      
+
               <Route path="/offers/:offerId" component={OfferDetail} />
       <Route path="/profile/:userId?" component={ProfilePage} />
       <Route path="/medals" component={MedalsPage} />
+      <Route path="/submit-idea" component={SubmitIdea} />
+      <Route path="/developer" component={Developer} />
+      <Route component={NotFound} />
       <Route path="/fees" component={Fees} />
       <Route path="/affiliate" component={Affiliate} />
       <Route path="/rewards" component={RewardsPage} />
@@ -163,7 +167,6 @@ function Router() {
       <Route path="/restricted-countries" component={RestrictedCountries} />
       <Route path="/vip-terms" component={VIPTerms} />
       <Route path="/vendor-reminder" component={VendorReminder} />
-      <Route path="*" component={NotFound} />
     </Switch>
   );
 }
