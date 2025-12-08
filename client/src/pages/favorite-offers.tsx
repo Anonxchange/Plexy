@@ -197,9 +197,66 @@ export function FavoriteOffers() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button variant="outline" size="icon">
-                  <Menu className="h-5 w-5" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <MoreVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => navigate('/trade-history')}>
+                      <History className="h-4 w-4 mr-2" />
+                      Trade History
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Recent Trade Partners
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/my-offers')}>
+                      <Package className="h-4 w-4 mr-2" />
+                      My Offers
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/favorite-offers')} className="bg-primary/10">
+                      <Star className="h-4 w-4 mr-2" />
+                      Favorite Offers
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/trusted-users')}>
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      Trusted Users
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/blocked-users')}>
+                      <Lock className="h-4 w-4 mr-2" />
+                      Blocked Users
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/trade-statistics')}>
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Trade Statistics
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/merchant-application')}>
+                      <Award className="h-4 w-4 mr-2" />
+                      Become a Merchant
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Share Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/medals')}>
+                      <Medal className="h-4 w-4 mr-2" />
+                      Medals
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/account-settings')}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Account Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.open('https://docs.replit.com', '_blank')}>
+                      <Code className="h-4 w-4 mr-2" />
+                      Developer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
