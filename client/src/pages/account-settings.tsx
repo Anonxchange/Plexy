@@ -3914,6 +3914,9 @@ export default function AccountSettings() {
         return <VerificationSection />;
       case "connected":
         return <ConnectedAppsSection />;
+      case "developer":
+        setLocation('/developer');
+        return null;
       default:
         return (
           <Card>
