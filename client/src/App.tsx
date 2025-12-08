@@ -7,7 +7,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
 import { GlobalNotificationListener } from "@/components/global-notification-listener";
-import { SessionInvalidationListener } from "@/components/session-invalidation-listener";
 import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
@@ -182,7 +181,6 @@ function App() {
         <ThemeProvider>
           <AuthProvider>
             <GlobalNotificationListener />
-            <SessionInvalidationListener />
             <div className={`flex min-h-screen w-full flex-col ${!hideHeaderAndNav ? 'pt-16' : ''}`}>
               {!hideHeaderAndNav && <AppHeader />}
               {!hideHeaderAndNav && <PageNavigation />}
