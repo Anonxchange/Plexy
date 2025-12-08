@@ -60,6 +60,7 @@ import PexlyPayPaymentLimits from "@/pages/pexly-pay-payment-limits";
 import PexlyPayPasswordFree from "@/pages/pexly-pay-password-free";
 import PexlyPayHelp from "@/pages/pexly-pay-help";
 import NotificationsPage from "@/pages/notifications";
+import NotificationSettings from "@/pages/notification-settings";
 import { BitcoinCalculator } from "@/pages/bitcoin-calculator";
 import { VerifyEmail } from "@/pages/verify-email";
 import PexlyAcademy from "@/pages/pexly-academy";
@@ -117,6 +118,8 @@ function Router() {
       <Route path="/trade-history" component={TradeHistory} />
       <Route path="/account-settings" component={AccountSettings} />
       <Route path="/devices" component={DevicesPage} />
+      <Route path="/notification-settings" component={NotificationSettings} />
+      <Route path="/developer" component={Developer} />
       <Route path="/verification" component={VerificationPage} />
       <Route path="/merchant-application" component={MerchantApplicationPage} />
       <Route path="/merchant-downgrade" component={MerchantDowngradePage} />
