@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { createClient } from "./supabase";
 import { presenceTracker } from './presence';
@@ -88,19 +88,13 @@ async function trackDevice(supabase: any, userId: string) {
 
     if (existingDevices && existingDevices.length > 0) {
       const deviceId = existingDevices[0].id;
-
       await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
-
       await supabase.from('user_devices')
-        .update({ 
-          is_current: true, 
-          last_active: new Date().toISOString() 
-        })
+        .update({ is_current: true, last_active: new Date().toISOString() })
         .eq('id', deviceId);
     } else {
       await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
-
-      const { error } = await supabase.from('user_devices').insert({
+      await supabase.from('user_devices').insert({
         user_id: userId,
         device_name: deviceInfo.deviceName,
         browser: deviceInfo.browser,
@@ -110,10 +104,6 @@ async function trackDevice(supabase: any, userId: string) {
         is_current: true,
         last_active: new Date().toISOString(),
       });
-
-      if (error) {
-        console.error('Error tracking device:', error);
-      }
     }
   } catch (error) {
     console.error('Error in trackDevice:', error);
@@ -126,7 +116,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(null);
   const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(null);
+  // Track the current session token in state to trigger re-subscription
+  const [currentSessionToken, setCurrentSessionToken] = useState<string | null>(null);
   const supabase = createClient();
+  const sessionChannelRef = useRef<any>(null);
+  // Track when this device created the session (to ignore self-triggered deletions)
+  const sessionCreatedAtRef = useRef<number | null>(null);
+
+  // Real-time session invalidation listener - RE-SUBSCRIBES when token changes
+  useEffect(() => {
+    const isLoginInProgress = localStorage.getItem('session_login_in_progress') === 'true';
+    const isManualLogout = localStorage.getItem('manual_logout') === 'true';
+    
+    // Don't subscribe during login flow or manual logout
+    if (!currentSessionToken || !user || isLoginInProgress || isManualLogout) {
+      // Clean up any existing channel
+      if (sessionChannelRef.current) {
+        supabase.removeChannel(sessionChannelRef.current);
+        sessionChannelRef.current = null;
+      }
+      return;
+    }
+
+    // Clean up existing channel before creating new one
+    if (sessionChannelRef.current) {
+      supabase.removeChannel(sessionChannelRef.current);
+      sessionChannelRef.current = null;
+    }
+
+    console.log(`[SessionListener] Subscribing to token: ${currentSessionToken.substring(0, 8)}...`);
+
+    const channel = supabase
+      .channel(`session-invalidation-${user.id}-${currentSessionToken}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'active_sessions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          // Check flags FIRST
+          const nowManualLogout = localStorage.getItem('manual_logout') === 'true';
+          const nowLoginInProgress = localStorage.getItem('session_login_in_progress') === 'true';
+          
+          if (nowManualLogout || nowLoginInProgress) {
+            console.log('[SessionListener] Ignoring DELETE - manual logout or login in progress');
+            return;
+          }
+
+          // Check if this device just created its session (grace period)
+          if (sessionCreatedAtRef.current && Date.now() - sessionCreatedAtRef.current < 5000) {
+            console.log('[SessionListener] Ignoring DELETE - within grace period after session creation');
+            return;
+          }
+
+          // Verify our specific session was deleted by checking if it still exists
+          const nowCurrentToken = localStorage.getItem('session_token');
+          
+          if (!nowCurrentToken || nowCurrentToken !== currentSessionToken) {
+            console.log('[SessionListener] Token mismatch, ignoring');
+            return;
+          }
+
+          // Check if OUR session still exists
+          const { data: sessionExists } = await supabase
+            .from('active_sessions')
+            .select('id')
+            .eq('session_token', nowCurrentToken)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (!sessionExists) {
+            console.log('[SessionListener] Session was invalidated from another device');
+            localStorage.removeItem('session_token');
+            setCurrentSessionToken(null);
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+          }
+        }
+      )
+      .subscribe();
+
+    sessionChannelRef.current = channel;
+
+    return () => {
+      if (sessionChannelRef.current) {
+        supabase.removeChannel(sessionChannelRef.current);
+        sessionChannelRef.current = null;
+      }
+    };
+  }, [user?.id, currentSessionToken, supabase]);
 
   useEffect(() => {
     if (window.location.pathname === '/verify-email') {
@@ -138,18 +220,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        // Check if login is in progress - skip validation during login flow
         const isLoginInProgress = localStorage.getItem('session_login_in_progress') === 'true';
         
         if (isLoginInProgress) {
-          // During login, don't validate session token - it's being created
           setSession(session);
           setUser(session.user);
           setLoading(false);
           return;
         }
         
-        // Validate session token exists and is valid
         const sessionToken = localStorage.getItem('session_token');
         
         if (sessionToken) {
@@ -162,8 +241,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .maybeSingle();
 
             if (!sessionData) {
-              // Session token doesn't exist - user was logged out elsewhere
               localStorage.removeItem('session_token');
+              setCurrentSessionToken(null);
               await supabase.auth.signOut();
               setSession(null);
               setUser(null);
@@ -171,19 +250,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return;
             }
 
-            // Update last_active timestamp on valid session (refresh case)
-            // This keeps the session alive without generating a new token
             await supabase
               .from('active_sessions')
               .update({ last_active: new Date().toISOString() })
               .eq('session_token', sessionToken)
               .eq('user_id', session.user.id);
 
+            // Set token state AFTER validation passes
+            setCurrentSessionToken(sessionToken);
+
           } catch (err) {
             console.error('Error validating session:', err);
           }
         } else {
-          // No session token and not logging in - sign out
           await supabase.auth.signOut();
           setSession(null);
           setUser(null);
@@ -200,9 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (window.location.pathname === '/verify-email') {
         setSession(null);
         setUser(null);
@@ -218,6 +295,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         presenceTracker.startTracking(session.user.id);
       } else {
         presenceTracker.stopTracking();
+        setCurrentSessionToken(null);
       }
     });
 
@@ -227,8 +305,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [pendingOTPVerification]);
 
-  // Supabase handles session refresh automatically
-
   useEffect(() => {
     const handleBeforeUnload = () => {
       const stayLoggedIn = localStorage.getItem('stayLoggedIn');
@@ -236,12 +312,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         navigator.sendBeacon('/api/logout');
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [user]);
 
   const signUp = async (email: string, password: string) => {
@@ -249,33 +321,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ? 'https://pexly.app' 
       : window.location.origin;
     const redirectUrl = `${baseUrl}/verify-email`;
-
-    console.log("Signup redirect URL:", redirectUrl);
-
-    const { error, data } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
+      options: { emailRedirectTo: redirectUrl },
     });
-
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    // CRITICAL: Set these flags BEFORE signInWithPassword so the SessionInvalidationListener
-    // won't subscribe to old token deletions when auth.user becomes available
+    // CRITICAL: Clear old token and set flags BEFORE auth
     localStorage.removeItem('session_token');
+    setCurrentSessionToken(null); // Clear state too!
     localStorage.setItem('session_login_in_progress', 'true');
     
-    const { error, data } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      // Clear the flag on error
       localStorage.removeItem('session_login_in_progress');
       return { error, data };
     }
@@ -283,7 +345,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.user && data.session) {
       await trackDevice(supabase, data.user.id);
       
-      // Create new session and invalidate all others (single-session enforcement)
       try {
         const deviceInfo = getDeviceInfo();
         let ipAddress = 'Unknown';
@@ -313,20 +374,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }),
         });
 
-        // Clear the login in progress flag
-        localStorage.removeItem('session_login_in_progress');
-
         if (response.ok) {
           const sessionData = await response.json();
           if (sessionData.session_token) {
-            // Set the new token - the listener will automatically re-subscribe
+            // Mark when THIS device created its session
+            sessionCreatedAtRef.current = Date.now();
+            // Store token
             localStorage.setItem('session_token', sessionData.session_token);
+            // Update state - this triggers re-subscription to NEW token
+            setCurrentSessionToken(sessionData.session_token);
           }
         } else {
-          // If session creation fails, sign out
           await supabase.auth.signOut();
+          localStorage.removeItem('session_login_in_progress');
           return { error: { message: 'Failed to create session' }, data: null };
         }
+        
+        // Clear flag AFTER token is set
+        localStorage.removeItem('session_login_in_progress');
+        
       } catch (err) {
         console.error('Error creating session:', err);
         localStorage.removeItem('session_login_in_progress');
@@ -339,17 +405,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const completeOTPVerification = useCallback(async () => {
-    if (!pendingOTPVerification || !pendingSession) {
-      return;
-    }
-
+    if (!pendingOTPVerification || !pendingSession) return;
     const { user: pendingUser } = pendingSession;
-
     await trackDevice(supabase, pendingUser.id);
-    
     setPendingOTPVerification(null);
     setPendingSession(null);
-
     presenceTracker.startTracking(pendingUser.id);
   }, [pendingOTPVerification, pendingSession, supabase]);
 
@@ -359,14 +419,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    // Set flag BEFORE deleting to prevent listener from triggering
     localStorage.setItem('manual_logout', 'true');
     
-    // Clean up session token
+    // Clean up realtime channel FIRST
+    if (sessionChannelRef.current) {
+      supabase.removeChannel(sessionChannelRef.current);
+      sessionChannelRef.current = null;
+    }
+    
     const sessionToken = localStorage.getItem('session_token');
     if (sessionToken && user) {
       try {
-        // Delete the session from database - this will trigger DELETE event
         await supabase
           .from('active_sessions')
           .delete()
@@ -376,29 +439,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
-    // Remove session token
     localStorage.removeItem('session_token');
-    
-    // Sign out from Supabase auth
+    setCurrentSessionToken(null);
     await supabase.auth.signOut();
     
-    // Clean up the flag after auth state settles
-    setTimeout(() => {
-      localStorage.removeItem('manual_logout');
-    }, 2000);
+    setTimeout(() => localStorage.removeItem('manual_logout'), 2000);
   };
 
   return (
     <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      signUp, 
-      signIn, 
-      signOut, 
-      completeOTPVerification,
-      cancelOTPVerification,
-      loading,
-      pendingOTPVerification,
+      user, session, signUp, signIn, signOut, 
+      completeOTPVerification, cancelOTPVerification,
+      loading, pendingOTPVerification,
     }}>
       {children}
     </AuthContext.Provider>
