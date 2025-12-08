@@ -30,6 +30,15 @@ import {
   Menu,
   RefreshCw,
 } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { PexlyFooter } from "@/components/pexly-footer";
 
 interface Device {
@@ -67,6 +76,8 @@ export default function DevicesPage() {
   const [loadingDevices, setLoadingDevices] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const devicesPerPage = 60;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -104,10 +115,22 @@ export default function DevicesPage() {
     setRefreshing(true);
     await fetchDevices();
     setRefreshing(false);
+    setCurrentPage(1);
     toast({
       title: "Refreshed",
       description: "Device list updated",
     });
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(devices.length / devicesPerPage);
+  const startIndex = (currentPage - 1) * devicesPerPage;
+  const endIndex = startIndex + devicesPerPage;
+  const currentDevices = devices.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRevokeDevice = async (deviceId: string) => {
@@ -240,6 +263,7 @@ export default function DevicesPage() {
                     <h2 className="text-2xl font-bold mb-2">Devices</h2>
                     <p className="text-sm text-muted-foreground">
                       Manage devices that have access to your account
+                      {devices.length > 0 && ` (${devices.length} total, showing ${startIndex + 1}-${Math.min(endIndex, devices.length)})`}
                     </p>
                   </div>
                   <Button
@@ -282,7 +306,7 @@ export default function DevicesPage() {
                     </Card>
                   ) : (
                     <div className="space-y-4">
-                      {devices.map((device) => {
+                      {currentDevices.map((device) => {
                         const DeviceIcon = getDeviceIcon(device.device_name, device.browser);
                         return (
                           <Card key={device.id} className={device.is_current ? "border-primary/50" : ""}>
@@ -336,6 +360,59 @@ export default function DevicesPage() {
                           </Card>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {devices.length > devicesPerPage && (
+                    <div className="flex justify-center mt-6">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                              className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                          
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNumber;
+                            if (totalPages <= 5) {
+                              pageNumber = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNumber = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNumber = totalPages - 4 + i;
+                            } else {
+                              pageNumber = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <PaginationItem key={pageNumber}>
+                                <PaginationLink
+                                  onClick={() => handlePageChange(pageNumber)}
+                                  isActive={currentPage === pageNumber}
+                                  className="cursor-pointer"
+                                >
+                                  {pageNumber}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+                          
+                          {totalPages > 5 && currentPage < totalPages - 2 && (
+                            <PaginationItem>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )}
+                          
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                              className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
                     </div>
                   )}
 
