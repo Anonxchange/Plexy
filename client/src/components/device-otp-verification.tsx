@@ -14,7 +14,7 @@ import {
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
 import { Smartphone, Shield, RefreshCw, Mail } from 'lucide-react';
-import { sessionSecurity } from '@/lib/security/session-security';
+import { createClient } from '@/lib/supabase';
 
 interface DeviceOTPVerificationProps {
   isOpen: boolean;
@@ -42,6 +42,7 @@ export function DeviceOTPVerification({
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const supabase = createClient();
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -67,13 +68,17 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
-      const result = await sessionSecurity.verifyOTP(userId, otp);
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
       
-      if (result.verified) {
-        onVerified();
-      } else {
-        setError(result.error || 'Invalid verification code');
+      if (verifyError) {
+        setError(verifyError.message || 'Invalid verification code');
         setOtp('');
+      } else {
+        onVerified();
       }
     } catch (err) {
       setError('Verification failed. Please try again.');
@@ -88,13 +93,15 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
-      const result = await sessionSecurity.resendOTP(userId, email);
+      const { error: resendError } = await supabase.auth.signInWithOtp({
+        email,
+      });
       
-      if (result.sent) {
+      if (resendError) {
+        setError(resendError.message || 'Failed to resend code');
+      } else {
         setResendCooldown(60);
         setOtp('');
-      } else {
-        setError(result.error || 'Failed to resend code');
       }
     } catch (err) {
       setError('Failed to resend code. Please try again.');
