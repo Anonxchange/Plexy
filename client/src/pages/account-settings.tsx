@@ -112,7 +112,9 @@ const settingsSections = [
       return;
     } else if (sectionId === "developer") {
       setLocation("/developer");
+      return;
     } else {
+      setActiveSection(sectionId);
       setLocation(`/account-settings?section=${sectionId}`);
     }
   };
@@ -127,6 +129,15 @@ export default function AccountSettings() {
   const urlParams = new URLSearchParams(window.location.search);
   const sectionFromUrl = urlParams.get('section');
   const [activeSection, setActiveSection] = useState(sectionFromUrl || "profile");
+
+  // Update active section when URL changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sectionFromUrl = urlParams.get('section');
+    if (sectionFromUrl && sectionFromUrl !== activeSection) {
+      setActiveSection(sectionFromUrl);
+    }
+  }, [location]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [nameDisplay, setNameDisplay] = useState("hide");
   const [phoneVerified, setPhoneVerified] = useState(true);
