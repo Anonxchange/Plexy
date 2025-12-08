@@ -29,7 +29,6 @@ export function SessionInvalidationListener(): null {
   const [, setLocation] = useLocation();
   const isLoggingOutRef = useRef(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const sessionTokenRef = useRef<string | null>(null);
 
   const handleLogout = useCallback(async () => {
     if (isLoggingOutRef.current) return;
@@ -42,24 +41,19 @@ export function SessionInvalidationListener(): null {
       variant: 'destructive',
     });
     
-    // Don't remove session_token here - let auth-context handle it
     await supabase.auth.signOut();
     setLocation('/signin?reason=logged_out_elsewhere');
   }, [setLocation]);
 
-  // Store current session token in ref to avoid race conditions
-  const currentSessionTokenRef = useRef<string | null>(null);
-
+  // Initialize session token once login is complete
   useEffect(() => {
     if (!auth?.user?.id) {
       isLoggingOutRef.current = false;
       setSessionToken(null);
-      sessionTokenRef.current = null;
       return;
     }
 
-    // Poll for session token until it's available (during login flow)
-    // This ensures we don't subscribe to stale/missing tokens
+    // Poll for session token until login flow completes
     const checkInterval = setInterval(() => {
       const isLoginInProgress = localStorage.getItem('session_login_in_progress') === 'true';
       if (isLoginInProgress) {
@@ -67,34 +61,25 @@ export function SessionInvalidationListener(): null {
       }
       
       const token = localStorage.getItem('session_token');
-      if (token && token !== sessionTokenRef.current) {
-        // New stable token found - update state and ref
+      if (token && token !== sessionToken) {
         setSessionToken(token);
-        sessionTokenRef.current = token;
-        currentSessionTokenRef.current = token;
         clearInterval(checkInterval);
-      } else if (!token && sessionTokenRef.current) {
-        // Token was removed - clear state
+      } else if (!token && sessionToken) {
         setSessionToken(null);
-        sessionTokenRef.current = null;
-        currentSessionTokenRef.current = null;
         clearInterval(checkInterval);
       }
     }, 500);
 
     return () => clearInterval(checkInterval);
-  }, [auth?.user?.id]);
+  }, [auth?.user?.id, sessionToken]);
 
+  // Listen for session deletions
   useEffect(() => {
     if (!auth?.user?.id || !sessionToken) {
       return;
     }
 
-    // Update the current token ref whenever sessionToken changes
-    currentSessionTokenRef.current = sessionToken;
-
-    // Use unique channel name that includes token to force recreation
-    const channelName = `session-invalidation-${auth.user.id}-${sessionToken}`;
+    const channelName = `session-invalidation-${auth.user.id}-${sessionToken.slice(-8)}`;
     
     const sessionChannel = supabase
       .channel(channelName)
@@ -107,39 +92,36 @@ export function SessionInvalidationListener(): null {
           filter: `user_id=eq.${auth.user.id}`,
         },
         async (payload) => {
-          // Safety check: if payload is missing session_token, ignore it
-          // This prevents false logouts from bulk deletes or cascading operations
-          if (!payload.old || !payload.old.session_token) {
+          // REPLICA IDENTITY FULL ensures payload.old has full row data
+          if (!payload.old?.session_token) {
             return;
           }
           
-          // CRITICAL: Only process if the deleted token matches OUR current token
-          // This prevents being logged out when OTHER sessions are deleted
           const currentToken = localStorage.getItem('session_token');
+          
+          // Ignore if deleted token is NOT our current token
           if (payload.old.session_token !== currentToken) {
-            // A different session was deleted, not ours - ignore it
             return;
           }
           
-          // Double-check with state
-          if (payload.old.session_token !== sessionToken) {
-            return;
-          }
-
-          // Check if this is a manual logout initiated by this device
-          const isManualLogout = localStorage.getItem('manual_logout') === 'true';
-          if (isManualLogout) {
+          // Ignore during manual logout
+          if (localStorage.getItem('manual_logout') === 'true') {
             isLoggingOutRef.current = true;
             return;
           }
-
-          // Check if login is in progress (shouldn't happen with new flow, but safeguard)
-          const isLoginInProgress = localStorage.getItem('session_login_in_progress') === 'true';
-          if (isLoginInProgress) {
+          
+          // Ignore during login flow
+          if (localStorage.getItem('session_login_in_progress') === 'true') {
+            return;
+          }
+          
+          // Ignore deletions within 5 seconds of session creation (race condition protection)
+          const createdAt = parseInt(localStorage.getItem('session_created_at') || '0', 10);
+          if (Date.now() - createdAt < 5000) {
             return;
           }
 
-          // Verify the session actually no longer exists in database
+          // Verify session no longer exists in database
           try {
             const { data: sessionExists } = await supabase
               .from('active_sessions')
@@ -149,14 +131,13 @@ export function SessionInvalidationListener(): null {
               .maybeSingle();
 
             if (sessionExists) {
-              // Session still exists, false alarm
-              return;
+              return; // Session still exists, false alarm
             }
           } catch (err) {
             console.error('Error verifying session deletion:', err);
           }
 
-          // This is a legitimate forced logout from another device
+          // Legitimate forced logout from another device
           await handleLogout();
         }
       )
