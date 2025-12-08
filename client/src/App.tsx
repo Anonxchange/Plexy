@@ -30,6 +30,7 @@ import NotFound from "@/pages/not-found";
 import { GiftCards } from "@/pages/gift-cards";
 import { TradeHistory } from "@/pages/trade-history";
 import AccountSettings from "@/pages/account-settings";
+import DevicesPage from "@/pages/devices";
 import VisaCard from "@/pages/visa-card";
 import VisaCardDetails from "@/pages/visa-card-details";
 import MobileTopup from "@/pages/mobile-topup";
@@ -115,6 +116,7 @@ function Router() {
       <Route path="/gift-cards" component={GiftCards} />
       <Route path="/trade-history" component={TradeHistory} />
       <Route path="/account-settings" component={AccountSettings} />
+      <Route path="/devices" component={DevicesPage} />
       <Route path="/verification" component={VerificationPage} />
       <Route path="/merchant-application" component={MerchantApplicationPage} />
       <Route path="/merchant-downgrade" component={MerchantDowngradePage} />
