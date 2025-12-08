@@ -333,21 +333,21 @@ export function MyOffers() {
                     <Package className="h-4 w-4 mr-2" />
                     My Offers
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <DropdownMenuItem onClick={() => navigate('/favorite-offers')}>
                     <Star className="h-4 w-4 mr-2" />
                     Favorite Offers
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <DropdownMenuItem onClick={() => navigate('/trusted-users')}>
                     <ThumbsUp className="h-4 w-4 mr-2" />
                     Trusted Users
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/p2p')}>
+                  <DropdownMenuItem onClick={() => navigate('/blocked-users')}>
                     <Lock className="h-4 w-4 mr-2" />
                     Blocked Users
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/trade-history')}>
+                  <DropdownMenuItem onClick={() => navigate('/trade-statistics')}>
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Trade Statistics
                   </DropdownMenuItem>
@@ -416,7 +416,7 @@ export function MyOffers() {
                     <Button 
                       variant="ghost" 
                       className="w-full justify-start"
-                      onClick={() => navigate('/p2p')}
+                      onClick={() => navigate('/favorite-offers')}
                     >
                       <Star className="h-4 w-4 mr-2" />
                       Favorite Offers
@@ -425,7 +425,7 @@ export function MyOffers() {
                     <Button 
                       variant="ghost" 
                       className="w-full justify-start"
-                      onClick={() => navigate('/p2p')}
+                      onClick={() => navigate('/trusted-users')}
                     >
                       <ThumbsUp className="h-4 w-4 mr-2" />
                       Trusted Users
@@ -433,7 +433,7 @@ export function MyOffers() {
                     <Button 
                       variant="ghost" 
                       className="w-full justify-start"
-                      onClick={() => navigate('/p2p')}
+                      onClick={() => navigate('/blocked-users')}
                     >
                       <Lock className="h-4 w-4 mr-2" />
                       Blocked Users
@@ -442,7 +442,7 @@ export function MyOffers() {
                     <Button 
                       variant="ghost" 
                       className="w-full justify-start"
-                      onClick={() => navigate('/trade-history')}
+                      onClick={() => navigate('/trade-statistics')}
                     >
                       <BarChart3 className="h-4 w-4 mr-2" />
                       Trade Statistics
