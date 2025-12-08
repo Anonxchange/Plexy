@@ -102,23 +102,6 @@ const settingsSections = [
   { id: "security-questions", label: "Security Questions", icon: Info },
 ];
 
-  const handleSectionClick = (sectionId: string) => {
-    setSidebarOpen(false);
-    if (sectionId === "devices") {
-      setLocation('/devices');
-      return;
-    } else if (sectionId === "notifications") {
-      setLocation('/notification-settings');
-      return;
-    } else if (sectionId === "developer") {
-      setLocation("/developer");
-      return;
-    } else {
-      setActiveSection(sectionId);
-      setLocation(`/account-settings?section=${sectionId}`);
-    }
-  };
-
 export default function AccountSettings() {
   const { user, loading } = useAuth();
   const [location, setLocation] = useLocation();
@@ -129,15 +112,6 @@ export default function AccountSettings() {
   const urlParams = new URLSearchParams(window.location.search);
   const sectionFromUrl = urlParams.get('section');
   const [activeSection, setActiveSection] = useState(sectionFromUrl || "profile");
-
-  // Update active section when URL changes
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const sectionFromUrl = urlParams.get('section');
-    if (sectionFromUrl && sectionFromUrl !== activeSection) {
-      setActiveSection(sectionFromUrl);
-    }
-  }, [location]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [nameDisplay, setNameDisplay] = useState("hide");
   const [phoneVerified, setPhoneVerified] = useState(true);
@@ -188,7 +162,11 @@ export default function AccountSettings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  
+  // Notification settings
+  const [tradeUpdates, setTradeUpdates] = useState(true);
+  const [priceAlerts, setPriceAlerts] = useState(true);
+  const [newOffers, setNewOffers] = useState(true);
+  const [marketingEmails, setMarketingEmails] = useState(false);
 
   // Payment method dialog
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -1252,7 +1230,10 @@ export default function AccountSettings() {
         return (
           <button
             key={section.id}
-            onClick={() => handleSectionClick(section.id)}
+            onClick={() => {
+              setActiveSection(section.id);
+              setSidebarOpen(false);
+            }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
               activeSection === section.id
                 ? "bg-primary text-primary-foreground"
@@ -2712,7 +2693,42 @@ export default function AccountSettings() {
     );
   };
 
-  
+  const NotificationsSection = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Trade Updates</p>
+              <p className="text-sm text-muted-foreground">Notifications about your trades</p>
+            </div>
+            <Switch checked={tradeUpdates} onCheckedChange={setTradeUpdates} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Price Alerts</p>
+              <p className="text-sm text-muted-foreground">Get notified of price changes</p>
+            </div>
+            <Switch checked={priceAlerts} onCheckedChange={setPriceAlerts} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">New Offers</p>
+              <p className="text-sm text-muted-foreground">Notifications about new trading offers</p>
+            </div>
+            <Switch checked={newOffers} onCheckedChange={setNewOffers} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Marketing Emails</p>
+              <p className="text-sm text-muted-foreground">Promotional content and updates</p>
+            </div>
+            <Switch checked={marketingEmails} onCheckedChange={setMarketingEmails} />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   const PaymentSection = () => (
     <div className="space-y-6">
@@ -3718,8 +3734,7 @@ export default function AccountSettings() {
       case "security":
         return <SecuritySection />;
       case "notifications":
-        setLocation('/notification-settings');
-        return null;
+        return <NotificationsSection />;
       case "payment":
         return <PaymentSection />;
       case "devices":
