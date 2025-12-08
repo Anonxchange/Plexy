@@ -655,21 +655,8 @@ export function Swap() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Mobile Layout */}
       <div className="flex-1 px-4 py-8 lg:hidden">
-        {/* Chart on Mobile */}
-        <Card className="bg-card/50 mb-6">
-          <CardContent className="p-4">
-            <div className="h-[300px] bg-background rounded-lg overflow-hidden">
-              <iframe
-                key={`${fromCurrency}-${toCurrency}`}
-                src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}&interval=60&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}`}
-                className="w-full h-full"
-                title="TradingView Chart"
-              ></iframe>
-            </div>
-          </CardContent>
-        </Card>
         {/* Swap Interface */}
-        <Card className="bg-card/50 mb-8">
+        <Card className="bg-card/50 mb-6">
           <CardContent className="p-6 space-y-6">
             {/* From Section */}
             <div className="space-y-3">
@@ -803,7 +790,7 @@ export function Swap() {
 
         {/* Swap Button */}
         <Button 
-          className="w-full h-14 text-lg bg-primary hover:bg-primary/90 mb-8"
+          className="w-full h-14 text-lg bg-primary hover:bg-primary/90 mb-6"
           onClick={handleSwap}
           disabled={executeSwap.isPending || !fromAmount || !toAmount || parseFloat(fromAmount) <= 0}
         >
@@ -819,6 +806,20 @@ export function Swap() {
             </>
           )}
         </Button>
+
+        {/* Chart on Mobile */}
+        <Card className="bg-card/50 mb-8">
+          <CardContent className="p-4">
+            <div className="h-[400px] bg-background rounded-lg overflow-hidden">
+              <iframe
+                key={`${fromCurrency}-${toCurrency}`}
+                src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}&interval=60&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${fromCurrency}${toCurrency === 'USDT' ? 'USDT' : toCurrency}`}
+                className="w-full h-full"
+                title="TradingView Chart"
+              ></iframe>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Recent Activity */}
         <Card className="bg-card/50">
