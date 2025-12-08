@@ -107,11 +107,14 @@ const settingsSections = [
 
 export default function AccountSettings() {
   const { user, loading } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
 
-  const [activeSection, setActiveSection] = useState("profile");
+  // Parse section from URL query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const sectionFromUrl = urlParams.get('section');
+  const [activeSection, setActiveSection] = useState(sectionFromUrl || "profile");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [nameDisplay, setNameDisplay] = useState("hide");
   const [phoneVerified, setPhoneVerified] = useState(true);
@@ -3909,7 +3912,8 @@ export default function AccountSettings() {
       case "payment":
         return <PaymentSection />;
       case "devices":
-        return <DevicesSection />;
+        setLocation('/devices');
+        return null;
       case "verification":
         return <VerificationSection />;
       case "connected":
