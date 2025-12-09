@@ -391,20 +391,16 @@ export default function Wallet() {
     }
   };
 
-  // Show loading state while auth is loading
-  if (loading) {
+  // Show loading state while auth is loading or user not ready
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Loading wallet...</p>
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   const mergedAssets = cryptoAssets.map(asset => {
