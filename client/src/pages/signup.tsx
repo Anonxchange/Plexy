@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { useTheme } from "@/components/theme-provider";
 import { amlScreening } from "@/lib/security/aml-screening";
+import { Turnstile } from "@marsidev/react-turnstile";
 import {
   Select,
   SelectContent,
@@ -137,6 +138,7 @@ export function SignUp() {
   const [userId, setUserId] = useState<string | null>(null);
   const [emailOtp, setEmailOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const { signUp, signIn, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -816,10 +818,25 @@ export function SignUp() {
                 </a>
               </div>
 
+              {/* Cloudflare Turnstile CAPTCHA */}
+              {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                <div className="mb-6 flex justify-center">
+                  <Turnstile
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setCaptchaToken(null)}
+                    onExpire={() => setCaptchaToken(null)}
+                    options={{
+                      theme: isDark ? 'dark' : 'light',
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Create Account Button */}
               <button 
                 type="submit"
-                disabled={loading}
+                disabled={loading || (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
                 style={{ fontWeight: 500 }}
               >
