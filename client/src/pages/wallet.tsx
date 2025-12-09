@@ -214,8 +214,6 @@ export default function Wallet() {
   const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
   const { toast } = useToast();
 
-  const [hasError, setHasError] = useState(false);
-
   useWalletMonitoring(['BTC', 'ETH', 'SOL', 'BNB', 'TRX', 'USDC', 'USDT'], !!user);
 
   // Check authentication only once on mount - wait for loading to complete
@@ -224,16 +222,6 @@ export default function Wallet() {
       setLocation("/signin");
     }
   }, [user, loading, setLocation]);
-
-  // Error boundary effect
-  useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      console.error('Wallet page error:', event.error);
-      setHasError(true);
-    };
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
 
   // Load initial data and set up real-time subscriptions
   useEffect(() => {
@@ -396,25 +384,12 @@ export default function Wallet() {
           } : pair;
         })
       );
-      } catch (error) {
+    } catch (error) {
       console.error("Error loading crypto prices:", error);
+      // Set prices loaded to true even on error to show cached data
+      setPricesLoaded(true);
     }
   };
-
-  // Show error state
-  if (hasError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center">
-            <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-            <p className="text-muted-foreground">We encountered an error loading your wallet.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // Show loading state while auth is loading
   if (loading) {
