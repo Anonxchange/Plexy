@@ -351,7 +351,11 @@ export function SignIn() {
     <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
       {/* Header */}
       <div className="p-6 flex justify-between items-center lg:absolute lg:top-0 lg:left-0 lg:right-0 lg:z-10">
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 lg:bg-transparent lg:backdrop-blur-none lg:border-none lg:shadow-none px-4 py-2 rounded-2xl ${
+          isDark 
+            ? 'bg-white/10 backdrop-blur-md border border-white/20 shadow-lg' 
+            : 'bg-black/5 backdrop-blur-md border border-black/10 shadow-lg'
+        }`}>
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
