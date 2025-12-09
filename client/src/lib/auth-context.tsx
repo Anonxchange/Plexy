@@ -16,8 +16,8 @@ interface PendingAuth {
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ 
+  signUp: (email: string, password: string, captchaToken?: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ 
     error: any; 
     data: any;
     requiresOTP?: boolean;
@@ -172,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [user]);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, captchaToken?: string) => {
     const baseUrl = window.location.hostname.includes('pexly.app') 
       ? 'https://pexly.app' 
       : window.location.origin;
@@ -180,13 +180,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectUrl },
+      options: { 
+        emailRedirectTo: redirectUrl,
+        captchaToken,
+      },
     });
     return { error };
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
+    const { error, data } = await supabase.auth.signInWithPassword({ 
+      email, 
+      password,
+      options: { captchaToken },
+    });
 
     if (error) {
       return { error, data };
