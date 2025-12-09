@@ -148,14 +148,10 @@ function Router() {
               <Route path="/offers/:offerId" component={OfferDetail} />
       <Route path="/profile/:userId?" component={ProfilePage} />
       <Route path="/medals" component={MedalsPage} />
-      <Route path="/submit-idea" component={SubmitIdea} />
-      <Route path="/developer" component={Developer} />
-      <Route component={NotFound} />
       <Route path="/fees" component={Fees} />
       <Route path="/affiliate" component={Affiliate} />
       <Route path="/rewards" component={RewardsPage} />
       <Route path="/referral" component={ReferralPage} />
-      <Route path="/notifications" component={NotificationsPage} />
       <Route path="/bitcoin-calculator" component={BitcoinCalculator} />
       <Route path="/academy" component={PexlyAcademy} />
       <Route path="/academy/:articleId" component={AcademyArticle} />
@@ -171,6 +167,7 @@ function Router() {
       <Route path="/restricted-countries" component={RestrictedCountries} />
       <Route path="/vip-terms" component={VIPTerms} />
       <Route path="/vendor-reminder" component={VendorReminder} />
+      <Route component={NotFound} />
     </Switch>
   );
 }
