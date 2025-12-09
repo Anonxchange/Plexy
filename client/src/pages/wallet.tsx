@@ -202,6 +202,10 @@ export default function Wallet() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [pricesLoaded, setPricesLoaded] = useState(false);
+  const [cachedBalance, setCachedBalance] = useState<number | null>(null);
+  const [cachedPnL, setCachedPnL] = useState<number | null>(null);
+  const [cachedPnLPercentage, setCachedPnLPercentage] = useState<number | null>(null);
   const [spotPairs, setSpotPairs] = useState(initialSpotPairs);
   const [limitsExpanded, setLimitsExpanded] = useState(false);
   const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
@@ -368,6 +372,7 @@ export default function Wallet() {
       const symbols = ['BTC', 'ETH', 'BNB', 'TRX', 'SOL', 'LTC', 'USDT', 'USDC', 'TON', 'XMR'];
       const prices = await getCryptoPrices(symbols);
       setCryptoPrices(prices);
+      setPricesLoaded(true);
 
       setSpotPairs(prevPairs =>
         prevPairs.map(pair => {
@@ -447,19 +452,40 @@ export default function Wallet() {
   });
 
   // Calculate total balance in the user's preferred currency (USD by default)
-  const totalBalance = preferredCurrency === 'USD' 
+  const calculatedBalance = preferredCurrency === 'USD' 
     ? mergedAssets.reduce((sum, asset) => sum + asset.usdValue, 0)
     : mergedAssets.reduce((sum, asset) => sum + asset.ngnValue, 0);
 
   // Calculate total PnL in the user's preferred currency
-  const totalPnL = preferredCurrency === 'USD'
+  const calculatedPnL = preferredCurrency === 'USD'
     ? mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0)
     : mergedAssets.reduce((sum, asset) => sum + (convertToNGN(asset.pnlUsd)), 0);
 
   const totalCostBasis = mergedAssets.reduce((sum, asset) => sum + (asset.balance * asset.avgCost), 0);
-  const totalPnLPercentage = totalCostBasis > 0
+  const calculatedPnLPercentage = totalCostBasis > 0
     ? (mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0) / totalCostBasis) * 100
     : 0;
+
+  // Use cached values when calculated would show 0 but we have cached data
+  const totalBalance = (calculatedBalance === 0 && cachedBalance !== null && cachedBalance > 0) 
+    ? cachedBalance 
+    : calculatedBalance;
+  const totalPnL = (calculatedBalance === 0 && cachedPnL !== null) 
+    ? cachedPnL 
+    : calculatedPnL;
+  const totalPnLPercentage = (calculatedBalance === 0 && cachedPnLPercentage !== null) 
+    ? cachedPnLPercentage 
+    : calculatedPnLPercentage;
+
+  // Cache balance when we have valid data
+  useEffect(() => {
+    const hasValidData = pricesLoaded && !isInitialLoad;
+    if (hasValidData && calculatedBalance > 0) {
+      setCachedBalance(calculatedBalance);
+      setCachedPnL(calculatedPnL);
+      setCachedPnLPercentage(calculatedPnLPercentage);
+    }
+  }, [calculatedBalance, calculatedPnL, calculatedPnLPercentage, pricesLoaded, isInitialLoad]);
 
   const portfolioTrend = totalPnLPercentage > 0 ? 'up' : totalPnLPercentage < 0 ? 'down' : 'neutral';
   const portfolioSparklineData = generateSparklineData(totalBalance * 0.95, portfolioTrend, 30);
@@ -723,25 +749,25 @@ export default function Wallet() {
 
                 <div className="mb-2">
                   <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
-                    {isInitialLoad && wallets.length === 0 ? (
+                    {isInitialLoad && !pricesLoaded && cachedBalance === null ? (
                       <div className="h-10 w-48 bg-muted animate-pulse rounded" />
                     ) : (
                       balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"
                     )}
                   </div>
-                  {!(isInitialLoad && wallets.length === 0) && balanceVisible && totalPnL !== 0 && (
+                  {!(isInitialLoad && !pricesLoaded && cachedBalance === null) && balanceVisible && totalPnL !== 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
                         {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
                       </span>
                     </div>
                   )}
-                  {isInitialLoad && wallets.length === 0 && (
+                  {isInitialLoad && !pricesLoaded && cachedBalance === null && (
                     <div className="h-5 w-32 bg-muted animate-pulse rounded mt-1" />
                   )}
                 </div>
 
-                {balanceVisible && !(isInitialLoad && wallets.length === 0) && (
+                {balanceVisible && !(isInitialLoad && !pricesLoaded && cachedBalance === null) && (
                   <div className="mb-6 h-12 opacity-60">
                     <Sparkline 
                       data={portfolioSparklineData} 
@@ -751,7 +777,7 @@ export default function Wallet() {
                     />
                   </div>
                 )}
-                {isInitialLoad && wallets.length === 0 && (
+                {isInitialLoad && !pricesLoaded && cachedBalance === null && (
                   <div className="mb-6 h-12 bg-muted animate-pulse rounded" />
                 )}
 
