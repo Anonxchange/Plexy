@@ -201,7 +201,7 @@ export default function Wallet() {
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
-  const [loadingWallets, setLoadingWallets] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [spotPairs, setSpotPairs] = useState(initialSpotPairs);
   const [limitsExpanded, setLimitsExpanded] = useState(false);
   const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
@@ -359,7 +359,7 @@ export default function Wallet() {
       console.error("Error loading wallets:", error);
       setWallets([]);
     } finally {
-      setLoadingWallets(false);
+      setIsInitialLoad(false);
     }
   };
 
@@ -723,18 +723,25 @@ export default function Wallet() {
 
                 <div className="mb-2">
                   <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
-                    {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
+                    {isInitialLoad && wallets.length === 0 ? (
+                      <div className="h-10 w-48 bg-muted animate-pulse rounded" />
+                    ) : (
+                      balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"
+                    )}
                   </div>
-                  {balanceVisible && totalPnL !== 0 && (
+                  {!(isInitialLoad && wallets.length === 0) && balanceVisible && totalPnL !== 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
                         {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
                       </span>
                     </div>
                   )}
+                  {isInitialLoad && wallets.length === 0 && (
+                    <div className="h-5 w-32 bg-muted animate-pulse rounded mt-1" />
+                  )}
                 </div>
 
-                {balanceVisible && (
+                {balanceVisible && !(isInitialLoad && wallets.length === 0) && (
                   <div className="mb-6 h-12 opacity-60">
                     <Sparkline 
                       data={portfolioSparklineData} 
@@ -743,6 +750,9 @@ export default function Wallet() {
                       strokeWidth={2}
                     />
                   </div>
+                )}
+                {isInitialLoad && wallets.length === 0 && (
+                  <div className="mb-6 h-12 bg-muted animate-pulse rounded" />
                 )}
 
                 {/* Action Buttons - Horizontal Layout */}
