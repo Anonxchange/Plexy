@@ -472,14 +472,22 @@ export function SignUp() {
     <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
       {/* Header */}
       <div className="p-6 flex justify-between items-center lg:absolute lg:top-0 lg:left-0 lg:right-0 lg:z-10">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Zap className="h-5 w-5 text-primary-foreground" />
+        <a href="/" className="flex items-center gap-2 cursor-pointer">
+          <div className="relative w-8 h-8">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Zap className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <img 
+              src="/assets/IMG_2740.png" 
+              alt="Christmas hat" 
+              className="absolute -top-4 -right-3 w-8 h-8 object-contain"
+              style={{ transform: 'rotate(-25deg)' }}
+            />
           </div>
           <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-black'}`}>
             Pexly
           </span>
-        </div>
+        </a>
 
         {/* Theme Toggle */}
         <button
