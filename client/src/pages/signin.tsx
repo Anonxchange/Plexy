@@ -10,6 +10,7 @@ import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { createClient } from "@/lib/supabase";
 import * as OTPAuth from "otpauth";
 import { useTheme } from "@/components/theme-provider";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export function SignIn() {
   const [inputValue, setInputValue] = useState("");
@@ -24,6 +25,7 @@ export function SignIn() {
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const { signIn, signOut, user, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -536,10 +538,25 @@ export function SignIn() {
                 </div>
               )}
 
+              {/* Cloudflare Turnstile CAPTCHA */}
+              {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                <div className="mb-6 flex justify-center">
+                  <Turnstile
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setCaptchaToken(null)}
+                    onExpire={() => setCaptchaToken(null)}
+                    options={{
+                      theme: isDark ? 'dark' : 'light',
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Sign In Button */}
               <button 
                 type="submit"
-                disabled={loading}
+                disabled={loading || (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
                 style={{ fontWeight: 500 }}
               >
