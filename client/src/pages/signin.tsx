@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { createClient } from "@/lib/supabase";
 import * as OTPAuth from "otpauth";
 import { useTheme } from "@/components/theme-provider";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 export function SignIn() {
   const [inputValue, setInputValue] = useState("");
@@ -24,6 +25,8 @@ export function SignIn() {
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
   const { signIn, signOut, user, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -84,6 +87,16 @@ export function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check captcha token
+    if (!captchaToken) {
+      toast({
+        title: "Error",
+        description: "Please complete the captcha verification",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Phone number → OTP only (no password)
     if (isPhoneNumber) {
@@ -535,6 +548,17 @@ export function SignIn() {
                   </a>
                 </div>
               )}
+
+              {/* hCaptcha */}
+              <div className="mb-6 flex justify-center">
+                <HCaptcha
+                  sitekey={import.meta.env.VITE_HCAPTCHA_SITE_KEY || "10000000-ffff-ffff-ffff-000000000001"}
+                  onVerify={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  ref={captchaRef}
+                  theme={isDark ? "dark" : "light"}
+                />
+              </div>
 
               {/* Sign In Button */}
               <button 
