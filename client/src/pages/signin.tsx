@@ -26,6 +26,7 @@ export function SignIn() {
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [displayedText, setDisplayedText] = useState("");
   const { signIn, signOut, user, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -33,6 +34,7 @@ export function SignIn() {
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
+  const welcomeText = "Welcome back!";
 
   // Auto-detect country from IP on mount
   useEffect(() => {
@@ -48,6 +50,21 @@ export function SignIn() {
       }
     };
     detectCountry();
+  }, []);
+
+  // Typewriter effect for welcome message
+  useEffect(() => {
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (currentIndex <= welcomeText.length) {
+        setDisplayedText(welcomeText.slice(0, currentIndex));
+        currentIndex++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -351,13 +368,17 @@ export function SignIn() {
     <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
       {/* Header */}
       <div className="p-6 flex justify-between items-center lg:absolute lg:top-0 lg:left-0 lg:right-0 lg:z-10">
-        <div className={`flex items-center gap-2 lg:bg-transparent lg:backdrop-blur-none lg:border-none lg:shadow-none px-4 py-2 rounded-2xl ${
-          isDark 
-            ? 'bg-white/10 backdrop-blur-md border border-white/20 shadow-lg' 
-            : 'bg-black/5 backdrop-blur-md border border-black/10 shadow-lg'
-        }`}>
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Zap className="h-5 w-5 text-primary-foreground" />
+        <div className="flex items-center gap-2">
+          <div className="relative w-8 h-8">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Zap className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <img 
+              src="/assets/IMG_2740.png" 
+              alt="Christmas hat" 
+              className="absolute -top-4 -right-3 w-8 h-8 object-contain"
+              style={{ transform: 'rotate(-25deg)' }}
+            />
           </div>
           <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-black'}`}>
             Pexly
@@ -416,7 +437,8 @@ export function SignIn() {
         ) : !show2FAInput ? (
           <>
             <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
-              Welcome back!
+              {displayedText}
+              <span className="animate-pulse">|</span>
             </h1>
 
             {/* Social Login Buttons */}
