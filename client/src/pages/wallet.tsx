@@ -379,7 +379,7 @@ export default function Wallet() {
           } : pair;
         })
       );
-    } catch (error) {
+      } catch (error) {
       console.error("Error loading crypto prices:", error);
     }
   };
@@ -725,7 +725,7 @@ export default function Wallet() {
                   <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
                     {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
                   </div>
-                  {balanceVisible && (
+                  {balanceVisible && totalPnL !== 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
                         {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
@@ -868,7 +868,7 @@ export default function Wallet() {
                           )}
                         </CardContent>
                       </Card>
-                  ))}
+                    ))}
                 </div>
               </>
             )}
