@@ -422,13 +422,31 @@ export default function AccountSettings() {
       if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
-        setTwoFactorEnabled(data.two_factor_enabled || false);
-        setAppAuth(data.two_factor_enabled || false);
+        const isAppAuthEnabled = data.two_factor_enabled || false;
+        setTwoFactorEnabled(isAppAuthEnabled);
+        setAppAuth(isAppAuthEnabled);
         setSmsAuth(data.sms_two_factor_enabled || false);
         setEmailAuth(data.email_two_factor_enabled || false);
+        
+        console.log('2FA Status loaded:', {
+          appAuth: isAppAuthEnabled,
+          smsAuth: data.sms_two_factor_enabled || false,
+          emailAuth: data.email_two_factor_enabled || false
+        });
+      } else {
+        // If no data, set all to false
+        setTwoFactorEnabled(false);
+        setAppAuth(false);
+        setSmsAuth(false);
+        setEmailAuth(false);
       }
     } catch (error) {
       console.error('Error fetching 2FA status:', error);
+      // On error, set all to false
+      setTwoFactorEnabled(false);
+      setAppAuth(false);
+      setSmsAuth(false);
+      setEmailAuth(false);
     }
   };
 
@@ -827,10 +845,14 @@ export default function AccountSettings() {
 
       if (error) throw error;
 
+      // Update states immediately
       setTwoFactorEnabled(false);
       setAppAuth(false);
       setShowDisable2FADialog(false);
       setDisable2FACode("");
+
+      // Re-fetch to ensure states are in sync with database
+      await fetch2FAStatus();
 
       toast({
         title: "2FA Disabled",
