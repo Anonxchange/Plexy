@@ -200,12 +200,33 @@ export default function Wallet() {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [walletsLoaded, setWalletsLoaded] = useState(false);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [pricesLoaded, setPricesLoaded] = useState(false);
-  const [cachedBalance, setCachedBalance] = useState<number | null>(null);
-  const [cachedPnL, setCachedPnL] = useState<number | null>(null);
-  const [cachedPnLPercentage, setCachedPnLPercentage] = useState<number | null>(null);
+  const [pricesLoadedSuccessfully, setPricesLoadedSuccessfully] = useState(false);
+  
+  // Initialize cached values from sessionStorage to prevent 0 display on refresh
+  const [cachedBalance, setCachedBalance] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('wallet_cached_balance');
+      return stored ? parseFloat(stored) : null;
+    }
+    return null;
+  });
+  const [cachedPnL, setCachedPnL] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('wallet_cached_pnl');
+      return stored ? parseFloat(stored) : null;
+    }
+    return null;
+  });
+  const [cachedPnLPercentage, setCachedPnLPercentage] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('wallet_cached_pnl_percentage');
+      return stored ? parseFloat(stored) : null;
+    }
+    return null;
+  });
   const [spotPairs, setSpotPairs] = useState(initialSpotPairs);
   const [limitsExpanded, setLimitsExpanded] = useState(false);
   const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
@@ -354,16 +375,15 @@ export default function Wallet() {
 
       if (error) {
         console.error("Error loading wallets:", error);
-        setWallets([]);
+        // Don't reset wallets on error - keep previous data
       } else {
         console.log("Loaded wallets from database:", data);
         setWallets(data || []);
+        setWalletsLoaded(true);
       }
     } catch (error) {
       console.error("Error loading wallets:", error);
-      setWallets([]);
-    } finally {
-      setIsInitialLoad(false);
+      // Don't reset wallets on error - keep previous data
     }
   };
 
@@ -373,6 +393,10 @@ export default function Wallet() {
       const prices = await getCryptoPrices(symbols);
       setCryptoPrices(prices);
       setPricesLoaded(true);
+      // Only mark as successfully loaded if we actually got price data
+      if (Object.keys(prices).length > 0) {
+        setPricesLoadedSuccessfully(true);
+      }
 
       setSpotPairs(prevPairs =>
         prevPairs.map(pair => {
@@ -387,6 +411,7 @@ export default function Wallet() {
     } catch (error) {
       console.error("Error loading crypto prices:", error);
       // Set prices loaded to true even on error to show cached data
+      // But DON'T set pricesLoadedSuccessfully - this prevents caching bad data
       setPricesLoaded(true);
     }
   };
@@ -471,26 +496,33 @@ export default function Wallet() {
     ? (mergedAssets.reduce((sum, asset) => sum + asset.pnlUsd, 0) / totalCostBasis) * 100
     : 0;
 
-  // Use cached values when calculated would show 0 but we have cached data
-  const totalBalance = (calculatedBalance === 0 && cachedBalance !== null && cachedBalance > 0) 
+  // Use cached values ONLY while fresh data is loading
+  // Both wallets AND prices must be successfully loaded before showing calculated values
+  // This prevents showing 0 during loading or when price fetch fails
+  const hasFreshReliableData = walletsLoaded && pricesLoadedSuccessfully && Object.keys(cryptoPrices).length > 0;
+  const totalBalance = (!hasFreshReliableData && cachedBalance !== null) 
     ? cachedBalance 
     : calculatedBalance;
-  const totalPnL = (calculatedBalance === 0 && cachedPnL !== null) 
+  const totalPnL = (!hasFreshReliableData && cachedPnL !== null) 
     ? cachedPnL 
     : calculatedPnL;
-  const totalPnLPercentage = (calculatedBalance === 0 && cachedPnLPercentage !== null) 
+  const totalPnLPercentage = (!hasFreshReliableData && cachedPnLPercentage !== null) 
     ? cachedPnLPercentage 
     : calculatedPnLPercentage;
 
-  // Cache balance when we have valid data
+  // Cache balance ONLY when we have confirmed fresh reliable data from BOTH sources
+  // This prevents caching bad data from failed price fetches
   useEffect(() => {
-    const hasValidData = pricesLoaded && !isInitialLoad;
-    if (hasValidData && calculatedBalance > 0) {
+    if (hasFreshReliableData) {
       setCachedBalance(calculatedBalance);
       setCachedPnL(calculatedPnL);
       setCachedPnLPercentage(calculatedPnLPercentage);
+      // Persist to sessionStorage (including zeros for accurate display)
+      sessionStorage.setItem('wallet_cached_balance', calculatedBalance.toString());
+      sessionStorage.setItem('wallet_cached_pnl', calculatedPnL.toString());
+      sessionStorage.setItem('wallet_cached_pnl_percentage', calculatedPnLPercentage.toString());
     }
-  }, [calculatedBalance, calculatedPnL, calculatedPnLPercentage, pricesLoaded, isInitialLoad]);
+  }, [calculatedBalance, calculatedPnL, calculatedPnLPercentage, hasFreshReliableData]);
 
   const portfolioTrend = totalPnLPercentage > 0 ? 'up' : totalPnLPercentage < 0 ? 'down' : 'neutral';
   const portfolioSparklineData = generateSparklineData(totalBalance * 0.95, portfolioTrend, 30);
@@ -754,25 +786,18 @@ export default function Wallet() {
 
                 <div className="mb-2">
                   <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
-                    {isInitialLoad && !pricesLoaded && cachedBalance === null ? (
-                      <div className="h-10 w-48 bg-muted animate-pulse rounded" />
-                    ) : (
-                      balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"
-                    )}
+                    {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
                   </div>
-                  {!(isInitialLoad && !pricesLoaded && cachedBalance === null) && balanceVisible && totalPnL !== 0 && (
+                  {balanceVisible && totalPnL !== 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
                         {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
                       </span>
                     </div>
                   )}
-                  {isInitialLoad && !pricesLoaded && cachedBalance === null && (
-                    <div className="h-5 w-32 bg-muted animate-pulse rounded mt-1" />
-                  )}
                 </div>
 
-                {balanceVisible && !(isInitialLoad && !pricesLoaded && cachedBalance === null) && (
+                {balanceVisible && (
                   <div className="mb-6 h-12 opacity-60">
                     <Sparkline 
                       data={portfolioSparklineData} 
@@ -781,9 +806,6 @@ export default function Wallet() {
                       strokeWidth={2}
                     />
                   </div>
-                )}
-                {isInitialLoad && !pricesLoaded && cachedBalance === null && (
-                  <div className="mb-6 h-12 bg-muted animate-pulse rounded" />
                 )}
 
                 {/* Action Buttons - Horizontal Layout */}
