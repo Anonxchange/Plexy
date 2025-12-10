@@ -85,7 +85,7 @@ const paymentCategories = [
   { icon: "card", color: "#3B82F6", name: "Visa card", count: "80+", description: "Spend your crypto anywhere with a virtual card" },
   { icon: "bitcoin", color: "#F59E0B", name: "Buy crypto", count: "150+", description: "Receive your stablecoins directly in your NoOnes wallet" },
   { icon: "mobile", color: "#10B981", name: "Mobile top-up", count: "60+", description: "Recharge any mobile number globally using your crypto" },
-  { icon: "giftcard", color: "#06B6D4", name: "NoOnes gift card", count: "85+", description: "Gift crypto instantly with a simple, secure NoOnes link" },
+  { icon: "giftcard", color: "#06B6D4", name: "Pexly gift card", count: "85+", description: "Gift crypto instantly with a simple, secure NoOnes link" },
   { icon: "bank", color: "#8B5CF6", name: "Bank Transfer", count: "200+", description: "ACH, SEPA, Wire Transfer, SWIFT transfers" },
   { icon: "card", color: "#EC4899", name: "Credit/Debit Cards", count: "80+", description: "Visa, Mastercard, Amex, Discover" },
   { icon: "mobile", color: "#14B8A6", name: "Mobile Money", count: "150+", description: "M-Pesa, MTN, Orange Money, Airtel" },
