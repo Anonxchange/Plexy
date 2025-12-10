@@ -233,22 +233,14 @@ export default function Wallet() {
   const [lifetimeTradeVolume, setLifetimeTradeVolume] = useState<number>(0);
   const [lifetimeSendVolume, setLifetimeSendVolume] = useState<number>(0);
   const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
-  const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const { toast } = useToast();
 
   useWalletMonitoring(['BTC', 'ETH', 'SOL', 'BNB', 'TRX', 'USDC', 'USDT'], !!user);
 
-  // Check authentication - wait for loading to complete and give session time to restore
+  // Redirect to signin if not logged in (no loading state)
   useEffect(() => {
-    if (!loading) {
-      // Give Supabase a moment to restore session from localStorage on refresh
-      const timer = setTimeout(() => {
-        setAuthCheckComplete(true);
-        if (!user) {
-          setLocation("/signin");
-        }
-      }, 500);
-      return () => clearTimeout(timer);
+    if (!loading && !user) {
+      setLocation("/signin");
     }
   }, [user, loading, setLocation]);
 
@@ -424,32 +416,9 @@ export default function Wallet() {
     }
   };
 
-  // Show loading state while auth is loading or waiting for session restoration
-  if (loading || (!authCheckComplete && !user)) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading wallet...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect if not logged in after auth check is complete
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Redirecting to sign in...</p>
-          </div>
-        </div>
-      </div>
-    );
+  // Redirect immediately if not logged in (no loading state shown)
+  if (!loading && !user) {
+    return null;
   }
 
   const mergedAssets = cryptoAssets.map(asset => {
