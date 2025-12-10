@@ -2,97 +2,156 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+const PaymentIcon = ({ icon, color }: { icon: string; color: string }) => {
+  const icons: Record<string, JSX.Element> = {
+    shop: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <rect x="12" y="20" width="40" height="6" rx="2" fill={color} />
+        <rect x="16" y="26" width="32" height="24" rx="2" fill={color} opacity="0.8" />
+        <rect x="22" y="34" width="8" height="12" fill="white" opacity="0.9" />
+        <rect x="34" y="34" width="8" height="12" fill="white" opacity="0.9" />
+        <rect x="18" y="30" width="6" height="4" rx="1" fill="white" opacity="0.7" />
+        <rect x="40" y="30" width="6" height="4" rx="1" fill="white" opacity="0.7" />
+      </svg>
+    ),
+    giftcard: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <rect x="14" y="28" width="36" height="20" rx="2" fill={color} />
+        <rect x="12" y="22" width="40" height="6" rx="1" fill={color} opacity="0.7" />
+        <rect x="31" y="22" width="2" height="26" fill="#FFD700" />
+        <path d="M24 22c0-4 3-6 6-6s4 2 4 6" fill="#FFD700" />
+        <path d="M40 22c0-4-3-6-6-6s-4 2-4 6" fill="#FFD700" />
+      </svg>
+    ),
+    swap: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <circle cx="32" cy="32" r="24" fill={color} opacity="0.2" />
+        <path d="M40 22l8 8-8 8" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M16 30h32" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <path d="M24 42l-8-8 8-8" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M48 34H16" stroke={color} strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    ),
+    wallet: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <rect x="10" y="18" width="44" height="28" rx="3" fill={color} />
+        <rect x="12" y="20" width="40" height="24" rx="2" fill="white" opacity="0.2" />
+        <rect x="42" y="28" width="10" height="8" rx="1" fill="white" opacity="0.9" />
+        <circle cx="46" cy="32" r="2" fill={color} />
+      </svg>
+    ),
+    card: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <rect x="10" y="20" width="44" height="24" rx="3" fill={color} />
+        <rect x="10" y="26" width="44" height="4" fill="#333333" opacity="0.5" />
+        <rect x="14" y="34" width="24" height="3" rx="1" fill="white" opacity="0.8" />
+        <rect x="14" y="39" width="16" height="2" rx="1" fill="white" opacity="0.6" />
+        <circle cx="48" cy="38" r="3" fill="#FFD700" />
+      </svg>
+    ),
+    mobile: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <rect x="20" y="10" width="24" height="44" rx="3" fill={color} />
+        <rect x="22" y="14" width="20" height="32" rx="1" fill="white" opacity="0.9" />
+        <circle cx="32" cy="50" r="2" fill="white" opacity="0.9" />
+      </svg>
+    ),
+    bank: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <rect x="14" y="16" width="22" height="36" rx="2" fill={color} />
+        <rect x="38" y="26" width="12" height="26" rx="1" fill={color} opacity="0.7" />
+        <rect x="18" y="20" width="4" height="4" rx="0.5" fill="white" opacity="0.8" />
+        <rect x="26" y="20" width="4" height="4" rx="0.5" fill="white" opacity="0.8" />
+        <rect x="18" y="28" width="4" height="4" rx="0.5" fill="white" opacity="0.8" />
+        <rect x="26" y="28" width="4" height="4" rx="0.5" fill="white" opacity="0.8" />
+        <rect x="42" y="30" width="4" height="4" rx="0.5" fill="white" opacity="0.7" />
+      </svg>
+    ),
+    bitcoin: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <circle cx="32" cy="32" r="26" fill={color} />
+        <path d="M38 28c0.6-4-2.4-6.2-6.5-7.6l1.3-5.4-3.2-0.8-1.3 5.2c-0.8-0.2-1.7-0.4-2.6-0.6l1.3-5.3-3.2-0.8-1.3 5.4c-0.7-0.2-1.4-0.3-2.1-0.5l-4.4-1.1-0.8 3.5s2.4 0.6 2.3 0.6c1.3 0.3 1.5 1.2 1.5 1.9l-3.5 14c-0.2 0.5-0.7 1.1-1.7 0.8 0 0.1-2.3-0.6-2.3-0.6l-1.5 3.8 4.2 1c0.8 0.2 1.5 0.4 2.3 0.5l-1.3 5.4 3.2 0.8 1.3-5.4c0.9 0.2 1.7 0.5 2.6 0.6l-1.3 5.3 3.2 0.8 1.3-5.4c5.5 1 9.6 0.6 11.4-4.4 1.4-4.1 0-6.4-3-7.9 2.1-0.5 3.7-1.9 4.1-4.8zm-7.4 10.5c-1 4-7.8 1.8-10 1.2l1.8-7.1c2.2 0.6 9.3 1.7 8.2 5.9zm1-10.6c-0.9 3.6-6.6 1.8-8.5 1.3l1.6-6.5c1.9 0.5 7.8 1.4 6.9 5.2z" fill="white" />
+      </svg>
+    ),
+  };
+  return icons[icon] || icons.wallet;
+};
+
 const paymentCategories = [
-  { image: "/assets/IMG_2020.jpeg", name: "Bank Transfer", count: "200+", methods: ["ACH", "SEPA", "Wire Transfer", "SWIFT", "Local Bank", "BACS", "CHAPS", "FPS", "TARGET2", "RTGS"] },
-  { image: "/assets/IMG_2021.jpeg", name: "Credit/Debit Cards", count: "80+", methods: ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Diners Club", "Maestro", "RuPay", "Elo"] },
-  { image: "/assets/IMG_2022.jpeg", name: "Mobile Money", count: "150+", methods: ["M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Tigo Pesa", "Vodafone Cash", "Ecocash", "Wave", "Moov Money", "GCash"] },
-  { image: "/assets/IMG_2023.jpeg", name: "Gift Cards", count: "120+", methods: ["Amazon", "Apple", "Google Play", "Steam", "eBay", "iTunes", "Xbox", "PlayStation", "Target", "Walmart"] },
-  { image: "/assets/IMG_2033.jpeg", name: "E-Wallets", count: "100+", methods: ["PayPal", "Skrill", "Neteller", "Perfect Money", "WebMoney", "Payeer", "AdvCash", "EcoPayz", "Payoneer", "Paytm"] },
-  { image: "/assets/IMG_2026.jpeg", name: "Digital Wallets", count: "90+", methods: ["Zelle", "Venmo", "Cash App", "Apple Pay", "Google Pay", "Samsung Pay", "WeChat Pay", "Alipay", "PhonePe", "Paytm"] },
-  { image: "/assets/IMG_2030.jpeg", name: "Cash Payments", count: "60+", methods: ["Cash Deposit", "Cash in Person", "ATM", "Western Union", "Remitly", "Ria", "Moneygram", "Xoom", "WorldRemit", "Cash Pickup"] },
-  { image: "/assets/IMG_2035.jpeg", name: "Money Transfer", count: "85+", methods: ["Wise", "Remitly", "WorldRemit", "MoneyGram", "Ria", "Xoom", "Azimo", "TransferGo", "InstaReM", "Xe"] },
-  { image: "/assets/IMG_2036.jpeg", name: "International", count: "110+", methods: ["TransferWise", "Revolut", "N26", "Payoneer", "Paysera", "Monese", "Starling", "Bunq", "Vivid", "Lydia"] },
-  { image: "/assets/IMG_2040.jpeg", name: "Banking Apps", count: "130+", methods: ["Chime", "Varo", "Current", "SoFi", "Ally", "Marcus", "Discover", "Capital One", "Chase", "Bank of America"] },
-  { image: "/assets/IMG_2029.jpeg", name: "Crypto Payments", count: "40+", methods: ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB", "XRP", "Litecoin", "Dogecoin", "Cardano", "Solana"] },
-  { image: "/assets/IMG_2028.jpeg", name: "Point of Sale", count: "35+", methods: ["Square", "Stripe", "PayPal Here", "SumUp", "iZettle", "Clover", "Toast", "Shopify POS", "Lightspeed", "Vend"] },
-  { image: "/assets/IMG_2037.jpeg", name: "Business Solutions", count: "55+", methods: ["QuickBooks", "Xero", "FreshBooks", "Wave", "Zoho Books", "Sage", "Bill.com", "Melio", "Tipalti", "AvidXchange"] },
-  { image: "/assets/IMG_2039.jpeg", name: "Delivery Services", count: "30+", methods: ["Uber Cash", "Lyft Credits", "DoorDash", "Grubhub", "Postmates", "Deliveroo", "Just Eat", "Bolt", "Rappi", "Glovo"] },
+  { icon: "shop", color: "#FF6B6B", name: "Shop", count: "200+", badge: "NEW", description: "Find unique products and services from creators" },
+  { icon: "giftcard", color: "#FFA500", name: "Gift card store", count: "120+", badge: "HOT", description: "Use crypto to buy instant gift cards for global brands" },
+  { icon: "swap", color: "#4FACFE", name: "Swap", count: "100+", badge: "BEST RATE", description: "Exchange your crypto instantly with fast, low-fee swaps" },
+  { icon: "wallet", color: "#A855F7", name: "Wallet", count: "90+", description: "Send and receive crypto safely in your secure NoOnes wallet" },
+  { icon: "card", color: "#3B82F6", name: "Visa card", count: "80+", description: "Spend your crypto anywhere with a virtual card" },
+  { icon: "bitcoin", color: "#F59E0B", name: "Buy crypto", count: "150+", description: "Receive your stablecoins directly in your NoOnes wallet" },
+  { icon: "mobile", color: "#10B981", name: "Mobile top-up", count: "60+", description: "Recharge any mobile number globally using your crypto" },
+  { icon: "giftcard", color: "#06B6D4", name: "NoOnes gift card", count: "85+", description: "Gift crypto instantly with a simple, secure NoOnes link" },
+  { icon: "bank", color: "#8B5CF6", name: "Bank Transfer", count: "200+", description: "ACH, SEPA, Wire Transfer, SWIFT transfers" },
+  { icon: "card", color: "#EC4899", name: "Credit/Debit Cards", count: "80+", description: "Visa, Mastercard, Amex, Discover" },
+  { icon: "mobile", color: "#14B8A6", name: "Mobile Money", count: "150+", description: "M-Pesa, MTN, Orange Money, Airtel" },
+  { icon: "wallet", color: "#F97316", name: "E-Wallets", count: "100+", description: "PayPal, Skrill, Neteller, Perfect Money" },
 ];
 
 const popularMethods = [
-  // E-Wallets & Digital Payments
-  "PayPal", "Venmo", "Cash App", "Zelle", "Apple Pay", "Google Pay", "Samsung Pay", "Wise", "Revolut",
-  
-  // Bank Transfers
-  "Bank Transfer", "ACH", "SEPA", "Wire Transfer", "SWIFT", "Interac e-Transfer",
-  
-  // Cards
-  "Credit Card", "Debit Card", "Visa", "Mastercard", "American Express", "Discover",
-  
-  // Mobile Money Africa
-  "M-Pesa", "MTN Mobile Money", "Orange Money", "Airtel Money", "Ecocash", "Wave",
-  
-  // Mobile Money Asia
-  "GCash", "PayMaya", "Paytm", "PhonePe", "Alipay", "WeChat Pay",
-  
-  // Latin America
-  "Mercado Pago", "PicPay", "Nequi", "Yape", "Pix",
-  
-  // Gift Cards
-  "Amazon Gift Card", "Apple Gift Card", "Google Play", "Steam", "iTunes",
-  
-  // E-Wallets International
-  "Skrill", "Neteller", "Perfect Money", "WebMoney", "Payoneer",
-  
-  // Money Transfer
-  "Western Union", "MoneyGram", "Remitly", "WorldRemit",
-  
-  // BNPL
-  "Klarna", "Afterpay", "Affirm"
+  "PayPal", "Venmo", "Cash App", "Zelle", "Apple Pay", "Google Pay", "Bank Transfer", "ACH", "SEPA",
+  "M-Pesa", "MTN Mobile Money", "GCash", "Paytm", "WeChat Pay", "Alipay", "Amazon Gift Card", 
+  "Visa", "Mastercard", "Western Union", "MoneyGram", "Wise", "Revolut"
 ];
 
 export function PaymentMethods() {
   return (
-    <section className="pt-12 pb-20 bg-gradient-to-b from-background to-muted/20">
+    <section className="pt-12 pb-20 bg-[#1a1d24]">
       <div className="max-w-7xl mx-auto px-4 lg:px-6">
-        <div className="text-center space-y-6 mb-16">
-          <Badge className="text-sm px-4 py-2">500+ Payment Options</Badge>
-          <h2 className="text-4xl lg:text-5xl font-bold text-foreground">
-            Trade with Any Payment Method
+        <div className="text-center space-y-4 mb-12">
+          <h2 className="text-3xl lg:text-5xl font-bold text-white">
+            Our products
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Access the world's most comprehensive payment network. From bank transfers to digital wallets, mobile money to gift cards - we support over 500 payment methods globally.
+          <p className="text-lg lg:text-xl text-gray-400 max-w-3xl mx-auto">
+            Discover our full range of tools designed to make crypto easy and accessible
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-16">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-12">
           {paymentCategories.map((method, index) => (
-            <Card key={index} className="hover-elevate active-elevate-2 cursor-pointer transition-all h-full" data-testid={`card-payment-${method.name.toLowerCase().replace(/\s+/g, '-')}`}>
-              <div className="p-6 text-center space-y-4 h-full flex flex-col justify-center">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto overflow-hidden">
-                  <img 
-                    src={method.image} 
-                    alt={method.name}
-                    className="w-full h-full object-cover"
-                  />
+            <Card 
+              key={index} 
+              className="relative overflow-hidden backdrop-blur-xl bg-[#2a2d35]/80 border border-white/10 hover:border-primary/50 cursor-pointer transition-all duration-300 group hover:shadow-2xl hover:shadow-primary/20"
+              data-testid={`card-payment-${method.name.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative p-3 lg:p-6 space-y-2 lg:space-y-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="w-14 h-14 lg:w-20 lg:h-20 rounded-2xl overflow-hidden group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
+                    <PaymentIcon icon={method.icon} color={method.color} />
+                  </div>
+                  {method.badge && (
+                    <Badge variant="secondary" className="text-[10px] lg:text-xs px-1.5 lg:px-2 py-0.5 bg-primary/20 text-primary backdrop-blur-sm border-primary/30 font-semibold">
+                      {method.badge}
+                    </Badge>
+                  )}
                 </div>
                 <div>
-                  <div className="font-semibold text-foreground mb-1">{method.name}</div>
-                  <div className="text-sm font-medium text-primary">{method.count} options</div>
+                  <h3 className="font-semibold text-sm lg:text-lg text-white mb-1">{method.name}</h3>
+                  <p className="text-[11px] lg:text-sm text-gray-400 leading-relaxed line-clamp-2 lg:line-clamp-none">
+                    {method.description}
+                  </p>
                 </div>
               </div>
             </Card>
           ))}
         </div>
 
-        <div>
-          <h3 className="text-2xl font-bold text-foreground mb-6 text-center">Popular Payment Methods</h3>
-          <div className="flex flex-wrap gap-3 justify-center">
+        <div className="text-center space-y-6">
+          <h3 className="text-2xl font-bold text-white">Why Pexly?</h3>
+          <p className="text-lg text-gray-400">
+            Safe, easy, and reliable trading for everyone
+          </p>
+          <div className="flex flex-wrap gap-2 lg:gap-3 justify-center mt-6">
             {popularMethods.map((method, index) => (
               <Badge 
                 key={index} 
                 variant="outline" 
-                className="px-4 py-2 text-sm font-medium hover-elevate active-elevate-2 cursor-pointer"
+                className="px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-medium bg-[#2a2d35]/60 border-white/10 text-gray-300 hover:bg-primary/20 hover:border-primary/50 hover:text-primary cursor-pointer transition-all duration-200"
                 data-testid={`badge-method-${method.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 {method}
