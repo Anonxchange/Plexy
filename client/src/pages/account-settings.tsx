@@ -415,23 +415,27 @@ export default function AccountSettings() {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('two_factor_enabled, sms_two_factor_enabled, email_two_factor_enabled')
+        .select('two_factor_enabled, two_factor_secret, sms_two_factor_enabled, email_two_factor_enabled')
         .eq('id', user?.id)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
-        const isAppAuthEnabled = data.two_factor_enabled || false;
+        // Check both the boolean flag AND if a secret exists (for legacy data)
+        const hasSecret = !!data.two_factor_secret;
+        const isAppAuthEnabled = data.two_factor_enabled === true || hasSecret;
         setTwoFactorEnabled(isAppAuthEnabled);
         setAppAuth(isAppAuthEnabled);
-        setSmsAuth(data.sms_two_factor_enabled || false);
-        setEmailAuth(data.email_two_factor_enabled || false);
+        setSmsAuth(data.sms_two_factor_enabled === true);
+        setEmailAuth(data.email_two_factor_enabled === true);
         
         console.log('2FA Status loaded:', {
           appAuth: isAppAuthEnabled,
-          smsAuth: data.sms_two_factor_enabled || false,
-          emailAuth: data.email_two_factor_enabled || false
+          hasSecret: hasSecret,
+          rawTwoFactorEnabled: data.two_factor_enabled,
+          smsAuth: data.sms_two_factor_enabled,
+          emailAuth: data.email_two_factor_enabled
         });
       } else {
         // If no data, set all to false
@@ -1834,16 +1838,16 @@ export default function AccountSettings() {
                   open={show2FADialog}
                   onOpenChange={(open) => {
                     setShow2FADialog(open);
-                    if (!open) {
-                      // Refetch status when dialog closes to ensure UI is in sync
-                      fetch2FAStatus();
-                    }
                   }}
                   userEmail={user.email}
                   userId={user.id}
                   onSuccess={() => {
                     setTwoFactorEnabled(true);
                     setAppAuth(true);
+                    // Refetch after a delay to ensure database write has propagated
+                    setTimeout(() => {
+                      fetch2FAStatus();
+                    }, 500);
                   }}
                 />
               )}
