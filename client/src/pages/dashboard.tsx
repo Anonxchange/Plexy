@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase";
-import { ChevronDown, ChevronUp, Award as AwardIcon, Trophy as TrophyIcon } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { MulticolorIcons } from "@/components/multicolor-icons";
 import { medals, isMedalEarned } from "@/lib/medals";
 import { getUserMedalStats } from "@/lib/medals-api";
@@ -127,38 +127,38 @@ export function Dashboard() {
   }
 
   const products = [
-    { icon: "Users", label: "P2P Trading", href: "/p2p" },
-    { icon: "Store", label: "Shop", href: "#" },
-    { icon: "Wallet", label: "Wallet", href: "/wallet" },
-    { icon: "Gift", label: "Gift card store", href: "#" },
-    { icon: "CreditCard", label: "Visa card", href: "#" },
-    { icon: "DollarSign", label: "Buy crypto", href: "/buy" },
-    { icon: "Swap", label: "Swap", href: "#" },
-    { icon: "TrendingUp", label: "Spot", href: "#" },
-    { icon: "Building", label: "Crypto to Bank", href: "#" },
-    { icon: "Mobile", label: "Mobile top-up", href: "#" },
-    { icon: "BarChart", label: "OTC Desk", href: "#" },
-    { icon: "Scan", label: "Gift card checker", href: "#" },
-    { icon: "Gift", label: "Pexly gift card", href: "#" },
-    { icon: "Award", label: "Fees", href: "/fees" },
-    { icon: "Trophy", label: "Medals", href: "/medals" },
-    { icon: "Rocket", label: "Quick start", href: "#" },
-    { icon: "Bitcoin", label: "Invite and earn", href: "#" },
+    { icon: "Users", label: "P2P Trading", href: "/p2p", color: "#4facfe" },
+    { icon: "Store", label: "Shop", href: "#", color: "#FF6B6B" },
+    { icon: "Wallet", label: "Wallet", href: "/wallet", color: "#A855F7" },
+    { icon: "Gift", label: "Gift card store", href: "#", color: "#FFA500" },
+    { icon: "CreditCard", label: "Visa card", href: "#", color: "#3B82F6" },
+    { icon: "DollarSign", label: "Buy crypto", href: "/buy", color: "#F59E0B" },
+    { icon: "Swap", label: "Swap", href: "#", color: "#4FACFE" },
+    { icon: "TrendingUp", label: "Spot", href: "#", color: "#10B981" },
+    { icon: "Building", label: "Crypto to Bank", href: "#", color: "#8B5CF6" },
+    { icon: "Mobile", label: "Mobile top-up", href: "#", color: "#10B981" },
+    { icon: "BarChart", label: "OTC Desk", href: "#", color: "#EC4899" },
+    { icon: "Scan", label: "Gift card checker", href: "#", color: "#06B6D4" },
+    { icon: "Gift", label: "Pexly gift card", href: "#", color: "#06B6D4" },
+    { icon: "Award", label: "Fees", href: "/fees", color: "#F59E0B" },
+    { icon: "Trophy", label: "Medals", href: "/medals", color: "#F59E0B" },
+    { icon: "Rocket", label: "Quick start", href: "#", color: "#667eea" },
+    { icon: "Bitcoin", label: "Invite and earn", href: "#", color: "#F59E0B" },
   ];
 
   const accountSettings = [
-    { icon: "FileText", label: "My offers", href: "#" },
-    { icon: "User", label: "Account settings", href: "#" },
-    { icon: "Settings", label: "Trader settings", href: "#" },
-    { icon: "BarChart", label: "Trade history", href: "#" },
-    { icon: "CreditCard", label: "Payment accounts", href: "#" },
-    { icon: "Mobile", label: "Devices", href: "#" },
-    { icon: "Shield", label: "Security", href: "#" },
-    { icon: "GraduationCap", label: "NoOnes academy", href: "#" },
-    { icon: "Dashboard", label: "CEO dashboard", href: "#" },
-    { icon: "MessageSquare", label: "Discord", href: "#" },
-    { icon: "Bell", label: "Status", href: "#" },
-    { icon: "HelpCircle", label: "Help center", href: "#" },
+    { icon: "FileText", label: "My offers", href: "#", color: "#667eea" },
+    { icon: "User", label: "Account settings", href: "#", color: "#4facfe" },
+    { icon: "Settings", label: "Trader settings", href: "#", color: "#667eea" },
+    { icon: "BarChart", label: "Trade history", href: "#", color: "#EC4899" },
+    { icon: "CreditCard", label: "Payment accounts", href: "#", color: "#3B82F6" },
+    { icon: "Mobile", label: "Devices", href: "#", color: "#10B981" },
+    { icon: "Shield", label: "Security", href: "#", color: "#F59E0B" },
+    { icon: "GraduationCap", label: "NoOnes academy", href: "#", color: "#8B5CF6" },
+    { icon: "Dashboard", label: "CEO dashboard", href: "#", color: "#06B6D4" },
+    { icon: "MessageSquare", label: "Discord", href: "#", color: "#667eea" },
+    { icon: "Bell", label: "Status", href: "#", color: "#F59E0B" },
+    { icon: "HelpCircle", label: "Help center", href: "#", color: "#4facfe" },
   ];
 
   // Use real crypto prices from API
@@ -441,7 +441,9 @@ export function Dashboard() {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              <AwardIcon className="h-5 w-5 text-yellow-500" />
+              <div className="w-5 h-5">
+                <MulticolorIcons.Award />
+              </div>
               Your Medals
             </h2>
             <Button 
@@ -470,8 +472,8 @@ export function Dashboard() {
                   })
                 ) : (
                   <div className="text-center p-3 rounded-lg bg-muted/50 col-span-4">
-                    <div className="text-3xl mb-2">
-                      <AwardIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+                    <div className="w-8 h-8 mx-auto mb-2">
+                      <MulticolorIcons.Award />
                     </div>
                     <div className="text-sm font-medium text-muted-foreground">No Medals Yet</div>
                     <div className="text-xs text-muted-foreground mt-1">Start trading to unlock them!</div>
@@ -480,8 +482,8 @@ export function Dashboard() {
                 {medalStats?.earnedMedals && medalStats.earnedMedals.length < 4 && (
                   Array.from({ length: 4 - medalStats.earnedMedals.length }).map((_, index) => (
                     <div key={`placeholder-${index}`} className="text-center p-3 rounded-lg bg-muted/50">
-                      <div className="text-3xl mb-2 grayscale opacity-50">
-                        <AwardIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+                      <div className="w-8 h-8 mx-auto mb-2 grayscale opacity-50">
+                        <MulticolorIcons.Award />
                       </div>
                       <div className="text-sm font-medium text-muted-foreground">Locked</div>
                       <div className="text-xs text-muted-foreground mt-1">...</div>
@@ -490,7 +492,9 @@ export function Dashboard() {
                 )}
               </div>
               <div className="flex items-center justify-center gap-2 pt-2">
-                <TrophyIcon className="h-4 w-4 text-yellow-500" />
+                <div className="w-4 h-4">
+                  <MulticolorIcons.Trophy />
+                </div>
                 <span className="text-sm font-medium">{medalStats?.earnedMedals?.length || 0} Medal{medalStats?.earnedMedals?.length !== 1 ? 's' : ''} Earned</span>
                 <span className="text-xs text-muted-foreground">• Keep trading to unlock more!</span>
               </div>
