@@ -365,7 +365,7 @@ export function SignIn() {
 
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
+    <div className={`min-h-screen ${isDark ? 'bg-background' : 'bg-white'} transition-colors duration-300`}>
       {/* Header */}
       <div className="p-6 flex justify-between items-center lg:absolute lg:top-0 lg:left-0 lg:right-0 lg:z-10">
         <a href="/" className="flex items-center gap-2 cursor-pointer">
@@ -410,7 +410,7 @@ export function SignIn() {
         {/* Right Column: Form */}
         <div className="px-6 pt-20 lg:pt-32 max-w-md mx-auto lg:flex lg:flex-col lg:justify-center">
         {showPhoneVerification ? (
-          <div className={`rounded-2xl p-6 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
+          <div className={`rounded-2xl p-6 ${isDark ? 'bg-card border border-card-border' : 'bg-gray-50 border border-gray-200'}`}>
             <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
               Phone Verification
             </h2>
@@ -501,7 +501,7 @@ export function SignIn() {
                   onChange={(e) => setInputValue(e.target.value)}
                   className={`w-full px-4 py-4 rounded-xl text-base ${
                     isDark 
-                      ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
+                      ? 'bg-muted text-foreground border border-border focus:border-lime-400' 
                       : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
                   } focus:outline-none transition-colors`}
                   placeholder="Enter your email or phone"
