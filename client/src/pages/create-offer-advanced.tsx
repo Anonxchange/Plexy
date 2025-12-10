@@ -568,43 +568,71 @@ export function CreateOfferAdvanced() {
               <SelectContent>
                 <SelectItem value="BTC">
                   <div className="flex items-center gap-3">
-                    <Bitcoin className="h-5 w-5 text-orange-500" />
+                    <img 
+                      src={cryptoIconUrls.BTC} 
+                      alt="BTC"
+                      className="w-5 h-5 rounded-full"
+                    />
                     <span>Bitcoin (BTC)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="ETH">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg">Ξ</span>
+                    <img 
+                      src={cryptoIconUrls.ETH} 
+                      alt="ETH"
+                      className="w-5 h-5 rounded-full"
+                    />
                     <span>Ethereum (ETH)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="SOL">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg text-purple-500">◎</span>
+                    <img 
+                      src={cryptoIconUrls.SOL} 
+                      alt="SOL"
+                      className="w-5 h-5 rounded-full"
+                    />
                     <span>Solana (SOL)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="BNB">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg text-yellow-500">♦</span>
+                    <img 
+                      src={cryptoIconUrls.BNB} 
+                      alt="BNB"
+                      className="w-5 h-5 rounded-full"
+                    />
                     <span>Binance Coin (BNB)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="TRX">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg text-red-500">⬡</span>
+                    <img 
+                      src={cryptoIconUrls.TRX} 
+                      alt="TRX"
+                      className="w-5 h-5 rounded-full"
+                    />
                     <span>Tron (TRX)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="USDC">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg text-blue-600">$</span>
+                    <img 
+                      src={cryptoIconUrls.USDC} 
+                      alt="USDC"
+                      className="w-5 h-5 rounded-full"
+                    />
                     <span>USD Coin (USDC)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="USDT">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg text-green-600">₮</span>
+                    <img 
+                      src={cryptoIconUrls.USDT} 
+                      alt="USDT"
+                      className="w-5 h-5 rounded-full"
+                    />
                     <span>Tether (USDT)</span>
                   </div>
                 </SelectItem>
