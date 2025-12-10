@@ -140,12 +140,12 @@ export function CreateOfferAdvanced() {
   useEffect(() => {
     const fetchLivePrices = async () => {
       if (loading) setLoading(true);
-      
+
       const prices = await getRealtimeCryptoPrices([crypto]);
       if (prices[crypto]) {
         const usdPrice = prices[crypto].current_price;
         setMarketRateUSD(usdPrice);
-        
+
         const priceInCurrency = usdPrice * exchangeRate;
         setMarketRate(priceInCurrency);
         setLastUpdated(new Date());
@@ -187,13 +187,13 @@ export function CreateOfferAdvanced() {
   const yourRate = priceType === "fixed" 
     ? parseFloat(fixedPrice) || marketRate
     : calculateFloatingPrice(marketRate, priceOffset[0]);
-  
+
   const marginLimits = offerType === "buy" 
     ? { min: -3, max: 0 }  
     : { min: 0, max: 5 };   
-  
+
   const priceRange = getPriceRange(marketRate, marginLimits.min, marginLimits.max);
-  
+
   const handlePremiumInputChange = (value: string) => {
     setPremiumInput(value);
     const numValue = parseFloat(value);
@@ -201,7 +201,7 @@ export function CreateOfferAdvanced() {
       setPriceOffset([numValue]);
     }
   };
-  
+
   const handlePremiumSliderChange = (value: number[]) => {
     setPriceOffset(value);
     setPremiumInput(value[0].toFixed(1));
@@ -286,7 +286,7 @@ export function CreateOfferAdvanced() {
 
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (user) {
         const { data: wallet } = await supabase
           .from('wallets')
@@ -294,7 +294,7 @@ export function CreateOfferAdvanced() {
           .eq('user_id', user.id)
           .eq('crypto_symbol', crypto)
           .single();
-        
+
         if (!wallet || !wallet.balance) {
           toast({
             title: "No Wallet Found",
@@ -305,7 +305,7 @@ export function CreateOfferAdvanced() {
         }
 
         const walletBalance = parseFloat(wallet.balance.toString());
-        
+
         // Check minimum balance requirement
         const minBalanceRequired = 0.0001; // Minimum balance to create an offer
         if (walletBalance < minBalanceRequired) {
@@ -316,7 +316,7 @@ export function CreateOfferAdvanced() {
           });
           return;
         }
-        
+
         if (totalQuantityNum > walletBalance) {
           toast({
             title: "Insufficient Balance",
@@ -340,7 +340,7 @@ export function CreateOfferAdvanced() {
 
     try {
       const limits = await getOfferLimits(currency);
-      
+
       if (minAmountNum < limits.min) {
         toast({
           title: "Amount Too Low",
@@ -386,13 +386,13 @@ export function CreateOfferAdvanced() {
 
       let totalQuantityNum = totalQuantity ? parseFloat(totalQuantity) : null;
       let fiatAmountToSave = totalQuantityNum;
-      
+
       // For BUY offers: Convert crypto to fiat if user entered in crypto mode
       if (offerType === "buy" && quantityInputMode === "crypto" && totalQuantityNum && marketRate > 0) {
         fiatAmountToSave = totalQuantityNum * marketRate;
       }
       // If in fiat mode for BUY, fiatAmountToSave is already the correct value
-      
+
       // For SELL offers: Always convert crypto amount to fiat for storage
       // Sell offers are always entered in crypto amount (BTC, ETH, etc.)
       if (offerType === "sell" && totalQuantityNum && marketRate > 0) {
@@ -508,7 +508,7 @@ export function CreateOfferAdvanced() {
           </Alert>
         )}
 
-        
+
 
         {!isLevel0 && offerLimits.maxOffers && userOfferCount !== undefined && userOfferCount >= offerLimits.maxOffers && (
           <Alert className="mb-6 border-orange-500/50 bg-orange-500/10">
@@ -572,8 +572,42 @@ export function CreateOfferAdvanced() {
                     <span>Bitcoin (BTC)</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
-                <SelectItem value="USDT">Tether (USDT)</SelectItem>
+                <SelectItem value="ETH">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">Ξ</span>
+                    <span>Ethereum (ETH)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="SOL">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-purple-500">◎</span>
+                    <span>Solana (SOL)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="BNB">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-yellow-500">♦</span>
+                    <span>Binance Coin (BNB)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="TRX">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-red-500">⬡</span>
+                    <span>Tron (TRX)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="USDC">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-blue-600">$</span>
+                    <span>USD Coin (USDC)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="USDT">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-green-600">₮</span>
+                    <span>Tether (USDT)</span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -735,7 +769,7 @@ export function CreateOfferAdvanced() {
                             .eq('user_id', user.id)
                             .eq('crypto_symbol', crypto)
                             .single();
-                          
+
                           if (wallet && wallet.balance) {
                             const balance = parseFloat(wallet.balance.toString());
                             if (quantityInputMode === "fiat" && marketRate > 0) {
@@ -976,7 +1010,7 @@ export function CreateOfferAdvanced() {
                       <span>{marginLimits.max > 0 ? "0%" : ""}</span>
                       <span>{marginLimits.max > 0 ? `+${marginLimits.max}%` : `${marginLimits.max}%`}</span>
                     </div>
-                    
+
                     <div className="bg-background/50 rounded-lg p-3 border border-border/50">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
@@ -989,7 +1023,7 @@ export function CreateOfferAdvanced() {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="mt-6 pt-4 border-t border-border/50 space-y-3">
                   <div className="flex justify-between items-center text-sm">
                     <div className="flex items-center gap-2">
@@ -1026,7 +1060,7 @@ export function CreateOfferAdvanced() {
                     </div>
                   )}
                 </div>
-                
+
                 {priceType === "floating" && (
                   <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
                     <p className="text-xs text-muted-foreground">
