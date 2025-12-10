@@ -140,6 +140,10 @@ export function Profile() {
     avatar_url: null as string | null,
   });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isTrusted, setIsTrusted] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [trustLoading, setTrustLoading] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   const avatarTypes = [
     { id: 'default', label: 'Default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
@@ -158,8 +162,39 @@ export function Profile() {
     } else if (viewingUserId) {
       fetchProfileData();
       fetchFeedbacks();
+      if (!isOwnProfile && user?.id) {
+        checkTrustAndBlockStatus();
+      }
     }
   }, [user, loading, setLocation, viewingUserId]);
+
+  const checkTrustAndBlockStatus = async () => {
+    if (!user?.id || !viewingUserId || isOwnProfile) return;
+
+    try {
+      // Check if user is trusted
+      const { data: trustData } = await supabase
+        .from('trusted_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('trusted_user_id', viewingUserId)
+        .single();
+
+      setIsTrusted(!!trustData);
+
+      // Check if user is blocked
+      const { data: blockData } = await supabase
+        .from('blocked_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('blocked_user_id', viewingUserId)
+        .single();
+
+      setIsBlocked(!!blockData);
+    } catch (error) {
+      console.error('Error checking trust/block status:', error);
+    }
+  };
 
   const fetchProfileData = async () => {
     try {
@@ -638,6 +673,128 @@ export function Profile() {
     });
   };
 
+  const handleTrustToggle = async () => {
+    if (!user?.id || !viewingUserId || isOwnProfile) return;
+
+    try {
+      setTrustLoading(true);
+
+      if (isTrusted) {
+        // Remove trust
+        const { error } = await supabase
+          .from('trusted_users')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('trusted_user_id', viewingUserId);
+
+        if (error) throw error;
+
+        setIsTrusted(false);
+        toast({
+          title: "User Untrusted",
+          description: `You have removed @${profileData?.username} from your trusted list`,
+        });
+      } else {
+        // Add trust
+        const { error } = await supabase
+          .from('trusted_users')
+          .insert({
+            user_id: user.id,
+            trusted_user_id: viewingUserId,
+          });
+
+        if (error) {
+          if (error.message.includes('Cannot trust a blocked user')) {
+            toast({
+              title: "Cannot Trust User",
+              description: "You must unblock this user first before trusting them",
+              variant: "destructive",
+            });
+          } else {
+            throw error;
+          }
+          return;
+        }
+
+        setIsTrusted(true);
+        toast({
+          title: "User Trusted",
+          description: `You have added @${profileData?.username} to your trusted list`,
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling trust:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update trust status",
+        variant: "destructive",
+      });
+    } finally {
+      setTrustLoading(false);
+    }
+  };
+
+  const handleBlockToggle = async () => {
+    if (!user?.id || !viewingUserId || isOwnProfile) return;
+
+    try {
+      setBlockLoading(true);
+
+      if (isBlocked) {
+        // Unblock user
+        const { error } = await supabase
+          .from('blocked_users')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('blocked_user_id', viewingUserId);
+
+        if (error) throw error;
+
+        setIsBlocked(false);
+        toast({
+          title: "User Unblocked",
+          description: `You have unblocked @${profileData?.username}`,
+        });
+      } else {
+        // Block user
+        const { error } = await supabase
+          .from('blocked_users')
+          .insert({
+            user_id: user.id,
+            blocked_user_id: viewingUserId,
+          });
+
+        if (error) {
+          if (error.message.includes('Cannot block a trusted user')) {
+            toast({
+              title: "Cannot Block User",
+              description: "You must remove this user from your trusted list first",
+              variant: "destructive",
+            });
+          } else {
+            throw error;
+          }
+          return;
+        }
+
+        setIsBlocked(true);
+        toast({
+          title: "User Blocked",
+          description: `You have blocked @${profileData?.username}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling block:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update block status",
+        variant: "destructive",
+      });
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
@@ -737,30 +894,28 @@ export function Profile() {
                   </div>
                 </div>
 
-                {/* Block and Trust Buttons - Replaced with clickable text */}
+                {/* Block and Trust Buttons */}
                 {!isOwnProfile && (
                   <div className="flex gap-3 mb-4">
                     <span 
-                      className="text-red-600 font-semibold cursor-pointer flex-1 text-center py-2 rounded-md hover:bg-red-600/10"
-                      onClick={() => {
-                        toast({
-                          title: "Block User",
-                          description: "Block feature coming soon",
-                        });
-                      }}
+                      className={`font-semibold cursor-pointer flex-1 text-center py-2 rounded-md transition-colors ${
+                        isBlocked 
+                          ? 'text-red-600 bg-red-600/20 hover:bg-red-600/30' 
+                          : 'text-red-600 hover:bg-red-600/10'
+                      } ${blockLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={blockLoading ? undefined : handleBlockToggle}
                     >
-                      Block
+                      {blockLoading ? 'Loading...' : isBlocked ? 'Unblock' : 'Block'}
                     </span>
                     <span 
-                      className="text-green-600 font-semibold cursor-pointer flex-1 text-center py-2 rounded-md hover:bg-green-600/10"
-                      onClick={() => {
-                        toast({
-                          title: "Trust User",
-                          description: "Trust feature coming soon",
-                        });
-                      }}
+                      className={`font-semibold cursor-pointer flex-1 text-center py-2 rounded-md transition-colors ${
+                        isTrusted 
+                          ? 'text-green-600 bg-green-600/20 hover:bg-green-600/30' 
+                          : 'text-green-600 hover:bg-green-600/10'
+                      } ${trustLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={trustLoading ? undefined : handleTrustToggle}
                     >
-                      Trust
+                      {trustLoading ? 'Loading...' : isTrusted ? 'Untrust' : 'Trust'}
                     </span>
                   </div>
                 )}
