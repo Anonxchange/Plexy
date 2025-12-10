@@ -62,35 +62,48 @@ export function TrustedUsers() {
       setLoading(true);
       const supabase = createClient();
 
-      const { data, error } = await supabase
+      // First get the trusted user IDs
+      const { data: trustedData, error: trustedError } = await supabase
         .from("trusted_users")
-        .select(`
-          id,
-          trusted_user_id,
-          user_profiles:trusted_user_id (
-            id,
-            username,
-            avatar_url,
-            is_online,
-            last_seen
-          )
-        `)
+        .select("id, trusted_user_id")
         .eq("user_id", user?.id);
 
-      if (error) {
-        console.error("Error fetching trusted users:", error);
+      if (trustedError) {
+        console.error("Error fetching trusted users:", trustedError);
         setTrustedUsers([]);
         return;
       }
 
-      const mapped = (data || []).map((item: any) => ({
-        id: item.id,
-        user_id: item.trusted_user_id,
-        username: item.user_profiles?.username || "Unknown",
-        avatar_url: item.user_profiles?.avatar_url,
-        is_online: item.user_profiles?.is_online || false,
-        last_seen: item.user_profiles?.last_seen,
-      }));
+      if (!trustedData || trustedData.length === 0) {
+        setTrustedUsers([]);
+        return;
+      }
+
+      // Get the user profiles for the trusted users
+      const trustedUserIds = trustedData.map(t => t.trusted_user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("user_profiles")
+        .select("id, username, avatar_url, is_online, last_seen")
+        .in("id", trustedUserIds);
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        setTrustedUsers([]);
+        return;
+      }
+
+      // Combine the data
+      const mapped = trustedData.map((item) => {
+        const profile = profilesData?.find(p => p.id === item.trusted_user_id);
+        return {
+          id: item.id,
+          user_id: item.trusted_user_id,
+          username: profile?.username || "Unknown",
+          avatar_url: profile?.avatar_url,
+          is_online: profile?.is_online || false,
+          last_seen: profile?.last_seen,
+        };
+      });
 
       setTrustedUsers(mapped);
     } catch (error) {
