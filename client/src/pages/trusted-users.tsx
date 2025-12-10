@@ -67,7 +67,7 @@ export function TrustedUsers() {
         .select(`
           id,
           trusted_user_id,
-          profiles:trusted_user_id (
+          user_profiles:trusted_user_id (
             id,
             username,
             avatar_url,
@@ -86,10 +86,10 @@ export function TrustedUsers() {
       const mapped = (data || []).map((item: any) => ({
         id: item.id,
         user_id: item.trusted_user_id,
-        username: item.profiles?.username || "Unknown",
-        avatar_url: item.profiles?.avatar_url,
-        is_online: item.profiles?.is_online || false,
-        last_seen: item.profiles?.last_seen,
+        username: item.user_profiles?.username || "Unknown",
+        avatar_url: item.user_profiles?.avatar_url,
+        is_online: item.user_profiles?.is_online || false,
+        last_seen: item.user_profiles?.last_seen,
       }));
 
       setTrustedUsers(mapped);
