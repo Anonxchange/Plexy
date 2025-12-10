@@ -108,7 +108,7 @@ export function TradeCompletedSection({
 
       // Get current user profile
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('username, avatar_url')
         .eq('id', user.id)
         .single();
