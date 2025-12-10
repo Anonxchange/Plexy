@@ -1,6 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useLocation } from "wouter";
 
 const PaymentIcon = ({ icon, color }: { icon: string; color: string }) => {
   const icons: Record<string, JSX.Element> = {
@@ -78,18 +79,18 @@ const PaymentIcon = ({ icon, color }: { icon: string; color: string }) => {
 };
 
 const paymentCategories = [
-  { icon: "shop", color: "#FF6B6B", name: "Shop", count: "200+", badge: "NEW", description: "Find unique products and services from creators" },
-  { icon: "giftcard", color: "#FFA500", name: "Gift card store", count: "120+", badge: "HOT", description: "Use crypto to buy instant gift cards for global brands" },
-  { icon: "swap", color: "#4FACFE", name: "Swap", count: "100+", badge: "BEST RATE", description: "Exchange your crypto instantly with fast, low-fee swaps" },
-  { icon: "wallet", color: "#A855F7", name: "Wallet", count: "90+", description: "Send and receive crypto safely in your secure NoOnes wallet" },
-  { icon: "card", color: "#3B82F6", name: "Visa card", count: "80+", description: "Spend your crypto anywhere with a virtual card" },
-  { icon: "bitcoin", color: "#F59E0B", name: "Buy crypto", count: "150+", description: "Receive your stablecoins directly in your NoOnes wallet" },
-  { icon: "mobile", color: "#10B981", name: "Mobile top-up", count: "60+", description: "Recharge any mobile number globally using your crypto" },
-  { icon: "giftcard", color: "#06B6D4", name: "Pexly gift card", count: "85+", description: "Gift crypto instantly with a simple, secure NoOnes link" },
-  { icon: "bank", color: "#8B5CF6", name: "Bank Transfer", count: "200+", description: "ACH, SEPA, Wire Transfer, SWIFT transfers" },
-  { icon: "card", color: "#EC4899", name: "Credit/Debit Cards", count: "80+", description: "Visa, Mastercard, Amex, Discover" },
-  { icon: "mobile", color: "#14B8A6", name: "Mobile Money", count: "150+", description: "M-Pesa, MTN, Orange Money, Airtel" },
-  { icon: "wallet", color: "#F97316", name: "E-Wallets", count: "100+", description: "PayPal, Skrill, Neteller, Perfect Money" },
+  { icon: "shop", color: "#FF6B6B", name: "Shop", count: "200+", badge: "NEW", description: "Find unique products and services from creators", route: "/shop" },
+  { icon: "giftcard", color: "#FFA500", name: "Gift card store", count: "120+", badge: "HOT", description: "Use crypto to buy instant gift cards for global brands", route: "/gift-cards" },
+  { icon: "swap", color: "#4FACFE", name: "Swap", count: "100+", badge: "BEST RATE", description: "Exchange your crypto instantly with fast, low-fee swaps", route: "/swap" },
+  { icon: "wallet", color: "#A855F7", name: "Wallet", count: "90+", description: "Send and receive crypto safely in your secure NoOnes wallet", route: "/wallet" },
+  { icon: "card", color: "#3B82F6", name: "Visa card", count: "80+", description: "Spend your crypto anywhere with a virtual card", route: "/visa-card" },
+  { icon: "bitcoin", color: "#F59E0B", name: "Buy crypto", count: "150+", description: "Receive your stablecoins directly in your NoOnes wallet", route: "/buy-crypto" },
+  { icon: "mobile", color: "#10B981", name: "Mobile top-up", count: "60+", description: "Recharge any mobile number globally using your crypto", route: "/mobile-topup" },
+  { icon: "giftcard", color: "#06B6D4", name: "Pexly gift card", count: "85+", description: "Gift crypto instantly with a simple, secure NoOnes link", route: "/pexly-pay" },
+  { icon: "bank", color: "#8B5CF6", name: "Bank Transfer", count: "200+", description: "ACH, SEPA, Wire Transfer, SWIFT transfers", route: "/p2p" },
+  { icon: "card", color: "#EC4899", name: "Credit/Debit Cards", count: "80+", description: "Visa, Mastercard, Amex, Discover", route: "/p2p" },
+  { icon: "mobile", color: "#14B8A6", name: "Mobile Money", count: "150+", description: "M-Pesa, MTN, Orange Money, Airtel", route: "/p2p" },
+  { icon: "wallet", color: "#F97316", name: "E-Wallets", count: "100+", description: "PayPal, Skrill, Neteller, Perfect Money", route: "/p2p" },
 ];
 
 const popularMethods = [
@@ -99,6 +100,12 @@ const popularMethods = [
 ];
 
 export function PaymentMethods() {
+  const [, setLocation] = useLocation();
+
+  const handleCardClick = (route: string) => {
+    setLocation(route);
+  };
+
   return (
     <section className="pt-12 pb-20 bg-white dark:bg-[#1a1d24]">
       <div className="max-w-7xl mx-auto px-4 lg:px-6">
@@ -115,6 +122,7 @@ export function PaymentMethods() {
           {paymentCategories.map((method, index) => (
             <Card 
               key={index} 
+              onClick={() => handleCardClick(method.route)}
               className="relative overflow-hidden backdrop-blur-xl bg-gray-50/80 dark:bg-[#2a2d35]/80 border border-gray-200 dark:border-white/10 hover:border-primary/50 cursor-pointer transition-all duration-300 group hover:shadow-2xl hover:shadow-primary/20"
               data-testid={`card-payment-${method.name.toLowerCase().replace(/\s+/g, '-')}`}
             >
