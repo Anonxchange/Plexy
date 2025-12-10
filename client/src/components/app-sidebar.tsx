@@ -19,6 +19,7 @@ import {
   Trophy,
   Users
 } from "lucide-react";
+import { SiApple, SiGoogleplay } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,13 +51,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           <span className="text-2xl font-bold">Pexly</span>
         </Link>
 
-        <div className="mt-6 space-y-2">
-          <Button className="w-full justify-start gap-2" size="sm" variant="outline" data-testid="button-download-android">
-            <Smartphone className="h-4 w-4" />
+        <div className="mt-6 flex gap-2">
+          <Button className="flex-1 justify-center gap-2" size="sm" variant="outline" data-testid="button-download-android">
+            <SiGoogleplay className="h-4 w-4" />
             Android
           </Button>
-          <Button className="w-full justify-start gap-2" size="sm" variant="outline" data-testid="button-download-ios">
-            <Smartphone className="h-4 w-4" />
+          <Button className="flex-1 justify-center gap-2" size="sm" variant="outline" data-testid="button-download-ios">
+            <SiApple className="h-4 w-4" />
             iOS
           </Button>
         </div>
