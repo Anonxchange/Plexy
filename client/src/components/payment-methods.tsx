@@ -100,22 +100,22 @@ const popularMethods = [
 
 export function PaymentMethods() {
   return (
-    <section className="pt-12 pb-20 bg-[#1a1d24]">
+    <section className="pt-12 pb-20 bg-white dark:bg-[#1a1d24]">
       <div className="max-w-7xl mx-auto px-4 lg:px-6">
         <div className="text-center space-y-4 mb-12">
-          <h2 className="text-3xl lg:text-5xl font-bold text-white">
+          <h2 className="text-3xl lg:text-5xl font-bold text-gray-900 dark:text-white">
             Our products
           </h2>
-          <p className="text-lg lg:text-xl text-gray-400 max-w-3xl mx-auto">
+          <p className="text-lg lg:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
             Discover our full range of tools designed to make crypto easy and accessible
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           {paymentCategories.map((method, index) => (
             <Card 
               key={index} 
-              className="relative overflow-hidden backdrop-blur-xl bg-[#2a2d35]/80 border border-white/10 hover:border-primary/50 cursor-pointer transition-all duration-300 group hover:shadow-2xl hover:shadow-primary/20"
+              className="relative overflow-hidden backdrop-blur-xl bg-gray-50/80 dark:bg-[#2a2d35]/80 border border-gray-200 dark:border-white/10 hover:border-primary/50 cursor-pointer transition-all duration-300 group hover:shadow-2xl hover:shadow-primary/20"
               data-testid={`card-payment-${method.name.toLowerCase().replace(/\s+/g, '-')}`}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -131,33 +131,14 @@ export function PaymentMethods() {
                   )}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm lg:text-lg text-white mb-1">{method.name}</h3>
-                  <p className="text-[11px] lg:text-sm text-gray-400 leading-relaxed line-clamp-2 lg:line-clamp-none">
+                  <h3 className="font-semibold text-sm lg:text-lg text-gray-900 dark:text-white mb-1">{method.name}</h3>
+                  <p className="text-[11px] lg:text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 lg:line-clamp-none">
                     {method.description}
                   </p>
                 </div>
               </div>
             </Card>
           ))}
-        </div>
-
-        <div className="text-center space-y-6">
-          <h3 className="text-2xl font-bold text-white">Why Pexly?</h3>
-          <p className="text-lg text-gray-400">
-            Safe, easy, and reliable trading for everyone
-          </p>
-          <div className="flex flex-wrap gap-2 lg:gap-3 justify-center mt-6">
-            {popularMethods.map((method, index) => (
-              <Badge 
-                key={index} 
-                variant="outline" 
-                className="px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-medium bg-[#2a2d35]/60 border-white/10 text-gray-300 hover:bg-primary/20 hover:border-primary/50 hover:text-primary cursor-pointer transition-all duration-200"
-                data-testid={`badge-method-${method.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                {method}
-              </Badge>
-            ))}
-          </div>
         </div>
       </div>
     </section>
