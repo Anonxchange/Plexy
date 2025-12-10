@@ -740,6 +740,30 @@ export function CreateOffer() {
                     <span>Ethereum (ETH)</span>
                   </div>
                 </SelectItem>
+                <SelectItem value="SOL">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-purple-500">◎</span>
+                    <span>Solana (SOL)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="BNB">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-yellow-500">♦</span>
+                    <span>Binance Coin (BNB)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="TRX">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-red-500">⬡</span>
+                    <span>Tron (TRX)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="USDC">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg text-blue-600">$</span>
+                    <span>USD Coin (USDC)</span>
+                  </div>
+                </SelectItem>
                 <SelectItem value="USDT">
                   <div className="flex items-center gap-3">
                     <span className="text-lg text-green-600">₮</span>
