@@ -1810,13 +1810,18 @@ export default function AccountSettings() {
               {show2FADialog && user?.email && (
                 <TwoFactorSetupDialog
                   open={show2FADialog}
-                  onOpenChange={setShow2FADialog}
+                  onOpenChange={(open) => {
+                    setShow2FADialog(open);
+                    if (!open) {
+                      // Refetch status when dialog closes to ensure UI is in sync
+                      fetch2FAStatus();
+                    }
+                  }}
                   userEmail={user.email}
                   userId={user.id}
                   onSuccess={() => {
                     setTwoFactorEnabled(true);
                     setAppAuth(true);
-                    fetch2FAStatus();
                   }}
                 />
               )}
