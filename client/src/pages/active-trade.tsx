@@ -765,7 +765,7 @@ export default function ActiveTrade() {
       const recipientId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
 
       const { data: senderProfile } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('username, avatar_url, avatar_type')
         .eq('id', currentUserProfileId)
         .single();
