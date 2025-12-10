@@ -1740,96 +1740,72 @@ export default function AccountSettings() {
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="font-medium">SMS Authentication</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="font-medium">SMS Authentication</p>
+                    {smsAuth && (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Enabled
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Receive verification codes via SMS to your registered phone number
                   </p>
-                  {smsAuth && (
-                    <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 mt-2">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Enabled
-                    </Badge>
-                  )}
                 </div>
-                {smsAuth ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDisableSMS2FA}
-                  >
-                    Disable
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowSMS2FADialog(true)}
-                  >
-                    Enable
-                  </Button>
-                )}
+                <Button
+                  variant={smsAuth ? "outline" : "default"}
+                  size="sm"
+                  onClick={smsAuth ? handleDisableSMS2FA : () => setShowSMS2FADialog(true)}
+                >
+                  {smsAuth ? "Disable" : "Enable"}
+                </Button>
               </div>
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="flex-1">
-                  <p className="font-medium">Email Authentication</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="font-medium">Email Authentication</p>
+                    {emailAuth && (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Enabled
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Receive verification codes via email to your registered email address
                   </p>
-                  {emailAuth && (
-                    <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 mt-2">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Enabled
-                    </Badge>
-                  )}
                 </div>
-                {emailAuth ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDisableEmail2FA}
-                  >
-                    Disable
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowEmail2FADialog(true)}
-                  >
-                    Enable
-                  </Button>
-                )}
+                <Button
+                  variant={emailAuth ? "outline" : "default"}
+                  size="sm"
+                  onClick={emailAuth ? handleDisableEmail2FA : () => setShowEmail2FADialog(true)}
+                >
+                  {emailAuth ? "Disable" : "Enable"}
+                </Button>
               </div>
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="flex-1">
-                  <p className="font-medium">Authenticator App</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="font-medium">Authenticator App</p>
+                    {twoFactorEnabled && (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Enabled
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Use Google Authenticator, Authy, or similar apps for enhanced security
                   </p>
-                  {twoFactorEnabled && (
-                    <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 mt-2">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Enabled
-                    </Badge>
-                  )}
                 </div>
-                {twoFactorEnabled ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDisable2FADialog(true)}
-                  >
-                    Disable
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShow2FADialog(true)}
-                  >
-                    Enable
-                  </Button>
-                )}
+                <Button
+                  variant={twoFactorEnabled ? "outline" : "default"}
+                  size="sm"
+                  onClick={twoFactorEnabled ? () => setShowDisable2FADialog(true) : () => setShow2FADialog(true)}
+                >
+                  {twoFactorEnabled ? "Disable" : "Enable"}
+                </Button>
               </div>
               {show2FADialog && user?.email && (
                 <TwoFactorSetupDialog
