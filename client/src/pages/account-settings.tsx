@@ -312,6 +312,19 @@ export default function AccountSettings() {
         setProfileData(data);
         console.log('Profile data loaded:', data);
 
+        // Set 2FA status from profile data
+        const hasSecret = !!data.two_factor_secret;
+        const isAppAuthEnabled = data.two_factor_enabled === true || hasSecret;
+        console.log('2FA from profile data:', {
+          two_factor_enabled: data.two_factor_enabled,
+          hasSecret,
+          isAppAuthEnabled
+        });
+        setTwoFactorEnabled(isAppAuthEnabled);
+        setAppAuth(isAppAuthEnabled);
+        setSmsAuth(data.sms_two_factor_enabled === true);
+        setEmailAuth(data.email_two_factor_enabled === true);
+
         // Only update fields if user is not currently editing them
         if (!isEditingUsername) {
           setUsername(data.username || '');
@@ -412,45 +425,52 @@ export default function AccountSettings() {
   
 
   const fetch2FAStatus = async () => {
+    // Must have valid user ID to query
+    if (!user?.id) {
+      console.log('fetch2FAStatus: No user ID available yet');
+      return;
+    }
+    
     try {
+      console.log('fetch2FAStatus: Querying for user ID:', user.id);
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('two_factor_enabled, two_factor_secret, sms_two_factor_enabled, email_two_factor_enabled')
-        .eq('id', user?.id)
+        .eq('id', user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      console.log('fetch2FAStatus: Query result:', { data, error });
+
+      if (error) {
+        // PGRST116 = no rows found, which is okay for new users
+        if (error.code !== 'PGRST116') {
+          throw error;
+        }
+        console.log('fetch2FAStatus: No profile found (new user)');
+        return;
+      }
 
       if (data) {
         // Check both the boolean flag AND if a secret exists (for legacy data)
         const hasSecret = !!data.two_factor_secret;
         const isAppAuthEnabled = data.two_factor_enabled === true || hasSecret;
+        
+        console.log('fetch2FAStatus: Setting 2FA state:', {
+          hasSecret,
+          two_factor_enabled: data.two_factor_enabled,
+          isAppAuthEnabled,
+          sms: data.sms_two_factor_enabled,
+          email: data.email_two_factor_enabled
+        });
+        
         setTwoFactorEnabled(isAppAuthEnabled);
         setAppAuth(isAppAuthEnabled);
         setSmsAuth(data.sms_two_factor_enabled === true);
         setEmailAuth(data.email_two_factor_enabled === true);
-        
-        console.log('2FA Status loaded:', {
-          appAuth: isAppAuthEnabled,
-          hasSecret: hasSecret,
-          rawTwoFactorEnabled: data.two_factor_enabled,
-          smsAuth: data.sms_two_factor_enabled,
-          emailAuth: data.email_two_factor_enabled
-        });
-      } else {
-        // If no data, set all to false
-        setTwoFactorEnabled(false);
-        setAppAuth(false);
-        setSmsAuth(false);
-        setEmailAuth(false);
       }
     } catch (error) {
       console.error('Error fetching 2FA status:', error);
-      // On error, set all to false
-      setTwoFactorEnabled(false);
-      setAppAuth(false);
-      setSmsAuth(false);
-      setEmailAuth(false);
     }
   };
 
