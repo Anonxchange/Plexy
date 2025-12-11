@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search, ChevronLeft, ChevronRight, Clock, User } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { createClient } from "@/lib/supabase";
+import { useSchema, blogPageSchema } from "@/hooks/use-schema";
 
 function calculateReadTime(content: string): string {
   if (!content) return "1 min read";
@@ -74,6 +75,7 @@ const gradients = [
 ];
 
 export default function Blog() {
+  useSchema(blogPageSchema, "blog-page-schema");
   const supabase = createClient();
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState("Latest news");
