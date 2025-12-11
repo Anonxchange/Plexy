@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Clock, GraduationCap, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { useSchema, academyPageSchema } from "@/hooks/use-schema";
 
 interface Article {
   id: string;
@@ -232,6 +233,7 @@ const getDifficultyColor = (difficulty: string) => {
 };
 
 export function PexlyAcademy() {
+  useSchema(academyPageSchema, "academy-page-schema");
   const [activeCategory, setActiveCategory] = useState("p2p");
   // Placeholder for selected article state, assuming it will be used elsewhere or for future features
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
