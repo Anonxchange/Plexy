@@ -7,8 +7,10 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
+import { useSchema, supportPageSchema } from "@/hooks/use-schema";
 
 const SupportInterface = () => {
+  useSchema(supportPageSchema, "support-page-schema");
   const [currentView, setCurrentView] = useState("home");
   const [searchQuery, setSearchQuery] = useState("");
 
