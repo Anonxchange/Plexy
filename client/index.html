@@ -17,6 +17,99 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+    
+    <!-- Global JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.pexly.app/#organization",
+          "name": "Pexly",
+          "alternateName": "Pexly Exchange",
+          "url": "https://www.pexly.app/",
+          "description": "Pexly is a leading peer-to-peer cryptocurrency exchange platform enabling users to buy, sell, and trade Bitcoin, Ethereum, and other cryptocurrencies with 500+ payment methods worldwide.",
+          "foundingDate": "2024",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.pexly.app/favicon.svg",
+            "width": "512",
+            "height": "512"
+          },
+          "contactPoint": [
+            {
+              "@type": "ContactPoint",
+              "email": "support@pexly.app",
+              "contactType": "customer support",
+              "availableLanguage": ["English"],
+              "areaServed": "Worldwide"
+            }
+          ],
+          "sameAs": [],
+          "knowsAbout": ["Cryptocurrency", "Bitcoin", "Ethereum", "P2P Trading", "Blockchain", "Digital Assets"],
+          "slogan": "The People-Powered Way to Move Money"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.pexly.app/#website",
+          "url": "https://www.pexly.app/",
+          "name": "Pexly",
+          "description": "Buy and sell cryptocurrency peer-to-peer with 500+ payment methods. Trade Bitcoin, Ethereum, USDT with escrow protection.",
+          "publisher": {
+            "@id": "https://www.pexly.app/#organization"
+          },
+          "inLanguage": "en-US",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://www.pexly.app/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "FinancialService",
+          "@id": "https://www.pexly.app/#service",
+          "name": "Pexly P2P Exchange",
+          "description": "Peer-to-peer cryptocurrency trading platform with escrow protection",
+          "provider": {
+            "@id": "https://www.pexly.app/#organization"
+          },
+          "serviceType": "Cryptocurrency Exchange",
+          "areaServed": "Worldwide",
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Cryptocurrency Trading Services",
+            "itemListElement": [
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "P2P Trading"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Spot Trading"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Crypto Swap"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
