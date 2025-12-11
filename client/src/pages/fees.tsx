@@ -1,9 +1,10 @@
-
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Bitcoin } from "lucide-react";
+import { useSchema, feesPageSchema } from "@/hooks/use-schema";
 
 export function Fees() {
+  useSchema(feesPageSchema, "fees-page-schema");
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
