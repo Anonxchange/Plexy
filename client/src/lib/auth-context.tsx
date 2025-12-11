@@ -35,34 +35,165 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function getDeviceInfo() {
   const ua = navigator.userAgent;
   let browser = 'Unknown Browser';
+  let browserVersion = '';
   let os = 'Unknown OS';
+  let osVersion = '';
   let deviceName = 'Desktop';
+  let deviceModel = '';
 
-  if (ua.includes('Chrome') && !ua.includes('Edg')) {
+  // Helper: Check if device has touch capability (for detecting mobile/tablet)
+  const hasTouchScreen = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+  const screenWidth = window.screen.width;
+  const screenHeight = window.screen.height;
+  const minDimension = Math.min(screenWidth, screenHeight);
+  const maxDimension = Math.max(screenWidth, screenHeight);
+
+  // Detect browser and version
+  if (ua.includes('CriOS')) {
     browser = 'Chrome';
+    const match = ua.match(/CriOS\/(\d+)/);
+    if (match) browserVersion = match[1];
+  } else if (ua.includes('FxiOS')) {
+    browser = 'Firefox';
+    const match = ua.match(/FxiOS\/(\d+)/);
+    if (match) browserVersion = match[1];
+  } else if (ua.includes('EdgiOS')) {
+    browser = 'Edge';
+    const match = ua.match(/EdgiOS\/(\d+)/);
+    if (match) browserVersion = match[1];
+  } else if (ua.includes('Chrome') && !ua.includes('Edg') && !ua.includes('OPR')) {
+    browser = 'Chrome';
+    const match = ua.match(/Chrome\/(\d+)/);
+    if (match) browserVersion = match[1];
   } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
     browser = 'Safari';
+    const match = ua.match(/Version\/(\d+)/);
+    if (match) browserVersion = match[1];
   } else if (ua.includes('Firefox')) {
     browser = 'Firefox';
+    const match = ua.match(/Firefox\/(\d+)/);
+    if (match) browserVersion = match[1];
   } else if (ua.includes('Edg')) {
     browser = 'Edge';
+    const match = ua.match(/Edg\/(\d+)/);
+    if (match) browserVersion = match[1];
+  } else if (ua.includes('OPR') || ua.includes('Opera')) {
+    browser = 'Opera';
+  } else if (ua.includes('SamsungBrowser')) {
+    browser = 'Samsung Internet';
+    const match = ua.match(/SamsungBrowser\/(\d+)/);
+    if (match) browserVersion = match[1];
   }
 
-  if (ua.includes('Windows')) {
-    os = 'Windows';
-  } else if (ua.includes('Mac')) {
-    os = 'macOS';
-  } else if (ua.includes('Linux')) {
-    os = 'Linux';
+  // Detect OS and device - check mobile patterns first
+  if (ua.includes('iPhone')) {
+    os = 'iOS';
+    deviceName = 'iPhone';
+    const match = ua.match(/iPhone OS (\d+[._]\d+)/);
+    if (match) osVersion = match[1].replace('_', '.');
+  } else if (ua.includes('iPad')) {
+    os = 'iPadOS';
+    deviceName = 'iPad';
+    const match = ua.match(/CPU OS (\d+[._]\d+)/);
+    if (match) osVersion = match[1].replace('_', '.');
   } else if (ua.includes('Android')) {
     os = 'Android';
-    deviceName = 'Mobile';
-  } else if (ua.includes('iPhone') || ua.includes('iPad')) {
-    os = 'iOS';
-    deviceName = ua.includes('iPad') ? 'Tablet' : 'Mobile';
+    const match = ua.match(/Android (\d+\.?\d*)/);
+    if (match) osVersion = match[1];
+    
+    // Try to get device model from user agent
+    const modelMatch = ua.match(/;\s*([^;)]+)\s*Build\//);
+    if (modelMatch) {
+      deviceModel = modelMatch[1].trim();
+      // Clean up common prefixes
+      deviceModel = deviceModel.replace(/^(SM-|LG-|SAMSUNG|Xiaomi|HUAWEI|OPPO|vivo|OnePlus|Pixel)\s*/i, '');
+    }
+    
+    // Determine if tablet or phone based on screen size and model name
+    const isTablet = minDimension >= 600 || 
+      (deviceModel && (
+        deviceModel.toLowerCase().includes('tablet') || 
+        deviceModel.toLowerCase().includes('tab') ||
+        deviceModel.toLowerCase().includes('pad')
+      ));
+    
+    deviceName = isTablet ? 'Android Tablet' : 'Android Phone';
+  } else if (ua.includes('Windows Phone') || ua.includes('Windows Mobile')) {
+    os = 'Windows Phone';
+    deviceName = 'Windows Phone';
+  } else if (ua.includes('Windows NT 10.0')) {
+    os = 'Windows';
+    osVersion = ua.includes('Windows NT 10.0; Win64') ? '10/11' : '10';
+  } else if (ua.includes('Windows NT 6.3')) {
+    os = 'Windows';
+    osVersion = '8.1';
+  } else if (ua.includes('Windows NT 6.1')) {
+    os = 'Windows';
+    osVersion = '7';
+  } else if (ua.includes('Windows')) {
+    os = 'Windows';
+  } else if (ua.includes('Mac OS X') || ua.includes('Macintosh')) {
+    // Check if this is actually an iPad pretending to be Mac (Request Desktop Website)
+    // iPads in desktop mode: have touch, Safari browser, and typical iPad screen ratios
+    const isLikelyIPad = hasTouchScreen && 
+      ua.includes('Safari') && 
+      !ua.includes('Chrome') &&
+      navigator.maxTouchPoints >= 2 &&
+      (navigator.platform === 'MacIntel' || navigator.platform === 'iPad');
+    
+    if (isLikelyIPad && minDimension <= 1024) {
+      os = 'iPadOS';
+      deviceName = 'iPad';
+      const match = ua.match(/Mac OS X (\d+[._]\d+)/);
+      if (match) osVersion = match[1].replace('_', '.');
+    } else {
+      os = 'macOS';
+      const match = ua.match(/Mac OS X (\d+[._]\d+)/);
+      if (match) osVersion = match[1].replace('_', '.');
+    }
+  } else if (ua.includes('CrOS')) {
+    os = 'Chrome OS';
+    deviceName = 'Chromebook';
+  } else if (ua.includes('Linux')) {
+    os = 'Linux';
+    if (ua.includes('Ubuntu')) os = 'Ubuntu';
+    
+    // Check if this might be Android without proper identification
+    if (hasTouchScreen && minDimension < 800) {
+      os = 'Android';
+      deviceName = 'Android Phone';
+    }
   }
 
-  return { browser, os, deviceName, userAgent: ua };
+  // Final device name determination
+  let fullDeviceName = deviceName;
+  
+  if (deviceModel && deviceModel.length > 0 && deviceModel.length < 30) {
+    // Use the actual device model if we found one
+    fullDeviceName = deviceModel;
+  } else if (deviceName === 'Desktop') {
+    // Make desktop names more specific based on OS
+    if (os === 'macOS') {
+      fullDeviceName = 'Mac';
+    } else if (os === 'Windows') {
+      fullDeviceName = 'Windows PC';
+    } else if (os === 'Linux' || os === 'Ubuntu') {
+      fullDeviceName = 'Linux PC';
+    } else if (os === 'Chrome OS') {
+      fullDeviceName = 'Chromebook';
+    }
+  }
+
+  // Build full OS string
+  const fullOs = osVersion ? `${os} ${osVersion}` : os;
+  const fullBrowser = browserVersion ? `${browser} ${browserVersion}` : browser;
+
+  return { 
+    browser: fullBrowser, 
+    os: fullOs, 
+    deviceName: fullDeviceName, 
+    userAgent: ua 
+  };
 }
 
 async function trackDevice(supabase: any, userId: string) {
