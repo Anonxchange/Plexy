@@ -3,6 +3,7 @@ import { OfferCard, type OfferCardProps } from "@/components/offer-card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
+import { useSchema, buyPageSchema } from "@/hooks/use-schema";
 
 //todo: remove mock functionality
 const mockOffers: OfferCardProps[] = [
@@ -49,6 +50,7 @@ const mockOffers: OfferCardProps[] = [
 ];
 
 export default function Buy() {
+  useSchema(buyPageSchema, "buy-page-schema");
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
 
