@@ -29,6 +29,10 @@ import {
   Tablet,
   Menu,
   RefreshCw,
+  Trash2,
+  Loader2,
+  Clock,
+  Fingerprint,
 } from "lucide-react";
 import {
   Pagination,
@@ -40,6 +44,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { deviceFingerprint, DeviceFingerprint } from "@/lib/security/device-fingerprint";
+import { formatDistanceToNow } from "date-fns";
 
 interface Device {
   id: string;
@@ -79,13 +85,144 @@ export default function DevicesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const devicesPerPage = 60;
 
+  const [trustedDevices, setTrustedDevices] = useState<DeviceFingerprint[]>([]);
+  const [loadingTrustedDevices, setLoadingTrustedDevices] = useState(false);
+  const [currentFingerprint, setCurrentFingerprint] = useState<string>("");
+  const [processingDeviceId, setProcessingDeviceId] = useState<string | null>(null);
+  const [registeringDevice, setRegisteringDevice] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) {
       setLocation("/signin");
     } else if (user) {
       fetchDevices();
+      fetchTrustedDevices();
+      loadCurrentFingerprint();
     }
   }, [user, loading]);
+
+  const loadCurrentFingerprint = async () => {
+    try {
+      const fingerprint = await deviceFingerprint.getCurrentFingerprint();
+      setCurrentFingerprint(fingerprint);
+    } catch (error) {
+      console.error("Error getting current fingerprint:", error);
+    }
+  };
+
+  const fetchTrustedDevices = async () => {
+    if (!user?.id) return;
+    setLoadingTrustedDevices(true);
+    try {
+      const data = await deviceFingerprint.getDevices(user.id);
+      setTrustedDevices(data);
+    } catch (error) {
+      console.error("Error loading trusted devices:", error);
+    } finally {
+      setLoadingTrustedDevices(false);
+    }
+  };
+
+  const handleRegisterCurrentDevice = async () => {
+    if (!user?.id) return;
+    setRegisteringDevice(true);
+    try {
+      await deviceFingerprint.registerDevice(user.id);
+      toast({
+        title: "Device Registered",
+        description: "Your current device has been added to trusted devices.",
+      });
+      fetchTrustedDevices();
+    } catch (error) {
+      console.error("Error registering device:", error);
+      toast({
+        title: "Error",
+        description: "Failed to register current device",
+        variant: "destructive",
+      });
+    } finally {
+      setRegisteringDevice(false);
+    }
+  };
+
+  const handleTrustDevice = async (deviceId: string) => {
+    if (!user?.id) return;
+    setProcessingDeviceId(deviceId);
+    try {
+      await deviceFingerprint.trustDevice(user.id, deviceId);
+      toast({
+        title: "Device Trusted",
+        description: "The device has been marked as trusted.",
+      });
+      fetchTrustedDevices();
+    } catch (error) {
+      console.error("Error trusting device:", error);
+      toast({
+        title: "Error",
+        description: "Failed to trust device",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingDeviceId(null);
+    }
+  };
+
+  const handleRevokeTrustedDevice = async (deviceId: string) => {
+    if (!user?.id) return;
+    setProcessingDeviceId(deviceId);
+    try {
+      await deviceFingerprint.revokeDevice(user.id, deviceId);
+      toast({
+        title: "Device Removed",
+        description: "The device has been removed from your trusted devices.",
+      });
+      fetchTrustedDevices();
+    } catch (error) {
+      console.error("Error revoking device:", error);
+      toast({
+        title: "Error",
+        description: "Failed to revoke device",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingDeviceId(null);
+    }
+  };
+
+  const getTrustedDeviceIcon = (deviceInfo: DeviceFingerprint['device_info']) => {
+    const platform = deviceInfo?.platform?.toLowerCase() || '';
+    const userAgent = deviceInfo?.userAgent?.toLowerCase() || '';
+    
+    if (userAgent.includes('mobile') || userAgent.includes('android') || userAgent.includes('iphone')) {
+      return Smartphone;
+    }
+    if (userAgent.includes('ipad') || userAgent.includes('tablet')) {
+      return Tablet;
+    }
+    if (platform.includes('mac')) {
+      return Laptop;
+    }
+    return Monitor;
+  };
+
+  const getTrustedDeviceName = (deviceInfo: DeviceFingerprint['device_info']) => {
+    const platform = deviceInfo?.platform || 'Unknown Platform';
+    const userAgent = deviceInfo?.userAgent || '';
+    
+    let browser = 'Unknown Browser';
+    if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) browser = 'Chrome';
+    else if (userAgent.includes('Firefox')) browser = 'Firefox';
+    else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) browser = 'Safari';
+    else if (userAgent.includes('Edg')) browser = 'Edge';
+    
+    return `${browser} on ${platform}`;
+  };
+
+  const isCurrentTrustedDevice = (device: DeviceFingerprint) => {
+    return device.fingerprint_hash === currentFingerprint;
+  };
+
+  const currentDeviceRegistered = trustedDevices.some(d => d.fingerprint_hash === currentFingerprint);
 
   const fetchDevices = async () => {
     setLoadingDevices(true);
@@ -428,6 +565,159 @@ export default function DevicesPage() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Trusted Devices Section */}
+                  <div className="pt-6 border-t">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Fingerprint className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Trusted Devices</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Devices you've marked as trusted for enhanced security. Trusted devices may bypass additional verification steps.
+                    </p>
+
+                    {!currentDeviceRegistered && (
+                      <Card className="border-dashed mb-4">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                                <Monitor className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="font-medium">Current Device</p>
+                                <p className="text-sm text-muted-foreground">This device is not yet registered</p>
+                              </div>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={handleRegisterCurrentDevice}
+                              disabled={registeringDevice}
+                            >
+                              {registeringDevice ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Adding...
+                                </>
+                              ) : (
+                                "Add This Device"
+                              )}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {loadingTrustedDevices ? (
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <p className="text-muted-foreground">Loading trusted devices...</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : trustedDevices.length === 0 ? (
+                      <Card>
+                        <CardContent className="p-8 text-center">
+                          <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                          <p className="text-muted-foreground">No trusted devices registered</p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Register your current device to get started
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="space-y-3">
+                        {trustedDevices.map((device) => {
+                          const DeviceIcon = getTrustedDeviceIcon(device.device_info);
+                          const isCurrent = isCurrentTrustedDevice(device);
+                          return (
+                            <Card key={device.id} className={isCurrent ? "border-primary/50" : ""}>
+                              <CardContent className="p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-start gap-3 flex-1">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                      isCurrent ? 'bg-primary/10' : 'bg-muted'
+                                    }`}>
+                                      <DeviceIcon className={`h-5 w-5 ${
+                                        isCurrent ? 'text-primary' : 'text-muted-foreground'
+                                      }`} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <span className="font-medium text-sm">
+                                          {getTrustedDeviceName(device.device_info)}
+                                        </span>
+                                        {isCurrent && (
+                                          <Badge variant="secondary" className="text-xs">Current</Badge>
+                                        )}
+                                        {device.trusted ? (
+                                          <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 text-xs">
+                                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                                            Trusted
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="text-xs">Untrusted</Badge>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground space-y-0.5">
+                                        {device.ip_address && (
+                                          <p className="flex items-center gap-1">
+                                            <Globe className="h-3 w-3" />
+                                            {device.ip_address}
+                                          </p>
+                                        )}
+                                        <p className="flex items-center gap-1">
+                                          <Clock className="h-3 w-3" />
+                                          Last seen {formatDistanceToNow(new Date(device.last_seen_at), { addSuffix: true })}
+                                        </p>
+                                        {device.device_info?.screen && (
+                                          <p>Screen: {device.device_info.screen}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    {!device.trusted && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleTrustDevice(device.id)}
+                                        disabled={processingDeviceId === device.id}
+                                      >
+                                        {processingDeviceId === device.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          "Trust"
+                                        )}
+                                      </Button>
+                                    )}
+                                    {!isCurrent && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() => handleRevokeTrustedDevice(device.id)}
+                                        disabled={processingDeviceId === device.id}
+                                      >
+                                        {processingDeviceId === device.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
