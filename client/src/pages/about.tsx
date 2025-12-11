@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, Users, DollarSign, Clock, Globe, Check, Building2, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { useSchema, aboutPageSchema } from "@/hooks/use-schema";
 
 export default function About() {
+  useSchema(aboutPageSchema, "about-page-schema");
   const [expandedYears, setExpandedYears] = useState<string[]>(["2025"]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
