@@ -137,6 +137,7 @@ export default function NotificationsPage() {
   const systemNotifications = notifications.filter(n => n.type === 'system');
   const generalNotifications = notifications.filter(n => n.type !== 'system');
   const campaignNotifications: Notification[] = [];
+  const rewardsNotifications: Notification[] = [];
 
   const displayedNotifications = hideRead 
     ? generalNotifications.filter(n => !n.read)
@@ -145,6 +146,7 @@ export default function NotificationsPage() {
   const unreadAnnouncementCount = announcements.filter(a => !readAnnouncementIds.has(a.id)).length;
   const systemUnreadCount = systemNotifications.filter(n => !n.read).length + unreadAnnouncementCount;
   const notificationsUnreadCount = generalNotifications.filter(n => !n.read).length;
+  const rewardsUnreadCount = rewardsNotifications.filter(n => !n.read).length;
 
   const handleAnnouncementClick = (announcement: Announcement) => {
     markAnnouncementAsRead(announcement.id);
@@ -206,36 +208,49 @@ export default function NotificationsPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-3 rounded-none border-b bg-transparent h-auto p-0">
-            <TabsTrigger 
-              value="system" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent px-4 py-3 relative"
-            >
-              <span className="text-sm">System</span>
-              {systemUnreadCount > 0 && (
-                <Badge className="ml-2 h-5 min-w-5 px-1.5 bg-purple-500 hover:bg-purple-600 text-xs rounded-full">
-                  {systemUnreadCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="notifications" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent px-4 py-3 relative"
-            >
-              <span className="text-sm">Notifications</span>
-              {notificationsUnreadCount > 0 && (
-                <Badge className="ml-2 h-5 min-w-5 px-1.5 bg-purple-500 hover:bg-purple-600 text-xs rounded-full">
-                  {notificationsUnreadCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="campaign" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent px-4 py-3"
-            >
-              <span className="text-sm">Campaign</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-hide">
+            <TabsList className="inline-flex min-w-full w-auto rounded-none border-b bg-transparent h-auto p-0">
+              <TabsTrigger 
+                value="system" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent px-4 py-3 relative flex-shrink-0"
+              >
+                <span className="text-sm">System</span>
+                {systemUnreadCount > 0 && (
+                  <Badge className="ml-2 h-5 min-w-5 px-1.5 bg-purple-500 hover:bg-purple-600 text-xs rounded-full">
+                    {systemUnreadCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="notifications" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent px-4 py-3 relative flex-shrink-0"
+              >
+                <span className="text-sm">Notifications</span>
+                {notificationsUnreadCount > 0 && (
+                  <Badge className="ml-2 h-5 min-w-5 px-1.5 bg-purple-500 hover:bg-purple-600 text-xs rounded-full">
+                    {notificationsUnreadCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="rewards" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#B4F22E] data-[state=active]:bg-transparent px-4 py-3 relative flex-shrink-0"
+              >
+                <span className="text-sm">Rewards</span>
+                {rewardsUnreadCount > 0 && (
+                  <Badge className="ml-2 h-5 min-w-5 px-1.5 bg-[#B4F22E] hover:bg-[#9FD624] text-black text-xs rounded-full">
+                    {rewardsUnreadCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="campaign" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent px-4 py-3 flex-shrink-0"
+              >
+                <span className="text-sm">Campaign</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* System Tab */}
           <TabsContent value="system" className="mt-0">
@@ -359,6 +374,60 @@ export default function NotificationsPage() {
                     >
                       <div className="flex-shrink-0 mt-1">
                         <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+                          {getNotificationIcon(notification)}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {formatTime(notification.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Rewards Tab */}
+          <TabsContent value="rewards" className="mt-0">
+            <ScrollArea className="h-[calc(100vh-180px)]">
+              <div className="divide-y divide-border">
+                {rewardsNotifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-24 h-24 bg-[#B4F22E]/20 rounded-2xl flex items-center justify-center mb-3">
+                      <img 
+                        src="/assets/IMG_2645.png" 
+                        alt="Rewards"
+                        className="w-16 h-16"
+                      />
+                    </div>
+                    <p className="text-sm font-medium mb-2">No rewards notifications</p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Complete tasks and earn rewards
+                    </p>
+                    <Button 
+                      onClick={() => navigate('/rewards')}
+                      className="bg-[#B4F22E] text-black hover:bg-[#9FD624]"
+                    >
+                      Explore Rewards
+                    </Button>
+                  </div>
+                ) : (
+                  rewardsNotifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`flex items-start gap-3 p-4 hover:bg-accent cursor-pointer transition-colors ${
+                        !notification.read ? 'bg-[#B4F22E]/10' : ''
+                      }`}
+                    >
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="h-10 w-10 rounded-full bg-[#B4F22E]/20 flex items-center justify-center">
                           {getNotificationIcon(notification)}
                         </div>
                       </div>
