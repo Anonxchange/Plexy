@@ -268,7 +268,6 @@ description: “Device list updated”,
 });
 };
 
-// Pagination calculations
 const totalPages = Math.ceil(devices.length / devicesPerPage);
 const startIndex = (currentPage - 1) * devicesPerPage;
 const endIndex = startIndex + devicesPerPage;
@@ -430,7 +429,6 @@ return (
             </div>
 
             <div className="space-y-6">
-              {/* Trusted Devices Section - Moved to top */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Fingerprint className="h-5 w-5 text-primary" />
@@ -583,7 +581,6 @@ return (
                 )}
               </div>
 
-              {/* Active Devices Section */}
               <div className="pt-6 border-t">
                 <h3 className="text-lg font-semibold mb-2">Active Devices</h3>
                 <p className="text-sm text-muted-foreground mb-4">
@@ -722,7 +719,6 @@ return (
                 </div>
               )}
 
-              {/* Security Warning Card */}
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="p-4">
                   <div className="flex gap-3">
