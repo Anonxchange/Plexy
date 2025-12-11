@@ -22,8 +22,10 @@ export function SignIn() {
   const [loading, setLoading] = useState(false);
   const [show2FAInput, setShow2FAInput] = useState(false);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [showDeviceVerification, setShowDeviceVerification] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [tempUserId, setTempUserId] = useState<string | null>(null);
+  const [tempEmail, setTempEmail] = useState<string>("");
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -193,8 +195,28 @@ export function SignIn() {
       setLoading(false);
       await signOut();
     } else {
+      const deviceStatus = await deviceFingerprint.checkDeviceStatus(userId);
+      
+      if (!deviceStatus.exists || !deviceStatus.trusted) {
+        const userEmail = sessionData?.session?.user?.email;
+        if (userEmail) {
+          setTempUserId(userId);
+          setTempEmail(userEmail);
+          
+          const { error: otpError } = await deviceFingerprint.sendDeviceVerificationEmail(userEmail);
+          if (otpError) {
+            console.error('Error sending device verification email:', otpError);
+          }
+          
+          setShowDeviceVerification(true);
+          setLoading(false);
+          setChecking2FA(false);
+          return;
+        }
+      }
+      
       try {
-        await deviceFingerprint.registerOrUpdateDevice(userId);
+        await deviceFingerprint.registerDeviceAsTrusted(userId);
       } catch (error) {
         console.error('Error registering device during signin:', error);
       }
@@ -211,11 +233,10 @@ export function SignIn() {
   };
 
   const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
-    // Phone verification successful, user is now authenticated
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData?.session?.user?.id) {
       try {
-        await deviceFingerprint.registerOrUpdateDevice(sessionData.session.user.id);
+        await deviceFingerprint.registerDeviceAsTrusted(sessionData.session.user.id);
       } catch (error) {
         console.error('Error registering device during phone signin:', error);
       }
@@ -225,6 +246,31 @@ export function SignIn() {
       description: "Phone verified! Signing you in...",
     });
     setLocation("/dashboard");
+  };
+
+  const handleDeviceVerified = async () => {
+    if (tempUserId) {
+      try {
+        await deviceFingerprint.registerDeviceAsTrusted(tempUserId);
+      } catch (error) {
+        console.error('Error registering trusted device:', error);
+      }
+    }
+    setShowDeviceVerification(false);
+    setTempUserId(null);
+    setTempEmail("");
+    toast({
+      title: "Device Verified!",
+      description: "This device is now trusted. Welcome back!",
+    });
+    setLocation("/dashboard");
+  };
+
+  const handleDeviceVerificationCancel = async () => {
+    setShowDeviceVerification(false);
+    setTempUserId(null);
+    setTempEmail("");
+    await signOut();
   };
 
   const handleVerify2FA = async (e: React.FormEvent) => {
@@ -308,7 +354,7 @@ export function SignIn() {
       }
 
       try {
-        await deviceFingerprint.registerOrUpdateDevice(tempUserId);
+        await deviceFingerprint.registerDeviceAsTrusted(tempUserId);
       } catch (error) {
         console.error('Error registering device during 2FA signin:', error);
       }
@@ -373,7 +419,7 @@ export function SignIn() {
         setLoading(false);
       } else {
         try {
-          await deviceFingerprint.registerOrUpdateDevice(userData.user.id);
+          await deviceFingerprint.registerDeviceAsTrusted(userData.user.id);
         } catch (error) {
           console.error('Error registering device during phone signin:', error);
         }
@@ -708,6 +754,16 @@ export function SignIn() {
           userId={pendingOTPVerification.userId}
           email={pendingOTPVerification.email}
           deviceInfo={pendingOTPVerification.deviceInfo}
+        />
+      )}
+
+      {showDeviceVerification && tempUserId && tempEmail && (
+        <DeviceOTPVerification
+          isOpen={showDeviceVerification}
+          onClose={handleDeviceVerificationCancel}
+          onVerified={handleDeviceVerified}
+          userId={tempUserId}
+          email={tempEmail}
         />
       )}
     </div>
