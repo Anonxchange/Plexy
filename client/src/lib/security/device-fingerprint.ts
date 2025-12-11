@@ -28,6 +28,26 @@ class DeviceFingerprintManager {
   private async generateFingerprint(): Promise<string> {
     const components = [];
 
+    components.push(navigator.platform);
+    components.push(navigator.language);
+    
+    components.push(`${screen.width}x${screen.height}x${screen.colorDepth}`);
+    
+    components.push(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    
+    components.push(screen.availWidth.toString());
+    components.push(screen.availHeight.toString());
+    components.push(navigator.hardwareConcurrency?.toString() || 'unknown');
+    components.push((navigator as any).deviceMemory?.toString() || 'unknown');
+    components.push(navigator.maxTouchPoints?.toString() || '0');
+
+    const fingerprint = components.join('|||');
+    return await this.hashString(fingerprint);
+  }
+
+  private async generateBrowserAwareFingerprint(): Promise<string> {
+    const components = [];
+
     components.push(navigator.userAgent);
     components.push(navigator.platform);
     components.push(navigator.language);
@@ -250,6 +270,46 @@ class DeviceFingerprintManager {
 
     if (error || !data) return false;
     return data.trusted;
+  }
+
+  async checkDeviceStatus(userId: string): Promise<{ exists: boolean; trusted: boolean; device: DeviceFingerprint | null }> {
+    if (!userId) {
+      return { exists: false, trusted: false, device: null };
+    }
+
+    const fingerprint = await this.generateFingerprint();
+
+    const { data, error } = await supabase
+      .from('device_fingerprints')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('fingerprint_hash', fingerprint)
+      .maybeSingle();
+
+    if (error || !data) {
+      return { exists: false, trusted: false, device: null };
+    }
+
+    return { exists: true, trusted: data.trusted, device: data };
+  }
+
+  async sendDeviceVerificationEmail(email: string): Promise<{ error: any }> {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+      }
+    });
+    return { error };
+  }
+
+  async verifyDeviceOTP(email: string, token: string): Promise<{ error: any; data: any }> {
+    const { error, data } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    });
+    return { error, data };
   }
 
   async updateLastSeen(userId: string): Promise<void> {
