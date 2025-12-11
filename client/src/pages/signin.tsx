@@ -26,6 +26,8 @@ export function SignIn() {
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [tempEmail, setTempEmail] = useState<string>("");
+  const [tempPassword, setTempPassword] = useState<string>("");
+  const [tempInputValue, setTempInputValue] = useState<string>("");
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -195,24 +197,48 @@ export function SignIn() {
       setLoading(false);
       await signOut();
     } else {
+      console.log('[Device Verification] Checking device status for user:', userId);
       const deviceStatus = await deviceFingerprint.checkDeviceStatus(userId);
+      console.log('[Device Verification] Device status result:', deviceStatus);
       
       if (!deviceStatus.exists || !deviceStatus.trusted) {
+        console.log('[Device Verification] Device NOT trusted or does not exist. Triggering OTP verification.');
         const userEmail = sessionData?.session?.user?.email;
+        console.log('[Device Verification] User email:', userEmail);
+        
         if (userEmail) {
           setTempUserId(userId);
           setTempEmail(userEmail);
+          setTempPassword(password);
+          setTempInputValue(inputValue);
           
+          console.log('[Device Verification] Signing out user before OTP verification...');
+          await signOut();
+          
+          console.log('[Device Verification] Sending OTP verification email...');
           const { error: otpError } = await deviceFingerprint.sendDeviceVerificationEmail(userEmail);
           if (otpError) {
-            console.error('Error sending device verification email:', otpError);
+            console.error('[Device Verification] Error sending device verification email:', otpError);
+            toast({
+              title: "Error",
+              description: "Failed to send verification email. Please try again.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            setChecking2FA(false);
+            return;
           }
           
+          console.log('[Device Verification] OTP email sent successfully. Showing verification dialog.');
           setShowDeviceVerification(true);
           setLoading(false);
           setChecking2FA(false);
           return;
+        } else {
+          console.log('[Device Verification] No email found for user. Skipping verification.');
         }
+      } else {
+        console.log('[Device Verification] Device is already trusted. Skipping OTP verification.');
       }
       
       try {
@@ -249,16 +275,57 @@ export function SignIn() {
   };
 
   const handleDeviceVerified = async () => {
-    if (tempUserId) {
+    if (!tempInputValue || !tempPassword) {
+      toast({
+        title: "Error",
+        description: "Session expired. Please sign in again.",
+        variant: "destructive",
+      });
+      setShowDeviceVerification(false);
+      setTempUserId(null);
+      setTempEmail("");
+      setTempPassword("");
+      setTempInputValue("");
+      return;
+    }
+
+    setLoading(true);
+    
+    const { error: signInError } = await signIn(tempInputValue, tempPassword);
+    
+    if (signInError) {
+      toast({
+        title: "Error",
+        description: signInError.message || "Failed to complete sign in. Please try again.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      setShowDeviceVerification(false);
+      setTempUserId(null);
+      setTempEmail("");
+      setTempPassword("");
+      setTempInputValue("");
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id;
+
+    if (userId) {
       try {
-        await deviceFingerprint.registerDeviceAsTrusted(tempUserId);
+        await deviceFingerprint.registerDeviceAsTrusted(userId);
       } catch (error) {
         console.error('Error registering trusted device:', error);
       }
     }
+    
     setShowDeviceVerification(false);
     setTempUserId(null);
     setTempEmail("");
+    setTempPassword("");
+    setTempInputValue("");
+    setLoading(false);
+    
     toast({
       title: "Device Verified!",
       description: "This device is now trusted. Welcome back!",
@@ -270,7 +337,8 @@ export function SignIn() {
     setShowDeviceVerification(false);
     setTempUserId(null);
     setTempEmail("");
-    await signOut();
+    setTempPassword("");
+    setTempInputValue("");
   };
 
   const handleVerify2FA = async (e: React.FormEvent) => {
