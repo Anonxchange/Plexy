@@ -111,48 +111,54 @@ class DeviceFingerprintManager {
 
     const now = new Date().toISOString();
 
-    try {
+    // First check if the device already exists
+    const { data: existingDevice } = await supabase
+      .from('device_fingerprints')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('fingerprint_hash', fingerprint)
+      .maybeSingle();
+
+    if (existingDevice) {
+      // Device already exists, update it
       const { data, error } = await supabase
         .from('device_fingerprints')
-        .insert({
-          user_id: userId,
-          fingerprint_hash: fingerprint,
+        .update({
           device_info: deviceInfo,
           ip_address: ip,
-          trusted: false,
           last_seen_at: now,
-          created_at: now,
         })
+        .eq('id', existingDevice.id)
         .select()
         .single();
 
       if (error) {
-        console.error('Error registering device:', error);
+        console.error('Error updating existing device:', error);
         throw error;
       }
       return data;
-    } catch (err: any) {
-      // If insert fails due to unique constraint, try to update instead
-      if (err?.code === '23505' || err?.message?.includes('duplicate')) {
-        const { data, error } = await supabase
-          .from('device_fingerprints')
-          .update({
-            ip_address: ip,
-            last_seen_at: now,
-          })
-          .eq('user_id', userId)
-          .eq('fingerprint_hash', fingerprint)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error updating device on duplicate:', error);
-          throw error;
-        }
-        return data;
-      }
-      throw err;
     }
+
+    // Device doesn't exist, insert new one
+    const { data, error } = await supabase
+      .from('device_fingerprints')
+      .insert({
+        user_id: userId,
+        fingerprint_hash: fingerprint,
+        device_info: deviceInfo,
+        ip_address: ip,
+        trusted: false,
+        last_seen_at: now,
+        created_at: now,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error registering device:', error);
+      throw error;
+    }
+    return data;
   }
 
   async getDevices(userId: string): Promise<DeviceFingerprint[]> {
