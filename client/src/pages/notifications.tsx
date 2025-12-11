@@ -249,6 +249,12 @@ export default function NotificationsPage() {
               >
                 <span className="text-sm">Campaign</span>
               </TabsTrigger>
+              <TabsTrigger 
+                value="account-changes" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent px-4 py-3 flex-shrink-0"
+              >
+                <span className="text-sm">Account Changes</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -453,6 +459,64 @@ export default function NotificationsPage() {
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Bell className="h-12 w-12 text-muted-foreground mb-3 opacity-30" />
                 <p className="text-sm text-muted-foreground">No campaign notifications</p>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Account Changes Tab */}
+          <TabsContent value="account-changes" className="mt-0">
+            <ScrollArea className="h-[calc(100vh-180px)]">
+              <div className="divide-y divide-border">
+                {systemNotifications.filter(n => 
+                  n.message.toLowerCase().includes('account') || 
+                  n.message.toLowerCase().includes('profile') ||
+                  n.message.toLowerCase().includes('email') ||
+                  n.message.toLowerCase().includes('phone') ||
+                  n.message.toLowerCase().includes('password') ||
+                  n.message.toLowerCase().includes('security')
+                ).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <User className="h-12 w-12 text-muted-foreground mb-3 opacity-30" />
+                    <p className="text-sm text-muted-foreground">No account changes</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      You'll see notifications here when your account info is updated
+                    </p>
+                  </div>
+                ) : (
+                  systemNotifications
+                    .filter(n => 
+                      n.message.toLowerCase().includes('account') || 
+                      n.message.toLowerCase().includes('profile') ||
+                      n.message.toLowerCase().includes('email') ||
+                      n.message.toLowerCase().includes('phone') ||
+                      n.message.toLowerCase().includes('password') ||
+                      n.message.toLowerCase().includes('security')
+                    )
+                    .map((notification) => (
+                      <div
+                        key={notification.id}
+                        onClick={() => handleNotificationClick(notification)}
+                        className={`flex items-start gap-3 p-4 hover:bg-accent cursor-pointer transition-colors ${
+                          !notification.read ? 'bg-purple-500/5' : ''
+                        }`}
+                      >
+                        <div className="flex-shrink-0 mt-1">
+                          <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+                            {getNotificationIcon(notification)}
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground leading-relaxed">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {formatTime(notification.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                )}
               </div>
             </ScrollArea>
           </TabsContent>
