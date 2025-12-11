@@ -1,8 +1,7 @@
-
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useSchema, spotPageSchema } from "@/hooks/use-schema";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -95,6 +94,7 @@ const recentTrades = [
 ];
 
 export default function Spot() {
+  useSchema(spotPageSchema, "spot-page-schema");
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
