@@ -1,11 +1,4 @@
 import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
   InputOTP,
@@ -13,8 +6,9 @@ import {
   InputOTPSlot,
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
-import { Monitor, Smartphone, Tablet, Laptop, RefreshCw, Mail, HelpCircle, X } from 'lucide-react';
+import { Monitor, Laptop, RefreshCw, HelpCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 interface DeviceOTPVerificationProps {
@@ -40,9 +34,10 @@ export function DeviceOTPVerification({
 }: DeviceOTPVerificationProps) {
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isResending, setIsResending] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resendCooldown, setResendCooldown] = useState(60);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [emailSent, setEmailSent] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const supabase = createClient();
 
@@ -57,9 +52,36 @@ export function DeviceOTPVerification({
     if (isOpen) {
       setOtp('');
       setError(null);
-      setResendCooldown(60);
+      setEmailSent(false);
+      setResendCooldown(0);
     }
   }, [isOpen]);
+
+  const handleSendEmail = async () => {
+    setIsSending(true);
+    setError(null);
+
+    try {
+      const { error: sendError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+        }
+      });
+      
+      if (sendError) {
+        setError(sendError.message || 'Failed to send verification code');
+      } else {
+        setEmailSent(true);
+        setResendCooldown(60);
+        setOtp('');
+      }
+    } catch (err) {
+      setError('Failed to send code. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleVerify = async () => {
     if (otp.length !== 6) {
@@ -93,45 +115,32 @@ export function DeviceOTPVerification({
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
-    
-    setIsResending(true);
-    setError(null);
-
-    try {
-      const { error: resendError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,
-        }
-      });
-      
-      if (resendError) {
-        setError(resendError.message || 'Failed to resend code');
-      } else {
-        setResendCooldown(60);
-        setOtp('');
-      }
-    } catch (err) {
-      setError('Failed to resend code. Please try again.');
-    } finally {
-      setIsResending(false);
-    }
+    await handleSendEmail();
   };
 
   const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-card border-border" onPointerDownOutside={(e) => e.preventDefault()}>
-          <div className="p-6 space-y-6">
-            <DialogHeader className="text-center space-y-4">
-              <DialogTitle className="text-2xl font-semibold">New device detected</DialogTitle>
-              <DialogDescription className="text-center text-muted-foreground">
-                Confirm this is your device from the email we just sent to{' '}
-                <span className="text-primary font-medium">{maskedEmail}</span>
-              </DialogDescription>
-            </DialogHeader>
+      <Drawer open={isOpen} onOpenChange={() => {}}>
+        <DrawerContent className="px-4 pb-8 max-h-[90vh]">
+          <div className="mx-auto w-full max-w-md">
+            <DrawerHeader className="text-center pt-6 pb-4">
+              <DrawerTitle className="text-2xl font-semibold">New device detected</DrawerTitle>
+              <DrawerDescription className="text-center text-muted-foreground mt-2">
+                {emailSent ? (
+                  <>
+                    Confirm this is your device from the email we just sent to{' '}
+                    <span className="text-primary font-medium">{maskedEmail}</span>
+                  </>
+                ) : (
+                  <>
+                    We'll send a verification code to{' '}
+                    <span className="text-primary font-medium">{maskedEmail}</span>
+                  </>
+                )}
+              </DrawerDescription>
+            </DrawerHeader>
 
             <div className="flex justify-center py-4">
               <div className="relative">
@@ -146,95 +155,134 @@ export function DeviceOTPVerification({
               </div>
             </div>
 
-            <p className="text-center text-muted-foreground text-sm">
+            <p className="text-center text-muted-foreground text-sm mb-6">
               We don't recognize this device
             </p>
 
-            <div className="space-y-4">
-              <Button
-                onClick={handleResend}
-                disabled={isResending || resendCooldown > 0}
-                variant="outline"
-                className={`w-full py-6 text-base rounded-xl ${
-                  resendCooldown > 0 
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                }`}
-              >
-                {isResending ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : resendCooldown > 0 ? (
-                  `Resend email (${resendCooldown} sec.)`
-                ) : (
-                  'Resend email'
+            {!emailSent ? (
+              <div className="space-y-4">
+                <Button
+                  onClick={handleSendEmail}
+                  disabled={isSending}
+                  className="w-full py-6 text-base rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  {isSending ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send email'
+                  )}
+                </Button>
+
+                {error && (
+                  <p className="text-sm text-destructive text-center">{error}</p>
                 )}
-              </Button>
 
-              <Button
-                variant="outline"
-                className="w-full py-6 text-base rounded-xl"
-                onClick={() => setShowHelp(true)}
-              >
-                Try another way
-              </Button>
+                <Button
+                  variant="outline"
+                  className="w-full py-6 text-base rounded-xl"
+                  onClick={() => setShowHelp(true)}
+                >
+                  Try another way
+                </Button>
 
-              <Button
-                variant="ghost"
-                className="w-full text-primary hover:text-primary/80"
-                onClick={onClose}
-              >
-                Cancel signing in
-              </Button>
-            </div>
+                <Button
+                  variant="ghost"
+                  className="w-full text-primary hover:text-primary/80"
+                  onClick={onClose}
+                >
+                  Cancel signing in
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Button
+                  onClick={handleResend}
+                  disabled={isSending || resendCooldown > 0}
+                  variant="outline"
+                  className={`w-full py-6 text-base rounded-xl ${
+                    resendCooldown > 0 
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  }`}
+                >
+                  {isSending ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : resendCooldown > 0 ? (
+                    `Resend email (${resendCooldown} sec.)`
+                  ) : (
+                    'Resend email'
+                  )}
+                </Button>
 
-            <div className="flex flex-col items-center gap-4 pt-4 border-t border-border">
-              <p className="text-sm text-muted-foreground text-center">
-                Or enter the 6-digit code from your email:
-              </p>
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={setOtp}
-                onComplete={handleVerify}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
+                <Button
+                  variant="outline"
+                  className="w-full py-6 text-base rounded-xl"
+                  onClick={() => setShowHelp(true)}
+                >
+                  Try another way
+                </Button>
 
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+                <Button
+                  variant="ghost"
+                  className="w-full text-primary hover:text-primary/80"
+                  onClick={onClose}
+                >
+                  Cancel signing in
+                </Button>
 
-              <Button
-                onClick={handleVerify}
-                disabled={otp.length !== 6 || isVerifying}
-                className="w-full"
-              >
-                {isVerifying ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  'Verify Device'
-                )}
-              </Button>
-            </div>
+                <div className="flex flex-col items-center gap-4 pt-4 border-t border-border">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Enter the 6-digit code from your email:
+                  </p>
+                  <InputOTP
+                    maxLength={6}
+                    value={otp}
+                    onChange={setOtp}
+                    onComplete={handleVerify}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup>
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+
+                  {error && (
+                    <p className="text-sm text-destructive">{error}</p>
+                  )}
+
+                  <Button
+                    onClick={handleVerify}
+                    disabled={otp.length !== 6 || isVerifying}
+                    className="w-full"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      'Verify Device'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
 
       <Sheet open={showHelp} onOpenChange={setShowHelp}>
         <SheetContent side="bottom" className="rounded-t-2xl">
