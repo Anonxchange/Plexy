@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSchema, marketsPageSchema } from "@/hooks/use-schema";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -70,6 +70,7 @@ const topGainers = [
 ];
 
 export default function MarketsPage() {
+  useSchema(marketsPageSchema, "markets-page-schema");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("spot");
   const [selectedQuote, setSelectedQuote] = useState("All");
