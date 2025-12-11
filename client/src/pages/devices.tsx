@@ -497,6 +497,47 @@ export default function DevicesPage() {
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
+
+                {(() => {
+                  const currentDevice = trustedDevices.find(d => d.fingerprint_hash === currentFingerprint);
+                  if (!currentDevice) return null;
+                  
+                  const DeviceIcon = getDeviceIcon(currentDevice.device_info);
+                  const deviceName = getDeviceName(currentDevice.device_info);
+                  const osName = getOSName(currentDevice.device_info);
+                  
+                  return (
+                    <div className="mt-8 pt-6 border-t border-border">
+                      <h3 className="text-sm font-medium text-muted-foreground mb-4">Active Session</h3>
+                      <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <DeviceIcon className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{deviceName}</p>
+                            <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 text-xs">
+                              Current
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{osName}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {currentDevice.ip_address || 'Unknown IP'} • Last active: {format(new Date(currentDevice.last_seen_at), "MMM d, h:mm a")}
+                          </p>
+                        </div>
+                        {currentDevice.trusted ? (
+                          <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                            Trusted
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20">
+                            Untrusted
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>
