@@ -86,7 +86,6 @@ import { HardwareKeySetup } from "@/components/hardware-key-setup";
 import { PasskeySetup } from "@/components/passkey-setup";
 import { WithdrawalWhitelistDialog } from "@/components/withdrawal-whitelist-dialog";
 import { IPWhitelistDialog } from "@/components/ip-whitelist-dialog";
-import { TrustedDevicesDialog } from "@/components/trusted-devices-dialog";
 import * as OTPAuth from "otpauth";
 
 const settingsSections = [
@@ -1699,7 +1698,6 @@ export default function AccountSettings() {
     const [showPasswordChange, setShowPasswordChange] = useState(false);
     const [showWithdrawalWhitelistDialog, setShowWithdrawalWhitelistDialog] = useState(false);
     const [showIPWhitelistDialog, setShowIPWhitelistDialog] = useState(false);
-    const [showTrustedDevicesDialog, setShowTrustedDevicesDialog] = useState(false);
     const [ipWhitelistEnabled, setIPWhitelistEnabled] = useState(false);
     const [ipRequireWithdrawals, setIPRequireWithdrawals] = useState(false);
     const [ipRequireTrades, setIPRequireTrades] = useState(false);
@@ -2275,33 +2273,6 @@ export default function AccountSettings() {
           onOpenChange={setShowIPWhitelistDialog}
         />
 
-        {/* Trusted Devices */}
-        <div>
-          <h4 className="text-lg font-semibold mb-4">Trusted Devices</h4>
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="font-medium">Device Fingerprinting</p>
-                  <p className="text-sm text-muted-foreground">
-                    Monitor and trust specific devices for enhanced security.
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowTrustedDevicesDialog(true)}
-              >
-                Manage Trusted Devices
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-        <TrustedDevicesDialog
-          open={showTrustedDevicesDialog}
-          onOpenChange={setShowTrustedDevicesDialog}
-        />
 
         {/* Hardware Security Keys */}
         {user?.id && (
