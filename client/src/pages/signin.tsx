@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase";
 import * as OTPAuth from "otpauth";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { deviceFingerprint } from "@/lib/security/device-fingerprint";
 
 export function SignIn() {
   const [inputValue, setInputValue] = useState("");
@@ -192,6 +193,11 @@ export function SignIn() {
       setLoading(false);
       await signOut();
     } else {
+      try {
+        await deviceFingerprint.registerOrUpdateDevice(userId);
+      } catch (error) {
+        console.error('Error registering device during signin:', error);
+      }
       setChecking2FA(false);
       toast({
         title: "Success!",
@@ -206,6 +212,14 @@ export function SignIn() {
 
   const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
     // Phone verification successful, user is now authenticated
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.user?.id) {
+      try {
+        await deviceFingerprint.registerOrUpdateDevice(sessionData.session.user.id);
+      } catch (error) {
+        console.error('Error registering device during phone signin:', error);
+      }
+    }
     toast({
       title: "Success!",
       description: "Phone verified! Signing you in...",
@@ -293,6 +307,12 @@ export function SignIn() {
         return;
       }
 
+      try {
+        await deviceFingerprint.registerOrUpdateDevice(tempUserId);
+      } catch (error) {
+        console.error('Error registering device during 2FA signin:', error);
+      }
+
       setChecking2FA(false);
       toast({
         title: "Success!",
@@ -352,6 +372,11 @@ export function SignIn() {
         setShow2FAInput(true);
         setLoading(false);
       } else {
+        try {
+          await deviceFingerprint.registerOrUpdateDevice(userData.user.id);
+        } catch (error) {
+          console.error('Error registering device during phone signin:', error);
+        }
         toast({
           title: "Welcome back!",
           description: "Successfully signed in",
