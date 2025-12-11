@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { useTheme } from "@/components/theme-provider";
 import { amlScreening } from "@/lib/security/aml-screening";
+import { deviceFingerprint } from "@/lib/security/device-fingerprint";
 import { Turnstile } from "@marsidev/react-turnstile";
 import {
   Select,
@@ -409,6 +410,11 @@ export function SignUp() {
     
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
+      try {
+        await deviceFingerprint.registerDeviceAsTrusted(userData.user.id);
+      } catch (error) {
+        console.error('Error auto-trusting device during signup:', error);
+      }
       setUserId(userData.user.id);
       setStep("phone");
     }
@@ -429,6 +435,12 @@ export function SignUp() {
         }, {
           onConflict: 'id'
         });
+
+        try {
+          await deviceFingerprint.registerDeviceAsTrusted(data.user.id);
+        } catch (error) {
+          console.error('Error auto-trusting device during phone signup:', error);
+        }
 
         // Sign out the user after successful signup
         await supabase.auth.signOut();
