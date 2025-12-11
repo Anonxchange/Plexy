@@ -109,22 +109,50 @@ class DeviceFingerprintManager {
       device_type: this.detectDeviceType(),
     };
 
-    const { data, error } = await supabase
-      .from('device_fingerprints')
-      .upsert({
-        user_id: userId,
-        fingerprint_hash: fingerprint,
-        device_info: deviceInfo,
-        ip_address: ip,
-        last_seen_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,fingerprint_hash'
-      })
-      .select()
-      .single();
+    const now = new Date().toISOString();
 
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('device_fingerprints')
+        .insert({
+          user_id: userId,
+          fingerprint_hash: fingerprint,
+          device_info: deviceInfo,
+          ip_address: ip,
+          trusted: false,
+          last_seen_at: now,
+          created_at: now,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error registering device:', error);
+        throw error;
+      }
+      return data;
+    } catch (err: any) {
+      // If insert fails due to unique constraint, try to update instead
+      if (err?.code === '23505' || err?.message?.includes('duplicate')) {
+        const { data, error } = await supabase
+          .from('device_fingerprints')
+          .update({
+            ip_address: ip,
+            last_seen_at: now,
+          })
+          .eq('user_id', userId)
+          .eq('fingerprint_hash', fingerprint)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating device on duplicate:', error);
+          throw error;
+        }
+        return data;
+      }
+      throw err;
+    }
   }
 
   async getDevices(userId: string): Promise<DeviceFingerprint[]> {
