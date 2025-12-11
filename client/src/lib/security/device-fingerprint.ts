@@ -273,11 +273,15 @@ class DeviceFingerprintManager {
   }
 
   async checkDeviceStatus(userId: string): Promise<{ exists: boolean; trusted: boolean; device: DeviceFingerprint | null }> {
+    console.log('[DeviceFingerprint] checkDeviceStatus called for userId:', userId);
+    
     if (!userId) {
+      console.log('[DeviceFingerprint] No userId provided, returning untrusted');
       return { exists: false, trusted: false, device: null };
     }
 
     const fingerprint = await this.generateFingerprint();
+    console.log('[DeviceFingerprint] Generated fingerprint:', fingerprint.substring(0, 16) + '...');
 
     const { data, error } = await supabase
       .from('device_fingerprints')
@@ -286,10 +290,19 @@ class DeviceFingerprintManager {
       .eq('fingerprint_hash', fingerprint)
       .maybeSingle();
 
-    if (error || !data) {
+    console.log('[DeviceFingerprint] Query result - data:', data, 'error:', error);
+
+    if (error) {
+      console.log('[DeviceFingerprint] Error querying device_fingerprints table:', error.message);
+      return { exists: false, trusted: false, device: null };
+    }
+    
+    if (!data) {
+      console.log('[DeviceFingerprint] No device found with this fingerprint - device is NEW');
       return { exists: false, trusted: false, device: null };
     }
 
+    console.log('[DeviceFingerprint] Device found - trusted:', data.trusted);
     return { exists: true, trusted: data.trusted, device: data };
   }
 
