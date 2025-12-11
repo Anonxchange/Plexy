@@ -263,6 +263,158 @@ class DeviceFingerprintManager {
       .eq('user_id', userId)
       .eq('fingerprint_hash', fingerprint);
   }
+
+  async registerDeviceAsTrusted(userId: string): Promise<DeviceFingerprint> {
+    if (!userId) {
+      throw new Error('User ID is required to register a device');
+    }
+
+    const fingerprint = await this.generateFingerprint();
+    
+    let ip = null;
+    try {
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const data = await ipResponse.json();
+      ip = data.ip;
+    } catch (error) {
+      console.warn('Could not fetch IP address:', error);
+    }
+
+    const deviceInfo = {
+      platform: navigator.platform,
+      userAgent: navigator.userAgent,
+      screen: `${screen.width}x${screen.height}`,
+      language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      device_type: this.detectDeviceType(),
+    };
+
+    const now = new Date().toISOString();
+
+    const { data: existingDevice } = await supabase
+      .from('device_fingerprints')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('fingerprint_hash', fingerprint)
+      .maybeSingle();
+
+    if (existingDevice) {
+      const { data, error } = await supabase
+        .from('device_fingerprints')
+        .update({
+          device_info: deviceInfo,
+          ip_address: ip,
+          last_seen_at: now,
+          trusted: true,
+        })
+        .eq('id', existingDevice.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating existing device:', error);
+        throw error;
+      }
+      return data;
+    }
+
+    const { data, error } = await supabase
+      .from('device_fingerprints')
+      .insert({
+        user_id: userId,
+        fingerprint_hash: fingerprint,
+        device_info: deviceInfo,
+        ip_address: ip,
+        trusted: true,
+        last_seen_at: now,
+        created_at: now,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error registering device as trusted:', error);
+      throw error;
+    }
+    return data;
+  }
+
+  async registerOrUpdateDevice(userId: string): Promise<DeviceFingerprint | null> {
+    if (!userId) return null;
+
+    try {
+      const fingerprint = await this.generateFingerprint();
+      
+      let ip = null;
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const data = await ipResponse.json();
+        ip = data.ip;
+      } catch (error) {
+        console.warn('Could not fetch IP address:', error);
+      }
+
+      const deviceInfo = {
+        platform: navigator.platform,
+        userAgent: navigator.userAgent,
+        screen: `${screen.width}x${screen.height}`,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        device_type: this.detectDeviceType(),
+      };
+
+      const now = new Date().toISOString();
+
+      const { data: existingDevice } = await supabase
+        .from('device_fingerprints')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('fingerprint_hash', fingerprint)
+        .maybeSingle();
+
+      if (existingDevice) {
+        const { data, error } = await supabase
+          .from('device_fingerprints')
+          .update({
+            device_info: deviceInfo,
+            ip_address: ip,
+            last_seen_at: now,
+          })
+          .eq('id', existingDevice.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating existing device:', error);
+          return null;
+        }
+        return data;
+      }
+
+      const { data, error } = await supabase
+        .from('device_fingerprints')
+        .insert({
+          user_id: userId,
+          fingerprint_hash: fingerprint,
+          device_info: deviceInfo,
+          ip_address: ip,
+          trusted: false,
+          last_seen_at: now,
+          created_at: now,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error registering device:', error);
+        return null;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error in registerOrUpdateDevice:', error);
+      return null;
+    }
+  }
 }
 
 export const deviceFingerprint = new DeviceFingerprintManager();
