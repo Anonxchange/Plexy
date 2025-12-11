@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth-context";
+import { useSchema, p2pPageSchema } from "@/hooks/use-schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
@@ -98,6 +99,7 @@ const getCountryFlag = (countryName: string | undefined | null): string => {
 };
 
 export function P2P() {
+  useSchema(p2pPageSchema, "p2p-page-schema");
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
   const [selectedCrypto, setSelectedCrypto] = useState("BTC");
