@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { ArrowUpDown, FileText, TrendingDown, Shield, Gift, BookOpen, Headphones
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
+import { useSchema, swapPageSchema } from "@/hooks/use-schema";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapFee } from "@/hooks/use-fees";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
@@ -30,6 +30,7 @@ const currencies = [
 ];
 
 export function Swap() {
+  useSchema(swapPageSchema, "swap-page-schema");
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
