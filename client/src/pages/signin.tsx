@@ -215,21 +215,7 @@ export function SignIn() {
           console.log('[Device Verification] Signing out user before OTP verification...');
           await signOut();
           
-          console.log('[Device Verification] Sending OTP verification email...');
-          const { error: otpError } = await deviceFingerprint.sendDeviceVerificationEmail(userEmail);
-          if (otpError) {
-            console.error('[Device Verification] Error sending device verification email:', otpError);
-            toast({
-              title: "Error",
-              description: "Failed to send verification email. Please try again.",
-              variant: "destructive",
-            });
-            setLoading(false);
-            setChecking2FA(false);
-            return;
-          }
-          
-          console.log('[Device Verification] OTP email sent successfully. Showing verification dialog.');
+          console.log('[Device Verification] Showing device verification modal. User will click Send email to receive OTP.');
           setShowDeviceVerification(true);
           setLoading(false);
           setChecking2FA(false);
