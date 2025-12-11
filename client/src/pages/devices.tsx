@@ -133,11 +133,12 @@ export default function DevicesPage() {
         description: "Your current device has been added to trusted devices.",
       });
       fetchTrustedDevices();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error registering device:", error);
+      const errorMessage = error?.message || error?.details || "Failed to register current device";
       toast({
         title: "Error",
-        description: "Failed to register current device",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
