@@ -42,7 +42,6 @@ export function AppHeader() {
   const [balance, setBalance] = useState<number>(0);
   const [preferredCurrency, setPreferredCurrency] = useState<string>('USD');
   const [lastBalanceUpdate, setLastBalanceUpdate] = useState<number>(0);
-  const [notificationOpen, setNotificationOpen] = useState(false); // State for notification dropdown
 
   useEffect(() => {
     if (!user) return;
@@ -65,43 +64,6 @@ export function AppHeader() {
       unsubscribe();
     };
   }, [user, toast]);
-
-  const handleNotificationClick = async (notification: Notification) => {
-    if (!notification.read) {
-      await markAsRead(notification.id);
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notification.id ? { ...n, read: true } : n
-        )
-      );
-    }
-
-    // Navigate based on notification type
-    if (notification.metadata?.url) {
-      navigate(notification.metadata.url);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    const success = await markAllAsRead();
-    if (success) {
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, read: true }))
-      );
-    }
-  };
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    return date.toLocaleDateString();
-  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -498,94 +460,20 @@ export function AppHeader() {
               </div>
 
               {/* Notification Icon - All screens */}
-              <DropdownMenu open={notificationOpen} onOpenChange={setNotificationOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative h-9 w-9"
-                    data-testid="button-notifications"
-                  >
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 bg-red-500 hover:bg-red-600 text-[10px] rounded-full flex items-center justify-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[380px] p-0">
-                  {/* Tabs: System, Notifications, Campaign */}
-                  <div className="grid grid-cols-3 border-b bg-transparent">
-                    <button className="py-3 text-sm font-medium text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-purple-500/50 transition-colors">
-                      <span>System</span>
-                      {notifications.filter(n => n.type === 'system' && !n.read).length > 0 && (
-                        <Badge className="ml-1.5 h-5 min-w-5 px-1.5 bg-purple-500 hover:bg-purple-600 text-xs rounded-full">
-                          {notifications.filter(n => n.type === 'system' && !n.read).length}
-                        </Badge>
-                      )}
-                    </button>
-                    <button className="py-3 text-sm font-medium text-primary border-b-2 border-purple-500 transition-colors">
-                      <span>Notifications</span>
-                      {unreadCount > 0 && (
-                        <Badge className="ml-1.5 h-5 min-w-5 px-1.5 bg-purple-500 hover:bg-purple-600 text-xs rounded-full">
-                          {unreadCount}
-                        </Badge>
-                      )}
-                    </button>
-                    <button className="py-3 text-sm font-medium text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-purple-500/50 transition-colors">
-                      <span>Campaign</span>
-                    </button>
-                  </div>
-
-                  {/* Notification Items */}
-                  <div className="max-h-[350px] overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        No notifications yet
-                      </div>
-                    ) : (
-                      notifications.slice(0, 8).map((notification) => (
-                        <div
-                          key={notification.id}
-                          onClick={() => {
-                            handleNotificationClick(notification);
-                            setNotificationOpen(false);
-                          }}
-                          className={`flex items-start gap-3 p-4 cursor-pointer hover:bg-accent transition-colors ${
-                            !notification.read ? 'bg-purple-500/5' : ''
-                          }`}
-                        >
-                          <div className="flex-shrink-0 mt-1">
-                            <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
-                              <Bell className="h-5 w-5 text-purple-500" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-foreground leading-relaxed">
-                              {notification.message || notification.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              {formatTimeAgo(notification.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* View All Link */}
-                  <div
-                    onClick={() => {
-                      navigate('/notifications');
-                      setNotificationOpen(false);
-                    }}
-                    className="p-3 text-center text-sm font-medium text-primary hover:bg-accent/50 cursor-pointer border-t"
-                  >
-                    View all notifications
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9"
+                onClick={() => navigate('/notifications')}
+                data-testid="button-notifications"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 bg-red-500 hover:bg-red-600 text-[10px] rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
