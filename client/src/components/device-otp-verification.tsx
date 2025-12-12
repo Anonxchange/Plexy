@@ -60,7 +60,7 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/device-otp-generation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
