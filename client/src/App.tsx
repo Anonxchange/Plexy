@@ -85,6 +85,7 @@ import { TrustedUsers } from "@/pages/trusted-users";
 import { BlockedUsers } from "@/pages/blocked-users";
 import { TradeStatistics } from "@/pages/trade-statistics";
 import { Developer } from "./pages/developer";
+import KYCCallback from "@/pages/kyc-callback";
 
 import { OfferDetail } from "@/pages/offer-detail";
 
@@ -121,6 +122,7 @@ function Router() {
       <Route path="/notification-settings" component={NotificationSettings} />
       <Route path="/developer" component={Developer} />
       <Route path="/verification" component={VerificationPage} />
+      <Route path="/kyc/callback" component={KYCCallback} />
       <Route path="/merchant-application" component={MerchantApplicationPage} />
       <Route path="/merchant-downgrade" component={MerchantDowngradePage} />
       <Route path="/admin" component={AdminPage} />
