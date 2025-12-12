@@ -215,10 +215,7 @@ export function SignIn() {
           setTempInputValue(inputValue);
           setTempAccessToken(currentAccessToken);
           
-          console.log('[Device Verification] Signing out user before OTP verification...');
-          await signOut();
-          
-          console.log('[Device Verification] Showing device verification modal. User will click Send email to receive OTP.');
+          console.log('[Device Verification] Showing device verification modal. Session remains active for OTP.');
           setShowDeviceVerification(true);
           setLoading(false);
           setChecking2FA(false);
@@ -264,39 +261,8 @@ export function SignIn() {
   };
 
   const handleDeviceVerified = async () => {
-    if (!tempInputValue || !tempPassword) {
-      toast({
-        title: "Error",
-        description: "Session expired. Please sign in again.",
-        variant: "destructive",
-      });
-      setShowDeviceVerification(false);
-      setTempUserId(null);
-      setTempEmail("");
-      setTempPassword("");
-      setTempInputValue("");
-      return;
-    }
-
     setLoading(true);
     
-    const { error: signInError } = await signIn(tempInputValue, tempPassword);
-    
-    if (signInError) {
-      toast({
-        title: "Error",
-        description: signInError.message || "Failed to complete sign in. Please try again.",
-        variant: "destructive",
-      });
-      setLoading(false);
-      setShowDeviceVerification(false);
-      setTempUserId(null);
-      setTempEmail("");
-      setTempPassword("");
-      setTempInputValue("");
-      return;
-    }
-
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData?.session?.user?.id;
 
@@ -313,6 +279,7 @@ export function SignIn() {
     setTempEmail("");
     setTempPassword("");
     setTempInputValue("");
+    setTempAccessToken(undefined);
     setLoading(false);
     
     toast({
@@ -323,11 +290,13 @@ export function SignIn() {
   };
 
   const handleDeviceVerificationCancel = async () => {
+    await signOut();
     setShowDeviceVerification(false);
     setTempUserId(null);
     setTempEmail("");
     setTempPassword("");
     setTempInputValue("");
+    setTempAccessToken(undefined);
   };
 
   const handleVerify2FA = async (e: React.FormEvent) => {
@@ -815,14 +784,14 @@ export function SignIn() {
         />
       )}
 
-      {showDeviceVerification && tempUserId && tempEmail && tempAccessToken && (
+      {showDeviceVerification && tempUserId && tempEmail && (session?.access_token || tempAccessToken) && (
         <DeviceOTPVerification
           isOpen={showDeviceVerification}
           onClose={handleDeviceVerificationCancel}
           onVerified={handleDeviceVerified}
           userId={tempUserId}
           email={tempEmail}
-          accessToken={tempAccessToken}
+          accessToken={session?.access_token || tempAccessToken || ''}
         />
       )}
     </div>
