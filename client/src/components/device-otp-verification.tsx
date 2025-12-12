@@ -9,7 +9,7 @@ import {
 import { Monitor, Laptop, RefreshCw, HelpCircle } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DeviceOTPVerificationProps {
   isOpen: boolean;
@@ -17,12 +17,58 @@ interface DeviceOTPVerificationProps {
   onVerified: () => void;
   userId: string;
   email: string;
-  accessToken?: string;
+  accessToken: string;
   deviceInfo?: {
     deviceName: string;
     browser: string;
     os: string;
+    ipAddress?: string;
   };
+}
+
+function generateDeviceFingerprint(): string {
+  const nav = navigator;
+  const screen = window.screen;
+  const fingerprint = [
+    nav.userAgent,
+    nav.language,
+    screen.colorDepth,
+    screen.width + 'x' + screen.height,
+    new Date().getTimezoneOffset(),
+    nav.hardwareConcurrency || 'unknown',
+  ].join('|');
+  
+  let hash = 0;
+  for (let i = 0; i < fingerprint.length; i++) {
+    const char = fingerprint.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16);
+}
+
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let browser = 'Unknown';
+  let os = 'Unknown';
+  let deviceName = 'Unknown Device';
+
+  if (ua.includes('Chrome')) browser = 'Chrome';
+  else if (ua.includes('Firefox')) browser = 'Firefox';
+  else if (ua.includes('Safari')) browser = 'Safari';
+  else if (ua.includes('Edge')) browser = 'Edge';
+
+  if (ua.includes('Windows')) os = 'Windows';
+  else if (ua.includes('Mac')) os = 'macOS';
+  else if (ua.includes('Linux')) os = 'Linux';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('iOS') || ua.includes('iPhone')) os = 'iOS';
+
+  if (ua.includes('Mobile')) deviceName = 'Mobile Device';
+  else if (ua.includes('Tablet')) deviceName = 'Tablet';
+  else deviceName = 'Desktop';
+
+  return { device_name: deviceName, browser, os, ip_address: '' };
 }
 
 export function DeviceOTPVerification({
@@ -34,7 +80,6 @@ export function DeviceOTPVerification({
   accessToken,
   deviceInfo,
 }: DeviceOTPVerificationProps) {
-  const supabase = createClient();
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -42,6 +87,7 @@ export function DeviceOTPVerification({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [emailSent, setEmailSent] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [deviceFingerprint] = useState(generateDeviceFingerprint);
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -60,51 +106,55 @@ export function DeviceOTPVerification({
   }, [isOpen]);
 
   const handleSendEmail = async () => {
+    if (!accessToken) {
+      setError('Authentication required. Please try signing in again.');
+      return;
+    }
+
     setIsSending(true);
     setError(null);
 
     try {
-      // Get session token from Supabase client or use prop
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionToken = accessToken || sessionData.session?.access_token;
-
-      // If no session token, try to send OTP without auth (for new device verification during login)
-      const headers: Record<string, string> = {};
-      if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`;
-      }
-
-      const { data, error: fnError } = await supabase.functions.invoke('device-otp-generation', {
-        body: { email, userId, type: 'device_verification' },
-        headers,
-      });
-      
-      if (fnError) {
-        // Handle specific auth errors
-        const errorMsg = fnError.message || '';
-        if (errorMsg.includes('missing sub claim') || errorMsg.includes('Invalid auth token')) {
-          // Try without auth token as fallback for device verification during login flow
-          const { data: retryData, error: retryError } = await supabase.functions.invoke('device-otp-generation', {
-            body: { email, userId, type: 'device_verification' },
-          });
-          
-          if (retryError) {
-            setError(retryError.message || 'Failed to send verification code');
-          } else {
-            setEmailSent(true);
-            setResendCooldown(60);
-            setOtp('');
+      const device_info = deviceInfo 
+        ? {
+            device_name: deviceInfo.deviceName,
+            browser: deviceInfo.browser,
+            os: deviceInfo.os,
+            ip_address: deviceInfo.ipAddress || '',
           }
-        } else {
-          setError(fnError.message || 'Failed to send verification code');
+        : getDeviceInfo();
+
+      const response = await fetch(
+        `https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/device-otp-generation`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            device_fingerprint: deviceFingerprint,
+            device_info,
+          }),
         }
-      } else {
-        setEmailSent(true);
-        setResendCooldown(60);
-        setOtp('');
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send verification code');
       }
-    } catch (err) {
-      setError('Failed to send code. Please try again.');
+
+      if (data.device_trusted) {
+        onVerified();
+        return;
+      }
+
+      setEmailSent(true);
+      setResendCooldown(60);
+      setOtp('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send code. Please try again.');
     } finally {
       setIsSending(false);
     }
@@ -120,44 +170,30 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
-      // Get session token from Supabase client or use prop
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionToken = accessToken || sessionData.session?.access_token;
-
-      const headers: Record<string, string> = {};
-      if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`;
-      }
-
-      const { data, error: fnError } = await supabase.functions.invoke('device-otp-verify', {
-        body: { email, otp, userId },
-        headers,
-      });
-      
-      if (fnError) {
-        // Handle specific auth errors
-        const errorMsg = fnError.message || '';
-        if (errorMsg.includes('missing sub claim') || errorMsg.includes('Invalid auth token')) {
-          // Try without auth token as fallback
-          const { data: retryData, error: retryError } = await supabase.functions.invoke('device-otp-verify', {
-            body: { email, otp, userId },
-          });
-          
-          if (retryError) {
-            setError(retryError.message || 'Invalid verification code');
-            setOtp('');
-          } else {
-            onVerified();
-          }
-        } else {
-          setError(fnError.message || 'Invalid verification code');
-          setOtp('');
+      const response = await fetch(
+        `https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/device-otp-verify`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            otp_code: otp,
+            device_fingerprint: deviceFingerprint,
+          }),
         }
-      } else {
-        onVerified();
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Invalid verification code');
       }
-    } catch (err) {
-      setError('Verification failed. Please try again.');
+
+      onVerified();
+    } catch (err: any) {
+      setError(err.message || 'Verification failed. Please try again.');
       setOtp('');
     } finally {
       setIsVerifying(false);
