@@ -39,6 +39,7 @@ export default function VerificationPage() {
   const [livenessResult, setLivenessResult] = useState<LivenessResult | null>(null);
   const [showLivenessCheck, setShowLivenessCheck] = useState(false);
   const [documentType, setDocumentType] = useState<string>("government_id"); // Default document type
+  const [startingKYC, setStartingKYC] = useState(false);
 
   // Email linking dialog state
   const [emailLinkingOpen, setEmailLinkingOpen] = useState(false);
@@ -404,6 +405,45 @@ export default function VerificationPage() {
     }
   });
 
+
+  // Start KYC verification using didit edge function
+  const startKYCVerification = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "Please sign in to continue",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setStartingKYC(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('didit-create-session', {
+        body: { callback_url: window.location.origin + '/kyc/callback' }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.session_url) {
+        // Redirect user to the KYC provider
+        window.location.href = data.session_url;
+      } else {
+        throw new Error('No session URL returned from KYC provider');
+      }
+    } catch (error: any) {
+      console.error('KYC session creation error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start verification. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setStartingKYC(false);
+    }
+  };
 
   const pendingVerification = verifications?.find(v => v.status === "pending");
 
@@ -914,7 +954,7 @@ export default function VerificationPage() {
                 {(needsResubmitForCurrentLevel && currentLevel === 2) || needsResubmitForLevel2 ? "Resubmit Level 2 Verification" : "Step 2: Full Verification (Level 2)"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Upload a valid government-issued ID and complete liveness verification to unlock unlimited daily/lifetime trading.
+                Complete identity verification to unlock unlimited daily/lifetime trading. You'll be redirected to our secure verification partner.
               </p>
 
               <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
@@ -929,113 +969,28 @@ export default function VerificationPage() {
                 </ul>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="country-level2">Country <span className="text-red-500">*</span></Label>
-                <Select value={country || userProfile?.country || ""} onValueChange={setCountry}>
-                  <SelectTrigger id="country-level2" className="h-12">
-                    <SelectValue placeholder="Select your country" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {countries.map((c) => (
-                      <SelectItem key={c.code} value={c.name}>
-                        {c.flag} {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Confirm your country of residence
-                </p>
-              </div>
+              <Alert className="bg-blue-500/10 border-blue-500/20">
+                <Shield className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>What to expect:</strong>
+                  <ul className="mt-2 space-y-1 text-xs ml-4">
+                    <li>• You'll be redirected to our secure verification partner</li>
+                    <li>• Have your government-issued ID ready (passport, ID card, or driver's license)</li>
+                    <li>• The process takes about 2-3 minutes</li>
+                    <li>• You'll be brought back here when complete</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
 
-              <div className="space-y-2">
-                <Label htmlFor="document-type">Document Type <span className="text-red-500">*</span></Label>
-                <Select value={documentType} onValueChange={setDocumentType}>
-                  <SelectTrigger id="document-type">
-                    <SelectValue placeholder="Select document type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="id_card">ID card</SelectItem>
-                    <SelectItem value="passport">Passport</SelectItem>
-                    <SelectItem value="residence_permit">Residence permit</SelectItem>
-                    <SelectItem value="driving_license">Driving license</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Select the type of ID document you'll upload
-                </p>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="document-front">ID Document - Front Side <span className="text-red-500">*</span></Label>
-                  <p className="text-xs text-muted-foreground">
-                    Upload clear photo of the front of your ID
-                  </p>
-                  <Input
-                    id="document-front"
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
-                  />
-                  {documentFile && (
-                    <p className="text-xs text-green-600">✓ Selected: {documentFile.name}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="document-back">ID Document - Back Side <span className="text-red-500">*</span></Label>
-                  <p className="text-xs text-muted-foreground">
-                    Upload clear photo of the back of your ID
-                  </p>
-                  <Input
-                    id="document-back"
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => setDocumentBackFile(e.target.files?.[0] || null)}
-                  />
-                  {documentBackFile && (
-                    <p className="text-xs text-green-600">✓ Selected: {documentBackFile.name}</p>
-                  )}
-                </div>
-              </div>
-
-              {showLivenessCheck ? (
-                <LivenessCheck
-                  onSuccess={(result) => setLivenessResult(result)}
-                  onError={(error) => console.error("Liveness check error:", error)}
-                />
-              ) : (
-                livenessResult?.isLive && (
-                  <Alert>
-                    <CheckCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      ✓ Liveness verified! Confidence: {(livenessResult.confidence * 100).toFixed(0)}%
-                    </AlertDescription>
-                  </Alert>
-                )
-              )}
-
-              {!showLivenessCheck && !livenessResult && documentFile && (
-                <Button 
-                  onClick={() => setShowLivenessCheck(true)}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Continue to Liveness Check
-                </Button>
-              )}
-
-              {livenessResult?.isLive && (
-                <Button 
-                  onClick={() => submitVerification.mutate(2)}
-                  disabled={!documentFile || !documentBackFile || submitVerification.isPending}
-                  className="w-full"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {submitVerification.isPending ? "Submitting..." : "Submit for Level 2 Verification"}
-                </Button>
-              )}
+              <Button 
+                onClick={startKYCVerification}
+                disabled={startingKYC}
+                className="w-full"
+                size="lg"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                {startingKYC ? "Starting Verification..." : "Start Identity Verification"}
+              </Button>
             </div>
           )}
 
