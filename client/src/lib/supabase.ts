@@ -8,3 +8,6 @@ export const createClient = () =>
     supabaseUrl!,
     supabaseKey!,
   );
+
+// Export a singleton instance for direct usage
+export const supabase = createClient();
