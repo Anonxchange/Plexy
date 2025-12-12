@@ -64,13 +64,26 @@ export function DeviceOTPVerification({
       const { data: sessionData } = await supabase.auth.getSession();
       const sessionToken = sessionData.session?.access_token;
 
+      // If no session token, user needs to authenticate first
+      if (!sessionToken) {
+        setError('Please sign in again to verify your device.');
+        setIsSending(false);
+        return;
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke('device-otp-generation', {
         body: { email, type: 'device_verification' },
-        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
+        headers: { Authorization: `Bearer ${sessionToken}` },
       });
       
       if (fnError) {
-        setError(fnError.message || 'Failed to send verification code');
+        // Handle specific auth errors
+        const errorMsg = fnError.message || '';
+        if (errorMsg.includes('missing sub claim') || errorMsg.includes('Invalid auth token')) {
+          setError('Your session has expired. Please sign in again.');
+        } else {
+          setError(fnError.message || 'Failed to send verification code');
+        }
       } else {
         setEmailSent(true);
         setResendCooldown(60);
@@ -96,13 +109,26 @@ export function DeviceOTPVerification({
       const { data: sessionData } = await supabase.auth.getSession();
       const sessionToken = sessionData.session?.access_token;
 
+      // If no session token, user needs to authenticate first
+      if (!sessionToken) {
+        setError('Your session has expired. Please sign in again.');
+        setIsVerifying(false);
+        return;
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke('device-otp-verify', {
         body: { email, otp, userId },
-        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
+        headers: { Authorization: `Bearer ${sessionToken}` },
       });
       
       if (fnError) {
-        setError(fnError.message || 'Invalid verification code');
+        // Handle specific auth errors
+        const errorMsg = fnError.message || '';
+        if (errorMsg.includes('missing sub claim') || errorMsg.includes('Invalid auth token')) {
+          setError('Your session has expired. Please sign in again.');
+        } else {
+          setError(fnError.message || 'Invalid verification code');
+        }
         setOtp('');
       } else {
         onVerified();
