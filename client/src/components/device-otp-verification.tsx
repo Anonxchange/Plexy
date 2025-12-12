@@ -9,7 +9,7 @@ import {
 import { Monitor, Laptop, RefreshCw, HelpCircle } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 
 interface DeviceOTPVerificationProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ interface DeviceOTPVerificationProps {
   onVerified: () => void;
   userId: string;
   email: string;
+  accessToken?: string;
   deviceInfo?: {
     deviceName: string;
     browser: string;
@@ -30,8 +31,10 @@ export function DeviceOTPVerification({
   onVerified,
   userId,
   email,
+  accessToken,
   deviceInfo,
 }: DeviceOTPVerificationProps) {
+  const supabase = createClient();
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -61,26 +64,37 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
+      // Get session token from Supabase client or use prop
       const { data: sessionData } = await supabase.auth.getSession();
-      const sessionToken = sessionData.session?.access_token;
+      const sessionToken = accessToken || sessionData.session?.access_token;
 
-      // If no session token, user needs to authenticate first
-      if (!sessionToken) {
-        setError('Please sign in again to verify your device.');
-        setIsSending(false);
-        return;
+      // If no session token, try to send OTP without auth (for new device verification during login)
+      const headers: Record<string, string> = {};
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
       }
 
       const { data, error: fnError } = await supabase.functions.invoke('device-otp-generation', {
-        body: { email, type: 'device_verification' },
-        headers: { Authorization: `Bearer ${sessionToken}` },
+        body: { email, userId, type: 'device_verification' },
+        headers,
       });
       
       if (fnError) {
         // Handle specific auth errors
         const errorMsg = fnError.message || '';
         if (errorMsg.includes('missing sub claim') || errorMsg.includes('Invalid auth token')) {
-          setError('Your session has expired. Please sign in again.');
+          // Try without auth token as fallback for device verification during login flow
+          const { data: retryData, error: retryError } = await supabase.functions.invoke('device-otp-generation', {
+            body: { email, userId, type: 'device_verification' },
+          });
+          
+          if (retryError) {
+            setError(retryError.message || 'Failed to send verification code');
+          } else {
+            setEmailSent(true);
+            setResendCooldown(60);
+            setOtp('');
+          }
         } else {
           setError(fnError.message || 'Failed to send verification code');
         }
@@ -106,30 +120,39 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
+      // Get session token from Supabase client or use prop
       const { data: sessionData } = await supabase.auth.getSession();
-      const sessionToken = sessionData.session?.access_token;
+      const sessionToken = accessToken || sessionData.session?.access_token;
 
-      // If no session token, user needs to authenticate first
-      if (!sessionToken) {
-        setError('Your session has expired. Please sign in again.');
-        setIsVerifying(false);
-        return;
+      const headers: Record<string, string> = {};
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
       }
 
       const { data, error: fnError } = await supabase.functions.invoke('device-otp-verify', {
         body: { email, otp, userId },
-        headers: { Authorization: `Bearer ${sessionToken}` },
+        headers,
       });
       
       if (fnError) {
         // Handle specific auth errors
         const errorMsg = fnError.message || '';
         if (errorMsg.includes('missing sub claim') || errorMsg.includes('Invalid auth token')) {
-          setError('Your session has expired. Please sign in again.');
+          // Try without auth token as fallback
+          const { data: retryData, error: retryError } = await supabase.functions.invoke('device-otp-verify', {
+            body: { email, otp, userId },
+          });
+          
+          if (retryError) {
+            setError(retryError.message || 'Invalid verification code');
+            setOtp('');
+          } else {
+            onVerified();
+          }
         } else {
           setError(fnError.message || 'Invalid verification code');
+          setOtp('');
         }
-        setOtp('');
       } else {
         onVerified();
       }
