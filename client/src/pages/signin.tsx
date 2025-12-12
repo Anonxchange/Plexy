@@ -32,7 +32,8 @@ export function SignIn() {
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [displayedText, setDisplayedText] = useState("");
-  const { signIn, signOut, user, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
+  const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
+  const [tempAccessToken, setTempAccessToken] = useState<string | undefined>(undefined);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();
@@ -807,6 +808,7 @@ export function SignIn() {
           }}
           userId={pendingOTPVerification.userId}
           email={pendingOTPVerification.email}
+          accessToken={session?.access_token || tempAccessToken}
           deviceInfo={pendingOTPVerification.deviceInfo}
         />
       )}
@@ -818,6 +820,7 @@ export function SignIn() {
           onVerified={handleDeviceVerified}
           userId={tempUserId}
           email={tempEmail}
+          accessToken={session?.access_token || tempAccessToken}
         />
       )}
     </div>
