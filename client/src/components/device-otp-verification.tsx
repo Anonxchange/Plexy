@@ -7,7 +7,6 @@ import {
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
 import { Monitor, Laptop, RefreshCw, HelpCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
@@ -39,7 +38,6 @@ export function DeviceOTPVerification({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [emailSent, setEmailSent] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -62,15 +60,18 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
-      const { error: sendError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,
-        }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email, type: 'device_verification' }),
       });
       
-      if (sendError) {
-        setError(sendError.message || 'Failed to send verification code');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setError(data.error || 'Failed to send verification code');
       } else {
         setEmailSent(true);
         setResendCooldown(60);
@@ -93,14 +94,18 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email',
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-device-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email, otp, userId }),
       });
       
-      if (verifyError) {
-        setError(verifyError.message || 'Invalid verification code');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setError(data.error || 'Invalid verification code');
         setOtp('');
       } else {
         onVerified();
@@ -160,11 +165,11 @@ export function DeviceOTPVerification({
             </p>
 
             {!emailSent ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Button
                   onClick={handleSendEmail}
                   disabled={isSending}
-                  className="w-full py-6 text-base rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="w-full h-12 text-base font-medium rounded-xl bg-[#c8e45a] text-black hover:bg-[#b8d44a]"
                 >
                   {isSending ? (
                     <>
@@ -182,7 +187,7 @@ export function DeviceOTPVerification({
 
                 <Button
                   variant="outline"
-                  className="w-full py-6 text-base rounded-xl"
+                  className="w-full h-12 text-base font-medium rounded-xl border-border"
                   onClick={() => setShowHelp(true)}
                 >
                   Try another way
@@ -190,22 +195,22 @@ export function DeviceOTPVerification({
 
                 <Button
                   variant="ghost"
-                  className="w-full text-primary hover:text-primary/80"
+                  className="w-full h-10 text-sm text-destructive hover:text-destructive/80"
                   onClick={onClose}
                 >
                   Cancel signing in
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Button
                   onClick={handleResend}
                   disabled={isSending || resendCooldown > 0}
                   variant="outline"
-                  className={`w-full py-6 text-base rounded-xl ${
+                  className={`w-full h-12 text-base font-medium rounded-xl ${
                     resendCooldown > 0 
                       ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'bg-[#c8e45a] text-black hover:bg-[#b8d44a] border-0'
                   }`}
                 >
                   {isSending ? (
@@ -222,7 +227,7 @@ export function DeviceOTPVerification({
 
                 <Button
                   variant="outline"
-                  className="w-full py-6 text-base rounded-xl"
+                  className="w-full h-12 text-base font-medium rounded-xl border-border"
                   onClick={() => setShowHelp(true)}
                 >
                   Try another way
@@ -230,7 +235,7 @@ export function DeviceOTPVerification({
 
                 <Button
                   variant="ghost"
-                  className="w-full text-primary hover:text-primary/80"
+                  className="w-full h-10 text-sm text-destructive hover:text-destructive/80"
                   onClick={onClose}
                 >
                   Cancel signing in
