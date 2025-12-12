@@ -9,6 +9,7 @@ import {
 import { Monitor, Laptop, RefreshCw, HelpCircle } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DeviceOTPVerificationProps {
   isOpen: boolean;
@@ -60,18 +61,16 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/device-otp-generation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ email, type: 'device_verification' }),
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionToken = sessionData.session?.access_token;
+
+      const { data, error: fnError } = await supabase.functions.invoke('device-otp-generation', {
+        body: { email, type: 'device_verification' },
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
       });
       
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setError(data.error || 'Failed to send verification code');
+      if (fnError) {
+        setError(fnError.message || 'Failed to send verification code');
       } else {
         setEmailSent(true);
         setResendCooldown(60);
@@ -94,18 +93,16 @@ export function DeviceOTPVerification({
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-device-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ email, otp, userId }),
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionToken = sessionData.session?.access_token;
+
+      const { data, error: fnError } = await supabase.functions.invoke('device-otp-verify', {
+        body: { email, otp, userId },
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
       });
       
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setError(data.error || 'Invalid verification code');
+      if (fnError) {
+        setError(fnError.message || 'Invalid verification code');
         setOtp('');
       } else {
         onVerified();
