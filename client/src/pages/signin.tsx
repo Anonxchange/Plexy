@@ -205,13 +205,15 @@ export function SignIn() {
       if (!deviceStatus.exists || !deviceStatus.trusted) {
         console.log('[Device Verification] Device NOT trusted or does not exist. Triggering OTP verification.');
         const userEmail = sessionData?.session?.user?.email;
+        const currentAccessToken = sessionData?.session?.access_token;
         console.log('[Device Verification] User email:', userEmail);
         
-        if (userEmail) {
+        if (userEmail && currentAccessToken) {
           setTempUserId(userId);
           setTempEmail(userEmail);
           setTempPassword(password);
           setTempInputValue(inputValue);
+          setTempAccessToken(currentAccessToken);
           
           console.log('[Device Verification] Signing out user before OTP verification...');
           await signOut();
@@ -808,19 +810,19 @@ export function SignIn() {
           }}
           userId={pendingOTPVerification.userId}
           email={pendingOTPVerification.email}
-          accessToken={session?.access_token || tempAccessToken}
+          accessToken={session?.access_token || tempAccessToken || ''}
           deviceInfo={pendingOTPVerification.deviceInfo}
         />
       )}
 
-      {showDeviceVerification && tempUserId && tempEmail && (
+      {showDeviceVerification && tempUserId && tempEmail && tempAccessToken && (
         <DeviceOTPVerification
           isOpen={showDeviceVerification}
           onClose={handleDeviceVerificationCancel}
           onVerified={handleDeviceVerified}
           userId={tempUserId}
           email={tempEmail}
-          accessToken={session?.access_token || tempAccessToken}
+          accessToken={tempAccessToken}
         />
       )}
     </div>
