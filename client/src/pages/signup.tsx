@@ -338,9 +338,11 @@ export function SignUp() {
       setLoading(false);
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Send verification error:", response.status, errorData);
         toast({
           title: "Error",
-          description: "Failed to send verification code. Please try again.",
+          description: errorData.error || "Failed to send verification code. Please try again.",
           variant: "destructive",
         });
         return;
