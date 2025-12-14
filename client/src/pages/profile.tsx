@@ -65,9 +65,44 @@ interface UserProfile {
   trade_partners: number;
   is_verified: boolean;
   phone_verified: boolean;
+  email_verified: boolean;
   avatar_type: string | null;
   avatar_url: string | null;
   pexly_pay_id: string | null;
+  last_seen: string | null;
+}
+
+// Helper function for relative time formatting
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks === 1 ? '' : 's'} ago`;
+  if (diffMonths < 12) return `${diffMonths} month${diffMonths === 1 ? '' : 's'} ago`;
+  return `${diffYears} year${diffYears === 1 ? '' : 's'} ago`;
+}
+
+interface ProfileStats {
+  trustedByCount: number;
+  blockedByCount: number;
+  hasBlockedCount: number;
+  thirtyDayStats: {
+    tradesSuccess: number | null;
+    avgTimeToPayment: number | null;
+    avgTimeToRelease: number | null;
+    tradesVolume: number;
+  };
 }
 
 interface Offer {
@@ -144,6 +179,17 @@ export function Profile() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [trustLoading, setTrustLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [profileStats, setProfileStats] = useState<ProfileStats>({
+    trustedByCount: 0,
+    blockedByCount: 0,
+    hasBlockedCount: 0,
+    thirtyDayStats: {
+      tradesSuccess: null,
+      avgTimeToPayment: null,
+      avgTimeToRelease: null,
+      tradesVolume: 0,
+    },
+  });
 
   const avatarTypes = [
     { id: 'default', label: 'Default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
@@ -162,6 +208,7 @@ export function Profile() {
     } else if (viewingUserId) {
       fetchProfileData();
       fetchFeedbacks();
+      fetchProfileStats();
       if (!isOwnProfile && user?.id) {
         checkTrustAndBlockStatus();
       }
@@ -193,6 +240,100 @@ export function Profile() {
       setIsBlocked(!!blockData);
     } catch (error) {
       console.error('Error checking trust/block status:', error);
+    }
+  };
+
+  const fetchProfileStats = async () => {
+    if (!viewingUserId) return;
+
+    try {
+      // Fetch trusted by count (how many users trust this profile)
+      const { count: trustedByCount } = await supabase
+        .from('trusted_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('trusted_user_id', viewingUserId);
+
+      // Fetch blocked by count (how many users blocked this profile)
+      const { count: blockedByCount } = await supabase
+        .from('blocked_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('blocked_user_id', viewingUserId);
+
+      // Fetch has blocked count (how many users this profile has blocked)
+      const { count: hasBlockedCount } = await supabase
+        .from('blocked_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', viewingUserId);
+
+      // Fetch 30-day trade stats
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: recentTrades } = await supabase
+        .from('p2p_trades')
+        .select('*')
+        .or(`buyer_id.eq.${viewingUserId},seller_id.eq.${viewingUserId}`)
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: false });
+
+      let tradesSuccess: number | null = null;
+      let avgTimeToPayment: number | null = null;
+      let avgTimeToRelease: number | null = null;
+      let tradesVolume = 0;
+
+      if (recentTrades && recentTrades.length > 0) {
+        const completedTrades = recentTrades.filter((t: any) => t.status === 'completed');
+        const totalTrades = recentTrades.length;
+        
+        if (totalTrades > 0) {
+          tradesSuccess = Math.round((completedTrades.length / totalTrades) * 100);
+        }
+
+        // Calculate average time to payment (for trades where user is buyer)
+        const buyerTrades = recentTrades.filter((t: any) => 
+          t.buyer_id === viewingUserId && t.paid_at && t.created_at
+        );
+        if (buyerTrades.length > 0) {
+          const totalPaymentTime = buyerTrades.reduce((acc: number, t: any) => {
+            const created = new Date(t.created_at).getTime();
+            const paid = new Date(t.paid_at).getTime();
+            return acc + (paid - created);
+          }, 0);
+          avgTimeToPayment = Math.round(totalPaymentTime / buyerTrades.length / (1000 * 60)); // in minutes
+        }
+
+        // Calculate average time to release (for trades where user is seller)
+        const sellerTrades = recentTrades.filter((t: any) => 
+          t.seller_id === viewingUserId && t.released_at && t.paid_at
+        );
+        if (sellerTrades.length > 0) {
+          const totalReleaseTime = sellerTrades.reduce((acc: number, t: any) => {
+            const paid = new Date(t.paid_at).getTime();
+            const released = new Date(t.released_at).getTime();
+            return acc + (released - paid);
+          }, 0);
+          avgTimeToRelease = Math.round(totalReleaseTime / sellerTrades.length / (1000 * 60)); // in minutes
+        }
+
+        // Calculate total volume in USD
+        tradesVolume = completedTrades.reduce((acc: number, t: any) => {
+          return acc + parseFloat(t.fiat_amount || '0');
+        }, 0);
+      }
+
+      setProfileStats({
+        trustedByCount: trustedByCount || 0,
+        blockedByCount: blockedByCount || 0,
+        hasBlockedCount: hasBlockedCount || 0,
+        thirtyDayStats: {
+          tradesSuccess,
+          avgTimeToPayment,
+          avgTimeToRelease,
+          tradesVolume,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching profile stats:', error);
     }
   };
 
@@ -237,7 +378,9 @@ export function Profile() {
           total_trades: 0,
           trade_partners: 0,
           is_verified: false,
-          phone_verified: false
+          phone_verified: false,
+          email_verified: false,
+          last_seen: new Date().toISOString(),
         };
 
         const { data: newProfile, error: createError } = await supabase
@@ -273,11 +416,14 @@ export function Profile() {
         trade_partners: 0,
         is_verified: false,
         phone_verified: false,
+        email_verified: false,
+        last_seen: new Date().toISOString(),
         created_at: new Date().toISOString(),
         avatar_type: 'default',
-        avatar_url: null
+        avatar_url: null,
+        pexly_pay_id: null,
       };
-      setProfileData(defaultProfile as UserProfile);
+      setProfileData(defaultProfile);
     } finally {
       setLoadingProfile(false);
     }
@@ -690,6 +836,7 @@ export function Profile() {
         if (error) throw error;
 
         setIsTrusted(false);
+        fetchProfileStats(); // Refresh counts after trust change
         toast({
           title: "User Untrusted",
           description: `You have removed @${profileData?.username} from your trusted list`,
@@ -717,6 +864,7 @@ export function Profile() {
         }
 
         setIsTrusted(true);
+        fetchProfileStats(); // Refresh counts after trust change
         toast({
           title: "User Trusted",
           description: `You have added @${profileData?.username} to your trusted list`,
@@ -751,6 +899,7 @@ export function Profile() {
         if (error) throw error;
 
         setIsBlocked(false);
+        fetchProfileStats(); // Refresh counts after block change
         toast({
           title: "User Unblocked",
           description: `You have unblocked @${profileData?.username}`,
@@ -778,6 +927,7 @@ export function Profile() {
         }
 
         setIsBlocked(true);
+        fetchProfileStats(); // Refresh counts after block change
         toast({
           title: "User Blocked",
           description: `You have blocked @${profileData?.username}`,
@@ -843,7 +993,9 @@ export function Profile() {
               {/* Active Status */}
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-3 h-3 rounded-sm bg-primary"></div>
-                <span className="text-primary font-medium text-sm">Seen 13 minutes ago</span>
+                <span className="text-primary font-medium text-sm">
+                  Seen {profileData?.last_seen ? formatRelativeTime(profileData.last_seen) : 'recently'}
+                </span>
               </div>
 
               {/* Main Profile Section */}
@@ -959,7 +1111,7 @@ export function Profile() {
                   </div>
                   <div>
                     <p className="text-muted-foreground uppercase text-xs mb-2">Joined:</p>
-                    <p className="font-medium text-xs sm:text-sm">{Math.floor((Date.now() - new Date(profileData?.created_at || user.created_at).getTime()) / (1000 * 60 * 60 * 24 * 365))} years ago</p>
+                    <p className="font-medium text-xs sm:text-sm">{formatRelativeTime(profileData?.created_at || user.created_at)}</p>
                     <p className="text-xs text-muted-foreground">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                   </div>
                 </div>
@@ -1044,6 +1196,15 @@ export function Profile() {
                       <span className="font-medium">Phone verified</span>
                     </div>
                   )}
+                  {profileData?.email_verified && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                      <span className="font-medium">Email verified</span>
+                    </div>
+                  )}
+                  {!profileData?.is_verified && !profileData?.phone_verified && !profileData?.email_verified && (
+                    <p className="text-muted-foreground text-sm">No verifications yet</p>
+                  )}
                 </div>
               </div>
 
@@ -1081,7 +1242,7 @@ export function Profile() {
                 <p className="text-muted-foreground uppercase text-xs mb-2">Trusted By</p>
                 <div className="flex items-center gap-2 text-primary">
                   <Users className="h-5 w-5" />
-                  <span className="font-bold text-lg">6 USERS</span>
+                  <span className="font-bold text-lg">{profileStats.trustedByCount} USER{profileStats.trustedByCount !== 1 ? 'S' : ''}</span>
                 </div>
               </div>
             </CardContent>
@@ -1095,14 +1256,14 @@ export function Profile() {
                   <p className="text-muted-foreground uppercase text-xs mb-2">Blocked By</p>
                   <div className="flex items-center gap-2 text-primary">
                     <Users className="h-5 w-5" />
-                    <span className="font-bold">5 USERS</span>
+                    <span className="font-bold">{profileStats.blockedByCount} USER{profileStats.blockedByCount !== 1 ? 'S' : ''}</span>
                   </div>
                 </div>
                 <div>
                   <p className="text-muted-foreground uppercase text-xs mb-2">Has Blocked</p>
                   <div className="flex items-center gap-2 text-primary">
                     <Users className="h-5 w-5" />
-                    <span className="font-bold">0 USERS</span>
+                    <span className="font-bold">{profileStats.hasBlockedCount} USER{profileStats.hasBlockedCount !== 1 ? 'S' : ''}</span>
                   </div>
                 </div>
               </div>
@@ -1114,19 +1275,19 @@ export function Profile() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="text-center">
                   <p className="text-muted-foreground uppercase text-xs mb-2">Trades Success</p>
-                  <p className="text-xl">—</p>
+                  <p className="text-xl">{profileStats.thirtyDayStats.tradesSuccess !== null ? `${profileStats.thirtyDayStats.tradesSuccess}%` : '—'}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Payment</p>
-                  <p className="text-xl">—</p>
+                  <p className="text-xl">{profileStats.thirtyDayStats.avgTimeToPayment !== null ? `${profileStats.thirtyDayStats.avgTimeToPayment} min` : '—'}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Release</p>
-                  <p className="text-xl">—</p>
+                  <p className="text-xl">{profileStats.thirtyDayStats.avgTimeToRelease !== null ? `${profileStats.thirtyDayStats.avgTimeToRelease} min` : '—'}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-muted-foreground uppercase text-xs mb-2">Trades Volume</p>
-                  <p className="text-xl">&lt; 100USD</p>
+                  <p className="text-xl">{profileStats.thirtyDayStats.tradesVolume > 0 ? `$${profileStats.thirtyDayStats.tradesVolume.toLocaleString()}` : '< $100'}</p>
                 </div>
               </div>
             </CardContent>
