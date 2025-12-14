@@ -359,7 +359,55 @@ export function Profile() {
       }
 
       if (data) {
-        setProfileData(data);
+        // Check if email is verified from Supabase auth
+        const emailVerified = user?.email_confirmed_at ? true : false;
+        
+        // Fetch actual feedback counts from trade_feedback table
+        const { count: positiveCount } = await supabase
+          .from('trade_feedback')
+          .select('*', { count: 'exact', head: true })
+          .eq('to_user_id', viewingUserId)
+          .eq('rating', 'positive');
+        
+        const { count: negativeCount } = await supabase
+          .from('trade_feedback')
+          .select('*', { count: 'exact', head: true })
+          .eq('to_user_id', viewingUserId)
+          .eq('rating', 'negative');
+
+        // Fetch actual trades count (completed trades where user was seller - "released")
+        const { count: tradesReleasedCount } = await supabase
+          .from('p2p_trades')
+          .select('*', { count: 'exact', head: true })
+          .eq('seller_id', viewingUserId)
+          .eq('status', 'completed');
+
+        // Count unique trade partners
+        const { data: buyerTrades } = await supabase
+          .from('p2p_trades')
+          .select('seller_id')
+          .eq('buyer_id', viewingUserId)
+          .eq('status', 'completed');
+
+        const { data: sellerTrades } = await supabase
+          .from('p2p_trades')
+          .select('buyer_id')
+          .eq('seller_id', viewingUserId)
+          .eq('status', 'completed');
+
+        const uniquePartners = new Set([
+          ...(buyerTrades?.map(t => t.seller_id) || []),
+          ...(sellerTrades?.map(t => t.buyer_id) || [])
+        ]);
+
+        setProfileData({
+          ...data,
+          email_verified: emailVerified,
+          positive_feedback: positiveCount || 0,
+          negative_feedback: negativeCount || 0,
+          total_trades: tradesReleasedCount || 0,
+          trade_partners: uniquePartners.size,
+        });
       } else {
         // Create default profile if doesn't exist
         // Try to get country from user metadata or profile data
@@ -994,7 +1042,12 @@ export function Profile() {
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-3 h-3 rounded-sm bg-primary"></div>
                 <span className="text-primary font-medium text-sm">
-                  Seen {profileData?.last_seen ? formatRelativeTime(profileData.last_seen) : 'recently'}
+                  {profileData?.last_seen ? (
+                    // If seen within last 5 minutes, show "Active now"
+                    (Date.now() - new Date(profileData.last_seen).getTime()) < 5 * 60 * 1000 
+                      ? 'Active now' 
+                      : `Seen ${formatRelativeTime(profileData.last_seen)}`
+                  ) : 'Seen recently'}
                 </span>
               </div>
 
