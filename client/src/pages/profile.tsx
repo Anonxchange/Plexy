@@ -359,8 +359,11 @@ export function Profile() {
       }
 
       if (data) {
-        // Check if email is verified from Supabase auth
-        const emailVerified = user?.email_confirmed_at ? true : false;
+        // For email_verified: use profile data for the viewed user
+        // Only use auth data if viewing own profile
+        const emailVerified = isOwnProfile 
+          ? (user?.email_confirmed_at ? true : false)
+          : (data.email_verified || false);
         
         // Fetch actual feedback counts from trade_feedback table
         const { count: positiveCount } = await supabase
@@ -1237,26 +1240,31 @@ export function Profile() {
               <div className="mb-6">
                 <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {profileData?.email_verified ? (
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
+                    )}
+                    <span className={profileData?.email_verified ? "font-medium" : "text-muted-foreground"}>
+                      Email {profileData?.email_verified ? "verified" : "not verified"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {profileData?.phone_verified ? (
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
+                    )}
+                    <span className={profileData?.phone_verified ? "font-medium" : "text-muted-foreground"}>
+                      Phone {profileData?.phone_verified ? "verified" : "not verified"}
+                    </span>
+                  </div>
                   {profileData?.is_verified && (
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5 text-primary" />
                       <span className="font-medium">ID verified</span>
                     </div>
-                  )}
-                  {profileData?.phone_verified && (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                      <span className="font-medium">Phone verified</span>
-                    </div>
-                  )}
-                  {profileData?.email_verified && (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                      <span className="font-medium">Email verified</span>
-                    </div>
-                  )}
-                  {!profileData?.is_verified && !profileData?.phone_verified && !profileData?.email_verified && (
-                    <p className="text-muted-foreground text-sm">No verifications yet</p>
                   )}
                 </div>
               </div>
