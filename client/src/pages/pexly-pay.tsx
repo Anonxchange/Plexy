@@ -19,6 +19,7 @@ import {
   MoreHorizontal,
   CreditCard,
   Copy,
+  Clock,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
@@ -356,6 +357,19 @@ export default function PexlyPay() {
                 </div>
               </CardContent>
             </Card>
+            <Link href="/wallet/pexly-pay/history">
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                    <History className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">History</p>
+                    <p className="text-xs text-muted-foreground">View transfers</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
 
