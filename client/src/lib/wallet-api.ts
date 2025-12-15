@@ -310,135 +310,50 @@ export async function sendPexlyPayment(
       return { success: false, error: 'Not authenticated' };
     }
 
-    // Get sender's wallet balance (defaults to USDT for Pexly Pay)
-    const senderWallet = await getWalletBalance(senderId, cryptoSymbol);
-    if (!senderWallet) {
-      return { success: false, error: 'Sender wallet not found' };
-    }
-
-    console.log(`💰 Pexly Pay Balance Check:`, {
-      cryptoSymbol,
-      available: senderWallet.balance,
-      requested: amount,
-      locked: senderWallet.locked_balance
+    console.log('🚀 DEBUG: Calling pexly-pay-send edge function:', {
+      sender_id: senderId,
+      recipient_id: recipientId,
+      amount,
+      crypto_symbol: cryptoSymbol,
+      note
     });
 
-    if (senderWallet.balance < amount) {
+    // Call the pexly-pay-send edge function
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pexly-pay-send`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender_id: senderId,
+        recipient_id: recipientId,
+        amount,
+        crypto_symbol: cryptoSymbol,
+        note: note || null,
+      }),
+    });
+
+    console.log('📡 DEBUG: Edge function response status:', response.status);
+
+    const result = await response.json();
+    
+    console.log('📦 DEBUG: Edge function response:', result);
+
+    if (!response.ok) {
+      console.error('❌ Edge function error:', result);
       return { 
         success: false, 
-        error: `Insufficient balance. Available: ${senderWallet.balance} ${cryptoSymbol}, Required: ${amount} ${cryptoSymbol}` 
+        error: result.error || result.message || 'Failed to process transfer' 
       };
     }
 
-    // Get or create recipient's wallet
-    let recipientWallet = await getWalletBalance(recipientId, cryptoSymbol);
-    if (!recipientWallet) {
-      // Create wallet for recipient if it doesn't exist
-      const { data: newWallet, error: createError } = await supabase
-        .from('wallets')
-        .insert({
-          user_id: recipientId,
-          crypto_symbol: cryptoSymbol,
-          balance: 0,
-          locked_balance: 0,
-        })
-        .select()
-        .single();
-
-      if (createError || !newWallet) {
-        return { success: false, error: 'Failed to create recipient wallet' };
-      }
-      recipientWallet = newWallet as Wallet;
-    }
-
-    // Update sender's wallet balance
-    const { error: senderError } = await supabase
-      .from('wallets')
-      .update({ 
-        balance: senderWallet.balance - amount,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', senderWallet.id);
-
-    if (senderError) {
-      console.error('Error updating sender wallet:', senderError);
-      return { success: false, error: 'Failed to update sender wallet' };
-    }
-
-    // Update recipient's wallet balance
-    const { error: recipientError } = await supabase
-      .from('wallets')
-      .update({ 
-        balance: recipientWallet.balance + amount,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', recipientWallet.id);
-
-    if (recipientError) {
-      // Rollback sender's balance
-      await supabase
-        .from('wallets')
-        .update({ 
-          balance: senderWallet.balance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', senderWallet.id);
-      
-      console.error('Error updating recipient wallet:', recipientError);
-      return { success: false, error: 'Failed to update recipient wallet' };
-    }
-
-    // Create transaction record
-    const { data: transaction, error: txError } = await supabase
-      .from('pexly_transactions')
-      .insert({
-        sender_id: senderId,
-        receiver_id: recipientId,
-        amount: amount.toString(),
-        fee: '0',
-        status: 'completed',
-        note: note || null,
-        transaction_type: 'transfer',
-      })
-      .select()
-      .single();
-
-    if (txError) {
-      console.error('Error creating transaction record:', txError);
-    }
-
-    // Create wallet transaction records
-    await supabase.from('wallet_transactions').insert([
-      {
-        user_id: senderId,
-        wallet_id: senderWallet.id,
-        type: 'withdrawal',
-        crypto_symbol: cryptoSymbol,
-        amount: -amount,
-        fee: 0,
-        status: 'completed',
-        notes: `Pexly Pay transfer to ${recipientId}`,
-        completed_at: new Date().toISOString(),
-      },
-      {
-        user_id: recipientId,
-        wallet_id: recipientWallet.id,
-        type: 'deposit',
-        crypto_symbol: cryptoSymbol,
-        amount: amount,
-        fee: 0,
-        status: 'completed',
-        notes: `Pexly Pay transfer from ${senderId}`,
-        completed_at: new Date().toISOString(),
-      },
-    ]);
-
     return {
       success: true,
-      transactionId: transaction?.id,
+      transactionId: result.transaction_id || result.transactionId,
     };
   } catch (error) {
-    console.error('Error in sendPexlyPayment:', error);
+    console.error('❌ Error in sendPexlyPayment:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
