@@ -30,7 +30,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
-import { type Wallet } from "@/lib/wallet-api";
+import { type Wallet, type WalletTransaction, getWalletTransactions } from "@/lib/wallet-api";
 import { getCryptoPrices, convertToNGN, formatPrice } from "@/lib/crypto-prices";
 import type { CryptoPrice } from "@/lib/crypto-prices";
 import { getVerificationLevel, getVerificationRequirements } from "@shared/verification-levels";
@@ -59,38 +59,6 @@ const initialSpotPairs = [
   { symbol: "LTC", name: "Litecoin", price: 116.75, change: 0.15 },
 ];
 
-const recentActivities = [
-  {
-    id: 1,
-    type: "P2P Trade",
-    action: "Buy BTC",
-    amount: "2000 USD",
-    cryptoAmount: "0.01988403 BTC",
-    status: "completed",
-    date: "Mar 12, 2025 at 6:20 PM",
-    partner: "JASON168"
-  },
-  {
-    id: 2,
-    type: "P2P Trade",
-    action: "Sell BTC",
-    amount: "500 USD",
-    cryptoAmount: "0.00495 BTC",
-    status: "completed",
-    date: "Mar 10, 2025 at 3:15 PM",
-    partner: "CryptoKing99"
-  },
-  {
-    id: 3,
-    type: "P2P Trade",
-    action: "Buy ETH",
-    amount: "1500 USD",
-    cryptoAmount: "0.34 ETH",
-    status: "pending",
-    date: "Mar 8, 2025 at 11:30 AM",
-    partner: "TraderPro"
-  }
-];
 
 const generateSparklineData = (baseValue: number, trend: 'up' | 'down' | 'neutral', points: number = 20): number[] => {
   const data: number[] = [];
@@ -106,88 +74,6 @@ const generateSparklineData = (baseValue: number, trend: 'up' | 'down' | 'neutra
   return data;
 };
 
-const allOperations = [
-  {
-    id: 1,
-    type: "P2P Trade",
-    action: "Buy BTC",
-    amount: "2000 USD",
-    cryptoAmount: "0.01988403 BTC",
-    status: "completed",
-    date: "Mar 12, 2025 at 6:20 PM",
-    partner: "JASON168"
-  },
-  {
-    id: 2,
-    type: "P2P Trade",
-    action: "Sell BTC",
-    amount: "500 USD",
-    cryptoAmount: "0.00495 BTC",
-    status: "completed",
-    date: "Mar 10, 2025 at 3:15 PM",
-    partner: "CryptoKing99"
-  },
-  {
-    id: 3,
-    type: "Spot Trade",
-    action: "Buy BTC/USDT",
-    amount: "1000 USDT",
-    cryptoAmount: "0.00818 BTC",
-    status: "completed",
-    date: "Mar 9, 2025 at 2:45 PM",
-    partner: "Spot Exchange"
-  },
-  {
-    id: 4,
-    type: "P2P Trade",
-    action: "Buy ETH",
-    amount: "1500 USD",
-    cryptoAmount: "0.34 ETH",
-    status: "pending",
-    date: "Mar 8, 2025 at 11:30 AM",
-    partner: "TraderPro"
-  },
-  {
-    id: 5,
-    type: "Airtime Purchase",
-    action: "MTN Airtime",
-    amount: "50 NGN",
-    cryptoAmount: "0.00004 BTC",
-    status: "completed",
-    date: "Mar 7, 2025 at 9:15 AM",
-    partner: "MTN Nigeria"
-  },
-  {
-    id: 6,
-    type: "Spot Trade",
-    action: "Sell ETH/USDT",
-    amount: "2500 USDT",
-    cryptoAmount: "0.573 ETH",
-    status: "completed",
-    date: "Mar 6, 2025 at 4:30 PM",
-    partner: "Spot Exchange"
-  },
-  {
-    id: 7,
-    type: "Gift Card",
-    action: "Amazon Gift Card",
-    amount: "100 USD",
-    cryptoAmount: "0.00082 BTC",
-    status: "completed",
-    date: "Mar 5, 2025 at 1:20 PM",
-    partner: "Gift Card Store"
-  },
-  {
-    id: 8,
-    type: "Airtime Purchase",
-    action: "Airtel Data",
-    amount: "100 NGN",
-    cryptoAmount: "0.00008 BTC",
-    status: "completed",
-    date: "Mar 4, 2025 at 10:00 AM",
-    partner: "Airtel Nigeria"
-  }
-];
 
 export default function Wallet() {
   const { user, loading } = useAuth();
@@ -233,6 +119,8 @@ export default function Wallet() {
   const [lifetimeTradeVolume, setLifetimeTradeVolume] = useState<number>(0);
   const [lifetimeSendVolume, setLifetimeSendVolume] = useState<number>(0);
   const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [transactionsLoaded, setTransactionsLoaded] = useState(false);
   const { toast } = useToast();
 
   useWalletMonitoring(['BTC', 'ETH', 'SOL', 'BNB', 'TRX', 'USDC', 'USDT'], !!user);
@@ -251,6 +139,7 @@ export default function Wallet() {
     loadUserProfile();
     loadWalletData();
     loadCryptoPrices();
+    loadTransactions();
 
     // Increase price update interval to reduce calls
     const priceInterval = setInterval(loadCryptoPrices, 120000); // 2 minutes instead of 1
@@ -300,6 +189,7 @@ export default function Wallet() {
           clearTimeout(walletUpdateTimeout);
           walletUpdateTimeout = setTimeout(() => {
             loadWalletData();
+            loadTransactions();
           }, 1000);
 
           // Show toast notification
@@ -413,6 +303,18 @@ export default function Wallet() {
       // Set prices loaded to true even on error to show cached data
       // But DON'T set pricesLoadedSuccessfully - this prevents caching bad data
       setPricesLoaded(true);
+    }
+  };
+
+  const loadTransactions = async () => {
+    if (!user) return;
+    try {
+      const txs = await getWalletTransactions(user.id, 50);
+      setTransactions(txs);
+      setTransactionsLoaded(true);
+    } catch (error) {
+      console.error("Error loading transactions:", error);
+      setTransactionsLoaded(true);
     }
   };
 
@@ -893,12 +795,12 @@ export default function Wallet() {
                                 {balanceVisible ? asset.balance.toFixed(7) : "••••••"}
                               </div>
                               <div className="text-xs sm:text-sm text-muted-foreground">
-                                {balanceVisible ? `≈ ${asset.usdValue.toFixed(2)} USD` : "••••••"}
+                                {balanceVisible ? `≈ ${preferredCurrency === 'USD' ? asset.usdValue.toFixed(2) : asset.ngnValue.toFixed(2)} ${preferredCurrency}` : "••••••"}
                               </div>
                             </div>
                             <div className="text-right">
                               <div className={`font-medium text-sm ${asset.pnlUsd >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {balanceVisible ? (asset.pnlUsd >= 0 ? '+' : '') + asset.pnlUsd.toFixed(2) : "••••"}
+                                {balanceVisible ? (asset.pnlUsd >= 0 ? '+' : '') + (preferredCurrency === 'USD' ? asset.pnlUsd.toFixed(2) : convertToNGN(asset.pnlUsd).toFixed(2)) : "••••"}
                               </div>
                               <div className={`text-xs ${asset.pnlPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {balanceVisible ? (asset.pnlPercentage >= 0 ? '+' : '') + asset.pnlPercentage.toFixed(2) + '%' : "••••"}
@@ -925,42 +827,56 @@ export default function Wallet() {
             {/* Recent Activity Tab Content */}
             {activeAssetTab === "activity" && (
               <div className="space-y-3 mb-8">
-                <p className="text-sm text-muted-foreground mb-4">Recent P2P trading activity</p>
-                {recentActivities.map((activity) => (
-                  <Card key={activity.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-sm">{activity.type}</span>
-                            <Badge
-                              variant="outline"
-                              className={
-                                activity.status === "completed"
-                                  ? "bg-green-500/10 text-green-600 border-green-500/20"
-                                  : activity.status === "pending"
-                                  ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                                  : "bg-red-500/10 text-red-600 border-red-500/20"
-                              }
-                            >
-                              {activity.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                              {activity.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
-                              {activity.status === "failed" && <XCircle className="h-3 w-3 mr-1" />}
-                              {activity.status}
-                            </Badge>
+                <p className="text-sm text-muted-foreground mb-4">Recent wallet activity</p>
+                {!transactionsLoaded ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading transactions...</div>
+                ) : transactions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No recent activity</div>
+                ) : (
+                  transactions.slice(0, 5).map((tx) => (
+                    <Card key={tx.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-sm capitalize">{tx.type.replace(/_/g, ' ')}</span>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  tx.status === "completed"
+                                    ? "bg-green-500/10 text-green-600 border-green-500/20"
+                                    : tx.status === "pending"
+                                    ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                                    : "bg-red-500/10 text-red-600 border-red-500/20"
+                                }
+                              >
+                                {tx.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                {tx.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                                {(tx.status === "failed" || tx.status === "cancelled") && <XCircle className="h-3 w-3 mr-1" />}
+                                {tx.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm font-medium">{tx.crypto_symbol}</p>
+                            {tx.to_address && (
+                              <p className="text-xs text-muted-foreground">To: {tx.to_address.slice(0, 8)}...{tx.to_address.slice(-6)}</p>
+                            )}
                           </div>
-                          <p className="text-sm font-medium">{activity.action}</p>
-                          <p className="text-xs text-muted-foreground">with {activity.partner}</p>
+                          <div className="text-right">
+                            <p className={`font-semibold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {tx.amount >= 0 ? '+' : ''}{tx.amount.toFixed(8)} {tx.crypto_symbol}
+                            </p>
+                            {tx.fee > 0 && (
+                              <p className="text-xs text-muted-foreground">Fee: {tx.fee} {tx.crypto_symbol}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{activity.amount}</p>
-                          <p className="text-sm text-muted-foreground">{activity.cryptoAmount}</p>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(tx.created_at).toLocaleString()}
                         </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground">{activity.date}</div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             )}
 
@@ -968,43 +884,66 @@ export default function Wallet() {
             {activeAssetTab === "operations" && (
               <div className="space-y-3 mb-8">
                 <p className="text-sm text-muted-foreground mb-4">All wallet operations including trades, purchases, and transfers</p>
-                {allOperations.map((operation) => (
-                  <Card key={operation.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="secondary" className="text-xs">
-                              {operation.type}
-                            </Badge>
-                            <Badge
-                              variant="outline"
-                              className={
-                                operation.status === "completed"
-                                  ? "bg-green-500/10 text-green-600 border-green-500/20"
-                                  : operation.status === "pending"
-                                  ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                                  : "bg-red-500/10 text-red-600 border-red-500/20"
-                              }
-                            >
-                              {operation.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                              {operation.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
-                              {operation.status === "failed" && <XCircle className="h-3 w-3 mr-1" />}
-                              {operation.status}
-                            </Badge>
+                {!transactionsLoaded ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading operations...</div>
+                ) : transactions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No operations yet</div>
+                ) : (
+                  transactions.map((tx) => (
+                    <Card key={tx.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="secondary" className="text-xs capitalize">
+                                {tx.type.replace(/_/g, ' ')}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  tx.status === "completed"
+                                    ? "bg-green-500/10 text-green-600 border-green-500/20"
+                                    : tx.status === "pending"
+                                    ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                                    : "bg-red-500/10 text-red-600 border-red-500/20"
+                                }
+                              >
+                                {tx.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                {tx.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                                {(tx.status === "failed" || tx.status === "cancelled") && <XCircle className="h-3 w-3 mr-1" />}
+                                {tx.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm font-medium">{tx.crypto_symbol}</p>
+                            {tx.to_address && (
+                              <p className="text-xs text-muted-foreground">To: {tx.to_address.slice(0, 8)}...{tx.to_address.slice(-6)}</p>
+                            )}
+                            {tx.from_address && (
+                              <p className="text-xs text-muted-foreground">From: {tx.from_address.slice(0, 8)}...{tx.from_address.slice(-6)}</p>
+                            )}
+                            {tx.notes && (
+                              <p className="text-xs text-muted-foreground">{tx.notes}</p>
+                            )}
                           </div>
-                          <p className="text-sm font-medium">{operation.action}</p>
-                          <p className="text-xs text-muted-foreground">{operation.partner}</p>
+                          <div className="text-right">
+                            <p className={`font-semibold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {tx.amount >= 0 ? '+' : ''}{tx.amount.toFixed(8)} {tx.crypto_symbol}
+                            </p>
+                            {tx.fee > 0 && (
+                              <p className="text-xs text-muted-foreground">Fee: {tx.fee} {tx.crypto_symbol}</p>
+                            )}
+                            {tx.tx_hash && (
+                              <p className="text-xs text-muted-foreground">TX: {tx.tx_hash.slice(0, 8)}...</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{operation.amount}</p>
-                          <p className="text-sm text-muted-foreground">{operation.cryptoAmount}</p>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(tx.created_at).toLocaleString()}
                         </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground">{operation.date}</div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             )}
 
