@@ -20,6 +20,9 @@ import {
   CreditCard,
   Copy,
   Clock,
+  Shield,
+  Lock,
+  AlertTriangle,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
@@ -34,6 +37,8 @@ import { useWallets } from "@/hooks/use-wallets";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { useVerificationGuard } from "@/hooks/use-verification-guard";
+import { getVerificationLevel } from "@shared/verification-levels";
 
 export default function PexlyPay() {
   const { user, loading } = useAuth();
@@ -50,6 +55,37 @@ export default function PexlyPay() {
   const { toast } = useToast();
   const supabase = createClient();
   const { data: wallets, isLoading: walletsLoading } = useWallets();
+  
+  // Verification level guard for Pexly Pay restrictions
+  const { 
+    verificationLevel, 
+    levelConfig, 
+    isLevel0, 
+    isLevel1,
+    lifetimeSendVolume,
+    isLoading: verificationLoading 
+  } = useVerificationGuard();
+  
+  // Check if user can use Pexly Pay features (Level 1+ required)
+  const canUsePexlyPay = verificationLevel >= 1;
+  
+  // Get daily and lifetime send limits based on level
+  const dailyLimit = levelConfig?.dailyLimit || 0;
+  const lifetimeSendLimit = levelConfig?.lifetimeSendLimit || 0;
+  const remainingSendLimit = lifetimeSendLimit ? Math.max(0, lifetimeSendLimit - lifetimeSendVolume) : null;
+  
+  // Handler for restricted actions (shows upgrade prompt for Level 0)
+  const handleRestrictedAction = (action: () => void, actionName: string) => {
+    if (isLevel0) {
+      toast({
+        title: "Verification Required",
+        description: `Complete Level 1 verification to ${actionName}. Tap to upgrade.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    action();
+  };
 
   // Calculate total balance across all wallets in USD
   const calculateTotalBalance = () => {
@@ -231,11 +267,31 @@ export default function PexlyPay() {
   };
 
   const quickActions = [
-    { icon: QrCode, label: "QR Pay", onClick: () => setScannerDialogOpen(true) },
-    { icon: ArrowLeftRight, label: "Transfer", onClick: () => setSendDialogOpen(true) },
-    { icon: Send, label: "Send", onClick: () => setSendDialogOpen(true) },
-    { icon: Download, label: "Receive", onClick: () => setReceiveDialogOpen(true) },
-    { icon: Users, label: "Referral", onClick: () => setReferralDialogOpen(true) },
+    { 
+      icon: QrCode, 
+      label: "QR Pay", 
+      onClick: () => handleRestrictedAction(() => setScannerDialogOpen(true), "scan QR codes"),
+      restricted: isLevel0 
+    },
+    { 
+      icon: ArrowLeftRight, 
+      label: "Transfer", 
+      onClick: () => handleRestrictedAction(() => setSendDialogOpen(true), "transfer funds"),
+      restricted: isLevel0 
+    },
+    { 
+      icon: Send, 
+      label: "Send", 
+      onClick: () => handleRestrictedAction(() => setSendDialogOpen(true), "send payments"),
+      restricted: isLevel0 
+    },
+    { 
+      icon: Download, 
+      label: "Receive", 
+      onClick: () => handleRestrictedAction(() => setReceiveDialogOpen(true), "receive payments"),
+      restricted: isLevel0 
+    },
+    { icon: Users, label: "Referral", onClick: () => setReferralDialogOpen(true), restricted: false },
   ];
 
   const paymentApps = [
@@ -375,15 +431,70 @@ export default function PexlyPay() {
           </CardContent>
         </Card>
 
+        {/* Verification Level Banner */}
+        {isLevel0 && (
+          <Card className="border-orange-500/50 bg-orange-500/10">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                  <Lock className="h-5 w-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-800 dark:text-orange-200 mb-1">
+                    Verification Required
+                  </h3>
+                  <p className="text-xs text-orange-700 dark:text-orange-300 mb-3">
+                    Complete Level 1 verification to send, receive, and transfer funds through Pexly Pay.
+                  </p>
+                  <Link href="/verification">
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Verify Now
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Level 1 Limits Info */}
+        {isLevel1 && (
+          <Card className="border-blue-500/50 bg-blue-500/10">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30">
+                    Level 1
+                  </Badge>
+                  <span className="text-xs text-blue-700 dark:text-blue-300">
+                    Daily: ${dailyLimit?.toLocaleString()} | Remaining Send: ${remainingSendLimit !== null ? remainingSendLimit.toLocaleString() : 'Unlimited'}
+                  </span>
+                </div>
+                <Link href="/verification">
+                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 text-xs h-7">
+                    Upgrade
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-5 gap-4">
           {quickActions.map((action, index) => (
             <button
               key={index}
               onClick={action.onClick}
-              className="flex flex-col items-center gap-2 group"
+              className={`flex flex-col items-center gap-2 group ${action.restricted ? 'opacity-60' : ''}`}
             >
-              <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+              <div className={`h-14 w-14 rounded-full bg-muted flex items-center justify-center group-hover:bg-muted/80 transition-colors relative ${action.restricted ? 'bg-muted/50' : ''}`}>
                 <action.icon className="h-6 w-6" />
+                {action.restricted && (
+                  <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-orange-500 flex items-center justify-center">
+                    <Lock className="h-3 w-3 text-white" />
+                  </div>
+                )}
               </div>
               <span className="text-xs text-center">{action.label}</span>
             </button>
