@@ -483,7 +483,9 @@ export function Profile() {
   const fetchOffers = async () => {
     try {
       // Fetch offers for the profile being viewed (either own or another user's)
-      const type = offerFilter === "buying" ? "buy" : "sell";
+      // When "buying" is selected, show SELL offers (so visitors can buy from this profile)
+      // When "selling" is selected, show BUY offers (so visitors can sell to this profile)
+      const type = offerFilter === "buying" ? "sell" : "buy";
 
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
@@ -600,18 +602,20 @@ export function Profile() {
       }));
 
       // Filter based on feedbackFilter (buyers or sellers)
+      // When "buyers" tab is selected, show feedback FROM sellers (when profile owner was buying)
+      // When "sellers" tab is selected, show feedback FROM buyers (when profile owner was selling)
       let filteredFeedbacks = mappedFeedbacks;
       if (feedbackFilter === 'buyers') {
-        // Show feedback FROM buyers (where the profile owner was the seller)
-        filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
-          return f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id;
-        });
-      } else if (feedbackFilter === 'sellers') {
         // Show feedback FROM sellers (where the profile owner was the buyer)
         filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
           if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
           return f.trade.buyer_id === viewingUserId && f.trade.seller_id === f.from_user_id;
+        });
+      } else if (feedbackFilter === 'sellers') {
+        // Show feedback FROM buyers (where the profile owner was the seller)
+        filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
+          if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
+          return f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id;
         });
       }
 
