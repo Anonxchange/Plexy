@@ -359,17 +359,18 @@ export async function convertToUSD(amount: number, fromCurrency: string): Promis
 }
 
 // Get minimum and maximum offer limits in the specified currency
+// Limits are based on USD: $3 minimum, $50,000 maximum
 export async function getOfferLimits(currency: string): Promise<{ min: number; max: number }> {
-  const MIN_NGN = 4500;
-  const MAX_NGN = 23000000;
+  const MIN_USD = 3;
+  const MAX_USD = 50000;
   
-  if (currency === 'NGN') {
-    return { min: MIN_NGN, max: MAX_NGN };
+  if (currency === 'USD') {
+    return { min: MIN_USD, max: MAX_USD };
   }
   
   try {
-    const min = await convertFromNGN(MIN_NGN, currency);
-    const max = await convertFromNGN(MAX_NGN, currency);
+    const min = await convertCurrency(MIN_USD, currency);
+    const max = await convertCurrency(MAX_USD, currency);
     
     return { 
       min: Math.round(min * 100) / 100,
