@@ -90,8 +90,8 @@ export function CreateOffer() {
   const [currency, setCurrency] = useState("USD");
   const [country, setCountry] = useState("");
   const [currencyInitialized, setCurrencyInitialized] = useState(false);
-  const [minAmount, setMinAmount] = useState("4500");
-  const [maxAmount, setMaxAmount] = useState("23000000");
+  const [minAmount, setMinAmount] = useState("3");
+  const [maxAmount, setMaxAmount] = useState("50000");
   const [totalQuantity, setTotalQuantity] = useState("");
   const [quantityInputMode, setQuantityInputMode] = useState<"crypto" | "fiat">("crypto");
   const [timeLimit, setTimeLimit] = useState("30");
@@ -144,6 +144,22 @@ export function CreateOffer() {
     };
     fetchExchangeRate();
   }, [currency]);
+
+  // Auto-update min/max amounts when currency changes (only for new offers)
+  useEffect(() => {
+    if (isEditMode) return; // Don't update limits when editing existing offers
+    
+    const updateLimitsForCurrency = async () => {
+      try {
+        const limits = await getOfferLimits(currency);
+        setMinAmount(Math.round(limits.min).toString());
+        setMaxAmount(Math.round(limits.max).toString());
+      } catch (error) {
+        console.error('Error fetching currency limits:', error);
+      }
+    };
+    updateLimitsForCurrency();
+  }, [currency, isEditMode]);
 
   useEffect(() => {
     const fetchLivePrices = async () => {
@@ -492,7 +508,7 @@ export function CreateOffer() {
       if (minAmountNum < limits.min) {
         toast({
           title: "Amount Too Low",
-          description: `Minimum amount must be at least ${limits.min} ${currency} (₦4,500 NGN equivalent)`,
+          description: `Minimum amount must be at least ${limits.min.toLocaleString()} ${currency} ($3 USD equivalent)`,
           variant: "destructive",
         });
         return;
@@ -501,7 +517,7 @@ export function CreateOffer() {
       if (maxAmountNum > limits.max) {
         toast({
           title: "Amount Too High",
-          description: `Maximum amount cannot exceed ${limits.max.toLocaleString()} ${currency} (₦23,000,000 NGN equivalent)`,
+          description: `Maximum amount cannot exceed ${limits.max.toLocaleString()} ${currency} ($50,000 USD equivalent)`,
           variant: "destructive",
         });
         return;
