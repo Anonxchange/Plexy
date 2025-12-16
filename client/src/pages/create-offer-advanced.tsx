@@ -27,6 +27,7 @@ import { getMerchantLevel } from "@shared/merchant-levels";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { getCountryInfo } from "@/lib/localization";
 
 export function CreateOfferAdvanced() {
   const { 
@@ -45,7 +46,7 @@ export function CreateOfferAdvanced() {
 
       const { data } = await supabase
         .from("user_profiles")
-        .select("merchant_status, verification_level")
+        .select("merchant_status, verification_level, country, preferred_currency")
         .eq("id", user.id)
         .single();
 
@@ -80,10 +81,11 @@ export function CreateOfferAdvanced() {
   const [offerType, setOfferType] = useState<"buy" | "sell">("sell");
   const [offerStatus, setOfferStatus] = useState<"online" | "private">("online");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [currency, setCurrency] = useState("NGN");
+  const [currency, setCurrency] = useState("USD");
   const [country, setCountry] = useState("");
-  const [minAmount, setMinAmount] = useState("4500");
-  const [maxAmount, setMaxAmount] = useState("23000000");
+  const [currencyInitialized, setCurrencyInitialized] = useState(false);
+  const [minAmount, setMinAmount] = useState("3");
+  const [maxAmount, setMaxAmount] = useState("50000");
   const [totalQuantity, setTotalQuantity] = useState("");
   const [quantityInputMode, setQuantityInputMode] = useState<"crypto" | "fiat">("crypto");
   const [offerTerms, setOfferTerms] = useState("");
@@ -125,6 +127,19 @@ export function CreateOfferAdvanced() {
     setPremiumInput(defaultValue.toFixed(1));
   }, [offerType]);
 
+  // Set currency based on user's preferred currency or country
+  useEffect(() => {
+    if (!currencyInitialized && userProfile) {
+      if (userProfile.preferred_currency) {
+        setCurrency(userProfile.preferred_currency.toUpperCase());
+      } else if (userProfile.country) {
+        const countryInfo = getCountryInfo(userProfile.country);
+        setCurrency(countryInfo.currencyCode);
+      }
+      setCurrencyInitialized(true);
+    }
+  }, [userProfile, currencyInitialized]);
+
   useEffect(() => {
     const fetchExchangeRate = async () => {
       if (currency !== "USD") {
@@ -135,6 +150,20 @@ export function CreateOfferAdvanced() {
       }
     };
     fetchExchangeRate();
+  }, [currency]);
+
+  // Auto-update min/max amounts when currency changes
+  useEffect(() => {
+    const updateLimitsForCurrency = async () => {
+      try {
+        const limits = await getOfferLimits(currency);
+        setMinAmount(Math.round(limits.min).toString());
+        setMaxAmount(Math.round(limits.max).toString());
+      } catch (error) {
+        console.error('Error fetching currency limits:', error);
+      }
+    };
+    updateLimitsForCurrency();
   }, [currency]);
 
   useEffect(() => {
@@ -344,7 +373,7 @@ export function CreateOfferAdvanced() {
       if (minAmountNum < limits.min) {
         toast({
           title: "Amount Too Low",
-          description: `Minimum amount must be at least ${limits.min} ${currency} (₦4,500 NGN equivalent)`,
+          description: `Minimum amount must be at least ${limits.min.toLocaleString()} ${currency} ($3 USD equivalent)`,
           variant: "destructive",
         });
         return;
@@ -353,7 +382,7 @@ export function CreateOfferAdvanced() {
       if (maxAmountNum > limits.max) {
         toast({
           title: "Amount Too High",
-          description: `Maximum amount cannot exceed ${limits.max.toLocaleString()} ${currency} (₦23,000,000 NGN equivalent)`,
+          description: `Maximum amount cannot exceed ${limits.max.toLocaleString()} ${currency} ($50,000 USD equivalent)`,
           variant: "destructive",
         });
         return;
