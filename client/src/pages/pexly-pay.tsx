@@ -32,6 +32,8 @@ import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useWallets } from "@/hooks/use-wallets";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { getCryptoPrices } from "@/lib/crypto-prices";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 export default function PexlyPay() {
   const { user, loading } = useAuth();
@@ -42,17 +44,70 @@ export default function PexlyPay() {
   const [referralDialogOpen, setReferralDialogOpen] = useState(false);
   const [scannerDialogOpen, setScannerDialogOpen] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
+  const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, any>>({});
 
   const { toast } = useToast();
   const supabase = createClient();
   const { data: wallets, isLoading: walletsLoading } = useWallets();
 
-  // Use USDT wallet balance for Pexly Pay
-  const usdtWallet = wallets?.find(w => w.crypto_symbol === 'USDT');
-  const totalBalance = usdtWallet ? parseFloat(usdtWallet.balance.toString()) : 0;
+  // Calculate total balance across all wallets in USD
+  const calculateTotalBalance = () => {
+    if (!wallets || wallets.length === 0) return 0;
+    
+    let total = 0;
+    wallets.forEach(wallet => {
+      const balance = parseFloat(wallet.balance?.toString() || '0');
+      const lockedBalance = parseFloat(wallet.locked_balance?.toString() || '0');
+      const totalWalletBalance = balance + lockedBalance;
+      const priceData = cryptoPrices[wallet.crypto_symbol];
+      const currentPrice = priceData?.current_price || 0;
+      total += totalWalletBalance * currentPrice;
+    });
+    return total;
+  };
+
+  const totalBalance = calculateTotalBalance();
   
   // Fetch user's Pexly Pay metadata (cashback, auto-earn)
   const [pexlyMetadata, setPexlyMetadata] = useState<any>(null);
+
+  // Load crypto prices
+  useEffect(() => {
+    const loadPrices = async () => {
+      try {
+        const symbols = ['BTC', 'ETH', 'BNB', 'TRX', 'SOL', 'LTC', 'USDT', 'USDC', 'TON', 'XMR'];
+        const prices = await getCryptoPrices(symbols);
+        setCryptoPrices(prices);
+      } catch (error) {
+        console.error('Error loading crypto prices:', error);
+      }
+    };
+    loadPrices();
+    const interval = setInterval(loadPrices, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Load user's preferred currency
+  useEffect(() => {
+    const loadUserPreferences = async () => {
+      if (!user?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('preferred_currency')
+          .eq('id', user.id)
+          .single();
+        
+        if (!error && data?.preferred_currency) {
+          setPreferredCurrency(data.preferred_currency.toUpperCase());
+        }
+      } catch (error) {
+        console.error('Error loading user preferences:', error);
+      }
+    };
+    loadUserPreferences();
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchPexlyMetadata = async () => {
@@ -285,31 +340,38 @@ export default function PexlyPay() {
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">
-                    {balanceVisible ? totalBalance.toFixed(2) : "••••"}
+                    {balanceVisible ? totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••"}
                   </span>
-                  <span className="text-lg text-muted-foreground">USDT</span>
+                  <span className="text-lg text-muted-foreground">{preferredCurrency}</span>
                 </div>
               </div>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Download className="h-4 w-4 mr-2" />
-                Top Up
-              </Button>
+              <Link href="/wallet">
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Download className="h-4 w-4 mr-2" />
+                  Top Up
+                </Button>
+              </Link>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t">
-              <span className="text-sm text-muted-foreground">Payment Settings</span>
-              <div className="flex gap-1">
-                <div className="h-8 w-8 rounded-full bg-cyan-500 flex items-center justify-center">
-                  <CreditCard className="h-4 w-4 text-white" />
+            <Link href="/wallet/pexly-pay/payment-settings">
+              <div className="flex items-center justify-between pt-4 border-t cursor-pointer hover:bg-accent/50 -mx-4 px-4 py-2 rounded-lg transition-colors">
+                <span className="text-sm text-muted-foreground">Payment Settings</span>
+                <div className="flex gap-1 items-center">
+                  {wallets?.slice(0, 3).map((wallet, idx) => (
+                    <div key={idx} className="h-8 w-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={cryptoIconUrls[wallet.crypto_symbol] || `https://ui-avatars.com/api/?name=${wallet.crypto_symbol}&background=random`}
+                        alt={wallet.crypto_symbol}
+                        className="h-5 w-5"
+                      />
+                    </div>
+                  ))}
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                  <Smartphone className="h-4 w-4 text-white" />
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
               </div>
-            </div>
+            </Link>
           </CardContent>
         </Card>
 
@@ -394,7 +456,7 @@ export default function PexlyPay() {
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground mb-1">Cashback</p>
               <p className="text-2xl font-bold text-green-600">
-                +{cashback.toFixed(2)} USDT
+                +{cashback.toFixed(2)} {preferredCurrency}
               </p>
               <Badge variant="secondary" className="mt-2 bg-pink-100 text-pink-700 border-0">
                 Base: {cashbackRate}%
@@ -405,7 +467,7 @@ export default function PexlyPay() {
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground mb-1">Auto-Earn</p>
               <p className="text-2xl font-bold text-orange-600">
-                {autoEarnBalance.toFixed(2)} USDT
+                {autoEarnBalance.toFixed(2)} {preferredCurrency}
               </p>
               <div className="mt-2 flex items-center gap-1">
                 <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 text-xs">
