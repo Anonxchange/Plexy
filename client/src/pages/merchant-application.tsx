@@ -661,8 +661,8 @@ export default function MerchantApplicationPage() {
                     <tr className="border-b border-border/30">
                       <td className="py-3 px-2 text-muted-foreground">Limit per ad</td>
                       <td className="text-center py-3 px-2 text-red-500 font-semibold">0</td>
-                      <td className="text-center py-3 px-2">20,000</td>
-                      <td className="text-center py-3 px-2 bg-yellow-500/5 font-semibold">50,000</td>
+                      <td className="text-center py-3 px-2">50,000</td>
+                      <td className="text-center py-3 px-2 bg-yellow-500/5 font-semibold">100,000</td>
                       <td className="text-center py-3 px-2 font-semibold">200,000</td>
                     </tr>
                     <tr className="border-b border-border/30">
