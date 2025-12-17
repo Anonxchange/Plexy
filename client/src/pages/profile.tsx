@@ -1398,7 +1398,7 @@ export function Profile() {
                 currency={offer.fiat_currency}
                 availableRange={{ min: offer.min_amount, max: offer.max_amount }}
                 limits={{ min: offer.min_amount, max: offer.max_amount }}
-                type={offer.type as "buy" | "sell"}
+                type={offerFilter === "buying" ? "buy" : "sell"}
               />
             ))}
           </div>
