@@ -5,7 +5,7 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'trade' | 'price_alert' | 'offer' | 'system' | 'payment' | 'announcement';
+  type: 'trade' | 'price_alert' | 'offer' | 'system' | 'payment' | 'announcement' | 'account_change';
   read: boolean;
   created_at: string;
   metadata?: Record<string, any>;
@@ -229,6 +229,64 @@ export function subscribeToNotifications(
   return () => {
     supabase.removeChannel(channel);
   };
+}
+
+export async function createAccountChangeNotification(
+  userId: string,
+  changeType: 'password_changed' | '2fa_enabled' | '2fa_disabled' | 'email_changed' | 'phone_changed' | 'login_attempt',
+  metadata?: Record<string, any>
+): Promise<boolean> {
+  const supabase = createClient();
+  
+  const changeMessages: Record<string, { title: string; message: string }> = {
+    password_changed: {
+      title: 'Password Changed',
+      message: 'Your account password has been successfully changed.'
+    },
+    '2fa_enabled': {
+      title: 'Two-Factor Authentication Enabled',
+      message: 'Two-factor authentication has been enabled on your account for added security.'
+    },
+    '2fa_disabled': {
+      title: 'Two-Factor Authentication Disabled',
+      message: 'Two-factor authentication has been disabled on your account.'
+    },
+    email_changed: {
+      title: 'Email Address Changed',
+      message: 'Your account email address has been updated.'
+    },
+    phone_changed: {
+      title: 'Phone Number Changed',
+      message: 'Your account phone number has been updated.'
+    },
+    login_attempt: {
+      title: 'Login Attempt From New IP',
+      message: 'Your account was logged in from an unfamiliar IP address.'
+    }
+  };
+
+  const change = changeMessages[changeType] || { title: 'Account Changed', message: 'Your account has been modified.' };
+
+  const { error } = await supabase
+    .from('notifications')
+    .insert({
+      user_id: userId,
+      title: change.title,
+      message: change.message,
+      type: 'account_change',
+      read: false,
+      metadata: {
+        changeType,
+        ...metadata
+      }
+    });
+
+  if (error) {
+    console.error('Error creating account change notification:', error);
+    return false;
+  }
+
+  return true;
 }
 
 export async function getAnnouncements(): Promise<Announcement[]> {
