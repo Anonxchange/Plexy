@@ -161,7 +161,7 @@ export function TradeHistory() {
         setTotalCount(tradesData.length);
 
         const active = tradesData.filter(t => t.status === 'active' || t.status === 'pending' || t.status === 'payment_made');
-        const completed = tradesData.filter(t => t.status === 'completed');
+        const completed = tradesData.filter(t => t.status === 'completed' || t.status === 'released');
         const canceled = tradesData.filter(t => t.status === 'cancelled' || t.status === 'expired');
 
         setActiveCount(active.length);
