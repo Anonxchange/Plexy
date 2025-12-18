@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase";
 import { getCountryInfo, getCountryPhoneCode, getAllCountryNames, countries } from "@/lib/localization";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { createAccountChangeNotification } from "@/lib/notifications-api";
 import {
   Select,
   SelectContent,
@@ -597,6 +598,14 @@ export default function AccountSettings() {
       setSmsVerificationCode("");
       setSmsSent(false);
 
+      // Create account change notification
+      if (user?.id) {
+        await createAccountChangeNotification(user.id, '2fa_enabled', { 
+          method: 'SMS',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       toast({
         title: "SMS 2FA Enabled",
         description: "SMS two-factor authentication has been enabled",
@@ -623,6 +632,15 @@ export default function AccountSettings() {
       if (error) throw error;
 
       setSmsAuth(false);
+
+      // Create account change notification
+      if (user?.id) {
+        await createAccountChangeNotification(user.id, '2fa_disabled', { 
+          method: 'SMS',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       toast({
         title: "SMS 2FA Disabled",
         description: "SMS two-factor authentication has been disabled",
@@ -873,6 +891,14 @@ export default function AccountSettings() {
       setAppAuth(false);
       setShowDisable2FADialog(false);
       setDisable2FACode("");
+
+      // Create account change notification
+      if (user?.id) {
+        await createAccountChangeNotification(user.id, '2fa_disabled', { 
+          method: 'App',
+          timestamp: new Date().toISOString()
+        });
+      }
 
       // Re-fetch to ensure states are in sync with database
       await fetch2FAStatus();
