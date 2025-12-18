@@ -121,7 +121,7 @@ export function TradeStatistics() {
           buyer:buyer_id (id, username),
           seller:seller_id (id, username)
         `)
-        .eq("status", "completed")
+        .or(`status.eq.completed,status.eq.released`)
         .or(`buyer_id.eq.${user?.id},seller_id.eq.${user?.id}`)
         .order("completed_at", { ascending: false });
 
