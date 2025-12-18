@@ -209,6 +209,15 @@ async function trackDevice(supabase: any, userId: string) {
       console.error('Error fetching IP:', ipError);
     }
 
+    // Check if this IP exists for this user
+    const { data: existingIPs } = await supabase
+      .from('user_devices')
+      .select('ip_address')
+      .eq('user_id', userId)
+      .eq('ip_address', ipAddress);
+
+    const isNewIP = !existingIPs || existingIPs.length === 0;
+
     const { data: existingDevices } = await supabase
       .from('user_devices')
       .select('*')
@@ -223,6 +232,9 @@ async function trackDevice(supabase: any, userId: string) {
         .update({ is_current: true, last_active: new Date().toISOString() })
         .eq('id', deviceId);
     } else {
+      // Get user's email
+      const { data: { user } } = await supabase.auth.getUser();
+      
       await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
       await supabase.from('user_devices').insert({
         user_id: userId,
@@ -234,6 +246,21 @@ async function trackDevice(supabase: any, userId: string) {
         is_current: true,
         last_active: new Date().toISOString(),
       });
+
+      // If this is a new IP, create a notification (non-blocking)
+      if (isNewIP && user?.email) {
+        // Dynamic import to avoid circular dependency
+        import('./notifications-api').then(({ createAccountChangeNotification }) => {
+          createAccountChangeNotification(userId, 'login_attempt', {
+            ip_address: ipAddress,
+            device: deviceInfo.deviceName,
+            browser: deviceInfo.browser,
+            os: deviceInfo.os,
+            timestamp: new Date().toISOString(),
+            email: user.email
+          }).catch(err => console.error('Error creating account change notification:', err));
+        });
+      }
     }
   } catch (error) {
     console.error('Error in trackDevice:', error);
