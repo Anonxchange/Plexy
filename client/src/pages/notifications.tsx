@@ -135,7 +135,8 @@ export default function NotificationsPage() {
   };
 
   const systemNotifications = notifications.filter(n => n.type === 'system');
-  const generalNotifications = notifications.filter(n => n.type !== 'system');
+  const accountChangeNotifications = notifications.filter(n => n.type === 'account_change');
+  const generalNotifications = notifications.filter(n => n.type !== 'system' && n.type !== 'account_change');
   const campaignNotifications: Notification[] = [];
   const rewardsNotifications: Notification[] = [];
 
@@ -446,6 +447,52 @@ export default function NotificationsPage() {
                           {formatTime(notification.created_at)}
                         </p>
                       </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Account Changes Tab */}
+          <TabsContent value="account-changes" className="mt-0">
+            <ScrollArea className="h-[calc(100vh-180px)]">
+              <div className="divide-y divide-border">
+                {accountChangeNotifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Shield className="h-12 w-12 text-muted-foreground mb-3 opacity-30" />
+                    <p className="text-sm text-muted-foreground">No account changes</p>
+                  </div>
+                ) : (
+                  accountChangeNotifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`flex items-start gap-3 p-4 hover:bg-accent cursor-pointer transition-colors ${
+                        !notification.read ? 'bg-orange-500/5' : ''
+                      }`}
+                    >
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
+                          <Shield className="h-5 w-5 text-orange-500" />
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground leading-tight">
+                          {notification.title}
+                        </p>
+                        <p className="text-sm text-muted-foreground leading-relaxed mt-1">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {formatTime(notification.created_at)}
+                        </p>
+                      </div>
+
+                      {!notification.read && (
+                        <span className="flex-shrink-0 h-2 w-2 rounded-full bg-orange-500 mt-2"></span>
+                      )}
                     </div>
                   ))
                 )}
