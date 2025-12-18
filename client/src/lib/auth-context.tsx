@@ -249,6 +249,7 @@ async function trackDevice(supabase: any, userId: string) {
 
       // If this is a new IP, create a notification (non-blocking)
       if (isNewIP && user?.email) {
+        console.log('New IP detected, creating account change notification:', ipAddress);
         // Dynamic import to avoid circular dependency
         import('./notifications-api').then(({ createAccountChangeNotification }) => {
           createAccountChangeNotification(userId, 'login_attempt', {
@@ -258,8 +259,10 @@ async function trackDevice(supabase: any, userId: string) {
             os: deviceInfo.os,
             timestamp: new Date().toISOString(),
             email: user.email
+          }).then(success => {
+            console.log('Account change notification created:', success);
           }).catch(err => console.error('Error creating account change notification:', err));
-        });
+        }).catch(err => console.error('Error importing notifications-api:', err));
       }
     }
   } catch (error) {
