@@ -45,17 +45,20 @@ export default function NotificationsPage() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   useEffect(() => {
-    if (user) {
-      loadNotifications();
-      loadAnnouncements();
+    if (!user) return;
+    
+    loadNotifications();
+    loadAnnouncements();
+    
+    // Subscribe to real-time notification updates
+    import('@/lib/notifications-api').then(({ subscribeToNotifications }) => {
+      const unsubscribe = subscribeToNotifications(user.id, (newNotification) => {
+        console.log('New notification received:', newNotification);
+        setNotifications((prev) => [newNotification, ...prev]);
+      });
       
-      // Auto-refresh notifications every 5 seconds to catch new account changes
-      const interval = setInterval(() => {
-        loadNotifications();
-      }, 5000);
-      
-      return () => clearInterval(interval);
-    }
+      return () => unsubscribe();
+    });
   }, [user]);
 
   const loadAnnouncements = async () => {
@@ -178,17 +181,6 @@ export default function NotificationsPage() {
             <h1 className="text-xl font-semibold">Notifications</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => loadNotifications()}
-              title="Refresh notifications"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -524,64 +516,6 @@ export default function NotificationsPage() {
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Bell className="h-12 w-12 text-muted-foreground mb-3 opacity-30" />
                 <p className="text-sm text-muted-foreground">No campaign notifications</p>
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {/* Account Changes Tab */}
-          <TabsContent value="account-changes" className="mt-0">
-            <ScrollArea className="h-[calc(100vh-180px)]">
-              <div className="divide-y divide-border">
-                {systemNotifications.filter(n => 
-                  n.message.toLowerCase().includes('account') || 
-                  n.message.toLowerCase().includes('profile') ||
-                  n.message.toLowerCase().includes('email') ||
-                  n.message.toLowerCase().includes('phone') ||
-                  n.message.toLowerCase().includes('password') ||
-                  n.message.toLowerCase().includes('security')
-                ).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <User className="h-12 w-12 text-muted-foreground mb-3 opacity-30" />
-                    <p className="text-sm text-muted-foreground">No account changes</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      You'll see notifications here when your account info is updated
-                    </p>
-                  </div>
-                ) : (
-                  systemNotifications
-                    .filter(n => 
-                      n.message.toLowerCase().includes('account') || 
-                      n.message.toLowerCase().includes('profile') ||
-                      n.message.toLowerCase().includes('email') ||
-                      n.message.toLowerCase().includes('phone') ||
-                      n.message.toLowerCase().includes('password') ||
-                      n.message.toLowerCase().includes('security')
-                    )
-                    .map((notification) => (
-                      <div
-                        key={notification.id}
-                        onClick={() => handleNotificationClick(notification)}
-                        className={`flex items-start gap-3 p-4 hover:bg-accent cursor-pointer transition-colors ${
-                          !notification.read ? 'bg-purple-500/5' : ''
-                        }`}
-                      >
-                        <div className="flex-shrink-0 mt-1">
-                          <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
-                            {getNotificationIcon(notification)}
-                          </div>
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground leading-relaxed">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {formatTime(notification.created_at)}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                )}
               </div>
             </ScrollArea>
           </TabsContent>
