@@ -64,9 +64,9 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
         supabase.from("user_profiles").select("*").eq("id", userId).single(),
         supabase.from("trade_feedback").select("*", { count: "exact" }).eq("to_user_id", userId).eq("rating", "positive"),
         supabase.from("trade_feedback").select("*", { count: "exact" }).eq("to_user_id", userId).eq("rating", "negative"),
-        supabase.from("p2p_trades").select("seller_id").eq("buyer_id", userId).eq("status", "completed"),
-        supabase.from("p2p_trades").select("buyer_id").eq("seller_id", userId).eq("status", "completed"),
-        supabase.from("p2p_trades").select("created_at, completed_at").eq("seller_id", userId).eq("status", "completed").not("completed_at", "is", null)
+        supabase.from("p2p_trades").select("seller_id").eq("buyer_id", userId).or("status.eq.completed,status.eq.released"),
+        supabase.from("p2p_trades").select("buyer_id").eq("seller_id", userId).or("status.eq.completed,status.eq.released"),
+        supabase.from("p2p_trades").select("created_at, completed_at").eq("seller_id", userId).or("status.eq.completed,status.eq.released").not("completed_at", "is", null)
       ]);
 
       const profile = profileResult.data;
