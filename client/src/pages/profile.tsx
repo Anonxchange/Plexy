@@ -282,7 +282,7 @@ export function Profile() {
       let tradesVolume = 0;
 
       if (recentTrades && recentTrades.length > 0) {
-        const completedTrades = recentTrades.filter((t: any) => t.status === 'completed');
+        const completedTrades = recentTrades.filter((t: any) => t.status === 'completed' || t.status === 'released');
         const totalTrades = recentTrades.length;
         
         if (totalTrades > 0) {
@@ -383,20 +383,20 @@ export function Profile() {
           .from('p2p_trades')
           .select('*', { count: 'exact', head: true })
           .eq('seller_id', viewingUserId)
-          .eq('status', 'completed');
+          .or('status.eq.completed,status.eq.released');
 
         // Count unique trade partners
         const { data: buyerTrades } = await supabase
           .from('p2p_trades')
           .select('seller_id')
           .eq('buyer_id', viewingUserId)
-          .eq('status', 'completed');
+          .or('status.eq.completed,status.eq.released');
 
         const { data: sellerTrades } = await supabase
           .from('p2p_trades')
           .select('buyer_id')
           .eq('seller_id', viewingUserId)
-          .eq('status', 'completed');
+          .or('status.eq.completed,status.eq.released');
 
         const uniquePartners = new Set([
           ...(buyerTrades?.map(t => t.seller_id) || []),
