@@ -59,14 +59,16 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
         negativeFeedbackResult,
         buyerTradesResult,
         sellerTradesResult,
-        completedTradesResult
+        completedTradesResult,
+        blockedByCountResult
       ] = await Promise.all([
         supabase.from("user_profiles").select("*").eq("id", userId).single(),
         supabase.from("trade_feedback").select("*", { count: "exact" }).eq("to_user_id", userId).eq("rating", "positive"),
         supabase.from("trade_feedback").select("*", { count: "exact" }).eq("to_user_id", userId).eq("rating", "negative"),
         supabase.from("p2p_trades").select("seller_id").eq("buyer_id", userId).or("status.eq.completed,status.eq.released"),
         supabase.from("p2p_trades").select("buyer_id").eq("seller_id", userId).or("status.eq.completed,status.eq.released"),
-        supabase.from("p2p_trades").select("created_at, completed_at").eq("seller_id", userId).or("status.eq.completed,status.eq.released").not("completed_at", "is", null)
+        supabase.from("p2p_trades").select("created_at, completed_at").eq("seller_id", userId).or("status.eq.completed,status.eq.released").not("completed_at", "is", null),
+        supabase.from("blocked_users").select("*", { count: "exact", head: true }).eq("blocked_user_id", userId)
       ]);
 
       const profile = profileResult.data;
@@ -77,6 +79,7 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
       const buyerTrades = buyerTradesResult.data;
       const sellerTrades = sellerTradesResult.data;
       const completedTrades = completedTradesResult.data;
+      const blockedByCount = blockedByCountResult.count;
 
       // Calculate stats
       const totalTrades = (positiveCount || 0) + (negativeCount || 0);
@@ -114,6 +117,7 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
         avgReleaseTime,
         avgPaymentTime,
         tradesReleased: completedTrades?.length || 0,
+        blockedByCount: blockedByCount || 0,
       };
 
       setUserData(userData);
@@ -165,7 +169,7 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
     );
   }
 
-  const { profile, positiveCount, negativeCount, successRate, totalTrades, tradePartners, positiveFeedback, negativeFeedback, avgReleaseTime, avgPaymentTime, tradesReleased } = userData;
+  const { profile, positiveCount, negativeCount, successRate, totalTrades, tradePartners, positiveFeedback, negativeFeedback, avgReleaseTime, avgPaymentTime, tradesReleased, blockedByCount } = userData;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -270,7 +274,7 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
               </div>
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Blocked by</div>
-                <div className="font-semibold text-sm">3 users</div>
+                <div className="font-semibold text-sm">{blockedByCount} users</div>
               </div>
             </div>
           </div>
@@ -292,17 +296,6 @@ export function UserProfileDialog({ isOpen, onClose, userId, prefetch = false }:
             </TabsList>
 
             <TabsContent value="trading" className="p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Trade partners</div>
-                  <div className="text-xl font-bold">{tradePartners}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Trades released</div>
-                  <div className="text-xl font-bold">{tradesReleased}</div>
-                </div>
-              </div>
-
               <div className="space-y-2 pt-1">
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">Trade success</span>
