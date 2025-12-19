@@ -24,7 +24,8 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  Send
+  Send,
+  ArrowRight
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -49,6 +50,17 @@ const cryptoAssets = [
   { symbol: "TRX", name: "Tron", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.TRX, color: "text-red-500", avgCost: 0 },
   { symbol: "USDC", name: "USD Coin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.USDC, color: "text-blue-600", avgCost: 0 },
   { symbol: "USDT", name: "Tether", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.USDT, color: "text-green-500", avgCost: 0 },
+];
+
+const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
+
+const defaultMarkets = [
+  { symbol: "BTC", name: "Bitcoin", pair: "USDT", price: "85,451.2", change: -0.79 },
+  { symbol: "ETH", name: "Ethereum", pair: "USDT", price: "2,826.06", change: -0.13 },
+  { symbol: "SOL", name: "Solana", pair: "USDT", price: "119.38", change: -3.11 },
+  { symbol: "BNB", name: "Binance Coin", pair: "USDT", price: "600", change: -2.0 },
+  { symbol: "USDC", name: "USD Coin", pair: "USDT", price: "1.0004", change: 0.02 },
+  { symbol: "USDT", name: "Tether", pair: "USDT", price: "1.0000", change: 0.0 },
 ];
 
 const initialSpotPairs = [
@@ -84,6 +96,8 @@ export default function Wallet() {
   const [hideZeroBalance, setHideZeroBalance] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [activeSpotTab, setActiveSpotTab] = useState("hot");
+  const [activeTab, setActiveTab] = useState("Hot");
+  const [markets, setMarkets] = useState(defaultMarkets);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -1066,68 +1080,90 @@ export default function Wallet() {
               </CardContent>
             </Card>
 
-            {/* Spot Exchange Card */}
+            {/* Markets Card */}
             <Card className="mb-6">
-              <CardContent className="p-4">
+              <CardContent className="p-5">
+                {/* Header with Market dropdown */}
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Spot exchange</h3>
-                  <span className="text-primary text-sm cursor-pointer flex items-center gap-1 hover:underline">
-                    View all 50+ coins <ChevronRight className="h-4 w-4" />
-                  </span>
+                  <h2 className="text-xl font-bold text-foreground">Markets</h2>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg text-sm font-medium text-foreground">
+                    Market
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </button>
                 </div>
 
-                {/* Spot Tabs */}
-                <div className="flex gap-2 mb-4">
-                  <Button
-                    variant={activeSpotTab === "hot" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveSpotTab("hot")}
-                  >
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    Hot pairs
-                  </Button>
-                  <Button
-                    variant={activeSpotTab === "movers" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveSpotTab("movers")}
-                  >
-                    Top movers
-                  </Button>
-                  <Button
-                    variant={activeSpotTab === "added" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveSpotTab("added")}
-                  >
-                    Recently added
-                  </Button>
+                {/* Tabs with underline */}
+                <div className="overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-6">
+                    {tabs.map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`pb-2 text-sm font-medium transition-colors whitespace-nowrap relative ${
+                          activeTab === tab
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {tab}
+                        {activeTab === tab && (
+                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Spot Pairs List */}
-                <div className="space-y-2">
-                  {spotPairs.map((pair) => (
-                    <div
-                      key={pair.symbol}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={cryptoIconUrls[pair.symbol as keyof typeof cryptoIconUrls] || `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`}
-                          alt={pair.symbol}
-                          className="w-8 h-8 rounded-full"
-                          onError={(e) => {
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${pair.symbol}&background=random`;
-                          }}
-                        />
-                        <span className="font-medium">{pair.symbol}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">${pair.price.toLocaleString()}</div>
-                      </div>
-                      <div className={`text-sm font-medium ${pair.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {pair.change >= 0 ? '+' : ''}{pair.change}%
-                      </div>
+                {/* Column Headers */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 py-2">
+                    <span>Trading Pairs</span>
+                    <div className="flex">
+                      <span className="w-24 text-center">Price</span>
+                      <span className="w-20 text-right">24H Change</span>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Market Rows */}
+                  <div className="divide-y divide-border">
+                    {markets.map((market) => (
+                      <button
+                        key={market.symbol}
+                        className="w-full flex items-center justify-between py-4 hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={cryptoIconUrls[market.symbol] || `https://ui-avatars.com/api/?name=${market.symbol}&background=random`}
+                            alt={market.name}
+                            className="w-9 h-9 rounded-full"
+                          />
+                          <div className="text-left">
+                            <span className="font-semibold text-foreground">{market.symbol}</span>
+                            <span className="text-muted-foreground">/USDT</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center">
+                          <span className="w-24 text-center font-medium text-foreground">${market.price}</span>
+                          <div className={`w-20 text-right flex items-center justify-end gap-0.5 font-medium ${
+                            market.change >= 0 ? "text-primary" : "text-destructive"
+                          }`}>
+                            {market.change >= 0 ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
+                            {Math.abs(market.change).toFixed(2)}%
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <button className="flex items-center gap-1 text-primary font-medium text-sm mt-4 hover:gap-2 transition-all">
+                    Market Overview
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
                 </div>
               </CardContent>
             </Card>
