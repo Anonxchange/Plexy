@@ -1,5 +1,5 @@
  import { useState, useEffect } from "react";
-import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, Users, Zap, MoreHorizontal, ArrowRight, Gift, Star, ChevronRight } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";
@@ -18,11 +18,43 @@ const defaultMarkets = [
   { symbol: "USDT", name: "Tether", pair: "USDT", price: "1.0000", change: 0.0 },
 ];
 
+const QuickActionIcon = ({ type, color }: { type: string; color: string }) => {
+  const icons: Record<string, JSX.Element> = {
+    p2p: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <circle cx="22" cy="32" r="12" fill={color} />
+        <circle cx="42" cy="32" r="12" fill={color} opacity="0.7" />
+        <path d="M34 28l8 0" stroke={color} strokeWidth="2" strokeLinecap="round" />
+        <path d="M30 36l8 0" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
+    quick_trade: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <circle cx="32" cy="32" r="24" fill={color} opacity="0.2" />
+        <path d="M40 22l8 8-8 8" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M16 30h32" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <path d="M24 42l-8-8 8-8" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M48 34H16" stroke={color} strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    ),
+    rewards: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <circle cx="32" cy="22" r="10" fill={color} />
+        <rect x="20" y="34" width="24" height="18" rx="2" fill={color} opacity="0.8" />
+        <rect x="26" y="40" width="12" height="6" fill="white" opacity="0.8" />
+        <path d="M20 32l-6 8l6 4" stroke={color} strokeWidth="2" fill="none" />
+        <path d="M44 32l6 8l-6 4" stroke={color} strokeWidth="2" fill="none" />
+      </svg>
+    ),
+  };
+  return icons[type] || null;
+};
+
 const actions = [
-  { icon: Users, label: "P2P Trading", color: "bg-primary/10 text-primary" },
-  { icon: Zap, label: "Quick Trade", color: "bg-secondary text-secondary-foreground" },
-  { icon: Gift, label: "Rewards", color: "bg-accent text-accent-foreground" },
-  { icon: MoreHorizontal, label: "More", color: "bg-muted text-muted-foreground" },
+  { type: "p2p", label: "P2P Trading", color: "#4FACFE" },
+  { type: "quick_trade", label: "Quick Trade", color: "#7C3AED" },
+  { type: "rewards", label: "Rewards", color: "#F59E0B" },
+  { type: "more", label: "More", color: "#6B7280" },
 ];
 
 const rewards = [
@@ -158,10 +190,23 @@ export const Dashboard = () => {
                   <button
                     key={action.label}
                     onClick={() => action.label === "More" && setIsMoreModalOpen(true)}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95"
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
                   >
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${action.color} transition-transform hover:scale-105`}>
-                      <action.icon className="h-5 w-5" />
+                    <div 
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                      style={{
+                        background: `linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))`,
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                      }}
+                    >
+                      {action.type === "more" ? (
+                        <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                      ) : (
+                        <div className="w-6 h-6">
+                          <QuickActionIcon type={action.type} color={action.color} />
+                        </div>
+                      )}
                     </div>
                     <span className="text-xs font-medium text-foreground text-center leading-tight">
                       {action.label}
