@@ -189,7 +189,6 @@ export const DashboardMoreModal = ({ isOpen, onClose }: MoreModalProps) => {
     { icon: "shop", label: "Status", color: "#10B981" },
     { icon: "history", label: "My Offers", color: "#F59E0B" },
     { icon: "history", label: "Trade History", color: "#8B5CF6" },
-    { icon: "settings", label: "Import Feedback", color: "#4FACFE" },
     { icon: "support", label: "Contact Support", color: "#FF6B6B" },
     { icon: "academy", label: "Pexly Academy", color: "#FFA500" },
     { icon: "discord", label: "Discord", color: "#5865F2" },
