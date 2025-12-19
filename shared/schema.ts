@@ -37,11 +37,6 @@ export const verifications = pgTable("verifications", {
   rejectionReason: text("rejection_reason"),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
 export const pexlyBalances = pgTable("pexly_balances", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: varchar("user_id").notNull().references(() => users.id).unique(),
@@ -76,6 +71,11 @@ export const referrals = pgTable("referrals", {
   status: text("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
+});
+
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
 });
 
 export const insertVerificationSchema = createInsertSchema(verifications).omit({
