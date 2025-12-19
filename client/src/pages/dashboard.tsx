@@ -193,7 +193,7 @@ export const Dashboard = () => {
                     className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
                   >
                     <div 
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
                       style={{
                         background: `linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))`,
                         backdropFilter: "blur(10px)",
@@ -201,9 +201,9 @@ export const Dashboard = () => {
                       }}
                     >
                       {action.type === "more" ? (
-                        <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                        <MoreHorizontal className="h-7 w-7 text-muted-foreground" />
                       ) : (
-                        <div className="w-6 h-6">
+                        <div className="w-10 h-10">
                           <QuickActionIcon type={action.type} color={action.color} />
                         </div>
                       )}
