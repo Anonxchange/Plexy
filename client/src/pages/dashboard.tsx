@@ -1,5 +1,5 @@
  import { useState, useEffect } from "react";
-import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";
