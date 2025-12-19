@@ -29,7 +29,7 @@ const rewards = [
 ];
 
 export function Dashboard() {
-  const { user, signOut, loading } = useAuth();
+  const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("Hot");
@@ -37,7 +37,6 @@ export function Dashboard() {
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [medalStats, setMedalStats] = useState<any>(null);
   const [spotPrices, setSpotPrices] = useState<Record<string, CryptoPrice>>({});
-  const supabase = createClient();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -72,11 +71,6 @@ export function Dashboard() {
     } catch (error) {
       console.error('Error loading crypto prices:', error);
     }
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    setLocation("/");
   };
 
   if (loading) {
