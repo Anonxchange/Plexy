@@ -560,56 +560,6 @@ export default function Wallet() {
           </button>
         </div>
 
-        {/* Wallet Assets Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {filteredAssets.filter(asset => asset.balance > 0).slice(0, 6).map((asset) => (
-            <Link key={asset.symbol} href={`/wallet/asset/${asset.symbol}`} className="block">
-              <Card className="hover:shadow-md transition-all cursor-pointer h-full">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={asset.iconUrl}
-                        alt={asset.name}
-                        className="w-10 h-10 rounded-full"
-                        onError={(e) => {
-                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
-                        }}
-                      />
-                      <div>
-                        <div className="font-semibold text-sm">{asset.symbol}</div>
-                        <div className="text-xs text-muted-foreground">{asset.name}</div>
-                      </div>
-                    </div>
-                    <div className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      asset.priceChange24h >= 0 
-                        ? 'bg-primary/10 text-primary' 
-                        : 'bg-destructive/10 text-destructive'
-                    }`}>
-                      {asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Balance</div>
-                      <div className="font-semibold">{asset.balance.toFixed(8)} {asset.symbol}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Value</div>
-                      <div className="font-semibold text-lg">${asset.usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Price:</span>
-                      <span className="font-medium">${asset.currentPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-
         {/* 3-Column Layout for Desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
