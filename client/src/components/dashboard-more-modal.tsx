@@ -1,25 +1,97 @@
-import { X, Users, Store, MessageSquare, Zap, TrendingUp, Gift, CreditCard, Wallet, ArrowRightLeft, BadgeCheck, Lightbulb, BarChart3, Settings } from "lucide-react";
+import {
+  X,
+  Users,
+  Wallet,
+  ShoppingCart,
+  ArrowRightLeft,
+  Building,
+  CreditCard,
+  Smartphone,
+  BarChart3,
+  Store,
+  Gift,
+  CheckCircle2,
+  DollarSign,
+  Settings,
+  Sliders,
+  Lock,
+  Activity,
+  FileText,
+  Clock,
+  MessageSquare,
+  HelpCircle,
+  BookOpen,
+  Share2,
+  Trophy,
+  Landmark,
+  Ticket,
+} from "lucide-react";
 
 interface MoreModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface ServiceItem {
+  icon: React.ReactNode;
+  label: string;
+  badge?: string;
+}
+
 export const DashboardMoreModal = ({ isOpen, onClose }: MoreModalProps) => {
-  const services = [
-    { icon: Users, label: "P2P Trading", badge: "HOT" },
-    { icon: Store, label: "My offers and status", badge: "NEW" },
-    { icon: MessageSquare, label: "Contact Support", badge: null },
-    { icon: Wallet, label: "Wallet", badge: null },
-    { icon: ArrowRightLeft, label: "Swap", badge: null },
-    { icon: Gift, label: "Gift Card Store", badge: null },
-    { icon: CreditCard, label: "Buy Crypto", badge: null },
-    { icon: Zap, label: "Quick Trade", badge: null },
-    { icon: BadgeCheck, label: "KYC Verification", badge: null },
-    { icon: TrendingUp, label: "Trading View", badge: null },
-    { icon: Lightbulb, label: "Learn", badge: null },
-    { icon: Settings, label: "Settings", badge: null },
+  const pexlyServices: ServiceItem[] = [
+    { icon: <Users className="h-6 w-6" />, label: "P2P Trading", badge: "HOT" },
+    { icon: <Wallet className="h-6 w-6" />, label: "Wallet" },
+    { icon: <ShoppingCart className="h-6 w-6" />, label: "Buy Crypto" },
+    { icon: <ArrowRightLeft className="h-6 w-6" />, label: "Swap" },
+    { icon: <Landmark className="h-6 w-6" />, label: "Crypto to Bank" },
+    { icon: <CreditCard className="h-6 w-6" />, label: "Visa Card", badge: "NEW" },
+    { icon: <Smartphone className="h-6 w-6" />, label: "Mobile Top-up" },
+    { icon: <BarChart3 className="h-6 w-6" />, label: "OTC Desk" },
+    { icon: <Store className="h-6 w-6" />, label: "Shop" },
+    { icon: <Gift className="h-6 w-6" />, label: "Gift Card Store" },
+    { icon: <Ticket className="h-6 w-6" />, label: "Pexly Gift Card" },
+    { icon: <CheckCircle2 className="h-6 w-6" />, label: "Gift Card Checker" },
+    { icon: <DollarSign className="h-6 w-6" />, label: "Fees" },
   ];
+
+  const accountSettings: ServiceItem[] = [
+    { icon: <Settings className="h-6 w-6" />, label: "Account Settings" },
+    { icon: <Sliders className="h-6 w-6" />, label: "Trader Settings" },
+    { icon: <CreditCard className="h-6 w-6" />, label: "Payment Accounts" },
+    { icon: <Smartphone className="h-6 w-6" />, label: "Devices" },
+    { icon: <Lock className="h-6 w-6" />, label: "Security" },
+    { icon: <Activity className="h-6 w-6" />, label: "Status" },
+    { icon: <FileText className="h-6 w-6" />, label: "My Offers" },
+    { icon: <Clock className="h-6 w-6" />, label: "Trade History" },
+    { icon: <MessageSquare className="h-6 w-6" />, label: "Import Feedback" },
+    { icon: <HelpCircle className="h-6 w-6" />, label: "Contact Support" },
+    { icon: <BookOpen className="h-6 w-6" />, label: "Pexly Academy" },
+    { icon: <MessageSquare className="h-6 w-6" />, label: "Discord" },
+    { icon: <Share2 className="h-6 w-6" />, label: "Invite & Earn" },
+    { icon: <Trophy className="h-6 w-6" />, label: "Medals" },
+  ];
+
+  const ServiceButton = ({ service }: { service: ServiceItem }) => (
+    <button className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-muted/40 hover:bg-muted/60 active:scale-95 transition-all relative group">
+      {/* Badge */}
+      {service.badge && (
+        <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full">
+          {service.badge}
+        </div>
+      )}
+
+      {/* Icon */}
+      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors text-primary">
+        {service.icon}
+      </div>
+
+      {/* Label */}
+      <span className="text-xs font-medium text-foreground text-center leading-tight line-clamp-2">
+        {service.label}
+      </span>
+    </button>
+  );
 
   return (
     <>
@@ -38,7 +110,7 @@ export const DashboardMoreModal = ({ isOpen, onClose }: MoreModalProps) => {
         }`}
       >
         <div
-          className={`bg-card w-full lg:max-w-lg rounded-t-3xl lg:rounded-2xl border-t lg:border border-border shadow-2xl transform transition-all duration-300 pointer-events-auto ${
+          className={`bg-card w-full lg:max-w-2xl rounded-t-3xl lg:rounded-2xl border-t lg:border border-border shadow-2xl transform transition-all duration-300 pointer-events-auto ${
             isOpen
               ? "translate-y-0 opacity-100"
               : "translate-y-full lg:translate-y-0 opacity-0"
@@ -55,32 +127,33 @@ export const DashboardMoreModal = ({ isOpen, onClose }: MoreModalProps) => {
             </button>
           </div>
 
-          {/* Services Grid */}
-          <div className="p-5 overflow-y-auto max-h-[80vh] lg:max-h-auto">
-            <div className="grid grid-cols-3 gap-4">
-              {services.map((service) => (
-                <button
-                  key={service.label}
-                  className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-muted/40 hover:bg-muted/60 active:scale-95 transition-all relative group"
-                >
-                  {/* Badge */}
-                  {service.badge && (
-                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full">
-                      {service.badge}
-                    </div>
-                  )}
+          {/* Content */}
+          <div className="p-5 overflow-y-auto max-h-[80vh] lg:max-h-auto space-y-6">
+            {/* Pexly Services Section */}
+            <div>
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+                Pexly Services
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                {pexlyServices.map((service) => (
+                  <ServiceButton key={service.label} service={service} />
+                ))}
+              </div>
+            </div>
 
-                  {/* Icon */}
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <service.icon className="h-6 w-6 text-primary" />
-                  </div>
+            {/* Divider */}
+            <div className="h-px bg-border" />
 
-                  {/* Label */}
-                  <span className="text-xs font-medium text-foreground text-center leading-tight line-clamp-2">
-                    {service.label}
-                  </span>
-                </button>
-              ))}
+            {/* Account & Settings Section */}
+            <div>
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+                Account & Settings
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                {accountSettings.map((service) => (
+                  <ServiceButton key={service.label} service={service} />
+                ))}
+              </div>
             </div>
           </div>
         </div>
