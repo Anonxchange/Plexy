@@ -552,13 +552,6 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Sign Out */}
-      <div className="flex justify-center p-6">
-        <Button onClick={handleSignOut} variant="outline" size="lg" className="hover:bg-destructive/10 hover:text-destructive">
-          Log out
-        </Button>
-      </div>
-
       <PexlyFooter />
     </div>
   );
