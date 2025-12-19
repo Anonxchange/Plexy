@@ -14,8 +14,6 @@ import {
 import { createClient } from "@/lib/supabase";
 import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Gift, Star, ChevronRight } from "lucide-react";
 import { MulticolorIcons } from "@/components/multicolor-icons";
-import { medals } from "@/lib/medals";
-import { getUserMedalStats } from "@/lib/medals-api";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 
@@ -35,14 +33,12 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState("Hot");
   const [productsModalOpen, setProductsModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [medalStats, setMedalStats] = useState<any>(null);
   const [spotPrices, setSpotPrices] = useState<Record<string, CryptoPrice>>({});
 
   useEffect(() => {
     if (!loading && !user) {
       setLocation("/signin");
     } else if (user) {
-      fetchMedals();
       loadCryptoPrices();
     }
   }, [user, loading, setLocation]);
@@ -52,16 +48,6 @@ export function Dashboard() {
     const interval = setInterval(loadCryptoPrices, 30000);
     return () => clearInterval(interval);
   }, [user]);
-
-  const fetchMedals = async () => {
-    try {
-      if (!user?.id) return;
-      const stats = await getUserMedalStats(user.id);
-      setMedalStats(stats);
-    } catch (error) {
-      console.error('Error fetching medal stats:', error);
-    }
-  };
 
   const loadCryptoPrices = async () => {
     try {
@@ -491,59 +477,6 @@ export function Dashboard() {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Medals Section */}
-      <div className="px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-foreground">Your Medals</h2>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-primary"
-            onClick={() => setLocation("/medals")}
-          >
-            View all →
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? (
-                medalStats.earnedMedals.slice(0, 4).map((medalId: string) => {
-                  const medal = medals.find(m => m.id === medalId);
-                  if (!medal) return null;
-                  return (
-                    <div key={medal.id} className="text-center p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <img src={medal.icon} alt={medal.name} className="text-3xl mb-2 w-10 h-10 mx-auto" />
-                      <div className="text-sm font-medium">{medal.name.toUpperCase()}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{medal.description}</div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center p-3 rounded-lg bg-muted/50 col-span-4">
-                  <div className="w-8 h-8 mx-auto mb-2">
-                    <MulticolorIcons.Award />
-                  </div>
-                  <div className="text-sm font-medium text-muted-foreground">No Medals Yet</div>
-                  <div className="text-xs text-muted-foreground mt-1">Start trading to unlock them!</div>
-                </div>
-              )}
-              {medalStats?.earnedMedals && medalStats.earnedMedals.length < 4 && (
-                Array.from({ length: 4 - medalStats.earnedMedals.length }).map((_, index) => (
-                  <div key={`placeholder-${index}`} className="text-center p-3 rounded-lg bg-muted/50 border border-muted-foreground/20">
-                    <div className="w-8 h-8 mx-auto mb-2 grayscale opacity-50">
-                      <MulticolorIcons.Award />
-                    </div>
-                    <div className="text-sm font-medium text-muted-foreground">Locked</div>
-                    <div className="text-xs text-muted-foreground mt-1">Coming soon</div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <PexlyFooter />
