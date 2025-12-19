@@ -527,6 +527,132 @@ export default function Wallet() {
           </Card>
         </div>
 
+        {/* Quick Access Navigation Menu */}
+        <div className="mb-6">
+          {/* Desktop Quick Access Card */}
+          <Card className="overflow-hidden hidden lg:block">
+            <CardContent className="p-0">
+              <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 border-b">
+                <h3 className="font-semibold text-sm">Quick Access</h3>
+              </div>
+              <nav className="p-2 space-y-1">
+                <Button
+                  variant={activeWalletTab === "wallet" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => setActiveWalletTab("wallet")}
+                >
+                  <WalletIcon className="h-4 w-4 mr-3" />
+                  Wallet
+                </Button>
+                <Link href="/spot" className="block">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                  >
+                    <ArrowLeftRight className="h-4 w-4 mr-3" />
+                    Spot Trading
+                  </Button>
+                </Link>
+                <Link href="/wallet/visa-card" className="block">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                  >
+                    <CreditCard className="h-4 w-4 mr-3" />
+                    Visa Card
+                  </Button>
+                </Link>
+                <Link href="/wallet/pexly-pay" className="block">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                  >
+                    <Send className="h-4 w-4 mr-3" />
+                    Pexly Pay
+                  </Button>
+                </Link>
+                <Link href="/wallet/mobile-topup" className="block">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                  >
+                    <Smartphone className="h-4 w-4 mr-3" />
+                    Mobile Top-up
+                  </Button>
+                </Link>
+                <Link href="/gift-cards" className="block">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                  >
+                    <Gift className="h-4 w-4 mr-3" />
+                    Gift Cards
+                  </Button>
+                </Link>
+              </nav>
+            </CardContent>
+          </Card>
+
+          {/* Mobile Horizontal Quick Access */}
+          <div className="overflow-x-auto lg:hidden -mx-4 px-4">
+            <div className="flex gap-2 min-w-max pb-2">
+              <Button
+                variant={activeWalletTab === "wallet" ? "default" : "outline"}
+                className="h-9 text-sm whitespace-nowrap"
+                onClick={() => setActiveWalletTab("wallet")}
+              >
+                <WalletIcon className="h-4 w-4 mr-2" />
+                Wallet
+              </Button>
+              <Link href="/spot">
+                <Button
+                  variant="outline"
+                  className="h-9 text-sm whitespace-nowrap"
+                >
+                  <ArrowLeftRight className="h-4 w-4 mr-2" />
+                  Spot
+                </Button>
+              </Link>
+              <Link href="/wallet/visa-card">
+                <Button
+                  variant="outline"
+                  className="h-9 text-sm whitespace-nowrap"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Visa card
+                </Button>
+              </Link>
+              <Link href="/wallet/pexly-pay">
+                <Button
+                  variant="outline"
+                  className="h-9 text-sm whitespace-nowrap"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Pexly Pay
+                </Button>
+              </Link>
+              <Link href="/wallet/mobile-topup">
+                <Button
+                  variant="outline"
+                  className="h-9 text-sm whitespace-nowrap"
+                >
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Top-up
+                </Button>
+              </Link>
+              <Link href="/gift-cards">
+                <Button
+                  variant="outline"
+                  className="h-9 text-sm whitespace-nowrap"
+                >
+                  <Gift className="h-4 w-4 mr-2" />
+                  Gift Cards
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+
         {/* Total Assets Card */}
         <div className="bg-card rounded-2xl p-5 mb-6 shadow-sm border border-border">
           <div className="flex items-center justify-between mb-4">
@@ -656,128 +782,6 @@ export default function Wallet() {
           {/* LEFT COLUMN - Navigation Sidebar */}
           <div className="lg:col-span-3">
             <div className="space-y-4 lg:sticky lg:top-6">
-            {/* Quick Access Card */}
-            <Card className="overflow-hidden hidden lg:block">
-              <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 border-b">
-                  <h3 className="font-semibold text-sm">Quick Access</h3>
-                </div>
-                <nav className="p-2 space-y-1">
-                  <Button
-                    variant={activeWalletTab === "wallet" ? "default" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => setActiveWalletTab("wallet")}
-                  >
-                    <WalletIcon className="h-4 w-4 mr-3" />
-                    Wallet
-                  </Button>
-                  <Link href="/spot" className="block">
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                    >
-                      <ArrowLeftRight className="h-4 w-4 mr-3" />
-                      Spot Trading
-                    </Button>
-                  </Link>
-                  <Link href="/wallet/visa-card" className="block">
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                    >
-                      <CreditCard className="h-4 w-4 mr-3" />
-                      Visa Card
-                    </Button>
-                  </Link>
-                  <Link href="/wallet/pexly-pay" className="block">
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                    >
-                      <Send className="h-4 w-4 mr-3" />
-                      Pexly Pay
-                    </Button>
-                  </Link>
-                  <Link href="/wallet/mobile-topup" className="block">
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                    >
-                      <Smartphone className="h-4 w-4 mr-3" />
-                      Mobile Top-up
-                    </Button>
-                  </Link>
-                  <Link href="/gift-cards" className="block">
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                    >
-                      <Gift className="h-4 w-4 mr-3" />
-                      Gift Cards
-                    </Button>
-                  </Link>
-                </nav>
-              </CardContent>
-            </Card>
-
-            {/* Mobile Horizontal Quick Access */}
-            <div className="overflow-x-auto lg:hidden -mx-4 px-4">
-              <div className="flex gap-2 min-w-max pb-2">
-                <Button
-                  variant={activeWalletTab === "wallet" ? "default" : "outline"}
-                  className="h-9 text-sm whitespace-nowrap"
-                  onClick={() => setActiveWalletTab("wallet")}
-                >
-                  <WalletIcon className="h-4 w-4 mr-2" />
-                  Wallet
-                </Button>
-                <Link href="/spot">
-                  <Button
-                    variant="outline"
-                    className="h-9 text-sm whitespace-nowrap"
-                  >
-                    <ArrowLeftRight className="h-4 w-4 mr-2" />
-                    Spot
-                  </Button>
-                </Link>
-                <Link href="/wallet/visa-card">
-                  <Button
-                    variant="outline"
-                    className="h-9 text-sm whitespace-nowrap"
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Visa card
-                  </Button>
-                </Link>
-                <Link href="/wallet/pexly-pay">
-                  <Button
-                    variant="outline"
-                    className="h-9 text-sm whitespace-nowrap"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Pexly Pay
-                  </Button>
-                </Link>
-                <Link href="/wallet/mobile-topup">
-                  <Button
-                    variant="outline"
-                    className="h-9 text-sm whitespace-nowrap"
-                  >
-                    <Smartphone className="h-4 w-4 mr-2" />
-                    Top-up
-                  </Button>
-                </Link>
-                <Link href="/gift-cards">
-                  <Button
-                    variant="outline"
-                    className="h-9 text-sm whitespace-nowrap"
-                  >
-                    <Gift className="h-4 w-4 mr-2" />
-                    Gift Cards
-                  </Button>
-                </Link>
-              </div>
-            </div>
             </div>
           </div>
 
