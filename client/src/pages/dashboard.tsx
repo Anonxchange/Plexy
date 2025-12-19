@@ -1,16 +1,20 @@
- import { useState } from "react";
+ import { useState, useEffect } from "react";
 import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, Users, Calendar, Zap, MoreHorizontal, ArrowRight, Gift, Star, ChevronRight } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { useAuth } from "@/lib/auth-context";
+import { getUserWallets, type Wallet } from "@/lib/wallet-api";
+import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
 
-const markets = [
-  { symbol: "BTC", pair: "USDT", price: "85,451.2", change: -0.79, icon: "₿", color: "bg-amber-500" },
-  { symbol: "SOL", pair: "USDT", price: "119.38", change: -3.11, icon: "◐", color: "bg-gradient-to-r from-purple-500 to-cyan-400" },
-  { symbol: "MNT", pair: "USDT", price: "1.1489", change: -4.96, icon: "◎", color: "bg-teal-500" },
-  { symbol: "ETH", pair: "USDT", price: "2,826.06", change: -0.13, icon: "Ξ", color: "bg-slate-600" },
-  { symbol: "USDC", pair: "USDT", price: "1.0004", change: 0.02, icon: "$", color: "bg-blue-500" },
-  { symbol: "VOOI", pair: "USDT", price: "0.04949", change: 64.97, icon: "◉", color: "bg-amber-400" },
+const defaultMarkets = [
+  { symbol: "BTC", name: "Bitcoin", pair: "USDT", price: "85,451.2", change: -0.79 },
+  { symbol: "ETH", name: "Ethereum", pair: "USDT", price: "2,826.06", change: -0.13 },
+  { symbol: "SOL", name: "Solana", pair: "USDT", price: "119.38", change: -3.11 },
+  { symbol: "BNB", name: "Binance Coin", pair: "USDT", price: "600", change: -2.0 },
+  { symbol: "USDC", name: "USD Coin", pair: "USDT", price: "1.0004", change: 0.02 },
+  { symbol: "USDT", name: "Tether", pair: "USDT", price: "1.0000", change: 0.0 },
 ];
 
 const actions = [
@@ -28,8 +32,58 @@ const rewards = [
 ];
 
 export const Dashboard = () => {
+  const { user } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("Hot");
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
+  const [totalBalance, setTotalBalance] = useState(0);
+  const [equivalentBtc, setEquivalentBtc] = useState(0);
+  const [markets, setMarkets] = useState(defaultMarkets);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadData = async () => {
+      try {
+        const userWallets = await getUserWallets(user.id);
+        setWallets(userWallets);
+        
+        const symbols = userWallets.map(w => w.crypto_symbol);
+        const prices = await getCryptoPrices(symbols.length > 0 ? symbols : ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"]);
+        setCryptoPrices(prices);
+
+        // Calculate total balance in USD
+        let total = 0;
+        let btcEquivalent = 0;
+        userWallets.forEach(wallet => {
+          const price = prices[wallet.crypto_symbol]?.current_price || 0;
+          const usdValue = wallet.balance * price;
+          total += usdValue;
+        });
+
+        setTotalBalance(total);
+        if (prices.BTC?.current_price) {
+          setEquivalentBtc(total / prices.BTC.current_price);
+        }
+
+        // Update markets with real prices
+        const updatedMarkets = defaultMarkets.map(market => {
+          const priceData = prices[market.symbol];
+          return {
+            ...market,
+            price: priceData ? priceData.current_price.toFixed(market.symbol === "USDT" || market.symbol === "USDC" ? 4 : 2) : market.price,
+            change: priceData?.price_change_percentage_24h || 0
+          };
+        });
+        setMarkets(updatedMarkets);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      }
+    };
+
+    loadData();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -61,7 +115,7 @@ export const Dashboard = () => {
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-foreground">
-                      {showBalance ? "1,250.39" : "••••••"}
+                      {showBalance ? totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••••"}
                     </span>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <span className="text-lg font-medium">USD</span>
@@ -69,7 +123,7 @@ export const Dashboard = () => {
                     </div>
                   </div>
                   <p className="text-muted-foreground text-sm mt-1">
-                    ≈ {showBalance ? "0.01462" : "••••••"} BTC
+                    ≈ {showBalance ? equivalentBtc.toFixed(5) : "••••••"} BTC
                   </p>
                   <div className="flex items-center gap-2 mt-3">
                     <span className="text-sm text-muted-foreground">Today's P&L</span>
@@ -195,9 +249,11 @@ export const Dashboard = () => {
                       className="w-full flex items-center justify-between py-4 hover:bg-muted/30 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm ${market.color}`}>
-                          {market.icon}
-                        </div>
+                        <img 
+                          src={cryptoIconUrls[market.symbol] || `https://ui-avatars.com/api/?name=${market.symbol}&background=random`}
+                          alt={market.name}
+                          className="w-9 h-9 rounded-full"
+                        />
                         <div className="text-left">
                           <span className="font-semibold text-foreground">{market.symbol}</span>
                           <span className="text-muted-foreground">/USDT</span>
@@ -205,7 +261,7 @@ export const Dashboard = () => {
                       </div>
 
                       <div className="flex items-center">
-                        <span className="w-24 text-center font-medium text-foreground">{market.price}</span>
+                        <span className="w-24 text-center font-medium text-foreground">${market.price}</span>
                         <div className={`w-20 text-right flex items-center justify-end gap-0.5 font-medium ${
                           market.change >= 0 ? "text-primary" : "text-destructive"
                         }`}>
@@ -214,7 +270,7 @@ export const Dashboard = () => {
                           ) : (
                             <TrendingDown className="h-3 w-3" />
                           )}
-                          {Math.abs(market.change)}%
+                          {Math.abs(market.change).toFixed(2)}%
                         </div>
                       </div>
                     </button>
@@ -317,9 +373,11 @@ export const Dashboard = () => {
                       className="w-full flex items-center justify-between py-4 hover:bg-muted/30 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm ${market.color}`}>
-                          {market.icon}
-                        </div>
+                        <img 
+                          src={cryptoIconUrls[market.symbol] || `https://ui-avatars.com/api/?name=${market.symbol}&background=random`}
+                          alt={market.name}
+                          className="w-9 h-9 rounded-full"
+                        />
                         <div className="text-left">
                           <span className="font-semibold text-foreground">{market.symbol}</span>
                           <span className="text-muted-foreground">/USDT</span>
@@ -327,7 +385,7 @@ export const Dashboard = () => {
                       </div>
 
                       <div className="flex items-center">
-                        <span className="w-24 text-center font-medium text-foreground">{market.price}</span>
+                        <span className="w-24 text-center font-medium text-foreground">${market.price}</span>
                         <div className={`w-20 text-right flex items-center justify-end gap-0.5 font-medium ${
                           market.change >= 0 ? "text-primary" : "text-destructive"
                         }`}>
@@ -336,7 +394,7 @@ export const Dashboard = () => {
                           ) : (
                             <TrendingDown className="h-3 w-3" />
                           )}
-                          {Math.abs(market.change)}%
+                          {Math.abs(market.change).toFixed(2)}%
                         </div>
                       </div>
                     </button>
