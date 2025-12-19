@@ -33,14 +33,6 @@ export function VerifyEmail() {
         const errorCode = hashParams.get("error") || hashParams.get("error_code");
         const errorDescription = hashParams.get("error_description");
 
-        console.log("Hash params:", { 
-          accessToken: accessToken ? accessToken.substring(0, 20) + "..." : null, 
-          type, 
-          refreshToken: !!refreshToken,
-          error: errorCode,
-          errorDescription 
-        });
-
         // Check for errors in the URL (including OTP expired)
         if (errorCode) {
           setStatus("error");
