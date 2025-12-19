@@ -184,137 +184,51 @@ export function Dashboard() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-        {/* Dashboard Title */}
-        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-
-        {/* Welcome Card */}
-        <Collapsible open={welcomeOpen} onOpenChange={setWelcomeOpen} className="mb-6">
+        {/* My Assets Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-2xl font-bold">My Assets</h2>
+            <div className="w-5 h-5 text-muted-foreground">👁️</div>
+          </div>
           <Card>
-            <CollapsibleTrigger className="w-full">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={profileAvatar || user?.user_metadata?.avatar_url} alt="User avatar" />
-                    <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-                      {user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ?? 
-                       user?.email?.substring(0, 2)?.toUpperCase() ?? 
-                       "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="text-left">
-                    <CardTitle>Welcome,</CardTitle>
-                    <CardDescription>{user.email?.split('@')[0] || 'User'}</CardDescription>
-                  </div>
-                </div>
-                {welcomeOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Joined</span>
-                  <span className="text-sm">{new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Email</span>
-                  <span className="text-sm">{user.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Current medal</span>
-                  <span className="text-sm flex items-center gap-1">
-                    {medalStats?.earnedMedals && medalStats.earnedMedals.length > 0 ? (
-                      <>
-                        <img 
-                          src={medals.find(m => m.id === medalStats.earnedMedals[0])?.icon} 
-                          alt="Medal Icon" 
-                          className="w-5 h-5 object-contain" 
-                        />
-                        <span>{medals.find(m => m.id === medalStats.earnedMedals[0])?.name}</span>
-                      </>
-                    ) : (
-                      <>
-                        <img 
-                          src={medals.find(m => m.id === 'the-og')?.icon} 
-                          alt="The OG Medal" 
-                          className="w-5 h-5 object-contain" 
-                        />
-                        <span>{medals.find(m => m.id === 'the-og')?.name}</span>
-                      </>
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Daily Limit</span>
-                  <span className="text-sm font-medium">
-                    {(() => {
-                      const verificationLevel = Number(user?.user_metadata?.verification_level) || 0;
-                      const levelConfig = getVerificationLevel(verificationLevel);
-                      
-                      if (levelConfig.dailyLimit === null) {
-                        return 'Unlimited';
-                      } else if (levelConfig.dailyLimit === 0) {
-                        return '$0 (Verify to trade)';
-                      } else {
-                        return `$${levelConfig.dailyLimit.toLocaleString()}`;
-                      }
-                    })()}
-                  </span>
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-
-        {/* Partner Program Card */}
-        <Card className="mb-6 border-primary/50 bg-primary/5">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-lg mb-1">New Partner Program:</h3>
-                <p className="text-sm text-muted-foreground">
-                  Earn <span className="text-primary font-semibold">up to 40%</span> commission lifetime and{" "}
-                  <span className="font-semibold">other perks!</span>
-                </p>
-              </div>
-              <Button className="bg-primary hover:bg-primary/90">
-                Join program →
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <Card className="hover-elevate cursor-pointer transition-all">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10">
-                  <MulticolorIcons.Rocket />
-                </div>
+            <CardContent className="p-8">
+              <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold">Launch hub</h3>
-                  <p className="text-xs text-muted-foreground">Start trading now</p>
+                  <div className="text-4xl font-bold">0.39 <span className="text-lg text-muted-foreground">USD</span></div>
+                  <div className="text-sm text-muted-foreground mt-1">≈ 0.00000462 BTC</div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="hover-elevate cursor-pointer transition-all">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10">
-                  <MulticolorIcons.BarChart />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Trades</h3>
-                  <p className="text-xs text-muted-foreground">View your trades</p>
-                </div>
+                <Button variant="ghost" className="text-primary font-semibold p-0 h-auto">
+                  Asset Details →
+                </Button>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Products & Services Showcase */}
-        <div className="mb-6">
+        {/* Featured Events/Promotions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-transparent hover:shadow-lg transition-shadow cursor-pointer">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="text-3xl">🏆</div>
+              <div>
+                <h3 className="font-semibold">Boost Battle is live!</h3>
+                <p className="text-xs text-muted-foreground mt-1">Join now to compete</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-transparent hover:shadow-lg transition-shadow cursor-pointer">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="text-3xl">🎁</div>
+              <div>
+                <h3 className="font-semibold">Special Rewards Available</h3>
+                <p className="text-xs text-muted-foreground mt-1">Claim your bonus</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Product & Services Section - Compact */}
+        <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Product & services</h2>
           </div>
