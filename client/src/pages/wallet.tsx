@@ -435,15 +435,188 @@ export default function Wallet() {
       <div className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl">
         
         {/* My Assets Header - Moved to top */}
-        <h1 className="text-xl sm:text-2xl font-bold mb-4">My assets</h1>
+        <h1 className="text-xl sm:text-2xl font-bold mb-6">My assets</h1>
 
-        {/* 3-Column Layout for Desktop - Moved up, limits and nav now show first */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+        {/* Total Assets Card */}
+        <div className="bg-card rounded-2xl p-5 mb-6 shadow-sm border border-border">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm font-medium">Total Assets</span>
+              <button 
+                onClick={() => setBalanceVisible(!balanceVisible)}
+                className="p-1 hover:bg-muted rounded transition-colors"
+              >
+                {balanceVisible ? (
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-end justify-between">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold text-foreground">
+                  {balanceVisible ? totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••••"}
+                </span>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <span className="text-lg font-medium">{preferredCurrency}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+              </div>
+              <p className="text-muted-foreground text-sm mt-1">
+                ≈ {balanceVisible ? (totalBalance / (cryptoPrices.BTC?.current_price || 1)).toFixed(5) : "••••••"} BTC
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <span className="text-sm text-muted-foreground">Today's P&L</span>
+                <div className={`flex items-center gap-1 ${totalPnL >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                  {totalPnL >= 0 ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+                  <span className="text-sm font-medium">{balanceVisible ? `${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)} ${preferredCurrency}` : '••••••'} ({totalPnLPercentage.toFixed(2)}%)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mini Sparkline Chart */}
+            <div className="w-24 h-12">
+              <Sparkline data={portfolioSparklineData} color={portfolioTrend === 'up' ? '#10b981' : portfolioTrend === 'down' ? '#ef4444' : '#6b7280'} />
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions - Below Total Assets Card */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          <button
+            onClick={() => setReceiveDialogOpen(true)}
+            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+          >
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+              style={{
+                background: `linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.1))`,
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(59, 130, 246, 0.3)",
+              }}
+            >
+              <ArrowDownToLine className="h-6 w-6 text-blue-500" />
+            </div>
+            <span className="text-xs font-medium text-foreground text-center leading-tight">Receive</span>
+          </button>
+
+          <button
+            onClick={() => setSendDialogOpen(true)}
+            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+          >
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+              style={{
+                background: `linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(168, 85, 247, 0.1))`,
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(168, 85, 247, 0.3)",
+              }}
+            >
+              <ArrowUpFromLine className="h-6 w-6 text-purple-500" />
+            </div>
+            <span className="text-xs font-medium text-foreground text-center leading-tight">Send</span>
+          </button>
+
+          <button
+            onClick={() => setLocation("/swap")}
+            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+          >
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+              style={{
+                background: `linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.1))`,
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(34, 197, 94, 0.3)",
+              }}
+            >
+              <ArrowLeftRight className="h-6 w-6 text-green-500" />
+            </div>
+            <span className="text-xs font-medium text-foreground text-center leading-tight">Swap</span>
+          </button>
+
+          <button
+            onClick={() => setLocation("/wallet/mobile-topup")}
+            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+          >
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+              style={{
+                background: `linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.1))`,
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(249, 115, 22, 0.3)",
+              }}
+            >
+              <Smartphone className="h-6 w-6 text-orange-500" />
+            </div>
+            <span className="text-xs font-medium text-foreground text-center leading-tight">Topup</span>
+          </button>
+        </div>
+
+        {/* Wallet Assets Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {filteredAssets.filter(asset => asset.balance > 0).slice(0, 6).map((asset) => (
+            <Link key={asset.symbol} href={`/wallet/asset/${asset.symbol}`} className="block">
+              <Card className="hover:shadow-md transition-all cursor-pointer h-full">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={asset.iconUrl}
+                        alt={asset.name}
+                        className="w-10 h-10 rounded-full"
+                        onError={(e) => {
+                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
+                        }}
+                      />
+                      <div>
+                        <div className="font-semibold text-sm">{asset.symbol}</div>
+                        <div className="text-xs text-muted-foreground">{asset.name}</div>
+                      </div>
+                    </div>
+                    <div className={`text-xs font-medium px-2 py-1 rounded-full ${
+                      asset.priceChange24h >= 0 
+                        ? 'bg-primary/10 text-primary' 
+                        : 'bg-destructive/10 text-destructive'
+                    }`}>
+                      {asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Balance</div>
+                      <div className="font-semibold">{asset.balance.toFixed(8)} {asset.symbol}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Value</div>
+                      <div className="font-semibold text-lg">${asset.usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Price:</span>
+                      <span className="font-medium">${asset.currentPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+
+        {/* 3-Column Layout for Desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* LEFT COLUMN - Navigation Sidebar */}
           <div className="lg:col-span-3">
             <div className="space-y-4 lg:sticky lg:top-6">
-            {/* Limits Card - Now at the top */}
+            {/* Limits Card */}
             <Card>
               <CardContent className="p-4">
                 <div
@@ -531,7 +704,7 @@ export default function Wallet() {
               </CardContent>
             </Card>
 
-            {/* Quick Access Card - Now below limits */}
+            {/* Quick Access Card */}
             <Card className="overflow-hidden hidden lg:block">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 border-b">
@@ -595,7 +768,7 @@ export default function Wallet() {
               </CardContent>
             </Card>
 
-            {/* Mobile Horizontal Quick Access - Shows only on mobile */}
+            {/* Mobile Horizontal Quick Access */}
             <div className="overflow-x-auto lg:hidden -mx-4 px-4">
               <div className="flex gap-2 min-w-max pb-2">
                 <Button
@@ -1096,179 +1269,6 @@ export default function Wallet() {
 
             </div>
           </div>
-        </div>
-
-        {/* Total Assets Card - Now after My assets header and sidebar */}
-        <div className="bg-card rounded-2xl p-5 mb-6 shadow-sm border border-border">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm font-medium">Total Assets</span>
-              <button 
-                onClick={() => setBalanceVisible(!balanceVisible)}
-                className="p-1 hover:bg-muted rounded transition-colors"
-              >
-                {balanceVisible ? (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-foreground">
-                  {balanceVisible ? totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••••"}
-                </span>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <span className="text-lg font-medium">{preferredCurrency}</span>
-                  <ChevronDown className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="text-muted-foreground text-sm mt-1">
-                ≈ {balanceVisible ? (totalBalance / (cryptoPrices.BTC?.current_price || 1)).toFixed(5) : "••••••"} BTC
-              </p>
-              <div className="flex items-center gap-2 mt-3">
-                <span className="text-sm text-muted-foreground">Today's P&L</span>
-                <div className={`flex items-center gap-1 ${totalPnL >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                  {totalPnL >= 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  <span className="text-sm font-medium">{balanceVisible ? `${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)} ${preferredCurrency}` : '••••••'} ({totalPnLPercentage.toFixed(2)}%)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Mini Sparkline Chart */}
-            <div className="w-24 h-12">
-              <Sparkline data={portfolioSparklineData} color={portfolioTrend === 'up' ? '#10b981' : portfolioTrend === 'down' ? '#ef4444' : '#6b7280'} />
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions - Below Total Assets Card */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          <button
-            onClick={() => setReceiveDialogOpen(true)}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
-          >
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.1))`,
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
-              }}
-            >
-              <ArrowDownToLine className="h-6 w-6 text-blue-500" />
-            </div>
-            <span className="text-xs font-medium text-foreground text-center leading-tight">Receive</span>
-          </button>
-
-          <button
-            onClick={() => setSendDialogOpen(true)}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
-          >
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(168, 85, 247, 0.1))`,
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(168, 85, 247, 0.3)",
-              }}
-            >
-              <ArrowUpFromLine className="h-6 w-6 text-purple-500" />
-            </div>
-            <span className="text-xs font-medium text-foreground text-center leading-tight">Send</span>
-          </button>
-
-          <button
-            onClick={() => setLocation("/swap")}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
-          >
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.1))`,
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(34, 197, 94, 0.3)",
-              }}
-            >
-              <ArrowLeftRight className="h-6 w-6 text-green-500" />
-            </div>
-            <span className="text-xs font-medium text-foreground text-center leading-tight">Swap</span>
-          </button>
-
-          <button
-            onClick={() => setLocation("/wallet/mobile-topup")}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
-          >
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.1))`,
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(249, 115, 22, 0.3)",
-              }}
-            >
-              <Smartphone className="h-6 w-6 text-orange-500" />
-            </div>
-            <span className="text-xs font-medium text-foreground text-center leading-tight">Topup</span>
-          </button>
-        </div>
-
-        {/* Wallet Assets Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {filteredAssets.filter(asset => asset.balance > 0).slice(0, 6).map((asset) => (
-            <Link key={asset.symbol} href={`/wallet/asset/${asset.symbol}`} className="block">
-              <Card className="hover:shadow-md transition-all cursor-pointer h-full">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={asset.iconUrl}
-                        alt={asset.name}
-                        className="w-10 h-10 rounded-full"
-                        onError={(e) => {
-                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
-                        }}
-                      />
-                      <div>
-                        <div className="font-semibold text-sm">{asset.symbol}</div>
-                        <div className="text-xs text-muted-foreground">{asset.name}</div>
-                      </div>
-                    </div>
-                    <div className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      asset.priceChange24h >= 0 
-                        ? 'bg-primary/10 text-primary' 
-                        : 'bg-destructive/10 text-destructive'
-                    }`}>
-                      {asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Balance</div>
-                      <div className="font-semibold">{asset.balance.toFixed(8)} {asset.symbol}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Value</div>
-                      <div className="font-semibold text-lg">${asset.usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Price:</span>
-                      <span className="font-medium">${asset.currentPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
         </div>
 
       </div>
