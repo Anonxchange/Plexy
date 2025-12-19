@@ -438,7 +438,7 @@ export default function Wallet() {
         <h1 className="text-xl sm:text-2xl font-bold mb-6">My assets</h1>
 
         {/* Limits Card - Moved to top */}
-        <div className="mb-6">
+        <div className="mb-3">
           <Card>
             <CardContent className="p-4">
               <div
@@ -528,7 +528,7 @@ export default function Wallet() {
         </div>
 
         {/* Quick Access Navigation Menu */}
-        <div className="mb-6">
+        <div className="mb-3">
           {/* Desktop Quick Access Card */}
           <Card className="overflow-hidden hidden lg:block">
             <CardContent className="p-0">
@@ -654,7 +654,7 @@ export default function Wallet() {
         </div>
 
         {/* Total Assets Card */}
-        <div className="bg-card rounded-2xl p-5 mb-6 shadow-sm border border-border">
+        <div className="bg-card rounded-2xl p-5 mb-3 shadow-sm border border-border">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm font-medium">Total Assets</span>
