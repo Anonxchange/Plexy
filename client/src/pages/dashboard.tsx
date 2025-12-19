@@ -1,4 +1,4 @@
-Empty the page and use this code only leave the footer header import { useState } from "react";
+ import { useState } from "react";
 import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, Users, Calendar, Zap, MoreHorizontal, ArrowRight, Gift, Star, ChevronRight } from "lucide-react";
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
