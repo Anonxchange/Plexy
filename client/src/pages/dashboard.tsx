@@ -1,6 +1,7 @@
  import { useState, useEffect } from "react";
-import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, Users, Calendar, Zap, MoreHorizontal, ArrowRight, Gift, Star, ChevronRight } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, Users, Zap, MoreHorizontal, ArrowRight, Gift, Star, ChevronRight } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";
 import { getUserWallets, type Wallet } from "@/lib/wallet-api";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
@@ -19,8 +20,8 @@ const defaultMarkets = [
 
 const actions = [
   { icon: Users, label: "P2P Trading", color: "bg-primary/10 text-primary" },
-  { icon: Calendar, label: "Daily Delight", color: "bg-secondary text-secondary-foreground" },
-  { icon: Zap, label: "7UpBybit", color: "bg-accent text-accent-foreground" },
+  { icon: Zap, label: "Quick Trade", color: "bg-secondary text-secondary-foreground" },
+  { icon: Gift, label: "Rewards", color: "bg-accent text-accent-foreground" },
   { icon: MoreHorizontal, label: "More", color: "bg-muted text-muted-foreground" },
 ];
 
@@ -40,6 +41,7 @@ export const Dashboard = () => {
   const [totalBalance, setTotalBalance] = useState(0);
   const [equivalentBtc, setEquivalentBtc] = useState(0);
   const [markets, setMarkets] = useState(defaultMarkets);
+  const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -155,6 +157,7 @@ export const Dashboard = () => {
                 {actions.map((action) => (
                   <button
                     key={action.label}
+                    onClick={() => action.label === "More" && setIsMoreModalOpen(true)}
                     className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95"
                   >
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${action.color} transition-transform hover:scale-105`}>
@@ -411,6 +414,12 @@ export const Dashboard = () => {
         </div>
       </div>
       <PexlyFooter />
+      
+      {/* More Services Modal */}
+      <DashboardMoreModal
+        isOpen={isMoreModalOpen}
+        onClose={() => setIsMoreModalOpen(false)}
+      />
     </div>
   );
 };
