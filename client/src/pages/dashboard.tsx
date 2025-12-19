@@ -1,5 +1,6 @@
  import { useState } from "react";
 import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, Users, Calendar, Zap, MoreHorizontal, ArrowRight, Gift, Star, ChevronRight } from "lucide-react";
+import { PexlyFooter } from "@/components/pexly-footer";
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
 
@@ -26,7 +27,7 @@ const rewards = [
   { chances: 1, type: "Lucky Draw" },
 ];
 
-const Index = () => {
+export const Dashboard = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("Hot");
 
@@ -351,8 +352,7 @@ const Index = () => {
           </div>
         </div>
       </div>
+      <PexlyFooter />
     </div>
   );
 };
-
-export default Index;
