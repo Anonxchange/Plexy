@@ -657,36 +657,47 @@ export default function Wallet() {
           {/* MIDDLE COLUMN - Main Wallet Content */}
           <div className="lg:col-span-6 space-y-4">
 
-            {/* Wallet Balance Card */}
-            <Card>
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-muted-foreground">Wallet balance</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
+            {/* Wallet Balance Card - Styled like Dashboard */}
+            <div className="bg-card rounded-2xl p-5 sm:p-6 shadow-sm border border-border">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-sm font-medium">Wallet Balance</span>
+                  <button 
                     onClick={() => setBalanceVisible(!balanceVisible)}
-                    className="h-8 w-8"
+                    className="p-1 hover:bg-muted rounded transition-colors"
                   >
-                    {balanceVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  </Button>
+                    {balanceVisible ? (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
                 </div>
+              </div>
 
-                <div className="mb-2">
-                  <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
-                    {balanceVisible ? `${totalBalance.toFixed(2)} ${preferredCurrency}` : "••••••"}
+              <div className="flex items-end justify-between mb-6">
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span className="text-4xl font-bold text-foreground">
+                      {balanceVisible ? totalBalance.toFixed(2) : "••••••"}
+                    </span>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <span className="text-lg font-medium">{preferredCurrency}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
                   </div>
                   {balanceVisible && totalPnL !== 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className={totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Today's P&L</span>
+                      <div className={`flex items-center gap-1 text-sm font-medium ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)} {preferredCurrency} ({totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%)
-                      </span>
+                      </div>
                     </div>
                   )}
                 </div>
 
                 {balanceVisible && (
-                  <div className="mb-6 h-12 opacity-60">
+                  <div className="w-24 h-12">
                     <Sparkline 
                       data={portfolioSparklineData} 
                       color="auto"
@@ -695,36 +706,97 @@ export default function Wallet() {
                     />
                   </div>
                 )}
+              </div>
 
-                {/* Action Buttons - Horizontal Layout */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <Button variant="outline" className="h-14" onClick={() => setReceiveDialogOpen(true)}>
-                    <ArrowDownToLine className="mr-2 h-5 w-5" />
+              {/* Quick Action Circles - Like Dashboard */}
+              <div className="grid grid-cols-4 gap-3 mb-6">
+                <button
+                  onClick={() => setReceiveDialogOpen(true)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+                >
+                  <div 
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))`,
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                    }}
+                  >
+                    <ArrowDownToLine className="h-6 w-6 text-foreground" />
+                  </div>
+                  <span className="text-xs font-medium text-foreground text-center leading-tight">
                     Receive
-                  </Button>
-                  <Button variant="outline" className="h-14" onClick={() => setSendDialogOpen(true)}>
-                    <ArrowUpFromLine className="mr-2 h-5 w-5" />
-                    Send
-                  </Button>
-                  <Button className="h-14 bg-primary hover:bg-primary/90">
-                    <ArrowLeftRight className="mr-2 h-5 w-5" />
-                    Swap
-                  </Button>
-                </div>
+                  </span>
+                </button>
 
-                {/* Main Action Buttons */}
-                <div className="space-y-3">
-                  <Button variant="outline" className="w-full">
-                    <Landmark className="h-4 w-4 mr-2" />
-                    Crypto to Bank
-                  </Button>
-                  <Button className="w-full">
-                    <ShoppingBag className="h-4 w-4 mr-2" />
-                    Buy crypto
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                <button
+                  onClick={() => setSendDialogOpen(true)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+                >
+                  <div 
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))`,
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                    }}
+                  >
+                    <ArrowUpFromLine className="h-6 w-6 text-foreground" />
+                  </div>
+                  <span className="text-xs font-medium text-foreground text-center leading-tight">
+                    Send
+                  </span>
+                </button>
+
+                <button
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+                >
+                  <div 
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))`,
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                    }}
+                  >
+                    <ArrowLeftRight className="h-6 w-6 text-foreground" />
+                  </div>
+                  <span className="text-xs font-medium text-foreground text-center leading-tight">
+                    Swap
+                  </span>
+                </button>
+
+                <button
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+                >
+                  <div 
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))`,
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                    }}
+                  >
+                    <Smartphone className="h-6 w-6 text-foreground" />
+                  </div>
+                  <span className="text-xs font-medium text-foreground text-center leading-tight">
+                    Top-up
+                  </span>
+                </button>
+              </div>
+
+              {/* Additional Action Buttons */}
+              <div className="space-y-3">
+                <Button variant="outline" className="w-full">
+                  <Landmark className="h-4 w-4 mr-2" />
+                  Crypto to Bank
+                </Button>
+                <Button className="w-full">
+                  <ShoppingBag className="h-4 w-4 mr-2" />
+                  Buy crypto
+                </Button>
+              </div>
+            </div>
 
             {/* Asset Tabs */}
             <div className="flex gap-4 sm:gap-6 mb-4 border-b overflow-x-auto">
