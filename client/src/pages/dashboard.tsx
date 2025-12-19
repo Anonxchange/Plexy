@@ -313,66 +313,78 @@ export function Dashboard() {
           </Card>
         </div>
 
-        {/* Products & Services */}
+        {/* Products & Services Showcase */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Product & services</h2>
           </div>
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
-            {products.slice(0, 6).map((product, index) => {
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {products.slice(0, 3).map((product, index) => {
               const IconComponent = MulticolorIcons[product.icon as keyof typeof MulticolorIcons];
               return (
-                <Card 
-                  key={index} 
-                  className="hover-elevate cursor-pointer transition-all group"
+                <div
+                  key={index}
                   onClick={() => product.href !== '#' && setLocation(product.href)}
+                  className={`relative group cursor-pointer transition-all duration-300 ${product.href !== '#' ? 'hover:scale-105' : 'opacity-75'}`}
                 >
-                  <CardContent className="p-4 flex flex-col items-center gap-2">
-                    <div className="w-12 h-12">
-                      <IconComponent />
-                    </div>
-                    <span className="text-xs text-center font-medium">{product.label}</span>
-                  </CardContent>
-                </Card>
+                  <Card className="relative h-full border border-primary/20 hover:border-primary/50 hover:shadow-lg transition-all">
+                    <CardContent className="p-6 flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <IconComponent />
+                      </div>
+                      <span className="text-xs text-center font-semibold text-foreground">{product.label}</span>
+                    </CardContent>
+                  </Card>
+                </div>
               );
             })}
+            {/* More Button */}
+            <Dialog open={productsModalOpen} onOpenChange={setProductsModalOpen}>
+              <DialogTrigger asChild>
+                <div className="cursor-pointer transition-all hover:scale-105">
+                  <Card className="relative h-full border border-primary/20 hover:border-primary/50 hover:shadow-lg transition-all">
+                    <CardContent className="p-6 flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
+                        ⋯
+                      </div>
+                      <span className="text-xs text-center font-semibold text-foreground">More</span>
+                    </CardContent>
+                  </Card>
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl">All Products & Services</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
+                  {products.map((product, index) => {
+                    const IconComponent = MulticolorIcons[product.icon as keyof typeof MulticolorIcons];
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => {
+                          if (product.href !== '#') {
+                            setLocation(product.href);
+                            setProductsModalOpen(false);
+                          }
+                        }}
+                        className={`cursor-pointer transition-all ${product.href !== '#' ? 'hover:scale-105' : 'opacity-75'}`}
+                      >
+                        <Card className="h-full border border-primary/20 hover:border-primary/50">
+                          <CardContent className="p-4 flex flex-col items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                              <IconComponent />
+                            </div>
+                            <span className="text-xs text-center font-semibold">{product.label}</span>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-          <Dialog open={productsModalOpen} onOpenChange={setProductsModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full">
-                Show more
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>All Products & Services</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-                {products.map((product, index) => {
-                  const IconComponent = MulticolorIcons[product.icon as keyof typeof MulticolorIcons];
-                  return (
-                    <Card 
-                      key={index} 
-                      className="hover-elevate cursor-pointer transition-all group"
-                      onClick={() => {
-                        if (product.href !== '#') {
-                          setLocation(product.href);
-                          setProductsModalOpen(false);
-                        }
-                      }}
-                    >
-                      <CardContent className="p-4 flex flex-col items-center gap-2">
-                        <div className="w-12 h-12">
-                          <IconComponent />
-                        </div>
-                        <span className="text-xs text-center font-medium">{product.label}</span>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* Account Settings */}
@@ -380,61 +392,73 @@ export function Dashboard() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Account & settings</h2>
           </div>
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
-            {accountSettings.slice(0, 6).map((setting, index) => {
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {accountSettings.slice(0, 3).map((setting, index) => {
               const IconComponent = MulticolorIcons[setting.icon as keyof typeof MulticolorIcons];
               return (
-                <Card 
-                  key={index} 
-                  className="hover-elevate cursor-pointer transition-all group"
+                <div
+                  key={index}
                   onClick={() => setting.href !== '#' && setLocation(setting.href)}
+                  className="relative group cursor-pointer transition-all duration-300 hover:scale-105"
                 >
-                  <CardContent className="p-4 flex flex-col items-center gap-2">
-                    <div className="w-12 h-12">
-                      <IconComponent />
-                    </div>
-                    <span className="text-xs text-center font-medium">{setting.label}</span>
-                  </CardContent>
-                </Card>
+                  <Card className="relative h-full border border-primary/20 hover:border-primary/50 hover:shadow-lg transition-all">
+                    <CardContent className="p-6 flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <IconComponent />
+                      </div>
+                      <span className="text-xs text-center font-semibold text-foreground">{setting.label}</span>
+                    </CardContent>
+                  </Card>
+                </div>
               );
             })}
+            {/* More Button */}
+            <Dialog open={accountModalOpen} onOpenChange={setAccountModalOpen}>
+              <DialogTrigger asChild>
+                <div className="cursor-pointer transition-all hover:scale-105">
+                  <Card className="relative h-full border border-primary/20 hover:border-primary/50 hover:shadow-lg transition-all">
+                    <CardContent className="p-6 flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
+                        ⋯
+                      </div>
+                      <span className="text-xs text-center font-semibold text-foreground">More</span>
+                    </CardContent>
+                  </Card>
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl">Account & Settings</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
+                  {accountSettings.map((setting, index) => {
+                    const IconComponent = MulticolorIcons[setting.icon as keyof typeof MulticolorIcons];
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => {
+                          if (setting.href !== '#') {
+                            setLocation(setting.href);
+                            setAccountModalOpen(false);
+                          }
+                        }}
+                        className="cursor-pointer transition-all hover:scale-105"
+                      >
+                        <Card className="h-full border border-primary/20 hover:border-primary/50">
+                          <CardContent className="p-4 flex flex-col items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                              <IconComponent />
+                            </div>
+                            <span className="text-xs text-center font-semibold">{setting.label}</span>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-          <Dialog open={accountModalOpen} onOpenChange={setAccountModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full">
-                Show more
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Account & Settings</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-                {accountSettings.map((setting, index) => {
-                  const IconComponent = MulticolorIcons[setting.icon as keyof typeof MulticolorIcons];
-                  return (
-                    <Card 
-                      key={index} 
-                      className="hover-elevate cursor-pointer transition-all group"
-                      onClick={() => {
-                        if (setting.href !== '#') {
-                          setLocation(setting.href);
-                          setAccountModalOpen(false);
-                        }
-                      }}
-                    >
-                      <CardContent className="p-4 flex flex-col items-center gap-2">
-                        <div className="w-12 h-12">
-                          <IconComponent />
-                        </div>
-                        <span className="text-xs text-center font-medium">{setting.label}</span>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* Medals Section */}
