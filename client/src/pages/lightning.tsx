@@ -12,7 +12,7 @@ declare global {
 }
 
 export default function Lightning() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [activeTab, setActiveTab] = useState<"receive" | "send">("receive");
   const containerRef = useRef<HTMLDivElement>(null);
   const [amount, setAmount] = useState("");
@@ -46,15 +46,15 @@ export default function Lightning() {
     }
 
     try {
-      const token = await user.getAccessToken?.();
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const token = session?.access_token;
       
       if (!supabaseUrl) {
         throw new Error('VITE_SUPABASE_URL not configured');
       }
 
       if (!token) {
-        throw new Error('No authentication token. Please sign in again.');
+        throw new Error('Not signed in. Please sign in to your account first.');
       }
       
       const response = await fetch(`${supabaseUrl}/functions/v1/opennode-create-invoice`, {
