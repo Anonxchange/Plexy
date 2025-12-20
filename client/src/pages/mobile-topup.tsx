@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
+import { BitrefillWidget } from "@/components/bitrefill-widget";
 
 export default function MobileTopup() {
   const [phoneNumber, setPhoneNumber] = useState("813 447 8949");
@@ -125,12 +126,15 @@ export default function MobileTopup() {
 
         {/* Tabs */}
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-2 h-14">
+          <TabsList className="grid w-full grid-cols-3 h-14">
             <TabsTrigger value="recharge" className="text-base font-semibold">
               Mobile Recharge
             </TabsTrigger>
             <TabsTrigger value="data" className="text-base font-semibold">
               Data Plan
+            </TabsTrigger>
+            <TabsTrigger value="buy-usdt" className="text-base font-semibold">
+              Buy USDT
             </TabsTrigger>
           </TabsList>
 
@@ -219,6 +223,18 @@ export default function MobileTopup() {
           <TabsContent value="data" className="mt-6">
             <div className="text-center py-12 text-muted-foreground">
               <p className="text-lg">Data plan options coming soon</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="buy-usdt" className="mt-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-bold mb-2">Quick Buy USDT with Bitrefill</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Buy USDT instantly with multiple payment methods including crypto
+                </p>
+              </div>
+              <BitrefillWidget />
             </div>
           </TabsContent>
         </Tabs>
