@@ -699,7 +699,7 @@ export default function Wallet() {
               <p className="text-muted-foreground text-sm mt-1">
                 ≈ {balanceVisible ? (totalBalance / (cryptoPrices.BTC?.current_price || 1)).toFixed(5) : "••••••"} BTC
               </p>
-              <div className="flex items-center gap-2 mt-3 group cursor-pointer" onClick={() => setLocation("/analysis")}>
+              <div className="flex items-center gap-2 mt-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLocation("/analysis")}>
                 <span className="text-sm text-muted-foreground">Today's P&L</span>
                 <div className={`flex items-center gap-1 ${totalPnL >= 0 ? 'text-primary' : 'text-destructive'}`}>
                   {totalPnL >= 0 ? (
@@ -709,7 +709,6 @@ export default function Wallet() {
                   )}
                   <span className="text-sm font-medium">{balanceVisible ? `${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)} ${preferredCurrency}` : '••••••'} ({totalPnLPercentage.toFixed(2)}%)</span>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors ml-auto" />
               </div>
             </div>
 
