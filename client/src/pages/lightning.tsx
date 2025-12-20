@@ -24,6 +24,8 @@ export default function Lightning() {
   const [invoiceData, setInvoiceData] = useState<{ lightning_invoice: string; amount: string } | null>(null);
   const [sendInvoice, setSendInvoice] = useState("");
   const [copied, setCopied] = useState(false);
+  const [lightningBalance, setLightningBalance] = useState<string>("0.00");
+  const [loadingBalance, setLoadingBalance] = useState(false);
 
   useEffect(() => {
     // Load OpenNode script
@@ -38,6 +40,36 @@ export default function Lightning() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    // Load Lightning balance on mount
+    fetchLightningBalance();
+    
+    // Set up periodic refresh every 30 seconds to catch webhook updates
+    const interval = setInterval(() => {
+      fetchLightningBalance();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [session?.access_token]);
+
+  const fetchLightningBalance = async () => {
+    if (!session?.access_token) return;
+    
+    setLoadingBalance(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) throw new Error('VITE_SUPABASE_URL not configured');
+      
+      // TODO: Fetch Lightning balance from OpenNode API
+      // For now, showing placeholder balance
+      setLightningBalance("0.00");
+    } catch (error) {
+      console.error('Error fetching Lightning balance:', error);
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
 
   const handleReceive = async () => {
     if (!user) {
@@ -93,6 +125,9 @@ export default function Lightning() {
         });
         setShowReceiveModal(true);
         setAmount("");
+        
+        // Refresh balance after invoice is created (webhook will update when paid)
+        setTimeout(() => fetchLightningBalance(), 2000);
       } else {
         throw new Error(data.error || 'No invoice returned from OpenNode');
       }
@@ -144,6 +179,26 @@ export default function Lightning() {
           <p className="text-lg text-muted-foreground mb-8">
             Easily send and receive Bitcoin to your wallet with amazing low fees and near-instant speed.
           </p>
+
+          {/* Lightning Balance Card */}
+          <Card className="mb-8 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">⚡ Lightning Balance</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {loadingBalance ? "..." : lightningBalance} BTC
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground mb-2">Available to send</p>
+                  <p className="text-lg font-semibold text-primary">
+                    {lightningBalance} BTC
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           {/* Tabs */}
           <Card className="mb-8">
