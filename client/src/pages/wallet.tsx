@@ -1026,59 +1026,34 @@ export default function Wallet() {
             {/* Recommended Section */}
             <h2 className="text-xl font-bold mb-4">Recommended for you</h2>
 
-            {/* P2P Trading Card */}
-            <Card className="mb-4">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">P2P Trading</h3>
-                  <Link href="/p2p">
-                    <span className="text-primary text-sm cursor-pointer flex items-center gap-1 hover:underline">
-                      View all <ChevronRight className="h-4 w-4" />
+            {/* Sell Gift Cards Hero Section */}
+            <div className="mb-4 rounded-3xl p-8 md:p-12 shadow-xl relative overflow-visible" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)' }}>
+              <div className="relative z-10 max-w-md">
+                <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                  Sell Gift Cards
+                </h2>
+                <p className="text-lg text-muted-foreground mb-6">
+                  Instantly convert the gift cards you don't need to cash.
+                </p>
+                <Link href="/gift-cards">
+                  <button className="inline-flex items-center gap-2 text-primary font-semibold group">
+                    <span>Sell Gift Cards Now</span>
+                    <span className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+                      <ArrowRight size={18} />
                     </span>
-                  </Link>
-                </div>
+                  </button>
+                </Link>
+              </div>
 
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-xl">
-                          👤
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">MKUU_</span>
-                            <span className="text-xs">🇰🇪 🇳🇬</span>
-                            <Badge variant="default" className="text-xs">EXPERT</Badge>
-                          </div>
-                          <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                            <span>👍</span>
-                            <span>2929</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button>
-                        Buy BTC ₿
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <div className="text-muted-foreground mb-1">Payment</div>
-                        <div className="font-medium">Bank Transfer</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-muted-foreground mb-1">Price</div>
-                        <div className="font-medium">₿ KES 13,300,000.00</div>
-                      </div>
-                    </div>
-                    <div className="text-sm mt-2">
-                      <div className="text-muted-foreground">Range</div>
-                      <div className="font-medium">KES 3,000.00 - KES 110,931.00</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CardContent>
-            </Card>
+              {/* Brand Logos Image */}
+              <div className="relative -mt-2 -mx-8 -mb-8 md:mx-0 md:mb-0 w-[calc(100%+4rem)] md:w-[60%] lg:w-[50%] md:absolute md:-bottom-6 md:-right-4 md:mt-0 pointer-events-none">
+                <img 
+                  src="/assets/brand-logos.webp" 
+                  alt="Popular gift card brands including Nike, Amazon, Netflix, PlayStation, and more"
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
 
             {/* Markets Card */}
             <Card className="mb-6">
