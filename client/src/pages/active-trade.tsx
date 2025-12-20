@@ -110,47 +110,6 @@ export default function ActiveTrade() {
 
   const supabase = createClient();
 
-  // Real-time subscription for new messages
-  useEffect(() => {
-    if (!tradeId) return;
-
-    const messagesChannel = supabase
-      .channel(`trade-messages-${tradeId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'trade_messages',
-          filter: `trade_id=eq.${tradeId}`
-        },
-        (payload) => {
-          const newMessage = payload.new as TradeMessage;
-          
-          // Add new message to the list
-          setMessages((prev) => [...prev, newMessage]);
-          
-          // Play notification sound if message is from counterparty
-          if (newMessage.sender_id !== user?.id) {
-            notificationSounds.play('message_received');
-          }
-          
-          // Auto-scroll to bottom
-          setTimeout(() => {
-            const chatContainer = document.querySelector('[data-chat-messages]');
-            if (chatContainer) {
-              chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-          }, 100);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(messagesChannel);
-    };
-  }, [tradeId, user?.id]);
-
   const effectiveUserId = currentUserProfileId || user?.id;
   const isUserBuyer = !!(effectiveUserId && trade?.buyer_id === effectiveUserId);
   const counterparty = isUserBuyer ? trade?.seller_profile : trade?.buyer_profile;
@@ -233,6 +192,14 @@ export default function ActiveTrade() {
           if (newMessage.sender_id !== currentUserProfileId) {
             notificationSounds.play('message_received');
           }
+
+          // Auto-scroll to bottom
+          setTimeout(() => {
+            const chatContainer = document.querySelector('[data-chat-messages]');
+            if (chatContainer) {
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+          }, 100);
         }
       )
       .on('postgres_changes',
