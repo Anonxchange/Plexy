@@ -9,7 +9,7 @@ export default function MobileTopup() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            Buy Crypto Instantly
+            Mobile Topuo Instantly
           </h1>
           <p className="text-lg text-muted-foreground">
             Purchase USDT with 500+ payment methods from anywhere in the world
