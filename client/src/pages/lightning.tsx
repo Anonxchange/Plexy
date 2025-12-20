@@ -292,23 +292,23 @@ export default function Lightning() {
             </DialogHeader>
             {invoiceData && (
               <div className="space-y-3">
-                {/* QR Code */}
-                <div className="flex justify-center">
-                  <div className="bg-white p-4 rounded-lg">
-                    <QRCode 
-                      value={invoiceData.lightning_invoice} 
-                      size={256}
-                      level="H"
-                      includeMargin={true}
-                    />
-                  </div>
-                </div>
-
                 <div className="bg-muted p-4 rounded-lg border border-border">
                   <p className="text-sm text-muted-foreground mb-2">Lightning Invoice:</p>
                   <p className="text-sm font-mono break-all text-foreground">
                     {invoiceData.lightning_invoice}
                   </p>
+                </div>
+
+                {/* QR Code */}
+                <div className="flex justify-center">
+                  <div className="bg-white p-3 rounded-lg">
+                    <QRCode 
+                      value={invoiceData.lightning_invoice} 
+                      size={128}
+                      level="H"
+                      includeMargin={true}
+                    />
+                  </div>
                 </div>
                 
                 <div className="bg-muted p-4 rounded-lg border border-border">
