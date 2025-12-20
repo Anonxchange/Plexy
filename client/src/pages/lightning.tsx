@@ -286,12 +286,12 @@ export default function Lightning() {
 
         {/* Receive Invoice Modal */}
         <Dialog open={showReceiveModal} onOpenChange={setShowReceiveModal}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Your Lightning Invoice</DialogTitle>
             </DialogHeader>
             {invoiceData && (
-              <div className="space-y-6">
+              <div className="space-y-3">
                 {/* QR Code */}
                 <div className="flex justify-center">
                   <div className="bg-white p-4 rounded-lg">
@@ -359,11 +359,11 @@ export default function Lightning() {
 
         {/* Send Invoice Modal */}
         <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Send Bitcoin via Lightning</DialogTitle>
             </DialogHeader>
-            <div className="space-y-6">
+            <div className="space-y-3">
               <div className="bg-muted p-4 rounded-lg border border-border">
                 <p className="text-sm text-muted-foreground mb-1">Amount to send:</p>
                 <p className="text-lg font-bold text-foreground">{amount} BTC</p>
