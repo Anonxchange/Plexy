@@ -1,6 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Copy, Check } from "lucide-react";
 import { Search } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -16,6 +19,11 @@ export default function Lightning() {
   const [activeTab, setActiveTab] = useState<"receive" | "send">("receive");
   const containerRef = useRef<HTMLDivElement>(null);
   const [amount, setAmount] = useState("");
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<{ lightning_invoice: string; amount: string } | null>(null);
+  const [sendInvoice, setSendInvoice] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     // Load OpenNode script
@@ -78,9 +86,12 @@ export default function Lightning() {
       }
 
       if (data.success && data.invoice?.lightning_invoice) {
-        // Copy to clipboard and show invoice
-        navigator.clipboard.writeText(data.invoice.lightning_invoice);
-        alert(`✅ Invoice created! Lightning address copied to clipboard.\n\nAmount: ${receiveAmount} BTC\n\nExpires in 1 hour\n\nShare this to receive payment.`);
+        // Store invoice data and show modal
+        setInvoiceData({ 
+          lightning_invoice: data.invoice.lightning_invoice, 
+          amount: receiveAmount 
+        });
+        setShowReceiveModal(true);
         setAmount("");
       } else {
         throw new Error(data.error || 'No invoice returned from OpenNode');
@@ -98,8 +109,27 @@ export default function Lightning() {
       return;
     }
 
-    // For sending, users need to paste a Lightning invoice
-    alert(`Ready to send ${amount} BTC via Lightning.\n\nPaste the recipient's Lightning invoice to complete the transaction.`);
+    // Show modal to paste Lightning invoice
+    setShowSendModal(true);
+  };
+
+  const handleCopyInvoice = () => {
+    if (invoiceData?.lightning_invoice) {
+      navigator.clipboard.writeText(invoiceData.lightning_invoice);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleSendWithInvoice = () => {
+    if (!sendInvoice.trim()) {
+      alert("Please paste a valid Lightning invoice");
+      return;
+    }
+    // TODO: Implement actual Lightning payment with the invoice
+    alert(`Ready to send ${amount} BTC to the provided Lightning invoice.\n\nImplementing payment...`);
+    setSendInvoice("");
+    setShowSendModal(false);
   };
 
   return (
@@ -197,6 +227,117 @@ export default function Lightning() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Receive Invoice Modal */}
+        <Dialog open={showReceiveModal} onOpenChange={setShowReceiveModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Your Lightning Invoice</DialogTitle>
+            </DialogHeader>
+            {invoiceData && (
+              <div className="space-y-6">
+                <div className="bg-muted p-4 rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground mb-2">Lightning Invoice:</p>
+                  <p className="text-sm font-mono break-all text-foreground">
+                    {invoiceData.lightning_invoice}
+                  </p>
+                </div>
+                
+                <div className="bg-muted p-4 rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground mb-1">Amount:</p>
+                  <p className="text-lg font-bold text-foreground">{invoiceData.amount} BTC</p>
+                </div>
+
+                <div className="bg-yellow-50 dark:bg-yellow-950/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    ⏱️ This invoice expires in 1 hour
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={handleCopyInvoice}
+                    className="flex-1"
+                    variant="default"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy Invoice
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowReceiveModal(false)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Close
+                  </Button>
+                </div>
+
+                <p className="text-sm text-muted-foreground text-center">
+                  Share this invoice with the sender to receive payment
+                </p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Send Invoice Modal */}
+        <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Send Bitcoin via Lightning</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="bg-muted p-4 rounded-lg border border-border">
+                <p className="text-sm text-muted-foreground mb-1">Amount to send:</p>
+                <p className="text-lg font-bold text-foreground">{amount} BTC</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold">
+                  Recipient's Lightning Invoice
+                </label>
+                <textarea 
+                  placeholder="Paste the Lightning invoice here (starts with 'lnbc' or 'LNBC')"
+                  value={sendInvoice}
+                  onChange={(e) => setSendInvoice(e.target.value)}
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground font-mono text-sm min-h-[120px] resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Lightning invoices typically start with "lnbc" or "LNBC"
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button 
+                  onClick={handleSendWithInvoice}
+                  className="flex-1"
+                  variant="default"
+                >
+                  Send Now
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setSendInvoice("");
+                    setShowSendModal(false);
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* FAQ Section */}
         <div className="mt-12" id="faq">
