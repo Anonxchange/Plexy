@@ -1048,7 +1048,7 @@ export default function Wallet() {
               {/* Brand Logos Image */}
               <div className="relative -mt-2 -mx-8 -mb-8 md:mx-0 md:mb-0 w-[calc(100%+4rem)] md:w-[60%] lg:w-[50%] md:absolute md:-bottom-6 md:-right-4 md:mt-0 pointer-events-none">
                 <img 
-                  src="/assets/brand-logos.webp" 
+                  src="/assets/IMG_2941.webp" 
                   alt="Popular gift card brands including Nike, Amazon, Netflix, PlayStation, and more"
                   className="w-full h-auto"
                 />
