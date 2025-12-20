@@ -304,7 +304,7 @@ export default function Lightning() {
                   <div className="bg-white p-3 rounded-lg">
                     <QRCode 
                       value={invoiceData.lightning_invoice} 
-                      size={128}
+                      size={180}
                       level="H"
                       includeMargin={true}
                     />
