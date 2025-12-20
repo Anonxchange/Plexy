@@ -2,14 +2,86 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/lib/auth-context";
+
+declare global {
+  interface Window {
+    Opennode?: any;
+  }
+}
 
 export default function Lightning() {
-  const handleReceive = () => {
-    console.log("Receive Bitcoin via Lightning");
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<"receive" | "send">("receive");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [amount, setAmount] = useState("");
+
+  useEffect(() => {
+    // Load OpenNode script
+    const script = document.createElement("script");
+    script.src = "https://checkout.opennode.com/checkout.js";
+    script.async = true;
+    document.head.appendChild(script);
+
+    return () => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+  }, []);
+
+  const handleReceive = async () => {
+    if (!user) {
+      alert("Please sign in first");
+      return;
+    }
+
+    const receiveAmount = amount || "0.001";
+    const satoshis = Math.round(parseFloat(receiveAmount) * 100000000);
+
+    if (satoshis <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    try {
+      const token = await user.getAccessToken?.();
+      const response = await fetch('/api/opennode-create-invoice', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: satoshis,
+          description: `Deposit ${receiveAmount} BTC`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create invoice');
+      }
+
+      const data = await response.json();
+      if (data.invoice.lightning_invoice) {
+        // Copy to clipboard and show invoice
+        navigator.clipboard.writeText(data.invoice.lightning_invoice);
+        alert(`Invoice created! Lightning address copied to clipboard.\n\nAmount: ${receiveAmount} BTC\n\nExpires in 1 hour`);
+      }
+    } catch (error) {
+      alert('Error creating invoice: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
   };
 
-  const handleSend = () => {
-    console.log("Send Bitcoin via Lightning");
+  const handleSend = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    // For sending, users need to paste a Lightning invoice
+    alert(`Ready to send ${amount} BTC via Lightning.\n\nPaste the recipient's Lightning invoice to complete the transaction.`);
   };
 
   return (
@@ -25,23 +97,61 @@ export default function Lightning() {
             Easily send and receive Bitcoin to your wallet with amazing low fees and near-instant speed.
           </p>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <Button 
-              size="lg" 
-              className="h-14 text-lg font-semibold"
-              onClick={handleReceive}
-            >
-              Receive Bitcoin
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="h-14 text-lg font-semibold"
-              onClick={handleSend}
-            >
-              Send Bitcoin
-            </Button>
-          </div>
+          {/* Tabs */}
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <div className="flex gap-2 mb-6">
+                <Button 
+                  size="lg"
+                  variant={activeTab === "receive" ? "default" : "outline"}
+                  className="flex-1 h-12"
+                  onClick={() => setActiveTab("receive")}
+                >
+                  Receive Bitcoin
+                </Button>
+                <Button 
+                  size="lg"
+                  variant={activeTab === "send" ? "default" : "outline"}
+                  className="flex-1 h-12"
+                  onClick={() => setActiveTab("send")}
+                >
+                  Send Bitcoin
+                </Button>
+              </div>
+
+              {/* Amount Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold mb-2">
+                  {activeTab === "receive" ? "Request Amount (BTC)" : "Send Amount (BTC)"}
+                </label>
+                <input 
+                  type="number"
+                  step="0.00000001"
+                  min="0"
+                  placeholder="0.001"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Minimum: 0.00000001 BTC
+                </p>
+              </div>
+
+              {/* Action Button */}
+              <Button 
+                size="lg" 
+                className="w-full h-12 text-lg font-semibold"
+                onClick={activeTab === "receive" ? handleReceive : handleSend}
+              >
+                {activeTab === "receive" ? "Create Invoice" : "Send Now"}
+              </Button>
+
+              <p className="text-xs text-muted-foreground mt-4 text-center">
+                ⚡ Powered by OpenNode (Instant Lightning payments)
+              </p>
+            </CardContent>
+          </Card>
           
           <a 
             href="#faq" 
