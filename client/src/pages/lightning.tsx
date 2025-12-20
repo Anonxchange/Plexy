@@ -47,7 +47,17 @@ export default function Lightning() {
 
     try {
       const token = await user.getAccessToken?.();
-      const response = await fetch('/api/opennode-create-invoice', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      
+      if (!supabaseUrl) {
+        throw new Error('VITE_SUPABASE_URL not configured');
+      }
+
+      if (!token) {
+        throw new Error('No authentication token. Please sign in again.');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/opennode-create-invoice`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -59,18 +69,26 @@ export default function Lightning() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to create invoice');
+        const errorMsg = data.error || data.message || `HTTP ${response.status}`;
+        console.error('Invoice creation error:', errorMsg, data);
+        throw new Error(errorMsg);
       }
 
-      const data = await response.json();
-      if (data.invoice.lightning_invoice) {
+      if (data.success && data.invoice?.lightning_invoice) {
         // Copy to clipboard and show invoice
         navigator.clipboard.writeText(data.invoice.lightning_invoice);
-        alert(`Invoice created! Lightning address copied to clipboard.\n\nAmount: ${receiveAmount} BTC\n\nExpires in 1 hour`);
+        alert(`✅ Invoice created! Lightning address copied to clipboard.\n\nAmount: ${receiveAmount} BTC\n\nExpires in 1 hour\n\nShare this to receive payment.`);
+        setAmount("");
+      } else {
+        throw new Error(data.error || 'No invoice returned from OpenNode');
       }
     } catch (error) {
-      alert('Error creating invoice: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('Invoice error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      alert(`❌ Error: ${errorMsg}\n\nSee TROUBLESHOOT.md for help`);
     }
   };
 
