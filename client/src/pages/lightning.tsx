@@ -7,6 +7,7 @@ import { Copy, Check } from "lucide-react";
 import { Search } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { QRCodeSVG as QRCode } from "qrcode.react";
 
 declare global {
   interface Window {
@@ -291,6 +292,18 @@ export default function Lightning() {
             </DialogHeader>
             {invoiceData && (
               <div className="space-y-6">
+                {/* QR Code */}
+                <div className="flex justify-center">
+                  <div className="bg-white p-4 rounded-lg">
+                    <QRCode 
+                      value={invoiceData.lightning_invoice} 
+                      size={256}
+                      level="H"
+                      includeMargin={true}
+                    />
+                  </div>
+                </div>
+
                 <div className="bg-muted p-4 rounded-lg border border-border">
                   <p className="text-sm text-muted-foreground mb-2">Lightning Invoice:</p>
                   <p className="text-sm font-mono break-all text-foreground">
