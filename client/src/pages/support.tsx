@@ -1,310 +1,192 @@
-import React, { useState } from "react";
-import {
-  Home,
-  MessageSquare,
-  HelpCircle,
-  Search,
-  X,
-  ChevronRight,
+import { 
+  Menu, 
+  Search, 
+  Bitcoin, 
+  User, 
+  ShoppingCart, 
+  CreditCard, 
+  HelpCircle, 
+  Headphones,
+  FileText,
+  Globe,
+  Facebook,
+  Twitter,
+  Instagram,
+  MessageCircle
 } from "lucide-react";
-import { useSchema, supportPageSchema } from "@/hooks/use-schema";
 
-const SupportInterface = () => {
-  useSchema(supportPageSchema, "support-page-schema");
-  const [currentView, setCurrentView] = useState("home");
-  const [searchQuery, setSearchQuery] = useState("");
+const categories = [
+  {
+    icon: Bitcoin,
+    title: "Getting Started",
+    description: "Get started by learning about our services and how you can get the most out of Pexly.",
+  },
+  {
+    icon: User,
+    title: "Pexly Account",
+    description: "Learn everything you need to know about your Pexly Account: settings, 2-Factor-Authentication, preferences, and more.",
+  },
+  {
+    icon: ShoppingCart,
+    title: "Ordering / Payments",
+    description: "Learn about our payment methods and the most common questions when making payments",
+  },
+  {
+    icon: CreditCard,
+    title: "Pexly Card",
+    description: "Learn more about the Pexly Card.",
+  },
+  {
+    icon: HelpCircle,
+    title: "Troubleshooting",
+    description: "Common issues and solutions for orders, payments, and account-related problems.",
+  },
+  {
+    icon: Headphones,
+    title: "Contact Us",
+    description: "Get in touch with our support team for personalized assistance.",
+  },
+];
 
-  const HomeView = () => (
-    <div className="flex flex-col h-full relative">
-      {/* Lime Green Header Section - Fixed */}
-      <div className="bg-gradient-to-b from-[#B4F22E] to-[#A8D61F] px-6 pt-6 pb-32">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-black text-3xl font-bold">Pexly</h1>
-          <button className="text-black">
-            <X size={28} />
-          </button>
+const articles = [
+  "What is Pexly?",
+  "How do I place an order?",
+  "Do I need a Pexly Account?",
+  "Can I log in using my Web 3 wallet (e.g., Metamask)?",
+  "How to add store credit to my account?",
+  "How to add store credit by paying with tokens from my wallet?",
+  "Can I purchase gift cards using my favorite token?",
+  "How do I use my Pexly USD or EUR store credit?",
+  "How do I redeem my gift card?",
+  "What payment methods are accepted?",
+];
+
+const Index = () => {
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="bg-primary px-6 py-4 flex items-center justify-between relative z-20">
+        <div className="text-primary-foreground text-2xl font-bold tracking-tight">
+          Pexly
         </div>
+        
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-6">
+          <a href="#" className="text-primary-foreground/90 hover:text-primary-foreground transition-colors text-sm">
+            Shop
+          </a>
+          <a 
+            href="#" 
+            className="text-primary-foreground border border-primary-foreground/80 rounded-full px-4 py-2 text-sm hover:bg-primary-foreground/10 transition-colors"
+          >
+            Submit a request
+          </a>
+          <a href="#" className="text-primary-foreground/90 hover:text-primary-foreground transition-colors text-sm">
+            Sign in
+          </a>
+        </nav>
+        
+        {/* Mobile Menu */}
+        <button className="md:hidden text-primary-foreground p-2 hover:bg-primary-foreground/10 rounded-lg transition-colors">
+          <Menu className="w-6 h-6" />
+        </button>
+      </header>
 
-        <div className="flex gap-3 mb-8">
-          <div className="w-14 h-14 rounded-full bg-purple-500 flex items-center justify-center">
-            <div className="text-2xl">🎮</div>
-          </div>
-          <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center">
-            <div className="text-2xl">👤</div>
-          </div>
-          <div className="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center">
-            <div className="text-2xl">🤖</div>
-          </div>
-        </div>
-
-        <div className="text-black">
-          <div className="text-right text-lg mb-1">Trader User</div>
-          <div className="text-4xl font-bold mb-2">Hi</div>
-          <div className="text-lg">(Greeting)</div>
-          <div className="text-3xl font-bold mt-4">How can we help you today?</div>
-        </div>
-      </div>
-
-      {/* Gradient Fade Effect */}
-      <div className="absolute top-[420px] left-0 right-0 h-12 bg-gradient-to-b from-[#A8D61F] to-transparent pointer-events-none z-10"></div>
-
-      {/* Scrollable Content Area - Overlapping */}
-      <div className="flex-1 -mt-24 relative z-20 overflow-auto">
-        <div className="px-6 pb-24">
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex justify-between items-center shadow-lg cursor-pointer hover:shadow-xl transition-shadow">
-            <div>
-              <div className="font-semibold text-gray-900">Ask a question</div>
-              <div className="text-gray-500 text-sm">We are here to help.</div>
-            </div>
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <MessageSquare className="text-white" size={24} />
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center gap-3 mb-4 bg-white rounded-xl p-3">
-              <Search className="text-gray-400" size={20} />
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="hero-section pt-16 pb-40 px-6">
+          <div className="max-w-2xl mx-auto text-center relative z-10">
+            <h1 className="text-4xl md:text-5xl font-bold text-primary-foreground mb-8 leading-tight">
+              How can we help you?
+            </h1>
+            
+            <div className="relative max-w-lg mx-auto">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search for help"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-gray-700"
+                placeholder="Search"
+                className="search-input shadow-lg"
               />
             </div>
+            
+            <p className="text-primary-foreground/70 mt-6 text-lg">
+              Search for answers or browse our knowledge base.
+            </p>
+          </div>
+        </section>
 
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
-                <span className="text-gray-700 text-sm">
-                  How to create a Pexly account
-                </span>
-                <ChevronRight className="text-[#B4F22E]" size={20} />
+        {/* Categories Section */}
+        <section className="bg-white pt-0 pb-16">
+          <div className="container -mt-24 relative z-10">
+            <div className="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
+              <div className="grid md:grid-cols-2 gap-6">
+                {categories.map((category) => (
+                  <div key={category.title} className="text-center p-6 border border-border rounded-lg hover:bg-muted/50 hover:border-primary/30 transition-colors cursor-pointer">
+                    <div className="w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center mx-auto mb-4">
+                      <category.icon className="w-5 h-5 text-primary" strokeWidth={2} />
+                    </div>
+                    <h3 className="text-xl font-bold text-primary mb-3">{category.title}</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{category.description}</p>
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
-                <span className="text-gray-700 text-sm">How to buy crypto on P2P</span>
-                <ChevronRight className="text-[#B4F22E]" size={20} />
-              </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
-                <span className="text-gray-700 text-sm">
-                  Understanding escrow system
-                </span>
-                <ChevronRight className="text-[#B4F22E]" size={20} />
-              </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
-                <span className="text-gray-700 text-sm">
-                  How to enable two-factor authentication
-                </span>
-                <ChevronRight className="text-[#B4F22E]" size={20} />
-              </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 px-2 rounded">
-                <span className="text-gray-700 text-sm">
-                  Understanding trading fees
-                </span>
-                <ChevronRight className="text-[#B4F22E]" size={20} />
-              </div>
-              <div className="flex justify-between items-center py-3 cursor-pointer hover:bg-gray-100 px-2 rounded">
-                <span className="text-gray-700 text-sm">
-                  How to verify your account
-                </span>
-                <ChevronRight className="text-[#B4F22E]" size={20} />
+            </div>
+          </div>
+        </section>
+
+        {/* Promoted Articles */}
+        <section className="bg-background py-16 border-t border-border">
+          <div className="container max-w-3xl">
+            <h2 className="text-2xl font-bold text-foreground mb-6">Promoted articles</h2>
+            <div className="divide-y divide-border">
+              {articles.map((article) => (
+                <div key={article} className="article-item group">
+                  <FileText className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
+                  <span className="text-base font-medium">{article}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-secondary py-8 border-t border-border">
+        <div className="container">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-muted-foreground">Frequently asked questions</p>
+            
+            <div className="flex items-center gap-6">
+              <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                <Globe className="w-5 h-5" />
+                <span>English (US)</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              <div className="flex items-center gap-4">
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Facebook className="w-5 h-5" />
+                </a>
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Twitter className="w-5 h-5" />
+                </a>
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Instagram className="w-5 h-5" />
+                </a>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
+      </footer>
 
-  const HelpView = () => (
-    <div className="flex flex-col h-full bg-white">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Help center</h1>
-          <button onClick={() => setCurrentView("home")}>
-            <X size={28} className="text-gray-600" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3 bg-gray-100 rounded-xl p-3">
-          <Search className="text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search for help"
-            className="flex-1 bg-transparent outline-none text-gray-700"
-          />
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <div className="p-6 space-y-1">
-          {[
-            {
-              title: "Get Started",
-              description: "Get started with secure trading",
-            },
-            {
-              title: "Account - Security & Privacy",
-              description: "Your privacy. Our priority.",
-            },
-            {
-              title: "Wallet & Bank Transfer",
-              description: "Pexly wallet and bank transfer tips",
-            },
-            {
-              title: "Swap - Buy & Sell Crypto",
-              description: "Buy & sell crypto instantly with Swap",
-            },
-            {
-              title: "P2P Trading Guide",
-              description: "Complete guide to P2P trading on Pexly",
-              highlight: true,
-            },
-            {
-              title: "Gift Cards & Rewards",
-              description: "Earn and redeem rewards",
-              highlight: true,
-            },
-            {
-              title: "Referral Program - Event",
-              description: "Earn crypto by inviting friends",
-            },
-            {
-              title: "Other Knowledge",
-              description: "Explore crypto & blockchain tips",
-            },
-          ].map((item, index) => (
-            <div key={index} className="py-4 border-b border-gray-100">
-              <div className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity">
-                <div>
-                  <div
-                    className={`mb-1 ${
-                      item.highlight
-                        ? "font-semibold text-[#B4F22E]"
-                        : "font-semibold text-gray-900"
-                    }`}
-                  >
-                    {item.title}
-                  </div>
-                  <div className="text-gray-500 text-sm">{item.description}</div>
-                </div>
-                <ChevronRight
-                  className={item.highlight ? "text-[#B4F22E]" : "text-gray-400"}
-                  size={24}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const MessagesView = () => (
-    <div className="flex flex-col h-full bg-white">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-          <button onClick={() => setCurrentView("home")}>
-            <X size={28} className="text-gray-600" />
-          </button>
-        </div>
-
-        <div className="flex gap-6">
-          <button className="text-[#B4F22E] font-semibold border-b-2 border-[#B4F22E] pb-2">
-            Open
-          </button>
-          <button className="text-gray-500 font-semibold pb-2">Done</button>
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="bg-gray-200 p-6 rounded-2xl mb-4">
-          <MessageSquare size={32} className="text-gray-500" />
-        </div>
-        <div className="text-2xl font-bold text-gray-900 mb-2">Messages</div>
-        <div className="text-gray-500 mb-8">No messages yet</div>
-        <button className="bg-[#B4F22E] text-black font-semibold px-8 py-4 rounded-full flex items-center gap-2 hover:bg-[#A8D61F] transition-colors shadow-lg">
-          Send us a message
-          <ChevronRight size={20} />
-        </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="h-screen max-w-md mx-auto bg-white flex flex-col">
-      <div className="flex-1 overflow-hidden">
-        {currentView === "home" && <HomeView />}
-        {currentView === "help" && <HelpView />}
-        {currentView === "messages" && <MessagesView />}
-      </div>
-
-      <div className="border-t border-gray-200 bg-white">
-        <div className="flex justify-around items-center py-3">
-          <button
-            onClick={() => setCurrentView("home")}
-            className="flex flex-col items-center gap-1"
-          >
-            <Home
-              size={24}
-              className={
-                currentView === "home" ? "text-[#B4F22E]" : "text-gray-600"
-              }
-            />
-            <span
-              className={`text-xs ${
-                currentView === "home"
-                  ? "text-[#B4F22E] font-semibold"
-                  : "text-gray-600"
-              }`}
-            >
-              Home
-            </span>
-          </button>
-          <button
-            onClick={() => setCurrentView("messages")}
-            className="flex flex-col items-center gap-1"
-          >
-            <MessageSquare
-              size={24}
-              className={
-                currentView === "messages" ? "text-[#B4F22E]" : "text-gray-600"
-              }
-            />
-            <span
-              className={`text-xs ${
-                currentView === "messages"
-                  ? "text-[#B4F22E] font-semibold"
-                  : "text-gray-600"
-              }`}
-            >
-              Messages
-            </span>
-          </button>
-          <button
-            onClick={() => setCurrentView("help")}
-            className="flex flex-col items-center gap-1"
-          >
-            <HelpCircle
-              size={24}
-              className={
-                currentView === "help" ? "text-[#B4F22E]" : "text-gray-600"
-              }
-            />
-            <span
-              className={`text-xs ${
-                currentView === "help"
-                  ? "text-[#B4F22E] font-semibold"
-                  : "text-gray-600"
-              }`}
-            >
-              Help
-            </span>
-          </button>
-        </div>
-      </div>
+      {/* Chat Bubble */}
+      <button className="chat-bubble" aria-label="Open chat">
+        <MessageCircle className="w-6 h-6 text-primary-foreground" />
+      </button>
     </div>
   );
 };
 
-export default SupportInterface;
+export default Index;
