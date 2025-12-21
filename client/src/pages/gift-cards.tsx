@@ -20,9 +20,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { currencies } from "@/lib/currencies";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useLocation } from "wouter";
+import { createClient } from "@/lib/supabase";
 
 const categories = [
   { icon: LayoutGrid, label: "All categories", active: true },
@@ -44,7 +45,7 @@ const allCategories = [
   { icon: Globe, label: "Travel" },
 ];
 
-const giftCards = [
+const defaultGiftCards = [
   {
     id: 1,
     name: "iTunes Gift Card",
@@ -164,6 +165,49 @@ export function GiftCards() {
   const [openCurrency, setOpenCurrency] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All categories");
+  const [giftCards, setGiftCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchGiftCards();
+  }, []);
+
+  const fetchGiftCards = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('gift_cards')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching gift cards:', error);
+        setGiftCards(defaultGiftCards);
+      } else if (data && data.length > 0) {
+        setGiftCards(data.map((card: any) => ({
+          id: card.id,
+          name: card.name,
+          brand: card.brand,
+          priceRange: `$${card.min_value} - $${card.max_value}`,
+          cryptoRange: `${(card.min_value * 0.99).toFixed(2)} USDT - ${(card.max_value * 0.99).toFixed(2)} USDT`,
+          discount: card.discount || "-0.58%",
+          image: card.image_url || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
+          gradient: "from-gray-100 to-white",
+          description: card.description || "",
+          minValue: card.min_value,
+          maxValue: card.max_value,
+          available: card.available,
+        })));
+      } else {
+        setGiftCards(defaultGiftCards);
+      }
+    } catch (error) {
+      console.error('Error fetching gift cards:', error);
+      setGiftCards(defaultGiftCards);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const selectedCurrency = currencies.find((c) => c.code === currency);
 
@@ -311,8 +355,13 @@ export function GiftCards() {
         <h2 className="text-lg font-semibold text-foreground mb-4 mt-2">
           All categories
         </h2>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading gift cards...</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 pb-8">
-          {giftCards.map((card, index) => (
+          {giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
             <div
               key={card.id}
               className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up"
@@ -343,8 +392,13 @@ export function GiftCards() {
                 </p>
               </div>
             </div>
-          ))}
+          ))) : (
+            <div className="col-span-full text-center py-8">
+              <p className="text-muted-foreground">No gift cards available yet</p>
+            </div>
+          )}
         </div>
+        )}
       </main>
 
       {/* FAQ Section */}
