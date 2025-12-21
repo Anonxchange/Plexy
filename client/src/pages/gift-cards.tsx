@@ -6,13 +6,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Bitcoin, Check, ChevronsUpDown } from "lucide-react";
+import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { currencies } from "@/lib/currencies";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { PexlyFooter } from "@/components/pexly-footer";
 
 const categories = [
   { icon: LayoutGrid, label: "All categories", active: true },
@@ -138,8 +140,8 @@ export function GiftCards() {
 
           {/* Crypto Banner - Glass */}
           <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-3 border border-white/60 dark:border-white/20 shadow-lg flex items-center gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <div className="w-10 h-10 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Bitcoin className="h-5 w-5 text-primary" />
+            <div className="w-10 h-10 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center flex-shrink-0 flex-shrink-0">
+              <img src={cryptoIconUrls.USDT} alt="USDT" className="h-6 w-6 rounded-full" />
             </div>
             <p className="text-sm font-medium text-foreground">
               Pay with crypto for instant transactions
@@ -319,6 +321,8 @@ export function GiftCards() {
           </Accordion>
         </div>
       </section>
+
+      <PexlyFooter />
     </div>
   );
 }
