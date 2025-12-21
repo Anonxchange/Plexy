@@ -28,6 +28,7 @@ import { MyOffers } from "@/pages/my-offers";
 import Spot from "@/pages/spot";
 import NotFound from "@/pages/not-found";
 import { GiftCards } from "@/pages/gift-cards";
+import { GiftCardDetail } from "@/pages/gift-card-detail";
 import { TradeHistory } from "@/pages/trade-history";
 import AccountSettings from "@/pages/account-settings";
 import DevicesPage from "@/pages/devices";
@@ -118,6 +119,7 @@ function Router() {
           <Route path="/wallet/pexly-pay/password-free" component={PexlyPayPasswordFree} />
           <Route path="/wallet/pexly-pay/help" component={PexlyPayHelp} />
       <Route path="/gift-cards" component={GiftCards} />
+      <Route path="/gift-cards/:id" component={GiftCardDetail} />
       <Route path="/trade-history" component={TradeHistory} />
       <Route path="/account-settings" component={AccountSettings} />
       <Route path="/devices" component={DevicesPage} />
@@ -178,7 +180,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop-post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea"].includes(location) || location.startsWith("/trade/") || location.startsWith("/blog/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop-post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea"].includes(location) || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email"].includes(location);
 
   return (
