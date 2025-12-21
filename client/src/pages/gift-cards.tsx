@@ -15,6 +15,7 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { useLocation } from "wouter";
 
 const categories = [
   { icon: LayoutGrid, label: "All categories", active: true },
@@ -35,6 +36,10 @@ const giftCards = [
     discount: "-0.58%",
     image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
     gradient: "from-gray-100 to-white",
+    description: "Get access to millions of songs, movies, TV shows, and more with an iTunes Gift Card. Use it to download from the Apple App Store, iTunes Store, or buy Apple Music.",
+    minValue: 5,
+    maxValue: 200,
+    available: 999,
   },
   {
     id: 2,
@@ -45,6 +50,10 @@ const giftCards = [
     discount: "-0.50%",
     image: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop",
     gradient: "from-blue-600 to-blue-800",
+    description: "Add funds to your PlayStation Network wallet. Buy games, in-game currency, subscriptions, and more from the PlayStation Store.",
+    minValue: 10,
+    maxValue: 100,
+    available: 850,
   },
   {
     id: 3,
@@ -55,6 +64,10 @@ const giftCards = [
     discount: "-1.00%",
     image: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?w=400&h=300&fit=crop",
     gradient: "from-orange-400 to-yellow-500",
+    description: "Shop millions of products at Amazon with an Amazon Gift Card. Use it for everything from electronics to clothing, delivered to your door.",
+    minValue: 25,
+    maxValue: 500,
+    available: 750,
   },
   {
     id: 4,
@@ -65,6 +78,10 @@ const giftCards = [
     discount: "-1.00%",
     image: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400&h=300&fit=crop",
     gradient: "from-red-600 to-red-800",
+    description: "Enjoy unlimited streaming of TV shows, movies, and more. A Netflix Gift Card is the perfect gift for entertainment lovers.",
+    minValue: 15,
+    maxValue: 100,
+    available: 999,
   },
   {
     id: 5,
@@ -75,6 +92,10 @@ const giftCards = [
     discount: "-1.00%",
     image: "https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400&h=300&fit=crop",
     gradient: "from-green-500 to-green-700",
+    description: "Enjoy millions of songs ad-free with Spotify Premium. Create playlists, download offline, and enjoy high-quality audio.",
+    minValue: 10,
+    maxValue: 60,
+    available: 500,
   },
   {
     id: 6,
@@ -85,6 +106,10 @@ const giftCards = [
     discount: "-2.00%",
     image: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=300&fit=crop",
     gradient: "from-slate-700 to-slate-900",
+    description: "Add funds to your Steam account. Purchase games, in-game items, and digital content from the world's largest PC gaming platform.",
+    minValue: 20,
+    maxValue: 100,
+    available: 1200,
   },
 ];
 
@@ -116,6 +141,7 @@ const faqs = [
 ];
 
 export function GiftCards() {
+  const [, setLocation] = useLocation();
   const [currency, setCurrency] = useState("USD");
   const [openCurrency, setOpenCurrency] = useState(false);
 
@@ -264,11 +290,12 @@ export function GiftCards() {
         <h2 className="text-lg font-semibold text-foreground mb-4 mt-2">
           All categories
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 pb-8">
           {giftCards.map((card, index) => (
             <div
               key={card.id}
               className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up"
+              onClick={() => setLocation(`/gift-cards/${card.id}`)}
               style={{ animationDelay: `${0.2 + index * 0.05}s` }}
             >
               <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden`}>
