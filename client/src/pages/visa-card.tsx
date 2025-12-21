@@ -7,11 +7,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-
-// Placeholder image paths - using existing assets where possible or public placeholders
-const lifestylePasta = "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&q=80&w=800";
-const lifestyleBeach = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=800";
-const lifestyleBike = "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800";
+import lifestylePasta from '@/assets/lifestyle-pasta.jpg';
+import lifestyleBeach from '@/assets/lifestyle-beach.jpg';
+import lifestyleBike from '@/assets/lifestyle-bike.jpg';
 
 // ============ CRYPTO ICONS ============
 const BitcoinIcon = ({ className }: { className?: string }) => (
@@ -62,7 +60,7 @@ const CryptoIconsRow = () => (
 // ============ HERO CARD ============
 const HeroCard = () => (
   <section className="px-4 pt-6 pb-10">
-    <div className="hero-card rounded-3xl p-7 md:p-10 relative overflow-hidden bg-primary/20">
+    <div className="hero-card rounded-3xl p-7 md:p-10 relative overflow-hidden">
       <div className="absolute left-7 md:left-10 top-7 md:top-10 w-1.5 h-28 rounded-full overflow-hidden">
         <div className="w-full h-1/3 bg-red-500" />
         <div className="w-full h-1/3 bg-yellow-400" />
@@ -72,7 +70,7 @@ const HeroCard = () => (
         <h1 className="text-2xl md:text-4xl font-bold text-white leading-tight mb-8">
           Hold your crypto wherever you like, spend it with the Pexly Card
         </h1>
-        <Button size="lg" className="mb-4">Get your card</Button>
+        <Button variant="hero" className="mb-4">Get your card</Button>
         <p className="text-white/70 text-base">Your card is free.</p>
       </div>
     </div>
@@ -82,10 +80,10 @@ const HeroCard = () => (
 // ============ DEPOSIT SECTION ============
 const DepositSection = () => (
   <section className="px-4 py-10">
-    <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-4 text-center">
+    <h2 className="text-3xl md:text-5xl font-bold text-foreground leading-tight mb-4">
       Deposit crypto,<br />pay with a tap
     </h2>
-    <p className="text-white/60 text-lg mb-8 text-center">
+    <p className="text-muted-foreground text-lg mb-8">
       Top up your Pexly Card with EUR using BTC, ETH, USDC, BNB and more.
     </p>
     <CryptoIconsRow />
@@ -154,18 +152,18 @@ const WalletSection = () => (
   <section className="px-4 py-10">
     <div className="flex items-center justify-center gap-8 py-6">
       <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-red-500 via-yellow-400 to-blue-500 p-0.5">
-        <div className="w-full h-full bg-background rounded-full flex items-center justify-center border border-white/10">
+        <div className="w-full h-full bg-background rounded-full flex items-center justify-center">
           <div className="w-7 h-5 rounded bg-gradient-to-r from-blue-500 via-green-400 to-yellow-500" />
         </div>
       </div>
-      <div className="text-white">
+      <div className="text-foreground">
         <svg className="w-11 h-11" viewBox="0 0 24 24" fill="currentColor">
           <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
         </svg>
       </div>
     </div>
-    <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-4 text-center">Crypto in, money out</h2>
-    <p className="text-white/60 text-lg text-center">Use the Pexly Card with Google Wallet. Apple Pay coming soon.</p>
+    <h2 className="text-3xl md:text-5xl font-bold text-foreground leading-tight mb-4">Crypto in, money out</h2>
+    <p className="text-muted-foreground text-lg">Use the Pexly Card with Google Wallet. Apple Pay coming soon.</p>
   </section>
 );
 
@@ -181,10 +179,10 @@ const FeaturesSection = () => (
   <section className="px-4 py-12 pb-20">
     <div className="space-y-10">
       {features.map((feature, index) => (
-        <div key={index} className="opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-forwards" style={{ animationDelay: `${index * 150}ms` }}>
-          <div className="text-white/70 mb-3">{feature.icon}</div>
-          <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
-          <p className="text-white/50 text-base leading-relaxed">{feature.description}</p>
+        <div key={index} className="opacity-0 animate-slide-up" style={{ animationDelay: `${index * 0.15}s`, animationFillMode: 'forwards' }}>
+          <div className="text-muted-foreground mb-3">{feature.icon}</div>
+          <h3 className="text-xl font-bold text-foreground mb-2">{feature.title}</h3>
+          <p className="text-muted-foreground text-base leading-relaxed">{feature.description}</p>
         </div>
       ))}
     </div>
@@ -202,42 +200,42 @@ const securityFeatures = [
 const SecuritySection = () => (
   <section className="px-4 py-16">
     <div className="relative mb-10">
-      <div className="mx-auto w-64 h-80 bg-gradient-to-br from-white/10 to-white/5 rounded-3xl border border-white/10 flex items-center justify-center">
+      <div className="mx-auto w-64 h-80 bg-gradient-to-br from-secondary to-muted rounded-3xl border border-border flex items-center justify-center">
         <div className="text-center">
-          <div className="w-48 h-64 bg-white/5 rounded-2xl mx-auto flex flex-col items-center justify-center p-4">
-            <span className="text-white/40 text-sm">Cards</span>
-            <div className="w-32 h-20 bg-teal-700 rounded-lg mt-2 flex items-center justify-center">
-              <span className="text-white/80 text-xs font-bold">Pexly</span>
+          <div className="w-48 h-64 bg-muted rounded-2xl mx-auto flex flex-col items-center justify-center p-4">
+            <span className="text-muted-foreground text-sm">Cards</span>
+            <div className="w-32 h-20 bg-primary rounded-lg mt-2 flex items-center justify-center">
+              <span className="text-primary-foreground text-xs font-bold">Pexly</span>
             </div>
             <div className="mt-4 text-left w-full">
-              <span className="text-white/40 text-xs">Balance</span>
-              <p className="text-white font-bold">€427.87</p>
+              <span className="text-muted-foreground text-xs">Balance</span>
+              <p className="text-foreground font-bold">€427.87</p>
             </div>
           </div>
         </div>
       </div>
-      <div className="absolute top-8 right-4 bg-white rounded-xl px-3 py-2 shadow-lg">
+      <div className="absolute top-8 right-4 bg-background rounded-xl px-3 py-2 shadow-lg border border-border">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 bg-teal-600 rounded flex items-center justify-center"><Check className="text-white w-3 h-3" /></div>
+          <div className="w-5 h-5 bg-primary rounded flex items-center justify-center"><span className="text-primary-foreground text-xs">✓</span></div>
           <div>
-            <p className="text-xs font-semibold text-gray-900">Pexly Card</p>
-            <p className="text-xs text-gray-500">1 new notification</p>
+            <p className="text-xs font-semibold text-foreground">Pexly Card</p>
+            <p className="text-xs text-muted-foreground">1 new notification</p>
           </div>
         </div>
       </div>
       <div className="absolute top-1/3 right-2 space-y-2">
-        <div className="bg-teal-700 text-white px-4 py-2 rounded-full text-sm font-medium">Freeze</div>
-        <div className="bg-teal-700 text-white px-4 py-2 rounded-full text-sm font-medium">Revoke</div>
+        <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium">Freeze</div>
+        <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium">Revoke</div>
       </div>
     </div>
-    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">Easily accessible<br />security features</h2>
-    <p className="text-white/60 text-lg mb-8">Light on complexity, heavy on safety - You're in control.</p>
-    <Button variant="outline" className="mb-12">Get Your Card</Button>
+    <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">Easily accessible<br />security features</h2>
+    <p className="text-muted-foreground text-lg mb-8">Light on complexity, heavy on safety - You're in control.</p>
+    <button className="bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-colors mb-12">Get Your Card</button>
     <div className="space-y-4">
       {securityFeatures.map((feature, index) => (
-        <div key={index} className="flex items-center gap-4 opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-forwards" style={{ animationDelay: `${index * 100}ms` }}>
-          <div className="text-white/70">{feature.icon}</div>
-          <p className="text-white"><span className="font-semibold">{feature.title}</span> <span className="text-white/60">{feature.description}</span></p>
+        <div key={index} className="flex items-center gap-4 opacity-0 animate-slide-up" style={{ animationDelay: `${index * 0.1}s`, animationFillMode: 'forwards' }}>
+          <div className="text-muted-foreground">{feature.icon}</div>
+          <p className="text-foreground"><span className="font-semibold">{feature.title}</span> <span className="text-muted-foreground">{feature.description}</span></p>
         </div>
       ))}
     </div>
@@ -253,15 +251,15 @@ const CardTypesSection = () => {
 
   return (
     <section className="px-4 py-16">
-      <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 leading-tight">Virtual, or in<br />your pocket</h2>
-      <p className="text-white/60 text-lg mb-8">Choose the card that suits your lifestyle.</p>
+      <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3 leading-tight">Virtual, or in<br />your pocket</h2>
+      <p className="text-muted-foreground text-lg mb-8">Choose the card that suits your lifestyle.</p>
       <div className="relative mb-8">
         <div className="w-full max-w-sm mx-auto">
           {activeCard === 'virtual' ? (
-            <div className="aspect-[1.6/1] bg-teal-700 rounded-2xl p-6 relative overflow-hidden">
+            <div className="aspect-[1.6/1] bg-primary rounded-2xl p-6 relative overflow-hidden">
               <div className="absolute inset-0"><svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none"><path d="M-50,100 Q80,50 150,120 T350,80" stroke="#ef4444" strokeWidth="60" fill="none" opacity="0.8"/></svg></div>
-              <span className="relative text-white font-bold text-xl">Pexly</span>
-              <div className="absolute bottom-6 right-6"><span className="text-white font-bold text-xl tracking-wider">VISA</span></div>
+              <span className="relative text-primary-foreground font-bold text-xl">Pexly</span>
+              <div className="absolute bottom-6 right-6"><span className="text-primary-foreground font-bold text-xl tracking-wider">VISA</span></div>
             </div>
           ) : (
             <div className="aspect-[1.6/1] bg-red-500 rounded-2xl p-6 relative overflow-hidden">
@@ -277,20 +275,20 @@ const CardTypesSection = () => {
         </div>
       </div>
       <div className="flex gap-8 mb-6">
-        <button onClick={() => setActiveCard('virtual')} className={`text-xl font-bold transition-colors ${activeCard === 'virtual' ? 'text-white' : 'text-white/40'}`}>Virtual</button>
-        <button onClick={() => setActiveCard('physical')} className={`text-xl font-bold transition-colors ${activeCard === 'physical' ? 'text-white' : 'text-white/40'}`}>Physical</button>
+        <button onClick={() => setActiveCard('virtual')} className={`text-xl font-bold transition-colors ${activeCard === 'virtual' ? 'text-foreground' : 'text-muted-foreground'}`}>Virtual</button>
+        <button onClick={() => setActiveCard('physical')} className={`text-xl font-bold transition-colors ${activeCard === 'physical' ? 'text-foreground' : 'text-muted-foreground'}`}>Physical</button>
       </div>
       <div className="space-y-3">
         {cardFeatures.map((feature, index) => (
           <div key={index} className="flex items-center gap-3">
-            <Check className="w-5 h-5 text-white/60" />
-            <span className="text-white">{feature.text}</span>
-            {feature.comingSoon && <span className="bg-white/20 text-white/80 text-xs px-2 py-1 rounded-full">Coming soon</span>}
+            <Check className="w-5 h-5 text-muted-foreground" />
+            <span className="text-foreground">{feature.text}</span>
+            {feature.comingSoon && <span className="bg-secondary text-muted-foreground text-xs px-2 py-1 rounded-full">Coming soon</span>}
           </div>
         ))}
-        {activeCard === 'virtual' && <div className="flex items-center gap-3"><Check className="w-5 h-5 text-white/60" /><span className="text-white">Start using it right away</span></div>}
+        {activeCard === 'virtual' && <div className="flex items-center gap-3"><Check className="w-5 h-5 text-muted-foreground" /><span className="text-foreground">Start using it right away</span></div>}
       </div>
-      <Button className="mt-8">Get your card</Button>
+      <button className="mt-8 bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-colors">Get your card</button>
     </section>
   );
 };
@@ -298,78 +296,58 @@ const CardTypesSection = () => {
 // ============ TRUSTPILOT SECTION ============
 const TrustpilotSection = () => (
   <section className="px-4 py-16 text-center">
-    <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">Our customers<br />love us</h2>
+    <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8">Our customers<br />love us</h2>
     <div className="flex items-center justify-center gap-3 mb-6">
-      <div className="flex items-center gap-1"><Star className="w-5 h-5 text-emerald-400 fill-emerald-400" /><span className="text-white font-bold">Trustpilot</span></div>
-      <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map((star) => (<div key={star} className="w-7 h-7 bg-emerald-400 flex items-center justify-center"><Star className="w-4 h-4 text-white fill-white" /></div>))}</div>
-      <span className="text-white/80">4.8</span>
+      <div className="flex items-center gap-1"><Star className="w-5 h-5 text-emerald-500 fill-emerald-500" /><span className="text-foreground font-bold">Trustpilot</span></div>
+      <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map((star) => (<div key={star} className="w-7 h-7 bg-emerald-500 flex items-center justify-center"><Star className="w-4 h-4 text-white fill-white" /></div>))}</div>
+      <span className="text-muted-foreground">4.8</span>
     </div>
-    <Button variant="outline">Read reviews</Button>
+    <button className="bg-secondary text-foreground font-semibold px-6 py-3 rounded-full hover:bg-secondary/80 transition-colors border border-border">Read reviews</button>
   </section>
 );
 
 // ============ CARD DETAILS SECTION ============
 const CardDetailsSection = () => (
-  <section className="px-4 py-12 space-y-8 bg-white text-black rounded-t-[3rem]">
-    <div className="border-b border-black/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><CreditCard className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Card network</span></div>
-      <p className="text-black/80 ml-8 font-medium">VISA</p>
+  <section className="px-4 py-12 space-y-8">
+    <div className="border-b border-border pb-6">
+      <div className="flex items-center gap-3 mb-2"><CreditCard className="w-5 h-5 text-muted-foreground" /><span className="text-foreground font-semibold">Card network</span></div>
+      <p className="text-muted-foreground ml-8">VISA</p>
     </div>
-    <div className="border-b border-black/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><BitcoinIcon className="w-5 h-5" /><span className="text-black font-semibold">Supported currencies</span></div>
-      <div className="text-black/80 ml-8 font-medium space-y-1">
-        <p>Bitcoin.</p>
-        <p>Bitcoin on Lightning Network.</p>
-        <p>Ethereum.</p>
-      </div>
+    <div className="border-b border-border pb-6">
+      <div className="flex items-center gap-3 mb-2"><BitcoinIcon className="w-5 h-5" /><span className="text-foreground font-semibold">Supported currencies</span></div>
+      <p className="text-muted-foreground ml-8">Bitcoin.<br />Bitcoin on Lightning Network.<br />Ethereum.</p>
     </div>
-    <div className="border-b border-black/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><Globe className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Eligible countries</span></div>
-      <p className="text-black/60 ml-8 text-sm leading-relaxed font-medium">Austria, Belgium, Bulgaria, Croatia, Republic of Cyprus, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain and Sweden.</p>
-      <p className="text-teal-600 ml-8 mt-3 text-sm font-semibold">Please <span className="underline cursor-pointer">check the list of countries or regions</span> where the Pexly Card is not supported.</p>
+    <div className="border-b border-border pb-6">
+      <div className="flex items-center gap-3 mb-2"><Globe className="w-5 h-5 text-muted-foreground" /><span className="text-foreground font-semibold">Eligible countries</span></div>
+      <p className="text-muted-foreground ml-8 text-sm leading-relaxed">Austria, Belgium, Bulgaria, Croatia, Republic of Cyprus, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain and Sweden.</p>
+      <p className="text-primary ml-8 mt-3 text-sm">Please <span className="font-semibold underline">check the list of countries or regions</span> where the Pexly Card is not supported.</p>
     </div>
-    <div className="border-b border-black/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><Headphones className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Customer service</span></div>
-      <p className="text-black/80 ml-8 font-medium">24/7</p>
+    <div className="border-b border-border pb-6">
+      <div className="flex items-center gap-3 mb-2"><Headphones className="w-5 h-5 text-muted-foreground" /><span className="text-foreground font-semibold">Customer service</span></div>
+      <p className="text-muted-foreground ml-8">24/7</p>
     </div>
-    <div className="border-b border-black/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><ShoppingCart className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Spending limits</span></div>
-      <div className="ml-8 font-medium space-y-1">
-        <p className="text-black/80">Starter</p>
-        <p className="text-black/80">€7,500 per day</p>
-        <p className="text-black/80">€7,500 per month</p>
-        <p className="text-black/40 text-sm mt-2 font-normal">Payments and cash out transactions share the same limits.</p>
-      </div>
+    <div className="border-b border-border pb-6">
+      <div className="flex items-center gap-3 mb-2"><ShoppingCart className="w-5 h-5 text-muted-foreground" /><span className="text-foreground font-semibold">Spending limits</span></div>
+      <div className="ml-8"><p className="text-muted-foreground">Starter</p><p className="text-muted-foreground">€7,500 per day</p><p className="text-muted-foreground">€7,500 per month</p><p className="text-muted-foreground/70 text-sm mt-2">Payments and cash out transactions share the same limits.</p></div>
     </div>
-    <div className="border-b border-black/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><CheckCircle className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">No-fee</span></div>
-      <div className="ml-8 text-black/80 space-y-1 font-medium">
-        <p>Account setup.</p>
-        <p>Virtual card creation.</p>
-        <p>Physical card creation.</p>
-        <p>Monthly usage.</p>
-        <p>Foreign transactions.</p>
-        <p>Card transactions.</p>
-        <p>Cash out fee.</p>
-      </div>
+    <div className="border-b border-border pb-6">
+      <div className="flex items-center gap-3 mb-2"><CheckCircle className="w-5 h-5 text-muted-foreground" /><span className="text-foreground font-semibold">No-fee</span></div>
+      <div className="ml-8 text-muted-foreground space-y-1"><p>Account setup.</p><p>Virtual card creation.</p><p>Physical card creation.</p><p>Monthly usage.</p><p>Foreign transactions.</p><p>Card transactions.</p><p>Cash out fee.</p></div>
     </div>
-    <div className="border-b border-black/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><PlusCircle className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Deposit fee</span></div>
-      <div className="ml-8 font-medium space-y-1">
-        <p className="text-black/80 font-bold text-lg">1.99%</p>
-        <p className="text-black/40 text-sm mt-2 font-normal leading-relaxed">This is the fixed fee charged by Pexly on top of the variable cost of exchange, based on our card partner's live market price at the moment the payment is confirmed.</p>
-      </div>
+    <div className="border-b border-border pb-6">
+      <div className="flex items-center gap-3 mb-2"><PlusCircle className="w-5 h-5 text-muted-foreground" /><span className="text-foreground font-semibold">Deposit fee</span></div>
+      <div className="ml-8"><p className="text-foreground font-semibold">1.99%</p><p className="text-muted-foreground/70 text-sm mt-2">This is the fixed fee charged by Pexly on top of the variable cost of exchange, based on our card partner's live market price at the moment the payment is confirmed.</p></div>
     </div>
     <div className="pb-6">
-      <div className="flex items-center gap-3 mb-2"><Smartphone className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Experience</span></div>
-      <p className="text-black/80 ml-8 font-medium">The Pexly Card is available both in the <span className="font-bold">app</span> and on our <span className="font-bold">website</span></p>
+      <div className="flex items-center gap-3 mb-2"><Smartphone className="w-5 h-5 text-muted-foreground" /><span className="text-foreground font-semibold">Experience</span></div>
+      <p className="text-muted-foreground ml-8">The Pexly Card is available both in the <span className="font-semibold">app</span> and on our <span className="font-semibold">website</span></p>
     </div>
-    <div className="text-black/40 text-xs space-y-3 font-medium px-2">
+    <div className="text-muted-foreground/60 text-sm space-y-3">
       <p>*Different limits are available according to your level of identity verification. Obtaining a Pexly Card involves a verification procedure managed by our card partner.</p>
       <p>**Unfortunately the Cash Out feature is currently unavailable for Swedish residents.</p>
       <p>***Physical card reorders are subject to a fee.</p>
     </div>
-    <Button variant="default" className="w-full h-12 rounded-full font-bold">Discover more</Button>
+    <button className="w-full bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-colors">Discover more</button>
   </section>
 );
 
@@ -384,14 +362,14 @@ const faqs = [
 ];
 
 const FAQSection = () => (
-  <section className="px-4 py-16 bg-white text-black">
-    <h2 className="text-3xl md:text-4xl font-bold text-black mb-3">Frequently asked questions</h2>
-    <p className="text-black/60 mb-8 font-medium">Check out our <span className="text-black underline font-bold">Knowledge Base</span> page for more FAQs</p>
+  <section className="px-4 py-16">
+    <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Frequently asked questions</h2>
+    <p className="text-muted-foreground mb-8">Check out our <span className="text-foreground underline">Knowledge Base</span> page for more FAQs</p>
     <Accordion type="single" collapsible className="space-y-0">
       {faqs.map((faq, index) => (
-        <AccordionItem key={index} value={`item-${index}`} className="border-b border-black/10">
-          <AccordionTrigger className="text-black text-left font-bold py-5 hover:no-underline text-lg">{faq.question}</AccordionTrigger>
-          <AccordionContent className="text-black/60 pb-5 font-medium leading-relaxed">{faq.answer}</AccordionContent>
+        <AccordionItem key={index} value={`item-${index}`} className="border-b border-border">
+          <AccordionTrigger className="text-foreground text-left font-semibold py-5 hover:no-underline">{faq.question}</AccordionTrigger>
+          <AccordionContent className="text-muted-foreground pb-5">{faq.answer}</AccordionContent>
         </AccordionItem>
       ))}
     </Accordion>
@@ -400,16 +378,33 @@ const FAQSection = () => (
 
 // ============ FOOTER SECTION ============
 const FooterSection = () => (
-  <footer className="px-4 py-12 bg-white border-t border-black/5">
+  <footer className="px-4 py-12 bg-secondary">
     <div className="flex flex-wrap justify-center gap-3 mb-6">
-      <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center shadow-sm"><span className="text-white font-bold text-lg">₿</span></div>
+      <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center"><span className="text-white font-bold text-lg">₿</span></div>
+      <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white font-bold text-lg">⚡</span></div>
+      <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center"><span className="text-white font-bold text-lg">◆</span></div>
+      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center"><span className="text-white font-bold text-sm">$</span></div>
+      <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center"><span className="text-white font-bold text-sm">₮</span></div>
+      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-emerald-400 rounded-full flex items-center justify-center"><span className="text-white font-bold text-sm">S</span></div>
+      <div className="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center"><span className="text-white font-bold text-sm">—</span></div>
+      <div className="w-10 h-10 bg-pink-400 rounded-full flex items-center justify-center"><span className="text-white font-bold text-sm">∞</span></div>
+      <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center border border-border"><span className="text-white font-bold text-sm">F</span></div>
+      <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center border border-border"><span className="text-foreground font-bold text-xs"></span></div>
     </div>
+    <div className="flex flex-wrap justify-center gap-3 mb-8">
+      <div className="h-8 px-3 bg-background rounded flex items-center justify-center border border-border"><span className="text-foreground font-semibold text-xs">G Pay</span></div>
+      <div className="h-8 px-3 bg-background rounded flex items-center justify-center border border-border"><span className="text-blue-600 font-bold text-xs">VISA</span></div>
+      <div className="h-8 px-3 bg-background rounded flex items-center justify-center border border-border"><div className="flex"><div className="w-4 h-4 bg-red-500 rounded-full -mr-1"></div><div className="w-4 h-4 bg-yellow-500 rounded-full"></div></div></div>
+      <div className="h-8 px-3 bg-background rounded flex items-center justify-center border border-border"><span className="text-pink-600 font-bold text-xs">iDEAL</span></div>
+    </div>
+    <div className="text-center text-muted-foreground text-sm">© 2024 Pexly. All rights reserved.</div>
   </footer>
 );
 
+// ============ MAIN PAGE ============
 const VisaCard = () => {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
+    <main className="min-h-screen bg-background">
       <HeroCard />
       <DepositSection />
       <LifestyleCarousel />
@@ -421,7 +416,7 @@ const VisaCard = () => {
       <CardDetailsSection />
       <FAQSection />
       <FooterSection />
-    </div>
+    </main>
   );
 };
 
