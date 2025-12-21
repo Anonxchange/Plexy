@@ -419,7 +419,7 @@ export function GiftCards() {
                 </p>
               </div>
             </div>
-          ))) : (
+          )) : (
             <div className="col-span-full text-center py-8">
               <p className="text-muted-foreground">No gift cards available yet</p>
             </div>
