@@ -140,6 +140,8 @@ export function SignUp() {
   const [emailOtp, setEmailOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [otpCountdown, setOtpCountdown] = useState(60);
+  const [isResending, setIsResending] = useState(false);
   const { signUp, signIn, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -265,6 +267,23 @@ export function SignUp() {
       setLocation("/dashboard");
     }
   }, [user, setLocation]);
+
+  // Countdown timer for OTP expiry
+  useEffect(() => {
+    if (step !== "email_verify" || otpCountdown <= 0) return;
+
+    const timer = setInterval(() => {
+      setOtpCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [step, otpCountdown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -482,6 +501,38 @@ export function SignUp() {
     setLocation("/signin");
   };
 
+  const handleResendOtp = async () => {
+    setIsResending(true);
+    
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    setIsResending(false);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      toast({
+        title: "Error",
+        description: errorData.error || "Failed to resend verification code. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setOtpCountdown(60);
+    setEmailOtp("");
+    toast({
+      title: "Code resent!",
+      description: "We've sent a new 6-digit verification code to your email.",
+    });
+  };
+
   return (
     <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
       {/* Header */}
@@ -556,18 +607,43 @@ export function SignUp() {
               />
             </div>
 
+            {/* Countdown Timer */}
+            <div className="mb-4 text-center">
+              <p className={`text-sm ${otpCountdown > 10 ? (isDark ? 'text-gray-400' : 'text-gray-600') : 'text-red-500 font-medium'}`}>
+                Code expires in: <span className="font-mono font-bold">{otpCountdown}s</span>
+              </p>
+            </div>
+
             <button
               onClick={handleEmailOtpVerify}
               disabled={loading || emailOtp.length !== 6}
-              className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50 mb-4"
+              className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50 mb-3"
             >
               {loading ? "Verifying..." : "Verify & Continue"}
+            </button>
+
+            {/* Resend Button */}
+            <button
+              onClick={handleResendOtp}
+              disabled={otpCountdown > 0 || isResending}
+              className={`w-full py-3 rounded-xl text-sm font-medium transition-colors mb-4 ${
+                otpCountdown > 0 || isResending
+                  ? isDark
+                    ? 'text-gray-600 bg-gray-800 cursor-not-allowed'
+                    : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                  : isDark
+                  ? 'text-lime-400 hover:text-lime-300 hover:bg-gray-800'
+                  : 'text-lime-600 hover:text-lime-700 hover:bg-gray-100'
+              }`}
+            >
+              {isResending ? "Sending..." : otpCountdown > 0 ? `Resend in ${otpCountdown}s` : "Resend Code"}
             </button>
 
             <button
               onClick={() => {
                 setStep("details");
                 setEmailOtp("");
+                setOtpCountdown(60);
               }}
               className={`w-full py-3 rounded-xl text-sm transition-colors ${
                 isDark 
