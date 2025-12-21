@@ -154,7 +154,7 @@ const WalletSection = () => (
   <section className="px-4 py-10">
     <div className="flex items-center justify-center gap-8 py-6">
       <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-red-500 via-yellow-400 to-blue-500 p-0.5">
-        <div className="w-full h-full bg-background rounded-full flex items-center justify-center">
+        <div className="w-full h-full bg-background rounded-full flex items-center justify-center border border-white/10">
           <div className="w-7 h-5 rounded bg-gradient-to-r from-blue-500 via-green-400 to-yellow-500" />
         </div>
       </div>
@@ -218,7 +218,7 @@ const SecuritySection = () => (
       </div>
       <div className="absolute top-8 right-4 bg-white rounded-xl px-3 py-2 shadow-lg">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 bg-teal-600 rounded flex items-center justify-center"><span className="text-white text-xs">✓</span></div>
+          <div className="w-5 h-5 bg-teal-600 rounded flex items-center justify-center"><Check className="text-white w-3 h-3" /></div>
           <div>
             <p className="text-xs font-semibold text-gray-900">Pexly Card</p>
             <p className="text-xs text-gray-500">1 new notification</p>
@@ -301,7 +301,7 @@ const TrustpilotSection = () => (
     <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">Our customers<br />love us</h2>
     <div className="flex items-center justify-center gap-3 mb-6">
       <div className="flex items-center gap-1"><Star className="w-5 h-5 text-emerald-400 fill-emerald-400" /><span className="text-white font-bold">Trustpilot</span></div>
-      <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map((star) => (<div key={star} className="w-7 h-7 bg-emerald-400 flex items-center justify-center"><Star key={star} className="w-4 h-4 text-white fill-white" /></div>))}</div>
+      <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map((star) => (<div key={star} className="w-7 h-7 bg-emerald-400 flex items-center justify-center"><Star className="w-4 h-4 text-white fill-white" /></div>))}</div>
       <span className="text-white/80">4.8</span>
     </div>
     <Button variant="outline">Read reviews</Button>
@@ -310,46 +310,66 @@ const TrustpilotSection = () => (
 
 // ============ CARD DETAILS SECTION ============
 const CardDetailsSection = () => (
-  <section className="px-4 py-12 space-y-8">
-    <div className="border-b border-white/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><CreditCard className="w-5 h-5 text-white/60" /><span className="text-white font-semibold">Card network</span></div>
-      <p className="text-white/80 ml-8">VISA</p>
+  <section className="px-4 py-12 space-y-8 bg-white text-black rounded-t-[3rem]">
+    <div className="border-b border-black/10 pb-6">
+      <div className="flex items-center gap-3 mb-2"><CreditCard className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Card network</span></div>
+      <p className="text-black/80 ml-8 font-medium">VISA</p>
     </div>
-    <div className="border-b border-white/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><BitcoinIcon className="w-5 h-5" /><span className="text-white font-semibold">Supported currencies</span></div>
-      <p className="text-white/80 ml-8">Bitcoin.<br />Bitcoin on Lightning Network.<br />Ethereum.</p>
+    <div className="border-b border-black/10 pb-6">
+      <div className="flex items-center gap-3 mb-2"><BitcoinIcon className="w-5 h-5" /><span className="text-black font-semibold">Supported currencies</span></div>
+      <div className="text-black/80 ml-8 font-medium space-y-1">
+        <p>Bitcoin.</p>
+        <p>Bitcoin on Lightning Network.</p>
+        <p>Ethereum.</p>
+      </div>
     </div>
-    <div className="border-b border-white/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><Globe className="w-5 h-5 text-white/60" /><span className="text-white font-semibold">Eligible countries</span></div>
-      <p className="text-white/60 ml-8 text-sm leading-relaxed">Austria, Belgium, Bulgaria, Croatia, Republic of Cyprus, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain and Sweden.</p>
-      <p className="text-teal-400 ml-8 mt-3 text-sm">Please <span className="font-semibold underline">check the list of countries or regions</span> where the Pexly Card is not supported.</p>
+    <div className="border-b border-black/10 pb-6">
+      <div className="flex items-center gap-3 mb-2"><Globe className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Eligible countries</span></div>
+      <p className="text-black/60 ml-8 text-sm leading-relaxed font-medium">Austria, Belgium, Bulgaria, Croatia, Republic of Cyprus, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia, Slovenia, Spain and Sweden.</p>
+      <p className="text-teal-600 ml-8 mt-3 text-sm font-semibold">Please <span className="underline cursor-pointer">check the list of countries or regions</span> where the Pexly Card is not supported.</p>
     </div>
-    <div className="border-b border-white/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><Headphones className="w-5 h-5 text-white/60" /><span className="text-white font-semibold">Customer service</span></div>
-      <p className="text-white/80 ml-8">24/7</p>
+    <div className="border-b border-black/10 pb-6">
+      <div className="flex items-center gap-3 mb-2"><Headphones className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Customer service</span></div>
+      <p className="text-black/80 ml-8 font-medium">24/7</p>
     </div>
-    <div className="border-b border-white/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><ShoppingCart className="w-5 h-5 text-white/60" /><span className="text-white font-semibold">Spending limits</span></div>
-      <div className="ml-8"><p className="text-white/80">Starter</p><p className="text-white/80">€7,500 per day</p><p className="text-white/80">€7,500 per month</p><p className="text-white/50 text-sm mt-2">Payments and cash out transactions share the same limits.</p></div>
+    <div className="border-b border-black/10 pb-6">
+      <div className="flex items-center gap-3 mb-2"><ShoppingCart className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Spending limits</span></div>
+      <div className="ml-8 font-medium space-y-1">
+        <p className="text-black/80">Starter</p>
+        <p className="text-black/80">€7,500 per day</p>
+        <p className="text-black/80">€7,500 per month</p>
+        <p className="text-black/40 text-sm mt-2 font-normal">Payments and cash out transactions share the same limits.</p>
+      </div>
     </div>
-    <div className="border-b border-white/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><CheckCircle className="w-5 h-5 text-white/60" /><span className="text-white font-semibold">No-fee</span></div>
-      <div className="ml-8 text-white/80 space-y-1"><p>Account setup.</p><p>Virtual card creation.</p><p>Physical card creation.</p><p>Monthly usage.</p><p>Foreign transactions.</p><p>Card transactions.</p><p>Cash out fee.</p></div>
+    <div className="border-b border-black/10 pb-6">
+      <div className="flex items-center gap-3 mb-2"><CheckCircle className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">No-fee</span></div>
+      <div className="ml-8 text-black/80 space-y-1 font-medium">
+        <p>Account setup.</p>
+        <p>Virtual card creation.</p>
+        <p>Physical card creation.</p>
+        <p>Monthly usage.</p>
+        <p>Foreign transactions.</p>
+        <p>Card transactions.</p>
+        <p>Cash out fee.</p>
+      </div>
     </div>
-    <div className="border-b border-white/10 pb-6">
-      <div className="flex items-center gap-3 mb-2"><PlusCircle className="w-5 h-5 text-white/60" /><span className="text-white font-semibold">Deposit fee</span></div>
-      <div className="ml-8"><p className="text-white/80 font-semibold">1.99%</p><p className="text-white/50 text-sm mt-2">This is the fixed fee charged by Pexly on top of the variable cost of exchange, based on our card partner's live market price at the moment the payment is confirmed.</p></div>
+    <div className="border-b border-black/10 pb-6">
+      <div className="flex items-center gap-3 mb-2"><PlusCircle className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Deposit fee</span></div>
+      <div className="ml-8 font-medium space-y-1">
+        <p className="text-black/80 font-bold text-lg">1.99%</p>
+        <p className="text-black/40 text-sm mt-2 font-normal leading-relaxed">This is the fixed fee charged by Pexly on top of the variable cost of exchange, based on our card partner's live market price at the moment the payment is confirmed.</p>
+      </div>
     </div>
     <div className="pb-6">
-      <div className="flex items-center gap-3 mb-2"><Smartphone className="w-5 h-5 text-white/60" /><span className="text-white font-semibold">Experience</span></div>
-      <p className="text-white/80 ml-8">The Pexly Card is available both in the <span className="font-semibold">app</span> and on our <span className="font-semibold">website</span></p>
+      <div className="flex items-center gap-3 mb-2"><Smartphone className="w-5 h-5 text-black/60" /><span className="text-black font-semibold">Experience</span></div>
+      <p className="text-black/80 ml-8 font-medium">The Pexly Card is available both in the <span className="font-bold">app</span> and on our <span className="font-bold">website</span></p>
     </div>
-    <div className="text-white/40 text-sm space-y-3">
+    <div className="text-black/40 text-xs space-y-3 font-medium px-2">
       <p>*Different limits are available according to your level of identity verification. Obtaining a Pexly Card involves a verification procedure managed by our card partner.</p>
       <p>**Unfortunately the Cash Out feature is currently unavailable for Swedish residents.</p>
       <p>***Physical card reorders are subject to a fee.</p>
     </div>
-    <Button className="w-full">Discover more</Button>
+    <Button variant="default" className="w-full h-12 rounded-full font-bold">Discover more</Button>
   </section>
 );
 
@@ -364,14 +384,14 @@ const faqs = [
 ];
 
 const FAQSection = () => (
-  <section className="px-4 py-16">
-    <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Frequently asked questions</h2>
-    <p className="text-white/60 mb-8">Check out our <span className="text-white underline">Knowledge Base</span> page for more FAQs</p>
+  <section className="px-4 py-16 bg-white text-black">
+    <h2 className="text-3xl md:text-4xl font-bold text-black mb-3">Frequently asked questions</h2>
+    <p className="text-black/60 mb-8 font-medium">Check out our <span className="text-black underline font-bold">Knowledge Base</span> page for more FAQs</p>
     <Accordion type="single" collapsible className="space-y-0">
       {faqs.map((faq, index) => (
-        <AccordionItem key={index} value={`item-${index}`} className="border-b border-white/10">
-          <AccordionTrigger className="text-white text-left font-semibold py-5 hover:no-underline">{faq.question}</AccordionTrigger>
-          <AccordionContent className="text-white/60 pb-5">{faq.answer}</AccordionContent>
+        <AccordionItem key={index} value={`item-${index}`} className="border-b border-black/10">
+          <AccordionTrigger className="text-black text-left font-bold py-5 hover:no-underline text-lg">{faq.question}</AccordionTrigger>
+          <AccordionContent className="text-black/60 pb-5 font-medium leading-relaxed">{faq.answer}</AccordionContent>
         </AccordionItem>
       ))}
     </Accordion>
@@ -380,16 +400,16 @@ const FAQSection = () => (
 
 // ============ FOOTER SECTION ============
 const FooterSection = () => (
-  <footer className="px-4 py-12 bg-background/50">
+  <footer className="px-4 py-12 bg-white border-t border-black/5">
     <div className="flex flex-wrap justify-center gap-3 mb-6">
-      <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center"><span className="text-white font-bold text-lg">₿</span></div>
+      <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center shadow-sm"><span className="text-white font-bold text-lg">₿</span></div>
     </div>
   </footer>
 );
 
 const VisaCard = () => {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
       <HeroCard />
       <DepositSection />
       <LifestyleCarousel />
