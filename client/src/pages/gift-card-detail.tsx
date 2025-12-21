@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, ChevronDown, ShoppingCart } from "lucide-react";
+import { ArrowLeft, ChevronDown, ShoppingCart, Wallet, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,6 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { PexlyFooter } from "@/components/pexly-footer";
 
@@ -112,11 +119,39 @@ const giftCards = [
   },
 ];
 
+const faqs = [
+  {
+    question: "What payment options do you accept?",
+    answer: "We accept cryptocurrency payments including Bitcoin (BTC), Ethereum (ETH), and USDT. You can also use your Pexly balance for faster checkout."
+  },
+  {
+    question: "How long does it take to receive my gift card?",
+    answer: "Most gift cards are delivered instantly via email after your payment is confirmed. Delivery typically takes 5-15 minutes depending on network confirmation."
+  },
+  {
+    question: "Can I use my Pexly balance to buy gift cards?",
+    answer: "Yes! You can use your Pexly balance for instant purchases. Simply select 'Pexly balance' as your payment source at checkout."
+  },
+  {
+    question: "What is the maximum number of cards I can buy at once?",
+    answer: "You can purchase up to 20 gift cards in a single order. For bulk orders, contact our support team."
+  },
+  {
+    question: "Are there any transaction fees?",
+    answer: "We charge a small transaction fee when paying from an external wallet. Using your Pexly balance comes with reduced fees and faster processing."
+  },
+  {
+    question: "Can I refund a gift card purchase?",
+    answer: "Refunds are available within 24 hours of purchase if the gift card code hasn't been redeemed. Please contact support for refund requests."
+  }
+];
+
 export function GiftCardDetail() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/gift-cards/:id");
   const [cardValue, setCardValue] = useState(String(giftCards[0]?.minValue || 10));
   const [numberOfCards, setNumberOfCards] = useState("1");
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const cardId = params?.id ? parseInt(params.id) : null;
   const card = giftCards.find((c) => c.id === cardId);
@@ -139,9 +174,9 @@ export function GiftCardDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="max-w-4xl mx-auto px-4 py-6">
+      <main className="max-w-4xl mx-auto px-4 py-4">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => setLocation("/gift-cards")}
             className="p-2 hover:bg-secondary rounded-lg transition-colors"
@@ -151,11 +186,11 @@ export function GiftCardDetail() {
           <h1 className="text-2xl font-bold text-foreground">{card.name}</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left: Image and Info */}
           <div className="lg:order-1">
             <div
-              className={`h-80 bg-gradient-to-br ${card.gradient} rounded-2xl overflow-hidden shadow-lg mb-6`}
+              className={`h-80 bg-gradient-to-br ${card.gradient} rounded-2xl overflow-hidden shadow-lg mb-4`}
             >
               <img
                 src={card.image}
@@ -176,7 +211,7 @@ export function GiftCardDetail() {
           {/* Right: Purchase Form */}
           <div className="lg:order-2">
             {/* Enter Card Value */}
-            <div className="mb-6">
+            <div className="mb-4">
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Enter card value
               </label>
@@ -194,7 +229,7 @@ export function GiftCardDetail() {
             </div>
 
             {/* Number of Cards */}
-            <div className="mb-6">
+            <div className="mb-4">
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Number of cards
               </label>
@@ -216,7 +251,7 @@ export function GiftCardDetail() {
             </div>
 
             {/* Price Display */}
-            <div className="bg-card border border-border rounded-xl p-4 mb-6">
+            <div className="bg-card border border-border rounded-xl p-4 mb-4">
               <p className="text-sm text-muted-foreground mb-2">
                 Price for {card.brand}: {value}
               </p>
@@ -233,13 +268,16 @@ export function GiftCardDetail() {
             </div>
 
             {/* Buy Button */}
-            <Button className="w-full h-12 font-semibold mb-6 bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button 
+              onClick={() => setShowPaymentDialog(true)}
+              className="w-full h-12 font-semibold mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
               <ShoppingCart className="h-5 w-5 mr-2" />
               Buy card
             </Button>
 
             {/* Accepted Networks */}
-            <div className="mb-6">
+            <div className="mb-4">
               <h4 className="font-semibold text-foreground mb-3">
                 Accepted networks
               </h4>
@@ -266,19 +304,84 @@ export function GiftCardDetail() {
             </div>
 
             {/* How to Redeem */}
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="redeem">
-                <AccordionTrigger className="text-sm font-semibold">
-                  How to redeem?
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground text-sm">
-                  {card.redeemInfo}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            <div className="mt-4">
+              <h4 className="font-semibold text-foreground mb-2">How to redeem?</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {card.redeemInfo}
+              </p>
+            </div>
           </div>
         </div>
+
+        {/* FAQ Section */}
+        <section className="py-8 px-4">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold mb-1 text-center">Frequently asked questions</h2>
+            <p className="text-muted-foreground text-center mb-4 text-sm">
+              Find answers to the most popular questions about gift card purchases
+            </p>
+
+            <Accordion type="single" collapsible className="w-full">
+              {faqs.map((faq, index) => (
+                <AccordionItem key={index} value={`item-${index}`}>
+                  <AccordionTrigger className="text-left">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </section>
       </main>
+
+      {/* Payment Source Sheet */}
+      <Sheet open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <Wallet className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <SheetTitle className="text-center text-2xl">Choose payment source</SheetTitle>
+            <SheetDescription className="text-center">
+              Would you like to purchase the gift card using your Pexly balance or by depositing funds from an external wallet?
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-3 mt-6">
+            <Button
+              variant="outline"
+              className="w-full h-12 justify-start px-4 border-border hover:bg-secondary"
+              onClick={() => {
+                setShowPaymentDialog(false);
+                // Handle external wallet flow
+              }}
+            >
+              <Building2 className="h-5 w-5 mr-3" />
+              <span className="flex-1 text-left">External wallet</span>
+            </Button>
+
+            <Button
+              className="w-full h-12 justify-start px-4 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => {
+                setShowPaymentDialog(false);
+                // Handle Pexly balance flow
+              }}
+            >
+              <Wallet className="h-5 w-5 mr-3" />
+              <span className="flex-1 text-left">Pexly balance</span>
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            *Use your Pexly balance to save on transaction fees
+          </p>
+        </SheetContent>
+      </Sheet>
 
       <PexlyFooter />
     </div>
