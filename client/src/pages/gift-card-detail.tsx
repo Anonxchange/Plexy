@@ -24,6 +24,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { PexlyFooter } from "@/components/pexly-footer";
 
@@ -163,6 +170,7 @@ export function GiftCardDetail() {
   const [numberOfCards, setNumberOfCards] = useState("1");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showExternalWalletDialog, setShowExternalWalletDialog] = useState(false);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
   const [email, setEmail] = useState("");
   const [selectedNetwork, setSelectedNetwork] = useState("usdt-tron");
 
@@ -289,6 +297,24 @@ export function GiftCardDetail() {
                 </span>
               </div>
             </div>
+
+            {/* Pexly Balance Display */}
+            {user && (
+              <button
+                onClick={() => setShowBalanceDialog(true)}
+                className="w-full bg-card border border-border rounded-xl p-4 mb-4 text-left hover:bg-secondary transition-colors"
+              >
+                <p className="text-sm text-muted-foreground mb-2">
+                  Your Pexly Balance
+                </p>
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  <span className="text-2xl font-bold text-foreground">
+                    $50.00
+                  </span>
+                </div>
+              </button>
+            )}
 
             {/* Buy Button */}
             <Button 
@@ -471,6 +497,46 @@ export function GiftCardDetail() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Balance Dialog */}
+      <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <Wallet className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <DialogTitle className="text-2xl text-center">Your Pexly Balance</DialogTitle>
+            <DialogDescription className="text-center">
+              Here's your account information
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-1">Balance</p>
+              <p className="text-3xl font-bold text-foreground">$50.00</p>
+            </div>
+            
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                Email
+              </p>
+              <p className="text-lg font-semibold text-foreground break-all">
+                {user?.email || 'No email'}
+              </p>
+            </div>
+          </div>
+
+          <Button 
+            className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => setShowBalanceDialog(false)}
+          >
+            Close
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <PexlyFooter />
     </div>
