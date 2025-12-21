@@ -6,7 +6,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -20,10 +27,21 @@ import { useLocation } from "wouter";
 const categories = [
   { icon: LayoutGrid, label: "All categories", active: true },
   { icon: Coffee, label: "Food" },
-  { icon: Gamepad2, label: "Gaming" },
+  { icon: Gamepad2, label: "Games" },
+  { icon: Zap, label: "Health" },
+  { icon: Home, label: "Restaurants" },
   { icon: ShoppingBag, label: "Shopping" },
-  { icon: Music, label: "Entertainment" },
-  { icon: MoreHorizontal, label: "More" },
+  { icon: Globe, label: "Travel" },
+];
+
+const allCategories = [
+  { icon: LayoutGrid, label: "All categories" },
+  { icon: UtensilsCrossed, label: "Food" },
+  { icon: Gamepad2, label: "Games" },
+  { icon: Zap, label: "Health" },
+  { icon: Home, label: "Restaurants" },
+  { icon: ShoppingBag, label: "Shopping" },
+  { icon: Globe, label: "Travel" },
 ];
 
 const giftCards = [
@@ -144,6 +162,8 @@ export function GiftCards() {
   const [, setLocation] = useLocation();
   const [currency, setCurrency] = useState("USD");
   const [openCurrency, setOpenCurrency] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("All categories");
 
   const selectedCurrency = currencies.find((c) => c.code === currency);
 
@@ -279,6 +299,7 @@ export function GiftCards() {
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-card border border-border hover:bg-secondary"
               }`}
+              onClick={() => setShowCategoryModal(true)}
             >
               <category.icon className="h-4 w-4" />
               <span className="font-medium">{category.label}</span>
@@ -348,6 +369,41 @@ export function GiftCards() {
           </Accordion>
         </div>
       </section>
+
+      {/* Category Modal Sheet */}
+      <Sheet open={showCategoryModal} onOpenChange={setShowCategoryModal}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-2xl">Gift card categories</SheetTitle>
+          </SheetHeader>
+
+          <div className="space-y-2 mb-6">
+            {allCategories.map((category, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  setSelectedCategory(category.label);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                  selectedCategory === category.label
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card border border-border text-foreground hover:bg-secondary"
+                }`}
+              >
+                <category.icon className="h-5 w-5" />
+                <span>{category.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <Button
+            className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+            onClick={() => setShowCategoryModal(false)}
+          >
+            Confirm
+          </Button>
+        </SheetContent>
+      </Sheet>
 
       <PexlyFooter />
     </div>
