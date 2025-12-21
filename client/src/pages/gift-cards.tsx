@@ -174,16 +174,42 @@ export function GiftCards() {
 
   const fetchGiftCards = async () => {
     try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      // If Supabase is not configured, use default data
+      if (!supabaseUrl || !supabaseKey) {
+        console.log('Supabase not configured, using default gift cards');
+        setGiftCards(defaultGiftCards);
+        setLoading(false);
+        return;
+      }
+
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from('gift_cards')
-        .select('*')
-        .order('created_at', { ascending: false });
+      
+      // Add timeout for the request
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      const { data, error } = await Promise.race([
+        supabase
+          .from('gift_cards')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        new Promise((_, reject) => {
+          controller.signal.addEventListener('abort', () => {
+            reject(new Error('Fetch timeout'));
+          });
+        })
+      ]) as any;
+
+      clearTimeout(timeout);
 
       if (error) {
         console.error('Error fetching gift cards:', error);
         setGiftCards(defaultGiftCards);
       } else if (data && data.length > 0) {
+        console.log('Fetched gift cards from Supabase:', data);
         setGiftCards(data.map((card: any) => ({
           id: card.id,
           name: card.name,
@@ -199,6 +225,7 @@ export function GiftCards() {
           available: card.available,
         })));
       } else {
+        console.log('No gift cards found in Supabase, using defaults');
         setGiftCards(defaultGiftCards);
       }
     } catch (error) {
