@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
 import { ArrowLeft, ChevronDown, ShoppingCart, Wallet, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,12 +160,71 @@ export function GiftCardDetail() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/gift-cards/:id");
-  const [cardValue, setCardValue] = useState(String(giftCards[0]?.minValue || 10));
+  const [card, setCard] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [cardValue, setCardValue] = useState("");
   const [numberOfCards, setNumberOfCards] = useState("1");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showExternalWalletDialog, setShowExternalWalletDialog] = useState(false);
   const [email, setEmail] = useState("");
   const [selectedNetwork, setSelectedNetwork] = useState("usdt-tron");
+
+  const cardId = params?.id;
+
+  useEffect(() => {
+    const fetchCard = async () => {
+      if (!cardId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('gift_cards')
+          .select('*')
+          .eq('id', cardId)
+          .single();
+
+        if (error || !data) {
+          // Fallback to sample data if not found
+          const sampleCard = giftCards.find((c) => c.id === parseInt(cardId) || c.id === cardId);
+          setCard(sampleCard || null);
+        } else {
+          // Transform Supabase data
+          setCard({
+            id: data.id,
+            name: data.name,
+            brand: data.brand,
+            priceRange: `$${data.min_value} - $${data.max_value}`,
+            cryptoRange: `${(data.min_value * 0.99).toFixed(2)} USDT - ${(data.max_value * 0.99).toFixed(2)} USDT`,
+            discount: data.discount || "-0.58%",
+            image: data.image_url || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
+            gradient: "from-gray-100 to-white",
+            description: data.description || "",
+            minValue: data.min_value,
+            maxValue: data.max_value,
+            available: data.available,
+            redeemInfo: data.redeem_info || "Visit the service website and enter your gift card code.",
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching gift card:', error);
+        const sampleCard = giftCards.find((c) => c.id === parseInt(cardId) || c.id === cardId);
+        setCard(sampleCard || null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCard();
+  }, [cardId]);
+
+  useEffect(() => {
+    if (card) {
+      setCardValue(String(card.minValue || 10));
+    }
+  }, [card]);
 
   const handleBuyCard = () => {
     if (!user) {
@@ -176,8 +236,15 @@ export function GiftCardDetail() {
     }
   };
 
-  const cardId = params?.id ? parseInt(params.id) : null;
-  const card = giftCards.find((c) => c.id === cardId);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading gift card...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!card) {
     return (
