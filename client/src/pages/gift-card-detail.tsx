@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
+import { useAuth } from "@/lib/auth-context";
 import { ArrowLeft, ChevronDown, ShoppingCart, Wallet, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -146,12 +147,34 @@ const faqs = [
   }
 ];
 
+const networkOptions = [
+  { id: "usdt-tron", name: "USDT (Tron)", symbol: "USDT", network: "TRX" },
+  { id: "usdt-bsc", name: "USDT (BSC/BEP-20)", symbol: "USDT", network: "BSC" },
+  { id: "usdt-ethereum", name: "USDT (Ethereum)", symbol: "USDT", network: "ETH" },
+  { id: "btc", name: "Bitcoin", symbol: "BTC", network: "Bitcoin" },
+  { id: "eth", name: "Ethereum", symbol: "ETH", network: "Ethereum" },
+];
+
 export function GiftCardDetail() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/gift-cards/:id");
   const [cardValue, setCardValue] = useState(String(giftCards[0]?.minValue || 10));
   const [numberOfCards, setNumberOfCards] = useState("1");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showExternalWalletDialog, setShowExternalWalletDialog] = useState(false);
+  const [email, setEmail] = useState("");
+  const [selectedNetwork, setSelectedNetwork] = useState("usdt-tron");
+
+  const handleBuyCard = () => {
+    if (!user) {
+      // Not logged in: show external wallet dialog directly
+      setShowExternalWalletDialog(true);
+    } else {
+      // Logged in: show payment source selection
+      setShowPaymentDialog(true);
+    }
+  };
 
   const cardId = params?.id ? parseInt(params.id) : null;
   const card = giftCards.find((c) => c.id === cardId);
@@ -269,7 +292,7 @@ export function GiftCardDetail() {
 
             {/* Buy Button */}
             <Button 
-              onClick={() => setShowPaymentDialog(true)}
+              onClick={handleBuyCard}
               className="w-full h-12 font-semibold mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
             >
               <ShoppingCart className="h-5 w-5 mr-2" />
@@ -358,7 +381,7 @@ export function GiftCardDetail() {
               className="w-full h-12 justify-start px-4 border-border hover:bg-secondary"
               onClick={() => {
                 setShowPaymentDialog(false);
-                // Handle external wallet flow
+                setShowExternalWalletDialog(true);
               }}
             >
               <Building2 className="h-5 w-5 mr-3" />
@@ -380,6 +403,72 @@ export function GiftCardDetail() {
           <p className="text-xs text-muted-foreground text-center mt-4">
             *Use your Pexly balance to save on transaction fees
           </p>
+        </SheetContent>
+      </Sheet>
+
+      {/* External Wallet Payment Sheet */}
+      <Sheet open={showExternalWalletDialog} onOpenChange={setShowExternalWalletDialog}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle className="text-2xl">Email & network</SheetTitle>
+            <SheetDescription>
+              Please enter your email below to proceed with purchasing ${cardValue} {card?.name} for {priceInCrypto} USDT
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-4 mt-6">
+            {/* Email Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">Email</label>
+              <Input
+                type="email"
+                placeholder="john.doe@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-12 text-base"
+              />
+              <p className="text-xs text-muted-foreground">
+                An email address is mandatory; we will send the activation code for the selected gift card to this address
+              </p>
+            </div>
+
+            {/* Network Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">Network</label>
+              <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+                <SelectTrigger className="h-12 text-base">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {networkOptions.map((network) => (
+                    <SelectItem key={network.id} value={network.id}>
+                      {network.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Make sure to choose right network for your deposit
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-8">
+              <Button
+                variant="outline"
+                className="flex-1 h-12"
+                onClick={() => setShowExternalWalletDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 h-12 bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={!email}
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
 
