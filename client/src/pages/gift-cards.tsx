@@ -274,7 +274,7 @@ export function GiftCards() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search for gift cards"
-                className="pl-10 bg-white/70 dark:bg-white/10 border-white/80 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
+                className="pl-10 bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
               />
             </div>
 
@@ -286,7 +286,7 @@ export function GiftCards() {
                 </label>
                 <Input
                   placeholder="Enter amount"
-                  className="bg-white/70 dark:bg-white/10 border-white/80 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary"
+                  className="bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary"
                 />
               </div>
               <div>
@@ -299,7 +299,7 @@ export function GiftCards() {
                       variant="ghost"
                       role="combobox"
                       aria-expanded={openCurrency}
-                      className="w-full justify-between h-10 font-normal bg-white/70 dark:bg-white/10 border border-white/80 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20"
+                      className="w-full justify-between h-10 font-normal bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20"
                     >
                       {selectedCurrency ? (
                         <span>
@@ -346,7 +346,7 @@ export function GiftCards() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="ghost" className="h-10 font-medium bg-white/70 dark:bg-white/10 border border-white/80 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20">
+              <Button variant="ghost" className="h-10 font-medium bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20">
                 Advanced
               </Button>
               <Button className="h-10 font-medium bg-primary text-primary-foreground hover:bg-primary/90">
@@ -413,6 +413,9 @@ export function GiftCards() {
                     {card.discount}
                   </span>
                 </div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {card.description}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {card.priceRange}{" "}
                   <span className="text-muted-foreground/70">({card.cryptoRange})</span>
