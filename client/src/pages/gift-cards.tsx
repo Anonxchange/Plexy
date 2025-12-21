@@ -436,7 +436,7 @@ export function GiftCards() {
 
       {/* FAQ Section */}
       <section className="py-16 px-4 pb-20">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold mb-2 text-center">Frequently asked questions</h2>
           <p className="text-muted-foreground text-center mb-8">
             Find answers to the most popular questions asked by our users
