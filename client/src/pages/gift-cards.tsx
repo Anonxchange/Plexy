@@ -6,8 +6,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Bitcoin } from "lucide-react";
+import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Bitcoin, Check, ChevronsUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { currencies } from "@/lib/currencies";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 const categories = [
   { icon: LayoutGrid, label: "All categories", active: true },
@@ -109,76 +114,123 @@ const faqs = [
 ];
 
 export function GiftCards() {
+  const [currency, setCurrency] = useState("USD");
+  const [openCurrency, setOpenCurrency] = useState(false);
+
+  const selectedCurrency = currencies.find((c) => c.code === currency);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section with Background */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-lime-400 via-lime-500 to-green-500 py-10 px-4">
+      <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background py-6 px-4">
         {/* Decorative Elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/30 rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-lime-300/40 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/20 rounded-full blur-3xl" />
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/30 dark:bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-primary/20 dark:bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/20 dark:bg-white/5 rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-7xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 animate-fade-in">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 animate-fade-in">
             Buy gift cards with up to{" "}
-            <span className="text-white font-extrabold">20% discount</span>
+            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent font-extrabold">20% discount</span>
           </h1>
 
           {/* Crypto Banner - Glass */}
-          <div className="mt-6 backdrop-blur-xl bg-white/50 rounded-2xl p-4 border border-white/60 shadow-lg flex items-center gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <div className="w-10 h-10 rounded-full bg-lime-500/30 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Bitcoin className="h-5 w-5 text-lime-700" />
+          <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-3 border border-white/60 dark:border-white/20 shadow-lg flex items-center gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <div className="w-10 h-10 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+              <Bitcoin className="h-5 w-5 text-primary" />
             </div>
-            <p className="text-sm font-medium text-gray-800">
+            <p className="text-sm font-medium text-foreground">
               Pay with crypto for instant transactions
             </p>
           </div>
 
           {/* Search Section - Glass */}
-          <div className="mt-6 backdrop-blur-xl bg-white/50 rounded-2xl p-5 border border-white/60 shadow-xl animate-slide-up" style={{ animationDelay: "0.15s" }}>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
+          <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-4 border border-white/60 dark:border-white/20 shadow-xl animate-slide-up" style={{ animationDelay: "0.15s" }}>
+            <label className="text-sm font-medium text-foreground mb-2 block">
               Search
             </label>
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search for gift cards"
-                className="pl-10 bg-white/70 border-white/80 h-11 text-gray-900 placeholder:text-gray-500 focus:border-lime-400 focus:ring-lime-300"
+                className="pl-10 bg-white/70 dark:bg-white/10 border-white/80 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                <label className="text-sm font-medium text-foreground mb-2 block">
                   Define card value
-                  <span className="text-gray-500 ml-1">(optional)</span>
+                  <span className="text-muted-foreground ml-1">(optional)</span>
                 </label>
                 <Input
                   placeholder="Enter amount"
-                  className="bg-white/70 border-white/80 h-11 text-gray-900 placeholder:text-gray-500 focus:border-lime-400"
+                  className="bg-white/70 dark:bg-white/10 border-white/80 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                <label className="text-sm font-medium text-foreground mb-2 block">
                   Currency
                 </label>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-between h-11 font-normal bg-white/70 border border-white/80 text-gray-900 hover:bg-white/90 hover:text-gray-900"
-                >
-                  US Dollar (USD)
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
+                <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      role="combobox"
+                      aria-expanded={openCurrency}
+                      className="w-full justify-between h-10 font-normal bg-white/70 dark:bg-white/10 border border-white/80 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20"
+                    >
+                      {selectedCurrency ? (
+                        <span>
+                          {selectedCurrency.flag} {selectedCurrency.code}
+                        </span>
+                      ) : (
+                        "Select currency..."
+                      )}
+                      <ChevronsUpDown className="h-4 w-4 ml-2 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[280px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search currency..." />
+                      <CommandList>
+                        <CommandEmpty>No currency found.</CommandEmpty>
+                        <CommandGroup>
+                          {currencies.map((c) => (
+                            <CommandItem
+                              key={c.code}
+                              value={c.code}
+                              onSelect={() => {
+                                setCurrency(c.code);
+                                setOpenCurrency(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  currency === c.code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span className="mr-2">{c.flag}</span>
+                              <span>{c.code}</span>
+                              <span className="ml-auto text-muted-foreground text-xs">{c.name}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="ghost" className="h-11 font-medium bg-white/70 border border-white/80 text-gray-900 hover:bg-white/90 hover:text-gray-900">
+              <Button variant="ghost" className="h-10 font-medium bg-white/70 dark:bg-white/10 border border-white/80 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20">
                 Advanced
               </Button>
-              <Button className="h-11 font-medium bg-lime-600 text-white hover:bg-lime-700">
+              <Button className="h-10 font-medium bg-primary text-primary-foreground hover:bg-primary/90">
                 Search
               </Button>
             </div>
