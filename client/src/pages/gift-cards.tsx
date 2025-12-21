@@ -240,196 +240,199 @@ export function GiftCards() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section with Background */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background py-6 px-4">
-        {/* Decorative Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/30 dark:bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-primary/20 dark:bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/20 dark:bg-white/5 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 animate-fade-in">
-            Buy gift cards with up to{" "}
-            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent font-extrabold">20% discount</span>
-          </h1>
-
-          {/* Crypto Banner - Glass */}
-          <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-3 border border-white/60 dark:border-white/20 shadow-lg flex items-center gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <div className="w-10 h-10 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center flex-shrink-0 flex-shrink-0">
-              <img src={cryptoIconUrls.USDT} alt="USDT" className="h-6 w-6 rounded-full" />
-            </div>
-            <p className="text-sm font-medium text-foreground">
-              Pay with crypto for instant transactions
-            </p>
+      {/* Two Column Layout */}
+      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left Column - Hero Section */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background rounded-3xl p-6 border border-border/50 h-fit lg:sticky lg:top-6">
+          {/* Decorative Elements */}
+          <div className="absolute inset-0 overflow-hidden rounded-3xl">
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/30 dark:bg-white/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-primary/20 dark:bg-primary/10 rounded-full blur-3xl" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/20 dark:bg-white/5 rounded-full blur-3xl" />
           </div>
 
-          {/* Search Section - Glass */}
-          <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-4 border border-white/60 dark:border-white/20 shadow-xl animate-slide-up" style={{ animationDelay: "0.15s" }}>
-            <label className="text-sm font-medium text-foreground mb-2 block">
-              Search
-            </label>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search for gift cards"
-                className="pl-10 bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
-              />
+          <div className="relative">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 animate-fade-in">
+              Buy gift cards with up to{" "}
+              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent font-extrabold">20% discount</span>
+            </h1>
+
+            {/* Crypto Banner - Glass */}
+            <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-3 border border-white/60 dark:border-white/20 shadow-lg flex items-center gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+              <div className="w-10 h-10 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                <img src={cryptoIconUrls.USDT} alt="USDT" className="h-6 w-6 rounded-full" />
+              </div>
+              <p className="text-sm font-medium text-foreground">
+                Pay with crypto for instant transactions
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Define card value
-                  <span className="text-muted-foreground ml-1">(optional)</span>
-                </label>
-                <Input
-                  placeholder="Enter amount"
-                  className="bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Currency
-                </label>
-                <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      role="combobox"
-                      aria-expanded={openCurrency}
-                      className="w-full justify-between h-10 font-normal bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20"
-                    >
-                      {selectedCurrency ? (
-                        <span>
-                          {selectedCurrency.flag} {selectedCurrency.code}
-                        </span>
-                      ) : (
-                        "Select currency..."
-                      )}
-                      <ChevronsUpDown className="h-4 w-4 ml-2 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[280px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search currency..." />
-                      <CommandList>
-                        <CommandEmpty>No currency found.</CommandEmpty>
-                        <CommandGroup>
-                          {currencies.map((c) => (
-                            <CommandItem
-                              key={c.code}
-                              value={c.code}
-                              onSelect={() => {
-                                setCurrency(c.code);
-                                setOpenCurrency(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  currency === c.code ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <span className="mr-2">{c.flag}</span>
-                              <span>{c.code}</span>
-                              <span className="ml-auto text-muted-foreground text-xs">{c.name}</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="ghost" className="h-10 font-medium bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20">
-                Advanced
-              </Button>
-              <Button className="h-10 font-medium bg-primary text-primary-foreground hover:bg-primary/90">
+            {/* Search Section - Glass */}
+            <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-4 border border-white/60 dark:border-white/20 shadow-xl animate-slide-up" style={{ animationDelay: "0.15s" }}>
+              <label className="text-sm font-medium text-foreground mb-2 block">
                 Search
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Category Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide animate-fade-in">
-          {categories.map((category, index) => (
-            <Button
-              key={index}
-              variant={category.active ? "default" : "secondary"}
-              className={`flex-shrink-0 gap-2 px-4 h-10 rounded-xl ${
-                category.active
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "bg-card border border-border hover:bg-secondary"
-              }`}
-              onClick={() => setShowCategoryModal(true)}
-            >
-              <category.icon className="h-4 w-4" />
-              <span className="font-medium">{category.label}</span>
-            </Button>
-          ))}
-        </div>
-
-        {/* Gift Cards Section */}
-        <h2 className="text-lg font-semibold text-foreground mb-4 mt-2">
-          All categories
-        </h2>
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading gift cards...</p>
-          </div>
-        ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 pb-8">
-          {giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
-            <div
-              key={card.id}
-              className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up"
-              onClick={() => setLocation(`/gift-cards/${card.id}`)}
-              style={{ animationDelay: `${0.2 + index * 0.05}s` }}
-            >
-              <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden`}>
-                <img
-                  src={card.image}
-                  alt={card.name}
-                  className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500"
+              </label>
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search for gift cards"
+                  className="pl-10 bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               </div>
 
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-foreground text-lg leading-tight">
-                    {card.name}
-                  </h3>
-                  <span className="text-xs font-semibold text-destructive bg-discount-bg px-2 py-1 rounded-md flex-shrink-0 ml-2">
-                    {card.discount}
-                  </span>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Define card value
+                    <span className="text-muted-foreground ml-1">(optional)</span>
+                  </label>
+                  <Input
+                    placeholder="Enter amount"
+                    className="bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary"
+                  />
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {card.description}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {card.priceRange}{" "}
-                  <span className="text-muted-foreground/70">({card.cryptoRange})</span>
-                </p>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Currency
+                  </label>
+                  <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        role="combobox"
+                        aria-expanded={openCurrency}
+                        className="w-full justify-between h-10 font-normal bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20"
+                      >
+                        {selectedCurrency ? (
+                          <span>
+                            {selectedCurrency.flag} {selectedCurrency.code}
+                          </span>
+                        ) : (
+                          "Select currency..."
+                        )}
+                        <ChevronsUpDown className="h-4 w-4 ml-2 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search currency..." />
+                        <CommandList>
+                          <CommandEmpty>No currency found.</CommandEmpty>
+                          <CommandGroup>
+                            {currencies.map((c) => (
+                              <CommandItem
+                                key={c.code}
+                                value={c.code}
+                                onSelect={() => {
+                                  setCurrency(c.code);
+                                  setOpenCurrency(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    currency === c.code ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="mr-2">{c.flag}</span>
+                                <span>{c.code}</span>
+                                <span className="ml-auto text-muted-foreground text-xs">{c.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="ghost" className="h-10 font-medium bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20">
+                  Advanced
+                </Button>
+                <Button className="h-10 font-medium bg-primary text-primary-foreground hover:bg-primary/90">
+                  Search
+                </Button>
               </div>
             </div>
-          )) : (
-            <div className="col-span-full text-center py-8">
-              <p className="text-muted-foreground">No gift cards available yet</p>
+          </div>
+        </section>
+
+        {/* Right Column - Gift Cards */}
+        <main className="py-0">
+          {/* Category Tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide animate-fade-in">
+            {categories.map((category, index) => (
+              <Button
+                key={index}
+                variant={category.active ? "default" : "secondary"}
+                className={`flex-shrink-0 gap-2 px-4 h-10 rounded-xl ${
+                  category.active
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-card border border-border hover:bg-secondary"
+                }`}
+                onClick={() => setShowCategoryModal(true)}
+              >
+                <category.icon className="h-4 w-4" />
+                <span className="font-medium">{category.label}</span>
+              </Button>
+            ))}
+          </div>
+
+          {/* Gift Cards Section */}
+          <h2 className="text-lg font-semibold text-foreground mb-4 mt-2">
+            All categories
+          </h2>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Loading gift cards...</p>
             </div>
+          ) : (
+          <div className="space-y-4 pb-8">
+            {giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
+              <div
+                key={card.id}
+                className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up"
+                onClick={() => setLocation(`/gift-cards/${card.id}`)}
+                style={{ animationDelay: `${0.2 + index * 0.05}s` }}
+              >
+                <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden`}>
+                  <img
+                    src={card.image}
+                    alt={card.name}
+                    className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                </div>
+
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-foreground text-lg leading-tight">
+                      {card.name}
+                    </h3>
+                    <span className="text-xs font-semibold text-destructive bg-discount-bg px-2 py-1 rounded-md flex-shrink-0 ml-2">
+                      {card.discount}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {card.description}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {card.priceRange}{" "}
+                    <span className="text-muted-foreground/70">({card.cryptoRange})</span>
+                  </p>
+                </div>
+              </div>
+            )) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No gift cards available yet</p>
+              </div>
+            )}
+          </div>
           )}
-        </div>
-        )}
-      </main>
+        </main>
+      </div>
 
       {/* FAQ Section */}
       <section className="py-16 px-4 pb-20">
