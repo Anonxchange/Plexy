@@ -43,6 +43,7 @@ import VerificationPage from "@/pages/verification";
 import AdminPage from "@/pages/admin";
 import AdminVerificationsPage from "@/pages/admin-verifications";
 import AdminBlog from "@/pages/admin-blog";
+import AdminGiftCards from "@/pages/admin-gift-cards";
 import AssetDetail from "@/pages/asset-detail";
 import AssetHistory from "@/pages/asset-history";
 import { Profile as ProfilePage } from "@/pages/profile";
@@ -133,6 +134,7 @@ function Router() {
       <Route path="/admin/verifications" component={AdminVerificationsPage} />
       <Route path="/admin/merchants" component={AdminMerchantsPage} />
       <Route path="/admin/blog" component={AdminBlog} />
+      <Route path="/admin/gift-cards" component={AdminGiftCards} />
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/signup" component={SignUp} />
       <Route path="/signin" component={SignIn} />
@@ -180,7 +182,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop-post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea"].includes(location) || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop-post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea"].includes(location) || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email"].includes(location);
 
   return (
