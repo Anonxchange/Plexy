@@ -149,8 +149,8 @@ const LifestyleCarousel = () => {
 
 // ============ WALLET SECTION ============
 const WalletSection = () => (
-  <section className="px-4 py-10">
-    <div className="flex items-center justify-center gap-8 py-6">
+  <section className="px-4 py-6">
+    <div className="flex items-center justify-center gap-8 py-3">
       <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-red-500 via-yellow-400 to-blue-500 p-0.5">
         <div className="w-full h-full bg-background rounded-full flex items-center justify-center">
           <div className="w-7 h-5 rounded bg-gradient-to-r from-blue-500 via-green-400 to-yellow-500" />
@@ -162,8 +162,11 @@ const WalletSection = () => (
         </svg>
       </div>
     </div>
-    <h2 className="text-3xl md:text-5xl font-bold text-foreground leading-tight mb-4">Crypto in, money out</h2>
-    <p className="text-muted-foreground text-lg">Use the Pexly Card with Google Wallet. Apple Pay coming soon.</p>
+    <h2 className="text-3xl md:text-5xl font-bold text-foreground leading-tight mb-2">Crypto in, money out</h2>
+    <p className="text-muted-foreground text-lg mb-6">Use the Pexly Card with Google Wallet. Apple Pay coming soon.</p>
+    <div className="flex justify-center">
+      <img src="/assets/IMG_3068.jpeg" alt="Crypto payments" className="w-full max-w-md rounded-2xl" />
+    </div>
   </section>
 );
 
@@ -176,8 +179,8 @@ const features = [
 ];
 
 const FeaturesSection = () => (
-  <section className="px-4 py-12 pb-20">
-    <div className="space-y-10">
+  <section className="px-4 py-8 pb-12">
+    <div className="space-y-6">
       {features.map((feature, index) => (
         <div key={index}>
           <div className="text-muted-foreground mb-3">{feature.icon}</div>
@@ -198,13 +201,13 @@ const securityFeatures = [
 ];
 
 const SecuritySection = () => (
-  <section className="px-4 py-16">
-    <div className="mb-12 flex justify-center">
-      <img src="/assets/IMG_3066.jpeg" alt="Payment options" className="w-full max-w-md rounded-2xl" />
+  <section className="px-4 py-10">
+    <div className="mb-8 flex justify-center">
+      <img src="/assets/IMG_3066.jpeg" alt="Payment options" className="w-full max-w-sm md:max-w-xs rounded-2xl border border-border shadow-sm" />
     </div>
-    <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">Easily accessible<br />security features</h2>
-    <p className="text-muted-foreground text-lg mb-12">Light on complexity, heavy on safety — You're in control.</p>
-    <div className="space-y-4">
+    <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3 leading-tight">Easily accessible<br />security features</h2>
+    <p className="text-muted-foreground text-lg mb-6">Light on complexity, heavy on safety — You're in control.</p>
+    <div className="space-y-3">
       {securityFeatures.map((feature, index) => (
         <div key={index} className="flex items-center gap-4">
           <div className="text-foreground">{feature.icon}</div>
@@ -223,7 +226,7 @@ const CardTypesSection = () => {
   const cardFeatures = activeCard === 'virtual' ? virtualFeatures : physicalFeatures;
 
   return (
-    <section className="px-4 py-16">
+    <section className="px-4 py-10">
       <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3 leading-tight">Virtual, or in<br />your pocket</h2>
       <p className="text-muted-foreground text-lg mb-8">Choose the card that suits your lifestyle.</p>
       <div className="relative mb-8">
@@ -268,7 +271,7 @@ const CardTypesSection = () => {
 
 // ============ TRUSTPILOT SECTION ============
 const TrustpilotSection = () => (
-  <section className="px-4 py-16 text-center">
+  <section className="px-4 py-10 text-center">
     <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8">Our customers<br />love us</h2>
     <div className="flex items-center justify-center gap-3 mb-6">
       <div className="flex items-center gap-1"><Star className="w-5 h-5 text-emerald-500 fill-emerald-500" /><span className="text-foreground font-bold">Trustpilot</span></div>
@@ -281,7 +284,7 @@ const TrustpilotSection = () => (
 
 // ============ CARD DETAILS SECTION ============
 const CardDetailsSection = () => (
-  <section className="px-4 py-12 space-y-8">
+  <section className="px-4 py-8 space-y-6">
     <div className="border-b border-border pb-6">
       <div className="flex items-center gap-3 mb-2"><CreditCard className="w-5 h-5 text-muted-foreground" /><span className="text-foreground font-semibold">Card network</span></div>
       <p className="text-muted-foreground ml-8">VISA</p>
@@ -335,7 +338,7 @@ const faqs = [
 ];
 
 const FAQSection = () => (
-  <section className="px-4 py-16">
+  <section className="px-4 py-10">
     <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Frequently asked questions</h2>
     <p className="text-muted-foreground mb-8">Check out our <span className="text-foreground underline">Knowledge Base</span> page for more FAQs</p>
     <Accordion type="single" collapsible className="space-y-0">
@@ -351,7 +354,7 @@ const FAQSection = () => (
 
 // ============ FOOTER SECTION ============
 const FooterSection = () => (
-  <footer className="px-4 py-12 bg-secondary">
+  <footer className="px-4 py-8 bg-secondary">
     <div className="flex flex-wrap justify-center gap-3 mb-6">
       <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center"><span className="text-white font-bold text-lg">₿</span></div>
       <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white font-bold text-lg">⚡</span></div>
