@@ -60,19 +60,18 @@ const CryptoIconsRow = () => (
 
 // ============ HERO CARD ============
 const HeroCard = () => (
-  <section className="px-4 pt-6 pb-10">
-    <div className="hero-card rounded-3xl p-7 md:p-10 relative overflow-hidden">
-      <div className="absolute left-7 md:left-10 top-7 md:top-10 w-1.5 h-28 rounded-full overflow-hidden">
+  <section className="px-4 pt-4 pb-6">
+    <div className="rounded-3xl p-6 md:p-8 relative overflow-hidden border-2 border-cyan-600/40 dark:border-cyan-500/60 bg-gradient-to-br from-cyan-50/50 dark:from-cyan-950/30 to-teal-50/50 dark:to-teal-950/30">
+      <div className="absolute left-6 md:left-8 top-6 md:top-8 w-1.5 h-24 rounded-full overflow-hidden">
         <div className="w-full h-1/3 bg-red-500" />
         <div className="w-full h-1/3 bg-yellow-400" />
         <div className="w-full h-1/3 bg-green-500" />
       </div>
       <div className="pl-5">
-        <h1 className="text-2xl md:text-4xl font-bold text-white leading-tight mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-5">
           Hold your crypto wherever you like, spend it with the Pexly Card
         </h1>
-        <Button variant="hero" className="mb-4">Get your card</Button>
-        <p className="text-white/70 text-base">Your card is free.</p>
+        <p className="text-muted-foreground text-base mb-6">Your card is free.</p>
       </div>
     </div>
   </section>
@@ -180,7 +179,7 @@ const FeaturesSection = () => (
   <section className="px-4 py-12 pb-20">
     <div className="space-y-10">
       {features.map((feature, index) => (
-        <div key={index} className="opacity-0 animate-slide-up" style={{ animationDelay: `${index * 0.15}s`, animationFillMode: 'forwards' }}>
+        <div key={index}>
           <div className="text-muted-foreground mb-3">{feature.icon}</div>
           <h3 className="text-xl font-bold text-foreground mb-2">{feature.title}</h3>
           <p className="text-muted-foreground text-base leading-relaxed">{feature.description}</p>
@@ -200,42 +199,15 @@ const securityFeatures = [
 
 const SecuritySection = () => (
   <section className="px-4 py-16">
-    <div className="relative mb-10">
-      <div className="mx-auto w-64 h-80 bg-gradient-to-br from-secondary to-muted rounded-3xl border border-border flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-48 h-64 bg-muted rounded-2xl mx-auto flex flex-col items-center justify-center p-4">
-            <span className="text-muted-foreground text-sm">Cards</span>
-            <div className="w-32 h-20 bg-primary rounded-lg mt-2 flex items-center justify-center">
-              <span className="text-primary-foreground text-xs font-bold">Pexly</span>
-            </div>
-            <div className="mt-4 text-left w-full">
-              <span className="text-muted-foreground text-xs">Balance</span>
-              <p className="text-foreground font-bold">€427.87</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="absolute top-8 right-4 bg-background rounded-xl px-3 py-2 shadow-lg border border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 bg-primary rounded flex items-center justify-center"><span className="text-primary-foreground text-xs">✓</span></div>
-          <div>
-            <p className="text-xs font-semibold text-foreground">Pexly Card</p>
-            <p className="text-xs text-muted-foreground">1 new notification</p>
-          </div>
-        </div>
-      </div>
-      <div className="absolute top-1/3 right-2 space-y-2">
-        <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium">Freeze</div>
-        <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium">Revoke</div>
-      </div>
+    <div className="mb-12 flex justify-center">
+      <img src="/assets/IMG_3066.jpeg" alt="Payment options" className="w-full max-w-md rounded-2xl" />
     </div>
     <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">Easily accessible<br />security features</h2>
-    <p className="text-muted-foreground text-lg mb-8">Light on complexity, heavy on safety - You're in control.</p>
-    <button className="bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-colors mb-12">Get Your Card</button>
+    <p className="text-muted-foreground text-lg mb-12">Light on complexity, heavy on safety — You're in control.</p>
     <div className="space-y-4">
       {securityFeatures.map((feature, index) => (
-        <div key={index} className="flex items-center gap-4 opacity-0 animate-slide-up" style={{ animationDelay: `${index * 0.1}s`, animationFillMode: 'forwards' }}>
-          <div className="text-muted-foreground">{feature.icon}</div>
+        <div key={index} className="flex items-center gap-4">
+          <div className="text-foreground">{feature.icon}</div>
           <p className="text-foreground"><span className="font-semibold">{feature.title}</span> <span className="text-muted-foreground">{feature.description}</span></p>
         </div>
       ))}
