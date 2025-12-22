@@ -43,11 +43,15 @@
 }
 
 * {
-  @apply border-border;
+  border-color: hsl(var(--border));
 }
 
 body {
-  @apply bg-background text-foreground font-sans antialiased;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .hero-section {
@@ -80,25 +84,85 @@ body {
 
 .category-card {
   background-color: white !important;
-  @apply rounded-lg border border-border p-8 text-center transition-all duration-300;
-  @apply hover:shadow-lg hover:border-primary/30 hover:-translate-y-1;
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.category-card:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  border-color: hsla(var(--primary), 0.3);
+  transform: translateY(-0.25rem);
 }
 
 .category-icon {
-  @apply w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center mx-auto mb-4;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  border-width: 2px;
+  border-color: hsl(var(--primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem;
 }
 
 .article-item {
-  @apply flex items-start gap-3 py-4 text-foreground hover:text-primary transition-colors cursor-pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  color: hsl(var(--foreground));
+  transition-property: color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  cursor: pointer;
+}
+
+.article-item:hover {
+  color: hsl(var(--primary));
 }
 
 .chat-bubble {
-  @apply fixed bottom-6 right-6 w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-xl;
-  @apply hover:scale-110 transition-transform cursor-pointer z-50;
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  background-color: hsl(var(--primary));
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  cursor: pointer;
+  z-index: 50;
+}
+
+.chat-bubble:hover {
+  transform: scale(1.1);
 }
 
 .search-input {
-  @apply w-full px-5 py-4 pl-12 rounded-full bg-background text-foreground;
-  @apply placeholder:text-muted-foreground focus:outline-none;
-  @apply text-base border-4 border-white/20;
+  width: 100%;
+  padding: 1rem 1.25rem 1rem 3rem;
+  border-radius: 9999px;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 1rem;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.search-input::placeholder {
+  color: hsl(var(--muted-foreground));
 }
