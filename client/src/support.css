@@ -1,170 +1,57 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* Using standard Tailwind v3 directives to avoid Vercel build conflicts with v4 imports */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 160 30% 18%;
-
+  --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
-  --card-foreground: 160 30% 18%;
-
+  --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
-  --popover-foreground: 160 30% 18%;
-
-  /* Dark forest green - primary brand */
-  --primary: 160 30% 18%;
-  --primary-foreground: 0 0% 100%;
-
-  /* Light gray for secondary surfaces */
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 160 30% 18%;
-
-  --muted: 0 0% 96%;
-  --muted-foreground: 160 10% 45%;
-
-  /* Bright red accent */
-  --accent: 0 100% 50%;
-  --accent-foreground: 0 0% 100%;
-
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-
-  --border: 0 0% 88%;
-  --input: 0 0% 90%;
-  --ring: 160 30% 18%;
-
-  --radius: 0.75rem;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.5rem;
 }
 
 @layer base {
   * {
     border-color: hsl(var(--border));
   }
-
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-@layer components {
-  .hero-section {
-    position: relative;
-    background: hsl(var(--primary));
-    overflow: hidden;
-  }
+.hero-section {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, #1e40af 100%);
+  position: relative;
+  overflow: hidden;
+}
 
-  .hero-section::before,
-  .hero-section::after {
-    content: '';
-    position: absolute;
-    width: 600px;
-    height: 600px;
-    background: hsl(var(--accent));
-    border-radius: 50%;
-  }
+.search-input {
+  @apply w-full bg-white border-none rounded-full py-4 pl-14 pr-6 text-lg focus:ring-2 focus:ring-primary/20 transition-all outline-none;
+}
 
-  .hero-section::before {
-    left: -400px;
-    top: 50%;
-    transform: translateY(-30%);
-  }
+.article-item {
+  @apply flex items-start gap-4 py-4 hover:bg-muted/30 transition-colors cursor-pointer px-2 -mx-2 rounded-lg;
+}
 
-  .hero-section::after {
-    right: -400px;
-    top: 50%;
-    transform: translateY(-30%);
-  }
-
-  .category-card {
-    background-color: white !important;
-    border-radius: var(--radius);
-    border: 1px solid hsl(var(--border));
-    padding: 2rem;
-    text-align: center;
-    transition: all 0.3s;
-  }
-
-  .category-card:hover {
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    border-color: hsla(var(--primary), 0.3);
-    transform: translateY(-0.25rem);
-  }
-
-  .category-icon {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 9999px;
-    border-width: 2px;
-    border-color: hsl(var(--primary));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 1rem;
-  }
-
-  .article-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-    color: hsl(var(--foreground));
-    transition-property: color;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-    cursor: pointer;
-  }
-
-  .article-item:hover {
-    color: hsl(var(--primary));
-  }
-
-  .chat-bubble {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    width: 3.5rem;
-    height: 3.5rem;
-    background-color: hsl(var(--primary));
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-    transition-property: transform;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-    cursor: pointer;
-    z-index: 50;
-  }
-
-  .chat-bubble:hover {
-    transform: scale(1.1);
-  }
-
-  .search-input {
-    width: 100%;
-    padding: 1rem 1.25rem 1rem 3rem;
-    border-radius: 9999px;
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-size: 1rem;
-    border: 4px solid rgba(255, 255, 255, 0.2);
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-  }
-
-  .search-input::placeholder {
-    color: hsl(var(--muted-foreground));
-  }
+.chat-bubble {
+  @apply fixed bottom-6 right-6 w-14 h-14 bg-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50;
 }
