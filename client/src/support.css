@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 160 30% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 160 30% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 30% 18%;
+
+    /* Dark forest green - primary brand */
+    --primary: 160 30% 18%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Light gray for secondary surfaces */
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 160 30% 18%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 160 10% 45%;
+
+    /* Bright red accent */
+    --accent: 0 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 88%;
+    --input: 0 0% 90%;
+    --ring: 160 30% 18%;
+
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer components {
+  .hero-section {
+    position: relative;
+    background: hsl(var(--primary));
+    overflow: hidden;
+  }
+  
+  .hero-section::before,
+  .hero-section::after {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: hsl(var(--accent));
+    border-radius: 50%;
+  }
+  
+  .hero-section::before {
+    left: -400px;
+    top: 50%;
+    transform: translateY(-30%);
+  }
+  
+  .hero-section::after {
+    right: -400px;
+    top: 50%;
+    transform: translateY(-30%);
+  }
+
+  .category-card {
+    background-color: white !important;
+    @apply rounded-lg border border-border p-8 text-center transition-all duration-300;
+    @apply hover:shadow-lg hover:border-primary/30 hover:-translate-y-1;
+  }
+
+  .category-icon {
+    @apply w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center mx-auto mb-4;
+  }
+
+  .article-item {
+    @apply flex items-start gap-3 py-4 text-foreground hover:text-primary transition-colors cursor-pointer;
+  }
+
+  .chat-bubble {
+    @apply fixed bottom-6 right-6 w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-xl;
+    @apply hover:scale-110 transition-transform cursor-pointer z-50;
+  }
+
+  .search-input {
+    @apply w-full px-5 py-4 pl-12 rounded-full bg-background text-foreground;
+    @apply placeholder:text-muted-foreground focus:outline-none;
+    @apply text-base border-4 border-white/20;
+  }
+}
