@@ -264,7 +264,7 @@ export function GiftCardDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="max-w-4xl mx-auto px-4 py-4">
+      <main className="max-w-7xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <button
@@ -394,37 +394,31 @@ export function GiftCardDetail() {
             </div>
 
             {/* How to Redeem */}
-            <div className="mt-4">
+            <div className="mt-4 pb-8 border-b border-border">
               <h4 className="font-semibold text-foreground mb-2">How to redeem?</h4>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 {card.redeemInfo}
               </p>
             </div>
+
+            {/* FAQ Section */}
+            <div className="pt-8">
+              <h3 className="text-lg font-semibold text-foreground mb-6">Frequently asked questions</h3>
+              <Accordion type="single" collapsible className="w-full">
+                {faqs.map((faq, index) => (
+                  <AccordionItem key={index} value={`item-${index}`}>
+                    <AccordionTrigger className="text-left text-sm">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground text-sm">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
           </div>
         </div>
-
-        {/* FAQ Section */}
-        <section className="py-8 px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold mb-1 text-center">Frequently asked questions</h2>
-            <p className="text-muted-foreground text-center mb-4 text-sm">
-              Find answers to the most popular questions about gift card purchases
-            </p>
-
-            <Accordion type="single" collapsible className="w-full">
-              {faqs.map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`}>
-                  <AccordionTrigger className="text-left">
-                    {faq.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">
-                    {faq.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
-        </section>
       </main>
 
       {/* Payment Source Sheet */}
