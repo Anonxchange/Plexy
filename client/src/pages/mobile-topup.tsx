@@ -144,16 +144,16 @@ const Index = () => {
         <div className="absolute left-4 right-4 -bottom-7 z-10">
           <div className="max-w-sm md:max-w-lg mx-auto">
             <div className="flex items-center bg-card rounded-lg shadow-lg overflow-hidden animate-slide-up" style={{ animationDelay: "0.2s" }}>
-              <button className="flex items-center gap-1.5 hover:bg-muted transition-colors px-3 py-3 md:px-6 md:py-4 border-r border-border">
+              <button className="flex items-center gap-1.5 hover:bg-gray-100 transition-colors px-3 py-3 md:px-6 md:py-4 border-r border-gray-200 !bg-white">
                 <span className="text-base md:text-lg">🇳🇬</span>
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
               </button>
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="0802 123 4567"
-                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base md:text-lg py-3 md:py-5 px-3 md:px-6 min-w-0"
+                className="flex-1 !bg-white border-none outline-none !text-gray-900 placeholder:!text-gray-500 text-base md:text-lg py-3 md:py-5 px-3 md:px-6 min-w-0"
               />
               <button className="bg-red-500 hover:bg-red-600 border-2 border-red-600 text-white p-3.5 md:p-5 transition-all hover:brightness-110 active:scale-95">
                 <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
