@@ -1,53 +1,23 @@
 import { useState } from "react";
-import { ChevronDown, ArrowRight, Search, Clock, Wallet, Bot } from "lucide-react";
-
-// Provider Logos
-const MTNLogo = () => (
-  <div className="w-20 h-20 bg-mtn rounded-full flex items-center justify-center">
-    <span className="text-foreground font-bold text-xl tracking-tight">MTN</span>
-  </div>
-);
-
-const AirtelLogo = () => (
-  <div className="flex items-center gap-1">
-    <div className="w-8 h-8 bg-airtel rounded-full" />
-    <span className="text-airtel font-bold text-2xl">airtel</span>
-  </div>
-);
-
-const GloLogo = () => (
-  <div className="w-16 h-16 bg-glo rounded-full flex items-center justify-center">
-    <span className="text-primary-foreground font-bold text-lg">glo</span>
-  </div>
-);
-
-const NineMobileLogo = () => (
-  <div className="flex flex-col items-center">
-    <div className="w-10 h-10 bg-etisalat rounded-full flex items-center justify-center mb-1">
-      <span className="text-foreground font-bold text-sm">9</span>
-    </div>
-    <span className="text-xs text-muted-foreground">etisalat</span>
-  </div>
-);
-
-const SpectranetLogo = () => (
-  <div className="text-center">
-    <span className="text-primary-foreground font-semibold text-lg">Spectranet</span>
-    <div className="text-xs text-cta font-medium">4GLTE</div>
-  </div>
-);
+import { ChevronDown, ArrowRight, Search, Clock, Wallet, Bot, Bitcoin, Zap, DollarSign } from "lucide-react";
+import mtnImage from "@assets/IMG_3123_1766409636220.webp";
+import airtelImage from "@assets/IMG_3124_1766409636223.webp";
+import gloImage from "@assets/IMG_3125_1766409636223.webp";
+import etisalatImage from "@assets/IMG_3126_1766409636223.webp";
+import spectranetImage from "@assets/IMG_3127_1766409636223.webp";
 
 // Provider Card Component
 interface ProviderCardProps {
   name: string;
-  logo: React.ReactNode;
+  logo?: React.ReactNode;
+  image?: string;
   priceRange: string;
   bgColor?: string;
   badge?: string;
   outOfStock?: boolean;
 }
 
-const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-card", badge, outOfStock }: ProviderCardProps) => (
+const ProviderCard = ({ name, logo, image, priceRange, bgColor = "bg-card", badge, outOfStock }: ProviderCardProps) => (
   <div className="group cursor-pointer">
     <div className={`relative ${bgColor} rounded-xl aspect-[4/3] flex items-center justify-center shadow-card group-hover:shadow-card-hover transition-all duration-300 group-hover:-translate-y-1 overflow-hidden`}>
       {badge && (
@@ -60,7 +30,11 @@ const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-card", badge, outO
           Out Of Stock
         </span>
       )}
-      {logo}
+      {image ? (
+        <img src={image} alt={name} className="w-32 h-32 object-contain" />
+      ) : (
+        logo
+      )}
     </div>
     <div className="mt-3">
       <h3 className="font-semibold text-foreground">{name}</h3>
@@ -70,14 +44,14 @@ const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-card", badge, outO
 );
 
 const providers = [
-  { name: "MTN", logo: <MTNLogo />, priceRange: "5 NGN - 50000 NGN", bgColor: "bg-card" },
-  { name: "Airtel", logo: <AirtelLogo />, priceRange: "50 NGN - 50000 NGN", bgColor: "bg-card" },
-  { name: "Airtel Data", logo: <AirtelLogo />, priceRange: "50 NGN - 150000 NGN", bgColor: "bg-card" },
-  { name: "Glo Mobile bundles", logo: <GloLogo />, priceRange: "50 NGN - 150000 NGN", bgColor: "bg-glo" },
-  { name: "GLO", logo: <GloLogo />, priceRange: "2856 NGN - 39554 NGN", bgColor: "bg-card" },
-  { name: "9Mobile", logo: <NineMobileLogo />, priceRange: "50 NGN - 10000 NGN", bgColor: "bg-foreground", badge: "2%" },
-  { name: "Spectranet PIN", logo: <SpectranetLogo />, priceRange: "500 NGN - 7000 NGN", bgColor: "bg-primary" },
-  { name: "Airtel PIN", logo: <AirtelLogo />, priceRange: "100 NGN - 50000 NGN", bgColor: "bg-card", outOfStock: true },
+  { name: "MTN", image: mtnImage, priceRange: "5 NGN - 50000 NGN", bgColor: "bg-card" },
+  { name: "Airtel", image: airtelImage, priceRange: "50 NGN - 50000 NGN", bgColor: "bg-card" },
+  { name: "Airtel Data", image: airtelImage, priceRange: "50 NGN - 150000 NGN", bgColor: "bg-card" },
+  { name: "Glo Mobile bundles", image: gloImage, priceRange: "50 NGN - 150000 NGN", bgColor: "bg-card" },
+  { name: "GLO", image: gloImage, priceRange: "2856 NGN - 39554 NGN", bgColor: "bg-card" },
+  { name: "9Mobile", image: etisalatImage, priceRange: "50 NGN - 10000 NGN", bgColor: "bg-card", badge: "2%" },
+  { name: "Spectranet PIN", image: spectranetImage, priceRange: "500 NGN - 7000 NGN", bgColor: "bg-card" },
+  { name: "Airtel PIN", image: airtelImage, priceRange: "100 NGN - 50000 NGN", bgColor: "bg-card", outOfStock: true },
 ];
 
 const steps = [
@@ -131,12 +105,11 @@ const benefits = [
 ];
 
 const cryptoIcons = [
-  { name: "Bitcoin", symbol: "₿", color: "bg-warning text-foreground" },
-  { name: "Lightning", symbol: "⚡", color: "bg-warning text-foreground" },
-  { name: "Ethereum", symbol: "◆", color: "bg-blue-100 text-blue-600" },
-  { name: "USDC", symbol: "$", color: "bg-blue-50 text-blue-500" },
-  { name: "Tether", symbol: "₮", color: "bg-emerald-100 text-emerald-700" },
-  { name: "Solana", symbol: "◎", color: "bg-gradient-to-br from-purple-500 to-blue-500 text-primary-foreground" },
+  { name: "Bitcoin", icon: Bitcoin, color: "bg-warning text-foreground" },
+  { name: "Lightning", icon: Zap, color: "bg-warning text-foreground" },
+  { name: "Ethereum", icon: DollarSign, color: "bg-blue-100 text-blue-600" },
+  { name: "USDC", icon: DollarSign, color: "bg-blue-50 text-blue-500" },
+  { name: "Tether", icon: DollarSign, color: "bg-emerald-100 text-emerald-700" },
 ];
 
 const paymentMethods = [
@@ -252,7 +225,7 @@ const Index = () => {
                 className={`w-10 h-10 rounded-full ${crypto.color} flex items-center justify-center font-bold text-sm shadow-sm hover:scale-110 transition-transform cursor-pointer`}
                 title={crypto.name}
               >
-                {crypto.symbol}
+                <crypto.icon className="w-5 h-5" />
               </div>
             ))}
           </div>
