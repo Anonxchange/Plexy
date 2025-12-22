@@ -13,7 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe } from "lucide-react";
+import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe, Smartphone, Coins, Gift, Heart, Dumbbell, Lightbulb, Lock, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -33,6 +33,31 @@ const categories = [
   { icon: Home, label: "Restaurants" },
   { icon: ShoppingBag, label: "Shopping" },
   { icon: Globe, label: "Travel" },
+];
+
+const sidebarCategories = [
+  { name: "All Categories", icon: LayoutGrid },
+  { name: "Travel", icon: Globe },
+  { name: "Food & Groceries", icon: Coffee },
+  { name: "Gaming", icon: Gamepad2 },
+  { name: "Transportation", icon: Smartphone },
+  { name: "Electronics", icon: Lightbulb },
+  { name: "Fashion", icon: ShoppingBag },
+  { name: "Privacy & Tools", icon: Lock },
+  { name: "Department Stores", icon: ShoppingBag },
+  { name: "Multi-Brand", icon: ShoppingBag },
+  { name: "Entertainment", icon: Music },
+  { name: "Home & DIY", icon: Home },
+  { name: "Health & Beauty", icon: Heart },
+  { name: "Sports & Outdoors", icon: Dumbbell },
+  { name: "Gifts", icon: Gift },
+  { name: "Kids", icon: Gift },
+  { name: "VoIP", icon: Smartphone },
+  { name: "Crypto", icon: Coins },
+  { name: "Prepaid phones", icon: Smartphone },
+  { name: "Phone Codes", icon: Smartphone },
+  { name: "Other bundles", icon: Package },
+  { name: "eSIMs", icon: Smartphone },
 ];
 
 const allCategories = [
@@ -165,6 +190,7 @@ export function GiftCards() {
   const [openCurrency, setOpenCurrency] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All categories");
+  const [selectedSidebarCategory, setSelectedSidebarCategory] = useState("All Categories");
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -241,9 +267,31 @@ export function GiftCards() {
   return (
     <div className="min-h-screen bg-background">
       {/* Two Column Layout */}
-      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background rounded-3xl p-6 border border-border/50 h-fit lg:sticky lg:top-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Column - Categories Sidebar (Desktop Only) */}
+        <aside className="hidden lg:block lg:col-span-1 bg-card rounded-3xl p-6 border border-border/50 h-fit lg:sticky lg:top-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Categories</h3>
+          <div className="space-y-2">
+            {sidebarCategories.map((category, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedSidebarCategory(category.name)}
+                className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedSidebarCategory === category.name
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-secondary"
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        {/* Right Section - Hero and Gift Cards */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Hero Section */}
+          <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background rounded-3xl p-6 border border-border/50">
           {/* Decorative Elements */}
           <div className="absolute inset-0 overflow-hidden rounded-3xl">
             <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/30 dark:bg-white/10 rounded-full blur-3xl" />
@@ -359,37 +407,40 @@ export function GiftCards() {
           </div>
         </section>
 
-        {/* Right Column - Gift Cards */}
-        <main className="py-0">
-          {/* Category Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide animate-fade-in">
-            {categories.map((category, index) => (
-              <Button
-                key={index}
-                variant={category.active ? "default" : "secondary"}
-                className={`flex-shrink-0 gap-2 px-4 h-10 rounded-xl ${
-                  category.active
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-card border border-border hover:bg-secondary"
-                }`}
-                onClick={() => setShowCategoryModal(true)}
-              >
-                <category.icon className="h-4 w-4" />
-                <span className="font-medium">{category.label}</span>
-              </Button>
-            ))}
+        {/* Mobile Categories with Icons (Mobile Only) */}
+        <div className="lg:hidden">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {sidebarCategories.map((category, index) => {
+              const IconComponent = category.icon;
+              return (
+                <button
+                  key={index}
+                  onClick={() => setSelectedSidebarCategory(category.name)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors flex-shrink-0 whitespace-nowrap ${
+                    selectedSidebarCategory === category.name
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card border border-border text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  <IconComponent className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-xs font-medium">{category.name}</span>
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Gift Cards Section */}
-          <h2 className="text-lg font-semibold text-foreground mb-4 mt-2">
-            All categories
-          </h2>
+          {/* Gift Cards List */}
+          <div>
+            <h2 className="text-lg font-semibold text-foreground mb-4">
+              All categories
+            </h2>
           {loading ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading gift cards...</p>
             </div>
           ) : (
-          <div className="space-y-4 pb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
             {giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
               <div
                 key={card.id}
@@ -431,7 +482,8 @@ export function GiftCards() {
             )}
           </div>
           )}
-        </main>
+        </div>
+      </div>
       </div>
 
       {/* FAQ Section */}
