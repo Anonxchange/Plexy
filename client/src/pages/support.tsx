@@ -14,6 +14,7 @@ import {
   Instagram,
   MessageCircle
 } from "lucide-react";
+import "../support.css";
 
 const categories = [
   {
@@ -189,4 +190,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default support;
