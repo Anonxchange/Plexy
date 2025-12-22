@@ -1,280 +1,40 @@
-import { useState } from "react";
-import { ChevronDown, ArrowRight, Search, Clock, Wallet, Bot } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { BitrefillWidget } from "@/components/bitrefill-widget";
 
-// Provider Logos
-const MTNLogo = () => (
-  <div className="w-20 h-20 bg-mtn rounded-full flex items-center justify-center">
-    <span className="text-foreground font-bold text-xl tracking-tight">MTN</span>
-  </div>
-);
-
-const AirtelLogo = () => (
-  <div className="flex items-center gap-1">
-    <div className="w-8 h-8 bg-airtel rounded-full" />
-    <span className="text-airtel font-bold text-2xl">airtel</span>
-  </div>
-);
-
-const GloLogo = () => (
-  <div className="w-16 h-16 bg-glo rounded-full flex items-center justify-center">
-    <span className="text-primary-foreground font-bold text-lg">glo</span>
-  </div>
-);
-
-const NineMobileLogo = () => (
-  <div className="flex flex-col items-center">
-    <div className="w-10 h-10 bg-etisalat rounded-full flex items-center justify-center mb-1">
-      <span className="text-foreground font-bold text-sm">9</span>
-    </div>
-    <span className="text-xs text-muted-foreground">etisalat</span>
-  </div>
-);
-
-const SpectranetLogo = () => (
-  <div className="text-center">
-    <span className="text-primary-foreground font-semibold text-lg">Spectranet</span>
-    <div className="text-xs text-cta font-medium">4GLTE</div>
-  </div>
-);
-
-// Provider Card Component
-interface ProviderCardProps {
-  name: string;
-  logo: React.ReactNode;
-  priceRange: string;
-  bgColor?: string;
-  badge?: string;
-  outOfStock?: boolean;
-}
-
-const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-card", badge, outOfStock }: ProviderCardProps) => (
-  <div className="group cursor-pointer">
-    <div className={`relative ${bgColor} rounded-xl aspect-[4/3] flex items-center justify-center shadow-card group-hover:shadow-card-hover transition-all duration-300 group-hover:-translate-y-1 overflow-hidden`}>
-      {badge && (
-        <span className="absolute top-2 left-2 bg-success text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
-          <span>💰</span> {badge}
-        </span>
-      )}
-      {outOfStock && (
-        <span className="absolute top-2 left-2 bg-accent text-accent-foreground text-xs font-semibold px-2 py-1 rounded-md">
-          Out Of Stock
-        </span>
-      )}
-      {logo}
-    </div>
-    <div className="mt-3">
-      <h3 className="font-semibold text-foreground">{name}</h3>
-      <p className="text-sm text-muted-foreground">{priceRange}</p>
-    </div>
-  </div>
-);
-
-const providers = [
-  { name: "MTN", logo: <MTNLogo />, priceRange: "5 NGN - 50000 NGN", bgColor: "bg-card" },
-  { name: "Airtel", logo: <AirtelLogo />, priceRange: "50 NGN - 50000 NGN", bgColor: "bg-card" },
-  { name: "Airtel Data", logo: <AirtelLogo />, priceRange: "50 NGN - 150000 NGN", bgColor: "bg-card" },
-  { name: "Glo Mobile bundles", logo: <GloLogo />, priceRange: "50 NGN - 150000 NGN", bgColor: "bg-glo" },
-  { name: "GLO", logo: <GloLogo />, priceRange: "2856 NGN - 39554 NGN", bgColor: "bg-card" },
-  { name: "9Mobile", logo: <NineMobileLogo />, priceRange: "50 NGN - 10000 NGN", bgColor: "bg-foreground", badge: "2%" },
-  { name: "Spectranet PIN", logo: <SpectranetLogo />, priceRange: "500 NGN - 7000 NGN", bgColor: "bg-primary" },
-  { name: "Airtel PIN", logo: <AirtelLogo />, priceRange: "100 NGN - 50000 NGN", bgColor: "bg-card", outOfStock: true },
-];
-
-const steps = [
-  {
-    title: "Enter a phone number & amount",
-    description: "Type in the phone number and the amount you want us to refill.",
-    visual: (
-      <div className="bg-muted rounded-xl p-6 flex items-center justify-center gap-3">
-        <div className="bg-card rounded-md px-4 py-2 text-lg font-mono text-foreground shadow-sm">342934</div>
-        <button className="bg-cta text-cta-foreground p-2 rounded-lg">
-          <ArrowRight className="w-5 h-5" />
-        </button>
-      </div>
-    ),
-  },
-  {
-    title: "Pay with any payment method",
-    description: "Your payment is confirmed the same minute in most cases.",
-    visual: (
-      <div className="bg-muted rounded-xl p-6 flex items-center justify-center gap-4">
-        <div className="w-12 h-12 bg-warning rounded-full flex items-center justify-center text-xl font-bold text-foreground">₿</div>
-        <ArrowRight className="w-5 h-5 text-cta" />
-        <div className="w-12 h-12 bg-card rounded-md flex items-center justify-center border-2 border-success">
-          <span className="text-2xl">📱</span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    title: "That's it, here is your refill",
-    description: "Once your payment is confirmed you will get your refill sent out.",
-    visual: (
-      <div className="bg-muted rounded-xl p-6 flex items-center justify-center">
-        <div className="relative">
-          <div className="w-16 h-12 bg-card rounded-md border border-border flex items-center justify-center">
-            <span className="text-2xl">🎫</span>
-          </div>
-          <div className="absolute -top-2 -right-2 w-6 h-6 bg-cta rounded-full flex items-center justify-center">
-            <span className="text-cta-foreground text-xs">✓</span>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-];
-
-const benefits = [
-  { icon: Clock, title: "Instant digital delivery" },
-  { icon: Bot, title: "Live Bankless" },
-  { icon: Wallet, title: "Save on exchange fees" },
-];
-
-const cryptoIcons = [
-  { name: "Bitcoin", symbol: "₿", color: "bg-warning text-foreground" },
-  { name: "Lightning", symbol: "⚡", color: "bg-warning text-foreground" },
-  { name: "Ethereum", symbol: "◆", color: "bg-blue-100 text-blue-600" },
-  { name: "USDC", symbol: "$", color: "bg-blue-50 text-blue-500" },
-  { name: "Tether", symbol: "₮", color: "bg-emerald-100 text-emerald-700" },
-  { name: "Solana", symbol: "◎", color: "bg-gradient-to-br from-purple-500 to-blue-500 text-primary-foreground" },
-];
-
-const paymentMethods = [
-  { name: "Apple Pay", display: " Pay" },
-  { name: "Google Pay", display: "G Pay" },
-  { name: "Visa", display: "VISA" },
-  { name: "Mastercard", display: "●●" },
-];
-
-const Index = () => {
-  const [phoneNumber, setPhoneNumber] = useState("");
-
+export default function MobileTopup() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative bg-primary text-primary-foreground pt-12 pb-20 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-8 animate-fade-in">
-            Top up prepaid mobile phones with Bitcoin and other cryptocurrencies from anywhere in the world
+    <div className="min-h-screen bg-background pb-20">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+            Mobile Topuo Instantly
           </h1>
-        </div>
-
-        {/* Floating phone input */}
-        <div className="absolute left-4 right-4 -bottom-7 z-10">
-          <div className="max-w-md mx-auto">
-            <div className="flex items-center bg-card rounded-lg shadow-lg overflow-hidden animate-slide-up" style={{ animationDelay: "0.2s" }}>
-              <button className="flex items-center gap-1.5 hover:bg-muted transition-colors px-3 py-3 border-r border-border">
-                <span className="text-base">🇳🇬</span>
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="0802 123 4567"
-                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base py-3 px-3 min-w-0"
-              />
-              <button className="bg-cta hover:bg-cta/90 text-cta-foreground p-3.5 transition-all hover:brightness-110 active:scale-95">
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Provider Grid */}
-      <section className="pt-14 pb-8 px-4 md:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">
-              Popular Phone Refill products in Nigeria
-            </h2>
-            <button className="flex items-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-full transition-colors text-sm font-medium w-fit">
-              <Search className="w-4 h-4" />
-              <span>Search for</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 md:gap-6">
-            {providers.map((provider, index) => (
-              <div key={provider.name + index} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                <ProviderCard {...provider} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-12 px-4 md:px-6 lg:px-8 bg-secondary/50">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8">How refills work</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((step, index) => (
-              <div key={step.title} className="animate-fade-in" style={{ animationDelay: `${index * 0.15}s` }}>
-                {step.visual}
-                <div className="mt-4">
-                  <h3 className="text-lg font-bold text-foreground">{step.title}</h3>
-                  <p className="text-muted-foreground mt-1">{step.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits */}
-      <section className="py-12 px-4 md:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {benefits.map((benefit, index) => (
-              <div key={benefit.title} className="flex flex-col items-center text-center animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                <div className="w-14 h-14 rounded-full border-2 border-cta flex items-center justify-center mb-3">
-                  <benefit.icon className="w-6 h-6 text-cta" />
-                </div>
-                <h3 className="font-semibold text-foreground">{benefit.title}</h3>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Crypto Payments */}
-      <section className="py-10 px-4 md:px-6 lg:px-8 bg-muted">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-center text-foreground font-medium italic mb-6">
-            Refill your airtime with Bitcoin, Ethereum, Litecoin, Dash, Dogecoin, or Lightning!
+          <p className="text-lg text-muted-foreground">
+            Purchase USDT with 500+ payment methods from anywhere in the world
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-            {cryptoIcons.map((crypto) => (
-              <div
-                key={crypto.name}
-                className={`w-10 h-10 rounded-full ${crypto.color} flex items-center justify-center font-bold text-sm shadow-sm hover:scale-110 transition-transform cursor-pointer`}
-                title={crypto.name}
-              >
-                {crypto.symbol}
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {paymentMethods.map((method) => (
-              <div
-                key={method.name}
-                className="px-4 py-2 bg-card rounded-md border border-border text-foreground text-sm font-medium hover:shadow-card transition-shadow cursor-pointer"
-              >
-                {method.display}
-              </div>
-            ))}
-          </div>
         </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="py-6 px-4 text-center">
-        <p className="text-sm text-muted-foreground">© 2024 Phone Refill. All rights reserved.</p>
-      </footer>
+        {/* Bitrefill Widget */}
+        <div className="mb-8">
+          <BitrefillWidget />
+        </div>
+
+        {/* Info Card */}
+        <Card className="bg-muted/30 border-2">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-3">Why Bitrefill?</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>✓ Instant purchases - Get USDT in minutes</li>
+              <li>✓ Multiple payment methods - Pay your way</li>
+              <li>✓ Global coverage - Available in 140+ countries</li>
+              <li>✓ Secure - Industry-leading security standards</li>
+              <li>✓ Competitive rates - Best prices available</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-};
-
-export default MobileTopup;
+}
