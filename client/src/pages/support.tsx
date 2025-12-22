@@ -189,4 +189,4 @@ const Index = () => {
   );
 };
 
-export default support;
+export default Index;
