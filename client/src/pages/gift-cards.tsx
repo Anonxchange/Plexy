@@ -283,9 +283,9 @@ return (
         </aside>
 
         {/* Right Section - Hero and Gift Cards */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3">
           {/* Hero Section */}
-          <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background rounded-3xl p-6 border border-border/50">
+          <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background rounded-3xl p-6 border border-border/50 mb-6">
           {/* Decorative Elements */}
           <div className="absolute inset-0 overflow-hidden rounded-3xl">
             <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/30 dark:bg-white/10 rounded-full blur-3xl" />
@@ -424,94 +424,81 @@ return (
                 </button>
               );
             })}
-
           </div>
         </div>
 
-          {/* Gift Cards List */}
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              All categories
-            </h2>
+        {/* Gift Cards List */}
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">
+            All categories
+          </h2>
           {loading ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading gift cards...</p>
             </div>
           ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
-            {giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
-              <div
-                key={card.id}
-                className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up"
-                onClick={() => setLocation(`/gift-cards/${card.id}`)}
-                style={{ animationDelay: `${0.2 + index * 0.05}s` }}
-              >
-                <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden`}>
-                  <img
-                    src={card.image}
-                    alt={card.name}
-                    className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                </div>
-
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-foreground text-lg leading-tight">
-                      {card.name}
-                    </h3>
-                    <span className="text-xs font-semibold text-destructive bg-discount-bg px-2 py-1 rounded-md flex-shrink-0 ml-2">
-                      {card.discount}
-                    </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
+              {giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
+                <div
+                  key={card.id}
+                  className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up"
+                  onClick={() => setLocation(`/gift-cards/${card.id}`)}
+                  style={{ animationDelay: `${0.2 + index * 0.05}s` }}
+                >
+                  <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden`}>
+                    <img
+                      src={card.image}
+                      alt={card.name}
+                      className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {card.description}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {card.priceRange}{" "}
-                    <span className="text-muted-foreground/70">({card.cryptoRange})</span>
-                  </p>
 
-</div>
-
-</div>
-            )) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No gift cards available yet</p>
-              </div>
-            )}
-
-</div>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-foreground text-lg leading-tight">
+                        {card.name}
+                      </h3>
+                      <span className="text-xs font-semibold text-destructive bg-discount-bg px-2 py-1 rounded-md flex-shrink-0 ml-2">
+                        {card.discount}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {card.description}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {card.priceRange}{" "}
+                      <span className="text-muted-foreground/70">({card.cryptoRange})</span>
+                    </p>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No gift cards available yet</p>
+                </div>
+              )}
+            </div>
           )}
         </div>
-      </div>
-      </div>
 
-      {/* FAQ Section */}
-      <section className="py-16 px-4 pb-20">
-
-  <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold mb-2 text-center">Frequently asked questions</h2>
-          <p className="text-muted-foreground text-center mb-8">
-            Find answers to the most popular questions asked by our users
-
-</p>
-
+        {/* FAQ Section - Below Gift Cards */}
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-foreground mb-6">Frequently asked questions</h3>
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((faq, index) => (
               <AccordionItem key={index} value={`item-${index}`}>
-                <AccordionTrigger className="text-left">
+                <AccordionTrigger className="text-left text-sm">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
+                <AccordionContent className="text-muted-foreground text-sm">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>
-
             ))}
           </Accordion>
         </div>
-      </section>
+        </div>
+      </div>
 
       {/* Category Modal Sheet */}
       <Sheet open={showCategoryModal} onOpenChange={setShowCategoryModal}>
