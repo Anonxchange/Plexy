@@ -1,13 +1,35 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-export default defineConfig({
+// Detect Replit + dev environment
+const isReplitDev =
+  process.env.NODE_ENV !== "production" &&
+  process.env.REPL_ID !== undefined;
+
+export default defineConfig(async () => ({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
+
+    // ✅ Replit plugins ONLY in dev
+    ...(isReplitDev
+      ? [
+          (await import("@replit/vite-plugin-runtime-error-modal")).default(),
+          (await import("@replit/vite-plugin-cartographer")).cartographer(),
+          (await import("@replit/vite-plugin-dev-banner")).devBanner(),
+        ]
+      : []),
   ],
+
+  // 👇 Frontend root
+  root: path.resolve(import.meta.dirname, "client"),
+
+  // 👇 .env files live in project root
+  envDir: path.resolve(import.meta.dirname),
+
+  // 👇 Correct base path for Vercel
+  base: "/",
+
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -15,31 +37,23 @@ export default defineConfig({
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
-  root: path.resolve(import.meta.dirname, "client"), // 👈 index.html entry lives here
-  envDir: path.resolve(import.meta.dirname), // 👈 .env files live in project root
+
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist"), // ✅ final build goes here
+    // ✅ MUST be relative to `root`
+    outDir: "dist",
     emptyOutDir: true,
-    assetsInlineLimit: 0, // Don't inline assets, keep them as separate files for better caching
+    assetsInlineLimit: 0,
   },
+
+  // 🔧 Dev server only
   server: {
     host: "0.0.0.0",
     port: 5000,
-    allowedHosts: true,
-    fs: {
-      strict: true,
-      deny: ["**/.*"],
-    },
-    headers: {
-      'Cache-Control': 'public, max-age=31536000'
-    }
   },
+
+  // 🔧 Preview server
   preview: {
     host: "0.0.0.0",
     port: 5000,
-    allowedHosts: true,
-    headers: {
-      'Cache-Control': 'public, max-age=31536000, immutable'
-    }
   },
-});
+}));
