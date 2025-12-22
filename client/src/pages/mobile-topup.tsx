@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { ChevronDown, ArrowRight, Search, Clock, Wallet, Bot, Bitcoin, Zap, DollarSign } from "lucide-react";
 
-const mtnImage = "/IMG_3123.webp";
-const airtelImage = "/IMG_3124.webp";
-const gloImage = "/IMG_3125.webp";
-const etisalatImage = "/IMG_3126.webp";
-const spectranetImage = "/IMG_3127.webp";
+const mtnImage = "/assets/IMG_3123.webp";
+const airtelImage = "/assets/IMG_3124.webp";
+const gloImage = "/assets/IMG_3125.webp";
+const etisalatImage = "/assets/IMG_3126.webp";
+const spectranetImage = "/assets/IMG_3127.webp";
 
 // Provider Card Component
 interface ProviderCardProps {
@@ -32,7 +32,7 @@ const ProviderCard = ({ name, logo, image, priceRange, bgColor = "bg-card", badg
         </span>
       )}
       {image ? (
-        <img src={image} alt={name} className="w-32 h-32 object-contain" />
+        <img src={image} alt={name} className="w-full h-full object-cover" />
       ) : (
         logo
       )}
