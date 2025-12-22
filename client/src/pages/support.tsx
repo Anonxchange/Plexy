@@ -14,7 +14,6 @@ import {
   Instagram,
   MessageCircle
 } from "lucide-react";
-import "../support.css";
 
 const categories = [
   {
