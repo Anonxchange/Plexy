@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { ChevronDown, ArrowRight, Search, Clock, Wallet, Bot, Bitcoin, Zap, DollarSign } from "lucide-react";
-import mtnImage from "@assets/IMG_3123_1766409636220.webp";
-import airtelImage from "@assets/IMG_3124_1766409636223.webp";
-import gloImage from "@assets/IMG_3125_1766409636223.webp";
-import etisalatImage from "@assets/IMG_3126_1766409636223.webp";
-import spectranetImage from "@assets/IMG_3127_1766409636223.webp";
+import mtnImage from "@assets/IMG_3123.webp";
+import airtelImage from "@assets/IMG_3124.webp";
+import gloImage from "@assets/IMG_3125.webp";
+import etisalatImage from "@assets/IMG_3126.webp";
+import spectranetImage from "@assets/IMG_3127.webp";
 
 // Provider Card Component
 interface ProviderCardProps {
