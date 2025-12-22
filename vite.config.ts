@@ -7,53 +7,52 @@ const isReplitDev =
   process.env.NODE_ENV !== "production" &&
   process.env.REPL_ID !== undefined;
 
-export default defineConfig(async () => ({
-  plugins: [
+export default defineConfig(async () => {
+  const plugins = [
     react(),
+  ];
 
-    // ✅ Replit plugins ONLY in dev
-    ...(isReplitDev
-      ? [
-          (await import("@replit/vite-plugin-runtime-error-modal")).default(),
-          (await import("@replit/vite-plugin-cartographer")).cartographer(),
-          (await import("@replit/vite-plugin-dev-banner")).devBanner(),
-        ]
-      : []),
-  ],
+  if (isReplitDev) {
+    try {
+      const runtimeErrorModal = await import("@replit/vite-plugin-runtime-error-modal");
+      const devBanner = await import("@replit/vite-plugin-dev-banner");
+      
+      plugins.push(runtimeErrorModal.default());
+      plugins.push(devBanner.devBanner());
+    } catch (e) {
+      console.error("Failed to load Replit plugins:", e);
+    }
+  }
 
-  // 👇 Frontend root
-  root: path.resolve(import.meta.dirname, "client"),
-
-  // 👇 .env files live in project root
-  envDir: path.resolve(import.meta.dirname),
-
-  // 👇 Correct base path for Vercel
-  base: "/",
-
-  resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+  return {
+    plugins,
+    root: path.resolve(import.meta.dirname, "client"),
+    envDir: path.resolve(import.meta.dirname),
+    base: "/",
+    resolve: {
+      alias: {
+        "@": path.resolve(import.meta.dirname, "client", "src"),
+        "@shared": path.resolve(import.meta.dirname, "shared"),
+        "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      },
     },
-  },
-
-  build: {
-    // ✅ MUST be relative to `root`
-    outDir: "dist",
-    emptyOutDir: true,
-    assetsInlineLimit: 0,
-  },
-
-  // 🔧 Dev server only
-  server: {
-    host: "0.0.0.0",
-    port: 5000,
-  },
-
-  // 🔧 Preview server
-  preview: {
-    host: "0.0.0.0",
-    port: 5000,
-  },
-}));
+    build: {
+      outDir: "../dist",
+      emptyOutDir: true,
+      assetsInlineLimit: 0,
+    },
+    server: {
+      host: "0.0.0.0",
+      port: 5000,
+      allowedHosts: true,
+      hmr: {
+        clientPort: 443,
+      },
+    },
+    preview: {
+      host: "0.0.0.0",
+      port: 5000,
+      allowedHosts: true,
+    },
+  };
+});
