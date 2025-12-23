@@ -59,7 +59,7 @@ const tabs = [
 const trendingEvents = [
   {
     id: "1",
-    title: "Bybit Flat & Pay Christmas",
+    title: "Pexly Flat & Pay Christmas",
     description: "Earn from a 25,000 USDT Christmas Prize Pool!",
     status: "Ongoing",
     endDate: "2026-01-09",
