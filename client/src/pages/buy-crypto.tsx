@@ -85,7 +85,7 @@ const trendingEvents = [
   {
     id: "3",
     title: "Referral Rewards Season",
-    description: "Earn commissions by referring friends to Bybit!",
+    description: "Earn commissions by referring friends to Pexly!",
     status: "Ongoing",
     endDate: "2026-03-31",
     image: "👥",
