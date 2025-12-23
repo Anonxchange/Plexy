@@ -33,7 +33,13 @@ import {
 import { PexlyFooter } from "@/components/pexly-footer";
 import { MoonPayWidget } from "@/components/moonpay-widget";
 import { MoonPayIcon } from "@/components/icons/moonpay-icon";
+import { CryptoCurrencySelector } from "@/components/crypto-currency-selector";
+import { FiatCurrencySelector } from "@/components/fiat-currency-selector";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
+import { countries as localizationCountries } from "@/lib/localization";
+import { useEffect } from "react";
 
 // ==================== TYPES ====================
 interface PaymentMethod {
@@ -203,16 +209,87 @@ const Index = () => {
   const [mode, setMode] = useState<"buy" | "sell">("buy");
   const [spendAmount, setSpendAmount] = useState("");
   const [receiveAmount, setReceiveAmount] = useState("");
+  const [selectedCrypto, setSelectedCrypto] = useState("USDT");
+  const [selectedFiatCurrency, setSelectedFiatCurrency] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0]);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [faqActiveTab, setFaqActiveTab] = useState("Beginner");
   const [eventTab, setEventTab] = useState<"trending" | "ongoing">("trending");
 
-  const fiatCurrency: Currency = { code: "NGN", icon: "₦", color: "#2E7D32" };
-  const cryptoCurrency: Currency = { code: "USDT", icon: "₮", color: "#26A69A" };
+  const supabase = createClient();
+
+  const fiatCurrencyMap: Record<string, { icon: string; color: string }> = {
+    NGN: { icon: "₦", color: "#2E7D32" },
+    USD: { icon: "$", color: "#1E40AF" },
+    EUR: { icon: "€", color: "#DC2626" },
+    GBP: { icon: "£", color: "#4B5563" },
+    CAD: { icon: "$", color: "#FF6B35" },
+    INR: { icon: "₹", color: "#FF9500" },
+    KES: { icon: "KSh", color: "#06B6D4" },
+    GHS: { icon: "₵", color: "#059669" },
+  };
+
+  const fiatCurrency = fiatCurrencyMap[selectedFiatCurrency] || fiatCurrencyMap["NGN"];
+  
+  const getCryptoDisplay = (symbol: string) => {
+    const iconMap: Record<string, { icon: string; color: string }> = {
+      BTC: { icon: "₿", color: "#F7931A" },
+      ETH: { icon: "Ξ", color: "#627EEA" },
+      SOL: { icon: "◎", color: "#00D4AA" },
+      BNB: { icon: "⬡", color: "#F3BA2F" },
+      TRX: { icon: "Ⓣ", color: "#EB0029" },
+      USDC: { icon: "$", color: "#2775CA" },
+      USDT: { icon: "₮", color: "#26A69A" },
+      LTC: { icon: "Ł", color: "#345D9D" },
+    };
+    return iconMap[symbol] || { icon: "$", color: "#999" };
+  };
+
+  const cryptoCurrencyDisplay = getCryptoDisplay(selectedCrypto);
 
   const recommendedMethods = paymentMethods.filter((m) => m.badge || m.id === "bank-p2p");
   const thirdPartyMethods = paymentMethods.filter((m) => !m.badge && m.id !== "bank-p2p" && m.id !== "bank");
+
+  useEffect(() => {
+    const loadUserCurrency = async () => {
+      if (user?.id && !selectedFiatCurrency) {
+        try {
+          const { data: profileData } = await supabase
+            .from("user_profiles")
+            .select("country, preferred_currency")
+            .eq("id", user.id)
+            .single();
+
+          if (profileData) {
+            if (profileData.preferred_currency) {
+              setSelectedFiatCurrency(profileData.preferred_currency);
+            } else if (profileData.country) {
+              const userCountry = localizationCountries.find(
+                c => c.name.toLowerCase() === profileData.country.toLowerCase() || 
+                     c.code.toLowerCase() === profileData.country.toLowerCase()
+              );
+              if (userCountry) {
+                setSelectedFiatCurrency(userCountry.currencyCode);
+              } else {
+                setSelectedFiatCurrency("USD");
+              }
+            } else {
+              setSelectedFiatCurrency("USD");
+            }
+          } else {
+            setSelectedFiatCurrency("USD");
+          }
+        } catch (error) {
+          console.error("Error loading user currency:", error);
+          setSelectedFiatCurrency("USD");
+        }
+      } else if (!user?.id && !selectedFiatCurrency) {
+        setSelectedFiatCurrency("USD");
+      }
+    };
+
+    loadUserCurrency();
+  }, [user?.id, selectedFiatCurrency, supabase]);
 
   return (
     <>
@@ -265,13 +342,10 @@ const Index = () => {
                           placeholder="4,500 - 23,000,000"
                           className="flex-1 bg-transparent text-base font-medium placeholder:text-muted-foreground/60 focus:outline-none"
                         />
-                        <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: fiatCurrency.color }}>
-                            {fiatCurrency.icon}
-                          </div>
-                          <span className="font-semibold text-foreground">{fiatCurrency.code}</span>
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        </button>
+                        <FiatCurrencySelector 
+                          value={selectedFiatCurrency}
+                          onChange={setSelectedFiatCurrency}
+                        />
                       </div>
                     </div>
 
@@ -286,13 +360,12 @@ const Index = () => {
                           placeholder="Enter purchase amount"
                           className="flex-1 bg-transparent text-base font-medium placeholder:text-muted-foreground/60 focus:outline-none"
                         />
-                        <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: cryptoCurrency.color }}>
-                            {cryptoCurrency.icon}
-                          </div>
-                          <span className="font-semibold text-foreground">{cryptoCurrency.code}</span>
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        </button>
+                        <div className="w-full max-w-[180px]">
+                          <CryptoCurrencySelector 
+                            value={selectedCrypto}
+                            onChange={setSelectedCrypto}
+                          />
+                        </div>
                       </div>
                     </div>
 
