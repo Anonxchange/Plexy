@@ -172,11 +172,11 @@ const faqTabs = ["Beginner", "Advanced", "Advertiser"];
 
 const faqData = {
   Beginner: [
-    { question: "What is P2P on Bybit?", answer: "P2P (Peer-to-Peer) trading on Bybit allows users to buy and sell cryptocurrencies directly with each other using various payment methods. It provides a secure escrow service to protect both buyers and sellers during transactions." },
+    { question: "What is P2P on Bybit?", answer: "P2P (Peer-to-Peer) trading on Pexly allows users to buy and sell cryptocurrencies directly with each other using various payment methods. It provides a secure escrow service to protect both buyers and sellers during transactions." },
     { question: "Are there any transaction fees on the P2P platform?", answer: "Bybit P2P platform offers zero trading fees for both makers and takers. You only pay the network fees when withdrawing your crypto." },
     { question: "Do I need Identity Verification (KYC) to perform P2P trading?", answer: "Yes, you need to complete basic identity verification (KYC Level 1) to access P2P trading on Bybit. This helps ensure the security of all users on the platform." },
     { question: "Can I trade with users in other countries or regions?", answer: "Yes, you can trade with users from different countries. However, payment methods may vary by region, and you should ensure you can receive payments through the selected method." },
-    { question: "What payment methods are supported for P2P trade?", answer: "Bybit P2P supports various payment methods including bank transfer, mobile payment apps, digital wallets, and more. Available methods vary by region." },
+    { question: "What payment methods are supported for P2P trade?", answer: "Pexly P2P supports various payment methods including bank transfer, mobile payment apps, digital wallets, and more. Available methods vary by region." },
     { question: "How to buy and sell on P2P?", answer: "To buy: Select an offer, enter amount, confirm order, make payment, and click 'Payment Completed'. To sell: Post an ad or accept a buy order, wait for payment, then release the crypto." },
     { question: "What are the order limits on the P2P trading platform?", answer: "Order limits vary depending on the advertiser's settings and your account verification level. Higher KYC levels typically allow for larger transaction limits." },
     { question: "Why am I ineligible to buy or sell my coin?", answer: "This may be due to incomplete KYC verification, regional restrictions, or account security measures. Please check your account status or contact support for assistance." },
