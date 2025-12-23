@@ -56,6 +56,46 @@ const tabs = [
   { id: "fiat", label: "Fiat Deposit" },
 ];
 
+const trendingEvents = [
+  {
+    id: "1",
+    title: "Bybit Flat & Pay Christmas",
+    description: "Earn from a 25,000 USDT Christmas Prize Pool!",
+    status: "Ongoing",
+    endDate: "2026-01-09",
+    image: "🎄",
+    tasks: [
+      { label: "Lucky Draw", description: "1 Chance(s)", reward: "Random" },
+      { label: "Lucky Draw", description: "1 Chance(s)", reward: "Pay $25 (or its equivalent with Bybit Pay)" },
+    ],
+    participants: 0,
+  },
+  {
+    id: "2",
+    title: "New Year Trading Bonuses",
+    description: "Get exclusive bonuses for your first trade of 2026!",
+    status: "Upcoming",
+    endDate: "2026-02-01",
+    image: "🎉",
+    tasks: [
+      { label: "Sign Up Bonus", description: "1 Chance(s)", reward: "Up to 500 USDT" },
+    ],
+    participants: 0,
+  },
+  {
+    id: "3",
+    title: "Referral Rewards Season",
+    description: "Earn commissions by referring friends to Bybit!",
+    status: "Ongoing",
+    endDate: "2026-03-31",
+    image: "👥",
+    tasks: [
+      { label: "Referral Bonus", description: "Unlimited", reward: "10% of friend's trading fees" },
+    ],
+    participants: 0,
+  },
+];
+
 const paymentMethods: PaymentMethod[] = [
   {
     id: "bank-p2p",
@@ -160,6 +200,7 @@ const Index = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0]);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [faqActiveTab, setFaqActiveTab] = useState("Beginner");
+  const [eventTab, setEventTab] = useState<"trending" | "ongoing">("trending");
 
   const fiatCurrency: Currency = { code: "NGN", icon: "₦", color: "#2E7D32" };
   const cryptoCurrency: Currency = { code: "USDT", icon: "₮", color: "#26A69A" };
@@ -176,106 +217,197 @@ const Index = () => {
 
       <div className="min-h-screen bg-background">
         <main className="overflow-x-hidden">
-          {/* Trading Form */}
-          <div className="bg-background">
-            {/* Buy/Sell Toggle */}
-            <div className="flex gap-2 px-4 pt-6 pb-4 border-b border-border">
-              <button
-                onClick={() => setMode("buy")}
-                className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
-                  mode === "buy" 
-                    ? "bg-white text-foreground" 
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                Buy
-              </button>
-              <button
-                onClick={() => setMode("sell")}
-                className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
-                  mode === "sell" 
-                    ? "bg-white text-foreground" 
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                Sell
-              </button>
-            </div>
-
-            <div className="px-4 pb-6 space-y-4 pt-6">
-              {/* Spend Input */}
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground font-medium">Spend</label>
-                <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-4">
-                  <input
-                    type="text"
-                    value={spendAmount}
-                    onChange={(e) => setSpendAmount(e.target.value)}
-                    placeholder="4,500 - 23,000,000"
-                    className="flex-1 bg-transparent text-base font-medium placeholder:text-muted-foreground/60 focus:outline-none"
-                  />
-                  <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: fiatCurrency.color }}>
-                      {fiatCurrency.icon}
-                    </div>
-                    <span className="font-semibold text-foreground">{fiatCurrency.code}</span>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Receive Input */}
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground font-medium">Receive ≈</label>
-                <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-4">
-                  <input
-                    type="text"
-                    value={receiveAmount}
-                    onChange={(e) => setReceiveAmount(e.target.value)}
-                    placeholder="Enter purchase amount"
-                    className="flex-1 bg-transparent text-base font-medium placeholder:text-muted-foreground/60 focus:outline-none"
-                  />
-                  <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: cryptoCurrency.color }}>
-                      {cryptoCurrency.icon}
-                    </div>
-                    <span className="font-semibold text-foreground">{cryptoCurrency.code}</span>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Exchange rate */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
-                <span>1 USDT ≈ 1,471 NGN</span>
-                <button className="p-1 hover:bg-muted rounded transition-colors">
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Payment Method Selector */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-foreground text-base">Payment Methods</h3>
-                <button
-                  onClick={() => setIsPaymentModalOpen(true)}
-                  className="w-full flex items-center gap-3 border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: selectedPaymentMethod.iconBg }}>
-                    {selectedPaymentMethod.icon}
+          {/* Hero + Trading Form + Events */}
+          <div className="bg-background px-4 md:px-6 lg:px-8 py-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Trading Form Column */}
+                <div>
+                  {/* Buy/Sell Toggle */}
+                  <div className="flex justify-between pb-4 border-b border-border mb-6">
+                    <button
+                      onClick={() => setMode("buy")}
+                      className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+                        mode === "buy" 
+                          ? "bg-white text-foreground" 
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      Buy
+                    </button>
+                    <button
+                      onClick={() => setMode("sell")}
+                      className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+                        mode === "sell" 
+                          ? "bg-white text-foreground" 
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      Sell
+                    </button>
                   </div>
-                  <span className="flex-1 text-left font-semibold text-foreground">{selectedPaymentMethod.name}</span>
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                </button>
+
+                  <div className="space-y-4">
+                    {/* Spend Input */}
+                    <div className="space-y-2">
+                      <label className="text-sm text-muted-foreground font-medium">Spend</label>
+                      <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-4">
+                        <input
+                          type="text"
+                          value={spendAmount}
+                          onChange={(e) => setSpendAmount(e.target.value)}
+                          placeholder="4,500 - 23,000,000"
+                          className="flex-1 bg-transparent text-base font-medium placeholder:text-muted-foreground/60 focus:outline-none"
+                        />
+                        <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: fiatCurrency.color }}>
+                            {fiatCurrency.icon}
+                          </div>
+                          <span className="font-semibold text-foreground">{fiatCurrency.code}</span>
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Receive Input */}
+                    <div className="space-y-2">
+                      <label className="text-sm text-muted-foreground font-medium">Receive ≈</label>
+                      <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-4">
+                        <input
+                          type="text"
+                          value={receiveAmount}
+                          onChange={(e) => setReceiveAmount(e.target.value)}
+                          placeholder="Enter purchase amount"
+                          className="flex-1 bg-transparent text-base font-medium placeholder:text-muted-foreground/60 focus:outline-none"
+                        />
+                        <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: cryptoCurrency.color }}>
+                            {cryptoCurrency.icon}
+                          </div>
+                          <span className="font-semibold text-foreground">{cryptoCurrency.code}</span>
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Exchange rate */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
+                      <span>1 USDT ≈ 1,471 NGN</span>
+                      <button className="p-1 hover:bg-muted rounded transition-colors">
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Payment Method Selector */}
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-foreground text-base">Payment Methods</h3>
+                      <button
+                        onClick={() => setIsPaymentModalOpen(true)}
+                        className="w-full flex items-center gap-3 border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: selectedPaymentMethod.iconBg }}>
+                          {selectedPaymentMethod.icon}
+                        </div>
+                        <span className="flex-1 text-left font-semibold text-foreground">{selectedPaymentMethod.name}</span>
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      </button>
+                    </div>
+
+                    <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
+                      Buy With NGN
+                    </Button>
+
+                    <button className="w-full flex items-center justify-center gap-2 py-3 text-foreground font-medium hover:opacity-70 transition-opacity">
+                      <RefreshCw className="w-4 h-4" />
+                      Recurring Buy
+                    </button>
+                  </div>
+                </div>
+
+                {/* Events Column */}
+                <div>
+                  <h2 className="text-2xl font-bold mb-6">One-Click Buy Trending Events</h2>
+                  
+                  {/* Event Tabs */}
+                  <div className="flex gap-4 mb-6 border-b border-border pb-4">
+                    <button
+                      onClick={() => setEventTab("trending")}
+                      className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                        eventTab === "trending"
+                          ? "text-primary border-primary -mb-4"
+                          : "text-muted-foreground border-transparent hover:text-foreground"
+                      }`}
+                    >
+                      Trending Events
+                    </button>
+                    <button
+                      onClick={() => setEventTab("ongoing")}
+                      className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                        eventTab === "ongoing"
+                          ? "text-primary border-primary -mb-4"
+                          : "text-muted-foreground border-transparent hover:text-foreground"
+                      }`}
+                    >
+                      Ongoing ({trendingEvents.filter((e) => e.status === "Ongoing").length})
+                    </button>
+                  </div>
+
+                  {/* Events Grid - 2 columns */}
+                  <div className="grid grid-cols-1 gap-6">
+                    {trendingEvents
+                      .filter((event) => (eventTab === "trending" ? true : event.status === "Ongoing"))
+                      .slice(0, 2)
+                      .map((event) => (
+                        <div
+                          key={event.id}
+                          className="rounded-2xl overflow-hidden bg-card border border-border hover:shadow-lg transition-shadow"
+                        >
+                          {/* Event Image/Header */}
+                          <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 flex items-start justify-between">
+                            <div>
+                              <h3 className="text-lg font-bold text-white mb-1">{event.title}</h3>
+                              <p className="text-xs text-slate-300">{event.description}</p>
+                            </div>
+                            <div className="text-3xl shrink-0">{event.image}</div>
+                          </div>
+
+                          {/* Event Content */}
+                          <div className="p-4 space-y-3">
+                            {/* Status */}
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground font-medium">
+                                {event.status === "Ongoing" && "✓ Ongoing"}
+                                {event.status === "Upcoming" && "⏱️ Upcoming"}
+                              </span>
+                              <span className="text-muted-foreground">
+                                Ends {new Date(event.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              </span>
+                            </div>
+
+                            {/* Tasks */}
+                            <div className="space-y-2">
+                              <span className="text-xs font-semibold text-foreground block">Tasks and Rewards</span>
+                              {event.tasks.slice(0, 1).map((task, idx) => (
+                                <div key={idx} className="bg-muted/50 rounded-lg p-2">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-xs font-medium text-foreground">{task.label}</span>
+                                    <span className="text-xs text-primary font-semibold">{task.description}</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">{task.reward}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Register Button */}
+                            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg h-9 text-sm">
+                              Register Now
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
-
-              <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
-                Buy With NGN
-              </Button>
-
-              <button className="w-full flex items-center justify-center gap-2 py-3 text-foreground font-medium hover:opacity-70 transition-opacity">
-                <RefreshCw className="w-4 h-4" />
-                Recurring Buy
-              </button>
             </div>
           </div>
 
@@ -307,13 +439,13 @@ const Index = () => {
           </section>
 
           {/* Features Section */}
-          <section className="py-12 px-4 md:px-6 lg:px-8">
+          <section className="py-12 px-4 md:px-6 lg:px-8 bg-muted/10">
             <div className="max-w-7xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Deposit Local Fiat Currencies to Buy Crypto</h2>
-              <p className="text-muted-foreground mb-8 text-lg">Convert cash into crypto. Deposit over 65+ fiat currencies to get started with crypto trading.</p>
-              <div className="space-y-4">
+              <h2 className="text-3xl md:text-4xl font-bold mb-2">Deposit Local Fiat Currencies to Buy Crypto</h2>
+              <p className="text-muted-foreground mb-10 text-lg">Convert cash into crypto. Deposit over 65+ fiat currencies to get started with crypto trading.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {features.map((feature, index) => (
-                  <div key={index} className="bg-muted/30 rounded-2xl p-8 text-center animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                  <div key={index} className="bg-card border border-border rounded-2xl p-8 text-center animate-fade-in hover:shadow-md transition-shadow" style={{ animationDelay: `${index * 100}ms` }}>
                     <div className={`w-20 h-20 mx-auto mb-6 rounded-full ${feature.iconBg} flex items-center justify-center`}>
                       <feature.icon className={`w-10 h-10 ${feature.iconColor}`} strokeWidth={1.5} />
                     </div>
@@ -351,6 +483,115 @@ const Index = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Fiat Section - Top Crypto-Fiat Pairs */}
+          <section className="py-12 px-4 md:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold mb-8">Top Crypto-Fiat Pairs</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-4 px-4 font-semibold text-muted-foreground">Crypto</th>
+                      <th className="text-left py-4 px-4 font-semibold text-muted-foreground">Euro</th>
+                      <th className="text-left py-4 px-4 font-semibold text-muted-foreground">Brazilian Real</th>
+                      <th className="text-left py-4 px-4 font-semibold text-muted-foreground">Polish Zloty</th>
+                      <th className="text-left py-4 px-4 font-semibold text-muted-foreground">United States Dollar</th>
+                      <th className="text-left py-4 px-4 font-semibold text-muted-foreground">Japanese Yen</th>
+                      <th className="text-left py-4 px-4 font-semibold text-muted-foreground">Indian Rupee</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">₮</div>
+                          <div>
+                            <p className="font-medium">USDT</p>
+                            <p className="text-xs text-muted-foreground">Tether USDT</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 font-medium">0.84994</td>
+                      <td className="py-4 px-4 font-medium">5.62725</td>
+                      <td className="py-4 px-4 font-medium">3.66365</td>
+                      <td className="py-4 px-4 font-medium">1.0015</td>
+                      <td className="py-4 px-4 font-medium">161.91059</td>
+                      <td className="py-4 px-4 font-medium">91.87173</td>
+                    </tr>
+                    <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold">₿</div>
+                          <div>
+                            <p className="font-medium">BTC</p>
+                            <p className="text-xs text-muted-foreground">Bitcoin</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 font-medium">74,888.39651</td>
+                      <td className="py-4 px-4 font-medium">495,122.45902</td>
+                      <td className="py-4 px-4 font-medium">322,237.20881</td>
+                      <td className="py-4 px-4 font-medium">88,118.68434</td>
+                      <td className="py-4 px-4 font-medium">13,919,663.93</td>
+                      <td className="py-4 px-4 font-medium">7,855,943.63</td>
+                    </tr>
+                    <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white">Ξ</div>
+                          <div>
+                            <p className="font-medium">ETH</p>
+                            <p className="text-xs text-muted-foreground">Ethereum</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 font-medium">2,535.89107</td>
+                      <td className="py-4 px-4 font-medium">16,765.97018</td>
+                      <td className="py-4 px-4 font-medium">10,897.53075</td>
+                      <td className="py-4 px-4 font-medium">2,983.89864</td>
+                      <td className="py-4 px-4 font-medium">471,577.67</td>
+                      <td className="py-4 px-4 font-medium">265,994.73</td>
+                    </tr>
+                    <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold">T</div>
+                          <div>
+                            <p className="font-medium">TON</p>
+                            <p className="text-xs text-muted-foreground">TON</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 font-medium">1.24507</td>
+                      <td className="py-4 px-4 font-medium">8.24005</td>
+                      <td className="py-4 px-4 font-medium">5.36259</td>
+                      <td className="py-4 px-4 font-medium">1.46651</td>
+                      <td className="py-4 px-4 font-medium">231.35</td>
+                      <td className="py-4 px-4 font-medium">130.54</td>
+                    </tr>
+                    <tr className="hover:bg-muted/30 transition-colors">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-sm font-bold">S</div>
+                          <div>
+                            <p className="font-medium">SOL</p>
+                            <p className="text-xs text-muted-foreground">Solana</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 font-medium">106.34017</td>
+                      <td className="py-4 px-4 font-medium">703.76946</td>
+                      <td className="py-4 px-4 font-medium">457.46013</td>
+                      <td className="py-4 px-4 font-medium">125.25232</td>
+                      <td className="py-4 px-4 font-medium">19,750.84</td>
+                      <td className="py-4 px-4 font-medium">11,143.78</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>
