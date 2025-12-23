@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet";
+import { useLocation } from "wouter";
 import {
   ChevronDown,
   ChevronRight,
@@ -30,6 +31,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { MoonPayWidget } from "@/components/moonpay-widget";
+import { MoonPayIcon } from "@/components/icons/moonpay-icon";
+import { useAuth } from "@/lib/auth-context";
 
 // ==================== TYPES ====================
 interface PaymentMethod {
@@ -124,8 +128,8 @@ const paymentMethods: PaymentMethod[] = [
   {
     id: "moonpay",
     name: "Moonpay",
-    icon: "🌙",
-    iconBg: "#F3E5F5",
+    icon: "moonpay-icon",
+    iconBg: "#627EEA",
     price: "₦ 1,514.8",
     subtitle: "Credit Card, Maestro, Google Pay",
   },
@@ -201,6 +205,8 @@ const Index = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [faqActiveTab, setFaqActiveTab] = useState("Beginner");
   const [eventTab, setEventTab] = useState<"trending" | "ongoing">("trending");
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   const fiatCurrency: Currency = { code: "NGN", icon: "₦", color: "#2E7D32" };
   const cryptoCurrency: Currency = { code: "USDT", icon: "₮", color: "#26A69A" };
@@ -305,17 +311,45 @@ const Index = () => {
                         onClick={() => setIsPaymentModalOpen(true)}
                         className="w-full flex items-center gap-3 border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
                       >
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: selectedPaymentMethod.iconBg }}>
-                          {selectedPaymentMethod.icon}
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden" style={{ backgroundColor: selectedPaymentMethod.iconBg }}>
+                          {selectedPaymentMethod.icon === "moonpay-icon" ? (
+                            <MoonPayIcon />
+                          ) : (
+                            selectedPaymentMethod.icon
+                          )}
                         </div>
                         <span className="flex-1 text-left font-semibold text-foreground">{selectedPaymentMethod.name}</span>
                         <ChevronDown className="w-5 h-5 text-muted-foreground" />
                       </button>
                     </div>
 
-                    <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
-                      Buy With NGN
-                    </Button>
+                    {/* MoonPay Widget */}
+                    {selectedPaymentMethod.id === "moonpay" && (
+                      <MoonPayWidget
+                        amount={spendAmount ? parseFloat(spendAmount.replace(/,/g, '')) : undefined}
+                        currency="usd"
+                        onSuccess={() => {
+                          console.log('MoonPay payment completed');
+                        }}
+                        onError={(error) => {
+                          console.error('MoonPay error:', error);
+                        }}
+                      />
+                    )}
+
+                    {selectedPaymentMethod.id !== "moonpay" && (
+                      <Button 
+                        onClick={() => {
+                          if (!user) {
+                            setLocation('/signin');
+                          }
+                        }}
+                        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" 
+                        disabled={!user && !spendAmount}
+                      >
+                        {user ? "Buy With NGN" : "Login"}
+                      </Button>
+                    )}
 
                     <button className="w-full flex items-center justify-center gap-2 py-3 text-foreground font-medium hover:opacity-70 transition-opacity">
                       <RefreshCw className="w-4 h-4" />
