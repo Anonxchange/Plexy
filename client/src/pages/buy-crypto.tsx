@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet";
-import { useLocation } from "wouter";
 import {
   ChevronDown,
   ChevronRight,
@@ -33,7 +32,6 @@ import {
 import { PexlyFooter } from "@/components/pexly-footer";
 import { MoonPayWidget } from "@/components/moonpay-widget";
 import { MoonPayIcon } from "@/components/icons/moonpay-icon";
-import { useAuth } from "@/lib/auth-context";
 
 // ==================== TYPES ====================
 interface PaymentMethod {
@@ -205,8 +203,6 @@ const Index = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [faqActiveTab, setFaqActiveTab] = useState("Beginner");
   const [eventTab, setEventTab] = useState<"trending" | "ongoing">("trending");
-  const { user } = useAuth();
-  const [, setLocation] = useLocation();
 
   const fiatCurrency: Currency = { code: "NGN", icon: "₦", color: "#2E7D32" };
   const cryptoCurrency: Currency = { code: "USDT", icon: "₮", color: "#26A69A" };
@@ -338,16 +334,8 @@ const Index = () => {
                     )}
 
                     {selectedPaymentMethod.id !== "moonpay" && (
-                      <Button 
-                        onClick={() => {
-                          if (!user) {
-                            setLocation('/signin');
-                          }
-                        }}
-                        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" 
-                        disabled={!user && !spendAmount}
-                      >
-                        {user ? "Buy With NGN" : "Login"}
+                      <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
+                        Buy With NGN
                       </Button>
                     )}
 
