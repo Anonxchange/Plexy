@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface MoonPayConfig {
   apiKey?: string;
@@ -12,6 +12,8 @@ export interface MoonPayConfig {
 
 export const useMoonPay = () => {
   const MOONPAY_API_KEY = import.meta.env.VITE_MOONPAY_API_KEY || '';
+  const [moonPayUrl, setMoonPayUrl] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   const generateSignature = useCallback(async (url: string): Promise<string> => {
     try {
@@ -102,22 +104,9 @@ export const useMoonPay = () => {
     async (config: MoonPayConfig): Promise<void> => {
       try {
         const url = await buildMoonPayUrl(config);
-        const width = 500;
-        const height = 700;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-        
-        const popup = window.open(
-          url,
-          'moonpay-popup',
-          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-        );
-        
-        if (!popup) {
-          throw new Error('Popup blocked. Please allow popups for this site.');
-        }
-        
-        console.log('MoonPay popup opened successfully');
+        setMoonPayUrl(url);
+        setIsOpen(true);
+        console.log('MoonPay modal opened successfully');
       } catch (error) {
         console.error('Error opening MoonPay:', error);
         throw error;
@@ -126,8 +115,17 @@ export const useMoonPay = () => {
     [buildMoonPayUrl]
   );
 
+  const closeMoonPay = useCallback(() => {
+    setIsOpen(false);
+    setMoonPayUrl(null);
+  }, []);
+
   return {
     openMoonPay,
+    closeMoonPay,
+    moonPayUrl,
+    isOpen,
+    setIsOpen,
     buildMoonPayUrl,
     generateSignature,
   };
