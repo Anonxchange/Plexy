@@ -66,7 +66,7 @@ const trendingEvents = [
     image: "🎄",
     tasks: [
       { label: "Lucky Draw", description: "1 Chance(s)", reward: "Random" },
-      { label: "Lucky Draw", description: "1 Chance(s)", reward: "Pay $25 (or its equivalent with Bybit Pay)" },
+      { label: "Lucky Draw", description: "1 Chance(s)", reward: "Pay $25 (or its equivalent with Pexly Pay)" },
     ],
     participants: 0,
   },
