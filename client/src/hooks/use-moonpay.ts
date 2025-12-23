@@ -58,15 +58,29 @@ export const useMoonPay = () => {
 
   const buildMoonPayUrl = useCallback(
     async (config: MoonPayConfig): Promise<string> => {
+      // Use public API key (pk_test_ or pk_live_) not secret key (sk_test_)
+      const apiKey = MOONPAY_API_KEY || '';
+      
+      // Get the current URL properly for redirect
+      let redirectURL = window.location.origin;
+      try {
+        // For Replit environment, use the proper domain
+        if (window.location.hostname.includes('replit.dev')) {
+          redirectURL = window.location.origin;
+        }
+      } catch (e) {
+        console.warn('Could not determine redirect URL:', e);
+      }
+
       const params = new URLSearchParams({
-        apiKey: MOONPAY_API_KEY,
+        apiKey,
         baseCurrencyCode: config.baseCurrencyCode || 'usd',
         ...(config.baseCurrencyAmount && { baseCurrencyAmount: config.baseCurrencyAmount.toString() }),
         defaultCurrencyCode: config.defaultCurrencyCode || 'usdt',
         ...(config.amount && { amount: config.amount.toString() }),
         ...(config.email && { email: config.email }),
         ...(config.walletAddress && { walletAddress: config.walletAddress }),
-        redirectURL: window.location.origin,
+        redirectURL,
       });
 
       let url = `https://buy.moonpay.com?${params.toString()}`;
@@ -78,6 +92,7 @@ export const useMoonPay = () => {
         console.warn('Proceeding without signature:', error);
       }
 
+      console.log('MoonPay URL:', url);
       return url;
     },
     [MOONPAY_API_KEY, generateSignature]
@@ -87,7 +102,22 @@ export const useMoonPay = () => {
     async (config: MoonPayConfig): Promise<void> => {
       try {
         const url = await buildMoonPayUrl(config);
-        window.open(url, '_blank', 'width=500,height=700');
+        const width = 500;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popup = window.open(
+          url,
+          'moonpay-popup',
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+        
+        if (!popup) {
+          throw new Error('Popup blocked. Please allow popups for this site.');
+        }
+        
+        console.log('MoonPay popup opened successfully');
       } catch (error) {
         console.error('Error opening MoonPay:', error);
         throw error;
