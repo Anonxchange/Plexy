@@ -17,11 +17,14 @@ export const useMoonPay = () => {
     try {
       // Try Supabase Edge Function first
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (supabaseUrl) {
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && anonKey) {
         const response = await fetch(`${supabaseUrl}/functions/v1/moonpay-signature`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${anonKey}`,
           },
           body: JSON.stringify({ url }),
         });
