@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet";
+import { useLocation } from "wouter";
 import {
   ChevronDown,
   ChevronRight,
@@ -32,6 +33,7 @@ import {
 import { PexlyFooter } from "@/components/pexly-footer";
 import { MoonPayWidget } from "@/components/moonpay-widget";
 import { MoonPayIcon } from "@/components/icons/moonpay-icon";
+import { useAuth } from "@/lib/auth-context";
 
 // ==================== TYPES ====================
 interface PaymentMethod {
@@ -195,6 +197,8 @@ const faqData = {
 
 // ==================== MAIN COMPONENT ====================
 const Index = () => {
+  const { user, loading } = useAuth();
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("one-click");
   const [mode, setMode] = useState<"buy" | "sell">("buy");
   const [spendAmount, setSpendAmount] = useState("");
@@ -319,24 +323,46 @@ const Index = () => {
                       </button>
                     </div>
 
-                    {/* MoonPay Widget */}
+                    {/* MoonPay Widget or Login */}
                     {selectedPaymentMethod.id === "moonpay" && (
-                      <MoonPayWidget
-                        amount={spendAmount ? parseFloat(spendAmount.replace(/,/g, '')) : undefined}
-                        currency="usd"
-                        onSuccess={() => {
-                          console.log('MoonPay payment completed');
-                        }}
-                        onError={(error) => {
-                          console.error('MoonPay error:', error);
-                        }}
-                      />
+                      <>
+                        {user ? (
+                          <MoonPayWidget
+                            amount={spendAmount ? parseFloat(spendAmount.replace(/,/g, '')) : undefined}
+                            currency="usd"
+                            onSuccess={() => {
+                              console.log('MoonPay payment completed');
+                            }}
+                            onError={(error) => {
+                              console.error('MoonPay error:', error);
+                            }}
+                          />
+                        ) : (
+                          <Button
+                            onClick={() => navigate("/signin")}
+                            className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                          >
+                            Login to Buy
+                          </Button>
+                        )}
+                      </>
                     )}
 
                     {selectedPaymentMethod.id !== "moonpay" && (
-                      <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
-                        Buy With NGN
-                      </Button>
+                      <>
+                        {user ? (
+                          <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
+                            Buy With NGN
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => navigate("/signin")}
+                            className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                          >
+                            Login to Buy
+                          </Button>
+                        )}
+                      </>
                     )}
 
                     <button className="w-full flex items-center justify-center gap-2 py-3 text-foreground font-medium hover:opacity-70 transition-opacity">
