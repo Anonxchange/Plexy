@@ -1,164 +1,470 @@
-import { useEffect, useRef } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { useLocation } from "wouter";
+import { useState } from "react";
+import { Helmet } from "react-helmet";
+import {
+  ChevronDown,
+  ChevronRight,
+  MoreHorizontal,
+  RefreshCw,
+  X,
+  ListFilter,
+  CreditCard,
+  Gift,
+  Play,
+  Wallet,
+  ShieldCheck,
+  Building2,
+  DollarSign,
+  Users,
+  TrendingUp,
+  Banknote,
+  Lock,
+  BarChart3,
+  Coins,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-declare global {
-  interface Window {
-    RampInstantSDK?: any;
-  }
+// ==================== TYPES ====================
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string;
+  iconBg: string;
+  price?: string;
+  badge?: string;
+  subtitle?: string;
 }
 
-export default function BuyCrypto() {
-  const { user } = useAuth();
-  const [, setLocation] = useLocation();
-  const containerRef = useRef<HTMLDivElement>(null);
+interface Currency {
+  code: string;
+  icon: string;
+  color: string;
+}
 
-  useEffect(() => {
-    if (!user) {
-      setLocation("/signin");
-      return;
-    }
+// ==================== DATA ====================
+const tabs = [
+  { id: "one-click", label: "One-Click Buy" },
+  { id: "p2p", label: "P2P" },
+  { id: "block", label: "Block", badge: "NEW" },
+  { id: "fiat", label: "Fiat Deposit" },
+];
 
-    // Load Ramp Instant SDK
-    const script = document.createElement("script");
-    script.src = "https://instant.ramp.network/ramp.js";
-    script.async = true;
+const paymentMethods: PaymentMethod[] = [
+  {
+    id: "bank-p2p",
+    name: "Bank Transfer",
+    icon: "P2P",
+    iconBg: "#F7A600",
+    price: "₦ 1,471",
+    badge: "Highest Trade",
+    subtitle: "From P2P:",
+  },
+  {
+    id: "bank",
+    name: "Bank Transfer",
+    icon: "🏦",
+    iconBg: "#E3F2FD",
+    price: "₦ 1,481.48",
+  },
+  {
+    id: "onramp",
+    name: "Onramp",
+    icon: "⚡",
+    iconBg: "#E8F5E9",
+    price: "₦ 1,486.47",
+    subtitle: "UPI, IMPS, FAST, SPEI, VietQR",
+  },
+  {
+    id: "moonpay",
+    name: "Moonpay",
+    icon: "🌙",
+    iconBg: "#F3E5F5",
+    price: "₦ 1,514.8",
+    subtitle: "Credit Card, Maestro, Google Pay",
+  },
+];
 
-    script.onload = () => {
-      if (containerRef.current && window.RampInstantSDK) {
-        // Initialize Ramp widget
-        new window.RampInstantSDK.RampInstant({
-          hostAppName: "Pexly",
-          hostLogoUrl: "/favicon.svg",
-          userEmail: user.email || "",
-          userAddress: "", // Can be populated from user's wallet
-          useSandbox: import.meta.env.VITE_RAMP_SANDBOX === "true",
-          variant: "hosted",
-          webhookStatusUrl: `${window.location.origin}/api/ramp-webhook`,
-          defaultAsset: "ETH",
-          containerNode: containerRef.current,
-        });
-      }
-    };
+const steps = [
+  { step: 1, icon: ListFilter, title: "Enter an amount and select the payment method" },
+  { step: 2, icon: CreditCard, title: "Confirm order" },
+  { step: 3, icon: Gift, title: "Receive crypto" },
+];
 
-    script.onerror = () => {
-      console.error("Failed to load Ramp Instant SDK");
-    };
+const features = [
+  {
+    icon: Banknote,
+    title: "Transact Seamlessly Through Bank Transfers",
+    description: "Transact effortlessly with an extensive selection of banks and payment networks, including SEPA, FPS, Visa and Mastercard.",
+    iconBg: "bg-muted/30",
+    iconColor: "text-muted-foreground",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Swift Transactions With Robust Security",
+    description: "Experience rapid transactions and rest easy knowing your funds are secure.",
+    iconBg: "bg-muted/30",
+    iconColor: "text-muted-foreground",
+  },
+  {
+    icon: DollarSign,
+    title: "Zero Fees & Competitive Rates",
+    description: "Maximize your investment with zero fees and competitive currency rates.",
+    iconBg: "bg-muted/30",
+    iconColor: "text-muted-foreground",
+  },
+  {
+    icon: Building2,
+    title: "Tailored for Large Transactions",
+    description: "Our platform is optimized to handle and support all transaction sizes.",
+    iconBg: "bg-muted/30",
+    iconColor: "text-muted-foreground",
+  },
+];
 
-    document.body.appendChild(script);
+const faqTabs = ["Beginner", "Advanced", "Advertiser"];
 
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
-  }, [user, setLocation]);
+const faqData = {
+  Beginner: [
+    { question: "What is P2P on Bybit?", answer: "P2P (Peer-to-Peer) trading on Bybit allows users to buy and sell cryptocurrencies directly with each other using various payment methods. It provides a secure escrow service to protect both buyers and sellers during transactions." },
+    { question: "Are there any transaction fees on the P2P platform?", answer: "Bybit P2P platform offers zero trading fees for both makers and takers. You only pay the network fees when withdrawing your crypto." },
+    { question: "Do I need Identity Verification (KYC) to perform P2P trading?", answer: "Yes, you need to complete basic identity verification (KYC Level 1) to access P2P trading on Bybit. This helps ensure the security of all users on the platform." },
+    { question: "Can I trade with users in other countries or regions?", answer: "Yes, you can trade with users from different countries. However, payment methods may vary by region, and you should ensure you can receive payments through the selected method." },
+    { question: "What payment methods are supported for P2P trade?", answer: "Bybit P2P supports various payment methods including bank transfer, mobile payment apps, digital wallets, and more. Available methods vary by region." },
+    { question: "How to buy and sell on P2P?", answer: "To buy: Select an offer, enter amount, confirm order, make payment, and click 'Payment Completed'. To sell: Post an ad or accept a buy order, wait for payment, then release the crypto." },
+    { question: "What are the order limits on the P2P trading platform?", answer: "Order limits vary depending on the advertiser's settings and your account verification level. Higher KYC levels typically allow for larger transaction limits." },
+    { question: "Why am I ineligible to buy or sell my coin?", answer: "This may be due to incomplete KYC verification, regional restrictions, or account security measures. Please check your account status or contact support for assistance." },
+  ],
+  Advanced: [
+    { question: "How do I become a P2P merchant?", answer: "To become a P2P merchant, you need to meet certain requirements including trading volume, account age, and verification level. Apply through the P2P merchant program in your account." },
+    { question: "What is the escrow service?", answer: "The escrow service holds the seller's cryptocurrency during a trade until the buyer confirms payment. This protects both parties from fraud." },
+  ],
+  Advertiser: [
+    { question: "How do I post an advertisement?", answer: "Go to P2P trading, click 'Post Ad', set your price, amount, payment methods, and trading terms. Your ad will be visible to other users once published." },
+    { question: "What are the requirements to become an advertiser?", answer: "Advertisers need to maintain a good trading history, complete advanced verification, and meet minimum deposit requirements." },
+  ],
+};
 
-  if (!user) {
-    return null;
-  }
+// ==================== MAIN COMPONENT ====================
+const Index = () => {
+  const [activeTab, setActiveTab] = useState("one-click");
+  const [mode, setMode] = useState<"buy" | "sell">("buy");
+  const [spendAmount, setSpendAmount] = useState("");
+  const [receiveAmount, setReceiveAmount] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0]);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [faqActiveTab, setFaqActiveTab] = useState("Beginner");
 
-  const faqItems = [
-    {
-      question: "What payment methods does Ramp Network accept?",
-      answer: "Ramp Network accepts a wide variety of payment methods including credit cards (Visa, Mastercard, American Express), bank transfers (SEPA, ACH), and mobile payment options. The available methods depend on your location."
-    },
-    {
-      question: "How long does it take to receive my crypto?",
-      answer: "With credit/debit cards, your crypto is typically delivered instantly. Bank transfers may take 1-3 business days depending on your bank. Processing times vary by payment method and location."
-    },
-    {
-      question: "What are the fees?",
-      answer: "Ramp Network's fees vary depending on your payment method and location. Credit cards typically have a 2-3% fee, while bank transfers may be lower. The exact fee will be displayed before you complete the transaction."
-    },
-    {
-      question: "Is it safe to buy crypto through Ramp Network?",
-      answer: "Yes, Ramp Network is a secure, regulated platform that uses bank-level encryption and follows strict KYC/AML compliance. Your personal and financial information is protected with industry-standard security measures."
-    },
-    {
-      question: "Do I need to verify my identity?",
-      answer: "Depending on your transaction amount and location, you may need to complete identity verification. Ramp Network will guide you through this process if required."
-    },
-    {
-      question: "What cryptocurrencies can I buy?",
-      answer: "Ramp Network supports a wide range of cryptocurrencies including Bitcoin (BTC), Ethereum (ETH), USDT, USDC, and many others. The available coins may vary based on your location."
-    },
-    {
-      question: "Can I buy crypto from any country?",
-      answer: "Ramp Network is available in many countries worldwide. However, some countries and regions have restrictions due to local regulations. You'll see which payment methods are available in your region during the purchase process."
-    },
-    {
-      question: "What should I do if my transaction fails?",
-      answer: "If your transaction fails, Ramp Network will provide an explanation. Most failures are due to bank declines or regulatory blocks. You can try again with a different payment method or contact Ramp Network support for assistance."
-    },
-    {
-      question: "Can I buy crypto with cash?",
-      answer: "Ramp Network primarily supports digital payment methods. However, in some regions, you may be able to use bank transfers or other digital payment options to purchase crypto."
-    },
-    {
-      question: "Is there a minimum or maximum purchase amount?",
-      answer: "Yes, Ramp Network has minimum and maximum limits that vary by payment method and location. These limits will be displayed when you enter your payment details."
-    }
-  ];
+  const fiatCurrency: Currency = { code: "NGN", icon: "₦", color: "#2E7D32" };
+  const cryptoCurrency: Currency = { code: "USDT", icon: "₮", color: "#26A69A" };
+
+  const recommendedMethods = paymentMethods.filter((m) => m.badge || m.id === "bank-p2p");
+  const thirdPartyMethods = paymentMethods.filter((m) => !m.badge && m.id !== "bank-p2p" && m.id !== "bank");
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="flex-1">
-        {/* Header Section */}
-        <div className="bg-gradient-to-br from-primary/10 to-background py-8 px-4">
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-              Buy Crypto
-            </h1>
-            <p className="text-base text-muted-foreground">
-              Purchase cryptocurrency quickly and securely with Ramp Network
-            </p>
-          </div>
-        </div>
+    <>
+      <Helmet>
+        <title>Buy Crypto with Fiat | Fast & Secure Trading</title>
+        <meta name="description" content="Buy USDT and other cryptocurrencies instantly with bank transfer. Zero fees, competitive rates, and secure transactions." />
+      </Helmet>
 
-        {/* Ramp Widget Container */}
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div ref={containerRef} className="w-full min-h-[600px]" />
-        </div>
-
-        {/* FAQ Section */}
-        <div className="bg-muted/30 py-12 px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-foreground mb-2">
-                Frequently Asked Questions
-              </h2>
-              <p className="text-muted-foreground">
-                Everything you need to know about buying crypto with Ramp Network
-              </p>
+      <div className="min-h-screen bg-background">
+        <main className="overflow-x-hidden">
+          {/* Trading Form */}
+          <div className="bg-background">
+            {/* Buy/Sell Toggle */}
+            <div className="flex gap-2 px-4 pt-6 pb-4 border-b border-border">
+              <button
+                onClick={() => setMode("buy")}
+                className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+                  mode === "buy" 
+                    ? "bg-white text-foreground" 
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Buy
+              </button>
+              <button
+                onClick={() => setMode("sell")}
+                className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+                  mode === "sell" 
+                    ? "bg-white text-foreground" 
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Sell
+              </button>
             </div>
 
-            <Card>
-              <CardContent className="p-6">
-                <Accordion type="single" collapsible className="w-full">
-                  {faqItems.map((item, index) => (
-                    <AccordionItem key={index} value={`item-${index}`}>
-                      <AccordionTrigger className="text-left hover:no-underline">
-                        <span className="font-semibold text-foreground">
-                          {item.question}
-                        </span>
-                      </AccordionTrigger>
-                      <AccordionContent className="text-muted-foreground pt-2">
-                        {item.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+            <div className="px-4 pb-6 space-y-4 pt-6">
+              {/* Spend Input */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground font-medium">Spend</label>
+                <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-4">
+                  <input
+                    type="text"
+                    value={spendAmount}
+                    onChange={(e) => setSpendAmount(e.target.value)}
+                    placeholder="4,500 - 23,000,000"
+                    className="flex-1 bg-transparent text-base font-medium placeholder:text-muted-foreground/60 focus:outline-none"
+                  />
+                  <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: fiatCurrency.color }}>
+                      {fiatCurrency.icon}
+                    </div>
+                    <span className="font-semibold text-foreground">{fiatCurrency.code}</span>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
 
-      <PexlyFooter />
-    </div>
+              {/* Receive Input */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground font-medium">Receive ≈</label>
+                <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-4">
+                  <input
+                    type="text"
+                    value={receiveAmount}
+                    onChange={(e) => setReceiveAmount(e.target.value)}
+                    placeholder="Enter purchase amount"
+                    className="flex-1 bg-transparent text-base font-medium placeholder:text-muted-foreground/60 focus:outline-none"
+                  />
+                  <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: cryptoCurrency.color }}>
+                      {cryptoCurrency.icon}
+                    </div>
+                    <span className="font-semibold text-foreground">{cryptoCurrency.code}</span>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Exchange rate */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
+                <span>1 USDT ≈ 1,471 NGN</span>
+                <button className="p-1 hover:bg-muted rounded transition-colors">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Payment Method Selector */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground text-base">Payment Methods</h3>
+                <button
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="w-full flex items-center gap-3 border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: selectedPaymentMethod.iconBg }}>
+                    {selectedPaymentMethod.icon}
+                  </div>
+                  <span className="flex-1 text-left font-semibold text-foreground">{selectedPaymentMethod.name}</span>
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
+                Buy With NGN
+              </Button>
+
+              <button className="w-full flex items-center justify-center gap-2 py-3 text-foreground font-medium hover:opacity-70 transition-opacity">
+                <RefreshCw className="w-4 h-4" />
+                Recurring Buy
+              </button>
+            </div>
+          </div>
+
+          {/* How to Buy Section */}
+          <section className="py-12 px-4 md:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold mb-8">How to Buy Crypto in Real Time?</h2>
+              <div className="bg-muted/30 rounded-2xl p-6 md:p-8">
+                <div className="grid grid-cols-3 gap-6 mb-8">
+                  {steps.map((step, index) => (
+                    <div key={step.step} className="text-center">
+                      <div className="flex justify-center mb-4">
+                        <step.icon className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2 font-medium">Step {step.step}</p>
+                      <p className="text-foreground font-semibold leading-snug">{step.title}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-6 border-t border-border">
+                  <span className="text-foreground font-semibold">Click to View</span>
+                  <button className="flex items-center gap-2 px-6 py-2 rounded-lg border-2 border-primary text-primary font-semibold hover:bg-primary/5 transition-colors">
+                    <Play className="w-4 h-4" />
+                    Video
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Features Section */}
+          <section className="py-12 px-4 md:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Deposit Local Fiat Currencies to Buy Crypto</h2>
+              <p className="text-muted-foreground mb-8 text-lg">Convert cash into crypto. Deposit over 65+ fiat currencies to get started with crypto trading.</p>
+              <div className="space-y-4">
+                {features.map((feature, index) => (
+                  <div key={index} className="bg-muted/30 rounded-2xl p-8 text-center animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                    <div className={`w-20 h-20 mx-auto mb-6 rounded-full ${feature.iconBg} flex items-center justify-center`}>
+                      <feature.icon className={`w-10 h-10 ${feature.iconColor}`} strokeWidth={1.5} />
+                    </div>
+                    <h3 className="font-bold text-xl mb-3">{feature.title}</h3>
+                    <p className="text-muted-foreground text-base leading-relaxed">{feature.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Stats Section */}
+          <section className="py-12 px-4 md:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold mb-8">Leading Crypto Trading Platform</h2>
+              <div className="bg-muted/30 rounded-2xl p-8">
+                <div className="mb-8">
+                  <p className="text-base text-muted-foreground mb-4">More than</p>
+                  <h3 className="text-2xl font-bold mb-2">65+ fiat currencies</h3>
+                  <h3 className="text-2xl font-bold mb-4">100+ cryptocurrencies</h3>
+                  <p className="text-sm text-muted-foreground">EUR、USD、GBP、BRL、JPY、TRY、BTC、ETH</p>
+                </div>
+                <div className="pt-8 border-t border-border">
+                  <p className="text-lg font-semibold mb-8">Millions of registered users and billions of US dollars in daily trading volume</p>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="text-center">
+                      <div className="text-5xl mb-4">👥</div>
+                      <p className="text-2xl font-bold mb-2">20 Millions+</p>
+                      <p className="text-muted-foreground font-medium">Registered Users</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-5xl mb-4">📊</div>
+                      <p className="text-2xl font-bold mb-2">10 Billions+</p>
+                      <p className="text-muted-foreground font-medium">Daily Trading Volume (USD)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* FAQ Section */}
+          <section className="py-8 px-4 md:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-2xl font-bold mb-6">FAQs</h2>
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                {faqTabs.map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setFaqActiveTab(tab)}
+                    className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
+                      faqActiveTab === tab ? "bg-card border border-border shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+                <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0 hidden md:block" />
+              </div>
+              <Accordion type="single" collapsible className="space-y-0">
+                {faqData[faqActiveTab as keyof typeof faqData].map((faq, index) => (
+                  <AccordionItem key={index} value={`item-${index}`} className="border-b border-border py-2">
+                    <AccordionTrigger className="text-left font-medium hover:no-underline py-4 [&[data-state=open]]:text-primary">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground pb-4">{faq.answer}</AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+              <button className="flex items-center gap-2 text-primary font-medium mt-6 hover:opacity-80 transition-opacity">
+                Learn More
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+        </main>
+
+        {/* Footer */}
+        <PexlyFooter />
+
+        {/* Payment Method Modal */}
+        <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+          <DialogContent className="sm:max-w-md p-0 gap-0 rounded-t-3xl sm:rounded-2xl">
+            <DialogHeader className="p-4 pb-2">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-lg font-bold">Select Payment Method</DialogTitle>
+                <button onClick={() => setIsPaymentModalOpen(false)} className="p-1 hover:bg-muted rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </DialogHeader>
+            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold">Recommended</span>
+                </div>
+                <div className="space-y-2">
+                  {recommendedMethods.map((method) => (
+                    <button
+                      key={method.id}
+                      onClick={() => { setSelectedPaymentMethod(method); setIsPaymentModalOpen(false); }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-colors ${
+                        selectedPaymentMethod.id === method.id ? "border-primary bg-primary/5" : "border-transparent bg-muted/50 hover:bg-muted"
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: method.iconBg }}>
+                        {method.icon}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{method.name}</span>
+                          {method.badge && <span className="text-[10px] font-bold text-primary px-1.5 py-0.5 bg-primary/10 rounded">{method.badge}</span>}
+                        </div>
+                        {method.subtitle && <p className="text-xs text-muted-foreground">{method.subtitle}</p>}
+                      </div>
+                      {method.price && <span className="font-semibold text-sm">{method.price}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {thirdPartyMethods.length > 0 && (
+                <div className="space-y-2">
+                  <span className="font-semibold text-sm">Third Party</span>
+                  <div className="space-y-2">
+                    {thirdPartyMethods.map((method) => (
+                      <button
+                        key={method.id}
+                        onClick={() => { setSelectedPaymentMethod(method); setIsPaymentModalOpen(false); }}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-colors ${
+                          selectedPaymentMethod.id === method.id ? "border-primary bg-primary/5" : "border-transparent bg-muted/50 hover:bg-muted"
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: method.iconBg }}>
+                          {method.icon}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="font-medium">{method.name}</span>
+                          {method.subtitle && <p className="text-xs text-muted-foreground">{method.subtitle}</p>}
+                        </div>
+                        {method.price && <span className="font-semibold text-sm">{method.price}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
-}
+};
+
+export default Index;
