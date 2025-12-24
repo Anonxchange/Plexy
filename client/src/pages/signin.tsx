@@ -42,16 +42,6 @@ export function SignIn() {
   const isDark = theme === "dark";
   const welcomeText = "Welcome back!";
 
-  // Helper to redirect to dashboard - handles auth subdomain
-  const redirectToDashboard = () => {
-    const isAuthSubdomain = typeof window !== 'undefined' && window.location.hostname === 'auth.pexly.app';
-    if (isAuthSubdomain) {
-      window.location.href = 'https://pexly.app/dashboard';
-    } else {
-      redirectToDashboard();
-    }
-  };
-
   // Auto-detect country from IP on mount
   useEffect(() => {
     const detectCountry = async () => {
@@ -85,7 +75,7 @@ export function SignIn() {
 
   useEffect(() => {
     if (user && !checking2FA && !show2FAInput) {
-      redirectToDashboard();
+      setLocation("/dashboard");
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -249,7 +239,7 @@ export function SignIn() {
       });
       setTimeout(() => {
         setLoading(false);
-        redirectToDashboard();
+        setLocation("/dashboard");
       }, 100);
     }
   };
@@ -267,7 +257,7 @@ export function SignIn() {
       title: "Success!",
       description: "Phone verified! Signing you in...",
     });
-    redirectToDashboard();
+    setLocation("/dashboard");
   };
 
   const handleDeviceVerified = async () => {
@@ -296,7 +286,7 @@ export function SignIn() {
       title: "Device Verified!",
       description: "This device is now trusted. Welcome back!",
     });
-    redirectToDashboard();
+    setLocation("/dashboard");
   };
 
   const handleDeviceVerificationCancel = async () => {
@@ -403,7 +393,7 @@ export function SignIn() {
 
       setTimeout(() => {
         setLoading(false);
-        redirectToDashboard();
+        setLocation("/dashboard");
       }, 100);
     } catch (error: any) {
       console.error('2FA verification error:', error);
@@ -464,7 +454,7 @@ export function SignIn() {
           description: "Successfully signed in",
         });
         setTimeout(() => {
-          redirectToDashboard();
+          setLocation("/dashboard");
         }, 100);
       }
     }
@@ -475,7 +465,7 @@ export function SignIn() {
     <div className={`min-h-screen ${isDark ? 'bg-background' : 'bg-white'} transition-colors duration-300`}>
       {/* Header */}
       <div className="p-6 flex justify-between items-center lg:absolute lg:top-0 lg:left-0 lg:right-0 lg:z-10">
-        <a href="https://pexly.app" className="flex items-center gap-2 cursor-pointer">
+        <a href="/" className="flex items-center gap-2 cursor-pointer">
           <div className="relative w-8 h-8">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Zap className="h-5 w-5 text-primary-foreground" />
@@ -785,7 +775,7 @@ export function SignIn() {
               title: "Device Verified!",
               description: "Your device has been verified and trusted.",
             });
-            redirectToDashboard();
+            setLocation("/dashboard");
           }}
           userId={pendingOTPVerification.userId}
           email={pendingOTPVerification.email}
