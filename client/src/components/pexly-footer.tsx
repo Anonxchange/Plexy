@@ -36,7 +36,7 @@ const footerSections = [
   },
   {
     title: "Useful Links",
-    links: [{ text: "Support", href: "/support" }, { text: "Bitcoin Calculator", href: "/bitcoin-calculator" }, { text: "Pexly Academy", href: "/academy" }, "Market Prices", { text: "Blog", href: "/blog" }]
+    links: [{ text: "Support", href: "https://help.pexly.app" }, { text: "Bitcoin Calculator", href: "/bitcoin-calculator" }, { text: "Pexly Academy", href: "/academy" }, "Market Prices", { text: "Blog", href: "/blog" }]
   },
   {
     title: "About Pexly",
