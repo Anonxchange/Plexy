@@ -1,6 +1,16 @@
 {
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/support",
+      "has": [
+        {
+          "type": "host",
+          "value": "help.pexly.app"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
@@ -12,19 +22,6 @@
         {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/support",
-      "permanent": false,
-      "has": [
-        {
-          "type": "host",
-          "value": "help.pexly.app"
         }
       ]
     }
