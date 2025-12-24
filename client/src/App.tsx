@@ -180,7 +180,7 @@ function Router() {
 function AppContent() {
   const [location] = useLocation();
   const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop-post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea"].includes(location) || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
-  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email"].includes(location);
+  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support"].includes(location);
 
   return (
     <div className={`flex min-h-screen w-full flex-col ${!hideHeaderAndNav ? 'pt-16' : ''}`}>
