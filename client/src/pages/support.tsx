@@ -78,7 +78,7 @@ const HelpCenter = () => {
             </div>
             
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-6 border border-white/30 rounded-full px-6 py-3">
               <a href="#" className="text-white/80 hover:text-white transition-colors text-sm font-medium">
                 Shop
               </a>
@@ -219,4 +219,4 @@ const HelpCenter = () => {
   );
 };
 
-export default Index;
+export default HelpCenter;
