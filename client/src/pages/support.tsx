@@ -111,7 +111,7 @@ const HelpCenter = () => {
 
   const HeroSection = () => {
     return (
-      <section className="relative min-h-[400px] overflow-hidden" style={{ background: "#CCFF00" }}>
+      <section className="relative min-h-[400px] overflow-hidden bg-gradient-to-br from-primary to-primary/80">
         {/* Decorative curves */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {/* Left curve */}
@@ -207,12 +207,12 @@ const HelpCenter = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-lime-400 via-lime-300 to-lime-400">
+    <div className="min-h-screen flex flex-col">
       <main className="flex-1">
         <HeroSection />
 
         {/* Gray background section with card overlapping */}
-        <div className="bg-gray-100 px-6 relative">
+        <div className="bg-background px-6 relative">
           <div className="container mx-auto max-w-5xl relative -mt-8 md:-mt-12">
             {/* Categories Grid */}
             <div className="grid md:grid-cols-3 gap-6">
