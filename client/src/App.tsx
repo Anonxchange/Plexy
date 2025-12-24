@@ -197,11 +197,9 @@ function AppContent() {
 }
 
 function App() {
-  // Detect subdomains to show only specific pages
+  // Check if on help subdomain - show only support page
   const isHelpSubdomain = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
-  const isAuthSubdomain = typeof window !== 'undefined' && window.location.hostname === 'auth.pexly.app';
   
-  // Help subdomain - show only support page
   if (isHelpSubdomain) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -209,26 +207,6 @@ function App() {
           <AuthProvider>
             <TooltipProvider>
               <Support />
-            </TooltipProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // Auth subdomain - show only signin and signup pages
-  if (isAuthSubdomain) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <Switch>
-                <Route path="/signin" component={SignIn} />
-                <Route path="/signup" component={SignUp} />
-                <Route path="/" component={SignIn} />
-                <Route component={NotFound} />
-              </Switch>
             </TooltipProvider>
           </AuthProvider>
         </ThemeProvider>
