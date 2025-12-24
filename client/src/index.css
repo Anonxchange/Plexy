@@ -10,6 +10,24 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  
+  .card-hover {
+    transition: all 0.3s ease;
+  }
+  
+  .card-hover:hover {
+    background-color: hsl(var(--card) / 0.8);
+    border-color: #4F46E5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card-hover:hover .icon-circle {
+    background-color: #CCFF00 !important;
+  }
+  
+  .icon-hover {
+    position: relative;
+  }
 }
 
 /* LIGHT MODE */
@@ -85,6 +103,9 @@
   --chart-3: 25 95% 53%;
   --chart-4: 280 65% 55%;
   --chart-5: 190 75% 45%;
+  
+  --hero: 62 100% 50%;
+  --hero-curve: 240 100% 50%;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-serif: Georgia, serif;
