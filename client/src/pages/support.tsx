@@ -12,7 +12,8 @@ import {
   Facebook,
   Twitter,
   Instagram,
-  MessageCircle
+  MessageCircle,
+  Zap
 } from "lucide-react";
 
 const categories = [
@@ -61,72 +62,98 @@ const articles = [
   "What payment methods are accepted?",
 ];
 
+// Wave divider component
+const WaveDivider = () => (
+  <svg 
+    className="w-full h-auto"
+    viewBox="0 0 1200 80" 
+    preserveAspectRatio="none"
+    style={{ display: 'block', minHeight: '80px' }}
+  >
+    <path 
+      d="M0,0 Q300,60 600,40 T1200,0 L1200,40 Q900,60 600,40 T0,40 Z" 
+      fill="#ef4444"
+    />
+  </svg>
+);
+
 const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-primary px-6 py-4 flex items-center justify-between relative z-20">
-        <div className="text-primary-foreground text-2xl font-bold tracking-tight">
-          Pexly
-        </div>
-        
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          <a href="#" className="text-primary-foreground/90 hover:text-primary-foreground transition-colors text-sm">
-            Shop
-          </a>
-          <a 
-            href="#" 
-            className="text-primary-foreground border border-primary-foreground/80 rounded-full px-4 py-2 text-sm hover:bg-primary-foreground/10 transition-colors"
-          >
-            Submit a request
-          </a>
-          <a href="#" className="text-primary-foreground/90 hover:text-primary-foreground transition-colors text-sm">
-            Sign in
-          </a>
-        </nav>
-        
-        {/* Mobile Menu */}
-        <button className="md:hidden text-primary-foreground p-2 hover:bg-primary-foreground/10 rounded-lg transition-colors">
-          <Menu className="w-6 h-6" />
-        </button>
-      </header>
-
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="hero-section pt-16 pb-40 px-6">
-          <div className="max-w-2xl mx-auto text-center relative z-10">
-            <h1 className="text-4xl md:text-5xl font-bold text-primary-foreground mb-8 leading-tight">
+        {/* Hero Section with Header */}
+        <section className="bg-gradient-to-r from-lime-400 to-red-500 pt-6 pb-0 px-6 relative overflow-hidden">
+          {/* Header merged into hero */}
+          <div className="max-w-6xl mx-auto flex items-center justify-between mb-12">
+            <div className="flex items-center gap-3">
+              <Zap className="w-8 h-8 text-gray-900" strokeWidth={3} />
+              <span className="text-gray-900 text-2xl font-bold tracking-tight">
+                Pexly
+              </span>
+            </div>
+            
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-6">
+              <a href="#" className="text-gray-900/80 hover:text-gray-900 transition-colors text-sm font-medium">
+                Shop
+              </a>
+              <a 
+                href="#" 
+                className="text-gray-900 border border-gray-900/50 rounded-full px-4 py-2 text-sm hover:bg-black/10 transition-colors font-medium"
+              >
+                Submit a request
+              </a>
+              <a href="#" className="text-gray-900/80 hover:text-gray-900 transition-colors text-sm font-medium">
+                Sign in
+              </a>
+            </nav>
+            
+            {/* Mobile Menu */}
+            <button className="md:hidden text-gray-900 border border-gray-900/50 p-2 hover:bg-black/10 rounded-full transition-colors">
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Hero Content */}
+          <div className="max-w-2xl mx-auto text-center relative z-10 pb-16">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
               How can we help you?
             </h1>
             
-            <div className="relative max-w-lg mx-auto">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <div className="relative max-w-lg mx-auto mb-4">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search"
-                className="search-input shadow-lg"
+                className="w-full pl-14 pr-6 py-3 rounded-full bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary shadow-lg"
               />
             </div>
             
-            <p className="text-primary-foreground/70 mt-6 text-lg">
+            <p className="text-white/70 text-sm md:text-lg">
               Search for answers or browse our knowledge base.
             </p>
+          </div>
+          
+          {/* Wave Divider */}
+          <div className="w-full">
+            <WaveDivider />
           </div>
         </section>
 
         {/* Categories Section */}
-        <section className="bg-white pt-0 pb-16">
-          <div className="container -mt-24 relative z-10">
-            <div className="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
-              <div className="grid md:grid-cols-2 gap-6">
+        <section className="bg-gray-50 pt-16 pb-16 px-6 relative">
+          <div className="container mx-auto max-w-6xl">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 relative z-10">
+              <div className="grid md:grid-cols-3 gap-8">
                 {categories.map((category) => (
-                  <div key={category.title} className="text-center p-6 border border-border rounded-lg hover:bg-muted/50 hover:border-primary/30 transition-colors cursor-pointer">
-                    <div className="w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center mx-auto mb-4">
-                      <category.icon className="w-5 h-5 text-primary" strokeWidth={2} />
+                  <div key={category.title} className="text-center group cursor-pointer border border-gray-200 rounded-lg p-6 hover:border-gray-300 hover:bg-gray-50/50 transition-all">
+                    <div className="flex justify-center mb-6">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                        <category.icon className="w-10 h-10 text-white" strokeWidth={1.5} />
+                      </div>
                     </div>
-                    <h3 className="text-xl font-bold text-primary mb-3">{category.title}</h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">{category.description}</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-primary transition-colors">{category.title}</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">{category.description}</p>
                   </div>
                 ))}
               </div>
@@ -135,14 +162,16 @@ const Index = () => {
         </section>
 
         {/* Promoted Articles */}
-        <section className="bg-background py-16 border-t border-border">
-          <div className="container max-w-3xl">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Promoted articles</h2>
-            <div className="divide-y divide-border">
+        <section className="bg-white py-16 px-6">
+          <div className="container mx-auto max-w-6xl">
+            <h2 className="text-2xl font-bold text-foreground mb-8">Promoted articles</h2>
+            <div className="grid md:grid-cols-2 gap-6">
               {articles.map((article) => (
-                <div key={article} className="article-item group">
-                  <FileText className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
-                  <span className="text-base font-medium">{article}</span>
+                <div key={article} className="group cursor-pointer border border-gray-200 rounded-lg p-6 hover:border-primary hover:shadow-lg transition-all">
+                  <div className="flex items-start gap-4">
+                    <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
+                    <span className="text-base font-medium text-foreground group-hover:text-primary transition-colors">{article}</span>
+                  </div>
                 </div>
               ))}
             </div>
