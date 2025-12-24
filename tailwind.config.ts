@@ -16,6 +16,7 @@ export default {
         foreground: "hsl(var(--foreground) / <alpha-value>)",
         border: "hsl(var(--border) / <alpha-value>)",
         input: "hsl(var(--input) / <alpha-value>)",
+        hero: "hsl(var(--hero) / <alpha-value>)",
         card: {
           DEFAULT: "hsl(var(--card) / <alpha-value>)",
           foreground: "hsl(var(--card-foreground) / <alpha-value>)",
@@ -81,6 +82,13 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        lime: {
+          DEFAULT: "#CCFF00",
+          dark: "#B3E600",
+        },
+        indigo: {
+          deep: "#2E1A5E",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
@@ -96,10 +104,32 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "curve-float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(20px)" },
+        },
+        "curve-float-reverse": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-20px)" },
+        },
+        "sparkle": {
+          "0%, 100%": { opacity: "0.6", transform: "scale(1)" },
+          "50%": { opacity: "1", transform: "scale(1.2)" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "curve-float": "curve-float 6s ease-in-out infinite",
+        "curve-float-reverse": "curve-float-reverse 6s ease-in-out infinite reverse",
+        "sparkle": "sparkle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "sparkle-delay-1": "sparkle 2s cubic-bezier(0.4, 0, 0.6, 1) 0.3s infinite",
+        "sparkle-delay-2": "sparkle 2s cubic-bezier(0.4, 0, 0.6, 1) 0.6s infinite",
+        "fade-in": "fade-in 0.6s ease-out forwards",
       },
     },
   },
