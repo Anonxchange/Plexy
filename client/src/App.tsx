@@ -197,6 +197,23 @@ function AppContent() {
 }
 
 function App() {
+  // Check if on help subdomain - show only support page
+  const isHelpSubdomain = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
+  
+  if (isHelpSubdomain) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Support />
+            </TooltipProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
