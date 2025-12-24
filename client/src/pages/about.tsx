@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { PexlyFooter } from "@/components/pexly-footer";
 import { Button } from "@/components/ui/button";
 
 // Asset paths from public folder
@@ -9,6 +8,7 @@ const floatingMan = "/assets/IMG_1541.png";
 const floatingWoman = "/assets/IMG_1764.png";
 const rocketImage = "/assets/IMG_2941.webp";
 const creativeEyes = "/assets/IMG_3127.webp";
+const handsImage = "/assets/IMG_2939.webp";
 
 const testimonials = [
   {
@@ -581,6 +581,83 @@ const CustomerObsessionSection = () => {
   );
 };
 
+const PeopleSection = () => {
+  return (
+    <section className="bg-white py-16 md:py-24">
+      <div className="px-6 md:px-12 lg:px-20">
+        <motion.span
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
+        >
+          PEOPLE
+        </motion.span>
+
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
+        >
+          A passionate team of hustlers
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2 }}
+          className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
+        >
+          We're one of the world's largest hosting and AI website builder providers, with 
+          over 900 employees in 54 countries. Like our dedication to our clients, we take 
+          care of our own so that we can grow professionally and take our customers to 
+          the next level. Join Hostinger and hustle with us!
+        </motion.p>
+
+        <motion.a
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          href="#"
+          className="text-[#6b46e5] font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
+        >
+          See career opportunities
+        </motion.a>
+
+        {/* Hands Image */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.4 }}
+          className="relative max-w-md mx-auto"
+        >
+          <div 
+            className="p-8 relative"
+            style={{
+              backgroundImage: "linear-gradient(to right, rgba(107, 70, 229, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(107, 70, 229, 0.1) 1px, transparent 1px)",
+              backgroundSize: "40px 40px"
+            }}
+          >
+            <img
+              src={handsImage}
+              alt="Hands reaching - teamwork"
+              className="w-full object-contain grayscale"
+            />
+            {/* Purple accent shapes */}
+            <div className="absolute top-1/2 left-1/3 w-8 h-16 bg-[#6b46e5] transform -rotate-45 opacity-20" />
+            <div className="absolute bottom-1/3 left-1/2 w-4 h-12 bg-[#6b46e5] transform rotate-12 opacity-20" />
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
 export default function About() {
   return (
     <div className="min-h-screen bg-white">
@@ -592,7 +669,7 @@ export default function About() {
       <TestimonialsSection />
       <TechnologySection />
       <CustomerObsessionSection />
-      <PexlyFooter />
+      <PeopleSection />
     </div>
   );
 }
