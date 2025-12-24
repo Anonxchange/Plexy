@@ -144,7 +144,7 @@ const HelpCenter = () => {
         <div className="relative z-10 container mx-auto px-4 py-8">
           {/* Navigation */}
           <nav className="flex items-center justify-between mb-14 pb-4 border-b border-black/10">
-            <a href="/" className="text-foreground font-bold text-2xl tracking-tight hover:opacity-80 transition-opacity">
+            <a href="https://pexly.app" className="text-foreground font-bold text-2xl tracking-tight hover:opacity-80 transition-opacity">
               Pexly<span style={{ color: "#4F46E5" }}>P2P</span>
             </a>
             <div className="hidden md:flex items-center gap-4">
