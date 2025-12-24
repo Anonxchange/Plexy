@@ -18,6 +18,7 @@ import {
   LucideIcon
 } from "lucide-react";
 import { useState } from "react";
+import { FloatingHelpButton } from "../components/floating-help-button";
 
 interface CategoryCardProps {
   icon: LucideIcon;
@@ -110,14 +111,14 @@ const HelpCenter = () => {
 
   const HeroSection = () => {
     return (
-      <section className="relative bg-hero min-h-[400px] overflow-hidden">
+      <section className="relative min-h-[400px] overflow-hidden" style={{ background: "#CCFF00" }}>
         {/* Decorative curves */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {/* Left curve */}
           <div 
             className="absolute -left-32 top-1/2 w-[500px] h-[500px] animate-curve-float"
             style={{
-              background: "hsl(var(--hero-curve))",
+              background: "#4F46E5",
               borderRadius: "50%",
               transform: "translate(-60%, -30%)",
             }}
@@ -126,7 +127,7 @@ const HelpCenter = () => {
           <div 
             className="absolute -right-32 top-1/2 w-[500px] h-[500px] animate-curve-float-reverse"
             style={{
-              background: "hsl(var(--hero-curve))",
+              background: "#4F46E5",
               borderRadius: "50%",
               transform: "translate(60%, -20%)",
             }}
@@ -142,10 +143,10 @@ const HelpCenter = () => {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 py-8">
           {/* Navigation */}
-          <nav className="flex items-center justify-between mb-14">
-            <div className="text-foreground font-bold text-2xl tracking-tight">
+          <nav className="flex items-center justify-between mb-14 pb-4 border-b border-black/10">
+            <a href="/" className="text-foreground font-bold text-2xl tracking-tight hover:opacity-80 transition-opacity">
               Pexly<span style={{ color: "#4F46E5" }}>P2P</span>
-            </div>
+            </a>
             <div className="hidden md:flex items-center gap-4">
               <a 
                 href="#" 
@@ -206,12 +207,12 @@ const HelpCenter = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-lime-400 via-lime-300 to-lime-400">
       <main className="flex-1">
         <HeroSection />
 
-        {/* White background section with card overlapping */}
-        <div className="bg-background px-6 relative">
+        {/* Gray background section with card overlapping */}
+        <div className="bg-gray-100 px-6 relative">
           <div className="container mx-auto max-w-5xl relative -mt-8 md:-mt-12">
             {/* Categories Grid */}
             <div className="grid md:grid-cols-3 gap-6">
@@ -232,11 +233,11 @@ const HelpCenter = () => {
         <section className="bg-white py-16 px-6">
           <div className="container mx-auto max-w-6xl">
             <h2 className="text-2xl font-bold text-gray-900 mb-8">Promoted articles</h2>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-8">
               {articles.map((article) => (
-                <div key={article} className="group cursor-pointer bg-gray-50 border border-gray-200 rounded-xl p-5 hover:border-lime hover:shadow-lg transition-all">
-                  <div className="flex items-start gap-4">
-                    <FileText className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                <div key={article} className="group cursor-pointer">
+                  <div className="flex flex-col items-start gap-2">
+                    <FileText className="w-6 h-6 text-indigo-600 flex-shrink-0 group-hover:scale-110 transition-transform" />
                     <span className="text-base font-medium text-gray-900 group-hover:text-lime transition-colors">{article}</span>
                   </div>
                 </div>
@@ -277,10 +278,8 @@ const HelpCenter = () => {
         </div>
       </footer>
 
-      {/* Chat Bubble */}
-      <button className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors" aria-label="Open chat">
-        <MessageCircle className="w-6 h-6 text-white" />
-      </button>
+      {/* Floating Help Button */}
+      <FloatingHelpButton />
     </div>
   );
 };
