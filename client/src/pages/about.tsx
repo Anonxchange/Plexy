@@ -4,12 +4,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Asset paths from public folder
-const floatingMan = "/assets/IMG_1541.png";
-const floatingWoman = "/assets/IMG_1764.png";
-const rocketImage = "/assets/IMG_2941.webp";
-const creativeEyes = "/assets/IMG_3127.webp";
-const handsImage = "/assets/IMG_2939.webp";
-const customerImage = "/assets/IMG_3116.webp";
+const floatingMan = "/assets/IMG_3195.png";
+const floatingWoman = "/assets/IMG_3196.png";
+const rocketImage = "/assets/IMG_3200.png";
+const creativeEyes = "/assets/IMG_3208.png";
+const handsImage = "/assets/IMG_3215.png";
+const customerImage = "/assets/IMG_3216.png";
 
 const testimonials = [
   {
