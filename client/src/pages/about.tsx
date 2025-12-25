@@ -14,54 +14,54 @@ const customerImage = "/assets/IMG_3193.png";
 const testimonials = [
   {
     name: "Podaz Store",
-    type: "Online shop",
-    text: "I was recently in contact with Hostinger's Customer Success team. The service was one of the best I have experienced – their agents were informative and helpful. Even with a small amount of information, they managed to detect the problem and solve it quickly.",
+    type: "Digital Merchant",
+    text: "I was recently in contact with Pexly's Customer Success team. The service was one of the best I have experienced – their agents were informative and helpful. Even with a small amount of information, they managed to detect the problem and solve it quickly.",
   },
   {
     name: "TechStartup Inc",
-    type: "Technology",
-    text: "Hostinger's hosting speed is incredible. Our website loads in under a second, which has significantly improved our conversion rates. The 24/7 support team is always responsive and knowledgeable.",
+    type: "Crypto Trader",
+    text: "Pexly's platform speed is incredible. Our trades execute in seconds, which has significantly improved our efficiency. The 24/7 support team is always responsive and knowledgeable.",
   },
   {
     name: "Creative Studio",
     type: "Design Agency",
-    text: "The Website Builder made it so easy to create our portfolio. We had a professional-looking site up and running in just a few hours. Highly recommend for anyone starting their online journey.",
+    text: "The P2P marketplace made it so easy to manage our crypto assets. We had a professional setup running in just a few hours. Highly recommend for anyone starting their crypto journey.",
   },
 ];
 
 const historyItems = [
-  { year: "2004", text: "Hostinger was founded in Kaunas, Lithuania with a mission to make web hosting accessible." },
-  { year: "2008", text: "We launched the first-class cPanel web hosting brand Hosting24.com." },
-  { year: "2011", text: "Hostinger brand was officially launched with free hosting services." },
-  { year: "2014", text: "We reached our first million users worldwide and expanded globally." },
-  { year: "2017", text: "Hostinger introduced the innovative hPanel control panel." },
-  { year: "2019", text: "We launched the AI-powered Website Builder for easy site creation." },
-  { year: "2021", text: "Reached 4 million customers and expanded to 150+ countries." },
-  { year: "2023", text: "Introduced advanced AI features and continued global expansion." },
+  { year: "2018", text: "Pexly was founded with a mission to make cryptocurrency trading accessible to everyone worldwide." },
+  { year: "2019", text: "We launched our first-class P2P marketplace supporting 50+ payment methods." },
+  { year: "2020", text: "The Pexly brand was officially expanded with enhanced security features and escrow protection." },
+  { year: "2021", text: "We reached our first million users worldwide and expanded across 100+ countries." },
+  { year: "2022", text: "Pexly introduced an innovative lightning network integration for instant transfers." },
+  { year: "2023", text: "We launched the AI-powered trading assistant for market analysis." },
+  { year: "2024", text: "Reached 14 million customers and expanded payment methods to 500+." },
+  { year: "2025", text: "Introduced advanced institutional features and continued global expansion." },
 ];
 
 const strengths = [
   {
-    title: "Seamless management tools",
+    title: "Seamless trading tools",
     description:
-      "Regardless of your background or technical expertise, our site-building and management tools have been created with user experience and power in mind. Control everything in one place with hPanel, from domains and web hosting to email accounts and more. Have more time for what matters with our AI-powered drag-and-drop Hostinger Website Builder – create and publish a website within minutes, without limits.",
+      "Regardless of your background or technical expertise, our trading and management tools have been created with user experience and security in mind. Control everything in one place with Pexly, from wallet management and offers to secure escrow trades. Have more time for what matters with our intuitive P2P marketplace – start trading within minutes, without limits.",
   },
   {
-    title: "Website speed",
+    title: "Transaction speed",
     description:
-      "We want website creators and business owners to move forward, and fast. Imagine having your site load in milliseconds anywhere in the world with our globally distributed servers and 99.9% uptime guarantee. Give your audience the best user experience, and watch as your site rankings improve.",
+      "We want crypto traders and business owners to move forward, and fast. Imagine having your trades completed in milliseconds anywhere in the world with our globally distributed network and secure escrow system. Give your trading the best experience, and watch as your portfolio grows.",
   },
   {
     title: "Dedicated 24/7 support",
     description:
-      "We are here for every committed online hustler who aims to rock the web. Our Customer Success team speaks 8+ languages, so you can confidently communicate your thoughts and concerns in your own language. Spend less time worrying about technical issues – we promise to get back to you quickly with helpful solutions.",
+      "We are here for every committed crypto hustler who aims to rock the market. Our Customer Success team speaks 8+ languages, so you can confidently communicate your thoughts and concerns in your own language. Spend less time worrying about technical issues – we promise to get back to you quickly with helpful solutions.",
   },
 ];
 
 const HeroSection = () => {
   return (
-    <section className="bg-white text-black min-h-[80vh] relative overflow-hidden">
-      <div className="px-6 md:px-12 lg:px-20 py-16 md:py-24">
+    <section className="bg-white text-black flex items-center relative overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-6 md:px-12 lg:px-20 pt-1 pb-8 md:pt-4 md:pb-24 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -73,35 +73,23 @@ const HeroSection = () => {
             <span className="block">Two.</span>
             <span className="block">Online.</span>
           </h1>
+          <p className="mt-8 text-xl text-gray-600 max-w-lg hidden lg:block">
+            Pexly is a leading global P2P cryptocurrency marketplace, 
+            connecting millions of traders worldwide with zero hassle.
+          </p>
         </motion.div>
 
         {/* Decorative Elements */}
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[60%] h-full pointer-events-none">
+        <div className="relative h-[400px] md:h-[500px] lg:h-[600px] pointer-events-none">
           {/* Purple Circle */}
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="absolute left-1/4 top-1/2 -translate-y-1/2 w-48 md:w-64 lg:w-80 aspect-square"
+            className="absolute left-1/4 top-1/2 -translate-y-1/2 w-48 md:w-64 lg:w-96 aspect-square"
           >
-            <div className="w-full h-full rounded-full border-[12px] md:border-[16px] border-[#6b46e5]" />
+            <div className="w-full h-full rounded-full border-[12px] md:border-[16px] border-primary/20" />
           </motion.div>
-
-          {/* Light Purple Circle */}
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 0.5 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="absolute right-10 top-1/4 w-20 md:w-32 aspect-square rounded-full bg-[#6b46e5]/20"
-          />
-
-          {/* Small Purple Dot */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-            className="absolute left-1/3 bottom-1/4 w-3 aspect-square rounded-full bg-[#6b46e5]"
-          />
 
           {/* Floating Man */}
           <motion.img
@@ -110,7 +98,7 @@ const HeroSection = () => {
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="absolute left-0 bottom-10 w-40 md:w-56 lg:w-72 object-contain animate-float grayscale"
+            className="absolute left-0 bottom-10 w-40 md:w-56 lg:w-80 object-contain animate-float grayscale"
             style={{ filter: "grayscale(100%)" }}
           />
 
@@ -121,7 +109,7 @@ const HeroSection = () => {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="absolute right-10 top-1/4 w-32 md:w-44 lg:w-56 object-contain animate-float-delayed grayscale"
+            className="absolute right-0 top-1/4 w-32 md:w-44 lg:w-64 object-contain animate-float-delayed grayscale"
             style={{ filter: "grayscale(100%)" }}
           />
         </div>
@@ -131,20 +119,10 @@ const HeroSection = () => {
           {[...Array(8)].map((_, i) => (
             <div
               key={i}
-              className={`w-2 h-2 rounded-full ${i === 0 ? "bg-[#6b46e5]" : "bg-gray-200"}`}
+              className={`w-2 h-2 rounded-full ${i === 0 ? "bg-primary" : "bg-gray-200"}`}
             />
           ))}
         </div>
-
-        {/* Plus Icon */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="absolute left-6 bottom-1/3 text-gray-400 text-2xl font-light"
-        >
-          +
-        </motion.div>
       </div>
     </section>
   );
@@ -152,59 +130,60 @@ const HeroSection = () => {
 
 const AboutSection = () => {
   return (
-    <section className="bg-[#6b46e5] text-white relative overflow-hidden">
-      <div className="px-6 md:px-12 lg:px-20 py-16 md:py-24">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal text-center mb-12 md:mb-16"
-        >
-          About us
-        </motion.h2>
-
+    <section className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-3xl"
         >
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-8 lg:text-left text-center"
+          >
+            About us
+          </motion.h2>
+
           <h3 className="font-sans font-bold text-2xl md:text-3xl mb-6">
-            Find your online success with Hostinger
+            Find your online success with Pexly
           </h3>
           <p className="font-sans text-lg md:text-xl leading-relaxed opacity-90">
-            Hostinger is on a mission to make online presence accessible to everyone worldwide – 
-            from developers to aspiring bloggers and business owners. With our fast hosting 
-            technology, AI-powered Website Builder, and easy-to-operate hPanel you can succeed 
-            online faster and easier.
+            Pexly is on a mission to make cryptocurrency trading accessible to everyone worldwide – 
+            from institutional traders to aspiring crypto enthusiasts. With our fast trading 
+            technology, secure escrow system, and easy-to-operate dashboard you can succeed 
+            in the crypto market faster and easier.
           </p>
         </motion.div>
 
+        <div className="relative hidden lg:flex justify-center items-center">
+          {/* Decorative Figure */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="w-full max-w-md"
+          >
+            <img
+              src={floatingMan}
+              alt="Person walking"
+              className="w-full object-contain grayscale brightness-200 opacity-20"
+            />
+          </motion.div>
+        </div>
+
         {/* Blueprint Lines Background */}
         <div 
-          className="absolute inset-0 opacity-20 pointer-events-none" 
+          className="absolute inset-0 opacity-10 pointer-events-none" 
           style={{
-            backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px)",
+            backgroundImage: "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
             backgroundSize: "40px 40px"
           }}
         />
-
-        {/* Decorative Figure */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="absolute right-0 bottom-0 w-40 md:w-56"
-        >
-          <img
-            src={floatingMan}
-            alt="Person walking"
-            className="w-full object-contain grayscale brightness-200"
-          />
-        </motion.div>
       </div>
     </section>
   );
@@ -212,7 +191,7 @@ const AboutSection = () => {
 
 const GlobalSection = () => {
   return (
-    <section className="bg-[#6b46e5] text-white relative overflow-hidden border-t border-white/10">
+    <section className="bg-gradient-to-br from-background via-primary/10 to-background text-foreground relative overflow-hidden border-t border-primary/10">
       <div className="px-6 md:px-12 lg:px-20 py-16 md:py-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -222,18 +201,18 @@ const GlobalSection = () => {
           className="max-w-3xl"
         >
           <h2 className="font-sans font-bold text-2xl md:text-3xl mb-6">
-            Globally recognized web host
+            Globally recognized crypto marketplace
           </h2>
           
           <p className="font-sans text-lg md:text-xl leading-relaxed opacity-90 mb-6">
-            Launched in 2004 as a Lithuania-based tech startup, Hostinger is now a leading 
-            provider of web hosting solutions, and we serve over 4 million people from 150+ countries
+            Launched in 2018 as a fintech tech startup, Pexly is now a leading 
+            provider of P2P trading solutions, and we serve over 14 million people from 140+ countries
           </p>
           
           <p className="font-sans text-lg md:text-xl leading-relaxed opacity-90 mb-6">
-            Staying true to our reputation, and listed among the FT 1000 ranking of Europe's 
-            fastest-growing companies for the sixth year in a row, we'll continue improving 
-            our services, unlocking new markets, and being part of even more success stories.
+            Staying true to our reputation, we've been listed among the fastest-growing fintech companies
+            for three years in a row. We'll continue improving our services, unlocking new markets, 
+            and being part of even more crypto success stories.
           </p>
           
           <p className="font-sans text-lg md:text-xl leading-relaxed opacity-90">
@@ -250,9 +229,9 @@ const GlobalSection = () => {
           className="mt-12 flex justify-center"
         >
           <div 
-            className="relative w-64 md:w-80 p-8"
+            className="relative w-64 md:w-80 p-8 bg-primary rounded-2xl"
             style={{
-              backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px)",
+              backgroundImage: "linear-gradient(to right, rgba(0, 0, 0, 0.15) 1.5px, transparent 1.5px), linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 1.5px, transparent 1.5px)",
               backgroundSize: "40px 40px"
             }}
           >
@@ -266,9 +245,9 @@ const GlobalSection = () => {
 
         {/* Blueprint Lines Background */}
         <div 
-          className="absolute inset-0 opacity-20 pointer-events-none"
+          className="absolute inset-0 opacity-5 pointer-events-none"
           style={{
-            backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px)",
+            backgroundImage: "linear-gradient(to right, hsl(var(--primary)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--primary)) 1px, transparent 1px)",
             backgroundSize: "40px 40px"
           }}
         />
@@ -340,9 +319,9 @@ const HistorySection = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.4 }}
-            className="bg-white border-l-4 border-[#6b46e5] p-8 rounded-lg shadow-sm"
+            className="bg-white border-l-4 border-primary p-8 rounded-lg shadow-sm"
           >
-            <span className="text-5xl md:text-6xl font-serif font-bold text-[#6b46e5] mb-4 block">
+            <span className="text-5xl md:text-6xl font-serif font-bold text-primary mb-4 block">
               {historyItems[currentIndex].year}
             </span>
             <p className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed">
@@ -414,7 +393,7 @@ const TestimonialsSection = () => {
           transition={{ delay: 0.1 }}
           className="text-center text-gray-500 font-sans text-lg md:text-xl mb-12"
         >
-          Don't just take our word for it – millions of customers are happy using Hostinger.
+          Don't just take our word for it – millions of customers are happy using Pexly.
         </motion.p>
 
         {/* Dots */}
@@ -424,7 +403,7 @@ const TestimonialsSection = () => {
               key={index}
               onClick={() => setActiveIndex(index)}
               className={`w-3 h-3 rounded-full transition-all ${
-                index === activeIndex ? "bg-[#6b46e5]" : "bg-gray-200"
+                index === activeIndex ? "bg-primary" : "bg-gray-200"
               }`}
             />
           ))}
@@ -436,11 +415,11 @@ const TestimonialsSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="max-w-2xl mx-auto bg-white border-l-4 border-[#6b46e5] p-8 rounded-lg shadow-sm"
+          className="max-w-2xl mx-auto bg-white border-l-4 border-primary p-8 rounded-lg shadow-sm"
         >
           <div className="mb-4">
             <h3 className="font-sans font-bold text-lg text-black">{testimonials[activeIndex].name}</h3>
-            <p className="text-[#6b46e5] text-sm font-sans">{testimonials[activeIndex].type}</p>
+            <p className="text-primary text-sm font-sans">{testimonials[activeIndex].type}</p>
           </div>
           <p className="text-gray-600 font-sans text-lg leading-relaxed">
             {testimonials[activeIndex].text}
@@ -448,7 +427,7 @@ const TestimonialsSection = () => {
         </motion.div>
 
         <div className="text-center mt-12">
-          <Button className="bg-[#6b46e5] hover:bg-[#5a3bc4] text-white px-8 py-6 text-lg rounded-full">
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full">
             Read more reviews
           </Button>
         </div>
@@ -487,10 +466,10 @@ const TechnologySection = () => {
           transition={{ delay: 0.2 }}
           className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
         >
-          As one of the fastest and most efficient web hosting service providers around, we keep 
+          As one of the fastest and most efficient P2P marketplace providers around, we keep 
           adapting to the latest tech advancements in the industry. We constantly improve our 
-          servers' infrastructure with advanced anti-DDoS solutions, LiteSpeed-powered tech 
-          stack, and our custom-built control panel – hPanel.
+          security infrastructure with advanced encryption, lightning-powered tech 
+          stack, and our custom-built dashboard.
         </motion.p>
 
         <motion.a
@@ -499,7 +478,7 @@ const TechnologySection = () => {
           viewport={{ once: true }}
           transition={{ delay: 0.3 }}
           href="#"
-          className="text-[#6b46e5] font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
+          className="text-primary font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
         >
           Learn more about our tech
         </motion.a>
@@ -561,10 +540,10 @@ const PeopleSection = () => {
           transition={{ delay: 0.2 }}
           className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
         >
-          We're one of the world's largest hosting and AI website builder providers, with 
+          We're one of the world's largest P2P cryptocurrency marketplace providers, with 
           over 900 employees in 54 countries. Like our dedication to our clients, we take 
           care of our own so that we can grow professionally and take our customers to 
-          the next level. Join Hostinger and hustle with us!
+          the next level. Join Pexly and hustle with us!
         </motion.p>
 
         <motion.a
@@ -573,7 +552,7 @@ const PeopleSection = () => {
           viewport={{ once: true }}
           transition={{ delay: 0.3 }}
           href="#"
-          className="text-[#6b46e5] font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
+          className="text-primary font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
         >
           See career opportunities
         </motion.a>
@@ -611,83 +590,87 @@ const PeopleSection = () => {
 const CustomerObsessionSection = () => {
   return (
     <section className="bg-white py-16 md:py-24 border-t border-gray-100">
-      <div className="px-6 md:px-12 lg:px-20">
-        <motion.span
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
-        >
-          CUSTOMER OBSESSION
-        </motion.span>
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <motion.span
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
+          >
+            CUSTOMER OBSESSION
+          </motion.span>
 
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
-        >
-          Before we speak, we listen
-        </motion.h2>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
+          >
+            Before we speak, we listen
+          </motion.h2>
 
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2 }}
-          className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
-        >
-          You, The Customer, hold the highest rank at Hostinger. Your feedback is key to improving our products, processes, and overall customer satisfaction. We always seek out our clients' input through surveys, online reviews, and one-on-one interviews.
-        </motion.p>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
+          >
+            You, The Customer, hold the highest rank at Pexly. Your feedback is key to improving our marketplace, processes, and overall customer satisfaction. We always seek out our clients' input through surveys, online reviews, and one-on-one interviews.
+          </motion.p>
 
-        <motion.a
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3 }}
-          href="#"
-          className="text-[#6b46e5] font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
-        >
-          Contact us
-        </motion.a>
+          <motion.a
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            href="#"
+            className="text-primary font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
+          >
+            Contact us
+          </motion.a>
+        </div>
 
-        {/* Image with blueprint H pattern background */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="relative flex justify-center"
-        >
-          <div className="relative w-full max-w-lg h-[400px] md:h-[500px]">
-            {/* Blueprint H pattern SVG */}
-            <svg
-              className="absolute left-0 md:left-8 top-0 w-[200px] md:w-[280px] h-full"
-              viewBox="0 0 200 400"
-              fill="none"
-              preserveAspectRatio="xMidYMid meet"
-            >
-              <line x1="40" y1="40" x2="40" y2="360" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
-              <line x1="160" y1="40" x2="160" y2="360" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
-              <line x1="40" y1="80" x2="160" y2="80" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
-              <line x1="40" y1="320" x2="160" y2="320" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
-              <line x1="40" y1="80" x2="160" y2="200" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
-              <line x1="40" y1="320" x2="160" y2="200" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
-              <rect x="20" y="60" width="160" height="280" stroke="#6b46e5" strokeWidth="1" strokeOpacity="0.05" fill="none" />
-            </svg>
+        <div>
+          {/* Image with blueprint H pattern background */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+            className="relative flex justify-center"
+          >
+            <div className="relative w-full max-w-lg h-[400px] md:h-[500px]">
+              {/* Blueprint H pattern SVG */}
+              <svg
+                className="absolute left-0 md:left-8 top-0 w-[200px] md:w-[280px] h-full"
+                viewBox="0 0 200 400"
+                fill="none"
+                preserveAspectRatio="xMidYMid meet"
+              >
+                <line x1="40" y1="40" x2="40" y2="360" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeOpacity="0.1" />
+                <line x1="160" y1="40" x2="160" y2="360" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeOpacity="0.1" />
+                <line x1="40" y1="80" x2="160" y2="80" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeOpacity="0.1" />
+                <line x1="40" y1="320" x2="160" y2="320" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeOpacity="0.1" />
+                <line x1="40" y1="80" x2="160" y2="200" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeOpacity="0.1" />
+                <line x1="40" y1="320" x2="160" y2="200" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeOpacity="0.1" />
+                <rect x="20" y="60" width="160" height="280" stroke="hsl(var(--primary))" strokeWidth="1" strokeOpacity="0.05" fill="none" />
+              </svg>
 
-            {/* Purple rectangle bar accent */}
-            <div className="absolute left-4 md:left-16 top-[40%] w-40 md:w-56 h-6 md:h-8 bg-[#6b46e5] opacity-20 z-10" />
+              {/* Purple rectangle bar accent */}
+              <div className="absolute left-4 md:left-16 top-[40%] w-40 md:w-56 h-6 md:h-8 bg-primary opacity-20 z-10" />
 
-            {/* Person image */}
-            <img 
-              src={customerImage} 
-              alt="Customer listening"
-              className="absolute right-0 md:right-8 top-1/2 -translate-y-1/2 z-20 w-[200px] md:w-[280px] grayscale object-contain"
-            />
-          </div>
-        </motion.div>
+              {/* Person image */}
+              <img 
+                src={customerImage} 
+                alt="Customer listening"
+                className="absolute right-0 md:right-0 top-1/2 -translate-y-1/2 z-20 w-[280px] md:w-[400px] lg:w-[450px] grayscale object-contain"
+              />
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -695,15 +678,15 @@ const CustomerObsessionSection = () => {
 
 const ReviewsSection = () => {
   const reviews = [
-    { text: "Hostinger truly is a very solid host", brand: "bitcatcha" },
-    { text: "Best for top-notch uptime", brand: "PCMAG.COM" },
-    { text: "It feels like a premium host", brand: "QUICKSPROUT" },
+    { text: "Pexly truly is a very solid platform", brand: "BITCATCHA" },
+    { text: "Best for top-notch security", brand: "PCMAG.COM" },
+    { text: "It feels like a premium marketplace", brand: "QUICKSPROUT" },
   ];
 
   return (
     <section className="bg-white py-16 md:py-24 border-t border-gray-100 overflow-hidden">
       <div className="px-6 md:px-12 lg:px-20">
-        <div className="flex flex-col items-center space-y-16">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-12 md:gap-8">
           {reviews.map((review, index) => (
             <motion.div
               key={review.brand}
@@ -711,23 +694,21 @@ const ReviewsSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.2 }}
-              className="text-center group"
+              className="text-center group flex-1"
             >
               <div className="relative inline-block mb-4">
-                {/* Wreath left */}
-                <span className="absolute -left-12 top-1/2 -translate-y-1/2 text-gray-200 text-3xl font-serif">
+                <span className="absolute -left-8 top-1/2 -translate-y-1/2 text-primary/20 text-4xl font-serif italic">
                   {"("}
                 </span>
-                <p className="font-sans font-bold text-xl md:text-2xl text-black">
+                <p className="font-sans font-bold text-lg md:text-xl text-black px-4">
                   "{review.text}"
                 </p>
-                {/* Wreath right */}
-                <span className="absolute -right-12 top-1/2 -translate-y-1/2 text-gray-200 text-3xl font-serif">
+                <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-primary/20 text-4xl font-serif italic">
                   {")"}
                 </span>
               </div>
               <div className="flex justify-center mt-2">
-                <span className="text-gray-400 font-sans font-black text-3xl md:text-4xl tracking-tighter opacity-30 group-hover:opacity-50 transition-opacity uppercase">
+                <span className="text-gray-400 font-sans font-black text-xl tracking-tighter opacity-30 group-hover:opacity-50 transition-opacity uppercase">
                   {review.brand}
                 </span>
               </div>
