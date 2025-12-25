@@ -9,6 +9,7 @@ const floatingWoman = "/assets/IMG_1764.png";
 const rocketImage = "/assets/IMG_2941.webp";
 const creativeEyes = "/assets/IMG_3127.webp";
 const handsImage = "/assets/IMG_2939.webp";
+const customerImage = "/assets/IMG_3116.webp";
 
 const testimonials = [
   {
@@ -530,57 +531,6 @@ const TechnologySection = () => {
   );
 };
 
-const CustomerObsessionSection = () => {
-  return (
-    <section className="bg-white py-16 md:py-24 border-t border-gray-100">
-      <div className="px-6 md:px-12 lg:px-20">
-        <motion.span
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
-        >
-          CUSTOMER OBSESSION
-        </motion.span>
-
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
-        >
-          Your success is our success
-        </motion.h2>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2 }}
-          className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
-        >
-          At Hostinger, we put customers at the center of everything we do. From intuitive 
-          tools to responsive support, every decision is made with your success in mind. 
-          We're not just a hosting provider – we're your partner in building an impactful 
-          online presence.
-        </motion.p>
-
-        <motion.a
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3 }}
-          href="#"
-          className="text-[#6b46e5] font-sans font-medium hover:underline underline-offset-4 transition-all inline-block"
-        >
-          Read our customer stories
-        </motion.a>
-      </div>
-    </section>
-  );
-};
-
 const PeopleSection = () => {
   return (
     <section className="bg-white py-16 md:py-24">
@@ -658,6 +608,137 @@ const PeopleSection = () => {
   );
 };
 
+const CustomerObsessionSection = () => {
+  return (
+    <section className="bg-white py-16 md:py-24 border-t border-gray-100">
+      <div className="px-6 md:px-12 lg:px-20">
+        <motion.span
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
+        >
+          CUSTOMER OBSESSION
+        </motion.span>
+
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
+        >
+          Before we speak, we listen
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2 }}
+          className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
+        >
+          You, The Customer, hold the highest rank at Hostinger. Your feedback is key to improving our products, processes, and overall customer satisfaction. We always seek out our clients' input through surveys, online reviews, and one-on-one interviews.
+        </motion.p>
+
+        <motion.a
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          href="#"
+          className="text-[#6b46e5] font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
+        >
+          Contact us
+        </motion.a>
+
+        {/* Image with blueprint H pattern background */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.4 }}
+          className="relative flex justify-center"
+        >
+          <div className="relative w-full max-w-lg h-[400px] md:h-[500px]">
+            {/* Blueprint H pattern SVG */}
+            <svg
+              className="absolute left-0 md:left-8 top-0 w-[200px] md:w-[280px] h-full"
+              viewBox="0 0 200 400"
+              fill="none"
+              preserveAspectRatio="xMidYMid meet"
+            >
+              <line x1="40" y1="40" x2="40" y2="360" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
+              <line x1="160" y1="40" x2="160" y2="360" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
+              <line x1="40" y1="80" x2="160" y2="80" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
+              <line x1="40" y1="320" x2="160" y2="320" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
+              <line x1="40" y1="80" x2="160" y2="200" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
+              <line x1="40" y1="320" x2="160" y2="200" stroke="#6b46e5" strokeWidth="1.5" strokeOpacity="0.1" />
+              <rect x="20" y="60" width="160" height="280" stroke="#6b46e5" strokeWidth="1" strokeOpacity="0.05" fill="none" />
+            </svg>
+
+            {/* Purple rectangle bar accent */}
+            <div className="absolute left-4 md:left-16 top-[40%] w-40 md:w-56 h-6 md:h-8 bg-[#6b46e5] opacity-20 z-10" />
+
+            {/* Person image */}
+            <img 
+              src={customerImage} 
+              alt="Customer listening"
+              className="absolute right-0 md:right-8 top-1/2 -translate-y-1/2 z-20 w-[200px] md:w-[280px] grayscale object-contain"
+            />
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+const ReviewsSection = () => {
+  const reviews = [
+    { text: "Hostinger truly is a very solid host", brand: "bitcatcha" },
+    { text: "Best for top-notch uptime", brand: "PCMAG.COM" },
+    { text: "It feels like a premium host", brand: "QUICKSPROUT" },
+  ];
+
+  return (
+    <section className="bg-white py-16 md:py-24 border-t border-gray-100 overflow-hidden">
+      <div className="px-6 md:px-12 lg:px-20">
+        <div className="flex flex-col items-center space-y-16">
+          {reviews.map((review, index) => (
+            <motion.div
+              key={review.brand}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.2 }}
+              className="text-center group"
+            >
+              <div className="relative inline-block mb-4">
+                {/* Wreath left */}
+                <span className="absolute -left-12 top-1/2 -translate-y-1/2 text-gray-200 text-3xl font-serif">
+                  {"("}
+                </span>
+                <p className="font-sans font-bold text-xl md:text-2xl text-black">
+                  "{review.text}"
+                </p>
+                {/* Wreath right */}
+                <span className="absolute -right-12 top-1/2 -translate-y-1/2 text-gray-200 text-3xl font-serif">
+                  {")"}
+                </span>
+              </div>
+              <div className="flex justify-center mt-2">
+                <span className="text-gray-400 font-sans font-black text-3xl md:text-4xl tracking-tighter opacity-30 group-hover:opacity-50 transition-opacity uppercase">
+                  {review.brand}
+                </span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 export default function About() {
   return (
     <div className="min-h-screen bg-white">
@@ -668,8 +749,9 @@ export default function About() {
       <StrengthsSection />
       <TestimonialsSection />
       <TechnologySection />
-      <CustomerObsessionSection />
       <PeopleSection />
+      <CustomerObsessionSection />
+      <ReviewsSection />
     </div>
   );
 }
