@@ -131,7 +131,7 @@ const HeroSection = () => {
 const AboutSection = () => {
   return (
     <section className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 py-8 md:py-12 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -192,7 +192,7 @@ const AboutSection = () => {
 const GlobalSection = () => {
   return (
     <section className="bg-gradient-to-br from-background via-primary/10 to-background text-foreground relative overflow-hidden border-t border-primary/10">
-      <div className="px-6 md:px-12 lg:px-20 py-16 md:py-24">
+      <div className="px-6 md:px-12 lg:px-20 py-8 md:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -268,7 +268,7 @@ const HistorySection = () => {
   };
 
   return (
-    <section className="bg-white py-16 md:py-24">
+    <section className="bg-white py-8 md:py-12">
       <div className="px-6 md:px-12 lg:px-20">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
@@ -336,8 +336,8 @@ const HistorySection = () => {
 
 const StrengthsSection = () => {
   return (
-    <section className="bg-white py-16 md:py-24">
-      <div className="px-6 md:px-12 lg:px-20">
+    <section className="bg-white py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -347,7 +347,7 @@ const StrengthsSection = () => {
           Our strengths
         </motion.h2>
 
-        <div className="space-y-12">
+        <div className="grid md:grid-cols-3 gap-12">
           {strengths.map((strength, index) => (
             <motion.div
               key={strength.title}
@@ -355,12 +355,12 @@ const StrengthsSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
-              className="text-center max-w-3xl mx-auto"
+              className="text-center"
             >
               <h3 className="font-sans font-bold text-xl md:text-2xl mb-4 text-black">
                 {strength.title}
               </h3>
-              <p className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed">
+              <p className="font-sans text-lg text-gray-600 leading-relaxed">
                 {strength.description}
               </p>
             </motion.div>
@@ -375,61 +375,68 @@ const TestimonialsSection = () => {
   const [activeIndex, setActiveIndex] = useState(0);
 
   return (
-    <section className="bg-white py-16 md:py-24">
-      <div className="px-6 md:px-12 lg:px-20">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal text-center mb-4"
-        >
-          Millions of satisfied customers
-        </motion.h2>
-        
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="text-center text-gray-500 font-sans text-lg md:text-xl mb-12"
-        >
-          Don't just take our word for it – millions of customers are happy using Pexly.
-        </motion.p>
+    <section className="bg-white py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-4"
+          >
+            Millions of satisfied customers
+          </motion.h2>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-gray-500 font-sans text-lg md:text-xl mb-8"
+          >
+            Don't just take our word for it – millions of customers are happy using Pexly.
+          </motion.p>
 
-        {/* Dots */}
-        <div className="flex justify-center gap-2 mb-8">
-          {testimonials.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveIndex(index)}
-              className={`w-3 h-3 rounded-full transition-all ${
-                index === activeIndex ? "bg-primary" : "bg-gray-200"
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Testimonial Card */}
-        <motion.div
-          key={activeIndex}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="max-w-2xl mx-auto bg-white border-l-4 border-primary p-8 rounded-lg shadow-sm"
-        >
-          <div className="mb-4">
-            <h3 className="font-sans font-bold text-lg text-black">{testimonials[activeIndex].name}</h3>
-            <p className="text-primary text-sm font-sans">{testimonials[activeIndex].type}</p>
+          <div className="flex gap-2 mb-8">
+            {testimonials.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveIndex(index)}
+                className={`w-3 h-3 rounded-full transition-all ${
+                  index === activeIndex ? "bg-primary w-8" : "bg-gray-200"
+                }`}
+              />
+            ))}
           </div>
-          <p className="text-gray-600 font-sans text-lg leading-relaxed">
-            {testimonials[activeIndex].text}
-          </p>
-        </motion.div>
 
-        <div className="text-center mt-12">
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full">
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full hidden lg:flex">
             Read more reviews
           </Button>
+        </div>
+
+        <div>
+          {/* Testimonial Card */}
+          <motion.div
+            key={activeIndex}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white border-l-4 border-primary p-10 rounded-lg shadow-sm min-h-[300px] flex flex-col justify-center"
+          >
+            <div className="mb-6">
+              <h3 className="font-sans font-bold text-xl text-black">{testimonials[activeIndex].name}</h3>
+              <p className="text-primary text-base font-sans">{testimonials[activeIndex].type}</p>
+            </div>
+            <p className="text-gray-600 font-sans text-xl leading-relaxed italic">
+              "{testimonials[activeIndex].text}"
+            </p>
+          </motion.div>
+
+          <div className="text-center mt-8 lg:hidden">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full w-full">
+              Read more reviews
+            </Button>
+          </div>
         </div>
       </div>
     </section>
@@ -438,73 +445,77 @@ const TestimonialsSection = () => {
 
 const TechnologySection = () => {
   return (
-    <section className="bg-white py-16 md:py-24">
-      <div className="px-6 md:px-12 lg:px-20">
-        <motion.span
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
-        >
-          TECHNOLOGY
-        </motion.span>
-
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
-        >
-          Innovation on the go
-        </motion.h2>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2 }}
-          className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
-        >
-          As one of the fastest and most efficient P2P marketplace providers around, we keep 
-          adapting to the latest tech advancements in the industry. We constantly improve our 
-          security infrastructure with advanced encryption, lightning-powered tech 
-          stack, and our custom-built dashboard.
-        </motion.p>
-
-        <motion.a
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3 }}
-          href="#"
-          className="text-primary font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
-        >
-          Learn more about our tech
-        </motion.a>
-
-        {/* Creative Image */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="relative max-w-md mx-auto"
-        >
-          <div 
-            className="p-8"
-            style={{
-              backgroundImage: "linear-gradient(to right, rgba(107, 70, 229, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(107, 70, 229, 0.1) 1px, transparent 1px)",
-              backgroundSize: "40px 40px"
-            }}
+    <section className="bg-white py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="order-2 lg:order-1">
+          {/* Creative Image */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+            className="relative max-w-md mx-auto lg:mx-0"
           >
-            <img
-              src={creativeEyes}
-              alt="Creative vision"
-              className="w-full object-contain grayscale"
-            />
-          </div>
-        </motion.div>
+            <div 
+              className="p-8"
+              style={{
+                backgroundImage: "linear-gradient(to right, rgba(107, 70, 229, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(107, 70, 229, 0.1) 1px, transparent 1px)",
+                backgroundSize: "40px 40px"
+              }}
+            >
+              <img
+                src={creativeEyes}
+                alt="Creative vision"
+                className="w-full object-contain grayscale"
+              />
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="order-1 lg:order-2">
+          <motion.span
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
+          >
+            TECHNOLOGY
+          </motion.span>
+
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
+          >
+            Innovation on the go
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
+          >
+            As one of the fastest and most efficient P2P marketplace providers around, we keep 
+            adapting to the latest tech advancements in the industry. We constantly improve our 
+            security infrastructure with advanced encryption, lightning-powered tech 
+            stack, and our custom-built dashboard.
+          </motion.p>
+
+          <motion.a
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            href="#"
+            className="text-primary font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
+          >
+            Learn more about our tech
+          </motion.a>
+        </div>
       </div>
     </section>
   );
@@ -512,76 +523,77 @@ const TechnologySection = () => {
 
 const PeopleSection = () => {
   return (
-    <section className="bg-white py-16 md:py-24">
-      <div className="px-6 md:px-12 lg:px-20">
-        <motion.span
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
-        >
-          PEOPLE
-        </motion.span>
-
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
-        >
-          A passionate team of hustlers
-        </motion.h2>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2 }}
-          className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
-        >
-          We're one of the world's largest P2P cryptocurrency marketplace providers, with 
-          over 900 employees in 54 countries. Like our dedication to our clients, we take 
-          care of our own so that we can grow professionally and take our customers to 
-          the next level. Join Pexly and hustle with us!
-        </motion.p>
-
-        <motion.a
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3 }}
-          href="#"
-          className="text-primary font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
-        >
-          See career opportunities
-        </motion.a>
-
-        {/* Hands Image */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="relative max-w-md mx-auto"
-        >
-          <div 
-            className="p-8 relative"
-            style={{
-              backgroundImage: "linear-gradient(to right, rgba(107, 70, 229, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(107, 70, 229, 0.1) 1px, transparent 1px)",
-              backgroundSize: "40px 40px"
-            }}
+    <section className="bg-white py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <motion.span
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-gray-400 font-sans uppercase tracking-widest text-sm mb-4 block"
           >
-            <img
-              src={handsImage}
-              alt="Hands reaching - teamwork"
-              className="w-full object-contain grayscale"
-            />
-            {/* Purple accent shapes */}
-            <div className="absolute top-1/2 left-1/3 w-8 h-16 bg-[#6b46e5] transform -rotate-45 opacity-20" />
-            <div className="absolute bottom-1/3 left-1/2 w-4 h-12 bg-[#6b46e5] transform rotate-12 opacity-20" />
-          </div>
-        </motion.div>
+            PEOPLE
+          </motion.span>
+
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="font-serif italic text-4xl md:text-5xl lg:text-6xl font-normal mb-6"
+          >
+            A passionate team of hustlers
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
+          >
+            We're one of the world's largest P2P cryptocurrency marketplace providers, with 
+            over 900 employees in 54 countries. Like our dedication to our clients, we take 
+            care of our own so that we can grow professionally and take our customers to 
+            the next level. Join Pexly and hustle with us!
+          </motion.p>
+
+          <motion.a
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            href="#"
+            className="text-primary font-sans font-medium hover:underline underline-offset-4 transition-all inline-block mb-12"
+          >
+            See career opportunities
+          </motion.a>
+        </div>
+
+        <div>
+          {/* Hands Image */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+            className="relative max-w-md mx-auto"
+          >
+            <div 
+              className="p-8 relative"
+              style={{
+                backgroundImage: "linear-gradient(to right, rgba(107, 70, 229, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(107, 70, 229, 0.1) 1px, transparent 1px)",
+                backgroundSize: "40px 40px"
+              }}
+            >
+              <img
+                src={handsImage}
+                alt="Hands reaching - teamwork"
+                className="w-full object-contain grayscale"
+              />
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -589,7 +601,7 @@ const PeopleSection = () => {
 
 const CustomerObsessionSection = () => {
   return (
-    <section className="bg-white py-16 md:py-24 border-t border-gray-100">
+    <section className="bg-white py-8 md:py-12 border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 grid lg:grid-cols-2 gap-12 items-center">
         <div>
           <motion.span
@@ -684,7 +696,7 @@ const ReviewsSection = () => {
   ];
 
   return (
-    <section className="bg-white py-16 md:py-24 border-t border-gray-100 overflow-hidden">
+    <section className="bg-white py-8 md:py-12 border-t border-gray-100 overflow-hidden">
       <div className="px-6 md:px-12 lg:px-20">
         <div className="flex flex-col md:flex-row items-center justify-between gap-12 md:gap-8">
           {reviews.map((review, index) => (
