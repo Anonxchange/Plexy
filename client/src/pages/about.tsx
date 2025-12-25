@@ -231,7 +231,7 @@ const GlobalSection = () => {
           <div 
             className="relative w-64 md:w-80 p-8 bg-primary rounded-2xl"
             style={{
-              backgroundImage: "linear-gradient(to right, rgba(0, 0, 0, 0.15) 1.5px, transparent 1.5px), linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 1.5px, transparent 1.5px)",
+              backgroundImage: "linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)",
               backgroundSize: "40px 40px"
             }}
           >
@@ -735,7 +735,6 @@ const ReviewsSection = () => {
 export default function About() {
   return (
     <div className="min-h-screen bg-white">
-      <HeroSection />
       <AboutSection />
       <GlobalSection />
       <HistorySection />
