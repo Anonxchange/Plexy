@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Asset paths from public folder
-const floatingMan = "/assets/IMG_3195.png";
+const floatingMan = "/assets/IMG_3193.png";
 const floatingWoman = "/assets/IMG_3196.png";
 const rocketImage = "/assets/IMG_3200.png";
 const creativeEyes = "/assets/IMG_3208.png";
