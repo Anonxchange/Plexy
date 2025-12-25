@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 
 // Asset paths from public folder
 const floatingMan = "/assets/IMG_3195.png";
-const floatingWoman = "/assets/IMG_3196.png";
+const floatingWoman = "/assets/IMG_3208.png";
 const rocketImage = "/assets/IMG_3216.png";
 const creativeEyes = "/assets/IMG_3200.png";
-const handsImage = "/assets/IMG_3215.png";
+const handsImage = "/assets/IMG_3196.png";
 const customerImage = "/assets/IMG_3193.png";
 
 const testimonials = [
