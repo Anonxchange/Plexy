@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { OfferCard, OfferCardProps } from "@/components/offer-card";
 import { Button } from "@/components/ui/button";
@@ -101,8 +102,35 @@ const getCountryFlag = (countryName: string | undefined | null): string => {
 export function P2P() {
   useSchema(p2pPageSchema, "p2p-page-schema");
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
-  const [selectedCrypto, setSelectedCrypto] = useState("BTC");
+  const [location] = useLocation();
+
+  // Parse URL parameters
+  const queryParams = useMemo(() => {
+    const search = window.location.search;
+    return new URLSearchParams(search);
+  }, [location]);
+
+  const initialTab = (queryParams.get("tab") as "buy" | "sell") || "buy";
+  const initialCrypto = queryParams.get("crypto") || "BTC";
+
+  const [activeTab, setActiveTab] = useState<"buy" | "sell">(initialTab);
+  const [selectedCrypto, setSelectedCrypto] = useState(initialCrypto.toUpperCase());
+
+  // Sync state with URL params when they change
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    const crypto = params.get("crypto");
+    
+    if (tab === "buy" || tab === "sell") {
+      setActiveTab(tab);
+    }
+    
+    if (crypto) {
+      const upperCrypto = crypto.toUpperCase();
+      setSelectedCrypto(upperCrypto);
+    }
+  }, [location]);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("");
   const [offerLocation, setOfferLocation] = useState("worldwide");
