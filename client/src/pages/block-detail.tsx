@@ -73,7 +73,7 @@ export default function BlockDetail() {
               </Button>
             </Link>
           </div>
-          <Card variant="default" className="border-destructive/50 bg-destructive/5">
+          <Card className="border-destructive/50 bg-destructive/5">
             <CardContent className="pt-6">
               <p className="text-destructive">{error || 'Block not found'}</p>
             </CardContent>
@@ -106,7 +106,7 @@ export default function BlockDetail() {
         </div>
 
         {/* Block Hash Card */}
-        <Card variant="default" className="mb-6">
+        <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div>
@@ -130,7 +130,7 @@ export default function BlockDetail() {
         {/* Stats Grid */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           {/* Height Card */}
-          <Card variant="default">
+          <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-2">BLOCK HEIGHT</p>
               <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function BlockDetail() {
           </Card>
 
           {/* Transactions Card */}
-          <Card variant="default">
+          <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-2">TRANSACTIONS</p>
               <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export default function BlockDetail() {
           </Card>
 
           {/* Size Card */}
-          <Card variant="default">
+          <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-2">BLOCK SIZE</p>
               <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export default function BlockDetail() {
           </Card>
 
           {/* Time Card */}
-          <Card variant="default">
+          <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-2">TIMESTAMP</p>
               <div className="flex items-center gap-2">
