@@ -48,7 +48,7 @@ const Header = () => {
           <Button variant="outline" size="icon" className="hidden md:flex">
             <Search className="h-4 w-4" />
           </Button>
-          <Button variant="hero" className="hidden md:flex">Connect Wallet</Button>
+          <Button variant="default" className="hidden md:flex">Connect Wallet</Button>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -71,7 +71,7 @@ const Header = () => {
                 </a>
               )
             ))}
-            <Button variant="hero" className="mt-2">Connect Wallet</Button>
+            <Button variant="default" className="mt-2">Connect Wallet</Button>
           </nav>
         </div>
       )}
@@ -138,6 +138,9 @@ export default function TransactionDetail() {
   const [error, setError] = useState('');
   const [currentBlockHeight, setCurrentBlockHeight] = useState<number>(0);
   const [showBTC, setShowBTC] = useState(false);
+  const [inputPage, setInputPage] = useState(1);
+  const [outputPage, setOutputPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -301,14 +304,37 @@ export default function TransactionDetail() {
         {/* Inputs Section */}
         {txData.inputs && txData.inputs.length > 0 && (
           <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-base">Inputs</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Inputs ({txData.inputs.length})</CardTitle>
+              {txData.inputs.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={inputPage === 1}
+                    onClick={() => setInputPage(prev => prev - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm font-medium">
+                    {inputPage} / {Math.ceil(txData.inputs.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={inputPage >= Math.ceil(txData.inputs.length / ITEMS_PER_PAGE)}
+                    onClick={() => setInputPage(prev => prev + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {txData.inputs.map((input: any, idx: number) => (
+                {txData.inputs.slice((inputPage - 1) * ITEMS_PER_PAGE, inputPage * ITEMS_PER_PAGE).map((input: any, idx: number) => (
                   <div key={idx} className="border-b border-border/50 pb-6 last:border-0">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Input {idx}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Input {(inputPage - 1) * ITEMS_PER_PAGE + idx}</p>
                     {input.prev_out?.addr ? (
                       <>
                         <code className="text-sm text-cyan-500 break-all font-mono mb-3 block">
@@ -335,16 +361,39 @@ export default function TransactionDetail() {
         {/* Outputs Section */}
         {txData.out && txData.out.length > 0 && (
           <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-base">Outputs</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Outputs ({txData.out.length})</CardTitle>
+              {txData.out.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={outputPage === 1}
+                    onClick={() => setOutputPage(prev => prev - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm font-medium">
+                    {outputPage} / {Math.ceil(txData.out.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={outputPage >= Math.ceil(txData.out.length / ITEMS_PER_PAGE)}
+                    onClick={() => setOutputPage(prev => prev + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {txData.out.map((output: any, idx: number) => (
+                {txData.out.slice((outputPage - 1) * ITEMS_PER_PAGE, outputPage * ITEMS_PER_PAGE).map((output: any, idx: number) => (
                   <div key={idx} className="border-b border-border/50 pb-6 last:border-0">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Output {idx}</p>
-                      {idx === 1 && <span className="inline-flex items-center gap-1.5 bg-yellow-500/20 text-yellow-500 px-2.5 py-1 rounded text-xs font-bold">CHANGE</span>}
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Output {(outputPage - 1) * ITEMS_PER_PAGE + idx}</p>
+                      {idx === 1 && outputPage === 1 && <span className="inline-flex items-center gap-1.5 bg-yellow-500/20 text-yellow-500 px-2.5 py-1 rounded text-xs font-bold">CHANGE</span>}
                     </div>
                     <code className="text-sm text-cyan-500 break-all font-mono mb-3 block">
                       {output.addr || 'OP_RETURN'}
