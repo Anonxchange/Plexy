@@ -33,20 +33,20 @@ export function AppFooter() {
           <div>
             <h3 className="font-semibold text-white mb-4">Trade crypto</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Buy Bitcoin</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Buy Ethereum</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Buy Tether</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Buy USDC</a></li>
+              <li><Link href="/p2p?tab=buy&crypto=BTC" className="text-sm hover:text-white transition-colors">Buy Bitcoin</Link></li>
+              <li><Link href="/p2p?tab=buy&crypto=ETH" className="text-sm hover:text-white transition-colors">Buy Ethereum</Link></li>
+              <li><Link href="/p2p?tab=buy&crypto=USDT" className="text-sm hover:text-white transition-colors">Buy Tether</Link></li>
+              <li><Link href="/p2p?tab=buy&crypto=USDC" className="text-sm hover:text-white transition-colors">Buy USDC</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-semibold text-white mb-4">Trade crypto</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Sell Bitcoin</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Sell Ethereum</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Sell Tether</a></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Sell USDC</a></li>
+              <li><Link href="/p2p?tab=sell&crypto=BTC" className="text-sm hover:text-white transition-colors">Sell Bitcoin</Link></li>
+              <li><Link href="/p2p?tab=sell&crypto=ETH" className="text-sm hover:text-white transition-colors">Sell Ethereum</Link></li>
+              <li><Link href="/p2p?tab=sell&crypto=USDT" className="text-sm hover:text-white transition-colors">Sell Tether</Link></li>
+              <li><Link href="/p2p?tab=sell&crypto=USDC" className="text-sm hover:text-white transition-colors">Sell USDC</Link></li>
             </ul>
           </div>
 
