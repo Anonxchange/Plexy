@@ -346,7 +346,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             
             <Link href="/explorer" onClick={handleLinkClick}>
               <Button
-                variant={location === "/medals" ? "secondary" : "ghost"}
+                variant={location === "/explorer" ? "secondary" : "ghost"}
                 className="w-full justify-start gap-2"
                 data-testid="nav-medals"
               >
