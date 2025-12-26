@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar } from "recharts";
 import { Link } from "wouter";
-import { getUnconfirmedTransactions, satoshiToBTC, formatTimestamp, formatHash } from "@/lib/blockchain-api";
+import { getUnconfirmedTransactions, satoshiToBTC, formatTimestamp, formatHash, getAverageTransactionsPerBlock, getTotalTransactionsData, getConfirmationsPerDayData, getAverageTransactionTimeData, getMempoolBytesPerFee } from "@/lib/blockchain-api";
 
 // ==================== DATA ====================
 
@@ -27,7 +27,7 @@ const tickerData = [
   { symbol: "ADA", name: "Cardano", price: "$0.56", change: -1.23 },
 ];
 
-const mempoolData = [
+const defaultMempoolData = [
   { time: "12:00", bytes: 1.2 },
   { time: "12:15", bytes: 1.8 },
   { time: "12:30", bytes: 2.1 },
@@ -40,7 +40,7 @@ const mempoolData = [
   { time: "14:15", bytes: 1.4 },
 ];
 
-const avgTransactionTimeData = [
+const defaultAvgTransactionTimeData = [
   { date: "Dec 18", time: 450 },
   { date: "Dec 19", time: 380 },
   { date: "Dec 20", time: 420 },
@@ -50,7 +50,7 @@ const avgTransactionTimeData = [
   { date: "Dec 24", time: 480 },
 ];
 
-const confirmationsPerDayData = [
+const defaultConfirmationsPerDayData = [
   { date: "Dec 27", confirmations: 580000 },
   { date: "Dec 28", confirmations: 620000 },
   { date: "Dec 29", confirmations: 590000 },
@@ -61,7 +61,7 @@ const confirmationsPerDayData = [
   { date: "Jan 03", confirmations: 650000 },
 ];
 
-const totalTransactionsData = [
+const defaultTotalTransactionsData = [
   { date: "Dec 27", txs: 1.15 },
   { date: "Dec 28", txs: 1.17 },
   { date: "Dec 29", txs: 1.19 },
@@ -72,7 +72,7 @@ const totalTransactionsData = [
   { date: "Jun 26", txs: 1.32 },
 ];
 
-const avgTxPerBlockData = [
+const defaultAvgTxPerBlockData: any[] = [
   { date: "Dec 27", avg: 3200 },
   { date: "Dec 28", avg: 3400 },
   { date: "Dec 29", avg: 3100 },
@@ -251,7 +251,65 @@ export default function Transactions() {
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
+  const [realAvgTxPerBlockData, setRealAvgTxPerBlockData] = useState<any[]>(defaultAvgTxPerBlockData);
+  const [realTotalTransactionsData, setRealTotalTransactionsData] = useState<any[]>(defaultTotalTransactionsData);
+  const [realConfirmationsPerDayData, setRealConfirmationsPerDayData] = useState<any[]>(defaultConfirmationsPerDayData);
+  const [realAvgTransactionTimeData, setRealAvgTransactionTimeData] = useState<any[]>(defaultAvgTransactionTimeData);
+  const [realMempoolData, setRealMempoolData] = useState<any[]>(defaultMempoolData);
   const ITEMS_PER_PAGE = 50;
+
+  // Fetch all real blockchain data
+  useEffect(() => {
+    const fetchAllRealData = async () => {
+      try {
+        // Fetch all data in parallel
+        const [avgTxPerBlock, totalTxs, confirmPerDay, avgTxTime, mempoolBytes] = await Promise.all([
+          getAverageTransactionsPerBlock(7),
+          getTotalTransactionsData(7),
+          getConfirmationsPerDayData(7),
+          getAverageTransactionTimeData(7),
+          getMempoolBytesPerFee()
+        ]);
+
+        // Update state with real data, fallback to defaults if empty
+        if (avgTxPerBlock && avgTxPerBlock.length > 0) {
+          setRealAvgTxPerBlockData(avgTxPerBlock.map(stat => ({
+            date: stat.date,
+            avg: stat.avgTransactionsPerBlock
+          })));
+        }
+
+        if (totalTxs && totalTxs.length > 0) {
+          setRealTotalTransactionsData(totalTxs.map(stat => ({
+            date: stat.date,
+            txs: stat.value
+          })));
+        }
+
+        if (confirmPerDay && confirmPerDay.length > 0) {
+          setRealConfirmationsPerDayData(confirmPerDay.map(stat => ({
+            date: stat.date,
+            confirmations: stat.value
+          })));
+        }
+
+        if (avgTxTime && avgTxTime.length > 0) {
+          setRealAvgTransactionTimeData(avgTxTime.map(stat => ({
+            date: stat.date,
+            time: stat.value
+          })));
+        }
+
+        if (mempoolBytes && mempoolBytes.length > 0) {
+          setRealMempoolData(mempoolBytes);
+        }
+      } catch (error) {
+        console.error('Error fetching blockchain data:', error);
+        // Falls back to mock data automatically
+      }
+    };
+    fetchAllRealData();
+  }, []);
 
   const fetchUnconfirmedTxs = async () => {
     setLoading(true);
@@ -265,6 +323,7 @@ export default function Transactions() {
             totalValue = tx.out.reduce((sum: number, output: any) => sum + (output.value || 0), 0);
           }
           return {
+            fullHash: tx.hash,
             hash: formatHash(tx.hash, 12),
             timestamp: formatTimestamp(tx.time),
             amount: satoshiToBTC(totalValue),
@@ -381,7 +440,7 @@ export default function Transactions() {
                 <CardContent className="pt-6">
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={mempoolData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <AreaChart data={realMempoolData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                         <defs>
                           <linearGradient id="colorMempool" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
@@ -411,7 +470,7 @@ export default function Transactions() {
                 <CardContent className="pt-6">
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={avgTransactionTimeData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <BarChart data={realAvgTransactionTimeData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
                         <YAxis stroke="hsl(var(--muted-foreground))" />
@@ -435,7 +494,7 @@ export default function Transactions() {
                 <CardContent className="pt-6">
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={confirmationsPerDayData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <AreaChart data={realConfirmationsPerDayData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                         <defs>
                           <linearGradient id="colorConfirm" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
@@ -465,7 +524,7 @@ export default function Transactions() {
                 <CardContent className="pt-6">
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={totalTransactionsData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <AreaChart data={realTotalTransactionsData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                         <defs>
                           <linearGradient id="colorTxs" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
@@ -495,7 +554,7 @@ export default function Transactions() {
                 <CardContent className="pt-6">
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={avgTxPerBlockData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <BarChart data={realAvgTxPerBlockData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
                         <YAxis stroke="hsl(var(--muted-foreground))" />
@@ -530,20 +589,22 @@ export default function Transactions() {
               </div>
               <div className="space-y-4">
                 {paginatedTransactions.map((tx, index) => (
-                  <Card key={index} className="hover:bg-secondary/50 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <code className="text-sm font-mono text-primary font-semibold">{tx.hash}</code>
-                            <span className="text-xs text-muted-foreground">{tx.timestamp}</span>
+                  <Link key={index} href={`/explorer/transaction/${tx.fullHash}`}>
+                    <Card className="hover:bg-secondary/50 transition-colors cursor-pointer">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <code className="text-sm font-mono text-primary font-semibold hover:text-cyan-400">{tx.hash}</code>
+                              <span className="text-xs text-muted-foreground">{tx.timestamp}</span>
+                            </div>
+                            <p className="text-lg font-bold text-foreground">{tx.amount} BTC</p>
+                            <p className="text-sm text-muted-foreground">${tx.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                           </div>
-                          <p className="text-lg font-bold text-foreground">{tx.amount} BTC</p>
-                          <p className="text-sm text-muted-foreground">${tx.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
 
