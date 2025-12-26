@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Blocks, Users, Activity, Github, Twitter, Database, Clock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis } from "recharts";
+import { PieChart, Pie, Cell, AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis, BarChart, Bar, Tooltip } from "recharts";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { getLatestBlocks, getStats, formatHash, formatAddress, formatTimestamp } from "@/lib/blockchain-api";
+import { Link } from "wouter";
 
 // ==================== DATA ====================
 
 const navLinks = [
-  { name: "Home", href: "#" },
-  { name: "Prices", href: "#prices" },
+  { name: "Home", href: "/explorer" },
+  { name: "Prices", href: "/explorer/prices" },
   { name: "Blocks", href: "#blocks" },
   { name: "Transactions", href: "#blocks" },
 ];
@@ -24,6 +26,16 @@ const tickerData = [
   { symbol: "BNB", name: "BNB", price: "$631.42", change: 0.85 },
   { symbol: "XRP", name: "XRP", price: "$1.87", change: 2.14 },
   { symbol: "ADA", name: "Cardano", price: "$0.56", change: -1.23 },
+];
+
+const walletCoins = [
+  { symbol: "BTC", name: "Bitcoin", price: 88696.00, change: 1.57 },
+  { symbol: "ETH", name: "Ethereum", price: 2970.09, change: 1.80 },
+  { symbol: "SOL", name: "Solana", price: 123.68, change: -0.42 },
+  { symbol: "BNB", name: "Binance Coin", price: 631.42, change: 0.85 },
+  { symbol: "TRX", name: "Tron", price: 0.28, change: -0.01 },
+  { symbol: "USDC", name: "USD Coin", price: 1.00, change: 0.02 },
+  { symbol: "USDT", name: "Tether", price: 1.00, change: 0.00 },
 ];
 
 const btcChartData = [
@@ -90,9 +102,17 @@ const Header = () => {
 
         <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
-            <a key={link.name} href={link.href} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary">
-              {link.name}
-            </a>
+            link.href.startsWith('/') ? (
+              <Link key={link.name} href={link.href}>
+                <span className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary cursor-pointer">
+                  {link.name}
+                </span>
+              </Link>
+            ) : (
+              <a key={link.name} href={link.href} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary">
+                {link.name}
+              </a>
+            )
           ))}
         </nav>
 
@@ -111,9 +131,17 @@ const Header = () => {
         <div className="md:hidden border-t border-border bg-card animate-slide-up">
           <nav className="container py-4 flex flex-col gap-2">
             {navLinks.map((link) => (
-              <a key={link.name} href={link.href} className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary" onClick={() => setMobileOpen(false)}>
-                {link.name}
-              </a>
+              link.href.startsWith('/') ? (
+                <Link key={link.name} href={link.href}>
+                  <span className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary block cursor-pointer" onClick={() => setMobileOpen(false)}>
+                    {link.name}
+                  </span>
+                </Link>
+              ) : (
+                <a key={link.name} href={link.href} className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary" onClick={() => setMobileOpen(false)}>
+                  {link.name}
+                </a>
+              )
             ))}
             <Button variant="hero" className="mt-2">Connect Wallet</Button>
           </nav>
@@ -295,7 +323,57 @@ const QuickStats = () => (
   </Card>
 );
 
-const LatestBlocksSection = () => (
+const PriceBarsChart = () => {
+  return (
+    <Card variant="default">
+      <CardHeader className="flex-row items-center justify-between">
+        <div>
+          <CardTitle>Prices</CardTitle>
+          <p className="text-sm text-muted-foreground">Market Cap</p>
+        </div>
+        <ArrowRight className="h-5 w-5 text-muted-foreground" />
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="space-y-0">
+          {walletCoins.map((coin) => {
+            const iconUrl = cryptoIconUrls[coin.symbol as keyof typeof cryptoIconUrls] || '';
+            const isPositive = coin.change >= 0;
+            return (
+              <div key={coin.symbol} className="flex items-center justify-between p-4 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
+                <div className="flex items-center gap-3 flex-1">
+                  {iconUrl ? (
+                    <img src={iconUrl} alt={coin.symbol} className="w-10 h-10 rounded-full" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/30 flex items-center justify-center text-sm font-bold">
+                      {coin.symbol[0]}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-semibold text-sm">{coin.name}</p>
+                    <p className="text-xs text-muted-foreground">{coin.symbol}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="font-bold text-sm min-w-24 text-right">
+                    {coin.price < 10 ? `$${coin.price.toFixed(2)}` : `$${coin.price.toLocaleString('en-US', {maximumFractionDigits: 2})}`}
+                  </span>
+                  <span className={`text-sm font-medium min-w-16 text-right ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                    {isPositive ? '+' : ''}{coin.change.toFixed(2)}%
+                  </span>
+                  <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center">
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const LatestBlocksSection = ({ blocks }: { blocks: any[] }) => (
   <Card variant="default" className="h-full">
     <CardHeader className="flex-row items-center justify-between border-b border-border">
       <div className="flex items-center gap-3">
@@ -308,15 +386,15 @@ const LatestBlocksSection = () => (
       <ArrowRight className="h-5 w-5 text-muted-foreground" />
     </CardHeader>
     <CardContent className="p-0">
-      {latestBlocks.map((block, index) => (
-        <div key={block.number} className="flex items-center gap-4 p-4 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
+      {blocks.map((block, index) => (
+        <div key={block.number || index} className="flex items-center gap-4 p-4 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-200 to-orange-100 flex items-center justify-center">
             <Box className="h-5 w-5 text-orange-600" />
           </div>
           <div className="flex-1">
             <p className="font-bold">{block.number}</p>
             <p className="text-sm text-muted-foreground">{block.date} • {block.time}</p>
-            <p className="text-sm text-muted-foreground">{block.txns.toLocaleString()} Txs • {block.size}</p>
+            <p className="text-sm text-muted-foreground">{typeof block.txns === 'number' ? block.txns.toLocaleString() : block.txns} Txs • {block.size}</p>
           </div>
         </div>
       ))}
@@ -324,7 +402,7 @@ const LatestBlocksSection = () => (
   </Card>
 );
 
-const LatestTransactionsSection = () => (
+const LatestTransactionsSection = ({ txns }: { txns: any[] }) => (
   <Card variant="default" className="h-full">
     <CardHeader className="flex-row items-center justify-between">
       <CardTitle className="flex items-center gap-2">
@@ -337,7 +415,7 @@ const LatestTransactionsSection = () => (
     </CardHeader>
     <CardContent>
       <div className="space-y-4">
-        {latestTxns.map((txn, index) => (
+        {txns.map((txn, index) => (
           <div key={txn.hash} className="flex items-center justify-between py-3 border-b border-border last:border-0">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
@@ -423,6 +501,45 @@ const Footer = () => (
 // ==================== MAIN PAGE ====================
 
 const Index = () => {
+  const [blocks, setBlocks] = useState(latestBlocks);
+  const [txns, setTxns] = useState(latestTxns);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBlockchainData = async () => {
+      try {
+        setLoading(true);
+        // Fetch latest blocks
+        const blocksData = await getLatestBlocks(5);
+        if (blocksData.length > 0) {
+          const formattedBlocks = blocksData.map((block: any) => ({
+            number: block.height || block.block_index || 0,
+            hash: block.hash || '',
+            date: new Date(block.time * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            time: new Date(block.time * 1000).toLocaleTimeString('en-GB'),
+            txns: block.n_tx || 0,
+            size: `${(block.size / 1024 / 1024).toFixed(2)} MB`,
+          }));
+          setBlocks(formattedBlocks.length > 0 ? formattedBlocks : latestBlocks);
+        }
+
+        // Fetch stats
+        const statsData = await getStats();
+        if (statsData) {
+          setStats(statsData);
+        }
+      } catch (error) {
+        console.error('Error fetching blockchain data:', error);
+        setBlocks(latestBlocks);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBlockchainData();
+  }, []);
+
   return (
     <>
       <style>{`
@@ -591,12 +708,19 @@ const Index = () => {
           </div>
         </section>
 
+        {/* Price List */}
+        <section className="py-8 bg-gray-100 dark:bg-gray-900">
+          <div className="container">
+            <PriceBarsChart />
+          </div>
+        </section>
+
         {/* Charts & Hashrate */}
         <section className="py-8 bg-gray-100 dark:bg-gray-900">
           <div className="container">
             <div className="grid lg:grid-cols-2 gap-6">
               <HashrateChart />
-              <LatestBlocksSection />
+              <LatestBlocksSection blocks={blocks} />
             </div>
           </div>
         </section>
@@ -620,7 +744,7 @@ const Index = () => {
         {/* Transactions */}
         <section id="blocks" className="py-8 bg-gray-100 dark:bg-gray-900">
           <div className="container">
-            <LatestTransactionsSection />
+            <LatestTransactionsSection txns={txns} />
           </div>
         </section>
       </main>
