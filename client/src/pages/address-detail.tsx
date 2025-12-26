@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Copy, TrendingUp, TrendingDown, Clock, DollarSign, Search, Menu, X, Github, Twitter, ArrowRight } from "lucide-react";
+import { Copy, TrendingUp, TrendingDown, Clock, DollarSign, Search, Menu, X, Github, Twitter, ArrowRight, ArrowDown, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAddress, formatAddress, satoshiToBTC, formatTimestamp, formatHash } from "@/lib/blockchain-api";
+import { getAddress, formatAddress, satoshiToBTC, formatTimestamp, formatHash, getLatestBlocks } from "@/lib/blockchain-api";
 import { Link } from "wouter";
 
 const navLinks = [
@@ -137,17 +137,30 @@ export default function AddressDetail() {
   const [addressData, setAddressData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentBlockHeight, setCurrentBlockHeight] = useState<number>(0);
+  const [showBTC, setShowBTC] = useState(false);
+  const itemsPerPage = 50;
 
   useEffect(() => {
-    const fetchAddress = async () => {
+    const fetchData = async () => {
       if (!address) return;
       try {
         setLoading(true);
-        const data = await getAddress(address);
-        if (data) {
-          setAddressData(data);
+        const [addressDataResult, blocksData] = await Promise.all([
+          getAddress(address, 0),
+          getLatestBlocks(1)
+        ]);
+        
+        if (addressDataResult) {
+          setAddressData(addressDataResult);
+          setCurrentPage(1);
         } else {
           setError('Address not found');
+        }
+        
+        if (blocksData && blocksData.length > 0) {
+          setCurrentBlockHeight(blocksData[0].height);
         }
       } catch (err: any) {
         setError(`Error loading address: ${err.message}`);
@@ -156,7 +169,7 @@ export default function AddressDetail() {
       }
     };
 
-    fetchAddress();
+    fetchData();
   }, [address]);
 
   const copyToClipboard = (text: string) => {
@@ -200,6 +213,11 @@ export default function AddressDetail() {
   const received = satoshiToBTC(addressData.total_received);
   const sent = satoshiToBTC(addressData.total_sent);
   const transactions = addressData.txs || [];
+  
+  const totalPages = Math.ceil(transactions.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedTransactions = transactions.slice(startIdx, endIdx);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
@@ -294,17 +312,17 @@ export default function AddressDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-border">
-                  <span className="text-muted-foreground">Address</span>
-                  <code className="font-mono text-sm">{formatAddress(addressData.address)}</code>
+                <div className="py-2 border-b border-border">
+                  <p className="text-xs text-muted-foreground mb-2">Address</p>
+                  <code className="font-mono text-xs sm:text-sm break-all text-cyan-500">{addressData.address}</code>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-border">
-                  <span className="text-muted-foreground">Hash160</span>
-                  <code className="font-mono text-sm">{addressData.hash160}</code>
+                <div className="py-2 border-b border-border">
+                  <p className="text-xs text-muted-foreground mb-2">Hash160</p>
+                  <code className="font-mono text-xs sm:text-sm break-all text-cyan-500">{addressData.hash160}</code>
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-muted-foreground">Balance</span>
-                  <span className="font-bold">{balance.toFixed(8)} BTC</span>
+                <div className="py-2 flex justify-between items-center gap-4">
+                  <span className="text-xs text-muted-foreground">Balance</span>
+                  <span className="font-bold text-sm flex-shrink-0">{balance.toFixed(8)} BTC</span>
                 </div>
               </div>
             </CardContent>
@@ -312,57 +330,120 @@ export default function AddressDetail() {
 
           {/* All Transactions */}
           {transactions.length > 0 && (
-            <Card variant="default" className="mb-6">
-              <CardHeader>
-                <CardTitle>Transactions ({transactions.length})</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border bg-secondary/50">
-                        <th className="text-left p-4 font-semibold text-sm">Transaction Hash</th>
-                        <th className="text-right p-4 font-semibold text-sm">Amount (BTC)</th>
-                        <th className="text-right p-4 font-semibold text-sm">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.slice(0, 50).map((tx: any, index: number) => {
-                        const txAmount = satoshiToBTC(tx.result || 0);
-                        const isIncoming = txAmount > 0;
-                        
-                        return (
-                          <tr key={tx.hash || index} className="border-b border-border hover:bg-secondary/50 transition-colors last:border-0">
-                            <td className="p-4">
-                              <code className="font-mono text-sm text-primary hover:underline cursor-pointer">
-                                {formatHash(tx.hash, 12)}
-                              </code>
-                            </td>
-                            <td className="p-4 text-right">
-                              <span className={`font-bold ${isIncoming ? 'text-success' : 'text-destructive'}`}>
-                                {isIncoming ? '+' : ''}{txAmount.toFixed(8)} BTC
+            <div className="mb-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold">
+                  {startIdx + 1} of {transactions.length} transactions
+                </h3>
+              </div>
+              
+              <div className="space-y-3">
+                {paginatedTransactions.map((tx: any, index: number) => {
+                  const txAmount = satoshiToBTC(tx.result || 0);
+                  const isIncoming = txAmount > 0;
+                  const outputs = (tx.out || []).filter((o: any) => o.addr);
+                  const displayedOutputs = outputs.slice(0, 4);
+                  const hasMoreOutputs = outputs.length > 4;
+                  const confirmations = tx.block_height && currentBlockHeight 
+                    ? Math.max(0, currentBlockHeight - tx.block_height + 1)
+                    : 0;
+                  
+                  return (
+                    <div key={tx.hash || index} className="border border-border rounded-lg overflow-hidden bg-card hover:border-primary/50 transition-colors">
+                      {/* Header - Transaction Hash and Date */}
+                      <div className="px-4 py-3 border-b border-border/50 bg-secondary/20">
+                        <div className="flex justify-between items-center gap-4">
+                          <Link href={`/explorer/transaction/${tx.hash}`}>
+                            <code className="font-mono text-xs sm:text-sm text-cyan-500 hover:text-cyan-400 cursor-pointer truncate">
+                              {formatHash(tx.hash, 16)}
+                            </code>
+                          </Link>
+                          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
+                            {tx.time ? formatTimestamp(tx.time) : 'Pending'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Body - Outputs (max 4) */}
+                      <div className="px-4 py-3 space-y-2">
+                        {displayedOutputs.map((output: any, idx: number) => {
+                          const outputValue = satoshiToBTC(output.value || 0);
+                          const isToThisAddress = output.addr === addressData.address;
+                          
+                          return (
+                            <div key={idx} className="flex items-center gap-3">
+                              <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <code className="text-xs text-cyan-500 block truncate">
+                                  {isToThisAddress ? output.addr : formatAddress(output.addr, 8)}
+                                </code>
+                              </div>
+                              <span className="text-xs sm:text-sm font-semibold text-foreground flex-shrink-0">
+                                ${(outputValue * 88696).toFixed(2)}
                               </span>
-                            </td>
-                            <td className="p-4 text-right">
-                              <span className="text-muted-foreground text-sm">
-                                {tx.time ? formatTimestamp(tx.time) : 'Pending'}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {transactions.length > 50 && (
-                  <div className="p-4 border-t border-border text-center">
-                    <p className="text-sm text-muted-foreground">
-                      Showing 50 of {transactions.length} transactions
-                    </p>
+                            </div>
+                          );
+                        })}
+                        {hasMoreOutputs && (
+                          <div className="text-xs text-muted-foreground italic pl-9">
+                            +{outputs.length - 4} more output{outputs.length - 4 !== 1 ? 's' : ''}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Footer - sat/vB and Confirmations + Amount */}
+                      <div className="px-4 py-3 border-t border-border/50 bg-secondary/20 flex items-center justify-between gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {tx.size ? Math.round((tx.fee || 0) / (tx.size / 8)) : 0} sat/vB
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 bg-green-500/20 text-green-500 px-2.5 py-1 rounded-full text-xs font-medium">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                            {confirmations} confirmed
+                          </span>
+                          <span 
+                            onClick={() => setShowBTC(!showBTC)}
+                            className={`text-xs sm:text-sm font-bold cursor-pointer hover:opacity-80 transition-opacity ${isIncoming ? 'text-green-500' : 'text-red-500'}`}
+                          >
+                            {isIncoming ? '+' : '-'}{showBTC ? `${Math.abs(txAmount).toFixed(8)} BTC` : `$${Math.abs(txAmount * 88696).toFixed(2)}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Pagination */}
+              <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 p-6 bg-secondary/20 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages} ({transactions.length} total transactions)
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="px-4 py-2 bg-secondary/50 rounded-lg text-sm font-medium">
+                    {currentPage} / {totalPages}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </main>
