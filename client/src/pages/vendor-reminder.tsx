@@ -1,40 +1,142 @@
-import { Store, ShieldAlert, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
+
+import { Store, ShieldAlert, CheckCircle2, AlertTriangle, AlertCircle, ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { Link } from "wouter";
+import { useState } from "react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export default function VendorReminder() {
+  const [openLegal, setOpenLegal] = useState(false);
+
+  const legalSections = [
+    {
+      category: "Agreements",
+      links: [
+        { text: "Terms & Conditions", href: "/terms" },
+        { text: "VIP Terms", href: "/vip-terms" },
+      ]
+    },
+    {
+      category: "Policies",
+      links: [
+        { text: "Privacy Policy", href: "/privacy" },
+        { text: "Cookie Policy", href: "/cookie-policy" },
+        { text: "AML Policy", href: "/aml-policy" },
+      ]
+    },
+    {
+      category: "Other",
+      links: [
+        { text: "Vendor Reminder", href: "/vendor-reminder" },
+      ]
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background py-20 px-4">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+      <section className="relative overflow-hidden bg-primary py-20 px-4">
+        <div className="absolute top-20 right-20 w-96 h-96 bg-primary-foreground/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary-foreground/5 rounded-full blur-3xl"></div>
         
         <div className="max-w-4xl mx-auto relative z-10 text-center">
           <div className="mb-8 flex justify-center">
-            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Store className="h-10 w-10 text-primary" />
+            <div className="w-20 h-20 rounded-2xl bg-primary-foreground/10 flex items-center justify-center">
+              <Store className="h-10 w-10 text-primary-foreground" />
             </div>
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="block text-foreground">Vendor Reminder</span>
+            <span className="block text-primary-foreground">Vendor Reminder</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
             Important guidelines and best practices for P2P vendors on Pexly
           </p>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-primary-foreground/80">
             Last Updated: November 2, 2024
           </p>
         </div>
       </section>
 
       {/* Content */}
-      <section className="py-16 px-4">
-        <div className="max-w-4xl mx-auto">
-          <Card className="p-8 md:p-12">
+      <section className="py-16 px-4 md:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Column 1: Legal Documents */}
+          <div className="md:col-span-1">
+            <div className="sticky top-24">
+              <Collapsible open={openLegal} onOpenChange={setOpenLegal} className="md:hidden">
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 rounded-lg border-2 border-primary/30 hover:border-primary/50 hover:bg-primary/5 transition-colors mb-6">
+                  <h3 className="text-lg font-semibold">Legal Documents</h3>
+                  <ChevronDown
+                    className={`h-5 w-5 text-primary transition-transform ${
+                      openLegal ? "rotate-180" : ""
+                    }`}
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mb-6">
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-4 mt-2">
+                    {legalSections.map((section) => (
+                      <div key={section.category}>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase">
+                          {section.category}
+                        </h4>
+                        <div className="space-y-2 ml-2">
+                          {section.links.map((link) => (
+                            <div key={link.text}>
+                              <Link
+                                to={link.href}
+                                className="text-foreground hover:text-primary hover:underline font-medium text-sm"
+                              >
+                                {link.text}
+                              </Link>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Desktop version - always visible */}
+              <div className="hidden md:block">
+                <div className="flex items-center justify-between w-full p-4 rounded-t-lg border-x-2 border-t-2 border-primary/30 bg-primary/5">
+                  <h3 className="text-lg font-semibold">Legal Documents</h3>
+                </div>
+                <div className="bg-muted/30 rounded-b-lg border-x-2 border-b-2 border-primary/30 p-4 space-y-6">
+                  {legalSections.map((section) => (
+                    <div key={section.category}>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase">
+                        {section.category}
+                      </h4>
+                      <div className="space-y-3 ml-2">
+                        {section.links.map((link) => (
+                          <div key={link.text}>
+                            <Link
+                              to={link.href}
+                              className="text-foreground hover:text-primary hover:underline font-medium text-sm block"
+                            >
+                              {link.text}
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Column 2: Content */}
+          <div className="md:col-span-2 space-y-8">
             <div className="space-y-8">
               <div>
                 <h2 className="text-2xl font-bold mb-4">Introduction</h2>
@@ -195,7 +297,7 @@ export default function VendorReminder() {
                 </p>
               </div>
 
-              <div className="bg-primary/10 p-6 rounded-lg border border-primary/20">
+              <div className="bg-muted/50 p-6 rounded-lg border-l-4 border-primary">
                 <div className="flex gap-3">
                   <AlertCircle className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
                   <div>
@@ -209,14 +311,8 @@ export default function VendorReminder() {
                   </div>
                 </div>
               </div>
-
-              <div className="bg-muted/30 p-6 rounded-lg">
-                <p className="text-sm text-muted-foreground italic">
-                  By continuing to operate as a vendor on Pexly, you acknowledge that you have read, understood, and agree to comply with these guidelines. Failure to adhere to these standards may result in penalties including but not limited to: warning notices, trading restrictions, account suspension, or permanent ban from the platform.
-                </p>
-              </div>
             </div>
-          </Card>
+          </div>
         </div>
       </section>
 
