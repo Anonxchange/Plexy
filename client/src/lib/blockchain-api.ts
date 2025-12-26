@@ -696,81 +696,7 @@ export async function getConfirmationsPerDayData(days: number = 7): Promise<Tran
 export async function getAverageTransactionTimeData(days: number = 7): Promise<TransactionMetrics[]> {
   try {
     if (currentBlockchain !== 'BTC') {
-      console.warn('Average transaction time is only available for Bitcoin');
-      return [];
-    }
-
-    const unconfirmedTxs = await getUnconfirmedTransactions();
-    
-    // Calculate average time from mempool data
-    if (unconfirmedTxs && unconfirmedTxs.length > 0) {
-      const now = Math.floor(Date.now() / 1000);
-      const stats: TransactionMetrics[] = [];
-      
-      // Group unconfirmed transactions by age buckets
-      const timeBuckets: { [key: string]: number[] } = {};
-      
-      unconfirmedTxs.forEach((tx: any) => {
-        const ageSeconds = now - tx.time;
-        const ageMinutes = Math.floor(ageSeconds / 60);
-        const bucket = `${ageMinutes}m`;
-        
-        if (!timeBuckets[bucket]) {
-          timeBuckets[bucket] = [];
-        }
-        timeBuckets[bucket].push(ageSeconds);
-      });
-      
-      // Calculate average times
-      Object.entries(timeBuckets).forEach(([bucket, times]) => {
-        const avgTime = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
-        stats.push({
-          date: bucket,
-          value: avgTime / 60 // Convert to minutes for display
-        });
-      });
-      
-      return stats.slice(-7); // Return last 7 data points
-    }
-    
-    // Fallback: estimate from block times
-    const blocksResponse = await fetch(`${BLOCKCHAIN_APIS.BTC}/latestblock?format=json`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (blocksResponse.ok) {
-      const blockData = await blocksResponse.json();
-      // Average block time is ~10 minutes, transactions are typically mined within 1-3 blocks
-      return [
-        { date: 'Latest', value: 10 }
-      ];
-    }
-    
-    return [];
-  } catch (error) {
-    console.error('Error fetching average transaction time:', error);
-    return [];
-  }
-}
-
-export interface MempoolData {
-  time: string;
-  bytes: number;
-}
-
-export interface BlockInfo {
-  number: number;
-  hash: string;
-  txCount: number;
-  fill: number;
-  time: number;
-  size: number;
-}
-
-export async function getRecentBlocks(limit: number = 50): Promise<BlockInfo[]> {
-  try {
-    if (currentBlockchain !== 'BTC') {
-      console.warn('Blocks data is only available for Bitcoin');
+      console.warn('Average transaction time data is only available for Bitcoin');
       return [];
     }
 
@@ -782,92 +708,44 @@ export async function getRecentBlocks(limit: number = 50): Promise<BlockInfo[]> 
     const latestBlockData = await latestBlockResponse.json();
     const currentHeight = latestBlockData.height;
     
-    const blocks: BlockInfo[] = [];
+    const blocksPerDay = 144;
+    const stats: TransactionMetrics[] = [];
     
-    // Fetch the latest blocks
-    for (let i = 0; i < Math.min(limit, 100); i++) {
-      const blockHeight = currentHeight - i;
-      if (blockHeight <= 0) break;
+    // Average block time for Bitcoin is 10 minutes = 600 seconds
+    const avgBlockTime = 600;
+    
+    for (let d = 0; d < days; d++) {
+      const date = new Date();
+      date.setDate(date.getDate() - d);
       
-      try {
-        const blockResponse = await fetch(
-          `${BLOCKCHAIN_APIS.BTC}/block-height/${blockHeight}?format=json`,
-          { headers: { 'Accept': 'application/json' } }
-        );
-        
-        if (blockResponse.ok) {
-          const blockData = await blockResponse.json();
-          if (blockData.blocks && blockData.blocks.length > 0) {
-            const block = blockData.blocks[0];
-            const txCount = block.tx ? block.tx.length : 0;
-            // Calculate fill percentage (max block size ~4MB, typical ~1.3MB)
-            const fill = (block.size / 4000000) * 100;
-            
-            blocks.push({
-              number: block.height,
-              hash: formatHash(block.hash, 8),
-              txCount: txCount,
-              fill: Math.min(fill, 100),
-              time: block.time,
-              size: block.size
-            });
-          }
-        }
-      } catch (e) {
-        console.warn(`Failed to fetch block ${blockHeight}`);
-      }
+      // Calculate average transaction time (simplified: avgBlockTime / 2 for mempool + block confirmation)
+      const avgTxTime = avgBlockTime / 2;
+      
+      stats.push({
+        date: `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`,
+        value: avgTxTime
+      });
     }
     
-    return blocks;
+    return stats.reverse();
   } catch (error) {
-    console.error('Error fetching recent blocks:', error);
+    console.error('Error fetching average transaction time data:', error);
     return [];
   }
 }
 
-export async function getMempoolBytesPerFee(): Promise<MempoolData[]> {
-  try {
-    if (currentBlockchain !== 'BTC') {
-      console.warn('Mempool data is only available for Bitcoin');
-      return [];
-    }
+// ============== MEMPOOL BYTES PER FEE (from mempool.space) ==============
 
-    const unconfirmedTxs = await getUnconfirmedTransactions();
-    console.log('Fetched unconfirmed txs for mempool:', unconfirmedTxs?.length || 0);
+export async function getMempoolBytesPerFee(): Promise<any> {
+  try {
+    const response = await fetch('https://mempool.space/api/v1/mempool', {
+      headers: { 'Accept': 'application/json' }
+    });
     
-    if (unconfirmedTxs && unconfirmedTxs.length > 0) {
-      const now = Math.floor(Date.now() / 1000);
-      const timeSlots: { [key: string]: number } = {};
-      
-      // Group transactions by time slots (every 15 minutes)
-      unconfirmedTxs.forEach((tx: any) => {
-        const ageSeconds = now - tx.time;
-        const ageMinutes = Math.floor(ageSeconds / 60);
-        const slotMinutes = Math.max(0, Math.floor(ageMinutes / 15) * 15);
-        const slot = slotMinutes === 0 ? 'Now' : `${slotMinutes}m ago`;
-        
-        const txBytes = tx.size || 250; // Estimate if not provided
-        timeSlots[slot] = (timeSlots[slot] || 0) + txBytes / 1000000; // Convert to MB
-      });
-      
-      // Convert to array and sort
-      const result = Object.entries(timeSlots)
-        .map(([time, bytes]) => ({ time, bytes }))
-        .sort((a, b) => {
-          const aMinutes = parseInt(a.time) || 0;
-          const bMinutes = parseInt(b.time) || 0;
-          return aMinutes - bMinutes;
-        })
-        .slice(-10); // Return last 10 slots
-      
-      console.log('Mempool real data:', result);
-      return result;
-    }
-    
-    console.log('No unconfirmed transactions found, returning empty mempool data');
-    return [];
+    if (!response.ok) throw new Error('Failed to fetch mempool bytes per fee');
+    return await response.json();
   } catch (error) {
     console.error('Error fetching mempool bytes per fee:', error);
-    return [];
+    return null;
   }
 }
