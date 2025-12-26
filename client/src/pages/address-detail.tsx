@@ -48,7 +48,7 @@ const Header = () => {
           <Button variant="outline" size="icon" className="hidden md:flex">
             <Search className="h-4 w-4" />
           </Button>
-          <Button variant="hero" className="hidden md:flex">Connect Wallet</Button>
+          <Button variant="default" className="hidden md:flex">Connect Wallet</Button>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -71,7 +71,7 @@ const Header = () => {
                 </a>
               )
             ))}
-            <Button variant="hero" className="mt-2">Connect Wallet</Button>
+            <Button variant="default" className="mt-2">Connect Wallet</Button>
           </nav>
         </div>
       )}
@@ -148,7 +148,7 @@ export default function AddressDetail() {
       try {
         setLoading(true);
         const [addressDataResult, blocksData] = await Promise.all([
-          getAddress(address, 0),
+          getAddress(address),
           getLatestBlocks(1)
         ]);
         
@@ -198,7 +198,7 @@ export default function AddressDetail() {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
         <Header />
         <div className="flex-1 container mx-auto px-4 py-8">
-          <Card variant="default" className="border-destructive/50 bg-destructive/5">
+          <Card className="border-destructive/50 bg-destructive/5">
             <CardContent className="pt-6">
               <p className="text-destructive">{error || 'Address not found'}</p>
             </CardContent>
@@ -232,7 +232,7 @@ export default function AddressDetail() {
           </div>
 
           {/* Address Hash Card */}
-          <Card variant="default" className="mb-6">
+          <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div>
@@ -255,7 +255,7 @@ export default function AddressDetail() {
 
           {/* Stats Grid */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <Card variant="default">
+            <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground mb-2">MAIN BALANCE</p>
                 <div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ export default function AddressDetail() {
               </CardContent>
             </Card>
 
-            <Card variant="default">
+            <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground mb-2">TRANSACTIONS</p>
                 <div className="flex items-center gap-2">
@@ -280,7 +280,7 @@ export default function AddressDetail() {
               </CardContent>
             </Card>
 
-            <Card variant="default">
+            <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground mb-2">TOTAL RECEIVED</p>
                 <div className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export default function AddressDetail() {
               </CardContent>
             </Card>
 
-            <Card variant="default">
+            <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground mb-2">TOTAL SENT</p>
                 <div className="flex items-center gap-2">
@@ -306,7 +306,7 @@ export default function AddressDetail() {
           </div>
 
           {/* Address Info */}
-          <Card variant="default" className="mb-6">
+          <Card className="mb-6">
             <CardHeader>
               <CardTitle>Address Information</CardTitle>
             </CardHeader>
