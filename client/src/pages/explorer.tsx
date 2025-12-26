@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
-import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Blocks, Users, Activity, Github, Twitter, Database, Clock, Zap } from "lucide-react";
+import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Blocks, Users, Activity, Github, Twitter, Database, Clock, Zap, Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis, BarChart, Bar, Tooltip } from "recharts";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
-import { getLatestBlocks, getStats, formatHash, formatAddress, formatTimestamp } from "@/lib/blockchain-api";
-import { Link } from "wouter";
+import { getLatestBlocks, getStats, formatHash, formatAddress, formatTimestamp, getBlock, getTransaction, getAddress } from "@/lib/blockchain-api";
+import { Link, useLocation } from "wouter";
 
 // ==================== DATA ====================
 
 const navLinks = [
   { name: "Home", href: "/explorer" },
   { name: "Prices", href: "/explorer/prices" },
-  { name: "Blocks", href: "#blocks" },
-  { name: "Transactions", href: "#blocks" },
+  { name: "Blocks", href: "/explorer/blocks" },
+  { name: "Transactions", href: "/explorer/transactions" },
 ];
 
 const tickerData = [
@@ -169,25 +169,101 @@ const PriceTicker = () => (
   </div>
 );
 
-const SearchBar = () => (
-  <section className="py-12 md:py-16 bg-gray-100 dark:bg-gray-900">
-    <div className="container">
-      <div className="max-w-3xl mx-auto text-center animate-fade-in">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-          Explore the <span className="gradient-text">Blockchain</span>
-        </h1>
-        <p className="text-lg text-muted-foreground mb-8">
-          Search transactions, addresses, blocks, and more across multiple chains
-        </p>
-        <div className="relative max-w-2xl mx-auto flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-md">
-          <Search className="h-5 w-5 text-muted-foreground ml-3" />
-          <Input placeholder="Search by Address / Txn Hash / Block / Token" className="flex-1 border-0 bg-transparent focus-visible:ring-0" />
-          <Button className="px-8 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">Search</Button>
+const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => void }) => {
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [location, navigate] = useLocation();
+
+  const detectSearchType = (input: string): 'block' | 'tx' | 'address' | 'unknown' => {
+    // Block hash or height (64 chars hex or numeric)
+    if (/^[0-9a-f]{64}$/i.test(input)) return 'block';
+    if (/^\d+$/.test(input) && input.length <= 10) return 'block';
+    // Transaction hash (64 chars hex)
+    if (/^[0-9a-f]{64}$/i.test(input)) return 'tx';
+    // Bitcoin address (26-35 chars starting with 1, 3, or bc1)
+    if (/^(1|3|bc1)[a-zA-Z0-9]{25,34}$/.test(input)) return 'address';
+    // 0x address (Ethereum style)
+    if (/^0x[a-fA-F0-9]{40}$/.test(input)) return 'address';
+    return 'unknown';
+  };
+
+  const handleSearch = async () => {
+    if (!query.trim()) {
+      setError('Please enter a search query');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    const searchType = detectSearchType(query.trim());
+
+    try {
+      if (searchType === 'block') {
+        const data = await getBlock(query.trim());
+        if (data) {
+          navigate(`/explorer/block/${query.trim()}`);
+        } else {
+          setError('Block not found');
+        }
+      } else if (searchType === 'tx') {
+        const data = await getTransaction(query.trim());
+        if (data) {
+          navigate(`/explorer/transaction/${query.trim()}`);
+        } else {
+          setError('Transaction not found');
+        }
+      } else if (searchType === 'address') {
+        const data = await getAddress(query.trim());
+        if (data) {
+          navigate(`/explorer/address/${query.trim()}`);
+        } else {
+          setError('Address not found');
+        }
+      } else {
+        setError('Invalid search query. Please enter a valid block hash, transaction hash, or address');
+      }
+    } catch (err: any) {
+      setError(`Search error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="py-12 md:py-16 bg-gray-100 dark:bg-gray-900">
+      <div className="container">
+        <div className="max-w-3xl mx-auto text-center animate-fade-in">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
+            Explore the <span className="gradient-text">Blockchain</span>
+          </h1>
+          <p className="text-lg text-muted-foreground mb-8">
+            Search transactions, addresses, blocks, and more across multiple chains
+          </p>
+          <div className="relative max-w-2xl mx-auto flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-md">
+            <Search className="h-5 w-5 text-muted-foreground ml-3" />
+            <Input
+              placeholder="Search by Address / Txn Hash / Block / Token"
+              className="flex-1 border-0 bg-transparent focus-visible:ring-0"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <Button
+              onClick={handleSearch}
+              disabled={loading}
+              className="px-8 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+            >
+              {loading ? <Loader className="h-4 w-4 animate-spin" /> : 'Search'}
+            </Button>
+          </div>
+          {error && <p className="text-destructive mt-3 text-sm">{error}</p>}
         </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 const CryptoCard = ({ name, symbol, price, change, changeValue, chartData, color, icon }: {
   name: string; symbol: string; price: string; change: string; changeValue: string;
@@ -402,6 +478,104 @@ const LatestBlocksSection = ({ blocks }: { blocks: any[] }) => (
   </Card>
 );
 
+const SearchResultsSection = ({ results }: { results: any }) => {
+  if (!results) return null;
+
+  return (
+    <Card variant="default" className="border-success/50 bg-success/5">
+      <CardHeader className="flex-row items-center justify-between border-b">
+        <CardTitle className="flex items-center gap-2">
+          <Database className="h-5 w-5 text-success" />
+          Search Results
+        </CardTitle>
+        <span className="text-sm font-medium text-success">{results.type}</span>
+      </CardHeader>
+      <CardContent className="pt-6">
+        {results.type === 'block' && results.data && (
+          <div className="space-y-3">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm text-muted-foreground">Block Hash</p>
+                <code className="text-primary font-mono text-sm break-all">{results.data.hash}</code>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Height</p>
+                <p className="font-bold text-lg">{results.data.height}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Transactions</p>
+                <p className="font-bold text-lg">{results.data.n_tx || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Size</p>
+                <p className="font-bold text-lg">{((results.data.size || 0) / 1024).toFixed(2)} KB</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Time</p>
+                <p className="font-bold text-sm">{formatTimestamp(results.data.time)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        {results.type === 'transaction' && results.data && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Transaction Hash</p>
+              <code className="text-primary font-mono text-sm break-all">{results.data.hash}</code>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Inputs</p>
+                <p className="font-bold text-lg">{results.data.inputs?.length || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Outputs</p>
+                <p className="font-bold text-lg">{results.data.out?.length || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="font-bold text-lg">{(results.data.total / 100000000).toFixed(8)} BTC</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Block Height</p>
+                <p className="font-bold text-lg">{results.data.block_height || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        {results.type === 'address' && results.data && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Address</p>
+              <code className="text-primary font-mono text-sm break-all">{results.data.address}</code>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Transactions</p>
+                <p className="font-bold text-lg">{results.data.n_tx || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Received</p>
+                <p className="font-bold text-lg">{(results.data.total_received / 100000000).toFixed(4)} BTC</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Sent</p>
+                <p className="font-bold text-lg">{(results.data.total_sent / 100000000).toFixed(4)} BTC</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Balance</p>
+                <p className="font-bold text-lg text-success">{(results.data.final_balance / 100000000).toFixed(8)} BTC</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 const LatestTransactionsSection = ({ txns }: { txns: any[] }) => (
   <Card variant="default" className="h-full">
     <CardHeader className="flex-row items-center justify-between">
@@ -505,6 +679,7 @@ const Index = () => {
   const [txns, setTxns] = useState(latestTxns);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [searchResults, setSearchResults] = useState<any>(null);
 
   useEffect(() => {
     const fetchBlockchainData = async () => {
@@ -675,7 +850,7 @@ const Index = () => {
         <Header />
         
         <main className="flex-1">
-        <SearchBar />
+        <SearchBar onSearchResults={setSearchResults} />
         <PriceTicker />
         
         {/* Quick Stats */}
@@ -740,6 +915,15 @@ const Index = () => {
             />
           </div>
         </section>
+
+        {/* Search Results */}
+        {searchResults && (
+          <section className="py-8 bg-gray-100 dark:bg-gray-900">
+            <div className="container">
+              <SearchResultsSection results={searchResults} />
+            </div>
+          </section>
+        )}
 
         {/* Transactions */}
         <section id="blocks" className="py-8 bg-gray-100 dark:bg-gray-900">
