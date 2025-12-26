@@ -91,13 +91,26 @@ import Analysis from "@/pages/analysis";
 import { OfferDetail } from "@/pages/offer-detail";
 import Explorer from "@/pages/explorer";
 import Prices from "@/pages/prices";
+import Blocks from "@/pages/blocks";
+import Transactions from "@/pages/transactions";
+import AddressDetail from "@/pages/address-detail";
+import TransactionDetail from "@/pages/transaction-detail";
+import BlockDetail from "@/pages/block-detail";
+import ExplorerAsset from "@/pages/explorer-asset";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/about" component={About} />
+      <Route path="/explorer" component={Explorer} />
       <Route path="/explorer/prices" component={Prices} />
+      <Route path="/explorer/blocks" component={Blocks} />
+      <Route path="/explorer/transactions" component={Transactions} />
+      <Route path="/explorer/address/:address" component={AddressDetail} />
+      <Route path="/explorer/transaction/:hash" component={TransactionDetail} />
+      <Route path="/explorer/block/:hash" component={BlockDetail} />
+      <Route path="/explorer/asset/:symbol" component={ExplorerAsset} />
       <Route path="/markets" component={MarketsPage} />
       <Route path="/submit-idea" component={SubmitIdea} />
       <Route path="/buy" component={Buy} />
@@ -175,7 +188,6 @@ function Router() {
       <Route path="/restricted-countries" component={RestrictedCountries} />
       <Route path="/vip-terms" component={VIPTerms} />
       <Route path="/vendor-reminder" component={VendorReminder} />
-      <Route path="/explorer" component={Explorer} />
       <Route component={NotFound} />
     </Switch>
   );
