@@ -232,15 +232,15 @@ const Index = () => {
   const fiatCurrency = fiatCurrencyMap[selectedFiatCurrency] || fiatCurrencyMap["NGN"];
   
   const getCryptoDisplay = (symbol: string) => {
-    const iconMap: Record<string, { icon: string; color: string }> = {
-      BTC: { icon: "₿", color: "#F7931A" },
-      ETH: { icon: "Ξ", color: "#627EEA" },
-      SOL: { icon: "◎", color: "#00D4AA" },
-      BNB: { icon: "⬡", color: "#F3BA2F" },
-      TRX: { icon: "Ⓣ", color: "#EB0029" },
-      USDC: { icon: "$", color: "#2775CA" },
-      USDT: { icon: "₮", color: "#26A69A" },
-      LTC: { icon: "Ł", color: "#345D9D" },
+    const iconMap: Record<string, { icon: string; color: string; realIcon?: string }> = {
+      BTC: { icon: "₿", color: "#F7931A", realIcon: cryptoIconUrls.BTC },
+      ETH: { icon: "Ξ", color: "#627EEA", realIcon: cryptoIconUrls.ETH },
+      SOL: { icon: "◎", color: "#00D4AA", realIcon: cryptoIconUrls.SOL },
+      BNB: { icon: "⬡", color: "#F3BA2F", realIcon: cryptoIconUrls.BNB },
+      TRX: { icon: "Ⓣ", color: "#EB0029", realIcon: cryptoIconUrls.TRX },
+      USDC: { icon: "$", color: "#2775CA", realIcon: cryptoIconUrls.USDC },
+      USDT: { icon: "₮", color: "#26A69A", realIcon: cryptoIconUrls.USDT },
+      LTC: { icon: "Ł", color: "#345D9D", realIcon: cryptoIconUrls.LTC },
     };
     return iconMap[symbol] || { icon: "$", color: "#999" };
   };
@@ -564,7 +564,7 @@ const Index = () => {
             <div className="max-w-7xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-bold mb-2">Deposit Local Fiat Currencies to Buy Crypto</h2>
               <p className="text-muted-foreground mb-10 text-lg">Convert cash into crypto. Deposit over 65+ fiat currencies to get started with crypto trading.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {features.map((feature, index) => (
                   <div key={index} className="bg-card border border-border rounded-2xl p-8 text-center animate-fade-in hover:shadow-md transition-shadow" style={{ animationDelay: `${index * 100}ms` }}>
                     <div className={`w-20 h-20 mx-auto mb-6 rounded-full ${feature.iconBg} flex items-center justify-center`}>
@@ -629,7 +629,11 @@ const Index = () => {
                     <tr className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">₮</div>
+                          {getCryptoDisplay("USDT").realIcon ? (
+                            <img src={getCryptoDisplay("USDT").realIcon} alt="USDT" className="w-8 h-8 rounded-full bg-primary/10" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">₮</div>
+                          )}
                           <div>
                             <p className="font-medium">USDT</p>
                             <p className="text-xs text-muted-foreground">Tether USDT</p>
@@ -646,7 +650,11 @@ const Index = () => {
                     <tr className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold">₿</div>
+                          {getCryptoDisplay("BTC").realIcon ? (
+                            <img src={getCryptoDisplay("BTC").realIcon} alt="BTC" className="w-8 h-8 rounded-full bg-orange-100" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold">₿</div>
+                          )}
                           <div>
                             <p className="font-medium">BTC</p>
                             <p className="text-xs text-muted-foreground">Bitcoin</p>
@@ -663,7 +671,11 @@ const Index = () => {
                     <tr className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white">Ξ</div>
+                          {getCryptoDisplay("ETH").realIcon ? (
+                            <img src={getCryptoDisplay("ETH").realIcon} alt="ETH" className="w-8 h-8 rounded-full" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white">Ξ</div>
+                          )}
                           <div>
                             <p className="font-medium">ETH</p>
                             <p className="text-xs text-muted-foreground">Ethereum</p>
@@ -680,10 +692,14 @@ const Index = () => {
                     <tr className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold">T</div>
+                          {getCryptoDisplay("TRX").realIcon ? (
+                            <img src={getCryptoDisplay("TRX").realIcon} alt="TRX" className="w-8 h-8 rounded-full" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-sm font-bold text-red-600">T</div>
+                          )}
                           <div>
-                            <p className="font-medium">TON</p>
-                            <p className="text-xs text-muted-foreground">TON</p>
+                            <p className="font-medium">TRX</p>
+                            <p className="text-xs text-muted-foreground">TRON</p>
                           </div>
                         </div>
                       </td>
@@ -697,7 +713,11 @@ const Index = () => {
                     <tr className="hover:bg-muted/30 transition-colors">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-sm font-bold">S</div>
+                          {getCryptoDisplay("SOL").realIcon ? (
+                            <img src={getCryptoDisplay("SOL").realIcon} alt="SOL" className="w-8 h-8 rounded-full" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-sm font-bold">S</div>
+                          )}
                           <div>
                             <p className="font-medium">SOL</p>
                             <p className="text-xs text-muted-foreground">Solana</p>
