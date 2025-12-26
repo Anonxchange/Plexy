@@ -198,7 +198,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     <Bitcoin className="h-5 w-5 flex-shrink-0" />
                     <div className="flex flex-col items-start">
                       <span className="text-sm font-semibold">Assets</span>
-                      <span className="text-xs text-muted-foreground leading-tight">My assets in the NoOnes wallet</span>
+                      <span className="text-xs text-muted-foreground leading-tight">My assets in the Pexly wallet</span>
                     </div>
                   </Button>
                 </Link>
