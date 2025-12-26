@@ -83,7 +83,7 @@ export default function ExplorerAsset() {
               Back
             </Button>
           </Link>
-          <Card variant="default" className="border-destructive/50 bg-destructive/5">
+          <Card className="border-destructive/50 bg-destructive/5">
             <CardContent className="pt-6">
               <p className="text-destructive">Asset not found</p>
             </CardContent>
@@ -121,7 +121,7 @@ export default function ExplorerAsset() {
           <p className="text-muted-foreground max-w-2xl">{asset.description}</p>
         </div>
 
-        <Card variant="default" className="mb-6">
+        <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div className="flex items-baseline gap-4">
@@ -144,7 +144,7 @@ export default function ExplorerAsset() {
           </CardContent>
         </Card>
 
-        <Card variant="default" className="mb-6">
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>24h Price Chart</CardTitle>
           </CardHeader>
@@ -170,28 +170,28 @@ export default function ExplorerAsset() {
         </Card>
 
         <div className="grid md:grid-cols-2 gap-6 mb-6">
-          <Card variant="default">
+          <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-2">MARKET CAPITALIZATION</p>
               <p className="text-2xl font-bold">${(asset.marketCap / 1000000000).toFixed(0)}B</p>
             </CardContent>
           </Card>
 
-          <Card variant="default">
+          <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-2">24H TRADING VOLUME</p>
               <p className="text-2xl font-bold">${(asset.volume24h / 1000000000).toFixed(1)}B</p>
             </CardContent>
           </Card>
 
-          <Card variant="default">
+          <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-2">CIRCULATING SUPPLY</p>
               <p className="text-2xl font-bold">{(asset.supply / 1000000).toFixed(0)}M {symbol}</p>
             </CardContent>
           </Card>
 
-          <Card variant="default">
+          <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-2">MAX SUPPLY</p>
               <p className="text-2xl font-bold">
