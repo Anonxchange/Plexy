@@ -120,7 +120,7 @@ const Header = () => {
           <Button variant="outline" size="icon" className="hidden md:flex">
             <Search className="h-4 w-4" />
           </Button>
-          <Button variant="hero" className="hidden md:flex">Connect Wallet</Button>
+          <Button variant="default" className="hidden md:flex">Connect Wallet</Button>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -143,7 +143,7 @@ const Header = () => {
                 </a>
               )
             ))}
-            <Button variant="hero" className="mt-2">Connect Wallet</Button>
+            <Button variant="default" className="mt-2">Connect Wallet</Button>
           </nav>
         </div>
       )}
@@ -175,17 +175,40 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
   const [error, setError] = useState('');
   const [location, navigate] = useLocation();
 
-  const detectSearchType = (input: string): 'block' | 'tx' | 'address' | 'unknown' => {
-    // Block hash or height (64 chars hex or numeric)
-    if (/^[0-9a-f]{64}$/i.test(input)) return 'block';
-    if (/^\d+$/.test(input) && input.length <= 10) return 'block';
+  const detectSearchType = (input: string): { type: 'block' | 'tx' | 'address' | 'unknown', chain?: string } => {
+    const trimmed = input.trim();
+    
+    // Bitcoin address (Legacy: 1..., SegWit: 3..., Bech32: bc1...)
+    if (/^(1|3|bc1)[a-zA-Z0-9]{25,62}$/.test(trimmed)) {
+      return { type: 'address', chain: 'BTC' };
+    }
+    
+    // Ethereum / BNB / Polygon / Tron (0x...)
+    if (/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
+      return { type: 'address', chain: 'ETH' };
+    }
+
+    // Solana address (base58, 32-44 chars)
+    if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed)) {
+      return { type: 'address', chain: 'SOL' };
+    }
+
+    // Tron address (starts with T, 34 chars)
+    if (/^T[a-zA-Z0-9]{33}$/.test(trimmed)) {
+      return { type: 'address', chain: 'TRON' };
+    }
+
     // Transaction hash (64 chars hex)
-    if (/^[0-9a-f]{64}$/i.test(input)) return 'tx';
-    // Bitcoin address (26-35 chars starting with 1, 3, or bc1)
-    if (/^(1|3|bc1)[a-zA-Z0-9]{25,34}$/.test(input)) return 'address';
-    // 0x address (Ethereum style)
-    if (/^0x[a-fA-F0-9]{40}$/.test(input)) return 'address';
-    return 'unknown';
+    if (/^[0-9a-f]{64}$/i.test(trimmed)) {
+      return { type: 'tx' };
+    }
+
+    // Block height (numeric)
+    if (/^\d+$/.test(trimmed) && trimmed.length <= 10) {
+      return { type: 'block', chain: 'BTC' };
+    }
+
+    return { type: 'unknown' };
   };
 
   const handleSearch = async () => {
@@ -197,7 +220,7 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
     setLoading(true);
     setError('');
 
-    const searchType = detectSearchType(query.trim());
+    const { type: searchType, chain } = detectSearchType(query.trim());
 
     try {
       if (searchType === 'block') {
@@ -215,11 +238,15 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
           setError('Transaction not found');
         }
       } else if (searchType === 'address') {
-        const data = await getAddress(query.trim());
-        if (data) {
-          navigate(`/explorer/address/${query.trim()}`);
+        if (chain === 'BTC') {
+          const data = await getAddress(query.trim());
+          if (data) {
+            navigate(`/explorer/address/${query.trim()}`);
+          } else {
+            setError('Address not found');
+          }
         } else {
-          setError('Address not found');
+          setError(`Detected ${chain} address. Pexly Explorer currently supports Bitcoin. Multi-chain support (ETH, SOL, BNB, TRON) is being integrated and will be available soon!`);
         }
       } else {
         setError('Invalid search query. Please enter a valid block hash, transaction hash, or address');
@@ -244,7 +271,7 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
           <div className="relative max-w-2xl mx-auto flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-md">
             <Search className="h-5 w-5 text-muted-foreground ml-3" />
             <Input
-              placeholder="Search by Address / Txn Hash / Block / Token"
+              placeholder="Search BTC, ETH, SOL, BNB, TRON addresses or Txn Hash"
               className="flex-1 border-0 bg-transparent focus-visible:ring-0"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -272,7 +299,7 @@ const CryptoCard = ({ name, symbol, price, change, changeValue, chartData, color
   const iconUrl = cryptoIconUrls[symbol as keyof typeof cryptoIconUrls] || '';
   
   return (
-    <Card variant="interactive" className="overflow-hidden">
+    <Card className="overflow-hidden hover:border-primary/50 transition-colors cursor-pointer">
       <CardContent className="p-0">
         <div className="p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -308,7 +335,7 @@ const CryptoCard = ({ name, symbol, price, change, changeValue, chartData, color
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="value" hide />
-              <YAxis hide domain="dataMin-5% dataMax+5%" />
+              <YAxis hide domain={['auto', 'auto']} />
               <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} fill={`url(#gradient-${symbol})`} />
             </AreaChart>
           </ResponsiveContainer>
@@ -319,7 +346,7 @@ const CryptoCard = ({ name, symbol, price, change, changeValue, chartData, color
 };
 
 const NetworkStatsGrid = () => (
-  <Card variant="default" className="overflow-hidden">
+  <Card className="overflow-hidden">
     <CardContent className="p-0">
       <div className="h-40 w-full bg-gradient-to-b from-success/20 to-transparent relative">
         <ResponsiveContainer width="100%" height="100%">
@@ -350,7 +377,7 @@ const NetworkStatsGrid = () => (
 );
 
 const HashrateChart = () => (
-  <Card variant="default">
+  <Card>
     <CardHeader className="flex-row items-center justify-between">
       <div>
         <CardTitle>Charts</CardTitle>
@@ -385,7 +412,7 @@ const HashrateChart = () => (
 );
 
 const QuickStats = () => (
-  <Card variant="flat" className="border-0 bg-transparent">
+  <Card className="border-0 bg-transparent shadow-none">
     <CardContent className="p-0 flex items-center gap-8">
       <div className="flex items-center gap-2">
         <span className="text-2xl font-bold">0.000028 BCH</span>
@@ -401,7 +428,7 @@ const QuickStats = () => (
 
 const PriceBarsChart = () => {
   return (
-    <Card variant="default">
+    <Card>
       <CardHeader className="flex-row items-center justify-between">
         <div>
           <CardTitle>Prices</CardTitle>
@@ -450,7 +477,7 @@ const PriceBarsChart = () => {
 };
 
 const LatestBlocksSection = ({ blocks }: { blocks: any[] }) => (
-  <Card variant="default" className="h-full">
+  <Card className="h-full">
     <CardHeader className="flex-row items-center justify-between border-b border-border">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">₿</div>
@@ -482,7 +509,7 @@ const SearchResultsSection = ({ results }: { results: any }) => {
   if (!results) return null;
 
   return (
-    <Card variant="default" className="border-success/50 bg-success/5">
+    <Card className="border-success/50 bg-success/5">
       <CardHeader className="flex-row items-center justify-between border-b">
         <CardTitle className="flex items-center gap-2">
           <Database className="h-5 w-5 text-success" />
@@ -577,7 +604,7 @@ const SearchResultsSection = ({ results }: { results: any }) => {
 };
 
 const LatestTransactionsSection = ({ txns }: { txns: any[] }) => (
-  <Card variant="default" className="h-full">
+  <Card className="h-full">
     <CardHeader className="flex-row items-center justify-between">
       <CardTitle className="flex items-center gap-2">
         <ArrowRightLeft className="h-5 w-5 text-primary" />
