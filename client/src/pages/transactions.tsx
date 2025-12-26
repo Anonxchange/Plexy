@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar } from "recharts";
 import { Link } from "wouter";
+import { getUnconfirmedTransactions, satoshiToBTC, formatTimestamp, formatHash } from "@/lib/blockchain-api";
 
 // ==================== DATA ====================
 
@@ -82,7 +83,7 @@ const avgTxPerBlockData = [
   { date: "Jun 26", avg: 3400 },
 ];
 
-const unconfirmedTransactions = [
+const defaultUnconfirmedTransactions = [
   { hash: "afd0-b359", timestamp: "12/26/2025, 14:47:23", amount: 0.00616443, value: 547.71 },
   { hash: "afd0-b359", timestamp: "12/26/2025, 14:47:24", amount: 0.00010935, value: 9.72 },
   { hash: "55ac-38ef", timestamp: "12/26/2025, 14:47:24", amount: 0.00871305, value: 774.16 },
@@ -246,6 +247,52 @@ const Footer = () => (
 // ==================== MAIN PAGE ====================
 
 export default function Transactions() {
+  const [unconfirmedTransactions, setUnconfirmedTransactions] = useState<any[]>(defaultUnconfirmedTransactions);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
+
+  const fetchUnconfirmedTxs = async () => {
+    setLoading(true);
+    try {
+      const data = await getUnconfirmedTransactions();
+      if (data && data.length > 0) {
+        const formatted = data.map((tx: any) => {
+          // Calculate total from outputs since inputs may not be fully available in mempool
+          let totalValue = 0;
+          if (tx.out && Array.isArray(tx.out)) {
+            totalValue = tx.out.reduce((sum: number, output: any) => sum + (output.value || 0), 0);
+          }
+          return {
+            hash: formatHash(tx.hash, 12),
+            timestamp: formatTimestamp(tx.time),
+            amount: satoshiToBTC(totalValue),
+            value: satoshiToBTC(totalValue) * 88696,
+          };
+        });
+        setUnconfirmedTransactions(formatted);
+        setLastUpdated(new Date());
+        setCurrentPage(1);
+      }
+    } catch (error) {
+      console.error('Error fetching unconfirmed transactions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnconfirmedTxs();
+    const interval = setInterval(fetchUnconfirmedTxs, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const totalPages = Math.ceil(unconfirmedTransactions.length / ITEMS_PER_PAGE);
+  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIdx = startIdx + ITEMS_PER_PAGE;
+  const paginatedTransactions = unconfirmedTransactions.slice(startIdx, endIdx);
+
   return (
     <>
       <style>{`
@@ -465,9 +512,24 @@ export default function Transactions() {
           {/* Unconfirmed Transactions */}
           <section className="py-8 bg-gray-100 dark:bg-gray-900">
             <div className="container">
-              <h2 className="text-2xl font-bold mb-6">Unconfirmed BTC Transactions</h2>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold">Unconfirmed BTC Transactions (Live Mempool)</h2>
+                  <p className="text-sm text-muted-foreground mt-1">Last updated: {lastUpdated.toLocaleTimeString()} • Total: {unconfirmedTransactions.length} pending</p>
+                </div>
+                <Button 
+                  onClick={fetchUnconfirmedTxs} 
+                  disabled={loading}
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  {loading ? 'Refreshing...' : 'Refresh Now'}
+                </Button>
+              </div>
               <div className="space-y-4">
-                {unconfirmedTransactions.map((tx, index) => (
+                {paginatedTransactions.map((tx, index) => (
                   <Card key={index} className="hover:bg-secondary/50 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -484,6 +546,36 @@ export default function Transactions() {
                   </Card>
                 ))}
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 p-6 bg-card rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {startIdx + 1} to {Math.min(endIdx, unconfirmedTransactions.length)} of {unconfirmedTransactions.length} transactions
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <div className="px-4 py-2 bg-secondary/50 rounded-lg text-sm font-medium">
+                      {currentPage} / {totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         </main>
