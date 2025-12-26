@@ -16,6 +16,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@marsidev/react-turnstile": "^1.4.0",
+    "@mempool/mempool.js": "^3.0.0",
     "@moonpay/moonpay-react": "^1.10.6",
     "@neondatabase/serverless": "^0.10.4",
     "@radix-ui/react-accordion": "^1.2.4",
