@@ -3,7 +3,7 @@ import { Copy, Search, Menu, X, Github, Twitter, CheckCircle2, Download } from "
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getTransaction, formatAddress, satoshiToBTC, formatTimestamp, getLatestBlocks } from "@/lib/blockchain-api";
+import { getTransaction, formatAddress, satoshiToBTC, formatTimestamp, getLatestBlocks, getBlockchain, weiToETH } from "@/lib/blockchain-api";
 import { Link } from "wouter";
 
 const navLinks = [
@@ -337,9 +337,11 @@ export default function TransactionDetail() {
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Input {(inputPage - 1) * ITEMS_PER_PAGE + idx}</p>
                     {input.prev_out?.addr ? (
                       <>
-                        <code className="text-sm text-cyan-500 break-all font-mono mb-3 block">
-                          {input.prev_out.addr}
-                        </code>
+                        <Link href={`/explorer/address/${input.prev_out.addr}`}>
+                          <code className="text-sm text-cyan-500 break-all font-mono mb-3 block hover:text-cyan-400 cursor-pointer transition-colors">
+                            {input.prev_out.addr}
+                          </code>
+                        </Link>
                         <p className="text-xs text-muted-foreground mb-1">Amount</p>
                         <p 
                           onClick={() => setShowBTC(!showBTC)}
@@ -395,9 +397,17 @@ export default function TransactionDetail() {
                       <p className="text-xs text-muted-foreground uppercase tracking-wide">Output {(outputPage - 1) * ITEMS_PER_PAGE + idx}</p>
                       {idx === 1 && outputPage === 1 && <span className="inline-flex items-center gap-1.5 bg-yellow-500/20 text-yellow-500 px-2.5 py-1 rounded text-xs font-bold">CHANGE</span>}
                     </div>
-                    <code className="text-sm text-cyan-500 break-all font-mono mb-3 block">
-                      {output.addr || 'OP_RETURN'}
-                    </code>
+                    {output.addr ? (
+                      <Link href={`/explorer/address/${output.addr}`}>
+                        <code className="text-sm text-cyan-500 break-all font-mono mb-3 block hover:text-cyan-400 cursor-pointer transition-colors">
+                          {output.addr}
+                        </code>
+                      </Link>
+                    ) : (
+                      <code className="text-sm text-cyan-500 break-all font-mono mb-3 block">
+                        OP_RETURN
+                      </code>
+                    )}
                     <p className="text-xs text-muted-foreground mb-1">Amount</p>
                     <p 
                       onClick={() => setShowBTC(!showBTC)}
