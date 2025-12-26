@@ -4,6 +4,16 @@
 
 const BLOCKCHAIN_API_BASE = 'https://blockchain.info';
 
+// Multi-chain API Base (using OKLink or similar public APIs for demo/multi-chain support)
+// For this explorer, we'll try to support multiple chains
+const MULTI_CHAIN_APIS = {
+  BTC: 'https://blockchain.info',
+  ETH: 'https://eth.blockscout.com/api',
+  SOL: 'https://api.mainnet-beta.solana.com',
+  BNB: 'https://bsc.blockscout.com/api',
+  TRON: 'https://api.trongrid.io'
+};
+
 export interface Block {
   hash: string;
   height: number;
