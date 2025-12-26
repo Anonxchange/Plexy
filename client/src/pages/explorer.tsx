@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis, BarChart, Bar, Tooltip } from "recharts";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
-import { getLatestBlocks, getStats, formatHash, formatAddress, formatTimestamp, getBlock, getTransaction, getAddress } from "@/lib/blockchain-api";
+import { getLatestBlocks, getStats, formatHash, formatAddress, formatTimestamp, getBlock, getTransaction, getAddress, setBlockchain, getBlockchain } from "@/lib/blockchain-api";
 import { Link, useLocation } from "wouter";
 
 // ==================== DATA ====================
@@ -89,6 +89,7 @@ const latestTxns = [
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const currentChain = getBlockchain();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/80 backdrop-blur-xl">
@@ -117,6 +118,31 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50">
+            <span className="text-xs text-muted-foreground">Chain:</span>
+            <Button
+              variant={currentChain === 'BTC' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => {
+                setBlockchain('BTC');
+                window.location.reload();
+              }}
+            >
+              BTC
+            </Button>
+            <Button
+              variant={currentChain === 'ETH' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => {
+                setBlockchain('ETH');
+                window.location.reload();
+              }}
+            >
+              ETH
+            </Button>
+          </div>
           <Button variant="outline" size="icon" className="hidden md:flex">
             <Search className="h-4 w-4" />
           </Button>
