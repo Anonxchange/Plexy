@@ -16,7 +16,7 @@ import {
   CreditCard,
   ShoppingBag,
   Banknote,
-  Trophy,
+  Globe,
   Users
 } from "lucide-react";
 import { SiApple, SiGoogleplay } from "react-icons/si";
@@ -344,14 +344,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               </CollapsibleContent>
             </Collapsible>
             
-            <Link href="/medals" onClick={handleLinkClick}>
+            <Link href="/explorer" onClick={handleLinkClick}>
               <Button
                 variant={location === "/medals" ? "secondary" : "ghost"}
                 className="w-full justify-start gap-2"
                 data-testid="nav-medals"
               >
-                <Trophy className="h-5 w-5" />
-                <span>Medals</span>
+                <Globe className="h-5 w-5" />
+                <span>Explorer</span>
               </Button>
             </Link>
           </nav>
