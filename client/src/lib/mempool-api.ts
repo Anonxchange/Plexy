@@ -294,24 +294,49 @@ export async function getMempool(): Promise<MempoolTransaction[]> {
 
 // ============== MEMPOOL TRANSACTIONS ==============
 
-export async function getMempoolTransactions(): Promise<MempoolTransaction[]> {
+export async function getMempoolTransactions(): Promise<any[]> {
   try {
-    const response = await fetch(`${MEMPOOL_API}/mempool/txids`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch mempool transactions');
-    const txids: string[] = await response.json();
-    
-    // Fetch first 10 transactions (to avoid overwhelming requests)
-    const transactions: MempoolTransaction[] = [];
-    for (const txid of txids.slice(0, 10)) {
-      const tx = await getTransaction(txid);
-      if (tx) transactions.push(tx);
+    // Try Blockchain.com first as requested
+    try {
+      const response = await fetch('https://api.blockchain.info/hathstats/v1/unconfirmed-transactions?cors=true');
+      if (response.ok) {
+        const data = await response.json();
+        if (data && Array.isArray(data.txs)) {
+          return data.txs.slice(0, 10).map((tx: any) => ({
+            txid: tx.hash,
+            hash: tx.hash,
+            from: tx.inputs?.[0]?.prev_out?.addr ? `${tx.inputs[0].prev_out.addr.substring(0, 4)}...` : "Unknown",
+            to: tx.out?.[0]?.addr ? `${tx.out[0].addr.substring(0, 4)}...` : "Multiple",
+            amount_btc: (tx.out?.reduce((s: number, o: any) => s + (o.value || 0), 0) / 100000000).toFixed(4),
+            time: tx.time,
+            status: { confirmed: false }
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn("Blockchain.info API failed:", e);
     }
-    return transactions;
+
+    // Secondary source: mempool.space (Highly reliable)
+    const mpResponse = await fetch('https://mempool.space/api/mempool/recent');
+    if (mpResponse.ok) {
+      const recentTxns = await mpResponse.json();
+      if (Array.isArray(recentTxns)) {
+        return recentTxns.slice(0, 10).map((tx: any) => ({
+          txid: tx.txid,
+          hash: tx.txid,
+          from: "Mempool",
+          to: "Multiple",
+          amount_btc: (tx.value / 100000000).toFixed(4),
+          time: tx.time || Math.floor(Date.now() / 1000),
+          status: { confirmed: false }
+        }));
+      }
+    }
+    
+    return [];
   } catch (error) {
-    console.error('Error fetching mempool transactions:', error);
+    console.error('Error in getMempoolTransactions:', error);
     return [];
   }
 }
