@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { BlockchainBlocks } from "@/components/blockchain-blocks";
-import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter, Loader } from "lucide-react";
+import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter, Loader, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +37,7 @@ const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         <a href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">P</span>
+            <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold">Pexly Explorer</span>
         </a>
@@ -252,64 +252,56 @@ const BlocksTable = () => {
 
   return (
     <div className="w-full flex flex-col">
-      <div className="text-xs text-muted-foreground p-2 bg-secondary/30 rounded mb-2">
+      <div className="text-xs text-muted-foreground p-3 bg-secondary/30 rounded mb-4">
         Showing {blocks.length} blocks • Last updated: {new Date().toLocaleTimeString()}
       </div>
-      <div className="overflow-y-auto max-h-96 border border-border rounded">
-        <table className="w-full">
-          <thead className="sticky top-0 z-10">
-            <tr className="border-b border-border bg-secondary/50">
-              <th className="text-left p-4 font-semibold text-sm">Number</th>
-              <th className="text-left p-4 font-semibold text-sm">Hash</th>
-              <th className="text-center p-4 font-semibold text-sm">Tx Count</th>
-              <th className="text-left p-4 font-semibold text-sm">Fill</th>
-            </tr>
-          </thead>
-          <tbody>
-            {blocks.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-muted-foreground">
-                  No blocks loaded yet
-                </td>
-              </tr>
-            ) : (
-              blocks.map((block, index) => (
-                <tr 
-                  key={`${block.number}-${index}`} 
-                  className="border-b border-border hover:bg-secondary/50 transition-colors last:border-0"
-                >
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                        <span className="text-xs font-bold text-orange-600 dark:text-orange-400">₿</span>
-                      </div>
-                      <span className="font-semibold text-foreground">#{block.number}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <code className="text-sm font-mono text-primary hover:underline cursor-pointer" title={block.fullHash}>
+      <div className="space-y-2">
+        {blocks.length === 0 ? (
+          <div className="p-6 text-center text-muted-foreground">
+            No blocks loaded yet
+          </div>
+        ) : (
+          blocks.map((block, index) => (
+            <div 
+              key={`${block.number}-${index}`} 
+              className="border border-border rounded-lg p-4 hover:bg-secondary/50 transition-colors bg-card"
+            >
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400">₿</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Block #{block.number}</p>
+                    <code className="text-xs font-mono text-primary/80" title={block.fullHash}>
                       {block.hash}
                     </code>
-                  </td>
-                  <td className="p-4 text-center">
-                    <span className="font-semibold text-foreground">{block.txCount}</span>
-                  </td>
-                  <td className="p-4">
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-6">
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Transactions</p>
+                    <p className="font-semibold text-foreground">{block.txCount}</p>
+                  </div>
+                  
+                  <div className="text-right min-w-32">
+                    <p className="text-xs text-muted-foreground mb-2">Block Fill</p>
                     <div>
                       <p className="text-sm font-semibold text-foreground mb-1">{block.fill.toFixed(2)}%</p>
-                      <div className="w-full bg-secondary rounded-full h-1 overflow-hidden">
+                      <div className="w-24 bg-secondary rounded-full h-2 overflow-hidden">
                         <div 
                           className="bg-orange-500 h-full rounded-full transition-all duration-300"
                           style={{ width: `${Math.min(block.fill, 100)}%` }}
                         />
                       </div>
                     </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
