@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { MarketInfo } from "@/components/market-info";
+import { PriceChart } from "@/components/price-chart";
 import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -273,162 +275,66 @@ export default function Prices() {
         
         <main className="flex-1">
           <PriceTicker />
-          <PricesHeader />
+          <div className="bg-gray-100 dark:bg-gray-900">
+            <MarketInfo />
+            <PriceChart />
+          </div>
           
-          {/* Chart Section */}
-          <section className="py-8 bg-gray-100 dark:bg-gray-900">
-            <div className="container">
-              <Card className="mb-8">
-                <CardHeader className="flex-row items-center justify-between border-b">
-                  <div>
-                    <CardTitle>Chart</CardTitle>
-                    <div className="flex items-center gap-6 mt-2">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Bitcoin</p>
-                        <p className="text-lg font-bold text-orange-500">18.664%</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Ethereum</p>
-                        <p className="text-lg font-bold text-blue-500">17.202%</p>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        October 29, 2025
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {["1D", "1W", "1M", "3M", "6M", "1Y"].map((period) => (
-                      <Button
-                        key={period}
-                        variant={timeframe === period ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setTimeframe(period)}
-                        className="w-12"
-                      >
-                        {period}
-                      </Button>
-                    ))}
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="w-full h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={priceChartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis 
-                          dataKey="date" 
-                          tick={{ fontSize: 12 }}
-                          stroke="hsl(var(--muted-foreground))"
-                        />
-                        <YAxis 
-                          yAxisId="left"
-                          stroke="hsl(var(--muted-foreground))"
-                          label={{ value: 'BTC Price', angle: -90, position: 'insideLeft' }}
-                        />
-                        <YAxis 
-                          yAxisId="right"
-                          orientation="right"
-                          stroke="hsl(var(--muted-foreground))"
-                          label={{ value: 'ETH Price', angle: 90, position: 'insideRight' }}
-                        />
-                        <Tooltip 
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
-                          }}
-                        />
-                        <Legend />
-                        <Line 
-                          yAxisId="left"
-                          type="monotone" 
-                          dataKey="BTC" 
-                          stroke="#f97316" 
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                        <Line 
-                          yAxisId="right"
-                          type="monotone" 
-                          dataKey="ETH" 
-                          stroke="#3b82f6" 
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-4 flex justify-between">
-                    <span>December 29, 2024</span>
-                    <span>June 29, 2025</span>
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
           {/* Prices Table */}
-          <section className="py-8 bg-gray-100 dark:bg-gray-900">
+          <section className="py-4 bg-gray-100 dark:bg-gray-900">
             <div className="container">
               <Card>
-                <CardHeader className="flex-row items-center justify-between border-b">
-                  <CardTitle>Top Cryptocurrencies</CardTitle>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                <CardHeader className="flex-row items-center justify-between border-b py-3">
+                  <CardTitle className="text-lg">Top Cryptocurrencies</CardTitle>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-border bg-secondary/50">
-                          <th className="text-left p-4 font-semibold text-sm">Name</th>
-                          <th className="text-right p-4 font-semibold text-sm">Price</th>
-                          <th className="text-right p-4 font-semibold text-sm">1d</th>
-                          <th className="text-right p-4 font-semibold text-sm">24h</th>
+                          <th className="text-left px-4 py-2 font-semibold text-xs uppercase tracking-wider">Name</th>
+                          <th className="text-right px-4 py-2 font-semibold text-xs uppercase tracking-wider">Price</th>
+                          <th className="text-right px-4 py-2 font-semibold text-xs uppercase tracking-wider">24h</th>
                         </tr>
                       </thead>
                       <tbody>
                         {pricesList.map((coin, index) => {
                           const iconUrl = cryptoIconUrls[coin.symbol as keyof typeof cryptoIconUrls] || '';
-                          const isPositive1d = coin.change1d >= 0;
                           const isPositive24h = coin.change24h >= 0;
 
                           return (
                             <tr 
                               key={coin.symbol} 
-                              className="border-b border-border hover:bg-secondary/50 transition-colors last:border-0"
+                              className="border-b border-border hover:bg-secondary/50 transition-colors last:border-0 cursor-pointer"
+                              onClick={() => window.location.href = `/explorer/asset/${coin.symbol.toLowerCase()}`}
                             >
-                              <td className="p-4">
+                              <td className="px-4 py-3">
                                 <div className="flex items-center gap-3">
                                   {iconUrl ? (
                                     <img src={iconUrl} alt={coin.symbol} className="w-8 h-8 rounded-full" />
                                   ) : (
-                                    <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center text-xs font-bold">
+                                    <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center text-[10px] font-bold">
                                       {coin.symbol[0]}
                                     </div>
                                   )}
                                   <div>
-                                    <p className="font-semibold">{coin.name}</p>
-                                    <p className="text-xs text-muted-foreground">{coin.symbol}</p>
+                                    <p className="font-semibold text-sm">{coin.name}</p>
+                                    <p className="text-[10px] text-muted-foreground">{coin.symbol}</p>
                                   </div>
                                 </div>
                               </td>
-                              <td className="p-4 text-right">
-                                <p className="font-bold">
+                              <td className="px-4 py-3 text-right">
+                                <p className="font-bold text-sm">
                                   ${coin.price.toLocaleString('en-US', { 
                                     minimumFractionDigits: 2, 
                                     maximumFractionDigits: 2 
                                   })}
                                 </p>
                               </td>
-                              <td className="p-4 text-right">
-                                <p className={`flex items-center justify-end gap-1 font-medium text-sm ${isPositive1d ? 'text-success' : 'text-destructive'}`}>
-                                  {isPositive1d ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                                  {isPositive1d ? '+' : ''}{coin.change1d.toFixed(2)}%
-                                </p>
-                              </td>
-                              <td className="p-4 text-right">
-                                <p className={`flex items-center justify-end gap-1 font-medium text-sm ${isPositive24h ? 'text-success' : 'text-destructive'}`}>
-                                  {isPositive24h ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                              <td className="px-4 py-3 text-right">
+                                <p className={`flex items-center justify-end gap-1 font-medium text-xs ${isPositive24h ? 'text-success' : 'text-destructive'}`}>
+                                  {isPositive24h ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                                   {isPositive24h ? '+' : ''}{coin.change24h.toFixed(2)}%
                                 </p>
                               </td>
