@@ -750,8 +750,8 @@ const Footer = () => (
         <div>
           <h4 className="font-semibold mb-4">Explore</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><a href="#" className="hover:text-foreground transition-colors">Blocks</a></li>
-            <li><a href="#" className="hover:text-foreground transition-colors">Transactions</a></li>
+            <li><a href="/explorer/block" className="hover:text-foreground transition-colors">Blocks</a></li>
+            <li><a href="/explorer/transaction" className="hover:text-foreground transition-colors">Transactions</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">Tokens</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">NFTs</a></li>
           </ul>
@@ -762,7 +762,7 @@ const Footer = () => (
             <li><a href="#" className="hover:text-foreground transition-colors">API Docs</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">Charts</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">Status</a></li>
-            <li><a href="#" className="hover:text-foreground transition-colors">Support</a></li>
+            <li><a href="/support" className="hover:text-foreground transition-colors">Support</a></li>
           </ul>
         </div>
         <div>
@@ -770,7 +770,7 @@ const Footer = () => (
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li><a href="/about" className="hover:text-foreground transition-colors">About</a></li>
             <li><a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a></li>
-            <li><a href="term" className="hover:text-foreground transition-colors">Terms</a></li>
+            <li><a href="/terms" className="hover:text-foreground transition-colors">Terms</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">Contact</a></li>
           </ul>
         </div>
