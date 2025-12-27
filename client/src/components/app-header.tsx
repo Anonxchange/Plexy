@@ -301,15 +301,15 @@ export function AppHeader() {
             </Button>
           </Link>
 
-          {/* Pexly Academy - No dropdown */}
-          <Link href="/pexly-academy">
+          {/* Pexly Explorer - No dropdown */}
+          <Link href="/explorer">
             <Button
-              variant={location === "/pexly-academy" ? "secondary" : "ghost"}
+              variant={location.startsWith("/explorer") ? "secondary" : "ghost"}
               size="sm"
               className="gap-2"
             >
               <Lightbulb className="h-4 w-4" />
-              Pexly Academy
+              Pexly Explorer
             </Button>
           </Link>
 
