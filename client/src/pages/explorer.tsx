@@ -522,7 +522,9 @@ const LatestBlocksSection = ({ blocks }: { blocks: any[] }) => (
             <Box className="h-5 w-5 text-orange-600" />
           </div>
           <div className="flex-1">
-            <p className="font-bold">{block.number}</p>
+            <Link href={`/explorer/block/${block.number || block.hash}`}>
+              <p className="font-bold text-primary hover:underline cursor-pointer">{block.number}</p>
+            </Link>
             <p className="text-sm text-muted-foreground">{block.date} • {block.time}</p>
             <p className="text-sm text-muted-foreground">{typeof block.txns === 'number' ? block.txns.toLocaleString() : block.txns} Txs • {block.size}</p>
           </div>
@@ -550,7 +552,9 @@ const SearchResultsSection = ({ results }: { results: any }) => {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm text-muted-foreground">Block Hash</p>
-                <code className="text-primary font-mono text-sm break-all">{results.data.hash}</code>
+                <Link href={`/explorer/block/${results.data.hash}`}>
+                  <code className="text-primary font-mono text-sm break-all hover:underline cursor-pointer">{results.data.hash}</code>
+                </Link>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -577,7 +581,9 @@ const SearchResultsSection = ({ results }: { results: any }) => {
           <div className="space-y-3">
             <div>
               <p className="text-sm text-muted-foreground">Transaction Hash</p>
-              <code className="text-primary font-mono text-sm break-all">{results.data.hash}</code>
+              <Link href={`/explorer/transaction/${results.data.hash}`}>
+                <code className="text-primary font-mono text-sm break-all hover:underline cursor-pointer">{results.data.hash}</code>
+              </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -707,7 +713,9 @@ const LatestTransactionsSection = ({ initialTxns = [] }: { initialTxns?: any[] }
                 <ArrowRightLeft className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-primary truncate max-w-[150px]">{tx.hash}</p>
+                <Link href={`/explorer/transaction/${tx.fullHash}`}>
+                  <p className="font-bold text-primary truncate max-w-[150px] hover:underline cursor-pointer">{tx.hash}</p>
+                </Link>
                 <p className="text-sm text-muted-foreground">{tx.time}</p>
               </div>
               <div className="text-right">
