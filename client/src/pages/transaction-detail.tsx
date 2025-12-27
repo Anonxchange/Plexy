@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, Search, Menu, X, Github, Twitter, CheckCircle2, Download } from "lucide-react";
+import { Copy, Search, Menu, X, Github, Twitter, CheckCircle2, Download, Zap } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,7 @@ const Header = () => {
         <Link href="/explorer">
           <a className="flex items-center gap-2 cursor-pointer">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">P</span>
+              <Zap className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold">Pexly Explorer</span>
           </a>
