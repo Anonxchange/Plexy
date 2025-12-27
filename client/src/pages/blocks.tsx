@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BlockchainBlocks } from "@/components/blockchain-blocks";
 import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter, Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,7 @@ const Header = () => {
           <Button variant="outline" size="icon" className="hidden md:flex">
             <Search className="h-4 w-4" />
           </Button>
-          <Button variant="hero" className="hidden md:flex">Connect Wallet</Button>
+          <Button variant="default" className="hidden md:flex">Connect Wallet</Button>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -84,7 +85,7 @@ const Header = () => {
                 </a>
               )
             ))}
-            <Button variant="hero" className="mt-2">Connect Wallet</Button>
+            <Button variant="default" className="mt-2">Connect Wallet</Button>
           </nav>
         </div>
       )}
@@ -111,13 +112,13 @@ const BlocksTicker = () => (
 );
 
 const BlocksHeader = () => (
-  <section className="py-12 md:py-16 bg-gray-100 dark:bg-gray-900">
+  <section className="py-2 bg-gray-100 dark:bg-gray-900">
     <div className="container">
       <div className="max-w-3xl mx-auto text-center animate-fade-in">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-1">
           <span className="gradient-text">Latest BTC Blocks</span>
         </h1>
-        <p className="text-lg text-muted-foreground mb-4">
+        <p className="text-base text-muted-foreground">
           View recent blockchain blocks and transaction activity
         </p>
       </div>
@@ -393,6 +394,7 @@ export default function Blocks() {
         
         <main className="flex-1">
           <BlocksTicker />
+          <BlockchainBlocks />
           <BlocksHeader />
           
           {/* Blocks Table */}
