@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis, BarChart, Bar, Tooltip } from "recharts";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { getLatestBlocks, getStats, formatHash, formatAddress, formatTimestamp, getBlock, getTransaction, getAddress, setBlockchain, getBlockchain } from "@/lib/blockchain-api";
+import { getMempoolTransactions, formatSats, satoshiToBTC } from "@/lib/mempool-api";
 import { Link, useLocation } from "wouter";
 
 // ==================== DATA ====================
@@ -629,49 +630,101 @@ const SearchResultsSection = ({ results }: { results: any }) => {
   );
 };
 
-const LatestTransactionsSection = ({ txns }: { txns: any[] }) => (
-  <Card className="h-full">
-    <CardHeader className="flex-row items-center justify-between">
-      <CardTitle className="flex items-center gap-2">
-        <ArrowRightLeft className="h-5 w-5 text-primary" />
-        Latest Transactions
-      </CardTitle>
-      <a href="#" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-        View all <ArrowRight className="h-4 w-4" />
-      </a>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-4">
-        {txns.map((txn, index) => (
-          <div key={txn.hash} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
-                <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <a href="#" className="font-semibold text-primary hover:underline">{txn.hash}</a>
-                <p className="text-sm text-muted-foreground">{txn.time}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm">
-                <span className="text-muted-foreground">From </span>
-                <a href="#" className="font-medium hover:text-primary transition-colors">{txn.from}</a>
-              </p>
-              <p className="text-sm">
-                <span className="text-muted-foreground">To </span>
-                <a href="#" className="font-medium hover:text-primary transition-colors">{txn.to}</a>
-              </p>
-            </div>
-            <div className="hidden sm:block">
-              <span className="inline-flex items-center rounded-lg border border-border bg-secondary px-3 py-1 text-sm font-medium">{txn.amount}</span>
-            </div>
+const LatestTransactionsSection = ({ initialTxns = [] }: { initialTxns?: any[] }) => {
+  const [txns, setTxns] = useState<any[]>(initialTxns);
+  const [loading, setLoading] = useState(initialTxns.length === 0);
+
+  useEffect(() => {
+    const fetchTxns = async () => {
+      try {
+        const rawTxns = await getMempoolTransactions();
+        if (rawTxns && rawTxns.length > 0) {
+          const transformed = rawTxns.map(tx => {
+            // Handle time difference (tx.time is now a difference in seconds or absolute timestamp)
+            let timeStr = "Just now";
+            const timeVal = Number(tx.time);
+            
+            if (!isNaN(timeVal) && timeVal > 0) {
+              if (timeVal > 1000000000) { // Absolute timestamp (seconds since epoch)
+                const now = Math.floor(Date.now() / 1000);
+                const diff = now - timeVal;
+                if (diff < 60) timeStr = `${Math.max(0, diff)} secs ago`;
+                else if (diff < 3600) timeStr = `${Math.floor(diff / 60)} mins ago`;
+                else timeStr = `${Math.floor(diff / 3600)} hrs ago`;
+              } else { // Likely a difference in seconds already
+                if (timeVal < 60) timeStr = `${timeVal} secs ago`;
+                else if (timeVal < 3600) timeStr = `${Math.floor(timeVal / 60)} mins ago`;
+                else timeStr = `${Math.floor(timeVal / 3600)} hrs ago`;
+              }
+            }
+
+            return {
+              hash: formatHash(tx.hash || tx.txid || "", 4),
+              fullHash: tx.hash || tx.txid || "",
+              from: tx.from || "Unknown",
+              to: tx.to || "Multiple Outputs",
+              amount: tx.amount_btc ? `${tx.amount_btc} BTC` : "0.0000 BTC",
+              time: timeStr
+            };
+          });
+          setTxns(transformed);
+        }
+      } catch (e) {
+        console.error("Failed to fetch latest txns:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTxns();
+    const interval = setInterval(fetchTxns, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Card className="h-full">
+      <CardHeader className="flex-row items-center justify-between border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
+            <ArrowRightLeft className="h-5 w-5" />
           </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
+          <div>
+            <CardTitle>Latest Transactions</CardTitle>
+            <p className="text-sm text-muted-foreground">Bitcoin</p>
+          </div>
+        </div>
+        <ArrowRight className="h-5 w-5 text-muted-foreground" />
+      </CardHeader>
+      <CardContent className="p-0">
+        {loading && txns.length === 0 ? (
+          <div className="p-8 flex justify-center">
+            <Loader className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          txns.map((tx, index) => (
+            <div key={tx.fullHash || index} className="flex items-center gap-4 p-4 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center">
+                <ArrowRightLeft className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-primary truncate max-w-[150px]">{tx.hash}</p>
+                <p className="text-sm text-muted-foreground">{tx.time}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-bold">{tx.amount}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span>From: {tx.from}</span>
+                  <ArrowRight className="h-3 w-3" />
+                  <span>To: {tx.to}</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const Footer = () => (
   <footer className="border-t border-border bg-card py-12">
@@ -981,7 +1034,7 @@ const Index = () => {
         {/* Transactions */}
         <section id="blocks" className="py-8 bg-gray-100 dark:bg-gray-900">
           <div className="container">
-            <LatestTransactionsSection txns={txns} />
+            <LatestTransactionsSection initialTxns={[]} />
           </div>
         </section>
       </main>
