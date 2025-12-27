@@ -447,7 +447,7 @@ const QuickStats = () => (
       </div>
       <div className="flex items-center gap-2">
         <span className="text-2xl font-bold">100</span>
-        <a href="#" className="text-muted-foreground text-sm underline hover:text-foreground">Pending Transactions</a>
+        <a href="/explorer/transaction" className="text-muted-foreground text-sm underline hover:text-foreground">Pending Transactions</a>
       </div>
     </CardContent>
   </Card>
