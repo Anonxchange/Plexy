@@ -43,22 +43,24 @@ export const BlockchainBlocks = () => {
 
   return (
     <section className="py-2">
-      <h2 className="text-base font-semibold text-foreground mb-1 px-4">Blockchain</h2>
+      <div className="container px-4">
+        <h2 className="text-base font-semibold text-foreground mb-1">Blockchain</h2>
+      </div>
       <div className="relative">
         {/* Connecting line behind blocks */}
-        <div className="absolute top-12 left-4 right-0 h-0.5 bg-border" />
+        <div className="absolute top-12 left-0 right-0 h-0.5 bg-border lg:mx-auto lg:max-w-[1400px]" />
         
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto px-4 pb-4 scrollbar-hide relative"
+          className="flex gap-4 overflow-x-auto px-4 pb-4 scrollbar-hide relative lg:justify-center lg:overflow-x-visible"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {displayBlocks.map((block) => (
             <div key={block.id} className="flex flex-col items-center flex-shrink-0">
               <div
-                className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${block.gradient} shadow-sm`}
+                className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${block.gradient} shadow-sm transition-transform hover:scale-105 duration-300`}
               />
-              <span className="mt-2 text-sm text-muted-foreground">{block.id}</span>
+              <span className="mt-2 text-sm text-muted-foreground font-mono">{block.id}</span>
             </div>
           ))}
         </div>
