@@ -96,7 +96,7 @@ const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         <a href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">P</span>
+            <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold">Pexly Explorer</span>
         </a>
