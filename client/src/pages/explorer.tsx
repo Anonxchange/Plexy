@@ -447,7 +447,7 @@ const QuickStats = () => (
       </div>
       <div className="flex items-center gap-2">
         <span className="text-2xl font-bold">100</span>
-        <a href="/explorer/transaction" className="text-muted-foreground text-sm underline hover:text-foreground">Pending Transactions</a>
+        <a href="/explorer/transactions" className="text-muted-foreground text-sm underline hover:text-foreground">Pending Transactions</a>
       </div>
     </CardContent>
   </Card>
@@ -750,8 +750,8 @@ const Footer = () => (
         <div>
           <h4 className="font-semibold mb-4">Explore</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><a href="/explorer/block" className="hover:text-foreground transition-colors">Blocks</a></li>
-            <li><a href="/explorer/transaction" className="hover:text-foreground transition-colors">Transactions</a></li>
+            <li><a href="/explorer/blocks" className="hover:text-foreground transition-colors">Blocks</a></li>
+            <li><a href="/explorer/transactions" className="hover:text-foreground transition-colors">Transactions</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">Tokens</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">NFTs</a></li>
           </ul>
