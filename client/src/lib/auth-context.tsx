@@ -14,6 +14,11 @@ interface PendingAuth {
   };
 }
 
+interface WalletImportState {
+  required: boolean;
+  expectedAddress: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -29,6 +34,8 @@ interface AuthContextType {
   cancelOTPVerification: () => Promise<void>;
   loading: boolean;
   pendingOTPVerification: PendingAuth | null;
+  walletImportState: WalletImportState;
+  setWalletImportState: (state: WalletImportState) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -277,7 +284,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(null);
   const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(null);
+  const [walletImportState, setWalletImportState] = useState<WalletImportState>({ required: false, expectedAddress: null });
   const supabase = createClient();
+
+  const checkWalletOnAuth = useCallback(async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('wallet_address')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile?.wallet_address) {
+        const hasLocal = nonCustodialWalletManager.hasLocalWallet(profile.wallet_address);
+        if (!hasLocal) {
+          setWalletImportState({ required: true, expectedAddress: profile.wallet_address });
+        }
+      }
+    } catch (error) {
+      console.error("Error checking wallet on auth:", error);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     if (window.location.pathname === '/verify-email') {
@@ -290,6 +317,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         await trackDevice(supabase, session.user.id);
+        await checkWalletOnAuth(session.user.id);
         presenceTracker.startTracking(session.user.id);
       }
 
@@ -339,14 +367,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ? 'https://pexly.app' 
       : window.location.origin;
     const redirectUrl = `${baseUrl}/verify-email`;
-    const { error } = await supabase.auth.signUp({
+    
+    // Check if we have a local wallet to associate during signup
+    const localWallets = nonCustodialWalletManager.getNonCustodialWallets();
+    const walletAddress = localWallets.length > 0 ? localWallets[0].address : undefined;
+
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: { 
         emailRedirectTo: redirectUrl,
         captchaToken,
+        data: {
+          wallet_address: walletAddress
+        }
       },
     });
+
+    if (!error && data.user && walletAddress) {
+      await supabase.from('user_profiles').upsert({
+        id: data.user.id,
+        wallet_address: walletAddress
+      }, { onConflict: 'id' });
+    }
+
     return { error };
   };
 
@@ -393,6 +437,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, session, signUp, signIn, signOut, 
       completeOTPVerification, cancelOTPVerification,
       loading, pendingOTPVerification,
+      walletImportState, setWalletImportState,
     }}>
       {children}
     </AuthContext.Provider>
