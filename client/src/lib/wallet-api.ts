@@ -1,3 +1,4 @@
+import { nonCustodialWalletManager } from "./non-custodial-wallet";
 import { createClient } from "./supabase";
 
 export interface Wallet {
@@ -42,11 +43,27 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
 
   if (error) throw error;
   
-  return (data || []).map(wallet => ({
+  const custodialWallets: Wallet[] = (data || []).map(wallet => ({
     ...wallet,
     balance: typeof wallet.balance === 'string' ? parseFloat(wallet.balance) : wallet.balance,
     locked_balance: typeof wallet.locked_balance === 'string' ? parseFloat(wallet.locked_balance) : wallet.locked_balance,
   }));
+
+  // Fetch non-custodial wallets from local storage
+  const localWallets = nonCustodialWalletManager.getNonCustodialWallets();
+  const nonCustodialWallets: Wallet[] = localWallets.map(w => ({
+    id: w.id,
+    user_id: userId,
+    crypto_symbol: w.chainId === 'ethereum' ? 'ETH' : w.chainId.toUpperCase(),
+    balance: 0,
+    locked_balance: 0,
+    deposit_address: w.address,
+    created_at: w.createdAt,
+    updated_at: w.createdAt,
+    isNonCustodial: true
+  }));
+
+  return [...custodialWallets, ...nonCustodialWallets];
 }
 
 export async function getWalletBalance(userId: string, cryptoSymbol: string): Promise<Wallet | null> {
