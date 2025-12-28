@@ -1855,80 +1855,7 @@ export default function AccountSettings() {
           </p>
         </div>
 
-        {/* Non-Custodial Wallet Backup */}
-        <Card className="border-destructive/20 shadow-sm overflow-hidden mb-6">
-          <CardHeader className="bg-destructive/5 border-b border-destructive/10 py-4 px-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                <Shield className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-bold">Wallet Security</CardTitle>
-                <p className="text-sm text-muted-foreground">Manage your non-custodial wallet recovery phrase</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-6">
-              <div className="bg-muted/50 rounded-xl p-4 border border-border">
-                <h4 className="font-semibold mb-2">Backup Recovery Phrase</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Your recovery phrase is the only way to restore your wallet if you lose access to this device. 
-                  Pexly does not store it.
-                </p>
-                
-                {!showBackupPhrase ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="backup-password">Wallet Password</Label>
-                      <Input
-                        id="backup-password"
-                        type="password"
-                        placeholder="Enter your wallet password to reveal phrase"
-                        value={backupPassword}
-                        onChange={(e) => setBackupPassword(e.target.value)}
-                        className="max-w-md"
-                      />
-                    </div>
-                    <Button 
-                      onClick={handleShowBackupPhrase} 
-                      disabled={isVerifyingBackupPassword || !backupPassword}
-                      variant="outline"
-                    >
-                      {isVerifyingBackupPassword ? "Verifying..." : "Show Recovery Phrase"}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4 animate-in fade-in duration-500">
-                    <div className="p-4 bg-background border border-destructive/30 rounded-lg font-mono text-sm leading-relaxed text-destructive break-words">
-                      {mnemonic}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setShowBackupPhrase(false)}
-                      >
-                        Hide Phrase
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          navigator.clipboard.writeText(mnemonic);
-                          toast({ title: "Copied to clipboard" });
-                        }}
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Non-Custodial Wallet Backup removed from here */}
 
         {/* Two-Factor Authentication */}
         <div>
@@ -2311,44 +2238,7 @@ export default function AccountSettings() {
           </Card>
         </div>
 
-        {/* Withdrawal Whitelist */}
-        <div>
-          <h4 className="text-lg font-semibold mb-4">Withdrawal Whitelist</h4>
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="font-medium">Enable Withdrawal Whitelist</p>
-                  <p className="text-sm text-muted-foreground">
-                    Only allow withdrawals to pre-approved addresses. Highly recommended for increased security.
-                  </p>
-                </div>
-                <Switch
-                  checked={whitelistEnabled}
-                  onCheckedChange={toggleWhitelist}
-                  disabled={loadingWhitelist}
-                />
-              </div>
-              {whitelistEnabled && (
-                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <div className="flex gap-2 items-center">
-                    <Info className="h-5 w-5 text-yellow-500 shrink-0" />
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      Your withdrawal whitelist is currently enabled. Ensure you have added all necessary addresses.
-                    </p>
-                  </div>
-                </div>
-              )}
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowWithdrawalWhitelistDialog(true)}
-              >
-                Manage Whitelisted Addresses
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Withdrawal Whitelist removed */}
         <WithdrawalWhitelistDialog
           open={showWithdrawalWhitelistDialog}
           onOpenChange={setShowWithdrawalWhitelistDialog}
@@ -2426,22 +2316,83 @@ export default function AccountSettings() {
           onOpenChange={setShowIPWhitelistDialog}
         />
 
+        {/* Non-Custodial Wallet Backup */}
+        <Card className="border-destructive/20 shadow-sm overflow-hidden">
+          <CardHeader className="bg-destructive/5 border-b border-destructive/10 py-4 px-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">Wallet Security</CardTitle>
+                <p className="text-sm text-muted-foreground">Manage your non-custodial wallet recovery phrase</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-6">
+              <div className="bg-muted/50 rounded-xl p-4 border border-border">
+                <h4 className="font-semibold mb-2">Backup Recovery Phrase</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Your recovery phrase is the only way to restore your wallet if you lose access to this device. 
+                  Pexly does not store it.
+                </p>
+                
+                {!showBackupPhrase ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="backup-password">Wallet Password</Label>
+                      <Input
+                        id="backup-password"
+                        type="password"
+                        placeholder="Enter your wallet password to reveal phrase"
+                        value={backupPassword}
+                        onChange={(e) => setBackupPassword(e.target.value)}
+                        className="max-w-md"
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleShowBackupPhrase} 
+                      disabled={isVerifyingBackupPassword || !backupPassword}
+                      variant="outline"
+                    >
+                      {isVerifyingBackupPassword ? "Verifying..." : "Show Recovery Phrase"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in duration-500">
+                    <div className="p-4 bg-background border border-destructive/30 rounded-lg font-mono text-sm leading-relaxed text-destructive break-words">
+                      {mnemonic}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setShowBackupPhrase(false)}
+                      >
+                        Hide Phrase
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          navigator.clipboard.writeText(mnemonic);
+                          toast({ title: "Copied to clipboard" });
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Hardware Security Keys */}
-        {user?.id && (
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Hardware Security Keys</h4>
-            <HardwareKeySetup userId={user.id} />
-          </div>
-        )}
 
-        {/* Passkeys */}
-        {user?.id && user?.email && (
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Passkeys</h4>
-            <PasskeySetup userId={user.id} userEmail={user.email} />
-          </div>
-        )}
+        {/* Passkeys removed */}
 
         {/* Password Management */}
         <div>
@@ -2549,26 +2500,7 @@ export default function AccountSettings() {
           </Card>
         </div>
 
-        {/* Active Sessions */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold">Active Login Sessions</h4>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setActiveSection("devices")}
-            >
-              View All Devices
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">
-                You can view and manage all devices logged into your account in the Devices section
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Active Sessions removed */}
 
         {/* Delete Account Section */}
         <div>
