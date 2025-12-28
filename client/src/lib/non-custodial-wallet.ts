@@ -61,10 +61,11 @@ class NonCustodialWalletManager {
   }
 
   /**
-   * Import existing non-custodial wallet from private key or mnemonic (stored in browser only)
+   * Import existing non-custodial wallet and verify against expected address
    */
-  async importNonCustodialWallet(
+  async importAndVerifyWallet(
     importData: string,
+    expectedAddress: string,
     chainId: string = "ethereum",
     userPassword: string,
     isMnemonic: boolean = false
@@ -72,34 +73,50 @@ class NonCustodialWalletManager {
     let privateKey: string;
     let address: string;
 
-    if (isMnemonic) {
-      const seed = await bip39.mnemonicToSeed(importData);
-      const wallet = ethers.HDNodeWallet.fromSeed(seed);
-      privateKey = wallet.privateKey;
-      address = wallet.address;
-    } else {
-      const wallet = new ethers.Wallet(importData);
-      privateKey = importData;
-      address = wallet.address;
-    }
+    try {
+      if (isMnemonic) {
+        const seed = await bip39.mnemonicToSeed(importData);
+        const wallet = ethers.HDNodeWallet.fromSeed(seed);
+        privateKey = wallet.privateKey;
+        address = wallet.address;
+      } else {
+        const wallet = new ethers.Wallet(importData);
+        privateKey = importData;
+        address = wallet.address;
+      }
 
-    const encryptedPrivateKey = this.encryptPrivateKey(privateKey, userPassword);
-    
-    const newWallet: NonCustodialWallet = {
-      id: this.generateId(),
-      chainId,
-      address,
-      walletType: "ethereum",
-      encryptedPrivateKey,
-      createdAt: new Date().toISOString(),
-      isActive: true,
-      isBackedUp: false,
-    };
-    
-    // Store in localStorage
-    this.saveWalletsToStorage([...this.getWalletsFromStorage(), newWallet]);
-    
-    return { wallet: newWallet };
+      // Allow matching against any derived address if multiple exist (though ethers usually derived 1)
+      // For now, we just verify the one we derived
+      if (address.toLowerCase() !== expectedAddress.toLowerCase()) {
+        throw new Error(`Imported address ${address} does not match expected address ${expectedAddress}`);
+      }
+
+      const encryptedPrivateKey = this.encryptPrivateKey(privateKey, userPassword);
+      
+      const newWallet: NonCustodialWallet = {
+        id: this.generateId(),
+        chainId,
+        address,
+        walletType: "ethereum",
+        encryptedPrivateKey,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+        isBackedUp: true,
+      };
+      
+      this.saveWalletsToStorage([...this.getWalletsFromStorage(), newWallet]);
+      return { wallet: newWallet };
+    } catch (error) {
+      throw error instanceof Error ? error : new Error("Failed to verify wallet");
+    }
+  }
+
+  /**
+   * Check if a wallet exists locally for a given address
+   */
+  hasLocalWallet(address: string): boolean {
+    const wallets = this.getWalletsFromStorage();
+    return wallets.some(w => w.address.toLowerCase() === address.toLowerCase());
   }
 
   /**
@@ -141,7 +158,7 @@ class NonCustodialWalletManager {
       const tx = {
         to: transactionData.to,
         value: ethers.parseEther(transactionData.amount.toString()),
-        gasLimit: 21000n,
+        gasLimit: BigInt(21000),
         gasPrice: ethers.parseUnits("20", "gwei"),
         nonce: 0,
       };
