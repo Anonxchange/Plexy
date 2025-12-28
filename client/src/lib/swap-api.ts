@@ -1,5 +1,6 @@
 import { createClient } from "./supabase";
 import { getWalletBalance } from "./wallet-api";
+import { getRocketxQuote } from "./rocketx-api";
 
 export interface SwapTransaction {
   id: string;
@@ -16,6 +17,10 @@ export interface SwapTransaction {
   completed_at: string | null;
 }
 
+/**
+ * Execute a swap using Rocketx exchange rates
+ * Non-custodial swap that directly updates wallet balances
+ */
 export async function executeSwap(params: {
   userId: string;
   fromCrypto: string;
