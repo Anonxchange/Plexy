@@ -14,6 +14,7 @@ export interface NonCustodialWallet {
   encryptedPrivateKey: string;
   createdAt: string;
   isActive: boolean;
+  isBackedUp: boolean;
 }
 
 const STORAGE_KEY = "pexly_non_custodial_wallets";
@@ -47,6 +48,7 @@ class NonCustodialWalletManager {
       encryptedPrivateKey, // Encrypted, safe to store
       createdAt: new Date().toISOString(),
       isActive: true,
+      isBackedUp: false,
     };
     
     // Store in localStorage
@@ -91,6 +93,7 @@ class NonCustodialWalletManager {
       encryptedPrivateKey,
       createdAt: new Date().toISOString(),
       isActive: true,
+      isBackedUp: false,
     };
     
     // Store in localStorage
@@ -161,6 +164,18 @@ class NonCustodialWalletManager {
     const wallets = this.getWalletsFromStorage();
     const wallet = wallets.find(w => w.id === walletId);
     return wallet?.address || null;
+  }
+
+  /**
+   * Mark a wallet as backed up
+   */
+  markWalletAsBackedUp(walletId: string): void {
+    const wallets = this.getWalletsFromStorage();
+    const wallet = wallets.find(w => w.id === walletId);
+    if (wallet) {
+      wallet.isBackedUp = true;
+      this.saveWalletsToStorage(wallets);
+    }
   }
 
   /**
