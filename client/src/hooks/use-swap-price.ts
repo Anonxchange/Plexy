@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getCryptoPrices } from '@/lib/crypto-prices';
+import { getRocketxRate } from '@/lib/rocketx-api';
 
 interface SwapPriceData {
   marketRate: number;
@@ -44,20 +45,22 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string) {
           return;
         }
 
-        // Fetch prices from CoinGecko
-        const prices = await getCryptoPrices([fromCrypto, toCrypto]);
+        // Try to fetch from Rocketx first for real exchange rates
+        const rocketxRate = await getRocketxRate(fromCrypto, toCrypto);
+        
+        let marketRate = rocketxRate;
+        
+        // Fallback to CoinGecko if Rocketx fails
+        if (rocketxRate === 0) {
+          const prices = await getCryptoPrices([fromCrypto, toCrypto]);
+          const fromPrice = prices[fromCrypto]?.current_price || 0;
+          const toPrice = prices[toCrypto]?.current_price || 1;
+          marketRate = fromPrice / toPrice;
+        }
 
         if (!isMounted) return;
 
-        const fromPrice = prices[fromCrypto]?.current_price || 0;
-        const toPrice = prices[toCrypto]?.current_price || 1;
-
-        // Calculate market rate (how many toCrypto for 1 fromCrypto)
-        const marketRate = fromPrice / toPrice;
-
         // Calculate swap rate with spread
-        // If buying (crypto to stablecoin), we give slightly less
-        // If selling (stablecoin to crypto), we charge slightly more
         const isSellingCrypto = toCrypto === 'USDT' || toCrypto === 'USDC';
         const spreadMultiplier = isSellingCrypto 
           ? (1 - SWAP_SPREAD_PERCENTAGE / 100)  // Give less when selling crypto
