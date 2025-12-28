@@ -1,3 +1,7 @@
+// Polyfill for Node.js Buffer in browser
+import { Buffer as BufferPolyfill } from "buffer";
+globalThis.Buffer = globalThis.Buffer || BufferPolyfill;
+
 import CryptoJS from "crypto-js";
 import * as bip39 from "bip39";
 import { ethers } from "ethers";
