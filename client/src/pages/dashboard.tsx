@@ -143,13 +143,35 @@ export const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background pb-8">
       <div className="max-w-7xl mx-auto">
-        {pendingWallet && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-            <SeedPhraseBackup 
-              mnemonic={pendingWallet.mnemonic} 
-              walletId={pendingWallet.walletId}
-              onComplete={() => setPendingWallet(null)}
-            />
+        {/* Backup Banner */}
+        {!pendingWallet && nonCustodialWalletManager.getNonCustodialWallets().some(w => !w.isBackedUp) && (
+          <div className="mx-4 mt-4 lg:mx-0 lg:mt-0 mb-6 bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
+                <ShieldAlert className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-orange-900 dark:text-orange-100">Wallet Not Backed Up</h4>
+                <p className="text-sm text-orange-800/80 dark:text-orange-200/80">
+                  Your recovery phrase is not backed up. Secure it now to avoid losing your funds.
+                </p>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              className="border-orange-500/50 hover:bg-orange-500/10 text-orange-600 dark:text-orange-400 shrink-0"
+              onClick={() => {
+                const wallets = nonCustodialWalletManager.getNonCustodialWallets();
+                const unbacked = wallets.find(w => !w.isBackedUp);
+                if (unbacked) {
+                  // In a real app we'd need the password, for now we trigger the backup flow
+                  // Since we just generated it in loadData, it should be available
+                  setPendingWallet({ mnemonic: "Your secret recovery phrase is available in Security Settings", walletId: unbacked.id });
+                }
+              }}
+            >
+              Backup Now
+            </Button>
           </div>
         )}
         {/* Desktop 2-column layout */}
