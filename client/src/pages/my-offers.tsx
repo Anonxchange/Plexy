@@ -137,6 +137,17 @@ export function MyOffers() {
     }
   };
 
+  // Helper to escape HTML entities for safe innerHTML usage
+  const escapeHtml = (str: string | undefined | null): string => {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
   const saveOfferAsImage = async () => {
     if (!selectedOffer) return;
 
@@ -166,22 +177,35 @@ export function MyOffers() {
       container.style.padding = '40px';
       container.style.fontFamily = 'system-ui, -apple-system, sans-serif';
       
+      const safeFullName = escapeHtml(user?.user_metadata?.full_name);
+      const safeEmail = escapeHtml(user?.email);
+      const safeInitials = escapeHtml(user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() || user?.email?.substring(0, 2)?.toUpperCase() || 'JD');
+      const safeDisplayName = escapeHtml(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Vendor');
+      const safeOfferType = escapeHtml(selectedOffer.offer_type);
+      const safeCryptoSymbol = escapeHtml(selectedOffer.crypto_symbol);
+      const safeFiatCurrency = escapeHtml(selectedOffer.fiat_currency);
+      const safePaymentMethods = escapeHtml(
+        Array.isArray(selectedOffer.payment_methods) 
+          ? selectedOffer.payment_methods.join(', ') 
+          : selectedOffer.payment_methods
+      );
+
       container.innerHTML = `
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 24px; padding: 32px; color: white;">
           <!-- Header with Owner Info -->
           <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
             <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">
-              ${user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() || user?.email?.substring(0, 2)?.toUpperCase() || 'JD'}
+              ${safeInitials}
             </div>
             <div>
-              <div style="font-size: 20px; font-weight: bold;">${user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Vendor'}</div>
+              <div style="font-size: 20px; font-weight: bold;">${safeDisplayName}</div>
               <div style="font-size: 14px; opacity: 0.9;">Verified Trader</div>
             </div>
           </div>
 
           <!-- Offer Type Badge -->
           <div style="display: inline-block; background: ${selectedOffer.offer_type === 'buy' ? '#C4F82A' : '#ffffff'}; color: #000; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; margin-bottom: 16px;">
-            ${selectedOffer.offer_type.toUpperCase()} ${selectedOffer.crypto_symbol}
+            ${safeOfferType.toUpperCase()} ${safeCryptoSymbol}
           </div>
 
           <!-- Main Offer Details -->
@@ -189,22 +213,22 @@ export function MyOffers() {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
               <div>
                 <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">Price</div>
-                <div style="font-size: 28px; font-weight: bold;">${selectedOffer.fixed_price?.toLocaleString()} ${selectedOffer.fiat_currency}</div>
+                <div style="font-size: 28px; font-weight: bold;">${selectedOffer.fixed_price?.toLocaleString()} ${safeFiatCurrency}</div>
               </div>
               <div>
                 <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">Amount</div>
-                <div style="font-size: 28px; font-weight: bold;">${selectedOffer.available_amount} ${selectedOffer.crypto_symbol}</div>
+                <div style="font-size: 28px; font-weight: bold;">${selectedOffer.available_amount} ${safeCryptoSymbol}</div>
               </div>
             </div>
             
             <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
               <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">Limits</div>
-              <div style="font-size: 18px; font-weight: 600;">${selectedOffer.min_amount.toLocaleString()} - ${selectedOffer.max_amount.toLocaleString()} ${selectedOffer.fiat_currency}</div>
+              <div style="font-size: 18px; font-weight: 600;">${selectedOffer.min_amount.toLocaleString()} - ${selectedOffer.max_amount.toLocaleString()} ${safeFiatCurrency}</div>
             </div>
 
             <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
               <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">Payment Method</div>
-              <div style="font-size: 16px; font-weight: 600;">${Array.isArray(selectedOffer.payment_methods) ? selectedOffer.payment_methods.join(', ') : selectedOffer.payment_methods}</div>
+              <div style="font-size: 16px; font-weight: 600;">${safePaymentMethods}</div>
             </div>
           </div>
 
