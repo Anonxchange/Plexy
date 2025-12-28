@@ -123,22 +123,18 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
     setLoading(true);
     setIsGenerating(true);
     try {
-      if (useNonCustodial) {
-        const wallets = nonCustodialWalletManager.getNonCustodialWallets();
-        const nonCustWallet = wallets.find(w => w.chainId === selectedNetwork);
-        if (nonCustWallet) {
-          setDepositAddress(nonCustWallet.address);
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Non-custodial wallet not found for this network. Create one first.",
-          });
-        }
+      // Always prioritize non-custodial if wallets exist
+      const wallets = nonCustodialWalletManager.getNonCustodialWallets();
+      if (wallets.length > 0) {
+        // Find by network or use the first one (most are Ethereum/EVM compatible)
+        const nonCustWallet = wallets.find(w => w.chainId === selectedNetwork) || wallets[0];
+        setDepositAddress(nonCustWallet.address);
+        setUseNonCustodial(true);
       } else {
         const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
         const address = await getDepositAddress(user.id, symbolToUse);
         setDepositAddress(address);
+        setUseNonCustodial(false);
       }
     } catch (error) {
       console.error("Error loading deposit address:", error);
