@@ -14,6 +14,26 @@ export interface RocketxQuote {
   fee?: number;
 }
 
+export interface RocketxSwapRequest {
+  fromToken: string;
+  toToken: string;
+  fromAmount: string;
+  fromAddress: string;
+  toAddress: string;
+  slippage?: string;
+  referrer?: string;
+}
+
+export interface RocketxSwapResponse {
+  transactionHash: string;
+  status: 'pending' | 'completed' | 'failed';
+  fromAmount: string;
+  toAmount: string;
+  rate: number;
+  fee: number;
+  timestamp: string;
+}
+
 const ROCKETX_API_BASE = 'https://api.rocketx.exchange/api/v1';
 const ROCKETX_API_KEY = import.meta.env.VITE_ROCKETX_API_KEY;
 
@@ -125,5 +145,68 @@ export async function getRocketxQuote(
   } catch (error) {
     console.error('Error fetching Rocketx quote:', error);
     return null;
+  }
+}
+
+/**
+ * Execute a swap through Rocketx API
+ * Performs the actual swap transaction on-chain
+ */
+export async function executeRocketxSwap(
+  params: RocketxSwapRequest
+): Promise<RocketxSwapResponse> {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add API key if available
+    if (ROCKETX_API_KEY) {
+      headers['Authorization'] = `Bearer ${ROCKETX_API_KEY}`;
+    }
+
+    const requestBody = {
+      fromToken: params.fromToken,
+      toToken: params.toToken,
+      fromAmount: params.fromAmount,
+      fromAddress: params.fromAddress,
+      toAddress: params.toAddress || params.fromAddress,
+      slippage: params.slippage || '1', // 1% default slippage
+      referrer: params.referrer,
+    };
+
+    const response = await fetch(`${ROCKETX_API_BASE}/swap`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `Rocketx swap failed with status ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (!data || !data.data) {
+      throw new Error('Invalid response from Rocketx API');
+    }
+
+    const swapData = data.data;
+
+    return {
+      transactionHash: swapData.txHash || swapData.transactionHash || crypto.randomUUID(),
+      status: swapData.status || 'pending',
+      fromAmount: swapData.fromAmount || params.fromAmount,
+      toAmount: swapData.toAmount || '0',
+      rate: parseFloat(swapData.rate) || 0,
+      fee: parseFloat(swapData.fee) || 0,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Error executing Rocketx swap:', error);
+    throw error;
   }
 }
