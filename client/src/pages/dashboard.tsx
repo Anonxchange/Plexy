@@ -1,13 +1,17 @@
  import { useState, useEffect } from "react";
-import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift, ShieldAlert } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";
 import { getUserWallets, type Wallet } from "@/lib/wallet-api";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { SeedPhraseBackup } from "@/components/non-custodial-onboarding";
+import { Button } from "@/components/ui/button";
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
+// ... rest of imports and helpers
 
 const defaultMarkets = [
   { symbol: "BTC", name: "Bitcoin", pair: "USDT", price: "85,451.2", change: -0.79 },
@@ -74,13 +78,30 @@ export const Dashboard = () => {
   const [equivalentBtc, setEquivalentBtc] = useState(0);
   const [markets, setMarkets] = useState(defaultMarkets);
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
+  const [pendingWallet, setPendingWallet] = useState<{mnemonic: string, walletId: string} | null>(null);
 
   useEffect(() => {
     if (!user) return;
     
     const loadData = async () => {
       try {
+        // Handle non-custodial wallet check/generation
+        const existingWallets = nonCustodialWalletManager.getNonCustodialWallets();
+        if (existingWallets.length === 0) {
+          // In a production app, password would come from the login/signup process
+          // Mocking with a placeholder for this demo flow
+          const { wallet, mnemonicPhrase } = await nonCustodialWalletManager.generateNonCustodialWallet("ethereum", "user-password");
+          setPendingWallet({ mnemonic: mnemonicPhrase, walletId: wallet.id });
+        } else {
+          const unbackedWallet = existingWallets.find(w => !w.isBackedUp);
+          if (unbackedWallet) {
+             // Wallet exists but backup wasn't completed
+             // In a real app we'd need the password to show mnemonic again
+          }
+        }
+
         const userWallets = await getUserWallets(user.id);
+// ... rest of loadData
         setWallets(userWallets);
         
         const symbols = userWallets.map(w => w.crypto_symbol);
@@ -122,6 +143,15 @@ export const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background pb-8">
       <div className="max-w-7xl mx-auto">
+        {pendingWallet && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+            <SeedPhraseBackup 
+              mnemonic={pendingWallet.mnemonic} 
+              walletId={pendingWallet.walletId}
+              onComplete={() => setPendingWallet(null)}
+            />
+          </div>
+        )}
         {/* Desktop 2-column layout */}
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:p-6">
           
