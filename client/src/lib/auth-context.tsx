@@ -289,16 +289,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkWalletOnAuth = useCallback(async (userId: string) => {
     try {
+      // First try user_profiles
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('wallet_address')
         .eq('id', userId)
         .maybeSingle();
 
-      if (profile?.wallet_address) {
-        const hasLocal = nonCustodialWalletManager.hasLocalWallet(profile.wallet_address);
+      let walletAddress = profile?.wallet_address;
+
+      // Fallback to auth metadata if not in profile
+      if (!walletAddress) {
+        const { data: { user } } = await supabase.auth.getUser();
+        walletAddress = user?.user_metadata?.wallet_address;
+      }
+
+      if (walletAddress) {
+        const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress);
         if (!hasLocal) {
-          setWalletImportState({ required: true, expectedAddress: profile.wallet_address });
+          setWalletImportState({ required: true, expectedAddress: walletAddress });
         }
       }
     } catch (error) {
@@ -326,7 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (window.location.pathname === '/verify-email') {
         setSession(null);
         setUser(null);
@@ -336,6 +345,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!pendingOTPVerification) {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          checkWalletOnAuth(session.user.id);
+        }
       }
 
       if (session?.user) {
@@ -407,6 +420,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data.user && data.session) {
       await trackDevice(supabase, data.user.id);
+      await checkWalletOnAuth(data.user.id);
       presenceTracker.startTracking(data.user.id);
     }
 
