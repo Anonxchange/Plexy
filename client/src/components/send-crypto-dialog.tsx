@@ -19,6 +19,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, Loader2, CheckCircle2, X, Copy } from "lucide-react";
 import { sendCrypto } from "@/lib/wallet-api";
+import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { useAuth } from "@/lib/auth-context";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSendFee } from "@/hooks/use-fees";
@@ -49,6 +50,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
   const [cryptoAmount, setCryptoAmount] = useState<string>("");
   const [fiatAmount, setFiatAmount] = useState<string>("");
   const [cryptoPrice, setCryptoPrice] = useState<number>(0);
+  const [useNonCustodial, setUseNonCustodial] = useState(false);
+  const [userPassword, setUserPassword] = useState<string>("");
 
   const networkMap: Record<string, string[]> = {
     BTC: ["Bitcoin (SegWit)"],
@@ -153,6 +156,11 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
       return;
     }
 
+    if (useNonCustodial && !userPassword) {
+      setError("Enter password for non-custodial wallet");
+      return;
+    }
+
     const cryptoAmountNum = amountInputMode === "crypto" 
       ? parseFloat(amount) 
       : parseFloat(cryptoAmount);
@@ -172,7 +180,26 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
 
     try {
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-      await sendCrypto(user.id, symbolToUse, toAddress, cryptoAmountNum, notes);
+      
+      if (useNonCustodial) {
+        const wallets = nonCustodialWalletManager.getNonCustodialWallets();
+        const nonCustWallet = wallets.find(w => w.chainId === selectedNetwork);
+        if (!nonCustWallet) {
+          setError("Non-custodial wallet not found for this network. Create one first.");
+          setLoading(false);
+          return;
+        }
+        // Sign transaction client-side (private key never leaves browser)
+        const txData = {
+          to: toAddress,
+          amount: cryptoAmountNum,
+          symbol: symbolToUse,
+        };
+        await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, userPassword);
+      } else {
+        await sendCrypto(user.id, symbolToUse, toAddress, cryptoAmountNum, notes);
+      }
+      
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -210,6 +237,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     setCryptoPrice(0);
     setError("");
     setSuccess(false);
+    setUseNonCustodial(false);
+    setUserPassword("");
   };
 
   const handleClose = () => {
@@ -273,6 +302,27 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
         ) : (
           <ScrollArea className="max-h-[500px] pr-4">
           <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                Wallet Type
+                <input
+                  type="checkbox"
+                  checked={useNonCustodial}
+                  onChange={(e) => setUseNonCustodial(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-xs text-muted-foreground">Non-custodial</span>
+              </Label>
+              {useNonCustodial && (
+                <Input
+                  type="password"
+                  placeholder="Enter password for wallet signing"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  className="h-10 mb-4"
+                />
+              )}
+            </div>
             <div>
               <Label className="text-sm font-medium mb-2 block">Asset</Label>
               <Select value={selectedCrypto} onValueChange={(value) => {
