@@ -610,8 +610,12 @@ export default function AdminVerificationsPage() {
                         className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
                         onClick={() => window.open(selectedVerification.document_url, '_blank')}
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          const errorMsg = document.createElement('p');
+                          errorMsg.className = 'text-sm text-muted-foreground';
+                          errorMsg.textContent = 'Image failed to load';
+                          img.parentElement?.appendChild(errorMsg);
                         }}
                       />
                     </div>
@@ -626,8 +630,12 @@ export default function AdminVerificationsPage() {
                         className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
                         onClick={() => window.open(selectedVerification.document_back_url, '_blank')}
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          const errorMsg = document.createElement('p');
+                          errorMsg.className = 'text-sm text-muted-foreground';
+                          errorMsg.textContent = 'Image failed to load';
+                          img.parentElement?.appendChild(errorMsg);
                         }}
                       />
                     </div>
@@ -642,8 +650,12 @@ export default function AdminVerificationsPage() {
                         className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
                         onClick={() => window.open(selectedVerification.liveness_image_url, '_blank')}
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          const errorMsg = document.createElement('p');
+                          errorMsg.className = 'text-sm text-muted-foreground';
+                          errorMsg.textContent = 'Image failed to load';
+                          img.parentElement?.appendChild(errorMsg);
                         }}
                       />
                     </div>
@@ -658,8 +670,12 @@ export default function AdminVerificationsPage() {
                         className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
                         onClick={() => window.open(selectedVerification.address_proof, '_blank')}
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).parentElement!.innerHTML += '<p class="text-sm text-muted-foreground">Image failed to load</p>';
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          const errorMsg = document.createElement('p');
+                          errorMsg.className = 'text-sm text-muted-foreground';
+                          errorMsg.textContent = 'Image failed to load';
+                          img.parentElement?.appendChild(errorMsg);
                         }}
                       />
                     </div>
