@@ -35,10 +35,19 @@ export interface WalletTransaction {
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
   // Fetch non-custodial wallets from local storage only
   const localWallets = nonCustodialWalletManager.getNonCustodialWallets();
+  
+  // Define the list of supported assets we want to show even if no local wallet exists for them yet
+  // but we have at least one local wallet to derive from.
+  const supportedAssets = ['BTC', 'ETH', 'BNB', 'SOL', 'TRX', 'USDT', 'USDC'];
+  
   const nonCustodialWallets: Wallet[] = localWallets.map(w => ({
     id: w.id,
     user_id: userId,
-    crypto_symbol: w.chainId === 'ethereum' ? 'ETH' : w.chainId.toUpperCase(),
+    crypto_symbol: w.chainId === 'Ethereum (ERC-20)' ? 'ETH' : 
+                   w.chainId === 'Bitcoin (SegWit)' ? 'BTC' :
+                   w.chainId === 'Binance Smart Chain (BEP-20)' ? 'BNB' :
+                   w.chainId === 'Solana' ? 'SOL' :
+                   w.chainId === 'Tron (TRC-20)' ? 'TRX' : w.chainId.toUpperCase(),
     balance: 0,
     locked_balance: 0,
     deposit_address: w.address,
@@ -46,6 +55,27 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     updated_at: w.createdAt,
     isNonCustodial: true
   }));
+
+  // If we have at least one local wallet, ensure we show all supported assets using its address
+  // (Assuming same address for EVM chains and placeholder for others for now)
+  if (localWallets.length > 0) {
+    const primaryWallet = localWallets[0];
+    supportedAssets.forEach(symbol => {
+      if (!nonCustodialWallets.some(w => w.crypto_symbol === symbol)) {
+        nonCustodialWallets.push({
+          id: `derived_${symbol}_${primaryWallet.id}`,
+          user_id: userId,
+          crypto_symbol: symbol,
+          balance: 0,
+          locked_balance: 0,
+          deposit_address: primaryWallet.address, // Use primary address as placeholder
+          created_at: primaryWallet.createdAt,
+          updated_at: primaryWallet.createdAt,
+          isNonCustodial: true
+        });
+      }
+    });
+  }
 
   return nonCustodialWallets;
 }
@@ -109,10 +139,24 @@ export async function sendCrypto(
 }
 
 export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
-  const wallet = await getWalletBalance(userId, cryptoSymbol);
+  const wallets = await getUserWallets(userId);
+  // Find a wallet that matches the crypto symbol exactly or via network mapping
+  const wallet = wallets.find(w => 
+    w.crypto_symbol === cryptoSymbol || 
+    (cryptoSymbol.startsWith('USDT-') && w.crypto_symbol === 'USDT') ||
+    (cryptoSymbol.startsWith('USDC-') && w.crypto_symbol === 'USDC')
+  );
+  
   if (wallet?.deposit_address) {
     return wallet.deposit_address;
   }
+  
+  // If we have any non-custodial wallet, we can at least show its address as a base
+  const anyWallet = wallets.find(w => w.isNonCustodial);
+  if (anyWallet?.deposit_address) {
+    return anyWallet.deposit_address;
+  }
+  
   throw new Error('No deposit address found for this non-custodial wallet.');
 }
 
