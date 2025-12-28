@@ -32,7 +32,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
-import { type Wallet, type WalletTransaction, getWalletTransactions } from "@/lib/wallet-api";
+import { type Wallet, type WalletTransaction, getWalletTransactions, getUserWallets } from "@/lib/wallet-api";
 import { getCryptoPrices, convertToNGN, formatPrice } from "@/lib/crypto-prices";
 import type { CryptoPrice } from "@/lib/crypto-prices";
 import { getVerificationLevel, getVerificationRequirements } from "@shared/verification-levels";
@@ -151,76 +151,17 @@ export default function Wallet() {
   useEffect(() => {
     if (!user) return;
 
+    // Load initial data
     loadUserProfile();
     loadWalletData();
     loadCryptoPrices();
-    loadTransactions();
+    // loadTransactions(); // Removed for non-custodial pure mode
 
     // Increase price update interval to reduce calls
-    const priceInterval = setInterval(loadCryptoPrices, 120000); // 2 minutes instead of 1
-
-    const supabase = createClient();
-
-    // Debounce wallet updates to prevent rapid successive calls
-    let walletUpdateTimeout: NodeJS.Timeout;
-
-    // Subscribe to wallet changes for real-time balance updates
-    const walletChannel = supabase
-      .channel('wallet-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'wallets',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          console.log('Wallet changed, debouncing refresh...');
-          // Debounce: only refresh after 1 second of no changes
-          clearTimeout(walletUpdateTimeout);
-          walletUpdateTimeout = setTimeout(() => {
-            loadWalletData();
-          }, 1000);
-        }
-      )
-      .subscribe();
-
-    // Subscribe to real-time transaction updates
-    const transactionChannel = supabase
-      .channel('wallet-transactions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'wallet_transactions',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('New transaction detected:', payload);
-
-          // Debounce wallet reload
-          clearTimeout(walletUpdateTimeout);
-          walletUpdateTimeout = setTimeout(() => {
-            loadWalletData();
-            loadTransactions();
-          }, 1000);
-
-          // Show toast notification
-          toast({
-            title: 'New Transaction!',
-            description: `${payload.new.amount} ${payload.new.crypto_symbol} transaction detected`,
-          });
-        }
-      )
-      .subscribe();
+    const priceInterval = setInterval(loadCryptoPrices, 120000); // 2 minutes
 
     return () => {
       clearInterval(priceInterval);
-      clearTimeout(walletUpdateTimeout);
-      supabase.removeChannel(walletChannel);
-      supabase.removeChannel(transactionChannel);
     };
   }, [user]);
 
@@ -271,21 +212,10 @@ export default function Wallet() {
   const loadWalletData = async () => {
     if (!user) return;
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('crypto_symbol', { ascending: true });
-
-      if (error) {
-        console.error("Error loading wallets:", error);
-        // Don't reset wallets on error - keep previous data
-      } else {
-        console.log("Loaded wallets from database:", data);
-        setWallets(data || []);
-        setWalletsLoaded(true);
-      }
+      const userWallets = await getUserWallets(user.id);
+      console.log("Loaded wallets from API:", userWallets);
+      setWallets(userWallets);
+      setWalletsLoaded(true);
     } catch (error) {
       console.error("Error loading wallets:", error);
       // Don't reset wallets on error - keep previous data
