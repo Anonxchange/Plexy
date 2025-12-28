@@ -117,17 +117,17 @@ export function AppHeader() {
 
   const fetchUserData = async () => {
     try {
+      // Import wallet API
+      const { getUserWallets } = await import('@/lib/wallet-api');
+
       // Fetch profile and wallets in parallel
-      const [profileResult, walletsResult] = await Promise.all([
+      const [profileResult, userWallets] = await Promise.all([
         supabase
           .from('user_profiles')
           .select('username, preferred_currency')
           .eq('id', user?.id)
           .single(),
-        supabase
-          .from('wallets')
-          .select('crypto_symbol, balance')
-          .eq('user_id', user?.id)
+        getUserWallets(user?.id || '')
       ]);
 
       // Set username
@@ -141,26 +141,25 @@ export function AppHeader() {
       const currency = profileResult.data?.preferred_currency?.toUpperCase() || 'USD';
       setPreferredCurrency(currency);
 
-      // Calculate balance if wallets exist
-      if (!walletsResult.error && walletsResult.data && walletsResult.data.length > 0) {
-        const walletsData = walletsResult.data;
+      // Calculate balance from non-custodial wallets
+      if (userWallets && userWallets.length > 0) {
+        // Filter wallets with balance > 0 (even if currently 0 for mockup)
+        const walletsWithAddress = userWallets.filter(w => w.deposit_address);
 
-        // Filter wallets with balance > 0 to reduce API calls
-        const walletsWithBalance = walletsData.filter(w => w.balance > 0);
-
-        if (walletsWithBalance.length === 0) {
+        if (walletsWithAddress.length === 0) {
           setBalance(0);
           return;
         }
 
         // Get unique crypto symbols
-        const allSymbols = walletsWithBalance.map(w => w.crypto_symbol);
+        const allSymbols = walletsWithAddress.map(w => w.crypto_symbol);
 
-        // Fetch prices (this is already parallel internally)
+        // Fetch prices
+        const { getCryptoPrices } = await import('@/lib/crypto-prices');
         const prices = await getCryptoPrices(allSymbols);
 
         // Calculate total in USD
-        const totalUSD = walletsWithBalance.reduce((sum, wallet) => {
+        const totalUSD = walletsWithAddress.reduce((sum, wallet) => {
           const priceData = prices[wallet.crypto_symbol];
           const currentPrice = priceData?.current_price || 0;
           return sum + (wallet.balance * currentPrice);
