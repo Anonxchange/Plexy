@@ -653,9 +653,6 @@ export function Swap() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-muted-foreground text-base">From</Label>
-                <span className="text-sm text-muted-foreground">
-                  Available: {formatBalance(getAvailableBalance(fromWallet))} {fromCurrency}
-                </span>
               </div>
               <div className="flex gap-3">
                 <Input
@@ -703,9 +700,6 @@ export function Swap() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-muted-foreground text-base">To</Label>
-                <span className="text-sm text-muted-foreground">
-                  Available: {formatBalance(getAvailableBalance(toWallet))} {toCurrency}
-                </span>
               </div>
               <div className="flex gap-3">
                 <Input
@@ -976,9 +970,9 @@ export function Swap() {
               <Button 
                 className="w-full h-14 text-lg bg-primary hover:bg-primary/90 mt-6"
                 onClick={handleSwap}
-                disabled={executeSwap.isPending || !fromAmount || !toAmount || parseFloat(fromAmount) <= 0}
+                disabled={isSwapping || !fromAmount || !toAmount || parseFloat(fromAmount) <= 0}
               >
-                {executeSwap.isPending ? (
+                {isSwapping ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Swapping...
