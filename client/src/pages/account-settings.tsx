@@ -503,15 +503,6 @@ export default function AccountSettings() {
   const [isVerifyingBackupPassword, setIsVerifyingBackupPassword] = useState(false);
 
   const handleShowBackupPhrase = async () => {
-    if (!backupPassword) {
-      toast({
-        title: "Password Required",
-        description: "Please enter your wallet password to view the seed phrase",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsVerifyingBackupPassword(true);
     try {
       const wallets = nonCustodialWalletManager.getNonCustodialWallets();
@@ -519,11 +510,13 @@ export default function AccountSettings() {
         throw new Error("No non-custodial wallet found");
       }
       
+      // Use user ID as the wallet encryption password (deterministic)
+      const walletPassword = user?.id || "user-password";
+      
       // We try to decrypt the first wallet's key to verify the password
-      // In a real app we'd have a specific password verification method
       try {
         // This will throw if password is wrong
-        await nonCustodialWalletManager.signTransaction(wallets[0].id, { to: "0x0", amount: 0 }, backupPassword);
+        await nonCustodialWalletManager.signTransaction(wallets[0].id, { to: "0x0", amount: 0 }, walletPassword);
         
         // If we reach here, password is correct. 
         // Note: The mnemonic itself isn't stored, but in this demo we're showing the concept.
@@ -533,15 +526,15 @@ export default function AccountSettings() {
         setShowBackupPhrase(true);
       } catch (e) {
         toast({
-          title: "Incorrect Password",
-          description: "The password provided is incorrect.",
+          title: "Verification Failed",
+          description: "Could not verify wallet access. This wallet may have been created with a different account.",
           variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to verify password",
+        description: error.message || "Failed to verify wallet",
         variant: "destructive",
       });
     } finally {
@@ -2340,20 +2333,12 @@ export default function AccountSettings() {
                 
                 {!showBackupPhrase ? (
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="backup-password">Wallet Password</Label>
-                      <Input
-                        id="backup-password"
-                        type="password"
-                        placeholder="Enter your wallet password to reveal phrase"
-                        value={backupPassword}
-                        onChange={(e) => setBackupPassword(e.target.value)}
-                        className="max-w-md"
-                      />
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Click the button below to verify your account and view your recovery phrase.
+                    </p>
                     <Button 
                       onClick={handleShowBackupPhrase} 
-                      disabled={isVerifyingBackupPassword || !backupPassword}
+                      disabled={isVerifyingBackupPassword}
                       variant="outline"
                     >
                       {isVerifyingBackupPassword ? "Verifying..." : "Show Recovery Phrase"}
