@@ -14,10 +14,9 @@ import { useSchema, swapPageSchema } from "@/hooks/use-schema";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapFee } from "@/hooks/use-fees";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
-import { useWalletBalance } from "@/hooks/use-wallets";
-import { useExecuteSwap, useSwapHistory } from "@/hooks/use-swap";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
+import { executeSwap } from "@/lib/swap-api";
 
 const currencies = [
   { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC },
@@ -46,10 +45,6 @@ export function Swap() {
     toCurrency
   );
 
-  // Fetch wallet balances
-  const { data: fromWallet } = useWalletBalance(fromCurrency);
-  const { data: toWallet } = useWalletBalance(toCurrency);
-
   // Fetch swap fee
   const { data: swapFee } = useSwapFee(
     fromCurrency,
@@ -57,11 +52,7 @@ export function Swap() {
     parseFloat(fromAmount) || 0
   );
 
-  // Execute swap mutation
-  const executeSwap = useExecuteSwap();
-
-  // Fetch swap history
-  const { data: swapHistory = [] } = useSwapHistory();
+  const [isSwapping, setIsSwapping] = useState(false);
 
   // Auto-update toAmount when prices change or fromAmount changes
   useEffect(() => {
@@ -114,20 +105,7 @@ export function Swap() {
     }
   };
 
-  // Format balance for display
-  const formatBalance = (balance: number | undefined) => {
-    if (balance === undefined) return "0.00";
-    if (balance >= 1) return balance.toFixed(4);
-    return balance.toFixed(8);
-  };
-
-  // Get available balance (total - locked)
-  const getAvailableBalance = (wallet: any) => {
-    if (!wallet) return 0;
-    return wallet.balance - wallet.locked_balance;
-  };
-
-  // Handle swap execution
+  // Handle swap execution (non-custodian via Rocketx)
   const handleSwap = async () => {
     if (!user) {
       setLocation("/signin");
@@ -147,7 +125,6 @@ export function Swap() {
     if (fromCurrency === 'USDT' || fromCurrency === 'USDC') {
       usdValue = fromAmountNum;
     } else {
-      // For other cryptos, use the market rate to get USD value
       const prices = await getCryptoPrices([fromCurrency]);
       const fromPrice = prices[fromCurrency]?.current_price || 0;
       
@@ -174,8 +151,9 @@ export function Swap() {
       return;
     }
 
+    setIsSwapping(true);
     try {
-      await executeSwap.mutateAsync({
+      const result = await executeSwap({
         userId: user.id,
         fromCrypto: fromCurrency,
         toCrypto: toCurrency,
@@ -186,11 +164,23 @@ export function Swap() {
         fee: feeAmount,
       });
 
+      toast({
+        title: "Swap Successful!",
+        description: `Swapped ${fromAmountNum} ${fromCurrency} to ${result.to_amount.toFixed(6)} ${toCurrency}`,
+      });
+
       // Reset form
       setFromAmount("0.00001");
       setToAmount("");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Swap error:', error);
+      toast({
+        title: "Swap Failed",
+        description: error.message || "Failed to execute swap. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSwapping(false);
     }
   };
 
@@ -793,9 +783,9 @@ export function Swap() {
         <Button 
           className="w-full h-14 text-lg bg-primary hover:bg-primary/90 mb-6"
           onClick={handleSwap}
-          disabled={executeSwap.isPending || !fromAmount || !toAmount || parseFloat(fromAmount) <= 0}
+          disabled={isSwapping || !fromAmount || !toAmount || parseFloat(fromAmount) <= 0}
         >
-          {executeSwap.isPending ? (
+          {isSwapping ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               Swapping...
@@ -860,9 +850,6 @@ export function Swap() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-muted-foreground text-base">From</Label>
-                  <span className="text-sm text-muted-foreground">
-                    Available: {formatBalance(getAvailableBalance(fromWallet))} {fromCurrency}
-                  </span>
                 </div>
                 <div className="flex gap-3">
                   <Input
@@ -910,9 +897,6 @@ export function Swap() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-muted-foreground text-base">To</Label>
-                  <span className="text-sm text-muted-foreground">
-                    Available: {formatBalance(getAvailableBalance(toWallet))} {toCurrency}
-                  </span>
                 </div>
                 <div className="flex gap-3">
                   <Input
