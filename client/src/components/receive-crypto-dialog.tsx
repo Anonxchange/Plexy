@@ -126,9 +126,9 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       // Always prioritize non-custodial if wallets exist
       const wallets = nonCustodialWalletManager.getNonCustodialWallets();
       if (wallets.length > 0) {
-        // Find by network or use the first one (most are Ethereum/EVM compatible)
-        const nonCustWallet = wallets.find(w => w.chainId === selectedNetwork) || wallets[0];
-        setDepositAddress(nonCustWallet.address);
+        const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+        const address = await getDepositAddress(user.id, symbolToUse);
+        setDepositAddress(address);
         setUseNonCustodial(true);
       } else {
         const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
@@ -200,6 +200,10 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
         "Ethereum (ERC-20)",
         walletPassword
       );
+      
+      // Also generate wallets for other networks if needed, or simply share the same mnemonic/address
+      // Most of the supported networks in networkMap are EVM or can use the same seed logic
+      // But for now, we'll just ensure the UI knows it has a local wallet.
       
       toast({
         title: "Success",
