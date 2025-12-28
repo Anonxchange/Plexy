@@ -15,6 +15,7 @@ export const users = pgTable("users", {
   lifetimeTradeVolume: numeric("lifetime_trade_volume", { precision: 15, scale: 2 }).default("0"),
   lifetimeSendVolume: numeric("lifetime_send_volume", { precision: 15, scale: 2 }).default("0"),
   referralCode: text("referral_code").unique(),
+  walletAddress: text("wallet_address").unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
