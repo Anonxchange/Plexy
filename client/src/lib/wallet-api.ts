@@ -9,6 +9,7 @@ export interface Wallet {
   deposit_address: string | null;
   created_at: string;
   updated_at: string;
+  isNonCustodial?: boolean;
 }
 
 export interface WalletTransaction {
