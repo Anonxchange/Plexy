@@ -1,6 +1,6 @@
-import { createClient } from "./supabase";
-import { getWalletBalance } from "./wallet-api";
-import { getRocketxQuote } from "./rocketx-api";
+import { getRocketxRate, executeRocketxSwap, RocketxSwapRequest } from "./rocketx-api";
+import { nonCustodialWalletManager } from "./non-custodial-wallet";
+import { swapHistoryStorage } from "./swap-history-storage";
 
 export interface SwapTransaction {
   id: string;
@@ -15,11 +15,13 @@ export interface SwapTransaction {
   status: 'pending' | 'completed' | 'failed';
   created_at: string;
   completed_at: string | null;
+  txHash?: string;
 }
 
 /**
- * Execute a swap using Rocketx exchange rates
- * Non-custodial swap that directly updates wallet balances
+ * Execute a non-custodial swap using Rocketx API
+ * Performs actual on-chain swap through Rocketx
+ * User owns their private keys - no custody involved
  */
 export async function executeSwap(params: {
   userId: string;
@@ -30,127 +32,65 @@ export async function executeSwap(params: {
   swapRate: number;
   marketRate: number;
   fee: number;
+  fromAddress?: string;
+  toAddress?: string;
+  slippage?: string;
 }): Promise<SwapTransaction> {
-  const supabase = createClient();
-
-  // Validate balances
-  const fromWallet = await getWalletBalance(params.userId, params.fromCrypto);
-  if (!fromWallet) {
-    throw new Error(`No ${params.fromCrypto} wallet found. Please create a wallet first.`);
-  }
-
-  const availableBalance = fromWallet.balance - fromWallet.locked_balance;
-  if (availableBalance < params.fromAmount) {
-    throw new Error(`Insufficient ${params.fromCrypto} balance. Available: ${availableBalance.toFixed(8)}`);
-  }
-
-  // Get or create destination wallet
-  let toWallet = await getWalletBalance(params.userId, params.toCrypto);
-  if (!toWallet) {
-    // Create wallet if it doesn't exist
-    const { data: newWallet, error: createError } = await supabase
-      .from('wallets')
-      .insert({
-        user_id: params.userId,
-        crypto_symbol: params.toCrypto,
-        balance: 0,
-        locked_balance: 0,
-      })
-      .select()
-      .single();
-
-    if (createError) throw new Error(`Failed to create ${params.toCrypto} wallet: ${createError.message}`);
-    if (!newWallet) throw new Error(`Failed to create ${params.toCrypto} wallet`);
-    toWallet = newWallet;
-  }
-
-  // Ensure toWallet is not null
-  if (!toWallet) throw new Error(`Wallet for ${params.toCrypto} not found`);
-
   try {
-    // Start transaction - deduct from source wallet
-    const { error: deductError } = await supabase
-      .from('wallets')
-      .update({
-        balance: fromWallet.balance - params.fromAmount,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', fromWallet.id);
-
-    if (deductError) throw new Error(`Failed to deduct balance: ${deductError.message}`);
-
-    // Add to destination wallet (after fee)
-    const netAmount = params.toAmount - params.fee;
-    const { error: addError } = await supabase
-      .from('wallets')
-      .update({
-        balance: toWallet.balance + netAmount,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', toWallet.id);
-
-    if (addError) {
-      // Rollback - add back to source wallet
-      await supabase
-        .from('wallets')
-        .update({
-          balance: fromWallet.balance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', fromWallet.id);
-      
-      throw new Error(`Failed to add balance: ${addError.message}`);
+    // Get user's wallet address from non-custodial wallet manager
+    const userWallets = nonCustodialWalletManager.getNonCustodialWallets();
+    const fromWallet = userWallets.find(w => w.chainId === params.fromCrypto.toLowerCase());
+    
+    if (!fromWallet) {
+      throw new Error(`No wallet found for ${params.fromCrypto}. Please create a wallet first.`);
     }
 
-    // Record withdrawal transaction
-    const { error: withdrawalError } = await supabase
-      .from('wallet_transactions')
-      .insert({
-        user_id: params.userId,
-        wallet_id: fromWallet.id,
-        type: 'swap',
-        crypto_symbol: params.fromCrypto,
-        amount: -params.fromAmount,
-        fee: 0,
-        status: 'completed',
-        notes: `Swapped to ${params.toCrypto}`,
-        completed_at: new Date().toISOString()
-      });
+    const fromAddress = params.fromAddress || fromWallet.address;
+    const toAddress = params.toAddress || fromAddress; // Send to same address by default
 
-    if (withdrawalError) console.error('Failed to record withdrawal transaction:', withdrawalError);
+    // Prepare Rocketx swap request
+    const swapRequest: RocketxSwapRequest = {
+      fromToken: params.fromCrypto,
+      toToken: params.toCrypto,
+      fromAmount: params.fromAmount.toString(),
+      fromAddress,
+      toAddress,
+      slippage: params.slippage || '1', // 1% default
+    };
 
-    // Record deposit transaction
-    const { error: depositError } = await supabase
-      .from('wallet_transactions')
-      .insert({
-        user_id: params.userId,
-        wallet_id: toWallet.id,
-        type: 'swap',
-        crypto_symbol: params.toCrypto,
-        amount: netAmount,
-        fee: params.fee,
-        status: 'completed',
-        notes: `Swapped from ${params.fromCrypto}`,
-        completed_at: new Date().toISOString()
-      });
+    // Execute swap through Rocketx API
+    const rocketxResponse = await executeRocketxSwap(swapRequest);
 
-    if (depositError) console.error('Failed to record deposit transaction:', depositError);
-
-    // Create swap transaction record (if table exists)
+    // Create swap transaction record
     const swapTransaction: SwapTransaction = {
-      id: crypto.randomUUID(),
+      id: rocketxResponse.transactionHash || crypto.randomUUID(),
       user_id: params.userId,
       from_crypto: params.fromCrypto,
       to_crypto: params.toCrypto,
       from_amount: params.fromAmount,
-      to_amount: netAmount,
-      swap_rate: params.swapRate,
+      to_amount: parseFloat(rocketxResponse.toAmount),
+      swap_rate: rocketxResponse.rate,
       market_rate: params.marketRate,
-      fee: params.fee,
-      status: 'completed',
+      fee: rocketxResponse.fee,
+      status: rocketxResponse.status as any,
       created_at: new Date().toISOString(),
-      completed_at: new Date().toISOString()
+      completed_at: rocketxResponse.status === 'completed' ? new Date().toISOString() : null,
+      txHash: rocketxResponse.transactionHash
     };
+
+    // Store in local history for non-custodial tracking
+    swapHistoryStorage.addSwap({
+      id: swapTransaction.id,
+      fromCrypto: params.fromCrypto,
+      toCrypto: params.toCrypto,
+      fromAmount: params.fromAmount,
+      toAmount: parseFloat(rocketxResponse.toAmount),
+      swapRate: rocketxResponse.rate,
+      fee: rocketxResponse.fee,
+      status: rocketxResponse.status as any,
+      txHash: rocketxResponse.transactionHash,
+      createdAt: new Date().toISOString(),
+    });
 
     return swapTransaction;
   } catch (error) {
@@ -160,21 +100,6 @@ export async function executeSwap(params: {
 }
 
 export async function getSwapHistory(userId: string, limit: number = 20): Promise<any[]> {
-  const supabase = createClient();
-  
-  // Get swap transactions from wallet_transactions
-  const { data, error } = await supabase
-    .from('wallet_transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('type', 'swap')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('Error fetching swap history:', error);
-    return [];
-  }
-
-  return data || [];
+  // Return swap history from local storage for non-custodial tracking
+  return swapHistoryStorage.getHistory(limit);
 }
