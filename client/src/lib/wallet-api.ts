@@ -33,23 +33,7 @@ export interface WalletTransaction {
 }
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  const supabase = createClient();
-  
-  const { data, error } = await supabase
-    .from('wallets')
-    .select('*')
-    .eq('user_id', userId)
-    .order('crypto_symbol', { ascending: true });
-
-  if (error) throw error;
-  
-  const custodialWallets: Wallet[] = (data || []).map(wallet => ({
-    ...wallet,
-    balance: typeof wallet.balance === 'string' ? parseFloat(wallet.balance) : wallet.balance,
-    locked_balance: typeof wallet.locked_balance === 'string' ? parseFloat(wallet.locked_balance) : wallet.locked_balance,
-  }));
-
-  // Fetch non-custodial wallets from local storage
+  // Fetch non-custodial wallets from local storage only
   const localWallets = nonCustodialWalletManager.getNonCustodialWallets();
   const nonCustodialWallets: Wallet[] = localWallets.map(w => ({
     id: w.id,
@@ -63,31 +47,12 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     isNonCustodial: true
   }));
 
-  return [...custodialWallets, ...nonCustodialWallets];
+  return nonCustodialWallets;
 }
 
 export async function getWalletBalance(userId: string, cryptoSymbol: string): Promise<Wallet | null> {
-  const supabase = createClient();
-  
-  const { data, error } = await supabase
-    .from('wallets')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('crypto_symbol', cryptoSymbol)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') return null;
-    throw error;
-  }
-  
-  if (!data) return null;
-  
-  return {
-    ...data,
-    balance: typeof data.balance === 'string' ? parseFloat(data.balance) : data.balance,
-    locked_balance: typeof data.locked_balance === 'string' ? parseFloat(data.locked_balance) : data.locked_balance,
-  };
+  const wallets = await getUserWallets(userId);
+  return wallets.find(w => w.crypto_symbol === cryptoSymbol) || null;
 }
 
 export async function sendCrypto(
@@ -144,59 +109,19 @@ export async function sendCrypto(
 }
 
 export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
-  const supabase = createClient();
-  
   const wallet = await getWalletBalance(userId, cryptoSymbol);
-
   if (wallet?.deposit_address) {
     return wallet.deposit_address;
   }
-
-  // Call Supabase edge function to generate real address
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not authenticated');
-
-  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wallet-generate`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ crypto_symbol: cryptoSymbol }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to generate deposit address');
-  }
-
-  const result = await response.json();
-  return result.wallet.deposit_address;
+  throw new Error('No deposit address found for this non-custodial wallet.');
 }
 
 export async function getWalletTransactions(
   userId: string,
   limit: number = 20
 ): Promise<WalletTransaction[]> {
-  const supabase = createClient();
-  
-  const { data, error } = await supabase
-    .from('wallet_transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  
-  return (data || []).map(tx => ({
-    ...tx,
-    amount: typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount,
-    fee: typeof tx.fee === 'string' ? parseFloat(tx.fee) : tx.fee,
-    confirmations: tx.confirmations !== null && tx.confirmations !== undefined
-      ? (typeof tx.confirmations === 'string' ? parseInt(tx.confirmations, 10) : tx.confirmations)
-      : null,
-  }));
+  // Return empty transactions as we are moving away from server-side history for non-custodial
+  return [];
 }
 
 export async function monitorDeposits(userId: string, cryptoSymbol: string): Promise<{
@@ -204,35 +129,8 @@ export async function monitorDeposits(userId: string, cryptoSymbol: string): Pro
   transactions?: any[];
   message?: string;
 }> {
-  const supabase = createClient();
-  
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not authenticated');
-
-  const wallet = await getWalletBalance(userId, cryptoSymbol);
-  if (!wallet?.deposit_address) {
-    throw new Error('No deposit address found. Please generate a deposit address first.');
-  }
-
-  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monitor-deposits`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      user_id: userId,
-      crypto_symbol: cryptoSymbol,
-      deposit_address: wallet.deposit_address,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to monitor deposits');
-  }
-
-  return await response.json();
+  // Non-custodial wallets monitor on-chain, not through server functions
+  return { detected: false, message: 'Non-custodial monitoring handled on-client' };
 }
 
 export async function monitorWithdrawals(userId: string): Promise<{
@@ -240,28 +138,7 @@ export async function monitorWithdrawals(userId: string): Promise<{
   updated: any[];
   message?: string;
 }> {
-  const supabase = createClient();
-  
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not authenticated');
-
-  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monitor-withdrawals`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      user_id: userId,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to monitor withdrawals');
-  }
-
-  return await response.json();
+  return { monitored: 0, updated: [], message: 'Non-custodial monitoring handled on-client' };
 }
 
 export function startDepositMonitoring(
