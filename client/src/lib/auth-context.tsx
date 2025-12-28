@@ -364,15 +364,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.user && data.session) {
       await trackDevice(supabase, data.user.id);
       presenceTracker.startTracking(data.user.id);
-
-      // Check if user needs a wallet generated
-      const wallets = nonCustodialWalletManager.getNonCustodialWallets();
-      if (wallets.length === 0) {
-        // We'll need the password to encrypt. 
-        // In a real app, we'd handle this via a dedicated onboarding flow.
-        // For now, we'll store the intent to generate.
-        console.log("No non-custodial wallet found for user, generation required.");
-      }
     }
 
     return { error, data };
