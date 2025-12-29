@@ -33,7 +33,19 @@ export interface WalletTransaction {
 }
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  // Fetch non-custodial wallets from local storage only (with user-specific key)
+  // First, try to load wallets from Supabase to support cross-browser access
+  // This ensures wallets created in one browser are available in another
+  const supabase = createClient();
+  try {
+    const supabaseWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+    console.log("[getUserWallets] Loaded from Supabase:", supabaseWallets.length, "wallets");
+  } catch (error) {
+    console.error("[getUserWallets] Failed to sync from Supabase:", error);
+    // If Supabase sync fails, continue with local storage only
+  }
+  
+  // Fetch non-custodial wallets from local storage (with user-specific key)
+  // They should now include any wallets synced from Supabase
   const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
   
   // Define the list of supported assets we want to show even if no local wallet exists for them yet
