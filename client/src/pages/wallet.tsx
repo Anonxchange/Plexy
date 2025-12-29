@@ -557,10 +557,10 @@ export default function Wallet() {
         </div>
 
         {/* 2-Column Layout for Desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* LEFT COLUMN - Main Wallet Content + News */}
-          <div className="lg:col-span-1 space-y-4">
+          {/* LEFT COLUMN - Main Wallet Content */}
+          <div className="lg:col-span-2 space-y-4">
 
             {/* Asset Tabs */}
             <div className="flex gap-4 sm:gap-6 mb-4 border-b overflow-x-auto">
