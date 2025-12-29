@@ -500,7 +500,7 @@ export default function Wallet() {
         <h1 className="text-2xl font-bold mb-6">My Wallet</h1>
 
         {/* Total Assets Card */}
-        <div className="bg-card rounded-2xl p-5 mb-3 shadow-sm border border-border">
+        <div className="bg-card rounded-2xl p-5 mb-6 shadow-sm border border-border">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm font-medium">Total Assets</span>
@@ -623,10 +623,10 @@ export default function Wallet() {
         </div>
 
         {/* 2-Column Layout for Desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
 
           {/* LEFT COLUMN - Main Wallet Content */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
 
             {/* Asset Tabs */}
             <div className="flex gap-4 sm:gap-6 mb-4 border-b overflow-x-auto">
@@ -908,8 +908,8 @@ export default function Wallet() {
           </div>
 
           {/* RIGHT COLUMN - Markets */}
-          <div className="lg:col-span-1">
-            <div className="space-y-4 lg:sticky lg:top-6">
+          <div className="lg:col-span-5 xl:col-span-4">
+            <div className="space-y-6 lg:sticky lg:top-6">
 
             {/* Markets Card */}
             <Card className="mb-6">
