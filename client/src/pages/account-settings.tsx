@@ -514,31 +514,15 @@ export default function AccountSettings() {
         throw new Error("No non-custodial wallet found");
       }
       
-      // Use user ID as the wallet encryption password (deterministic)
-      const walletPassword = user?.id || "user-password";
-      
-      // We try to decrypt the first wallet's key to verify the password
-      try {
-        // This will throw if password is wrong
-        await nonCustodialWalletManager.signTransaction(wallets[0].id, { to: "0x0", amount: 0 }, walletPassword, user.id);
-        
-        // If we reach here, password is correct. 
-        // Note: The mnemonic itself isn't stored, but in this demo we're showing the concept.
-        // In a real non-custodial app, you'd either store the encrypted mnemonic or the user would only see it once.
-        // For this requirement, we'll simulate retrieval if they have the password.
-        setMnemonic("The seed phrase is only shown during the initial backup for security. If you lost it, you must use your existing backup.");
-        setShowBackupPhrase(true);
-      } catch (e) {
-        toast({
-          title: "Verification Failed",
-          description: "Could not verify wallet access. This wallet may have been created with a different account.",
-          variant: "destructive",
-        });
-      }
+      // User is already authenticated, so just show the backup message
+      // In a real non-custodial app, you'd either store the encrypted mnemonic or the user would only see it once during creation.
+      // For security, we show a message about the backup being only available during initial setup.
+      setMnemonic("The seed phrase is only shown during the initial backup for security. If you lost it, you must use your existing backup.");
+      setShowBackupPhrase(true);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to verify wallet",
+        description: error.message || "Failed to access wallet",
         variant: "destructive",
       });
     } finally {
