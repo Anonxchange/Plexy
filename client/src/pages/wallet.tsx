@@ -793,7 +793,7 @@ export default function Wallet() {
                   </div>
                   <p className="text-sm opacity-90">Stay informed with live updates</p>
                 </div>
-                <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
+                <div className="p-4 space-y-3 max-h-screen overflow-y-auto">
                   {!newsLoaded ? (
                     <div className="text-center py-8 text-muted-foreground text-sm">
                       Loading news...
