@@ -85,7 +85,7 @@ export const Dashboard = () => {
     const loadData = async () => {
       try {
         // Check if user has existing wallets
-        const existingWallets = nonCustodialWalletManager.getNonCustodialWallets();
+        const existingWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
         setWalletBackupProcessed(existingWallets.length > 0);
 
         const userWallets = await getUserWallets(user.id);
