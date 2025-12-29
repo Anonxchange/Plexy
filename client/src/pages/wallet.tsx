@@ -163,15 +163,15 @@ export default function Wallet() {
 
   const loadCryptoNews = async () => {
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/news');
+      const response = await fetch('https://api.coingecko.com/api/v3/news?language=en&per_page=5');
       const data = await response.json();
-      if (data && Array.isArray(data)) {
-        const news: CryptoNews[] = data.slice(0, 5).map((item: any) => ({
-          id: item.id || '',
-          title: item.title || '',
+      if (data && data.data && Array.isArray(data.data)) {
+        const news: CryptoNews[] = data.data.slice(0, 5).map((item: any) => ({
+          id: item.id || Math.random().toString(),
+          title: item.title || 'Crypto News',
           description: item.description || '',
-          url: item.url || '',
-          image: item.image?.small || item.image?.thumb || '',
+          url: item.url || '#',
+          image: item.image?.small || item.image?.thumb || item.image || '',
           source: item.sources?.[0]?.name || 'Crypto News',
           published_at: item.published_at || new Date().toISOString(),
         }));
@@ -180,6 +180,18 @@ export default function Wallet() {
       setNewsLoaded(true);
     } catch (error) {
       console.error('Error loading crypto news:', error);
+      // Use fallback news if API fails
+      setCryptoNews([
+        {
+          id: '1',
+          title: 'Bitcoin reaches new heights in 2024',
+          description: 'Latest market updates on Bitcoin',
+          url: 'https://coingecko.com',
+          image: '',
+          source: 'Crypto Updates',
+          published_at: new Date().toISOString(),
+        }
+      ]);
       setNewsLoaded(true);
     }
   };
@@ -418,224 +430,8 @@ export default function Wallet() {
     <div className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl">
         
-        {/* My Assets Header - Moved to top */}
-        <h1 className="text-xl sm:text-2xl font-bold mb-6">My assets</h1>
-
-        {/* Limits Card - Moved to top */}
-        <div className="mb-3">
-          <Card>
-            <CardContent className="p-4">
-              <div
-                className="cursor-pointer"
-                onClick={() => setLimitsExpanded(!limitsExpanded)}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-sm">Limits</span>
-                  {limitsExpanded ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="default" className="text-xs">
-                    Level {userVerificationLevel}
-                  </Badge>
-                  <Link href="/verification">
-                    <span className="text-xs text-primary cursor-pointer hover:underline">
-                      {userVerificationLevel < 3 ? "Upgrade" : "Details"}
-                    </span>
-                  </Link>
-                </div>
-              </div>
-
-              {limitsExpanded && (
-                <div className="mt-4 pt-4 border-t space-y-3">
-                  <div className="space-y-3">
-                    {/* Current Level Info */}
-                    <div className="bg-primary/5 p-3 rounded-lg space-y-2">
-                      <div className="font-medium text-xs text-primary">
-                        {getVerificationLevel(userVerificationLevel).name}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {getVerificationLevel(userVerificationLevel).description}
-                      </p>
-                    </div>
-
-                    {/* Limits */}
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Daily Limit</span>
-                        <span className="font-medium">
-                          {getVerificationLevel(userVerificationLevel).dailyLimit !== null
-                            ? `$${getVerificationLevel(userVerificationLevel).dailyLimit?.toLocaleString()}`
-                            : "Unlimited"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Per Trade</span>
-                        <span className="font-medium">
-                          {getVerificationLevel(userVerificationLevel).perTradeLimit !== null
-                            ? `$${getVerificationLevel(userVerificationLevel).perTradeLimit?.toLocaleString()}`
-                            : "Unlimited"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* What you can do */}
-                    {getVerificationLevel(userVerificationLevel).permissions.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs font-medium">What you can do:</div>
-                        <ul className="text-xs text-muted-foreground space-y-1">
-                          {getVerificationLevel(userVerificationLevel).permissions.slice(0, 3).map((permission, idx) => (
-                            <li key={idx} className="flex items-start gap-1">
-                              <span className="text-primary mt-0.5">•</span>
-                              <span>{permission}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-
-                  {userVerificationLevel < 3 && (
-                    <Link href="/verification" className="block">
-                      <Button size="sm" className="w-full" variant="default">
-                        Upgrade to Level {userVerificationLevel + 1}
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Access Navigation Menu */}
-        <div className="mb-3">
-          {/* Desktop Quick Access Card */}
-          <Card className="overflow-hidden hidden lg:block">
-            <CardContent className="p-0">
-              <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 border-b">
-                <h3 className="font-semibold text-sm">Quick Access</h3>
-              </div>
-              <nav className="p-2 space-y-1">
-                <Button
-                  variant={activeWalletTab === "wallet" ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setActiveWalletTab("wallet")}
-                >
-                  <WalletIcon className="h-4 w-4 mr-3" />
-                  Wallet
-                </Button>
-                <Link href="/spot" className="block">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                  >
-                    <ArrowLeftRight className="h-4 w-4 mr-3" />
-                    Spot Trading
-                  </Button>
-                </Link>
-                <Link href="/wallet/visa-card" className="block">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                  >
-                    <CreditCard className="h-4 w-4 mr-3" />
-                    Visa Card
-                  </Button>
-                </Link>
-                <Link href="/wallet/pexly-pay" className="block">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                  >
-                    <Send className="h-4 w-4 mr-3" />
-                    Pexly Pay
-                  </Button>
-                </Link>
-                <Link href="/wallet/mobile-topup" className="block">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                  >
-                    <Smartphone className="h-4 w-4 mr-3" />
-                    Mobile Top-up
-                  </Button>
-                </Link>
-                <Link href="/gift-cards" className="block">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                  >
-                    <Gift className="h-4 w-4 mr-3" />
-                    Gift Cards
-                  </Button>
-                </Link>
-              </nav>
-            </CardContent>
-          </Card>
-
-          {/* Mobile Horizontal Quick Access */}
-          <div className="overflow-x-auto lg:hidden -mx-4 px-4">
-            <div className="flex gap-2 min-w-max pb-2">
-              <Button
-                variant={activeWalletTab === "wallet" ? "default" : "outline"}
-                className="h-9 text-sm whitespace-nowrap"
-                onClick={() => setActiveWalletTab("wallet")}
-              >
-                <WalletIcon className="h-4 w-4 mr-2" />
-                Wallet
-              </Button>
-              <Link href="/spot">
-                <Button
-                  variant="outline"
-                  className="h-9 text-sm whitespace-nowrap"
-                >
-                  <ArrowLeftRight className="h-4 w-4 mr-2" />
-                  Spot
-                </Button>
-              </Link>
-              <Link href="/wallet/visa-card">
-                <Button
-                  variant="outline"
-                  className="h-9 text-sm whitespace-nowrap"
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Visa card
-                </Button>
-              </Link>
-              <Link href="/wallet/pexly-pay">
-                <Button
-                  variant="outline"
-                  className="h-9 text-sm whitespace-nowrap"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Pexly Pay
-                </Button>
-              </Link>
-              <Link href="/wallet/mobile-topup">
-                <Button
-                  variant="outline"
-                  className="h-9 text-sm whitespace-nowrap"
-                >
-                  <Smartphone className="h-4 w-4 mr-2" />
-                  Top-up
-                </Button>
-              </Link>
-              <Link href="/gift-cards">
-                <Button
-                  variant="outline"
-                  className="h-9 text-sm whitespace-nowrap"
-                >
-                  <Gift className="h-4 w-4 mr-2" />
-                  Gift Cards
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
+        {/* My Assets Header */}
+        <h1 className="text-2xl font-bold mb-6">My Wallet</h1>
 
         {/* Total Assets Card */}
         <div className="bg-card rounded-2xl p-5 mb-3 shadow-sm border border-border">
@@ -760,17 +556,11 @@ export default function Wallet() {
           </button>
         </div>
 
-        {/* 3-Column Layout for Desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* 2-Column Layout for Desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-          {/* LEFT COLUMN - Navigation Sidebar */}
-          <div className="lg:col-span-3">
-            <div className="space-y-4 lg:sticky lg:top-6">
-            </div>
-          </div>
-
-          {/* MIDDLE COLUMN - Main Wallet Content */}
-          <div className="lg:col-span-6 space-y-4">
+          {/* LEFT COLUMN - Main Wallet Content */}
+          <div className="lg:col-span-2.5 space-y-4">
 
             {/* Asset Tabs */}
             <div className="flex gap-4 sm:gap-6 mb-4 border-b overflow-x-auto">
@@ -1116,7 +906,7 @@ export default function Wallet() {
           </div>
 
           {/* RIGHT COLUMN - Live Crypto News */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-1.5">
             <div className="space-y-4 lg:sticky lg:top-6">
 
             {/* Crypto News Card */}
