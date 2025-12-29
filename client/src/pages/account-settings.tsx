@@ -505,7 +505,11 @@ export default function AccountSettings() {
   const handleShowBackupPhrase = async () => {
     setIsVerifyingBackupPassword(true);
     try {
-      const wallets = nonCustodialWalletManager.getNonCustodialWallets();
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+      
+      const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
       if (wallets.length === 0) {
         throw new Error("No non-custodial wallet found");
       }
@@ -516,7 +520,7 @@ export default function AccountSettings() {
       // We try to decrypt the first wallet's key to verify the password
       try {
         // This will throw if password is wrong
-        await nonCustodialWalletManager.signTransaction(wallets[0].id, { to: "0x0", amount: 0 }, walletPassword);
+        await nonCustodialWalletManager.signTransaction(wallets[0].id, { to: "0x0", amount: 0 }, walletPassword, user.id);
         
         // If we reach here, password is correct. 
         // Note: The mnemonic itself isn't stored, but in this demo we're showing the concept.
