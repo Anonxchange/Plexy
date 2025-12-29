@@ -305,9 +305,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (walletAddress) {
+        console.log("[AuthContext] Checking wallet address:", walletAddress);
         const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress);
+        console.log("[AuthContext] Has local wallet?", hasLocal);
+        
+        // Ensure state update is consistent and forced if not local
         if (!hasLocal) {
-          setWalletImportState({ required: true, expectedAddress: walletAddress });
+          setWalletImportState({ 
+            required: true, 
+            expectedAddress: walletAddress 
+          });
+        } else {
+          setWalletImportState({ 
+            required: false, 
+            expectedAddress: null 
+          });
         }
       }
     } catch (error) {
