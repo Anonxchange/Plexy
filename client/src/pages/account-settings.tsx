@@ -506,7 +506,7 @@ export default function AccountSettings() {
     if (!backupPassword) {
       toast({
         title: "Password Required",
-        description: "Please enter your account password to view your recovery phrase",
+        description: "Please enter your wallet password to view your recovery phrase",
         variant: "destructive",
       });
       return;
@@ -520,7 +520,7 @@ export default function AccountSettings() {
       
       const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
       if (wallets.length === 0) {
-        throw new Error("No non-custodial wallet found. Please create a wallet first.");
+        throw new Error("No non-custodial wallet found. Please create a wallet first through the Wallet section.");
       }
       
       // Try to decrypt the mnemonic with the provided password
@@ -530,17 +530,15 @@ export default function AccountSettings() {
         user.id
       );
       
-      if (!mnemonicPhrase) {
-        throw new Error("Failed to decrypt recovery phrase. Please check your password and try again.");
-      }
-      
       setMnemonic(mnemonicPhrase);
       setShowBackupPhrase(true);
       setBackupPassword("");
     } catch (error: any) {
+      const errorMsg = error.message || "Failed to access recovery phrase";
+      console.error("Backup phrase error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to access recovery phrase",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
