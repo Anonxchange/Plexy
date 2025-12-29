@@ -65,8 +65,8 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
 
   // Check for existing non-custodial wallets on dialog open
   useEffect(() => {
-    if (open) {
-      const existingWallets = nonCustodialWalletManager.getNonCustodialWallets();
+    if (open && user) {
+      const existingWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
       if (existingWallets.length === 0) {
         // No wallets yet - show setup dialog automatically
         setShowWalletSetup(true);
@@ -77,7 +77,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
         setShowWalletSetup(false);
       }
     }
-  }, [open]);
+  }, [open, user]);
 
   // Auto-load or generate address when step changes to details
   useEffect(() => {
@@ -126,7 +126,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
     setIsGenerating(true);
     try {
       // Always prioritize non-custodial if wallets exist
-      const wallets = nonCustodialWalletManager.getNonCustodialWallets();
+      const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
       if (wallets.length > 0) {
         const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
         const address = await getDepositAddress(user.id, symbolToUse);
