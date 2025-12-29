@@ -289,28 +289,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkWalletOnAuth = useCallback(async (userId: string) => {
     try {
-      // First try user_profiles
-      const { data: profile } = await supabase
+      console.log("[AuthContext] checkWalletOnAuth started for user:", userId);
+      
+      // Force a fresh profile fetch
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('wallet_address')
         .eq('id', userId)
         .maybeSingle();
 
+      if (profileError) {
+        console.error("[AuthContext] Error fetching profile:", profileError);
+      }
+
       let walletAddress = profile?.wallet_address;
+      console.log("[AuthContext] DB Wallet Address:", walletAddress);
 
       // Fallback to auth metadata if not in profile
       if (!walletAddress) {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error("[AuthContext] Error fetching auth user:", userError);
+        }
         walletAddress = user?.user_metadata?.wallet_address;
+        console.log("[AuthContext] Metadata Wallet Address:", walletAddress);
       }
 
       if (walletAddress) {
-        console.log("[AuthContext] Checking wallet address:", walletAddress);
         const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress);
-        console.log("[AuthContext] Has local wallet?", hasLocal);
+        console.log("[AuthContext] Has local wallet for", walletAddress, "?", hasLocal);
         
-        // Ensure state update is consistent and forced if not local
         if (!hasLocal) {
+          console.log("[AuthContext] Triggering import dialog for:", walletAddress);
           setWalletImportState({ 
             required: true, 
             expectedAddress: walletAddress 
@@ -321,6 +331,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             expectedAddress: null 
           });
         }
+      } else {
+        console.log("[AuthContext] No wallet address found in DB or Metadata");
       }
     } catch (error) {
       console.error("Error checking wallet on auth:", error);
@@ -370,9 +382,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Listen for manual trigger from dashboard
+    const handleForceCheck = (e: any) => {
+      if (e.detail?.userId) {
+        checkWalletOnAuth(e.detail.userId);
+      }
+    };
+    window.addEventListener('force-wallet-check', handleForceCheck);
+
     return () => {
       subscription.unsubscribe();
       presenceTracker.stopTracking();
+      window.removeEventListener('force-wallet-check', handleForceCheck);
     };
   }, [pendingOTPVerification]);
 
@@ -397,6 +418,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets();
     const walletAddress = localWallets.length > 0 ? localWallets[0].address : undefined;
 
+    console.log("[AuthContext] Signing up with wallet address:", walletAddress);
+
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
@@ -410,10 +433,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (!error && data.user && walletAddress) {
-      await supabase.from('user_profiles').upsert({
+      console.log("[AuthContext] Syncing wallet to user_profiles for new user:", data.user.id);
+      const { error: syncError } = await supabase.from('user_profiles').upsert({
         id: data.user.id,
         wallet_address: walletAddress
       }, { onConflict: 'id' });
+      
+      if (syncError) {
+        console.error("[AuthContext] Error syncing wallet on signup:", syncError);
+      }
     }
 
     return { error };
@@ -431,6 +459,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data.user && data.session) {
+      console.log("[AuthContext] Sign in successful for:", data.user.id);
+      
+      // Force a session refresh to get latest metadata
+      await supabase.auth.refreshSession();
+      
       await trackDevice(supabase, data.user.id);
       await checkWalletOnAuth(data.user.id);
       presenceTracker.startTracking(data.user.id);
