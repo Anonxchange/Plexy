@@ -8,7 +8,6 @@ import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
 // ... rest of imports and helpers
@@ -78,7 +77,6 @@ export const Dashboard = () => {
   const [equivalentBtc, setEquivalentBtc] = useState(0);
   const [markets, setMarkets] = useState(defaultMarkets);
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
-  const [pendingWallet, setPendingWallet] = useState<{mnemonic: string, walletId: string} | null>(null);
   const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
 
   useEffect(() => {
@@ -86,17 +84,9 @@ export const Dashboard = () => {
     
     const loadData = async () => {
       try {
-        // Handle non-custodial wallet check/generation
+        // Check if user has existing wallets
         const existingWallets = nonCustodialWalletManager.getNonCustodialWallets();
-        if (existingWallets.length === 0) {
-          // Auto-generate wallet on first login - use user ID as password for consistency
-          const walletPassword = user?.id || "user-password";
-          const { wallet, mnemonicPhrase } = await nonCustodialWalletManager.generateNonCustodialWallet("ethereum", walletPassword);
-          setPendingWallet({ mnemonic: mnemonicPhrase, walletId: wallet.id });
-          setWalletBackupProcessed(false);
-        } else {
-          setWalletBackupProcessed(true);
-        }
+        setWalletBackupProcessed(existingWallets.length > 0);
 
         const userWallets = await getUserWallets(user.id);
 // ... rest of loadData
@@ -141,43 +131,6 @@ export const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background pb-8">
       <div className="max-w-7xl mx-auto">
-        {/* Backup Banner */}
-        {pendingWallet && walletBackupProcessed === false && (
-          <div className="mx-4 mt-4 lg:mx-0 lg:mt-0 mb-6 bg-blue-500/10 border border-blue-500/20 rounded-xl p-6 flex items-start justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex-1">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Your Backup Phrase</h4>
-              <p className="text-sm text-blue-800/80 dark:text-blue-200/80 mb-4">
-                Save this recovery phrase somewhere safe. You'll need it to recover your wallet if you lose access.
-              </p>
-              <div className="bg-background rounded-lg p-4 mb-4 border border-blue-500/20">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm font-mono">
-                  {pendingWallet.mnemonic.split(' ').map((word, i) => (
-                    <div key={i} className="flex items-center">
-                      <span className="text-muted-foreground mr-2">{i + 1}.</span>
-                      <span className="text-foreground">{word}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => {
-                  nonCustodialWalletManager.markWalletAsBackedUp(pendingWallet.walletId);
-                  setPendingWallet(null);
-                  setWalletBackupProcessed(true);
-                }}
-              >
-                I've Saved My Phrase
-              </Button>
-            </div>
-            <button 
-              onClick={() => setPendingWallet(null)}
-              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        )}
         {/* Desktop 2-column layout */}
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:p-6">
           
