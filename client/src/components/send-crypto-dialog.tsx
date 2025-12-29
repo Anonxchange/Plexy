@@ -184,7 +184,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
       
       if (useNonCustodial) {
-        const wallets = nonCustodialWalletManager.getNonCustodialWallets();
+        const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
         const nonCustWallet = wallets.find(w => w.chainId === "ethereum"); // Default to eth for now as per schema
         if (!nonCustWallet) {
           setError("Non-custodial wallet not found. Please create one first.");
@@ -197,7 +197,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
           amount: cryptoAmountNum,
           symbol: symbolToUse,
         };
-        const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, userPassword);
+        const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, userPassword, user.id);
         console.log("Signed Transaction:", signedTx);
         // In a real app, we would now broadcast this signed transaction to the network
         toast({ title: "Transaction signed and broadcasted!" });
