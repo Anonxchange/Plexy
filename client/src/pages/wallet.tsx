@@ -163,17 +163,25 @@ export default function Wallet() {
 
   const loadCryptoNews = async () => {
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/news');
+      const apiKey = import.meta.env.VITE_NEWSDATA_API_KEY;
+      if (!apiKey) {
+        setCryptoNews(getFallbackNews());
+        setNewsLoaded(true);
+        return;
+      }
+      
+      const response = await fetch(`https://newsdata.io/api/1/news?apikey=${apiKey}&q=crypto&language=en&category=technology`);
       const data = await response.json();
-      if (data && data.data && Array.isArray(data.data)) {
-        const news: CryptoNews[] = data.data.slice(0, 20).map((item: any) => ({
-          id: item.id || Math.random().toString(),
+      
+      if (data && data.results && Array.isArray(data.results)) {
+        const news: CryptoNews[] = data.results.slice(0, 20).map((item: any) => ({
+          id: item.article_id || Math.random().toString(),
           title: item.title || 'Crypto News',
           description: item.description || '',
-          url: item.url || '#',
-          image: item.image?.small || item.image?.thumb || item.image || '',
-          source: item.sources?.[0]?.name || 'Crypto News',
-          published_at: item.published_at || new Date().toISOString(),
+          url: item.link || '#',
+          image: item.image_url || '',
+          source: item.source_id || 'Crypto News',
+          published_at: item.pubDate || new Date().toISOString(),
         }));
         setCryptoNews(news.length > 0 ? news : getFallbackNews());
       } else {
