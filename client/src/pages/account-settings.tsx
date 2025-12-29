@@ -2339,17 +2339,19 @@ export default function AccountSettings() {
                 
                 {!showBackupPhrase ? (
                   <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Enter your password to securely view your recovery phrase. Your password is used only to decrypt your recovery phrase and is never stored.
-                    </p>
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        Enter the <strong>wallet password</strong> you set when you created this non-custodial wallet. This is different from your login password.
+                      </p>
+                    </div>
                     <div className="space-y-2">
-                      <Label htmlFor="backup-password">Account Password</Label>
+                      <Label htmlFor="backup-password">Wallet Password</Label>
                       <Input
                         id="backup-password"
                         type="password"
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
-                        placeholder="Enter your account password"
+                        placeholder="Enter your wallet password"
                         disabled={isVerifyingBackupPassword}
                       />
                     </div>
