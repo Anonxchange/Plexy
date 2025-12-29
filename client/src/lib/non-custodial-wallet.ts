@@ -17,9 +17,19 @@ export interface NonCustodialWallet {
   isBackedUp: boolean;
 }
 
-const STORAGE_KEY = "pexly_non_custodial_wallets";
+const STORAGE_KEY_PREFIX = "pexly_non_custodial_wallets";
 
 class NonCustodialWalletManager {
+  /**
+   * Get user-specific storage key
+   */
+  private getStorageKey(userId?: string): string {
+    if (!userId) {
+      throw new Error("userId is required for wallet operations");
+    }
+    return `${STORAGE_KEY_PREFIX}_${userId}`;
+  }
+
   /**
    * Generate a new non-custodial wallet with encrypted private key (stored in browser only)
    */
@@ -29,6 +39,10 @@ class NonCustodialWalletManager {
     supabase?: any,
     userId?: string
   ): Promise<{ wallet: NonCustodialWallet; mnemonicPhrase: string }> {
+    if (!userId) {
+      throw new Error("userId is required to generate wallet");
+    }
+
     // Generate mnemonic and derive wallet
     const mnemonic = bip39.generateMnemonic();
     const seed = await bip39.mnemonicToSeed(mnemonic);
@@ -53,8 +67,8 @@ class NonCustodialWalletManager {
       isBackedUp: false,
     };
     
-    // Store in localStorage
-    this.saveWalletsToStorage([...this.getWalletsFromStorage(), newWallet]);
+    // Store in localStorage with user-specific key
+    this.saveWalletsToStorage([...this.getWalletsFromStorage(userId), newWallet], userId);
     
     // Also save to Supabase if provided
     if (supabase && userId) {
@@ -75,8 +89,13 @@ class NonCustodialWalletManager {
     expectedAddress: string,
     chainId: string = "ethereum",
     userPassword: string,
-    isMnemonic: boolean = false
+    isMnemonic: boolean = false,
+    userId?: string
   ): Promise<{ wallet: NonCustodialWallet }> {
+    if (!userId) {
+      throw new Error("userId is required to import wallet");
+    }
+
     let privateKey: string;
     let address: string;
 
@@ -111,7 +130,7 @@ class NonCustodialWalletManager {
         isBackedUp: true,
       };
       
-      this.saveWalletsToStorage([...this.getWalletsFromStorage(), newWallet]);
+      this.saveWalletsToStorage([...this.getWalletsFromStorage(userId), newWallet], userId);
       return { wallet: newWallet };
     } catch (error) {
       throw error instanceof Error ? error : new Error("Failed to verify wallet");
@@ -121,16 +140,22 @@ class NonCustodialWalletManager {
   /**
    * Check if a wallet exists locally for a given address
    */
-  hasLocalWallet(address: string): boolean {
-    const wallets = this.getWalletsFromStorage();
+  hasLocalWallet(address: string, userId?: string): boolean {
+    if (!userId) {
+      throw new Error("userId is required to check for wallets");
+    }
+    const wallets = this.getWalletsFromStorage(userId);
     return wallets.some(w => w.address.toLowerCase() === address.toLowerCase());
   }
 
   /**
    * Get all non-custodial wallets from localStorage
    */
-  getNonCustodialWallets(): NonCustodialWallet[] {
-    return this.getWalletsFromStorage();
+  getNonCustodialWallets(userId?: string): NonCustodialWallet[] {
+    if (!userId) {
+      throw new Error("userId is required to fetch wallets");
+    }
+    return this.getWalletsFromStorage(userId);
   }
 
   /**
@@ -140,9 +165,14 @@ class NonCustodialWalletManager {
   async signTransaction(
     walletId: string,
     transactionData: any,
-    userPassword: string
+    userPassword: string,
+    userId?: string
   ): Promise<string> {
-    const wallets = this.getWalletsFromStorage();
+    if (!userId) {
+      throw new Error("userId is required to sign transaction");
+    }
+    
+    const wallets = this.getWalletsFromStorage(userId);
     const wallet = wallets.find(w => w.id === walletId);
     
     if (!wallet) {
@@ -184,8 +214,11 @@ class NonCustodialWalletManager {
   /**
    * Get wallet address by ID
    */
-  getWalletAddress(walletId: string): string | null {
-    const wallets = this.getWalletsFromStorage();
+  getWalletAddress(walletId: string, userId?: string): string | null {
+    if (!userId) {
+      throw new Error("userId is required to get wallet address");
+    }
+    const wallets = this.getWalletsFromStorage(userId);
     const wallet = wallets.find(w => w.id === walletId);
     return wallet?.address || null;
   }
@@ -193,22 +226,28 @@ class NonCustodialWalletManager {
   /**
    * Mark a wallet as backed up
    */
-  markWalletAsBackedUp(walletId: string): void {
-    const wallets = this.getWalletsFromStorage();
+  markWalletAsBackedUp(walletId: string, userId?: string): void {
+    if (!userId) {
+      throw new Error("userId is required to mark wallet as backed up");
+    }
+    const wallets = this.getWalletsFromStorage(userId);
     const wallet = wallets.find(w => w.id === walletId);
     if (wallet) {
       wallet.isBackedUp = true;
-      this.saveWalletsToStorage(wallets);
+      this.saveWalletsToStorage(wallets, userId);
     }
   }
 
   /**
    * Delete a non-custodial wallet from localStorage
    */
-  deleteWallet(walletId: string): void {
-    const wallets = this.getWalletsFromStorage();
+  deleteWallet(walletId: string, userId?: string): void {
+    if (!userId) {
+      throw new Error("userId is required to delete wallet");
+    }
+    const wallets = this.getWalletsFromStorage(userId);
     const filtered = wallets.filter(w => w.id !== walletId);
-    this.saveWalletsToStorage(filtered);
+    this.saveWalletsToStorage(filtered, userId);
   }
 
   /**
@@ -293,9 +332,13 @@ class NonCustodialWalletManager {
   /**
    * Get wallets from localStorage
    */
-  private getWalletsFromStorage(): NonCustodialWallet[] {
+  private getWalletsFromStorage(userId?: string): NonCustodialWallet[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!userId) {
+        throw new Error("userId is required to get wallets from storage");
+      }
+      const key = this.getStorageKey(userId);
+      const stored = localStorage.getItem(key);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       console.error("Failed to read wallets from storage:", error);
@@ -306,9 +349,13 @@ class NonCustodialWalletManager {
   /**
    * Save wallets to localStorage
    */
-  private saveWalletsToStorage(wallets: NonCustodialWallet[]): void {
+  private saveWalletsToStorage(wallets: NonCustodialWallet[], userId?: string): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(wallets));
+      if (!userId) {
+        throw new Error("userId is required to save wallets to storage");
+      }
+      const key = this.getStorageKey(userId);
+      localStorage.setItem(key, JSON.stringify(wallets));
     } catch (error) {
       console.error("Failed to save wallets to storage:", error);
       throw new Error("Failed to save wallet to browser storage");
