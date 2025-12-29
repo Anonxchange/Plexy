@@ -25,7 +25,9 @@ class NonCustodialWalletManager {
    */
   async generateNonCustodialWallet(
     chainId: string = "ethereum",
-    userPassword: string
+    userPassword: string,
+    supabase?: any,
+    userId?: string
   ): Promise<{ wallet: NonCustodialWallet; mnemonicPhrase: string }> {
     // Generate mnemonic and derive wallet
     const mnemonic = bip39.generateMnemonic();
@@ -53,6 +55,11 @@ class NonCustodialWalletManager {
     
     // Store in localStorage
     this.saveWalletsToStorage([...this.getWalletsFromStorage(), newWallet]);
+    
+    // Also save to Supabase if provided
+    if (supabase && userId) {
+      await this.saveWalletToSupabase(newWallet, supabase, userId);
+    }
     
     return {
       wallet: newWallet,
@@ -217,6 +224,64 @@ class NonCustodialWalletManager {
   private decryptPrivateKey(encryptedKey: string, password: string): string {
     const bytes = CryptoJS.AES.decrypt(encryptedKey, password);
     return bytes.toString(CryptoJS.enc.Utf8);
+  }
+
+  /**
+   * Save wallet to Supabase database
+   */
+  async saveWalletToSupabase(wallet: NonCustodialWallet, supabase: any, userId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('user_wallets')
+        .insert({
+          id: wallet.id,
+          user_id: userId,
+          chain_id: wallet.chainId,
+          address: wallet.address,
+          wallet_type: wallet.walletType,
+          encrypted_private_key: wallet.encryptedPrivateKey,
+          is_active: wallet.isActive ? 'true' : 'false',
+          is_backed_up: wallet.isBackedUp ? 'true' : 'false',
+        });
+      
+      if (error) throw error;
+      console.log("Wallet saved to Supabase:", wallet.id);
+    } catch (error) {
+      console.error("Failed to save wallet to Supabase:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load wallets from Supabase database
+   */
+  async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
+    try {
+      const { data, error } = await supabase
+        .from('user_wallets')
+        .select('*')
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      return data.map((row: any) => ({
+        id: row.id,
+        chainId: row.chain_id,
+        address: row.address,
+        walletType: row.wallet_type,
+        encryptedPrivateKey: row.encrypted_private_key,
+        createdAt: row.created_at,
+        isActive: row.is_active === 'true',
+        isBackedUp: row.is_backed_up === 'true',
+      }));
+    } catch (error) {
+      console.error("Failed to load wallets from Supabase:", error);
+      return [];
+    }
   }
 
   /**
