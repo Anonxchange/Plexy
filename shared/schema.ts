@@ -81,6 +81,7 @@ export const userWallets = pgTable("user_wallets", {
   address: text("address").notNull(),
   walletType: text("wallet_type").notNull().default("ethereum"),
   encryptedPrivateKey: text("encrypted_private_key").notNull(),
+  encryptedMnemonic: text("encrypted_mnemonic"),
   isActive: text("is_active").notNull().default("true"),
   isBackedUp: text("is_backed_up").notNull().default("false"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
