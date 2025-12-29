@@ -204,14 +204,23 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
         supabase,
         user?.id
       );
+
+      // Generate all other supported network wallets using the SAME mnemonic phrase
+      const networks = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "Binance Smart Chain (BEP-20)"];
       
-      // Also generate wallets for other networks if needed, or simply share the same mnemonic/address
-      // Most of the supported networks in networkMap are EVM or can use the same seed logic
-      // But for now, we'll just ensure the UI knows it has a local wallet.
+      for (const network of networks) {
+        await nonCustodialWalletManager.generateNonCustodialWallet(
+          network,
+          walletPassword,
+          supabase,
+          user?.id,
+          result.mnemonicPhrase
+        );
+      }
       
       toast({
         title: "Success",
-        description: "Non-custodial wallet created! Save your recovery phrase in a secure place.",
+        description: "Non-custodial wallets created! All networks are secured by your recovery phrase.",
       });
 
       // Reset and close setup dialog
@@ -273,10 +282,11 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       if (selectedNetwork === 'Ethereum (ERC-20)') return `${selectedCrypto}-ERC20`;
       if (selectedNetwork === 'Binance Smart Chain (BEP-20)') return `${selectedCrypto}-BEP20`;
       if (selectedNetwork === 'Tron (TRC-20)') return `${selectedCrypto}-TRC20`;
-      if (selectedNetwork === 'Solana (SPL)') return `${selectedCrypto}-SOL`; // Corrected to match SPL
+      if (selectedNetwork === 'Solana (SPL)') return `${selectedCrypto}-SOL`;
+      if (selectedNetwork === 'Solana') return `${selectedCrypto}-SOL`;
     }
 
-    return selectedCrypto; // Fallback for unhandled cases
+    return selectedCrypto;
   };
 
   // Handler to generate the deposit address
