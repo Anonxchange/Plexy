@@ -514,10 +514,20 @@ export default function AccountSettings() {
         throw new Error("No non-custodial wallet found");
       }
       
-      // User is already authenticated, so just show the backup message
-      // In a real non-custodial app, you'd either store the encrypted mnemonic or the user would only see it once during creation.
-      // For security, we show a message about the backup being only available during initial setup.
-      setMnemonic("The seed phrase is only shown during the initial backup for security. If you lost it, you must use your existing backup.");
+      // Get the mnemonic for the first wallet
+      // Password is the user's ID (deterministic, same as when wallet was created)
+      const walletPassword = user.id;
+      const mnemonicPhrase = nonCustodialWalletManager.getWalletMnemonic(
+        wallets[0].id,
+        walletPassword,
+        user.id
+      );
+      
+      if (mnemonicPhrase) {
+        setMnemonic(mnemonicPhrase);
+      } else {
+        setMnemonic("The seed phrase is only shown during the initial backup for security. If you lost it, you must use your existing backup.");
+      }
       setShowBackupPhrase(true);
     } catch (error: any) {
       toast({
