@@ -503,6 +503,15 @@ export default function AccountSettings() {
   const [isVerifyingBackupPassword, setIsVerifyingBackupPassword] = useState(false);
 
   const handleShowBackupPhrase = async () => {
+    if (!backupPassword) {
+      toast({
+        title: "Password Required",
+        description: "Please enter your account password to view your recovery phrase",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsVerifyingBackupPassword(true);
     try {
       if (!user?.id) {
@@ -511,28 +520,27 @@ export default function AccountSettings() {
       
       const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
       if (wallets.length === 0) {
-        throw new Error("No non-custodial wallet found");
+        throw new Error("No non-custodial wallet found. Please create a wallet first.");
       }
       
-      // Get the mnemonic for the first wallet
-      // Password is the user's ID (deterministic, same as when wallet was created)
-      const walletPassword = user.id;
+      // Try to decrypt the mnemonic with the provided password
       const mnemonicPhrase = nonCustodialWalletManager.getWalletMnemonic(
         wallets[0].id,
-        walletPassword,
+        backupPassword,
         user.id
       );
       
-      if (mnemonicPhrase) {
-        setMnemonic(mnemonicPhrase);
-      } else {
-        setMnemonic("The seed phrase is only shown during the initial backup for security. If you lost it, you must use your existing backup.");
+      if (!mnemonicPhrase) {
+        throw new Error("Failed to decrypt recovery phrase. Please check your password and try again.");
       }
+      
+      setMnemonic(mnemonicPhrase);
       setShowBackupPhrase(true);
+      setBackupPassword("");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to access wallet",
+        description: error.message || "Failed to access recovery phrase",
         variant: "destructive",
       });
     } finally {
@@ -2332,11 +2340,22 @@ export default function AccountSettings() {
                 {!showBackupPhrase ? (
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                      Click the button below to verify your account and view your recovery phrase.
+                      Enter your password to securely view your recovery phrase. Your password is used only to decrypt your recovery phrase and is never stored.
                     </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="backup-password">Account Password</Label>
+                      <Input
+                        id="backup-password"
+                        type="password"
+                        value={backupPassword}
+                        onChange={(e) => setBackupPassword(e.target.value)}
+                        placeholder="Enter your account password"
+                        disabled={isVerifyingBackupPassword}
+                      />
+                    </div>
                     <Button 
                       onClick={handleShowBackupPhrase} 
-                      disabled={isVerifyingBackupPassword}
+                      disabled={isVerifyingBackupPassword || !backupPassword}
                       variant="outline"
                     >
                       {isVerifyingBackupPassword ? "Verifying..." : "Show Recovery Phrase"}
