@@ -25,7 +25,9 @@ import {
   Clock,
   XCircle,
   Send,
-  ArrowRight
+  ArrowRight,
+  Newspaper,
+  ExternalLink
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -88,6 +90,16 @@ const generateSparklineData = (baseValue: number, trend: 'up' | 'down' | 'neutra
 };
 
 
+interface CryptoNews {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  image: string;
+  source: string;
+  published_at: string;
+}
+
 export default function Wallet() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -105,6 +117,8 @@ export default function Wallet() {
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
   const [pricesLoaded, setPricesLoaded] = useState(false);
   const [pricesLoadedSuccessfully, setPricesLoadedSuccessfully] = useState(false);
+  const [cryptoNews, setCryptoNews] = useState<CryptoNews[]>([]);
+  const [newsLoaded, setNewsLoaded] = useState(false);
   
   // Initialize cached values from sessionStorage to prevent 0 display on refresh
   const [cachedBalance, setCachedBalance] = useState<number | null>(() => {
@@ -147,6 +161,29 @@ export default function Wallet() {
     }
   }, [user, loading, setLocation]);
 
+  const loadCryptoNews = async () => {
+    try {
+      const response = await fetch('https://api.coingecko.com/api/v3/news');
+      const data = await response.json();
+      if (data && Array.isArray(data)) {
+        const news: CryptoNews[] = data.slice(0, 5).map((item: any) => ({
+          id: item.id || '',
+          title: item.title || '',
+          description: item.description || '',
+          url: item.url || '',
+          image: item.image?.small || item.image?.thumb || '',
+          source: item.sources?.[0]?.name || 'Crypto News',
+          published_at: item.published_at || new Date().toISOString(),
+        }));
+        setCryptoNews(news);
+      }
+      setNewsLoaded(true);
+    } catch (error) {
+      console.error('Error loading crypto news:', error);
+      setNewsLoaded(true);
+    }
+  };
+
   // Load initial data and set up real-time subscriptions
   useEffect(() => {
     if (!user) return;
@@ -155,13 +192,16 @@ export default function Wallet() {
     loadUserProfile();
     loadWalletData();
     loadCryptoPrices();
+    loadCryptoNews();
     // loadTransactions(); // Removed for non-custodial pure mode
 
     // Increase price update interval to reduce calls
     const priceInterval = setInterval(loadCryptoPrices, 120000); // 2 minutes
+    const newsInterval = setInterval(loadCryptoNews, 600000); // 10 minutes
 
     return () => {
       clearInterval(priceInterval);
+      clearInterval(newsInterval);
     };
   }, [user]);
 
@@ -1075,72 +1115,62 @@ export default function Wallet() {
 
           </div>
 
-          {/* RIGHT COLUMN - Rewards & Referrals */}
+          {/* RIGHT COLUMN - Live Crypto News */}
           <div className="lg:col-span-3">
             <div className="space-y-4 lg:sticky lg:top-6">
 
-            {/* Rewards Card */}
+            {/* Crypto News Card */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-primary to-primary/80 p-4 text-primary-foreground">
+                <div className="bg-gradient-to-br from-blue-600 to-blue-500 p-4 text-white">
                   <div className="flex items-center gap-2 mb-2">
-                    <Gift className="h-5 w-5" />
-                    <h3 className="font-bold text-lg">Rewards</h3>
+                    <Newspaper className="h-5 w-5" />
+                    <h3 className="font-bold text-lg">Latest Crypto News</h3>
                   </div>
-                  <p className="text-sm opacity-90">Earn while you trade</p>
+                  <p className="text-sm opacity-90">Stay informed with live updates</p>
                 </div>
-                <div className="p-4 space-y-3">
-                  <Link href="/rewards" className="block">
-                    <div className="p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Trading Rewards</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Earn up to 0.5% cashback</p>
+                <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
+                  {!newsLoaded ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      Loading news...
                     </div>
-                  </Link>
-                  <Link href="/medals" className="block">
-                    <div className="p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Achievement Medals</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Unlock exclusive badges</p>
+                  ) : cryptoNews.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      No news available
                     </div>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Referral Card */}
-            <Card className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-green-600 to-green-500 p-4 text-white">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-5 w-5" />
-                    <h3 className="font-bold text-lg">Referrals</h3>
-                  </div>
-                  <p className="text-sm opacity-90">Invite & earn together</p>
-                </div>
-                <div className="p-4 space-y-3">
-                  <Link href="/referral" className="block">
-                    <div className="p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Invite Friends</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Get $10 per referral</p>
-                    </div>
-                  </Link>
-                  <Link href="/affiliate" className="block">
-                    <div className="p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Affiliate Program</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Earn up to 40% commission</p>
-                    </div>
-                  </Link>
+                  ) : (
+                    cryptoNews.map((article) => (
+                      <a
+                        key={article.id}
+                        href={article.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer block"
+                      >
+                        <div className="flex items-start gap-2 mb-2">
+                          {article.image && (
+                            <img
+                              src={article.image}
+                              alt={article.title}
+                              className="w-12 h-12 rounded object-cover flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-foreground line-clamp-2 mb-1">
+                              {article.title}
+                            </h4>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">{article.source}</span>
+                              <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
