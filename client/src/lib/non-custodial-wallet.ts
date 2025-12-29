@@ -253,7 +253,7 @@ class NonCustodialWalletManager {
   }
 
   /**
-   * Load wallets from Supabase database
+   * Load wallets from Supabase database and sync to localStorage
    */
   async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
     try {
@@ -268,7 +268,7 @@ class NonCustodialWalletManager {
         return [];
       }
 
-      return data.map((row: any) => ({
+      const wallets = data.map((row: any) => ({
         id: row.id,
         chainId: row.chain_id,
         address: row.address,
@@ -278,6 +278,12 @@ class NonCustodialWalletManager {
         isActive: row.is_active === 'true',
         isBackedUp: row.is_backed_up === 'true',
       }));
+
+      // Sync loaded wallets to localStorage so they're recognized by the app
+      this.saveWalletsToStorage(wallets);
+      console.log("[WalletManager] Synced wallets from Supabase to localStorage:", wallets.length);
+
+      return wallets;
     } catch (error) {
       console.error("Failed to load wallets from Supabase:", error);
       return [];
