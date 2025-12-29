@@ -74,6 +74,18 @@ export const referrals = pgTable("referrals", {
   completedAt: timestamp("completed_at"),
 });
 
+export const userWallets = pgTable("user_wallets", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  chainId: text("chain_id").notNull(),
+  address: text("address").notNull(),
+  walletType: text("wallet_type").notNull().default("ethereum"),
+  encryptedPrivateKey: text("encrypted_private_key").notNull(),
+  isActive: text("is_active").notNull().default("true"),
+  isBackedUp: text("is_backed_up").notNull().default("false"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
