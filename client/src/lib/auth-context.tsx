@@ -291,6 +291,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("[AuthContext] checkWalletOnAuth started for user:", userId);
       
+      // Load persisted wallets from Supabase
+      const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+      console.log("[AuthContext] Loaded persisted wallets from Supabase:", persistedWallets.length);
+      
+      if (persistedWallets.length > 0) {
+        // User has persisted wallets, no need to import
+        setWalletImportState({ 
+          required: false, 
+          expectedAddress: null 
+        });
+        return;
+      }
+      
       // Force a fresh profile fetch
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
