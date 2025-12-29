@@ -163,10 +163,10 @@ export default function Wallet() {
 
   const loadCryptoNews = async () => {
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/news?language=en&per_page=5');
+      const response = await fetch('https://api.coingecko.com/api/v3/news?language=en&per_page=20');
       const data = await response.json();
       if (data && data.data && Array.isArray(data.data)) {
-        const news: CryptoNews[] = data.data.slice(0, 5).map((item: any) => ({
+        const news: CryptoNews[] = data.data.slice(0, 20).map((item: any) => ({
           id: item.id || Math.random().toString(),
           title: item.title || 'Crypto News',
           description: item.description || '',
@@ -783,37 +783,67 @@ export default function Wallet() {
               </div>
             )}
 
-            {/* Recommended Section */}
-            <h2 className="text-xl font-bold mb-4">Recommended for you</h2>
+            {/* Crypto News Card */}
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-blue-600 to-blue-500 p-4 text-white">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Newspaper className="h-5 w-5" />
+                    <h3 className="font-bold text-lg">Latest Crypto News</h3>
+                  </div>
+                  <p className="text-sm opacity-90">Stay informed with live updates</p>
+                </div>
+                <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
+                  {!newsLoaded ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      Loading news...
+                    </div>
+                  ) : cryptoNews.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      No news available
+                    </div>
+                  ) : (
+                    cryptoNews.map((article) => (
+                      <a
+                        key={article.id}
+                        href={article.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer block"
+                      >
+                        <div className="flex items-start gap-2 mb-2">
+                          {article.image && (
+                            <img
+                              src={article.image}
+                              alt={article.title}
+                              className="w-16 h-16 rounded object-cover flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-foreground line-clamp-2 mb-1">
+                              {article.title}
+                            </h4>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">{article.source}</span>
+                              <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Sell Gift Cards Hero Section */}
-            <div className="mb-4 rounded-3xl p-8 md:p-12 shadow-xl relative overflow-visible" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)' }}>
-              <div className="relative z-10 max-w-md">
-                <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                  Sell Gift Cards
-                </h2>
-                <p className="text-lg text-muted-foreground mb-6">
-                  Instantly convert the gift cards you don't need to cash.
-                </p>
-                <Link href="/gift-cards">
-                  <button className="inline-flex items-center gap-2 text-primary font-semibold group">
-                    <span>Sell Gift Cards Now</span>
-                    <span className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                      <ArrowRight size={18} />
-                    </span>
-                  </button>
-                </Link>
-              </div>
+          </div>
 
-              {/* Brand Logos Image */}
-              <div className="relative -mt-2 -mx-8 -mb-8 md:mx-0 md:mb-0 w-[calc(100%+4rem)] md:w-[60%] lg:w-[50%] md:absolute md:-bottom-6 md:-right-4 md:mt-0 pointer-events-none">
-                <img 
-                  src="/assets/IMG_2941.webp" 
-                  alt="Popular gift card brands including Nike, Amazon, Netflix, PlayStation, and more"
-                  className="w-full h-auto"
-                />
-              </div>
-            </div>
+          {/* RIGHT COLUMN - Markets */}
+          <div className="lg:col-span-1">
+            <div className="space-y-4 lg:sticky lg:top-6">
 
             {/* Markets Card */}
             <Card className="mb-6">
@@ -899,68 +929,6 @@ export default function Wallet() {
                     Market Overview
                     <ArrowRight className="h-4 w-4" />
                   </button>
-                </div>
-              </CardContent>
-            </Card>
-
-          </div>
-
-          {/* RIGHT COLUMN - Live Crypto News */}
-          <div className="lg:col-span-1">
-            <div className="space-y-4 lg:sticky lg:top-6">
-
-            {/* Crypto News Card */}
-            <Card className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-blue-600 to-blue-500 p-4 text-white">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Newspaper className="h-5 w-5" />
-                    <h3 className="font-bold text-lg">Latest Crypto News</h3>
-                  </div>
-                  <p className="text-sm opacity-90">Stay informed with live updates</p>
-                </div>
-                <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-                  {!newsLoaded ? (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                      Loading news...
-                    </div>
-                  ) : cryptoNews.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                      No news available
-                    </div>
-                  ) : (
-                    cryptoNews.map((article) => (
-                      <a
-                        key={article.id}
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer block"
-                      >
-                        <div className="flex items-start gap-2 mb-2">
-                          {article.image && (
-                            <img
-                              src={article.image}
-                              alt={article.title}
-                              className="w-12 h-12 rounded object-cover flex-shrink-0"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-foreground line-clamp-2 mb-1">
-                              {article.title}
-                            </h4>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-muted-foreground">{article.source}</span>
-                              <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            </div>
-                          </div>
-                        </div>
-                      </a>
-                    ))
-                  )}
                 </div>
               </CardContent>
             </Card>
