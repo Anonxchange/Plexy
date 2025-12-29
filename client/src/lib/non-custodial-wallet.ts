@@ -12,6 +12,7 @@ export interface NonCustodialWallet {
   address: string;
   walletType: string;
   encryptedPrivateKey: string;
+  encryptedMnemonic?: string; // Store encrypted seed phrase for recovery
   createdAt: string;
   isActive: boolean;
   isBackedUp: boolean;
@@ -52,8 +53,9 @@ class NonCustodialWalletManager {
     const privateKey = wallet.privateKey;
     const address = wallet.address;
     
-    // Encrypt private key with user password
+    // Encrypt private key and mnemonic with user password
     const encryptedPrivateKey = this.encryptPrivateKey(privateKey, userPassword);
+    const encryptedMnemonic = this.encryptPrivateKey(mnemonic, userPassword);
     
     // Create wallet object (without sensitive data)
     const newWallet: NonCustodialWallet = {
@@ -62,6 +64,7 @@ class NonCustodialWalletManager {
       address,
       walletType: "ethereum",
       encryptedPrivateKey, // Encrypted, safe to store
+      encryptedMnemonic, // Encrypted seed phrase for recovery
       createdAt: new Date().toISOString(),
       isActive: true,
       isBackedUp: false,
@@ -118,6 +121,7 @@ class NonCustodialWalletManager {
       }
 
       const encryptedPrivateKey = this.encryptPrivateKey(privateKey, userPassword);
+      const encryptedMnemonic = isMnemonic ? this.encryptPrivateKey(importData, userPassword) : undefined;
       
       const newWallet: NonCustodialWallet = {
         id: this.generateId(),
@@ -125,6 +129,7 @@ class NonCustodialWalletManager {
         address,
         walletType: "ethereum",
         encryptedPrivateKey,
+        encryptedMnemonic,
         createdAt: new Date().toISOString(),
         isActive: true,
         isBackedUp: true,
@@ -221,6 +226,28 @@ class NonCustodialWalletManager {
     const wallets = this.getWalletsFromStorage(userId);
     const wallet = wallets.find(w => w.id === walletId);
     return wallet?.address || null;
+  }
+
+  /**
+   * Get decrypted mnemonic for a wallet
+   */
+  getWalletMnemonic(walletId: string, password: string, userId?: string): string | null {
+    if (!userId) {
+      throw new Error("userId is required to get wallet mnemonic");
+    }
+    const wallets = this.getWalletsFromStorage(userId);
+    const wallet = wallets.find(w => w.id === walletId);
+    
+    if (!wallet || !wallet.encryptedMnemonic) {
+      return null;
+    }
+    
+    try {
+      return this.decryptPrivateKey(wallet.encryptedMnemonic, password);
+    } catch (error) {
+      console.error("Failed to decrypt mnemonic:", error);
+      return null;
+    }
   }
 
   /**
