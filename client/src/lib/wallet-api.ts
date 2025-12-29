@@ -33,8 +33,8 @@ export interface WalletTransaction {
 }
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  // Fetch non-custodial wallets from local storage only
-  const localWallets = nonCustodialWalletManager.getNonCustodialWallets();
+  // Fetch non-custodial wallets from local storage only (with user-specific key)
+  const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
   
   // Define the list of supported assets we want to show even if no local wallet exists for them yet
   // but we have at least one local wallet to derive from.
