@@ -20,6 +20,7 @@ import { Copy, CheckCircle2, Loader2, ArrowLeft, X, Lock } from "lucide-react";
 import { getDepositAddress } from "@/lib/wallet-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
 import { QRCodeSVG } from "qrcode.react";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +47,7 @@ const networkMap: Record<string, string[]> = {
 
 export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryptoDialogProps) {
   const { user } = useAuth();
+  const supabase = createClient();
   const [step, setStep] = useState<Step>("method");
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
@@ -198,7 +200,9 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
       // Generate wallet for Ethereum (primary network)
       const result = await nonCustodialWalletManager.generateNonCustodialWallet(
         "Ethereum (ERC-20)",
-        walletPassword
+        walletPassword,
+        supabase,
+        user?.id
       );
       
       // Also generate wallets for other networks if needed, or simply share the same mnemonic/address
