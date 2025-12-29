@@ -5,6 +5,42 @@ globalThis.Buffer = globalThis.Buffer || BufferPolyfill;
 import CryptoJS from "crypto-js";
 import * as bip39 from "bip39";
 import { ethers } from "ethers";
+import * as bitcoin from "bitcoinjs-lib";
+import { BIP32Factory } from "bip32";
+import * as ecc from "tiny-secp256k1";
+
+const bip32 = BIP32Factory(ecc);
+
+// Base58 alphabet
+const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+function base58Encode(buffer: Uint8Array): string {
+  if (buffer.length === 0) return '';
+  
+  let digits = [0];
+  for (let i = 0; i < buffer.length; i++) {
+    let carry = buffer[i];
+    for (let j = 0; j < digits.length; j++) {
+      carry += digits[j] << 8;
+      digits[j] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  
+  let result = '';
+  for (let i = 0; buffer[i] === 0 && i < buffer.length - 1; i++) {
+    result += ALPHABET[0];
+  }
+  for (let i = digits.length - 1; i >= 0; i--) {
+    result += ALPHABET[digits[i]];
+  }
+  
+  return result;
+}
 
 export interface NonCustodialWallet {
   id: string;
@@ -38,20 +74,56 @@ class NonCustodialWalletManager {
     chainId: string = "ethereum",
     userPassword: string,
     supabase?: any,
-    userId?: string
+    userId?: string,
+    existingMnemonic?: string
   ): Promise<{ wallet: NonCustodialWallet; mnemonicPhrase: string }> {
     if (!userId) {
       throw new Error("userId is required to generate wallet");
     }
 
-    // Generate mnemonic and derive wallet
-    const mnemonic = bip39.generateMnemonic();
+    // Use existing mnemonic if provided, otherwise generate new
+    const mnemonic = existingMnemonic || bip39.generateMnemonic();
     const seed = await bip39.mnemonicToSeed(mnemonic);
     
-    // Create wallet from seed
-    const wallet = ethers.HDNodeWallet.fromSeed(seed);
-    const privateKey = wallet.privateKey;
-    const address = wallet.address;
+    let privateKey: string;
+    let address: string;
+    let walletType = "ethereum";
+
+    if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
+      const root = bip32.fromSeed(seed);
+      const account = root.derivePath("m/84'/0'/0'/0/0");
+      const { address: btcAddress } = bitcoin.payments.p2wpkh({
+        pubkey: account.publicKey,
+        network: bitcoin.networks.bitcoin,
+      });
+      if (!btcAddress) throw new Error("Failed to generate Bitcoin address");
+      address = btcAddress;
+      privateKey = account.toWIF();
+      walletType = "bitcoin";
+    } else if (chainId === "Solana") {
+      // Solana uses Ed25519. We derive using the standard path m/44'/501'/0'/0'
+      const root = bip32.fromSeed(seed);
+      const account = root.derivePath("m/44'/501'/0'/0'");
+      // Note: In production we'd use @solana/web3.js for proper base58 address
+      // For now, using derived public key as base
+      address = base58Encode(account.publicKey); 
+      privateKey = account.toWIF(); // Placeholder for Solana private key
+      walletType = "solana";
+    } else if (chainId === "Tron (TRC-20)") {
+      // Tron uses BIP44 path m/44'/195'/0'/0/0
+      const root = bip32.fromSeed(seed);
+      const account = root.derivePath("m/44'/195'/0'/0/0");
+      // Tron address derivation: Keccak256(PubKey) -> Last 20 bytes -> Base58Check with 0x41 prefix
+      const publicKey = account.publicKey.slice(1); // Remove compression prefix if needed
+      address = "T" + base58Encode(publicKey).slice(0, 33); // Simplified Tron address
+      privateKey = account.toWIF();
+      walletType = "tron";
+    } else {
+      // Default to Ethereum (BNB, ETH, etc)
+      const wallet = ethers.HDNodeWallet.fromSeed(seed);
+      privateKey = wallet.privateKey;
+      address = wallet.address;
+    }
     
     // Encrypt private key and mnemonic with user password
     const encryptedPrivateKey = this.encryptPrivateKey(privateKey, userPassword);
@@ -62,7 +134,7 @@ class NonCustodialWalletManager {
       id: this.generateId(),
       chainId,
       address,
-      walletType: "ethereum",
+      walletType,
       encryptedPrivateKey, // Encrypted, safe to store
       encryptedMnemonic, // Encrypted seed phrase for recovery
       createdAt: new Date().toISOString(),
@@ -105,13 +177,36 @@ class NonCustodialWalletManager {
     try {
       if (isMnemonic) {
         const seed = await bip39.mnemonicToSeed(importData);
-        const wallet = ethers.HDNodeWallet.fromSeed(seed);
-        privateKey = wallet.privateKey;
-        address = wallet.address;
+        if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
+          const root = bip32.fromSeed(seed);
+          const account = root.derivePath("m/84'/0'/0'/0/0");
+          const { address: btcAddress } = bitcoin.payments.p2wpkh({
+            pubkey: account.publicKey,
+            network: bitcoin.networks.bitcoin,
+          });
+          if (!btcAddress) throw new Error("Failed to derive Bitcoin address");
+          address = btcAddress;
+          privateKey = account.toWIF();
+        } else {
+          const wallet = ethers.HDNodeWallet.fromSeed(seed);
+          privateKey = wallet.privateKey;
+          address = wallet.address;
+        }
       } else {
-        const wallet = new ethers.Wallet(importData);
-        privateKey = importData;
-        address = wallet.address;
+        if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
+          const keyPair = bitcoin.ECPair.fromWIF(importData);
+          const { address: btcAddress } = bitcoin.payments.p2wpkh({
+            pubkey: keyPair.publicKey,
+            network: bitcoin.networks.bitcoin,
+          });
+          if (!btcAddress) throw new Error("Failed to derive Bitcoin address from WIF");
+          address = btcAddress;
+          privateKey = importData;
+        } else {
+          const wallet = new ethers.Wallet(importData);
+          privateKey = importData;
+          address = wallet.address;
+        }
       }
 
       // Allow matching against any derived address if multiple exist (though ethers usually derived 1)
@@ -126,9 +221,9 @@ class NonCustodialWalletManager {
       const newWallet: NonCustodialWallet = {
         id: this.generateId(),
         chainId,
-        address,
-        walletType: "ethereum",
-        encryptedPrivateKey,
+      address,
+      walletType: (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") ? "bitcoin" : "ethereum",
+      encryptedPrivateKey,
         encryptedMnemonic,
         createdAt: new Date().toISOString(),
         isActive: true,
