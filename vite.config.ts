@@ -1,27 +1,32 @@
-import { defineConfig } from "vite";
+import { defineConfig, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import wasm from "vite-plugin-wasm";
+import topLevelAwait from "vite-plugin-top-level-await";
 
 // Detect Replit + dev environment
 const isReplitDev =
   process.env.NODE_ENV !== "production" &&
   process.env.REPL_ID !== undefined;
 
-export default defineConfig(async () => {
-  const plugins = [
+export default defineConfig(() => {
+  const plugins: PluginOption[] = [
     react(),
+    wasm(),
+    topLevelAwait(),
   ];
 
   if (isReplitDev) {
-    try {
-      const runtimeErrorModal = await import("@replit/vite-plugin-runtime-error-modal");
-      const devBanner = await import("@replit/vite-plugin-dev-banner");
-      
-      plugins.push(runtimeErrorModal.default());
-      plugins.push(devBanner.devBanner());
-    } catch (e) {
-      console.error("Failed to load Replit plugins:", e);
-    }
+    // Dynamic import to avoid errors in production builds
+    plugins.push((async () => {
+      const { default: runtimeErrorModal } = await import("@replit/vite-plugin-runtime-error-modal");
+      return runtimeErrorModal();
+    })() as unknown as PluginOption);
+    
+    plugins.push((async () => {
+      const { devBanner } = await import("@replit/vite-plugin-dev-banner");
+      return devBanner();
+    })() as unknown as PluginOption);
   }
 
   return {
