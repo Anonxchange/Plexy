@@ -238,15 +238,24 @@ class NonCustodialWalletManager {
     const wallets = this.getWalletsFromStorage(userId);
     const wallet = wallets.find(w => w.id === walletId);
     
-    if (!wallet || !wallet.encryptedMnemonic) {
-      return null;
+    if (!wallet) {
+      throw new Error("Wallet not found");
+    }
+    
+    if (!wallet.encryptedMnemonic) {
+      throw new Error("This wallet does not have a recovery phrase stored. You may need to regenerate the wallet.");
     }
     
     try {
-      return this.decryptPrivateKey(wallet.encryptedMnemonic, password);
-    } catch (error) {
+      const decrypted = this.decryptPrivateKey(wallet.encryptedMnemonic, password);
+      // Check if decryption resulted in valid data
+      if (!decrypted || decrypted.trim() === '') {
+        throw new Error("Decrypted phrase is empty - password may be incorrect");
+      }
+      return decrypted;
+    } catch (error: any) {
       console.error("Failed to decrypt mnemonic:", error);
-      return null;
+      throw new Error(`Failed to decrypt: ${error.message || 'Invalid password'}`);
     }
   }
 
