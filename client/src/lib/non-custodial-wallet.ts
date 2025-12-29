@@ -315,6 +315,7 @@ class NonCustodialWalletManager {
           address: wallet.address,
           wallet_type: wallet.walletType,
           encrypted_private_key: wallet.encryptedPrivateKey,
+          encrypted_mnemonic: wallet.encryptedMnemonic || null,
           is_active: wallet.isActive ? 'true' : 'false',
           is_backed_up: wallet.isBackedUp ? 'true' : 'false',
         });
@@ -349,6 +350,7 @@ class NonCustodialWalletManager {
         address: row.address,
         walletType: row.wallet_type,
         encryptedPrivateKey: row.encrypted_private_key,
+        encryptedMnemonic: row.encrypted_mnemonic || undefined,
         createdAt: row.created_at,
         isActive: row.is_active === 'true',
         isBackedUp: row.is_backed_up === 'true',
