@@ -329,7 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (walletAddress) {
-        const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress);
+        const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress, userId);
         console.log("[AuthContext] Has local wallet for", walletAddress, "?", hasLocal);
         
         if (!hasLocal) {
@@ -428,8 +428,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const redirectUrl = `${baseUrl}/verify-email`;
     
     // Check if we have a local wallet to associate during signup
-    const localWallets = nonCustodialWalletManager.getNonCustodialWallets();
-    const walletAddress = localWallets.length > 0 ? localWallets[0].address : undefined;
+    // Note: At signup time, we don't have a userId yet, so we can't fetch user-specific wallets
+    // This should be handled after user creation in the response
+    const walletAddress = undefined;
 
     console.log("[AuthContext] Signing up with wallet address:", walletAddress);
 
