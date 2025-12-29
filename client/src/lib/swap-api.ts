@@ -38,7 +38,7 @@ export async function executeSwap(params: {
 }): Promise<SwapTransaction> {
   try {
     // Get user's wallet address from non-custodial wallet manager
-    const userWallets = nonCustodialWalletManager.getNonCustodialWallets();
+    const userWallets = nonCustodialWalletManager.getNonCustodialWallets(params.userId);
     const fromWallet = userWallets.find(w => w.chainId === params.fromCrypto.toLowerCase());
     
     if (!fromWallet) {
