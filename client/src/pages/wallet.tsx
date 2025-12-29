@@ -557,10 +557,10 @@ export default function Wallet() {
         </div>
 
         {/* 2-Column Layout for Desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* LEFT COLUMN - Main Wallet Content */}
-          <div className="lg:col-span-2.5 space-y-4">
+          <div className="lg:col-span-2 space-y-4">
 
             {/* Asset Tabs */}
             <div className="flex gap-4 sm:gap-6 mb-4 border-b overflow-x-auto">
@@ -906,7 +906,7 @@ export default function Wallet() {
           </div>
 
           {/* RIGHT COLUMN - Live Crypto News */}
-          <div className="lg:col-span-1.5">
+          <div className="lg:col-span-1">
             <div className="space-y-4 lg:sticky lg:top-6">
 
             {/* Crypto News Card */}
