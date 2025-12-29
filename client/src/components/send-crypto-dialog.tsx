@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, Loader2, CheckCircle2, X, Copy } from "lucide-react";
-import { sendCrypto } from "@/lib/wallet-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { useAuth } from "@/lib/auth-context";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
@@ -158,8 +157,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
       return;
     }
 
-    if (useNonCustodial && !userPassword) {
-      setError("Enter password for non-custodial wallet");
+    if (!userPassword) {
+      setError("Please enter your wallet password to sign the transaction");
       return;
     }
 
@@ -183,27 +182,31 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     try {
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
       
-      if (useNonCustodial) {
-        const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-        const nonCustWallet = wallets.find(w => w.chainId === "ethereum"); // Default to eth for now as per schema
-        if (!nonCustWallet) {
-          setError("Non-custodial wallet not found. Please create one first.");
-          setLoading(false);
-          return;
-        }
-        // Sign transaction client-side (private key never leaves browser)
-        const txData = {
-          to: toAddress,
-          amount: cryptoAmountNum,
-          symbol: symbolToUse,
-        };
-        const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, userPassword, user.id);
-        console.log("Signed Transaction:", signedTx);
-        // In a real app, we would now broadcast this signed transaction to the network
-        toast({ title: "Transaction signed and broadcasted!" });
-      } else {
-        await sendCrypto(user.id, symbolToUse, toAddress, cryptoAmountNum, notes);
+      // Force non-custodial logic as we no longer support custodial sends
+      const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      const nonCustWallet = wallets.find(w => w.chainId === "ethereum"); // Default to eth for now as per schema
+      if (!nonCustWallet) {
+        setError("Non-custodial wallet not found. Please create one in your wallet settings first.");
+        setLoading(false);
+        return;
       }
+      
+      // Sign transaction client-side (private key never leaves browser)
+      const txData = {
+        to: toAddress,
+        amount: cryptoAmountNum,
+        symbol: symbolToUse,
+      };
+      
+      const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, userPassword, user.id);
+      console.log("Signed Transaction:", signedTx);
+      
+      // In a non-custodial architecture, we provide the signed transaction for the user to broadcast
+      // or we broadcast it to a public provider. We do not use the custodial backend.
+      toast({ 
+        title: "Transaction Signed!", 
+        description: "Your transaction has been signed locally. In this demo, it is logged to the console." 
+      });
       
       setSuccess(true);
       setTimeout(() => {
@@ -308,25 +311,19 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
           <ScrollArea className="max-h-[500px] pr-4">
           <div className="space-y-4">
             <div>
-              <Label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                Wallet Type
-                <input
-                  type="checkbox"
-                  checked={useNonCustodial}
-                  onChange={(e) => setUseNonCustodial(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <span className="text-xs text-muted-foreground">Non-custodial</span>
+              <Label className="text-sm font-medium mb-2 block">
+                Wallet Password
               </Label>
-              {useNonCustodial && (
-                <Input
-                  type="password"
-                  placeholder="Enter password for wallet signing"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  className="h-10 mb-4"
-                />
-              )}
+              <Input
+                type="password"
+                placeholder="Enter password to sign transaction"
+                value={userPassword}
+                onChange={(e) => setUserPassword(e.target.value)}
+                className="h-10 mb-4 bg-muted"
+              />
+              <p className="text-xs text-muted-foreground -mt-2">
+                This transaction will be signed locally in your browser.
+              </p>
             </div>
             <div>
               <Label className="text-sm font-medium mb-2 block">Asset</Label>
