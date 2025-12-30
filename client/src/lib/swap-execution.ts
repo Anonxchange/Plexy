@@ -174,16 +174,21 @@ class SwapExecutionService {
    */
   private buildSwapData(order: ExecutionOrder): string {
     // This would encode the swap function call for the DEX
-    // For now, returning a placeholder that can be extended
+    // For now, returning a valid placeholder hex value
     // In production: use ethers.AbiCoder or web3.js to encode function calls
     
-    const from = order.fromToken;
-    const to = order.toToken;
-    const amount = order.amount;
-    const minReceived = order.quote.minReceived;
+    // Create a simple valid hex string from order data
+    // Encode token names and amounts as hex
+    const fromToken = Buffer.from(order.fromToken).toString('hex').padEnd(64, '0');
+    const toToken = Buffer.from(order.toToken).toString('hex').padEnd(64, '0');
     
-    // Placeholder encoding
-    return `0x128acb08${from}${to}${amount}${minReceived}`;
+    // Parse amount and minReceived as integers (removing decimal points)
+    const amountInt = Math.floor(parseFloat(order.amount) * 1e18).toString(16).padStart(64, '0');
+    const minReceivedInt = Math.floor(parseFloat(order.quote.minReceived) * 1e18).toString(16).padStart(64, '0');
+    
+    // Build complete hex-encoded transaction data
+    // Function selector (swap) + parameters
+    return `0x128acb08${fromToken}${toToken}${amountInt}${minReceivedInt}`;
   }
 
   /**
