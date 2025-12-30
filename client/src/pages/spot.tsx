@@ -38,6 +38,8 @@ import {
 } from "lucide-react";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { asterdexService } from "@/lib/asterdex-service";
+import { swapExecutionService } from "@/lib/swap-execution";
+import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { useAuth } from "@/lib/auth-context";
 import { useWallets, useWalletBalance } from "@/hooks/use-wallets";
 import { feeCalculator } from "@/lib/fee-calculator";
@@ -285,7 +287,7 @@ export default function Spot() {
 
   const filteredPairs = getFilteredPairs(activeMarketTab);
 
-  // Execute buy order
+  // Execute buy order with AsterDEX
   const handleBuy = async () => {
     if (!user) {
       toast({
@@ -309,17 +311,54 @@ export default function Spot() {
 
     setIsExecuting(true);
     try {
+      // Get quote from AsterDEX
+      const quote = await swapExecutionService.getSwapQuote(
+        "USDT",
+        selectedPair.symbol,
+        amount.toString()
+      );
+
       toast({
-        title: "Confirm Transaction",
-        description: "Please confirm the transaction in your connected wallet",
+        title: "Quote Fetched",
+        description: `Price: ${quote.price} | Slippage: ${quote.slippage}% | Fee: ${quote.fee.toFixed(2)} USDT`,
       });
 
-      // Simulate on-chain execution
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create execution order
+      const order = swapExecutionService.createExecutionOrder(
+        "buy",
+        "USDT",
+        selectedPair.symbol,
+        amount.toString(),
+        quote
+      );
+
+      toast({
+        title: "Confirm Transaction",
+        description: `You will receive ~${quote.toAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
+      });
+
+      // Execute swap via AsterDEX API
+      const result = await swapExecutionService.executeSwap(
+        {
+          id: "demo_wallet",
+          chainId: "ethereum",
+          address: "0x" + "0".repeat(40),
+          walletType: "ethereum",
+          encryptedPrivateKey: "",
+          createdAt: new Date().toISOString(),
+          isActive: true,
+          isBackedUp: false,
+        },
+        "USDT",
+        selectedPair.symbol,
+        amount.toString(),
+        "demo_password",
+        user.id
+      );
 
       toast({
         title: "Trade Executed On-Chain",
-        description: `Successfully bought ${amount} ${baseCrypto} directly from your wallet.`,
+        description: `Successfully bought ${amount} ${selectedPair.symbol}. TX: ${result.txHash?.slice(0, 10)}...`,
       });
 
       setBuyAmount("");
@@ -329,7 +368,7 @@ export default function Spot() {
       console.error('Trade execution error:', error);
       toast({
         title: "Trade Failed",
-        description: error.message || "Failed to execute on-chain trade",
+        description: error.message || "Failed to execute trade via AsterDEX",
         variant: "destructive",
       });
     } finally {
@@ -337,7 +376,7 @@ export default function Spot() {
     }
   };
 
-  // Execute sell order
+  // Execute sell order with AsterDEX
   const handleSell = async () => {
     if (!user) {
       toast({
@@ -361,17 +400,54 @@ export default function Spot() {
 
     setIsExecuting(true);
     try {
+      // Get quote from AsterDEX
+      const quote = await swapExecutionService.getSwapQuote(
+        selectedPair.symbol,
+        "USDT",
+        amount.toString()
+      );
+
       toast({
-        title: "Confirm Transaction",
-        description: "Please confirm the transaction in your connected wallet",
+        title: "Quote Fetched",
+        description: `Price: ${quote.price} | Slippage: ${quote.slippage}% | Fee: ${quote.fee.toFixed(2)} USDT`,
       });
 
-      // Simulate on-chain execution
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create execution order
+      const order = swapExecutionService.createExecutionOrder(
+        "sell",
+        selectedPair.symbol,
+        "USDT",
+        amount.toString(),
+        quote
+      );
+
+      toast({
+        title: "Confirm Transaction",
+        description: `You will receive ~${quote.toAmount} USDT. Confirm in your wallet.`,
+      });
+
+      // Execute swap via AsterDEX API
+      const result = await swapExecutionService.executeSwap(
+        {
+          id: "demo_wallet",
+          chainId: "ethereum",
+          address: "0x" + "0".repeat(40),
+          walletType: "ethereum",
+          encryptedPrivateKey: "",
+          createdAt: new Date().toISOString(),
+          isActive: true,
+          isBackedUp: false,
+        },
+        selectedPair.symbol,
+        "USDT",
+        amount.toString(),
+        "demo_password",
+        user.id
+      );
 
       toast({
         title: "Trade Executed On-Chain",
-        description: `Successfully sold ${amount} ${baseCrypto} directly from your wallet.`,
+        description: `Successfully sold ${amount} ${selectedPair.symbol}. TX: ${result.txHash?.slice(0, 10)}...`,
       });
 
       setSellAmount("");
@@ -381,7 +457,7 @@ export default function Spot() {
       console.error('Trade execution error:', error);
       toast({
         title: "Trade Failed",
-        description: error.message || "Failed to execute on-chain trade",
+        description: error.message || "Failed to execute trade via AsterDEX",
         variant: "destructive",
       });
     } finally {
@@ -504,9 +580,9 @@ export default function Spot() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex flex-col h-[calc(100vh-4rem)]">
+      <div className="flex flex-col h-auto">
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-col">
           {/* Price Header */}
           <div className="p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center gap-4 mb-2">
@@ -546,9 +622,9 @@ export default function Spot() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0 gap-0">
+          <div className="flex flex-col lg:flex-row gap-0">
             {/* Chart Area */}
-            <div className="flex-[2] p-2 md:p-4 border-b lg:border-b-0 lg:border-r border-border h-[50vh] lg:h-full flex flex-col min-h-[300px]">
+            <div className="p-2 md:p-4 border-b lg:border-b-0 lg:border-r border-border flex flex-col w-full lg:flex-[2] h-[500px]">
               <div className="flex items-center justify-between mb-2 md:mb-4 flex-shrink-0 overflow-x-auto no-scrollbar">
                 <div className="flex items-center gap-1 md:gap-2">
                   <Button 
@@ -593,7 +669,7 @@ export default function Spot() {
                   </Button>
                 </div>
               </div>
-              <div className="flex-1 min-h-0 bg-background rounded-lg overflow-hidden relative">
+              <div className="flex-1 min-h-0 bg-background rounded-lg overflow-hidden relative lg:flex-1">
                 <iframe
                   key={`${selectedPair.pair}-${chartInterval}`}
                   src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${selectedPair.pair.replace('/', '')}&interval=${chartInterval}&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${selectedPair.pair.replace('/', '')}`}
@@ -604,7 +680,7 @@ export default function Spot() {
             </div>
 
             {/* Order Book and Recent Trades */}
-            <div className="w-full lg:w-96 lg:flex-[1] flex flex-col min-h-0 overflow-hidden border-t lg:border-t-0">
+            <div className="w-full lg:w-96 lg:flex-[1] flex flex-col border-t lg:border-t-0 h-auto mt-4 lg:mt-0">
               <Tabs defaultValue="orderbook" className="flex flex-col h-full">
                 <TabsList className="w-full grid grid-cols-2 rounded-none">
                   <TabsTrigger value="orderbook">
@@ -618,7 +694,8 @@ export default function Spot() {
                 </TabsList>
 
                 <TabsContent value="orderbook" className="mt-0 flex-1 min-h-0 overflow-y-auto">
-                  <div className="p-2">
+                  {/* 2-Column Layout on Mobile */}
+                  <div className="hidden md:block p-2">
                     <div className="grid grid-cols-3 text-[10px] md:text-xs text-muted-foreground mb-2 px-2">
                       <div>Price(USDT)</div>
                       <div className="text-right">Amount({selectedPair.symbol})</div>
@@ -664,6 +741,57 @@ export default function Spot() {
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+
+                  {/* Mobile 2-Column Layout */}
+                  <div className="md:hidden grid grid-cols-2 gap-0 h-full">
+                    {/* Asks Column */}
+                    <div className="border-r border-border p-1 overflow-y-auto">
+                      <h3 className="text-xs text-red-600 font-semibold p-2 sticky top-0 bg-background">Asks (Sell)</h3>
+                      <div className="text-[10px] text-muted-foreground px-2 mb-1">
+                        <div className="grid grid-cols-2 gap-1">
+                          <div>Price</div>
+                          <div className="text-right">Amt</div>
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        {liveOrderBook.asks.slice().reverse().map((ask, i) => {
+                          const price = parseFloat(ask[0]);
+                          const amount = parseFloat(ask[1]);
+                          return (
+                            <div key={i} className="grid grid-cols-2 text-[10px] px-2 py-0.5 hover:bg-red-500/10 cursor-pointer relative">
+                              <div className="absolute inset-0 bg-red-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.asks.map(a => parseFloat(a[1])))) * 100}%` }}></div>
+                              <div className="text-red-600 relative z-10">{price.toFixed(0)}</div>
+                              <div className="text-right relative z-10">{amount.toFixed(3)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Bids Column */}
+                    <div className="p-1 overflow-y-auto">
+                      <h3 className="text-xs text-green-600 font-semibold p-2 sticky top-0 bg-background">Bids (Buy)</h3>
+                      <div className="text-[10px] text-muted-foreground px-2 mb-1">
+                        <div className="grid grid-cols-2 gap-1">
+                          <div>Price</div>
+                          <div className="text-right">Amt</div>
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        {liveOrderBook.bids.map((bid, i) => {
+                          const price = parseFloat(bid[0]);
+                          const amount = parseFloat(bid[1]);
+                          return (
+                            <div key={i} className="grid grid-cols-2 text-[10px] px-2 py-0.5 hover:bg-green-500/10 cursor-pointer relative">
+                              <div className="absolute inset-0 bg-green-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.bids.map(b => parseFloat(b[1])))) * 100}%` }}></div>
+                              <div className="text-green-600 relative z-10">{price.toFixed(0)}</div>
+                              <div className="text-right relative z-10">{amount.toFixed(3)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
