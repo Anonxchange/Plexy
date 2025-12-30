@@ -139,14 +139,27 @@ export default function ActiveTrade() {
       if (unreadMessages.length > 0) {
         const markMessagesAsRead = async () => {
           const messageIds = unreadMessages.map(msg => msg.id);
+          const readTime = new Date().toISOString();
 
-          await supabase
+          // Update in database
+          const { error } = await supabase
             .from('trade_messages')
-            .update({ read_at: new Date().toISOString() })
+            .update({ read_at: readTime })
             .in('id', messageIds);
+
+          if (!error) {
+            // Immediately update local state so UI reflects read status
+            setMessages((prev) =>
+              prev.map((msg) =>
+                messageIds.includes(msg.id) ? { ...msg, read_at: readTime } : msg
+              )
+            );
+          }
         };
 
-        markMessagesAsRead();
+        // Add a small delay to avoid marking messages as read on first load
+        const timer = setTimeout(markMessagesAsRead, 500);
+        return () => clearTimeout(timer);
       }
     }
   }, [activeTab, messages, currentUserProfileId]);
