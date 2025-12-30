@@ -615,7 +615,24 @@ export default function Spot() {
           {/* Price Header */}
           <div className="p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center gap-4 mb-2">
-              <h2 className="text-xl md:text-2xl font-bold">{selectedPair.pair}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl md:text-2xl font-bold">{selectedPair.pair}</h2>
+                <Select value={selectedPair.pair} onValueChange={(value) => {
+                  const pair = tradingPairs.find(p => p.pair === value);
+                  if (pair) setSelectedPair(pair);
+                }}>
+                  <SelectTrigger className="w-32 h-8 hidden lg:flex">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tradingPairs.map((pair) => (
+                      <SelectItem key={pair.pair} value={pair.pair}>
+                        {pair.pair}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Badge variant={selectedPair.change >= 0 ? "default" : "destructive"} className={selectedPair.change >= 0 ? "bg-green-600" : ""}>
                 {selectedPair.change >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                 {selectedPair.change >= 0 ? '+' : ''}{selectedPair.change}%
