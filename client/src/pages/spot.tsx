@@ -111,6 +111,16 @@ export default function Spot() {
   const [chartInterval, setChartInterval] = useState("60");
   const [liveOrderBook, setLiveOrderBook] = useState({ bids: [] as Array<[string, string]>, asks: [] as Array<[string, string]> });
   const [liveTrades, setLiveTrades] = useState<Array<{ id: number; price: string; qty: string; quoteQty: string; time: number; isBuyerMaker: boolean }>>([]);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  // Track desktop/mobile for order book display
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Trading Panel State
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
@@ -713,7 +723,7 @@ export default function Spot() {
 
                   {/* Asks */}
                   <div className="space-y-0.5 mb-2">
-                    {liveOrderBook.asks.slice(-5).reverse().map((ask, i) => {
+                    {liveOrderBook.asks.slice(-(isDesktop ? 10 : 6)).reverse().map((ask, i) => {
                       const price = parseFloat(ask[0]);
                       const amount = parseFloat(ask[1]);
                       return (
@@ -735,7 +745,7 @@ export default function Spot() {
 
                   {/* Bids */}
                   <div className="space-y-0.5">
-                    {liveOrderBook.bids.slice(0, 5).map((bid, i) => {
+                    {liveOrderBook.bids.slice(0, isDesktop ? 10 : 6).map((bid, i) => {
                       const price = parseFloat(bid[0]);
                       const amount = parseFloat(bid[1]);
                       return (
