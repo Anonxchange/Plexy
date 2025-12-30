@@ -157,11 +157,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
       return;
     }
 
-    if (!userPassword) {
-      setError("Please enter your wallet password to sign the transaction");
-      return;
-    }
-
     const cryptoAmountNum = amountInputMode === "crypto" 
       ? parseFloat(amount) 
       : parseFloat(cryptoAmount);
@@ -198,7 +193,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
         symbol: symbolToUse,
       };
       
-      const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, userPassword, user.id);
+      // Auto-decrypt with empty password (no password required by default)
+      const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, "", user.id);
       console.log("Signed Transaction:", signedTx);
       
       // In a non-custodial architecture, we provide the signed transaction for the user to broadcast
@@ -310,19 +306,9 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
         ) : (
           <ScrollArea className="max-h-[500px] pr-4">
           <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium mb-2 block">
-                Wallet Password
-              </Label>
-              <Input
-                type="password"
-                placeholder="Enter password to sign transaction"
-                value={userPassword}
-                onChange={(e) => setUserPassword(e.target.value)}
-                className="h-10 mb-4 bg-muted"
-              />
-              <p className="text-xs text-muted-foreground -mt-2">
-                This transaction will be signed locally in your browser.
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
+              <p className="text-xs text-blue-800 dark:text-blue-200">
+                Your transaction will be signed locally in your browser. No password required by default.
               </p>
             </div>
             <div>
