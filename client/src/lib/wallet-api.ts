@@ -48,10 +48,6 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
   // They should now include any wallets synced from Supabase
   const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
   
-  // Define the list of supported assets we want to show even if no local wallet exists for them yet
-  // but we have at least one local wallet to derive from.
-  const supportedAssets = ['BTC', 'ETH', 'BNB', 'SOL', 'TRX', 'USDT', 'USDC'];
-  
   const nonCustodialWallets: Wallet[] = localWallets.map(w => ({
     id: w.id,
     user_id: userId,
@@ -68,24 +64,36 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     isNonCustodial: true
   }));
 
-  // If we have at least one local wallet, ensure we show all supported assets using its address
-  // (Assuming same address for EVM chains and placeholder for others for now)
+  // If we have at least one local wallet, add chain-specific stablecoin variants
   if (localWallets.length > 0) {
-    const primaryWallet = localWallets[0];
-    supportedAssets.forEach(symbol => {
-      if (!nonCustodialWallets.some(w => w.crypto_symbol === symbol)) {
-        nonCustodialWallets.push({
-          id: `derived_${symbol}_${primaryWallet.id}`,
-          user_id: userId,
-          crypto_symbol: symbol,
-          balance: 0,
-          locked_balance: 0,
-          deposit_address: primaryWallet.address, // Use primary address as placeholder
-          created_at: primaryWallet.createdAt,
-          updated_at: primaryWallet.createdAt,
-          isNonCustodial: true
-        });
-      }
+    // Map each blockchain to its supported stablecoins
+    const stablecoinsByChain: { [key: string]: string[] } = {
+      'Ethereum (ERC-20)': ['USDT', 'USDC'],
+      'Binance Smart Chain (BEP-20)': ['USDT', 'USDC'],
+      'Tron (TRC-20)': ['USDT', 'USDC'],
+      'Solana': ['USDT', 'USDC'],
+      'Bitcoin (SegWit)': [], // Bitcoin doesn't have native stablecoins
+    };
+
+    localWallets.forEach(wallet => {
+      const stablecoins = stablecoinsByChain[wallet.chainId] || [];
+      
+      stablecoins.forEach(symbol => {
+        const walletSymbol = `${symbol}-${wallet.chainId}`;
+        if (!nonCustodialWallets.some(w => w.crypto_symbol === walletSymbol)) {
+          nonCustodialWallets.push({
+            id: `derived_${walletSymbol}_${wallet.id}`,
+            user_id: userId,
+            crypto_symbol: walletSymbol,
+            balance: 0,
+            locked_balance: 0,
+            deposit_address: wallet.address, // Use same address as parent chain
+            created_at: wallet.createdAt,
+            updated_at: wallet.createdAt,
+            isNonCustodial: true
+          });
+        }
+      });
     });
   }
 
@@ -152,18 +160,23 @@ export async function sendCrypto(
 
 export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
   const wallets = await getUserWallets(userId);
-  // Find a wallet that matches the crypto symbol exactly or via network mapping
-  const wallet = wallets.find(w => 
-    w.crypto_symbol === cryptoSymbol || 
-    (cryptoSymbol.startsWith('USDT-') && w.crypto_symbol === 'USDT') ||
-    (cryptoSymbol.startsWith('USDC-') && w.crypto_symbol === 'USDC')
-  );
+  
+  // Find exact match first
+  let wallet = wallets.find(w => w.crypto_symbol === cryptoSymbol);
   
   if (wallet?.deposit_address) {
     return wallet.deposit_address;
   }
   
-  // If we have any non-custodial wallet, we can at least show its address as a base
+  // If searching for a stablecoin without chain specified, find the first available instance
+  if ((cryptoSymbol === 'USDT' || cryptoSymbol === 'USDC') && !cryptoSymbol.includes('-')) {
+    wallet = wallets.find(w => w.crypto_symbol.startsWith(`${cryptoSymbol}-`));
+    if (wallet?.deposit_address) {
+      return wallet.deposit_address;
+    }
+  }
+  
+  // If we have any non-custodial wallet, use its address as fallback
   const anyWallet = wallets.find(w => w.isNonCustodial);
   if (anyWallet?.deposit_address) {
     return anyWallet.deposit_address;
