@@ -37,6 +37,7 @@ import {
   Activity,
 } from "lucide-react";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { asterdexService } from "@/lib/asterdex-service";
 import { useAuth } from "@/lib/auth-context";
 import { useWallets, useWalletBalance } from "@/hooks/use-wallets";
 import { feeCalculator } from "@/lib/fee-calculator";
@@ -61,11 +62,11 @@ const initialTradingPairs: TradingPair[] = [
   { pair: "ETH/USDT", symbol: "ETH", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
   { pair: "SOL/USDT", symbol: "SOL", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
   { pair: "BNB/USDT", symbol: "BNB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "USDC/USDT", symbol: "USDC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "3x" },
   { pair: "XRP/USDT", symbol: "XRP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
   { pair: "TON/USDT", symbol: "TON", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
   { pair: "TRX/USDT", symbol: "TRX", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
   { pair: "LTC/USDT", symbol: "LTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "ADA/USDT", symbol: "ADA", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
 ];
 
 const orderBook = {
@@ -116,6 +117,8 @@ export default function Spot() {
   const [buyFee, setBuyFee] = useState(0);
   const [sellFee, setSellFee] = useState(0);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [liveOrderBook, setLiveOrderBook] = useState({ bids: [] as Array<[string, string]>, asks: [] as Array<[string, string]> });
+  const [liveTrades, setLiveTrades] = useState<Array<{ id: number; price: string; qty: string; quoteQty: string; time: number; isBuyerMaker: boolean }>>([]);
 
   // Get wallet balances for the trading pair
   const baseCrypto = selectedPair.symbol;
@@ -123,29 +126,68 @@ export default function Spot() {
   const { data: baseWallet } = useWalletBalance(baseCrypto);
   const { data: quoteWallet } = useWalletBalance(quoteCrypto);
 
-  // Fetch real-time prices
+  // Fetch real-time prices from Asterdex
   useEffect(() => {
     const fetchPrices = async () => {
       try {
         const symbols = tradingPairs.map(p => p.symbol);
-        const prices = await getCryptoPrices(symbols);
+        const asterdexSymbols = symbols.map(s => `${s}USDT`);
         
-        setTradingPairs(prevPairs => 
-          prevPairs.map(pair => {
-            const priceData = prices[pair.symbol];
-            if (priceData) {
-              return {
-                ...pair,
-                price: priceData.current_price,
-                change: priceData.price_change_percentage_24h,
-                volume: `${(priceData.total_volume / 1e9).toFixed(2)}B`,
-                high: priceData.current_price * 1.02,
-                low: priceData.current_price * 0.98,
-              };
-            }
-            return pair;
-          })
-        );
+        // Try to fetch from Asterdex first
+        try {
+          const tickers = await asterdexService.getTickers(asterdexSymbols);
+          
+          if (tickers && tickers.length > 0) {
+            setTradingPairs(prevPairs => 
+              prevPairs.map(pair => {
+                const ticker = tickers.find(t => t.symbol === `${pair.symbol}USDT`);
+                  
+                if (ticker) {
+                  const price = parseFloat(ticker.lastPrice);
+                  const change = parseFloat(ticker.priceChangePercent);
+                  const quoteVolume = parseFloat(ticker.quoteVolume);
+                  
+                  return {
+                    ...pair,
+                    price,
+                    change,
+                    volume: `${(quoteVolume / 1e9).toFixed(2)}B`,
+                    high: parseFloat(ticker.highPrice),
+                    low: parseFloat(ticker.lowPrice),
+                  };
+                }
+                return pair;
+              })
+            );
+            return;
+          }
+        } catch (asterdexError) {
+          console.warn('Asterdex API error:', asterdexError);
+        }
+        
+        // Fallback to original crypto-prices API
+        try {
+          const prices = await getCryptoPrices(symbols);
+          
+          setTradingPairs(prevPairs => 
+            prevPairs.map(pair => {
+              const priceData = prices[pair.symbol];
+              if (priceData) {
+                return {
+                  ...pair,
+                  price: priceData.current_price,
+                  change: priceData.price_change_percentage_24h,
+                  volume: `${(priceData.total_volume / 1e9).toFixed(2)}B`,
+                  high: priceData.current_price * 1.02,
+                  low: priceData.current_price * 0.98,
+                };
+              }
+              return pair;
+            })
+          );
+        } catch (fallbackError) {
+          console.error('Fallback price fetch error:', fallbackError);
+        }
       } catch (error) {
         console.error('Error fetching crypto prices:', error);
       }
@@ -164,6 +206,33 @@ export default function Spot() {
       setSelectedPair(updatedPair);
     }
   }, [tradingPairs]);
+
+  // Fetch order book and recent trades when pair changes
+  useEffect(() => {
+    const fetchOrderBookAndTrades = async () => {
+      try {
+        const symbol = `${selectedPair.symbol}USDT`;
+        const [orderBookData, tradesData] = await Promise.all([
+          asterdexService.getOrderBook(symbol, 20),
+          asterdexService.getRecentTrades(symbol, 20),
+        ]);
+        
+        if (orderBookData) {
+          setLiveOrderBook(orderBookData);
+        }
+        if (tradesData) {
+          setLiveTrades(tradesData);
+        }
+      } catch (error) {
+        console.error('Error fetching order book/trades:', error);
+      }
+    };
+
+    fetchOrderBookAndTrades();
+    const interval = setInterval(fetchOrderBookAndTrades, 5000); // Update every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [selectedPair]);
 
   // Calculate buy fee
   useEffect(() => {
@@ -589,9 +658,9 @@ export default function Spot() {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0">
           {/* Price Header */}
-          <div className="p-4 border-b border-border">
+          <div className="p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center gap-4 mb-2">
               <h2 className="text-2xl font-bold">{selectedPair.pair}</h2>
               <Badge variant={selectedPair.change >= 0 ? "default" : "destructive"} className={selectedPair.change >= 0 ? "bg-green-600" : ""}>
@@ -621,9 +690,9 @@ export default function Spot() {
           </div>
 
           {/* Chart and Order Book Area */}
-          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0 gap-0">
             {/* Chart Area */}
-            <div className="flex-1 p-4 border-r border-border min-h-[400px] md:min-h-0">
+            <div className="flex-1 p-4 border-b lg:border-b-0 lg:border-r border-border min-h-[350px] lg:min-h-0 lg:flex-[2]">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Button 
@@ -686,7 +755,7 @@ export default function Spot() {
             </div>
 
             {/* Order Book and Recent Trades */}
-            <div className="w-full md:w-96">
+            <div className="w-full lg:w-96 lg:flex-[1] max-h-[40vh] lg:max-h-none overflow-y-auto">
               <Tabs defaultValue="orderbook" className="h-full">
                 <TabsList className="w-full grid grid-cols-2 rounded-none">
                   <TabsTrigger value="orderbook">
@@ -709,14 +778,19 @@ export default function Spot() {
 
                     {/* Asks */}
                     <div className="space-y-1 mb-4">
-                      {orderBook.asks.reverse().map((ask, i) => (
-                        <div key={i} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-red-500/10 cursor-pointer relative">
-                          <div className="absolute inset-0 bg-red-500/10" style={{ width: `${(ask.amount / 2.5) * 100}%` }}></div>
-                          <div className="text-red-600 relative z-10">{ask.price.toLocaleString()}</div>
-                          <div className="text-right relative z-10">{ask.amount.toFixed(3)}</div>
-                          <div className="text-right text-muted-foreground relative z-10">{ask.total.toLocaleString()}</div>
-                        </div>
-                      ))}
+                      {liveOrderBook.asks.slice().reverse().map((ask, i) => {
+                        const price = parseFloat(ask[0]);
+                        const amount = parseFloat(ask[1]);
+                        const total = price * amount;
+                        return (
+                          <div key={i} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-red-500/10 cursor-pointer relative">
+                            <div className="absolute inset-0 bg-red-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.asks.map(a => parseFloat(a[1])))) * 100}%` }}></div>
+                            <div className="text-red-600 relative z-10">{price.toLocaleString()}</div>
+                            <div className="text-right relative z-10">{amount.toFixed(3)}</div>
+                            <div className="text-right text-muted-foreground relative z-10">{total.toLocaleString()}</div>
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {/* Current Price */}
@@ -728,14 +802,19 @@ export default function Spot() {
 
                     {/* Bids */}
                     <div className="space-y-1">
-                      {orderBook.bids.map((bid, i) => (
-                        <div key={i} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-green-500/10 cursor-pointer relative">
-                          <div className="absolute inset-0 bg-green-500/10" style={{ width: `${(bid.amount / 2.5) * 100}%` }}></div>
-                          <div className="text-green-600 relative z-10">{bid.price.toLocaleString()}</div>
-                          <div className="text-right relative z-10">{bid.amount.toFixed(3)}</div>
-                          <div className="text-right text-muted-foreground relative z-10">{bid.total.toLocaleString()}</div>
-                        </div>
-                      ))}
+                      {liveOrderBook.bids.map((bid, i) => {
+                        const price = parseFloat(bid[0]);
+                        const amount = parseFloat(bid[1]);
+                        const total = price * amount;
+                        return (
+                          <div key={i} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-green-500/10 cursor-pointer relative">
+                            <div className="absolute inset-0 bg-green-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.bids.map(b => parseFloat(b[1])))) * 100}%` }}></div>
+                            <div className="text-green-600 relative z-10">{price.toLocaleString()}</div>
+                            <div className="text-right relative z-10">{amount.toFixed(3)}</div>
+                            <div className="text-right text-muted-foreground relative z-10">{total.toLocaleString()}</div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </TabsContent>
@@ -748,15 +827,18 @@ export default function Spot() {
                       <div className="text-right">Time</div>
                     </div>
                     <div className="space-y-1">
-                      {recentTrades.map((trade, i) => (
-                        <div key={i} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-muted/50">
-                          <div className={trade.type === "buy" ? "text-green-600" : "text-red-600"}>
-                            {trade.price.toLocaleString()}
+                      {liveTrades.map((trade, i) => {
+                        const time = new Date(trade.time).toLocaleTimeString();
+                        return (
+                          <div key={trade.id} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-muted/50">
+                            <div className={trade.isBuyerMaker ? "text-red-600" : "text-green-600"}>
+                              {parseFloat(trade.price).toLocaleString()}
+                            </div>
+                            <div className="text-right">{parseFloat(trade.qty).toFixed(4)}</div>
+                            <div className="text-right text-muted-foreground text-xs">{time}</div>
                           </div>
-                          <div className="text-right">{trade.amount.toFixed(4)}</div>
-                          <div className="text-right text-muted-foreground text-xs">{trade.time}</div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </TabsContent>
@@ -765,7 +847,7 @@ export default function Spot() {
           </div>
 
           {/* Trading Panel */}
-          <div className="border-t border-border">
+          <div className="border-t border-border flex-shrink-0 lg:max-h-[35vh] max-h-[45vh] overflow-y-auto">
             <Tabs defaultValue="buy" className="w-full">
               <div className="flex items-center justify-between px-4 pt-4">
                 <TabsList>
