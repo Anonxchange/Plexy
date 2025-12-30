@@ -131,14 +131,10 @@ export default function ActiveTrade() {
 
   // Mark unread messages as read when viewing the chat
   useEffect(() => {
-    console.log('Read receipt effect triggered:', { activeTab, messagesCount: messages.length, currentUserProfileId });
-    
     if (activeTab === 'chat' && messages.length > 0 && currentUserProfileId) {
       const unreadMessages = messages.filter(
         msg => msg.sender_id !== currentUserProfileId && !msg.read_at
       );
-
-      console.log('Unread messages found:', unreadMessages.length, unreadMessages.map(m => ({ id: m.id, sender: m.sender_id })));
 
       if (unreadMessages.length > 0) {
         const markMessagesAsRead = async () => {
@@ -146,7 +142,7 @@ export default function ActiveTrade() {
             const messageIds = unreadMessages.map(msg => msg.id);
             const readAtTime = new Date().toISOString();
 
-            console.log('Marking messages as read:', messageIds, 'at', readAtTime);
+            console.log('Marking messages as read:', messageIds);
 
             const { error } = await supabase
               .from('trade_messages')
@@ -156,7 +152,7 @@ export default function ActiveTrade() {
             if (error) {
               console.error('Error marking messages as read:', error);
             } else {
-              console.log('✅ Messages marked as read successfully');
+              console.log('Messages marked as read successfully');
               // Update local state immediately
               setMessages((prev) =>
                 prev.map((msg) =>
