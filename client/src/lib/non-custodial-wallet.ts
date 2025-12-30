@@ -71,10 +71,11 @@ class NonCustodialWalletManager {
 
   /**
    * Generate a new non-custodial wallet with encrypted private key (stored in browser only)
+   * Uses empty password by default for frictionless UX
    */
   async generateNonCustodialWallet(
     chainId: string = "ethereum",
-    userPassword: string,
+    userPassword: string = "", // Default to empty password for auto-decrypt
     supabase?: any,
     userId?: string,
     existingMnemonic?: string
@@ -304,7 +305,7 @@ class NonCustodialWalletManager {
   /**
    * Sign a transaction entirely client-side with encrypted private key
    * Private key never leaves the client
-   * Uses empty password for auto-decrypt if no password provided
+   * Tries provided password first, then empty password (default) for auto-decrypt
    */
   async signTransaction(
     walletId: string,
@@ -324,12 +325,12 @@ class NonCustodialWalletManager {
     }
 
     // Decrypt private key (only in memory, temporarily)
-    // Try with provided password first, then empty password if that fails
+    // Try with provided password first, then empty password (default) if provided password fails
     let privateKey: string;
     try {
       privateKey = this.decryptPrivateKey(wallet.encryptedPrivateKey, userPassword);
     } catch (error) {
-      // If provided password fails and it's not empty, try with empty password for auto-decrypt
+      // If provided password fails and it's not empty, try with empty password for default auto-decrypt
       if (userPassword) {
         try {
           privateKey = this.decryptPrivateKey(wallet.encryptedPrivateKey, "");
