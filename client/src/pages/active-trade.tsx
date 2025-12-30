@@ -107,6 +107,7 @@ export default function ActiveTrade() {
     "Thank you for the trade",
   ]);
   const [counterpartyPresence, setCounterpartyPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
+  const lastMessageTimestampRef = useRef<string | null>(null);
 
   const supabase = createClient();
 
@@ -242,23 +243,35 @@ export default function ActiveTrade() {
       if (!tradeId) return;
       
       try {
-        const { data, error } = await supabase
+        // Only fetch messages created after the last one we saw
+        // This prevents duplicate detection issues and improves performance
+        const query = supabase
           .from("trade_messages")
           .select("*")
           .eq("trade_id", tradeId)
           .order("created_at", { ascending: true });
+
+        // If we have a last timestamp, only fetch newer messages
+        if (lastMessageTimestampRef.current) {
+          query.gt("created_at", lastMessageTimestampRef.current);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.warn('Polling error:', error);
           return;
         }
 
+        if (!data || data.length === 0) return;
+
+        // Update the last message timestamp for next poll
+        lastMessageTimestampRef.current = data[data.length - 1].created_at;
+
         setMessages((prev) => {
-          if (!data) return prev;
-          
-          // Merge new messages with existing ones, avoiding duplicates
+          // Merge new messages with existing ones, avoiding duplicates by ID
           const existingIds = new Set(prev.map(m => m.id));
-          const newMessages = data.filter(m => !existingIds.has(m.id));
+          const newMessages = data.filter(m => !existingIds.has(m.id) && !m.id.startsWith('temp-'));
           
           if (newMessages.length > 0) {
             // Play notification sound for new messages from counterparty
@@ -279,19 +292,6 @@ export default function ActiveTrade() {
             return [...prev, ...newMessages];
           }
           
-          // Also check for updated read receipts
-          const updatedMessages = data.filter(d => {
-            const existing = prev.find(p => p.id === d.id);
-            return existing && existing.read_at !== d.read_at;
-          });
-
-          if (updatedMessages.length > 0) {
-            return prev.map(msg => {
-              const updated = data.find(d => d.id === msg.id);
-              return updated ? { ...msg, read_at: updated.read_at } : msg;
-            });
-          }
-
           return prev;
         });
       } catch (error) {
