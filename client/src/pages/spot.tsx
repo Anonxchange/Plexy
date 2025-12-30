@@ -133,9 +133,6 @@ export default function Spot() {
   const [buyFee, setBuyFee] = useState(0);
   const [sellFee, setSellFee] = useState(0);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [walletPassword, setWalletPassword] = useState("");
-  const [pendingTrade, setPendingTrade] = useState<{ type: "buy" | "sell" } | null>(null);
 
   // Get wallet balances and list for the trading pair
   const baseCrypto = selectedPair.symbol;
@@ -333,20 +330,18 @@ export default function Spot() {
       return;
     }
 
-    // Prompt for password
-    setPendingTrade({ type: "buy" });
-    setShowPasswordDialog(true);
+    await executeTrade("buy");
   };
 
-  // Execute the actual trade with password
-  const executeTrade = async (password: string) => {
-    if (!user || !pendingTrade) return;
+  // Execute the actual trade (auto-decrypt, no password required by default)
+  const executeTrade = async (type: "buy" | "sell") => {
+    if (!user) return;
     
     setIsExecuting(true);
     try {
-      const fromToken = pendingTrade.type === "buy" ? "USDT" : selectedPair.symbol;
-      const toToken = pendingTrade.type === "buy" ? selectedPair.symbol : "USDT";
-      const amountStr = pendingTrade.type === "buy" ? buyAmount : sellAmount;
+      const fromToken = type === "buy" ? "USDT" : selectedPair.symbol;
+      const toToken = type === "buy" ? selectedPair.symbol : "USDT";
+      const amountStr = type === "buy" ? buyAmount : sellAmount;
 
       const quote = await swapExecutionService.getSwapQuote(
         fromToken,
@@ -360,7 +355,7 @@ export default function Spot() {
       });
 
       const order = swapExecutionService.createExecutionOrder(
-        pendingTrade.type,
+        type,
         fromToken,
         toToken,
         amountStr,
@@ -369,27 +364,27 @@ export default function Spot() {
 
       toast({
         title: "Confirm Transaction",
-        description: `You will ${pendingTrade.type === "buy" ? "receive" : "pay"} ~${pendingTrade.type === "buy" ? quote.toAmount : quote.fromAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
+        description: `You will ${type === "buy" ? "receive" : "pay"} ~${type === "buy" ? quote.toAmount : quote.fromAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
       });
 
       const activeWallet = userWallets[0] as any;
 
-      // Execute swap with actual password
+      // Execute swap with empty password (auto-decrypt)
       const result = await swapExecutionService.executeSwap(
         activeWallet,
         fromToken,
         toToken,
         amountStr,
-        password, // Use actual user password
+        "", // Auto-decrypt with empty password
         user.id
       );
 
       toast({
         title: "Order Submitted",
-        description: `${pendingTrade.type === "buy" ? "Buy" : "Sell"} order submitted. TX: ${result.txHash?.slice(0, 10)}... Waiting for on-chain confirmation...`,
+        description: `${type === "buy" ? "Buy" : "Sell"} order submitted. TX: ${result.txHash?.slice(0, 10)}... Waiting for on-chain confirmation...`,
       });
 
-      if (pendingTrade.type === "buy") {
+      if (type === "buy") {
         setBuyAmount("");
         setBuyPrice("");
         setBuyPercentage([0]);
@@ -407,9 +402,6 @@ export default function Spot() {
       });
     } finally {
       setIsExecuting(false);
-      setShowPasswordDialog(false);
-      setWalletPassword("");
-      setPendingTrade(null);
     }
   };
 
@@ -445,9 +437,7 @@ export default function Spot() {
       return;
     }
 
-    // Prompt for password
-    setPendingTrade({ type: "sell" });
-    setShowPasswordDialog(true);
+    await executeTrade("sell");
   };
 
 
@@ -946,50 +936,6 @@ export default function Spot() {
         </div>
       </div>
 
-      {/* Password Dialog */}
-      {showPasswordDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-96">
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Confirm Trade</h3>
-                <p className="text-sm text-muted-foreground">Enter your wallet password to confirm the transaction</p>
-                <Input
-                  type="password"
-                  placeholder="Wallet Password"
-                  value={walletPassword}
-                  onChange={(e) => setWalletPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      executeTrade(walletPassword);
-                    }
-                  }}
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setShowPasswordDialog(false);
-                      setWalletPassword("");
-                      setPendingTrade(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={() => executeTrade(walletPassword)}
-                    disabled={!walletPassword || isExecuting}
-                  >
-                    {isExecuting ? "Processing..." : "Confirm"}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
