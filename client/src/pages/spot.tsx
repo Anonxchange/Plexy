@@ -133,6 +133,10 @@ export default function Spot() {
   const [buyFee, setBuyFee] = useState(0);
   const [sellFee, setSellFee] = useState(0);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [walletPassword, setWalletPassword] = useState("");
+  const [pendingTrade, setPendingTrade] = useState<{ type: "buy" | "sell" } | null>(null);
+  const { sessionPassword, setSessionPassword } = useAuth();
 
   // Get wallet balances and list for the trading pair
   const baseCrypto = selectedPair.symbol;
@@ -330,11 +334,18 @@ export default function Spot() {
       return;
     }
 
-    await executeTrade("buy");
+    // If we have a cached session password, execute directly
+    if (sessionPassword) {
+      await executeTrade("buy", sessionPassword);
+    } else {
+      // Otherwise prompt for password (will be cached for session)
+      setPendingTrade({ type: "buy" });
+      setShowPasswordDialog(true);
+    }
   };
 
-  // Execute the actual trade (auto-decrypt, no password required by default)
-  const executeTrade = async (type: "buy" | "sell") => {
+  // Execute the actual trade with cached or provided password
+  const executeTrade = async (type: "buy" | "sell", password: string) => {
     if (!user) return;
     
     setIsExecuting(true);
@@ -369,13 +380,13 @@ export default function Spot() {
 
       const activeWallet = userWallets[0] as any;
 
-      // Execute swap with empty password (auto-decrypt)
+      // Execute swap with provided password
       const result = await swapExecutionService.executeSwap(
         activeWallet,
         fromToken,
         toToken,
         amountStr,
-        "", // Auto-decrypt with empty password
+        password,
         user.id
       );
 
@@ -402,6 +413,9 @@ export default function Spot() {
       });
     } finally {
       setIsExecuting(false);
+      setShowPasswordDialog(false);
+      setWalletPassword("");
+      setPendingTrade(null);
     }
   };
 
@@ -437,7 +451,14 @@ export default function Spot() {
       return;
     }
 
-    await executeTrade("sell");
+    // If we have a cached session password, execute directly
+    if (sessionPassword) {
+      await executeTrade("sell", sessionPassword);
+    } else {
+      // Otherwise prompt for password (will be cached for session)
+      setPendingTrade({ type: "sell" });
+      setShowPasswordDialog(true);
+    }
   };
 
 
@@ -936,6 +957,54 @@ export default function Spot() {
         </div>
       </div>
 
+      {/* Password Dialog - for first-time password entry in session */}
+      {showPasswordDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-96">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Enter Wallet Password</h3>
+                <p className="text-sm text-muted-foreground">Password will be cached for this session (until logout)</p>
+                <Input
+                  type="password"
+                  placeholder="Wallet Password"
+                  value={walletPassword}
+                  onChange={(e) => setWalletPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && walletPassword) {
+                      setSessionPassword(walletPassword);
+                      executeTrade(pendingTrade!.type, walletPassword);
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowPasswordDialog(false);
+                      setWalletPassword("");
+                      setPendingTrade(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setSessionPassword(walletPassword);
+                      executeTrade(pendingTrade!.type, walletPassword);
+                    }}
+                    disabled={!walletPassword || isExecuting}
+                  >
+                    {isExecuting ? "Processing..." : "Confirm"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
