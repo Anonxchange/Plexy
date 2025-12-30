@@ -109,12 +109,12 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
   }, [selectedCrypto]);
 
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
-    // For USDT and USDC, append network suffix based on selection
+    // For USDT and USDC, append full network name (matching wallet-api.ts format)
     if (crypto === 'USDT' || crypto === 'USDC') {
-      if (network.includes('ERC-20')) return `${crypto}-ERC20`;
-      if (network.includes('BEP-20')) return `${crypto}-BEP20`;
-      if (network.includes('TRC-20')) return `${crypto}-TRC20`;
-      if (network.includes('SPL')) return `${crypto}-SOL`; // Assuming SPL maps to SOL network
+      if (network === 'Ethereum (ERC-20)') return `${crypto}-Ethereum (ERC-20)`;
+      if (network === 'Binance Smart Chain (BEP-20)') return `${crypto}-Binance Smart Chain (BEP-20)`;
+      if (network === 'Tron (TRC-20)') return `${crypto}-Tron (TRC-20)`;
+      if (network === 'Solana (SPL)') return `${crypto}-Solana`;
     }
     // For native coins, return as-is
     return crypto;
