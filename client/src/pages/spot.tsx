@@ -771,54 +771,40 @@ export default function Spot() {
                           </Select>
 
                           {orderType === "limit" ? (
-                            <>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
-                                  <span>Amount</span>
-                                  <span>{selectedPair.symbol}</span>
-                                </div>
-                                <Input 
-                                  className="h-8 text-xs bg-muted/20" 
-                                  value={buyAmount}
-                                  onChange={(e) => setBuyAmount(e.target.value)}
-                                />
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
+                                <span>USDT</span>
                               </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
-                                  <span>Price</span>
-                                  <span>USDT</span>
-                                </div>
-                                <Input 
-                                  className="h-8 text-xs bg-muted/20" 
-                                  value={buyPrice}
-                                  onChange={(e) => setBuyPrice(e.target.value)}
-                                />
-                              </div>
-                            </>
+                              <Input 
+                                className="h-8 text-xs bg-muted/20" 
+                                value={buyPrice}
+                                onChange={(e) => setBuyPrice(e.target.value)}
+                              />
+                            </div>
                           ) : (
-                            <>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
-                                  <span>Amount</span>
-                                  <span>{selectedPair.symbol}</span>
-                                </div>
-                                <Input 
-                                  className="h-8 text-xs bg-muted/20" 
-                                  value={buyAmount}
-                                  onChange={(e) => setBuyAmount(e.target.value)}
-                                />
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
+                                <span>USDT</span>
                               </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
-                                  <span>Price</span>
-                                  <span>USDT</span>
-                                </div>
-                                <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
-                                  Market Price
-                                </div>
+                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                                Market Price
                               </div>
-                            </>
+                            </div>
                           )}
+
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>Amount</span>
+                              <span>{selectedPair.symbol}</span>
+                            </div>
+                            <Input 
+                              className="h-8 text-xs bg-muted/20" 
+                              value={buyAmount}
+                              onChange={(e) => setBuyAmount(e.target.value)}
+                            />
+                          </div>
 
                           <div className="pt-1">
                             <Slider
@@ -867,54 +853,40 @@ export default function Spot() {
                           </Select>
 
                           {orderType === "limit" ? (
-                            <>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
-                                  <span>Amount</span>
-                                  <span>{selectedPair.symbol}</span>
-                                </div>
-                                <Input 
-                                  className="h-8 text-xs bg-muted/20" 
-                                  value={sellAmount}
-                                  onChange={(e) => setSellAmount(e.target.value)}
-                                />
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
+                                <span>USDT</span>
                               </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
-                                  <span>Price</span>
-                                  <span>USDT</span>
-                                </div>
-                                <Input 
-                                  className="h-8 text-xs bg-muted/20" 
-                                  value={sellPrice}
-                                  onChange={(e) => setSellPrice(e.target.value)}
-                                />
-                              </div>
-                            </>
+                              <Input 
+                                className="h-8 text-xs bg-muted/20" 
+                                value={sellPrice}
+                                onChange={(e) => setSellPrice(e.target.value)}
+                              />
+                            </div>
                           ) : (
-                            <>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
-                                  <span>Amount</span>
-                                  <span>{selectedPair.symbol}</span>
-                                </div>
-                                <Input 
-                                  className="h-8 text-xs bg-muted/20" 
-                                  value={sellAmount}
-                                  onChange={(e) => setSellAmount(e.target.value)}
-                                />
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
+                                <span>USDT</span>
                               </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
-                                  <span>Price</span>
-                                  <span>USDT</span>
-                                </div>
-                                <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
-                                  Market Price
-                                </div>
+                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                                Market Price
                               </div>
-                            </>
+                            </div>
                           )}
+
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>Amount</span>
+                              <span>{selectedPair.symbol}</span>
+                            </div>
+                            <Input 
+                              className="h-8 text-xs bg-muted/20" 
+                              value={sellAmount}
+                              onChange={(e) => setSellAmount(e.target.value)}
+                            />
+                          </div>
 
                           <div className="pt-1">
                             <Slider
