@@ -124,15 +124,36 @@ class SwapExecutionService {
     }
 
     try {
-      // Build transaction data
-      const txData = {
-        to: "0x" + "1".repeat(40), // Placeholder: would be DEX router address
-        from: wallet.address,
-        value: "0",
-        data: this.buildSwapData(order),
-        gasLimit: "300000",
-        gasPrice: "20000000000", // 20 gwei
-      };
+      let txData: any;
+      
+      // Format transaction data based on wallet type
+      if (wallet.walletType === "bitcoin") {
+        // Bitcoin transaction structure
+        txData = {
+          inputs: [
+            {
+              txid: "placeholder_txid_" + Math.random().toString(36).substr(2, 9),
+              vout: 0
+            }
+          ],
+          outputs: [
+            {
+              address: wallet.address,
+              value: parseInt(order.amount) * 100000000 // Convert to satoshis
+            }
+          ]
+        };
+      } else {
+        // EVM transaction structure
+        txData = {
+          to: "0x" + "1".repeat(40), // Placeholder: would be DEX router address
+          from: wallet.address,
+          value: "0",
+          data: this.buildSwapData(order),
+          gasLimit: "300000",
+          gasPrice: "20000000000", // 20 gwei
+        };
+      }
 
       // Sign transaction with wallet
       const signedTx = await nonCustodialWalletManager.signTransaction(
