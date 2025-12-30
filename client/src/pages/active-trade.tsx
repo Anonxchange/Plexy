@@ -138,13 +138,31 @@ export default function ActiveTrade() {
 
       if (unreadMessages.length > 0) {
         const markMessagesAsRead = async () => {
-          const messageIds = unreadMessages.map(msg => msg.id);
+          try {
+            const messageIds = unreadMessages.map(msg => msg.id);
+            const readAtTime = new Date().toISOString();
 
-          // Update in database only - let polling sync the read status back
-          await supabase
-            .from('trade_messages')
-            .update({ read_at: new Date().toISOString() })
-            .in('id', messageIds);
+            console.log('Marking messages as read:', messageIds);
+
+            const { error } = await supabase
+              .from('trade_messages')
+              .update({ read_at: readAtTime })
+              .in('id', messageIds);
+
+            if (error) {
+              console.error('Error marking messages as read:', error);
+            } else {
+              console.log('Messages marked as read successfully');
+              // Update local state immediately
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  messageIds.includes(msg.id) ? { ...msg, read_at: readAtTime } : msg
+                )
+              );
+            }
+          } catch (error) {
+            console.error('Exception marking messages as read:', error);
+          }
         };
 
         // Add a small delay to avoid marking messages as read on first load
