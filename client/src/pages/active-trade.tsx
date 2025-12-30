@@ -139,22 +139,12 @@ export default function ActiveTrade() {
       if (unreadMessages.length > 0) {
         const markMessagesAsRead = async () => {
           const messageIds = unreadMessages.map(msg => msg.id);
-          const readTime = new Date().toISOString();
 
-          // Update in database
-          const { error } = await supabase
+          // Update in database only - let polling sync the read status back
+          await supabase
             .from('trade_messages')
-            .update({ read_at: readTime })
+            .update({ read_at: new Date().toISOString() })
             .in('id', messageIds);
-
-          if (!error) {
-            // Immediately update local state so UI reflects read status
-            setMessages((prev) =>
-              prev.map((msg) =>
-                messageIds.includes(msg.id) ? { ...msg, read_at: readTime } : msg
-              )
-            );
-          }
         };
 
         // Add a small delay to avoid marking messages as read on first load
@@ -250,71 +240,88 @@ export default function ActiveTrade() {
         }
       });
 
-    // Polling fallback: Check for new messages and read receipts every 3 seconds
+    // Polling fallback: Check for new messages every 3 seconds
     // This ensures messages sync even if real-time subscription fails
     const pollInterval = setInterval(async () => {
       if (!tradeId) return;
       
       try {
-        // Fetch ALL messages to check for read receipt updates on existing messages
-        const { data, error } = await supabase
+        // Fetch only messages newer than the last one we saw
+        let query = supabase
           .from("trade_messages")
           .select("*")
           .eq("trade_id", tradeId)
           .order("created_at", { ascending: true });
+
+        // Only fetch newer messages to avoid duplicates
+        if (lastMessageTimestampRef.current) {
+          query = query.gt("created_at", lastMessageTimestampRef.current);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.warn('Polling error:', error);
           return;
         }
 
-        if (!data || data.length === 0) return;
+        // Also fetch a few recent messages to check for read receipt updates
+        const { data: recentMessages } = await supabase
+          .from("trade_messages")
+          .select("id, read_at")
+          .eq("trade_id", tradeId)
+          .order("created_at", { ascending: false })
+          .limit(20);
 
         setMessages((prev) => {
-          // Merge new messages and update read receipts
-          const existingIds = new Set(prev.map(m => m.id));
-          const newMessages = data.filter(m => !existingIds.has(m.id) && !m.id.startsWith('temp-'));
-          
           let updated = prev;
+          const prevIds = new Set(prev.map(m => m.id));
 
           // Add new messages if any
-          if (newMessages.length > 0) {
-            // Play notification sound for new messages from counterparty
-            newMessages.forEach(msg => {
-              if (msg.sender_id !== currentUserProfileId) {
-                notificationSounds.play('message_received');
-              }
-            });
+          if (data && data.length > 0) {
+            // Only add messages that don't already exist (by ID) and aren't temp messages
+            const newMessages = data.filter(m => 
+              !prevIds.has(m.id) && 
+              !m.id.startsWith('temp-')
+            );
+            
+            if (newMessages.length > 0) {
+              // Play notification sound for new messages from counterparty
+              newMessages.forEach(msg => {
+                if (msg.sender_id !== currentUserProfileId) {
+                  notificationSounds.play('message_received');
+                }
+              });
 
-            // Auto-scroll to bottom
-            setTimeout(() => {
-              const chatContainer = document.querySelector('[data-chat-messages]');
-              if (chatContainer) {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-              }
-            }, 100);
+              // Auto-scroll to bottom
+              setTimeout(() => {
+                const chatContainer = document.querySelector('[data-chat-messages]');
+                if (chatContainer) {
+                  chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+              }, 100);
 
-            updated = [...prev, ...newMessages];
+              updated = [...prev, ...newMessages];
+              // Update timestamp after adding new messages
+              lastMessageTimestampRef.current = newMessages[newMessages.length - 1].created_at;
+            }
           }
 
-          // Update read receipts on existing messages
-          const hasReadUpdates = updated.some(msg => {
-            const freshMsg = data.find(d => d.id === msg.id);
-            return freshMsg && msg.read_at !== freshMsg.read_at;
-          });
-
-          if (hasReadUpdates) {
-            updated = updated.map(msg => {
-              const freshMsg = data.find(d => d.id === msg.id);
-              return freshMsg && freshMsg.read_at !== msg.read_at 
-                ? { ...msg, read_at: freshMsg.read_at } 
-                : msg;
+          // Update read receipts on recent messages (important for showing delivered status)
+          if (recentMessages && recentMessages.length > 0) {
+            const hasReadUpdates = updated.some(msg => {
+              const fresh = recentMessages.find(r => r.id === msg.id);
+              return fresh && msg.read_at !== fresh.read_at;
             });
-          }
 
-          // Update the last message timestamp for next optimization
-          if (data.length > 0) {
-            lastMessageTimestampRef.current = data[data.length - 1].created_at;
+            if (hasReadUpdates) {
+              updated = updated.map(msg => {
+                const fresh = recentMessages.find(r => r.id === msg.id);
+                return fresh && fresh.read_at !== msg.read_at 
+                  ? { ...msg, read_at: fresh.read_at } 
+                  : msg;
+              });
+            }
           }
 
           return updated;
