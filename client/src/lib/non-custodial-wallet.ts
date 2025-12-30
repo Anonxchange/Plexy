@@ -52,6 +52,8 @@ export interface NonCustodialWallet {
   createdAt: string;
   isActive: boolean;
   isBackedUp: boolean;
+  assetType?: string; // 'native' for native coins, 'stablecoin' for USDT/USDC
+  baseChainWalletId?: string; // Reference to parent native chain wallet for stablecoins
 }
 
 const STORAGE_KEY_PREFIX = "pexly_non_custodial_wallets";
@@ -143,11 +145,52 @@ class NonCustodialWalletManager {
     };
     
     // Store in localStorage with user-specific key
-    this.saveWalletsToStorage([...this.getWalletsFromStorage(userId), newWallet], userId);
+    const walletsToStore = [...this.getWalletsFromStorage(userId), newWallet];
+    
+    // Auto-generate stablecoin wallet entries for supported chains
+    if (chainId !== 'Bitcoin (SegWit)') {
+      const stablecoins = ['USDT', 'USDC'];
+      stablecoins.forEach(symbol => {
+        const stablecoinWallet: NonCustodialWallet = {
+          id: `${newWallet.id}_${symbol}`,
+          chainId: `${symbol}-${chainId}`,
+          address, // Same address as parent chain
+          walletType: newWallet.walletType,
+          encryptedPrivateKey: newWallet.encryptedPrivateKey, // Same key as parent
+          createdAt: newWallet.createdAt,
+          isActive: true,
+          isBackedUp: false,
+          assetType: 'stablecoin',
+          baseChainWalletId: newWallet.id,
+        };
+        walletsToStore.push(stablecoinWallet);
+      });
+    }
+    
+    this.saveWalletsToStorage(walletsToStore, userId);
     
     // Also save to Supabase if provided
     if (supabase && userId) {
       await this.saveWalletToSupabase(newWallet, supabase, userId);
+      // Also save stablecoins to Supabase
+      if (chainId !== 'Bitcoin (SegWit)') {
+        const stablecoins = ['USDT', 'USDC'];
+        for (const symbol of stablecoins) {
+          const stablecoinWallet: NonCustodialWallet = {
+            id: `${newWallet.id}_${symbol}`,
+            chainId: `${symbol}-${chainId}`,
+            address,
+            walletType: newWallet.walletType,
+            encryptedPrivateKey: newWallet.encryptedPrivateKey,
+            createdAt: newWallet.createdAt,
+            isActive: true,
+            isBackedUp: false,
+            assetType: 'stablecoin',
+            baseChainWalletId: newWallet.id,
+          };
+          await this.saveWalletToSupabase(stablecoinWallet, supabase, userId);
+        }
+      }
     }
     
     return {
