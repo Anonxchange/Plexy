@@ -237,26 +237,18 @@ export default function ActiveTrade() {
         }
       });
 
-    // Polling fallback: Check for new messages every 3 seconds
+    // Polling fallback: Check for new messages and read receipts every 3 seconds
     // This ensures messages sync even if real-time subscription fails
     const pollInterval = setInterval(async () => {
       if (!tradeId) return;
       
       try {
-        // Only fetch messages created after the last one we saw
-        // This prevents duplicate detection issues and improves performance
-        const query = supabase
+        // Fetch ALL messages to check for read receipt updates on existing messages
+        const { data, error } = await supabase
           .from("trade_messages")
           .select("*")
           .eq("trade_id", tradeId)
           .order("created_at", { ascending: true });
-
-        // If we have a last timestamp, only fetch newer messages
-        if (lastMessageTimestampRef.current) {
-          query.gt("created_at", lastMessageTimestampRef.current);
-        }
-
-        const { data, error } = await query;
 
         if (error) {
           console.warn('Polling error:', error);
@@ -265,14 +257,14 @@ export default function ActiveTrade() {
 
         if (!data || data.length === 0) return;
 
-        // Update the last message timestamp for next poll
-        lastMessageTimestampRef.current = data[data.length - 1].created_at;
-
         setMessages((prev) => {
-          // Merge new messages with existing ones, avoiding duplicates by ID
+          // Merge new messages and update read receipts
           const existingIds = new Set(prev.map(m => m.id));
           const newMessages = data.filter(m => !existingIds.has(m.id) && !m.id.startsWith('temp-'));
           
+          let updated = prev;
+
+          // Add new messages if any
           if (newMessages.length > 0) {
             // Play notification sound for new messages from counterparty
             newMessages.forEach(msg => {
@@ -289,10 +281,30 @@ export default function ActiveTrade() {
               }
             }, 100);
 
-            return [...prev, ...newMessages];
+            updated = [...prev, ...newMessages];
           }
-          
-          return prev;
+
+          // Update read receipts on existing messages
+          const hasReadUpdates = updated.some(msg => {
+            const freshMsg = data.find(d => d.id === msg.id);
+            return freshMsg && msg.read_at !== freshMsg.read_at;
+          });
+
+          if (hasReadUpdates) {
+            updated = updated.map(msg => {
+              const freshMsg = data.find(d => d.id === msg.id);
+              return freshMsg && freshMsg.read_at !== msg.read_at 
+                ? { ...msg, read_at: freshMsg.read_at } 
+                : msg;
+            });
+          }
+
+          // Update the last message timestamp for next optimization
+          if (data.length > 0) {
+            lastMessageTimestampRef.current = data[data.length - 1].created_at;
+          }
+
+          return updated;
         });
       } catch (error) {
         console.warn('Message polling error:', error);
