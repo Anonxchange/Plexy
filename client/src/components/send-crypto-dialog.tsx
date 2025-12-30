@@ -35,7 +35,7 @@ interface SendCryptoDialogProps {
 type Step = "select" | "details";
 
 export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: SendCryptoDialogProps) {
-  const { user } = useAuth();
+  const { user, sessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState<Step>("select");
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
@@ -157,6 +157,12 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
       return;
     }
 
+    // Check if password is needed
+    if (!sessionPassword && !userPassword) {
+      setError("Please enter your wallet password");
+      return;
+    }
+
     const cryptoAmountNum = amountInputMode === "crypto" 
       ? parseFloat(amount) 
       : parseFloat(cryptoAmount);
@@ -193,9 +199,15 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
         symbol: symbolToUse,
       };
       
-      // Auto-decrypt with empty password (no password required by default)
-      const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, "", user.id);
+      // Use cached session password or newly entered password
+      const passwordToUse = sessionPassword || userPassword;
+      const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, passwordToUse, user.id);
       console.log("Signed Transaction:", signedTx);
+      
+      // Cache password if not already cached
+      if (!sessionPassword && userPassword) {
+        setSessionPassword(userPassword);
+      }
       
       // In a non-custodial architecture, we provide the signed transaction for the user to broadcast
       // or we broadcast it to a public provider. We do not use the custodial backend.
@@ -306,11 +318,27 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
         ) : (
           <ScrollArea className="max-h-[500px] pr-4">
           <div className="space-y-4">
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
-              <p className="text-xs text-blue-800 dark:text-blue-200">
-                Your transaction will be signed locally in your browser. No password required by default.
-              </p>
-            </div>
+            {!sessionPassword && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
+                <p className="text-xs text-blue-800 dark:text-blue-200">
+                  Enter your password once - it will be cached for this session.
+                </p>
+                <Input
+                  type="password"
+                  placeholder="Wallet password"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  className="h-10 mt-2 bg-muted"
+                />
+              </div>
+            )}
+            {sessionPassword && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
+                <p className="text-xs text-green-800 dark:text-green-200">
+                  ✓ Password cached for session. Transaction will sign automatically.
+                </p>
+              </div>
+            )}
             <div>
               <Label className="text-sm font-medium mb-2 block">Asset</Label>
               <Select value={selectedCrypto} onValueChange={(value) => {
