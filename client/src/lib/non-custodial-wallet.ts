@@ -332,15 +332,21 @@ class NonCustodialWalletManager {
 
     // Sign transaction client-side
     try {
+      if (wallet.walletType === "bitcoin") {
+        throw new Error("Bitcoin transaction signing not yet implemented for swap");
+      }
+
+      // Ethereum/EVM signing
       const signer = new ethers.Wallet(privateKey);
       
       // Create and sign the transaction
       const tx = {
         to: transactionData.to,
-        value: ethers.parseEther(transactionData.amount.toString()),
-        gasLimit: BigInt(21000),
+        value: ethers.parseEther(transactionData.value || "0"),
+        data: transactionData.data || "0x",
+        gasLimit: BigInt(transactionData.gasLimit || 300000),
         gasPrice: ethers.parseUnits("20", "gwei"),
-        nonce: 0,
+        nonce: 0, // In production, get real nonce
       };
       
       const signedTx = await signer.signTransaction(tx);
