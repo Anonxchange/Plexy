@@ -174,21 +174,19 @@ class SwapExecutionService {
     order: ExecutionOrder
   ): Promise<{ txHash: string; order: ExecutionOrder }> {
     try {
-      // Update order status to submitted
-      const updatedOrder: ExecutionOrder = {
-        ...order,
-        status: "submitted",
-        executedAt: Date.now(),
-      };
-
-      // In production: broadcast signed transaction to network
-      // For now: simulate submission and generate transaction hash
+      // Generate placeholder transaction hash
+      // In production: this would be returned by the blockchain
       const txHash = `0x${Array.from({ length: 64 }, () =>
         Math.floor(Math.random() * 16).toString(16)
       ).join("")}`;
 
-      updatedOrder.txHash = txHash;
-      updatedOrder.status = "confirmed";
+      // Order remains in submitted state - only confirmed after on-chain confirmation
+      const updatedOrder: ExecutionOrder = {
+        ...order,
+        status: "submitted",
+        txHash,
+        executedAt: Date.now(),
+      };
 
       return {
         txHash,
@@ -201,28 +199,21 @@ class SwapExecutionService {
 
   /**
    * Monitor transaction confirmation
+   * In production: would poll blockchain for transaction status
+   * Currently returns pending state - requires real blockchain integration
    */
   async monitorTransaction(
     txHash: string,
     maxWaitTime: number = 60000 // 60 seconds
   ): Promise<{ confirmed: boolean; blockNumber?: number }> {
     try {
-      const startTime = Date.now();
-
-      while (Date.now() - startTime < maxWaitTime) {
-        // In production: check transaction status via blockchain API
-        // For now: simulate confirmation after 3 seconds
-        if (Date.now() - startTime > 3000) {
-          return {
-            confirmed: true,
-            blockNumber: Math.floor(Math.random() * 1000000),
-          };
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-
-      return { confirmed: false };
+      // In production: check transaction status via blockchain RPC or API
+      // For now: return pending status - user needs to check blockchain explorer
+      console.log(`Transaction ${txHash} submitted to network. Awaiting on-chain confirmation...`);
+      
+      return {
+        confirmed: false, // Requires real blockchain interaction to confirm
+      };
     } catch (error) {
       throw new Error(`Failed to monitor transaction: ${error}`);
     }
