@@ -71,17 +71,21 @@ class NonCustodialWalletManager {
 
   /**
    * Generate a new non-custodial wallet with encrypted private key (stored in browser only)
-   * Uses empty password by default for frictionless UX
+   * Requires a password for wallet security
    */
   async generateNonCustodialWallet(
     chainId: string = "ethereum",
-    userPassword: string = "", // Default to empty password for auto-decrypt
+    userPassword: string, // Password required for wallet encryption
     supabase?: any,
     userId?: string,
     existingMnemonic?: string
   ): Promise<{ wallet: NonCustodialWallet; mnemonicPhrase: string }> {
     if (!userId) {
       throw new Error("userId is required to generate wallet");
+    }
+    
+    if (!userPassword || userPassword.trim() === "") {
+      throw new Error("Password is required to generate a wallet");
     }
 
     // Use existing mnemonic if provided, otherwise generate new
@@ -305,16 +309,20 @@ class NonCustodialWalletManager {
   /**
    * Sign a transaction entirely client-side with encrypted private key
    * Private key never leaves the client
-   * Tries provided password first, then empty password (default) for auto-decrypt
+   * Requires password for wallet security
    */
   async signTransaction(
     walletId: string,
     transactionData: any,
-    userPassword: string = "", // Default to empty password for auto-decrypt
+    userPassword: string, // Password required for wallet access
     userId?: string
   ): Promise<string> {
     if (!userId) {
       throw new Error("userId is required to sign transaction");
+    }
+    
+    if (!userPassword || userPassword.trim() === "") {
+      throw new Error("Password is required to sign transactions");
     }
     
     const wallets = this.getWalletsFromStorage(userId);
@@ -325,21 +333,11 @@ class NonCustodialWalletManager {
     }
 
     // Decrypt private key (only in memory, temporarily)
-    // Try with provided password first, then empty password (default) if provided password fails
     let privateKey: string;
     try {
       privateKey = this.decryptPrivateKey(wallet.encryptedPrivateKey, userPassword);
     } catch (error) {
-      // If provided password fails and it's not empty, try with empty password for default auto-decrypt
-      if (userPassword) {
-        try {
-          privateKey = this.decryptPrivateKey(wallet.encryptedPrivateKey, "");
-        } catch {
-          throw new Error("Invalid password or corrupted wallet data");
-        }
-      } else {
-        throw new Error("Invalid password or corrupted wallet data");
-      }
+      throw new Error("Invalid password or corrupted wallet data");
     }
 
     // Validate private key format
