@@ -857,16 +857,24 @@ export default function Spot() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardContent className="p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Available</span>
-                        <span className="text-sm font-medium">
-                          {quoteWallet ? quoteWallet.balance.toFixed(2) : '0.00'} USDT
-                        </span>
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Amount of {selectedPair.symbol}</label>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={buyAmount}
+                            onChange={(e) => setBuyAmount(e.target.value)}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            {selectedPair.symbol}
+                          </span>
+                        </div>
                       </div>
 
                       {orderType === "limit" && (
                         <div className="space-y-2">
-                          <label className="text-sm text-muted-foreground">Price</label>
+                          <label className="text-sm text-muted-foreground">Price per {selectedPair.symbol}</label>
                           <div className="relative">
                             <Input
                               type="number"
@@ -881,19 +889,11 @@ export default function Spot() {
                         </div>
                       )}
 
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">Amount</label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            placeholder="0.00"
-                            value={buyAmount}
-                            onChange={(e) => setBuyAmount(e.target.value)}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            {selectedPair.symbol}
-                          </span>
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Available Balance</span>
+                        <span className="text-sm font-medium">
+                          {quoteWallet ? quoteWallet.balance.toFixed(2) : '0.00'} USDT
+                        </span>
                       </div>
 
                       <div className="space-y-2">
@@ -967,16 +967,24 @@ export default function Spot() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardContent className="p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Available</span>
-                        <span className="text-sm font-medium">
-                          {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'} {selectedPair.symbol}
-                        </span>
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Amount of {selectedPair.symbol}</label>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={sellAmount}
+                            onChange={(e) => setSellAmount(e.target.value)}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            {selectedPair.symbol}
+                          </span>
+                        </div>
                       </div>
 
                       {orderType === "limit" && (
                         <div className="space-y-2">
-                          <label className="text-sm text-muted-foreground">Price</label>
+                          <label className="text-sm text-muted-foreground">Price per {selectedPair.symbol}</label>
                           <div className="relative">
                             <Input
                               type="number"
@@ -991,19 +999,11 @@ export default function Spot() {
                         </div>
                       )}
 
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">Amount</label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            placeholder="0.00"
-                            value={sellAmount}
-                            onChange={(e) => setSellAmount(e.target.value)}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            {selectedPair.symbol}
-                          </span>
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Available Balance</span>
+                        <span className="text-sm font-medium">
+                          {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'} {selectedPair.symbol}
+                        </span>
                       </div>
 
                       <div className="space-y-2">
