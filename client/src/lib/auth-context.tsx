@@ -36,6 +36,8 @@ interface AuthContextType {
   pendingOTPVerification: PendingAuth | null;
   walletImportState: WalletImportState;
   setWalletImportState: (state: WalletImportState) => void;
+  sessionPassword: string | null;
+  setSessionPassword: (password: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -285,6 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(null);
   const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(null);
   const [walletImportState, setWalletImportState] = useState<WalletImportState>({ required: false, expectedAddress: null });
+  const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const supabase = createClient();
 
   const checkWalletOnAuth = useCallback(async (userId: string) => {
@@ -502,6 +505,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     presenceTracker.stopTracking();
+    setSessionPassword(null); // Clear session password on logout
     await supabase.auth.signOut();
   };
 
@@ -511,6 +515,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       completeOTPVerification, cancelOTPVerification,
       loading, pendingOTPVerification,
       walletImportState, setWalletImportState,
+      sessionPassword, setSessionPassword,
     }}>
       {children}
     </AuthContext.Provider>
