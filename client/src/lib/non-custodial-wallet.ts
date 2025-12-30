@@ -330,14 +330,33 @@ class NonCustodialWalletManager {
       throw new Error("Invalid password or corrupted wallet data");
     }
 
+    // Validate private key format
+    if (!privateKey || privateKey.length === 0) {
+      throw new Error("Invalid private key: empty");
+    }
+    
+    // Ensure private key has 0x prefix if it doesn't
+    if (!privateKey.startsWith("0x")) {
+      privateKey = "0x" + privateKey;
+    }
+
     // Sign transaction client-side
     try {
       if (wallet.walletType === "bitcoin") {
-        throw new Error("Bitcoin transaction signing not yet implemented for swap");
+        // Bitcoin transaction signing
+        const bitcoinSignedTx = this.signBitcoinTransaction(privateKey, transactionData);
+        // Clear private key from memory
+        privateKey = "";
+        return bitcoinSignedTx;
       }
 
       // Ethereum/EVM signing
-      const signer = new ethers.Wallet(privateKey);
+      let signer: ethers.Wallet;
+      try {
+        signer = new ethers.Wallet(privateKey);
+      } catch (walletError) {
+        throw new Error(`Invalid private key format: ${walletError}`);
+      }
       
       // Create and sign the transaction
       const tx = {
@@ -442,7 +461,71 @@ class NonCustodialWalletManager {
    */
   private decryptPrivateKey(encryptedKey: string, password: string): string {
     const bytes = CryptoJS.AES.decrypt(encryptedKey, password);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+    
+    // Validate decryption result
+    if (!decrypted || decrypted.trim() === "") {
+      throw new Error("Decryption failed: empty result");
+    }
+    
+    return decrypted;
+  }
+
+  /**
+   * Sign a Bitcoin transaction
+   */
+  private signBitcoinTransaction(privateKeyHex: string, transactionData: any): string {
+    try {
+      // Remove 0x prefix if present
+      let cleanPrivateKey = privateKeyHex.startsWith("0x") ? privateKeyHex.slice(2) : privateKeyHex;
+      
+      // For Bitcoin, private key should be in proper format
+      const privateKeyBuffer = Buffer.from(cleanPrivateKey, "hex");
+      
+      if (privateKeyBuffer.length !== 32) {
+        throw new Error("Invalid Bitcoin private key length");
+      }
+
+      // Create keypair using bitcoin.js
+      const keyPair = bitcoin.ECPair.fromPrivateKeyBuffer(privateKeyBuffer, {
+        compressed: true,
+        network: bitcoin.networks.bitcoin
+      });
+
+      // Parse transaction data
+      const inputs = transactionData.inputs || [];
+      const outputs = transactionData.outputs || [];
+      
+      if (inputs.length === 0 || outputs.length === 0) {
+        throw new Error("Bitcoin transaction requires inputs and outputs");
+      }
+
+      // Create transaction builder
+      const txBuilder = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+
+      // Add inputs
+      for (const input of inputs) {
+        txBuilder.addInput(input.txid, input.vout);
+      }
+
+      // Add outputs
+      for (const output of outputs) {
+        const address = output.address;
+        const value = parseInt(output.value, 10);
+        txBuilder.addOutput(address, value);
+      }
+
+      // Sign inputs
+      for (let i = 0; i < inputs.length; i++) {
+        txBuilder.sign(i, keyPair);
+      }
+
+      // Build and return signed transaction
+      const signedTx = txBuilder.build();
+      return signedTx.toHex();
+    } catch (error) {
+      throw new Error(`Bitcoin transaction signing failed: ${error}`);
+    }
   }
 
   /**
