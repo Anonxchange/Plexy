@@ -287,7 +287,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(null);
   const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(null);
   const [walletImportState, setWalletImportState] = useState<WalletImportState>({ required: false, expectedAddress: null });
-  const [sessionPassword, setSessionPassword] = useState<string | null>(null);
+  
+  // Load sessionPassword from sessionStorage on mount, or initialize to null
+  const [sessionPassword, setSessionPasswordState] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('walletPassword');
+    } catch (error) {
+      console.error('Error reading from sessionStorage:', error);
+      return null;
+    }
+  });
+  
+  // Custom setter that updates both state and sessionStorage
+  const setSessionPassword = (password: string | null) => {
+    setSessionPasswordState(password);
+    if (password === null) {
+      try {
+        sessionStorage.removeItem('walletPassword');
+      } catch (error) {
+        console.error('Error clearing sessionStorage:', error);
+      }
+    } else {
+      try {
+        sessionStorage.setItem('walletPassword', password);
+      } catch (error) {
+        console.error('Error saving to sessionStorage:', error);
+      }
+    }
+  };
+  
   const supabase = createClient();
 
   const checkWalletOnAuth = useCallback(async (userId: string) => {
@@ -505,7 +533,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     presenceTracker.stopTracking();
-    setSessionPassword(null); // Clear session password on logout
+    setSessionPassword(null); // Clear session password from sessionStorage on logout
+    try {
+      sessionStorage.removeItem('walletPassword');
+    } catch (error) {
+      console.error('Error clearing sessionStorage on logout:', error);
+    }
     await supabase.auth.signOut();
   };
 
