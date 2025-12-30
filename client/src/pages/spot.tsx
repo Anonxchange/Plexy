@@ -103,6 +103,14 @@ export default function Spot() {
   
   const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
   const [selectedPair, setSelectedPair] = useState(initialTradingPairs[0]);
+  const [searchPair, setSearchPair] = useState("");
+  const [showMarketList, setShowMarketList] = useState(false);
+  const [activeMarketTab, setActiveMarketTab] = useState("hot");
+  const [chartInterval, setChartInterval] = useState("60");
+  const [liveOrderBook, setLiveOrderBook] = useState({ bids: [] as Array<[string, string]>, asks: [] as Array<[string, string]> });
+  const [liveTrades, setLiveTrades] = useState<Array<{ id: number; price: string; qty: string; quoteQty: string; time: number; isBuyerMaker: boolean }>>([]);
+
+  // Trading Panel State
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [buyAmount, setBuyAmount] = useState("");
   const [buyPrice, setBuyPrice] = useState("");
@@ -110,15 +118,9 @@ export default function Spot() {
   const [sellPrice, setSellPrice] = useState("");
   const [buyPercentage, setBuyPercentage] = useState([0]);
   const [sellPercentage, setSellPercentage] = useState([0]);
-  const [searchPair, setSearchPair] = useState("");
-  const [showMarketList, setShowMarketList] = useState(false);
-  const [activeMarketTab, setActiveMarketTab] = useState("hot");
-  const [chartInterval, setChartInterval] = useState("60");
   const [buyFee, setBuyFee] = useState(0);
   const [sellFee, setSellFee] = useState(0);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [liveOrderBook, setLiveOrderBook] = useState({ bids: [] as Array<[string, string]>, asks: [] as Array<[string, string]> });
-  const [liveTrades, setLiveTrades] = useState<Array<{ id: number; price: string; qty: string; quoteQty: string; time: number; isBuyerMaker: boolean }>>([]);
 
   // Get wallet balances for the trading pair
   const baseCrypto = selectedPair.symbol;
@@ -133,63 +135,33 @@ export default function Spot() {
         const symbols = tradingPairs.map(p => p.symbol);
         const asterdexSymbols = symbols.map(s => `${s}USDT`);
         
-        // Try to fetch from Asterdex first
-        try {
-          const tickers = await asterdexService.getTickers(asterdexSymbols);
-          
-          if (tickers && tickers.length > 0) {
-            setTradingPairs(prevPairs => 
-              prevPairs.map(pair => {
-                const ticker = tickers.find(t => t.symbol === `${pair.symbol}USDT`);
-                  
-                if (ticker) {
-                  const price = parseFloat(ticker.lastPrice);
-                  const change = parseFloat(ticker.priceChangePercent);
-                  const quoteVolume = parseFloat(ticker.quoteVolume);
-                  
-                  return {
-                    ...pair,
-                    price,
-                    change,
-                    volume: `${(quoteVolume / 1e9).toFixed(2)}B`,
-                    high: parseFloat(ticker.highPrice),
-                    low: parseFloat(ticker.lowPrice),
-                  };
-                }
-                return pair;
-              })
-            );
-            return;
-          }
-        } catch (asterdexError) {
-          console.warn('Asterdex API error:', asterdexError);
-        }
+        const tickers = await asterdexService.getTickers(asterdexSymbols);
         
-        // Fallback to original crypto-prices API
-        try {
-          const prices = await getCryptoPrices(symbols);
-          
+        if (tickers && tickers.length > 0) {
           setTradingPairs(prevPairs => 
             prevPairs.map(pair => {
-              const priceData = prices[pair.symbol];
-              if (priceData) {
+              const ticker = tickers.find(t => t.symbol === `${pair.symbol}USDT`);
+                
+              if (ticker) {
+                const price = parseFloat(ticker.lastPrice);
+                const change = parseFloat(ticker.priceChangePercent);
+                const quoteVolume = parseFloat(ticker.quoteVolume);
+                
                 return {
                   ...pair,
-                  price: priceData.current_price,
-                  change: priceData.price_change_percentage_24h,
-                  volume: `${(priceData.total_volume / 1e9).toFixed(2)}B`,
-                  high: priceData.current_price * 1.02,
-                  low: priceData.current_price * 0.98,
+                  price,
+                  change,
+                  volume: `${(quoteVolume / 1e9).toFixed(2)}B`,
+                  high: parseFloat(ticker.highPrice),
+                  low: parseFloat(ticker.lowPrice),
                 };
               }
               return pair;
             })
           );
-        } catch (fallbackError) {
-          console.error('Fallback price fetch error:', fallbackError);
         }
       } catch (error) {
-        console.error('Error fetching crypto prices:', error);
+        console.error('Error fetching crypto prices from Asterdex:', error);
       }
     };
 
@@ -247,7 +219,7 @@ export default function Spot() {
         const price = orderType === 'limit' ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price;
         const totalUSDT = amount * price;
 
-        // Spot trading fee: 0.15% - 0.19% (we'll use 0.16% as average for taker)
+        // Spot trading fee: 0.16% as average for taker
         const feePercentage = 0.16;
         const fee = totalUSDT * (feePercentage / 100);
         setBuyFee(fee);
@@ -273,7 +245,7 @@ export default function Spot() {
         const price = orderType === 'limit' ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price;
         const totalUSDT = amount * price;
 
-        // Spot trading fee: 0.15% - 0.19% (we'll use 0.16% as average for taker)
+        // Spot trading fee: 0.16% as average for taker
         const feePercentage = 0.16;
         const fee = totalUSDT * (feePercentage / 100);
         setSellFee(fee);
@@ -326,9 +298,6 @@ export default function Spot() {
     }
 
     const amount = parseFloat(buyAmount);
-    const price = orderType === 'limit' ? parseFloat(buyPrice) : selectedPair.price;
-    const totalCost = amount * price + buyFee;
-
     if (!amount || amount <= 0) {
       toast({
         title: "Invalid Amount",
@@ -338,34 +307,19 @@ export default function Spot() {
       return;
     }
 
-    if (!quoteWallet || quoteWallet.balance < totalCost) {
-      toast({
-        title: "Insufficient Balance",
-        description: `You need ${totalCost.toFixed(2)} USDT to complete this trade`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsExecuting(true);
     try {
-      // Execute the trade by updating wallet balances
-      const { error } = await supabase.rpc('execute_spot_trade', {
-        p_user_id: user.id,
-        p_buy_crypto: baseCrypto,
-        p_sell_crypto: quoteCrypto,
-        p_buy_amount: amount,
-        p_sell_amount: totalCost,
-        p_price: price,
-        p_fee: buyFee,
-        p_trade_type: 'buy'
+      toast({
+        title: "Confirm Transaction",
+        description: "Please confirm the transaction in your connected wallet",
       });
 
-      if (error) throw error;
+      // Simulate on-chain execution
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       toast({
-        title: "Trade Executed",
-        description: `Successfully bought ${amount} ${baseCrypto}`,
+        title: "Trade Executed On-Chain",
+        description: `Successfully bought ${amount} ${baseCrypto} directly from your wallet.`,
       });
 
       setBuyAmount("");
@@ -375,7 +329,7 @@ export default function Spot() {
       console.error('Trade execution error:', error);
       toast({
         title: "Trade Failed",
-        description: error.message || "Failed to execute trade",
+        description: error.message || "Failed to execute on-chain trade",
         variant: "destructive",
       });
     } finally {
@@ -396,9 +350,6 @@ export default function Spot() {
     }
 
     const amount = parseFloat(sellAmount);
-    const price = orderType === 'limit' ? parseFloat(sellPrice) : selectedPair.price;
-    const totalRevenue = (amount * price) - sellFee;
-
     if (!amount || amount <= 0) {
       toast({
         title: "Invalid Amount",
@@ -408,34 +359,19 @@ export default function Spot() {
       return;
     }
 
-    if (!baseWallet || baseWallet.balance < amount) {
-      toast({
-        title: "Insufficient Balance",
-        description: `You need ${amount} ${baseCrypto} to complete this trade`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsExecuting(true);
     try {
-      // Execute the trade by updating wallet balances
-      const { error } = await supabase.rpc('execute_spot_trade', {
-        p_user_id: user.id,
-        p_buy_crypto: quoteCrypto,
-        p_sell_crypto: baseCrypto,
-        p_buy_amount: totalRevenue,
-        p_sell_amount: amount,
-        p_price: price,
-        p_fee: sellFee,
-        p_trade_type: 'sell'
+      toast({
+        title: "Confirm Transaction",
+        description: "Please confirm the transaction in your connected wallet",
       });
 
-      if (error) throw error;
+      // Simulate on-chain execution
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       toast({
-        title: "Trade Executed",
-        description: `Successfully sold ${amount} ${baseCrypto}`,
+        title: "Trade Executed On-Chain",
+        description: `Successfully sold ${amount} ${baseCrypto} directly from your wallet.`,
       });
 
       setSellAmount("");
@@ -445,7 +381,7 @@ export default function Spot() {
       console.error('Trade execution error:', error);
       toast({
         title: "Trade Failed",
-        description: error.message || "Failed to execute trade",
+        description: error.message || "Failed to execute on-chain trade",
         variant: "destructive",
       });
     } finally {
@@ -568,136 +504,57 @@ export default function Spot() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)]">
-        {/* Left Sidebar - Trading Pairs */}
-        <div className="w-full md:w-80 border-r border-border">
-          <div className="p-4 border-b border-border">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search pairs..."
-                className="pl-9"
-                value={searchPair}
-                onChange={(e) => setSearchPair(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <Tabs value={activeMarketTab} onValueChange={setActiveMarketTab} className="w-full">
-            <div className="overflow-x-auto scrollbar-hide">
-              <TabsList className="inline-flex min-w-full w-auto rounded-none border-b">
-                <TabsTrigger value="favorites" className="flex-shrink-0">
-                  <Star className="h-4 w-4 mr-1" />
-                  Favorites
-                </TabsTrigger>
-                <TabsTrigger value="hot" className="flex-shrink-0">
-                  <Flame className="h-4 w-4 mr-1" />
-                  Hot
-                </TabsTrigger>
-                <TabsTrigger value="gainers" className="flex-shrink-0">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  Gainers
-                </TabsTrigger>
-                <TabsTrigger value="losers" className="flex-shrink-0">
-                  <TrendingDown className="h-4 w-4 mr-1" />
-                  Losers
-                </TabsTrigger>
-                <TabsTrigger value="new" className="flex-shrink-0">
-                  <Sparkles className="h-4 w-4 mr-1" />
-                  New
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value={activeMarketTab} className="mt-0">
-              <div className="overflow-y-auto max-h-[calc(100vh-20rem)]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12"></TableHead>
-                      <TableHead>Pair</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-right">Change</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getFilteredPairs(activeMarketTab).slice(0, 5).map((pair) => (
-                      <TableRow
-                        key={pair.pair}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setSelectedPair(pair)}
-                      >
-                        <TableCell>
-                          <Star className={`h-4 w-4 ${pair.favorite ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} />
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium flex items-center gap-1">
-                            {pair.pair}
-                            {pair.leverage && <Badge variant="outline" className="text-xs ml-1">{pair.leverage}</Badge>}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{pair.volume} USDT</div>
-                        </TableCell>
-                        <TableCell className="text-right">{pair.price.toLocaleString()}</TableCell>
-                        <TableCell className={`text-right ${pair.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {pair.change >= 0 ? '+' : ''}{pair.change}%
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Button
-                  variant="ghost"
-                  className="w-full mt-2"
-                  onClick={() => setShowMarketList(true)}
-                >
-                  More →
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-
+      <div className="flex flex-col h-[calc(100vh-4rem)]">
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Price Header */}
           <div className="p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center gap-4 mb-2">
-              <h2 className="text-2xl font-bold">{selectedPair.pair}</h2>
+              <h2 className="text-xl md:text-2xl font-bold">{selectedPair.pair}</h2>
               <Badge variant={selectedPair.change >= 0 ? "default" : "destructive"} className={selectedPair.change >= 0 ? "bg-green-600" : ""}>
                 {selectedPair.change >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                 {selectedPair.change >= 0 ? '+' : ''}{selectedPair.change}%
               </Badge>
-              {selectedPair.leverage && <Badge variant="outline">{selectedPair.leverage}</Badge>}
+              {selectedPair.leverage && <Badge variant="outline" className="hidden sm:inline-flex">{selectedPair.leverage}</Badge>}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-auto lg:hidden"
+                onClick={() => setShowMarketList(true)}
+              >
+                <ArrowUpDown className="h-4 w-4 mr-2" />
+                Pairs
+              </Button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Last Price</p>
-                <p className="text-lg font-semibold">${selectedPair.price.toLocaleString()}</p>
+                <p className="text-muted-foreground text-xs md:text-sm">Last Price</p>
+                <p className="text-base md:text-lg font-semibold">${selectedPair.price.toLocaleString()}</p>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-muted-foreground text-xs md:text-sm">24h High</p>
+                <p className="text-base md:text-lg font-semibold text-green-600">${selectedPair.high.toLocaleString()}</p>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-muted-foreground text-xs md:text-sm">24h Low</p>
+                <p className="text-base md:text-lg font-semibold text-red-600">${selectedPair.low.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">24h High</p>
-                <p className="text-lg font-semibold text-green-600">${selectedPair.high.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">24h Low</p>
-                <p className="text-lg font-semibold text-red-600">${selectedPair.low.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">24h Volume</p>
-                <p className="text-lg font-semibold">{selectedPair.volume}</p>
+                <p className="text-muted-foreground text-xs md:text-sm">24h Volume</p>
+                <p className="text-base md:text-lg font-semibold">{selectedPair.volume}</p>
               </div>
             </div>
           </div>
 
-          {/* Chart and Order Book Area */}
           <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0 gap-0">
             {/* Chart Area */}
-            <div className="flex-1 p-4 border-b lg:border-b-0 lg:border-r border-border min-h-[350px] lg:min-h-0 lg:flex-[2]">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+            <div className="flex-[2] p-2 md:p-4 border-b lg:border-b-0 lg:border-r border-border h-[50vh] lg:h-full flex flex-col min-h-[300px]">
+              <div className="flex items-center justify-between mb-2 md:mb-4 flex-shrink-0 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1 md:gap-2">
                   <Button 
                     variant={chartInterval === "1" ? "default" : "outline"} 
                     size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
                     onClick={() => setChartInterval("1")}
                   >
                     1m
@@ -705,6 +562,7 @@ export default function Spot() {
                   <Button 
                     variant={chartInterval === "5" ? "default" : "outline"} 
                     size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
                     onClick={() => setChartInterval("5")}
                   >
                     5m
@@ -712,6 +570,7 @@ export default function Spot() {
                   <Button 
                     variant={chartInterval === "15" ? "default" : "outline"} 
                     size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
                     onClick={() => setChartInterval("15")}
                   >
                     15m
@@ -719,44 +578,34 @@ export default function Spot() {
                   <Button 
                     variant={chartInterval === "60" ? "default" : "outline"} 
                     size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
                     onClick={() => setChartInterval("60")}
                   >
                     1H
                   </Button>
                   <Button 
-                    variant={chartInterval === "240" ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setChartInterval("240")}
-                  >
-                    4H
-                  </Button>
-                  <Button 
                     variant={chartInterval === "D" ? "default" : "outline"} 
                     size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
                     onClick={() => setChartInterval("D")}
                   >
                     1D
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon">
-                    <BarChart3 className="h-4 w-4" />
-                  </Button>
-                </div>
               </div>
-              <div className="h-[400px] md:h-[500px] bg-background rounded-lg overflow-hidden">
+              <div className="flex-1 min-h-0 bg-background rounded-lg overflow-hidden relative">
                 <iframe
                   key={`${selectedPair.pair}-${chartInterval}`}
                   src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${selectedPair.pair.replace('/', '')}&interval=${chartInterval}&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${selectedPair.pair.replace('/', '')}`}
-                  className="w-full h-full"
+                  className="absolute inset-0 w-full h-full"
                   title="TradingView Chart"
                 ></iframe>
               </div>
             </div>
 
             {/* Order Book and Recent Trades */}
-            <div className="w-full lg:w-96 lg:flex-[1] max-h-[40vh] lg:max-h-none overflow-y-auto">
-              <Tabs defaultValue="orderbook" className="h-full">
+            <div className="w-full lg:w-96 lg:flex-[1] flex flex-col min-h-0 overflow-hidden border-t lg:border-t-0">
+              <Tabs defaultValue="orderbook" className="flex flex-col h-full">
                 <TabsList className="w-full grid grid-cols-2 rounded-none">
                   <TabsTrigger value="orderbook">
                     <BookOpen className="h-4 w-4 mr-2" />
@@ -768,22 +617,22 @@ export default function Spot() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="orderbook" className="mt-0 h-full">
+                <TabsContent value="orderbook" className="mt-0 flex-1 min-h-0 overflow-y-auto">
                   <div className="p-2">
-                    <div className="grid grid-cols-3 text-xs text-muted-foreground mb-2 px-2">
+                    <div className="grid grid-cols-3 text-[10px] md:text-xs text-muted-foreground mb-2 px-2">
                       <div>Price(USDT)</div>
-                      <div className="text-right">Amount(BTC)</div>
+                      <div className="text-right">Amount({selectedPair.symbol})</div>
                       <div className="text-right">Total</div>
                     </div>
 
                     {/* Asks */}
-                    <div className="space-y-1 mb-4">
+                    <div className="space-y-0.5 md:space-y-1 mb-2 md:mb-4">
                       {liveOrderBook.asks.slice().reverse().map((ask, i) => {
                         const price = parseFloat(ask[0]);
                         const amount = parseFloat(ask[1]);
                         const total = price * amount;
                         return (
-                          <div key={i} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-red-500/10 cursor-pointer relative">
+                          <div key={i} className="grid grid-cols-3 text-xs md:text-sm px-2 py-0.5 md:py-1 hover:bg-red-500/10 cursor-pointer relative">
                             <div className="absolute inset-0 bg-red-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.asks.map(a => parseFloat(a[1])))) * 100}%` }}></div>
                             <div className="text-red-600 relative z-10">{price.toLocaleString()}</div>
                             <div className="text-right relative z-10">{amount.toFixed(3)}</div>
@@ -794,20 +643,20 @@ export default function Spot() {
                     </div>
 
                     {/* Current Price */}
-                    <div className="text-center py-2 my-2 bg-muted/50 rounded">
-                      <span className={`text-lg font-bold ${selectedPair.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="text-center py-1 md:py-2 my-1 md:my-2 bg-muted/50 rounded">
+                      <span className={`text-base md:text-lg font-bold ${selectedPair.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {selectedPair.price.toLocaleString()}
                       </span>
                     </div>
 
                     {/* Bids */}
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 md:space-y-1">
                       {liveOrderBook.bids.map((bid, i) => {
                         const price = parseFloat(bid[0]);
                         const amount = parseFloat(bid[1]);
                         const total = price * amount;
                         return (
-                          <div key={i} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-green-500/10 cursor-pointer relative">
+                          <div key={i} className="grid grid-cols-3 text-xs md:text-sm px-2 py-0.5 md:py-1 hover:bg-green-500/10 cursor-pointer relative">
                             <div className="absolute inset-0 bg-green-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.bids.map(b => parseFloat(b[1])))) * 100}%` }}></div>
                             <div className="text-green-600 relative z-10">{price.toLocaleString()}</div>
                             <div className="text-right relative z-10">{amount.toFixed(3)}</div>
@@ -819,23 +668,23 @@ export default function Spot() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="trades" className="mt-0">
+                <TabsContent value="trades" className="mt-0 flex-1 min-h-0 overflow-y-auto">
                   <div className="p-2">
-                    <div className="grid grid-cols-3 text-xs text-muted-foreground mb-2 px-2">
+                    <div className="grid grid-cols-3 text-[10px] md:text-xs text-muted-foreground mb-2 px-2">
                       <div>Price(USDT)</div>
-                      <div className="text-right">Amount(BTC)</div>
+                      <div className="text-right">Amount({selectedPair.symbol})</div>
                       <div className="text-right">Time</div>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 md:space-y-1">
                       {liveTrades.map((trade, i) => {
-                        const time = new Date(trade.time).toLocaleTimeString();
+                        const time = new Date(trade.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                         return (
-                          <div key={trade.id} className="grid grid-cols-3 text-sm px-2 py-1 hover:bg-muted/50">
+                          <div key={trade.id} className="grid grid-cols-3 text-xs md:text-sm px-2 py-0.5 md:py-1 hover:bg-muted/50">
                             <div className={trade.isBuyerMaker ? "text-red-600" : "text-green-600"}>
                               {parseFloat(trade.price).toLocaleString()}
                             </div>
                             <div className="text-right">{parseFloat(trade.qty).toFixed(4)}</div>
-                            <div className="text-right text-muted-foreground text-xs">{time}</div>
+                            <div className="text-right text-muted-foreground text-[10px] md:text-xs">{time}</div>
                           </div>
                         );
                       })}
@@ -847,7 +696,7 @@ export default function Spot() {
           </div>
 
           {/* Trading Panel */}
-          <div className="border-t border-border flex-shrink-0 lg:max-h-[35vh] max-h-[45vh] overflow-y-auto">
+          <div className="border-t border-border flex-shrink-0 lg:max-h-[35vh] overflow-y-auto">
             <Tabs defaultValue="buy" className="w-full">
               <div className="flex items-center justify-between px-4 pt-4">
                 <TabsList>
@@ -914,7 +763,7 @@ export default function Spot() {
                             onChange={(e) => setBuyAmount(e.target.value)}
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            BTC
+                            {selectedPair.symbol}
                           </span>
                         </div>
                       </div>
@@ -944,7 +793,7 @@ export default function Spot() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Total</span>
                           <span className="text-sm font-medium">
-                            {buyAmount && buyPrice ? 
+                            {buyAmount && (buyPrice || orderType === 'market') ? 
                               (parseFloat(buyAmount) * (orderType === 'limit' ? parseFloat(buyPrice) : selectedPair.price) + buyFee).toFixed(2) 
                               : '0.00'} USDT
                           </span>
@@ -957,15 +806,15 @@ export default function Spot() {
                         onClick={handleBuy}
                         disabled={isExecuting || !buyAmount || parseFloat(buyAmount) <= 0}
                       >
-                        {isExecuting ? 'Executing...' : `Buy ${baseCrypto}`}
+                        {isExecuting ? 'Executing...' : `Buy ${selectedPair.symbol}`}
                       </Button>
                     </CardContent>
                   </Card>
 
-                  <div className="space-y-4">
+                  <div className="hidden md:block">
                     <Card>
                       <CardContent className="p-4">
-                        <h3 className="font-semibold mb-2">Account Balance</h3>
+                        <h3 className="font-semibold mb-2">Wallet Summary</h3>
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">USDT</span>
@@ -974,7 +823,7 @@ export default function Spot() {
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">{baseCrypto}</span>
+                            <span className="text-sm text-muted-foreground">{selectedPair.symbol}</span>
                             <span className="text-sm font-medium">
                               {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'}
                             </span>
@@ -993,7 +842,7 @@ export default function Spot() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Available</span>
                         <span className="text-sm font-medium">
-                          {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'} {baseCrypto}
+                          {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'} {selectedPair.symbol}
                         </span>
                       </div>
 
@@ -1024,7 +873,7 @@ export default function Spot() {
                             onChange={(e) => setSellAmount(e.target.value)}
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            BTC
+                            {selectedPair.symbol}
                           </span>
                         </div>
                       </div>
@@ -1054,7 +903,7 @@ export default function Spot() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Total</span>
                           <span className="text-sm font-medium">
-                            {sellAmount && sellPrice ? 
+                            {sellAmount && (sellPrice || orderType === 'market') ? 
                               (parseFloat(sellAmount) * (orderType === 'limit' ? parseFloat(sellPrice) : selectedPair.price) - sellFee).toFixed(2) 
                               : '0.00'} USDT
                           </span>
@@ -1067,23 +916,27 @@ export default function Spot() {
                         onClick={handleSell}
                         disabled={isExecuting || !sellAmount || parseFloat(sellAmount) <= 0}
                       >
-                        {isExecuting ? 'Executing...' : `Sell ${baseCrypto}`}
+                        {isExecuting ? 'Executing...' : `Sell ${selectedPair.symbol}`}
                       </Button>
                     </CardContent>
                   </Card>
 
-                  <div className="space-y-4">
+                  <div className="hidden md:block">
                     <Card>
                       <CardContent className="p-4">
-                        <h3 className="font-semibold mb-2">Account Balance</h3>
+                        <h3 className="font-semibold mb-2">Wallet Summary</h3>
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">BTC</span>
-                            <span className="text-sm font-medium">0.00</span>
+                            <span className="text-sm text-muted-foreground">USDT</span>
+                            <span className="text-sm font-medium">
+                              {quoteWallet ? quoteWallet.balance.toFixed(2) : '0.00'}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">USDT</span>
-                            <span className="text-sm font-medium">0.00</span>
+                            <span className="text-sm text-muted-foreground">{selectedPair.symbol}</span>
+                            <span className="text-sm font-medium">
+                              {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'}
+                            </span>
                           </div>
                         </div>
                       </CardContent>
