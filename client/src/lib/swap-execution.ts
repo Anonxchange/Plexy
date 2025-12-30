@@ -42,7 +42,7 @@ class SwapExecutionService {
     try {
       // Get current market prices from AsterDEX
       // Symbol format: base/quote (e.g., BTCUSDT)
-      const symbol = `${toToken}${fromToken}`;
+      const symbol = fromToken === "USDT" ? `${toToken}${fromToken}` : `${fromToken}${toToken}`;
       const ticker = await asterdexService.getTicker(symbol);
       
       const fromAmount = parseFloat(amount);
