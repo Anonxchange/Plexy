@@ -322,11 +322,16 @@ export default function Spot() {
 
     setIsExecuting(true);
     try {
-      // Get quote from AsterDEX
+      // Step 1: Get quote
+      // If buy, from USDT to crypto. If sell, from crypto to USDT.
+      const fromToken = orderType === "buy" ? "USDT" : selectedPair.symbol;
+      const toToken = orderType === "buy" ? selectedPair.symbol : "USDT";
+      const amountStr = orderType === "buy" ? buyAmount : sellAmount;
+
       const quote = await swapExecutionService.getSwapQuote(
-        "USDT",
-        selectedPair.symbol,
-        amount.toString()
+        fromToken,
+        toToken,
+        amountStr
       );
 
       toast({
@@ -336,27 +341,27 @@ export default function Spot() {
 
       // Create execution order
       const order = swapExecutionService.createExecutionOrder(
-        "buy",
-        "USDT",
-        selectedPair.symbol,
-        amount.toString(),
+        orderType,
+        fromToken,
+        toToken,
+        amountStr,
         quote
       );
 
       toast({
         title: "Confirm Transaction",
-        description: `You will receive ~${quote.toAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
+        description: `You will ${orderType === "buy" ? "receive" : "pay"} ~${orderType === "buy" ? quote.toAmount : quote.fromAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
       });
 
       // Use the first active wallet for signing
-      const activeWallet = userWallets.find(w => w.isActive) || userWallets[0];
+      const activeWallet = userWallets[0] as any;
 
       // Execute swap via AsterDEX API with actual wallet
       const result = await swapExecutionService.executeSwap(
         activeWallet,
-        "USDT",
-        selectedPair.symbol,
-        amount.toString(),
+        fromToken,
+        toToken,
+        amountStr,
         "user_password", // In production: prompt user for password
         user.id
       );
@@ -415,11 +420,16 @@ export default function Spot() {
 
     setIsExecuting(true);
     try {
-      // Get quote from AsterDEX
+      // Step 1: Get quote
+      // If sell, from crypto to USDT.
+      const fromToken = selectedPair.symbol;
+      const toToken = "USDT";
+      const amountStr = sellAmount;
+
       const quote = await swapExecutionService.getSwapQuote(
-        selectedPair.symbol,
-        "USDT",
-        amount.toString()
+        fromToken,
+        toToken,
+        amountStr
       );
 
       toast({
@@ -430,9 +440,9 @@ export default function Spot() {
       // Create execution order
       const order = swapExecutionService.createExecutionOrder(
         "sell",
-        selectedPair.symbol,
-        "USDT",
-        amount.toString(),
+        fromToken,
+        toToken,
+        amountStr,
         quote
       );
 
@@ -442,14 +452,14 @@ export default function Spot() {
       });
 
       // Use the first active wallet for signing
-      const activeWallet = userWallets.find(w => w.isActive) || userWallets[0];
+      const activeWallet = userWallets[0] as any;
 
       // Execute swap via AsterDEX API with actual wallet
       const result = await swapExecutionService.executeSwap(
         activeWallet,
-        selectedPair.symbol,
-        "USDT",
-        amount.toString(),
+        fromToken,
+        toToken,
+        amountStr,
         "user_password", // In production: prompt user for password
         user.id
       );
@@ -633,7 +643,7 @@ export default function Spot() {
 
           <div className="flex flex-col lg:flex-row gap-0">
             {/* Chart Area */}
-            <div className="p-2 md:p-4 border-b lg:border-b-0 lg:border-r border-border flex flex-col w-full lg:flex-[2] h-[500px]">
+            <div className="p-2 md:p-4 border-b lg:border-b-0 lg:border-r border-border flex flex-col w-full lg:flex-[3] h-[500px]">
               <div className="flex items-center justify-between mb-2 md:mb-4 flex-shrink-0 overflow-x-auto no-scrollbar">
                 <div className="flex items-center gap-1 md:gap-2">
                   <Button 
@@ -688,396 +698,290 @@ export default function Spot() {
               </div>
             </div>
 
-            {/* Order Book and Recent Trades */}
-            <div className="w-full lg:w-96 lg:flex-[1] flex flex-col border-t lg:border-t-0 h-auto mt-4 lg:mt-0">
-              <Tabs defaultValue="orderbook" className="flex flex-col h-full">
-                <TabsList className="w-full grid grid-cols-2 rounded-none">
-                  <TabsTrigger value="orderbook">
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Order Book
-                  </TabsTrigger>
-                  <TabsTrigger value="trades">
-                    <Clock className="h-4 w-4 mr-2" />
-                    Recent Trades
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="orderbook" className="mt-0 flex-1 min-h-0 overflow-y-auto">
-                  {/* 2-Column Layout on Mobile */}
-                  <div className="hidden md:block p-2">
-                    <div className="grid grid-cols-3 text-[10px] md:text-xs text-muted-foreground mb-2 px-2">
-                      <div>Price(USDT)</div>
-                      <div className="text-right">Amount({selectedPair.symbol})</div>
-                      <div className="text-right">Total</div>
-                    </div>
-
-                    {/* Asks */}
-                    <div className="space-y-0.5 md:space-y-1 mb-2 md:mb-4">
-                      {liveOrderBook.asks.slice().reverse().map((ask, i) => {
-                        const price = parseFloat(ask[0]);
-                        const amount = parseFloat(ask[1]);
-                        const total = price * amount;
-                        return (
-                          <div key={i} className="grid grid-cols-3 text-xs md:text-sm px-2 py-0.5 md:py-1 hover:bg-red-500/10 cursor-pointer relative">
-                            <div className="absolute inset-0 bg-red-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.asks.map(a => parseFloat(a[1])))) * 100}%` }}></div>
-                            <div className="text-red-600 relative z-10">{price.toLocaleString()}</div>
-                            <div className="text-right relative z-10">{amount.toFixed(3)}</div>
-                            <div className="text-right text-muted-foreground relative z-10">{total.toLocaleString()}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Current Price */}
-                    <div className="text-center py-1 md:py-2 my-1 md:my-2 bg-muted/50 rounded">
-                      <span className={`text-base md:text-lg font-bold ${selectedPair.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {selectedPair.price.toLocaleString()}
-                      </span>
-                    </div>
-
-                    {/* Bids */}
-                    <div className="space-y-0.5 md:space-y-1">
-                      {liveOrderBook.bids.map((bid, i) => {
-                        const price = parseFloat(bid[0]);
-                        const amount = parseFloat(bid[1]);
-                        const total = price * amount;
-                        return (
-                          <div key={i} className="grid grid-cols-3 text-xs md:text-sm px-2 py-0.5 md:py-1 hover:bg-green-500/10 cursor-pointer relative">
-                            <div className="absolute inset-0 bg-green-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.bids.map(b => parseFloat(b[1])))) * 100}%` }}></div>
-                            <div className="text-green-600 relative z-10">{price.toLocaleString()}</div>
-                            <div className="text-right relative z-10">{amount.toFixed(3)}</div>
-                            <div className="text-right text-muted-foreground relative z-10">{total.toLocaleString()}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
+            {/* Combined Sidebar: Order Book and Trade Panel */}
+            <div className="w-full lg:w-[480px] lg:flex-[1.5] flex flex-row border-t lg:border-t-0 h-auto lg:h-[500px] overflow-hidden">
+              {/* Column 1: Order Book */}
+              <div className="flex-[0.8] border-r border-border flex flex-col overflow-hidden h-full">
+                <div className="p-2 border-b border-border text-xs font-semibold flex items-center flex-shrink-0">
+                  <BookOpen className="h-3 w-3 mr-1" /> Order Book
+                </div>
+                <div className="flex-1 overflow-y-auto no-scrollbar p-1">
+                  <div className="grid grid-cols-2 text-[10px] text-muted-foreground mb-1 px-1">
+                    <div>Price</div>
+                    <div className="text-right">Size</div>
                   </div>
 
-                  {/* Mobile 2-Column Layout */}
-                  <div className="md:hidden grid grid-cols-2 gap-0 h-full">
-                    {/* Asks Column */}
-                    <div className="border-r border-border p-1 overflow-y-auto">
-                      <h3 className="text-xs text-red-600 font-semibold p-2 sticky top-0 bg-background">Asks (Sell)</h3>
-                      <div className="text-[10px] text-muted-foreground px-2 mb-1">
-                        <div className="grid grid-cols-2 gap-1">
-                          <div>Price</div>
-                          <div className="text-right">Amt</div>
+                  {/* Asks */}
+                  <div className="space-y-0.5 mb-2">
+                    {liveOrderBook.asks.slice(-5).reverse().map((ask, i) => {
+                      const price = parseFloat(ask[0]);
+                      const amount = parseFloat(ask[1]);
+                      return (
+                        <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-red-500/10 cursor-pointer relative">
+                          <div className="absolute inset-y-0 right-0 bg-red-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.asks.map(a => parseFloat(a[1])))) * 100}%` }}></div>
+                          <div className="text-red-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
+                          <div className="text-right relative z-10">{amount.toFixed(3)}</div>
                         </div>
-                      </div>
-                      <div className="space-y-0.5">
-                        {liveOrderBook.asks.slice().reverse().map((ask, i) => {
-                          const price = parseFloat(ask[0]);
-                          const amount = parseFloat(ask[1]);
-                          return (
-                            <div key={i} className="grid grid-cols-2 text-[10px] px-2 py-0.5 hover:bg-red-500/10 cursor-pointer relative">
-                              <div className="absolute inset-0 bg-red-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.asks.map(a => parseFloat(a[1])))) * 100}%` }}></div>
-                              <div className="text-red-600 relative z-10">{price.toFixed(0)}</div>
-                              <div className="text-right relative z-10">{amount.toFixed(3)}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                      );
+                    })}
+                  </div>
 
-                    {/* Bids Column */}
-                    <div className="p-1 overflow-y-auto">
-                      <h3 className="text-xs text-green-600 font-semibold p-2 sticky top-0 bg-background">Bids (Buy)</h3>
-                      <div className="text-[10px] text-muted-foreground px-2 mb-1">
-                        <div className="grid grid-cols-2 gap-1">
-                          <div>Price</div>
-                          <div className="text-right">Amt</div>
+                  {/* Spread/Mid Price */}
+                  <div className="text-center py-1 my-1 bg-muted/30 rounded border-y border-border/50">
+                    <span className={`text-xs font-bold ${selectedPair.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {selectedPair.price.toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* Bids */}
+                  <div className="space-y-0.5">
+                    {liveOrderBook.bids.slice(0, 5).map((bid, i) => {
+                      const price = parseFloat(bid[0]);
+                      const amount = parseFloat(bid[1]);
+                      return (
+                        <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-green-500/10 cursor-pointer relative">
+                          <div className="absolute inset-y-0 right-0 bg-green-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.bids.map(b => parseFloat(b[1])))) * 100}%` }}></div>
+                          <div className="text-green-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
+                          <div className="text-right relative z-10">{amount.toFixed(3)}</div>
                         </div>
-                      </div>
-                      <div className="space-y-0.5">
-                        {liveOrderBook.bids.map((bid, i) => {
-                          const price = parseFloat(bid[0]);
-                          const amount = parseFloat(bid[1]);
-                          return (
-                            <div key={i} className="grid grid-cols-2 text-[10px] px-2 py-0.5 hover:bg-green-500/10 cursor-pointer relative">
-                              <div className="absolute inset-0 bg-green-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.bids.map(b => parseFloat(b[1])))) * 100}%` }}></div>
-                              <div className="text-green-600 relative z-10">{price.toFixed(0)}</div>
-                              <div className="text-right relative z-10">{amount.toFixed(3)}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
-                </TabsContent>
-
-                <TabsContent value="trades" className="mt-0 flex-1 min-h-0 overflow-y-auto">
-                  <div className="p-2">
-                    <div className="grid grid-cols-3 text-[10px] md:text-xs text-muted-foreground mb-2 px-2">
-                      <div>Price(USDT)</div>
-                      <div className="text-right">Amount({selectedPair.symbol})</div>
-                      <div className="text-right">Time</div>
-                    </div>
-                    <div className="space-y-0.5 md:space-y-1">
-                      {liveTrades.map((trade, i) => {
-                        const time = new Date(trade.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                        return (
-                          <div key={trade.id} className="grid grid-cols-3 text-xs md:text-sm px-2 py-0.5 md:py-1 hover:bg-muted/50">
-                            <div className={trade.isBuyerMaker ? "text-red-600" : "text-green-600"}>
-                              {parseFloat(trade.price).toLocaleString()}
-                            </div>
-                            <div className="text-right">{parseFloat(trade.qty).toFixed(4)}</div>
-                            <div className="text-right text-muted-foreground text-[10px] md:text-xs">{time}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          </div>
-
-          {/* Trading Panel */}
-          <div className="border-t border-border flex-shrink-0 lg:max-h-[35vh] overflow-y-auto">
-            <Tabs defaultValue="buy" className="w-full">
-              <div className="flex items-center justify-between px-4 pt-4">
-                <TabsList>
-                  <TabsTrigger value="buy" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
-                    Buy
-                  </TabsTrigger>
-                  <TabsTrigger value="sell" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-                    Sell
-                  </TabsTrigger>
-                </TabsList>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={orderType === "limit" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setOrderType("limit")}
-                  >
-                    Limit
-                  </Button>
-                  <Button
-                    variant={orderType === "market" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setOrderType("market")}
-                  >
-                    Market
-                  </Button>
                 </div>
               </div>
 
-              <TabsContent value="buy" className="mt-0 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">Amount of {selectedPair.symbol}</label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            placeholder="0.00"
-                            value={buyAmount}
-                            onChange={(e) => setBuyAmount(e.target.value)}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            {selectedPair.symbol}
-                          </span>
-                        </div>
-                      </div>
+              {/* Column 2: Trade Panel */}
+              <div className="flex-[1.2] flex flex-col overflow-hidden h-full">
+                    <Tabs defaultValue="buy" className="flex-1 flex flex-col">
+                      <TabsList className="w-full grid grid-cols-2 rounded-none h-9 border-b border-border bg-transparent">
+                        <TabsTrigger value="buy" className="text-xs data-[state=active]:text-green-500 data-[state=active]:bg-green-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-green-500">Buy</TabsTrigger>
+                        <TabsTrigger value="sell" className="text-xs data-[state=active]:text-red-500 data-[state=active]:bg-red-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-red-500">Sell</TabsTrigger>
+                      </TabsList>
 
-                      {orderType === "limit" && (
-                        <div className="space-y-2">
-                          <label className="text-sm text-muted-foreground">Price per {selectedPair.symbol}</label>
-                          <div className="relative">
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              value={buyPrice}
-                              onChange={(e) => setBuyPrice(e.target.value)}
+                      <TabsContent value="buy" className="m-0 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
+                          <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Order Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="limit">Limit</SelectItem>
+                              <SelectItem value="market">Market</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {orderType === "limit" ? (
+                            <>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Amount</span>
+                                  <span>{selectedPair.symbol}</span>
+                                </div>
+                                <Input 
+                                  className="h-8 text-xs bg-muted/20" 
+                                  value={buyAmount}
+                                  onChange={(e) => setBuyAmount(e.target.value)}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Price</span>
+                                  <span>USDT</span>
+                                </div>
+                                <Input 
+                                  className="h-8 text-xs bg-muted/20" 
+                                  value={buyPrice}
+                                  onChange={(e) => setBuyPrice(e.target.value)}
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Amount</span>
+                                  <span>{selectedPair.symbol}</span>
+                                </div>
+                                <Input 
+                                  className="h-8 text-xs bg-muted/20" 
+                                  value={buyAmount}
+                                  onChange={(e) => setBuyAmount(e.target.value)}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Price</span>
+                                  <span>USDT</span>
+                                </div>
+                                <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                                  Market Price
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          <div className="pt-1">
+                            <Slider
+                              value={buyPercentage}
+                              onValueChange={setBuyPercentage}
+                              max={100}
+                              step={25}
+                              className="py-2"
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                              USDT
-                            </span>
+                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
+                              <span>0%</span>
+                              <span>25%</span>
+                              <span>50%</span>
+                              <span>75%</span>
+                              <span>100%</span>
+                            </div>
                           </div>
-                        </div>
-                      )}
 
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Available Balance</span>
-                        <span className="text-sm font-medium">
-                          {quoteWallet ? quoteWallet.balance.toFixed(2) : '0.00'} USDT
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>0%</span>
-                          <span>25%</span>
-                          <span>50%</span>
-                          <span>75%</span>
-                          <span>100%</span>
-                        </div>
-                        <Slider
-                          value={buyPercentage}
-                          onValueChange={setBuyPercentage}
-                          max={100}
-                          step={25}
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div className="space-y-1 pt-2 border-t">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Fee (0.16%)</span>
-                          <span className="text-sm font-medium">{buyFee.toFixed(2)} USDT</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Total</span>
-                          <span className="text-sm font-medium">
-                            {buyAmount && (buyPrice || orderType === 'market') ? 
-                              (parseFloat(buyAmount) * (orderType === 'limit' ? parseFloat(buyPrice) : selectedPair.price) + buyFee).toFixed(2) 
-                              : '0.00'} USDT
-                          </span>
-                        </div>
-                      </div>
-
-                      <Button 
-                        className="w-full bg-green-600 hover:bg-green-700" 
-                        size="lg"
-                        onClick={handleBuy}
-                        disabled={isExecuting || !buyAmount || parseFloat(buyAmount) <= 0}
-                      >
-                        {isExecuting ? 'Executing...' : `Buy ${selectedPair.symbol}`}
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  <div className="hidden md:block">
-                    <Card>
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold mb-2">Wallet Summary</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">USDT</span>
-                            <span className="text-sm font-medium">
-                              {quoteWallet ? quoteWallet.balance.toFixed(2) : '0.00'}
-                            </span>
+                          <div className="space-y-1 pt-2 border-t border-border/50">
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-muted-foreground">Avbl</span>
+                              <span>{quoteWallet?.balance.toFixed(2) || "0.00"} USDT</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">{selectedPair.symbol}</span>
-                            <span className="text-sm font-medium">
-                              {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'}
-                            </span>
-                          </div>
+
+                          <Button 
+                            className="w-full h-9 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
+                            onClick={handleBuy}
+                            disabled={isExecuting}
+                          >
+                            {isExecuting ? "Processing..." : "Buy"}
+                          </Button>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </TabsContent>
+
+                      <TabsContent value="sell" className="m-0 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
+                          <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Order Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="limit">Limit</SelectItem>
+                              <SelectItem value="market">Market</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {orderType === "limit" ? (
+                            <>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Amount</span>
+                                  <span>{selectedPair.symbol}</span>
+                                </div>
+                                <Input 
+                                  className="h-8 text-xs bg-muted/20" 
+                                  value={sellAmount}
+                                  onChange={(e) => setSellAmount(e.target.value)}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Price</span>
+                                  <span>USDT</span>
+                                </div>
+                                <Input 
+                                  className="h-8 text-xs bg-muted/20" 
+                                  value={sellPrice}
+                                  onChange={(e) => setSellPrice(e.target.value)}
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Amount</span>
+                                  <span>{selectedPair.symbol}</span>
+                                </div>
+                                <Input 
+                                  className="h-8 text-xs bg-muted/20" 
+                                  value={sellAmount}
+                                  onChange={(e) => setSellAmount(e.target.value)}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Price</span>
+                                  <span>USDT</span>
+                                </div>
+                                <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                                  Market Price
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          <div className="pt-1">
+                            <Slider
+                              value={sellPercentage}
+                              onValueChange={setSellPercentage}
+                              max={100}
+                              step={25}
+                              className="py-2"
+                            />
+                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
+                              <span>0%</span>
+                              <span>25%</span>
+                              <span>50%</span>
+                              <span>75%</span>
+                              <span>100%</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 pt-2 border-t border-border/50">
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-muted-foreground">Avbl</span>
+                              <span>{baseWallet?.balance.toFixed(4) || "0.00"} {selectedPair.symbol}</span>
+                            </div>
+                          </div>
+
+                          <Button 
+                            className="w-full h-9 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider"
+                            onClick={handleSell}
+                            disabled={isExecuting}
+                          >
+                            {isExecuting ? "Processing..." : "Sell"}
+                          </Button>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Section: Open Orders / Assets */}
+          <div className="border-t border-border p-4 bg-background">
+            <Tabs defaultValue="orders">
+              <div className="flex items-center justify-between mb-4">
+                <TabsList className="bg-transparent h-auto p-0 gap-4">
+                  <TabsTrigger value="orders" className="text-sm p-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Open Orders</TabsTrigger>
+                  <TabsTrigger value="assets" className="text-sm p-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Assets</TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="hide-low-top" className="rounded border-border bg-muted h-3 w-3" />
+                    <label htmlFor="hide-low-top" className="text-[10px] text-muted-foreground whitespace-nowrap">Hide low balance assets</label>
                   </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <BookOpen className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <TabsContent value="orders">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <BookOpen className="h-8 w-8 mb-2 opacity-20" />
+                  <p className="text-sm">No open orders found</p>
                 </div>
               </TabsContent>
-
-              <TabsContent value="sell" className="mt-0 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">Amount of {selectedPair.symbol}</label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            placeholder="0.00"
-                            value={sellAmount}
-                            onChange={(e) => setSellAmount(e.target.value)}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            {selectedPair.symbol}
-                          </span>
-                        </div>
-                      </div>
-
-                      {orderType === "limit" && (
-                        <div className="space-y-2">
-                          <label className="text-sm text-muted-foreground">Price per {selectedPair.symbol}</label>
-                          <div className="relative">
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              value={sellPrice}
-                              onChange={(e) => setSellPrice(e.target.value)}
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                              USDT
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Available Balance</span>
-                        <span className="text-sm font-medium">
-                          {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'} {selectedPair.symbol}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>0%</span>
-                          <span>25%</span>
-                          <span>50%</span>
-                          <span>75%</span>
-                          <span>100%</span>
-                        </div>
-                        <Slider
-                          value={sellPercentage}
-                          onValueChange={setSellPercentage}
-                          max={100}
-                          step={25}
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div className="space-y-1 pt-2 border-t">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Fee (0.16%)</span>
-                          <span className="text-sm font-medium">{sellFee.toFixed(2)} USDT</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Total</span>
-                          <span className="text-sm font-medium">
-                            {sellAmount && (sellPrice || orderType === 'market') ? 
-                              (parseFloat(sellAmount) * (orderType === 'limit' ? parseFloat(sellPrice) : selectedPair.price) - sellFee).toFixed(2) 
-                              : '0.00'} USDT
-                          </span>
-                        </div>
-                      </div>
-
-                      <Button 
-                        className="w-full bg-red-600 hover:bg-red-700" 
-                        size="lg"
-                        onClick={handleSell}
-                        disabled={isExecuting || !sellAmount || parseFloat(sellAmount) <= 0}
-                      >
-                        {isExecuting ? 'Executing...' : `Sell ${selectedPair.symbol}`}
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  <div className="hidden md:block">
-                    <Card>
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold mb-2">Wallet Summary</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">USDT</span>
-                            <span className="text-sm font-medium">
-                              {quoteWallet ? quoteWallet.balance.toFixed(2) : '0.00'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">{selectedPair.symbol}</span>
-                            <span className="text-sm font-medium">
-                              {baseWallet ? baseWallet.balance.toFixed(8) : '0.00'}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+              <TabsContent value="assets">
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <p className="text-sm">No assets found</p>
                   </div>
                 </div>
               </TabsContent>
