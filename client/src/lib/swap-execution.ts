@@ -41,12 +41,23 @@ class SwapExecutionService {
   ): Promise<SwapQuote> {
     try {
       // Get current market prices from AsterDEX
-      const symbol = `${fromToken}${toToken}`;
+      // Symbol format: base/quote (e.g., BTCUSDT)
+      const symbol = `${toToken}${fromToken}`;
       const ticker = await asterdexService.getTicker(symbol);
       
       const fromAmount = parseFloat(amount);
       const marketPrice = parseFloat(ticker.lastPrice);
-      const baseAmount = fromAmount * marketPrice;
+      
+      // Calculate output based on trade direction
+      // If selling (USDT is quote): multiply by price. If buying (USDT is base): divide by price
+      let baseAmount: number;
+      if (fromToken === "USDT") {
+        // Buying: spend USDT to get crypto
+        baseAmount = fromAmount / marketPrice;
+      } else {
+        // Selling: spend crypto to get USDT
+        baseAmount = fromAmount * marketPrice;
+      }
       
       // Calculate with slippage
       const slippageAmount = baseAmount * (slippageTolerance / 100);
@@ -54,7 +65,7 @@ class SwapExecutionService {
       
       // Spot trading fee (0.16% as per your setup)
       const feePercentage = 0.16;
-      const fee = baseAmount * (feePercentage / 100);
+      const fee = fromToken === "USDT" ? (fromAmount * (feePercentage / 100)) : (toAmount * (feePercentage / 100));
       
       // Price impact simulation (based on order size relative to volume)
       const volume = parseFloat(ticker.quoteVolume);
