@@ -304,11 +304,12 @@ class NonCustodialWalletManager {
   /**
    * Sign a transaction entirely client-side with encrypted private key
    * Private key never leaves the client
+   * Uses empty password for auto-decrypt if no password provided
    */
   async signTransaction(
     walletId: string,
     transactionData: any,
-    userPassword: string,
+    userPassword: string = "", // Default to empty password for auto-decrypt
     userId?: string
   ): Promise<string> {
     if (!userId) {
@@ -323,11 +324,21 @@ class NonCustodialWalletManager {
     }
 
     // Decrypt private key (only in memory, temporarily)
+    // Try with provided password first, then empty password if that fails
     let privateKey: string;
     try {
       privateKey = this.decryptPrivateKey(wallet.encryptedPrivateKey, userPassword);
     } catch (error) {
-      throw new Error("Invalid password or corrupted wallet data");
+      // If provided password fails and it's not empty, try with empty password for auto-decrypt
+      if (userPassword) {
+        try {
+          privateKey = this.decryptPrivateKey(wallet.encryptedPrivateKey, "");
+        } catch {
+          throw new Error("Invalid password or corrupted wallet data");
+        }
+      } else {
+        throw new Error("Invalid password or corrupted wallet data");
+      }
     }
 
     // Validate private key format
