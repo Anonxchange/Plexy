@@ -48,54 +48,28 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
   // They should now include any wallets synced from Supabase
   const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
   
-  const nonCustodialWallets: Wallet[] = localWallets.map(w => ({
-    id: w.id,
-    user_id: userId,
-    crypto_symbol: w.chainId === 'Ethereum (ERC-20)' ? 'ETH' : 
-                   w.chainId === 'Bitcoin (SegWit)' ? 'BTC' :
-                   w.chainId === 'Binance Smart Chain (BEP-20)' ? 'BNB' :
-                   w.chainId === 'Solana' ? 'SOL' :
-                   w.chainId === 'Tron (TRC-20)' ? 'TRX' : w.chainId.toUpperCase(),
-    balance: 0,
-    locked_balance: 0,
-    deposit_address: w.address,
-    created_at: w.createdAt,
-    updated_at: w.createdAt,
-    isNonCustodial: true
-  }));
+  const nonCustodialWallets: Wallet[] = localWallets.map(w => {
+    // Determine crypto symbol based on chainId
+    let symbol = w.chainId;
+    if (w.chainId === 'Ethereum (ERC-20)') symbol = 'ETH';
+    else if (w.chainId === 'Bitcoin (SegWit)') symbol = 'BTC';
+    else if (w.chainId === 'Binance Smart Chain (BEP-20)') symbol = 'BNB';
+    else if (w.chainId === 'Solana') symbol = 'SOL';
+    else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
+    // For stablecoins, use chainId as-is (e.g., "USDT-Ethereum (ERC-20)")
 
-  // If we have at least one local wallet, add chain-specific stablecoin variants
-  if (localWallets.length > 0) {
-    // Map each blockchain to its supported stablecoins
-    const stablecoinsByChain: { [key: string]: string[] } = {
-      'Ethereum (ERC-20)': ['USDT', 'USDC'],
-      'Binance Smart Chain (BEP-20)': ['USDT', 'USDC'],
-      'Tron (TRC-20)': ['USDT', 'USDC'],
-      'Solana': ['USDT', 'USDC'],
-      'Bitcoin (SegWit)': [], // Bitcoin doesn't have native stablecoins
+    return {
+      id: w.id,
+      user_id: userId,
+      crypto_symbol: symbol,
+      balance: 0,
+      locked_balance: 0,
+      deposit_address: w.address,
+      created_at: w.createdAt,
+      updated_at: w.createdAt,
+      isNonCustodial: true
     };
-
-    localWallets.forEach(wallet => {
-      const stablecoins = stablecoinsByChain[wallet.chainId] || [];
-      
-      stablecoins.forEach(symbol => {
-        const walletSymbol = `${symbol}-${wallet.chainId}`;
-        if (!nonCustodialWallets.some(w => w.crypto_symbol === walletSymbol)) {
-          nonCustodialWallets.push({
-            id: `derived_${walletSymbol}_${wallet.id}`,
-            user_id: userId,
-            crypto_symbol: walletSymbol,
-            balance: 0,
-            locked_balance: 0,
-            deposit_address: wallet.address, // Use same address as parent chain
-            created_at: wallet.createdAt,
-            updated_at: wallet.createdAt,
-            isNonCustodial: true
-          });
-        }
-      });
-    });
-  }
+  });
 
   return nonCustodialWallets;
 }
