@@ -176,6 +176,7 @@ export default function ActiveTrade() {
   }, [counterpartyId]);
 
   useEffect(() => {
+    // Real-time subscription
     const subscription = supabase
       .channel(`trade-${tradeId}`)
       .on('postgres_changes', 
@@ -229,9 +230,79 @@ export default function ActiveTrade() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Real-time subscription active for trade messages');
+        }
+      });
 
-    return () => { subscription.unsubscribe(); };
+    // Polling fallback: Check for new messages every 3 seconds
+    // This ensures messages sync even if real-time subscription fails
+    const pollInterval = setInterval(async () => {
+      if (!tradeId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("trade_messages")
+          .select("*")
+          .eq("trade_id", tradeId)
+          .order("created_at", { ascending: true });
+
+        if (error) {
+          console.warn('Polling error:', error);
+          return;
+        }
+
+        setMessages((prev) => {
+          if (!data) return prev;
+          
+          // Merge new messages with existing ones, avoiding duplicates
+          const existingIds = new Set(prev.map(m => m.id));
+          const newMessages = data.filter(m => !existingIds.has(m.id));
+          
+          if (newMessages.length > 0) {
+            // Play notification sound for new messages from counterparty
+            newMessages.forEach(msg => {
+              if (msg.sender_id !== currentUserProfileId) {
+                notificationSounds.play('message_received');
+              }
+            });
+
+            // Auto-scroll to bottom
+            setTimeout(() => {
+              const chatContainer = document.querySelector('[data-chat-messages]');
+              if (chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+              }
+            }, 100);
+
+            return [...prev, ...newMessages];
+          }
+          
+          // Also check for updated read receipts
+          const updatedMessages = data.filter(d => {
+            const existing = prev.find(p => p.id === d.id);
+            return existing && existing.read_at !== d.read_at;
+          });
+
+          if (updatedMessages.length > 0) {
+            return prev.map(msg => {
+              const updated = data.find(d => d.id === msg.id);
+              return updated ? { ...msg, read_at: updated.read_at } : msg;
+            });
+          }
+
+          return prev;
+        });
+      } catch (error) {
+        console.warn('Message polling error:', error);
+      }
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, [tradeId, currentUserProfileId]);
 
   useEffect(() => {
