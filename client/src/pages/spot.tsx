@@ -133,6 +133,9 @@ export default function Spot() {
   const [buyFee, setBuyFee] = useState(0);
   const [sellFee, setSellFee] = useState(0);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [walletPassword, setWalletPassword] = useState("");
+  const [pendingTrade, setPendingTrade] = useState<{ type: "buy" | "sell" } | null>(null);
 
   // Get wallet balances and list for the trading pair
   const baseCrypto = selectedPair.symbol;
@@ -330,13 +333,20 @@ export default function Spot() {
       return;
     }
 
+    // Prompt for password
+    setPendingTrade({ type: "buy" });
+    setShowPasswordDialog(true);
+  };
+
+  // Execute the actual trade with password
+  const executeTrade = async (password: string) => {
+    if (!user || !pendingTrade) return;
+    
     setIsExecuting(true);
     try {
-      // Step 1: Get quote
-      // If buy, from USDT to crypto. If sell, from crypto to USDT.
-      const fromToken = orderType === "buy" ? "USDT" : selectedPair.symbol;
-      const toToken = orderType === "buy" ? selectedPair.symbol : "USDT";
-      const amountStr = orderType === "buy" ? buyAmount : sellAmount;
+      const fromToken = pendingTrade.type === "buy" ? "USDT" : selectedPair.symbol;
+      const toToken = pendingTrade.type === "buy" ? selectedPair.symbol : "USDT";
+      const amountStr = pendingTrade.type === "buy" ? buyAmount : sellAmount;
 
       const quote = await swapExecutionService.getSwapQuote(
         fromToken,
@@ -349,9 +359,8 @@ export default function Spot() {
         description: `Price: ${quote.price} | Slippage: ${quote.slippage}% | Fee: ${quote.fee.toFixed(2)} USDT`,
       });
 
-      // Create execution order
       const order = swapExecutionService.createExecutionOrder(
-        orderType,
+        pendingTrade.type,
         fromToken,
         toToken,
         amountStr,
@@ -360,30 +369,35 @@ export default function Spot() {
 
       toast({
         title: "Confirm Transaction",
-        description: `You will ${orderType === "buy" ? "receive" : "pay"} ~${orderType === "buy" ? quote.toAmount : quote.fromAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
+        description: `You will ${pendingTrade.type === "buy" ? "receive" : "pay"} ~${pendingTrade.type === "buy" ? quote.toAmount : quote.fromAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
       });
 
-      // Use the first active wallet for signing
       const activeWallet = userWallets[0] as any;
 
-      // Execute swap via AsterDEX API with actual wallet
+      // Execute swap with actual password
       const result = await swapExecutionService.executeSwap(
         activeWallet,
         fromToken,
         toToken,
         amountStr,
-        "user_password", // In production: prompt user for password
+        password, // Use actual user password
         user.id
       );
 
       toast({
         title: "Order Submitted",
-        description: `Buy order submitted. TX: ${result.txHash?.slice(0, 10)}... Waiting for on-chain confirmation...`,
+        description: `${pendingTrade.type === "buy" ? "Buy" : "Sell"} order submitted. TX: ${result.txHash?.slice(0, 10)}... Waiting for on-chain confirmation...`,
       });
 
-      setBuyAmount("");
-      setBuyPrice("");
-      setBuyPercentage([0]);
+      if (pendingTrade.type === "buy") {
+        setBuyAmount("");
+        setBuyPrice("");
+        setBuyPercentage([0]);
+      } else {
+        setSellAmount("");
+        setSellPrice("");
+        setSellPercentage([0]);
+      }
     } catch (error: any) {
       console.error('Trade execution error:', error);
       toast({
@@ -393,6 +407,9 @@ export default function Spot() {
       });
     } finally {
       setIsExecuting(false);
+      setShowPasswordDialog(false);
+      setWalletPassword("");
+      setPendingTrade(null);
     }
   };
 
@@ -428,71 +445,11 @@ export default function Spot() {
       return;
     }
 
-    setIsExecuting(true);
-    try {
-      // Step 1: Get quote
-      // If sell, from crypto to USDT.
-      const fromToken = selectedPair.symbol;
-      const toToken = "USDT";
-      const amountStr = sellAmount;
-
-      const quote = await swapExecutionService.getSwapQuote(
-        fromToken,
-        toToken,
-        amountStr
-      );
-
-      toast({
-        title: "Quote Fetched",
-        description: `Price: ${quote.price} | Slippage: ${quote.slippage}% | Fee: ${quote.fee.toFixed(2)} USDT`,
-      });
-
-      // Create execution order
-      const order = swapExecutionService.createExecutionOrder(
-        "sell",
-        fromToken,
-        toToken,
-        amountStr,
-        quote
-      );
-
-      toast({
-        title: "Confirm Transaction",
-        description: `You will receive ~${quote.toAmount} USDT. Confirm in your wallet.`,
-      });
-
-      // Use the first active wallet for signing
-      const activeWallet = userWallets[0] as any;
-
-      // Execute swap via AsterDEX API with actual wallet
-      const result = await swapExecutionService.executeSwap(
-        activeWallet,
-        fromToken,
-        toToken,
-        amountStr,
-        "user_password", // In production: prompt user for password
-        user.id
-      );
-
-      toast({
-        title: "Order Submitted",
-        description: `Sell order submitted. TX: ${result.txHash?.slice(0, 10)}... Waiting for on-chain confirmation...`,
-      });
-
-      setSellAmount("");
-      setSellPrice("");
-      setSellPercentage([0]);
-    } catch (error: any) {
-      console.error('Trade execution error:', error);
-      toast({
-        title: "Trade Failed",
-        description: error.message || "Failed to execute trade via AsterDEX",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExecuting(false);
-    }
+    // Prompt for password
+    setPendingTrade({ type: "sell" });
+    setShowPasswordDialog(true);
   };
+
 
   if (showMarketList) {
     return (
@@ -988,6 +945,51 @@ export default function Spot() {
           </div>
         </div>
       </div>
+
+      {/* Password Dialog */}
+      {showPasswordDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-96">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Confirm Trade</h3>
+                <p className="text-sm text-muted-foreground">Enter your wallet password to confirm the transaction</p>
+                <Input
+                  type="password"
+                  placeholder="Wallet Password"
+                  value={walletPassword}
+                  onChange={(e) => setWalletPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      executeTrade(walletPassword);
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowPasswordDialog(false);
+                      setWalletPassword("");
+                      setPendingTrade(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => executeTrade(walletPassword)}
+                    disabled={!walletPassword || isExecuting}
+                  >
+                    {isExecuting ? "Processing..." : "Confirm"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
