@@ -2396,9 +2396,38 @@ export default function AccountSettings() {
 
         {/* Passkeys removed */}
 
-        {/* Password Management */}
+        {/* Wallet Password Management - Optional password for additional security */}
         <div>
-          <h4 className="text-lg font-semibold mb-4">Password</h4>
+          <h4 className="text-lg font-semibold mb-4">Wallet Security</h4>
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                  <p className="text-xs text-blue-800 dark:text-blue-200">
+                    By default, your wallet uses auto-decryption (no password) for seamless transactions. You can optionally set a wallet password for additional security - it will be used for all trade and send operations.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wallet-password">Optional Wallet Password</Label>
+                  <Input
+                    id="wallet-password"
+                    type="password"
+                    placeholder="Leave empty to use default auto-decrypt"
+                    className="h-10"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    If set, you'll need to enter this password once per session for trades and sends. Leave empty to use default secure auto-decrypt.
+                  </p>
+                </div>
+                <Button className="w-full">Save Wallet Password</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Login Password Management */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4">Login Password</h4>
           <Card>
             <CardContent className="p-6">
               {!showPasswordChange ? (
