@@ -800,6 +800,11 @@ export default function ActiveTrade() {
 
       if (error) throw error;
 
+      // Update the timestamp ref immediately so polling doesn't re-fetch this message
+      if (data && data.created_at) {
+        lastMessageTimestampRef.current = data.created_at;
+      }
+
       const recipientId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
 
       const { data: senderProfile } = await supabase
@@ -841,6 +846,7 @@ export default function ActiveTrade() {
         );
       }
 
+      // Replace the optimistic message with the real one from the server
       setMessages((prev) =>
         prev.map((msg) => (msg.id === optimisticMessage.id ? data : msg))
       );
