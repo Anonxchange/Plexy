@@ -555,8 +555,8 @@ export default function Terms() {
                   <h3 className="font-semibold mb-2">Questions?</h3>
                   <p className="text-sm text-muted-foreground">
                     If you have any questions about this User Agreement, please contact our support team at{" "}
-                    <a href="mailto:legal@pexly.com" className="text-primary hover:underline">
-                      legal@pexly.com
+                    <a href="mailto:support@pexly.app" className="text-primary hover:underline">
+                      support@pexly.app
                     </a>
                   </p>
                 </div>
