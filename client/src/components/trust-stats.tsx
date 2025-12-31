@@ -40,8 +40,8 @@ export const TrustStats = () => {
                 True ownership of your crypto assets
               </h3>
 
-              {/* IMAGE (mobile comes here, desktop unchanged) */}
-              <div className="order-2 lg:order-none mb-8 lg:mb-0">
+              {/* IMAGE (mobile comes here, desktop hidden) */}
+              <div className="order-2 lg:order-none mb-8 lg:mb-0 lg:hidden">
                 <img
                   src={trueOwnership}
                   alt="True ownership of crypto assets"
@@ -127,9 +127,72 @@ export const TrustStats = () => {
             </div>
           </div>
 
-          <img src={awardLogo} className="w-48 h-48 mx-auto object-contain" />
+          {/* Auto-scrolling Partners Ticker */}
+          <style>{`
+            @keyframes scroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-100%); }
+            }
+            .scroll-animation {
+              animation: scroll 40s linear infinite;
+            }
+            .scroll-animation:hover {
+              animation-play-state: paused;
+            }
+          `}</style>
+          
+          <div className="mt-12 pt-8 w-full">
+            <div className="overflow-hidden bg-primary-foreground/5 rounded-2xl py-6">
+              <div className="flex gap-8 scroll-animation">
+                {[
+                  "Binance",
+                  "Bybit",
+                  "Bitrefill",
+                  "Newsdata",
+                  "Yellowcard",
+                  "Localswap",
+                  "Asterdex",
+                  "Crypto.com",
+                  "Kraken",
+                  "Coinbase",
+                ].map((exchange, i) => (
+                  <div
+                    key={i}
+                    className="flex-shrink-0 px-8 py-2 bg-white rounded-lg shadow-sm flex items-center justify-center whitespace-nowrap"
+                  >
+                    <span className="font-bold text-primary text-sm md:text-base">
+                      {exchange}
+                    </span>
+                  </div>
+                ))}
+                {/* Duplicate for seamless loop */}
+                {[
+                  "Binance",
+                  "Bybit",
+                  "Bitrefill",
+                  "Newsdata",
+                  "Yellowcard",
+                  "Localswap",
+                  "Asterdex",
+                  "Crypto.com",
+                  "Kraken",
+                  "Coinbase",
+                ].map((exchange, i) => (
+                  <div
+                    key={`dup-${i}`}
+                    className="flex-shrink-0 px-8 py-2 bg-white rounded-lg shadow-sm flex items-center justify-center whitespace-nowrap"
+                  >
+                    <span className="font-bold text-primary text-sm md:text-base">
+                      {exchange}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto px-4">
+          {/* Testimonials - Horizontal scroll on mobile, grid on desktop */}
+          <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto px-4">
             <div className="bg-[#FFD700] p-6 rounded-[32px] text-left shadow-md">
               <p className="text-black/80 text-sm">
                 Before Pexly, selling gift cards was stressful. Now I get payouts in minutes.
@@ -137,6 +200,21 @@ export const TrustStats = () => {
             </div>
 
             <div className="bg-[#F5F5F5] p-6 rounded-[32px] text-left shadow-md">
+              <p className="text-black/80 text-sm">
+                Pexly pays fast every time. No stress, no fake vendors.
+              </p>
+            </div>
+          </div>
+
+          {/* Mobile Horizontal Scroll */}
+          <div className="md:hidden flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4 snap-x snap-mandatory max-w-full px-4">
+            <div className="flex-shrink-0 w-[85%] bg-[#FFD700] p-6 rounded-[32px] text-left shadow-md snap-center">
+              <p className="text-black/80 text-sm">
+                Before Pexly, selling gift cards was stressful. Now I get payouts in minutes.
+              </p>
+            </div>
+
+            <div className="flex-shrink-0 w-[85%] bg-[#F5F5F5] p-6 rounded-[32px] text-left shadow-md snap-center">
               <p className="text-black/80 text-sm">
                 Pexly pays fast every time. No stress, no fake vendors.
               </p>
