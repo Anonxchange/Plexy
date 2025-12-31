@@ -20,122 +20,103 @@ export const TrustStats = () => {
 
       <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-14">
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
             Zero personal tracking
           </h2>
-          <p className="text-primary-foreground/90 text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
+          <p className="text-primary-foreground/90 text-xl md:text-2xl max-w-3xl mx-auto">
             We secure your wallet, but don't control or have access to your private keys or secret phrase — only you do.
           </p>
         </div>
 
-        <div className="space-y-8">
-          {/* CARD 1 – Desktop aligned like Trust Wallet */}
-          <div className="bg-white rounded-[40px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              {/* Left text */}
-              <div className="text-center lg:text-left">
-                <h3 className="text-3xl md:text-4xl font-bold text-black mb-6">
-                  True ownership of your crypto assets
-                </h3>
-
-                <p className="text-black/70 text-lg md:text-xl mb-8 max-w-xl">
-                  We secure your wallet, but don't control or have access to your private keys or secret phrase — only you do.
-                </p>
-
-                <button className="px-10 py-4 bg-primary text-white rounded-full font-bold text-lg hover:opacity-90 transition-opacity">
-                  Get Started
-                </button>
-              </div>
-
-              {/* Right image */}
-              <div className="flex justify-center lg:justify-end">
-                <img
-                  src={trueOwnership}
-                  alt="True ownership of crypto assets"
-                  className="w-full max-w-2xl object-contain"
-                />
-              </div>
+        {/* HERO CARD */}
+        <div className="bg-white rounded-[40px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="text-center lg:text-left">
+              <h3 className="text-3xl md:text-4xl font-bold text-black mb-6">
+                True ownership of your crypto assets
+              </h3>
+              <p className="text-black/70 text-lg md:text-xl mb-8 max-w-xl">
+                We secure your wallet, but don't control or have access to your private keys or secret phrase — only you do.
+              </p>
+              <button className="px-10 py-4 bg-primary text-white rounded-full font-bold text-lg">
+                Get Started
+              </button>
             </div>
-          </div>
 
-          {/* Card 2 */}
-          <div className="bg-white rounded-[40px] p-8 md:p-12 max-w-4xl mx-auto shadow-sm">
-            <h3 className="text-3xl md:text-4xl font-bold text-black mb-8">
-              Added security with encryption
-            </h3>
-            <div className="flex justify-center mb-10">
+            <div className="flex justify-center lg:justify-end">
               <img
-                src={cloudBackup}
-                alt="Encrypted cloud backup for wallet security"
-                className="w-64 h-64 md:w-80 md:h-80 object-contain"
+                src={trueOwnership}
+                alt="True ownership"
+                className="w-full max-w-2xl object-contain"
               />
             </div>
-            <p className="text-black/70 text-lg md:text-xl">
+          </div>
+        </div>
+
+        {/* FEATURE CARDS – HORIZONTAL ON DESKTOP */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-20">
+          {/* Card 1 */}
+          <div className="bg-white rounded-[32px] p-8 shadow-sm text-center">
+            <h3 className="text-2xl font-bold text-black mb-6">
+              Added security with encryption
+            </h3>
+            <img
+              src={cloudBackup}
+              alt=""
+              className="w-40 h-40 mx-auto mb-6 object-contain"
+            />
+            <p className="text-black/70 text-lg">
               Use our Encrypted Cloud Backup for increased wallet security.
             </p>
           </div>
 
-          {/* Card 3 */}
-          <div className="bg-white rounded-[40px] p-8 md:p-12 max-w-4xl mx-auto shadow-sm">
-            <h3 className="text-3xl md:text-4xl font-bold text-black mb-8">
+          {/* Card 2 */}
+          <div className="bg-white rounded-[32px] p-8 shadow-sm text-center">
+            <h3 className="text-2xl font-bold text-black mb-6">
               Zero personal tracking
             </h3>
-            <div className="flex justify-center mb-10">
-              <img
-                src={privacyShield}
-                alt="Privacy shield protecting your personal information"
-                className="w-64 h-64 md:w-80 md:h-80 object-contain"
-              />
-            </div>
-            <p className="text-black/70 text-lg md:text-xl">
-              We don't track any personal information, including your IP address or balances.
+            <img
+              src={privacyShield}
+              alt=""
+              className="w-40 h-40 mx-auto mb-6 object-contain"
+            />
+            <p className="text-black/70 text-lg">
+              We don't track any personal information, including IP or balances.
             </p>
           </div>
 
-          {/* Card 4 */}
-          <div className="bg-white rounded-[40px] p-8 md:p-12 max-w-4xl mx-auto shadow-sm">
-            <h3 className="text-3xl md:text-4xl font-bold text-black mb-8">
-              Proactive alerts for risky transactions
+          {/* Card 3 */}
+          <div className="bg-white rounded-[32px] p-8 shadow-sm text-center">
+            <h3 className="text-2xl font-bold text-black mb-6">
+              Proactive alerts
             </h3>
-            <div className="flex justify-center mb-10">
-              <img
-                src={alertHorn}
-                alt="Alert system for risky transactions and connections"
-                className="w-64 h-64 md:w-80 md:h-80 object-contain"
-              />
-            </div>
-            <p className="text-black/70 text-lg md:text-xl">
+            <img
+              src={alertHorn}
+              alt=""
+              className="w-40 h-40 mx-auto mb-6 object-contain"
+            />
+            <p className="text-black/70 text-lg">
               Stay safe with alerts for risky address and dApp connections.
             </p>
           </div>
         </div>
 
-        {/* Learn more */}
-        <div className="mt-8 text-center mb-20">
-          <button className="px-6 py-2.5 border border-black text-black rounded-full font-medium text-sm hover:bg-black hover:text-white transition-all duration-300">
-            Learn more about privacy & security
-          </button>
-        </div>
-
-        {/* Trusted section */}
+        {/* TRUSTED SECTION */}
         <div className="text-center space-y-8 pt-12 border-t border-primary-foreground/10">
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold">
             Trusted by over 35k traders
           </h2>
 
           <div className="flex justify-center -space-x-4">
-            {[avatar1, avatar2, avatar3, avatar4].map((avatar, i) => (
-              <div
-                key={i}
-                className="w-16 h-16 rounded-full border-4 border-primary overflow-hidden"
-              >
-                <img src={avatar} alt="" className="w-full h-full object-cover" />
+            {[avatar1, avatar2, avatar3, avatar4].map((a, i) => (
+              <div key={i} className="w-16 h-16 rounded-full border-4 border-primary overflow-hidden">
+                <img src={a} className="w-full h-full object-cover" />
               </div>
             ))}
           </div>
 
-          <div className="flex items-center justify-center gap-2 text-2xl font-bold">
+          <div className="flex justify-center items-center gap-2 text-2xl font-bold">
             <span>4.9</span>
             <div className="flex text-yellow-400">
               {[...Array(5)].map((_, i) => (
@@ -144,49 +125,7 @@ export const TrustStats = () => {
             </div>
           </div>
 
-          <div className="flex justify-center py-8">
-            <img
-              src={awardLogo}
-              alt="Awards"
-              className="w-48 h-48 object-contain"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto px-4">
-            {/* Testimonial 1 */}
-            <div className="bg-[#FFD700] p-6 rounded-[32px] text-left relative overflow-hidden shadow-md">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white">
-                  <img src={avatar1} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <div className="font-bold">Charles O.</div>
-                  <div className="text-xs opacity-40">Twitter</div>
-                </div>
-              </div>
-              <p className="text-sm text-black/80">
-                Before Pexly, selling gift cards was stressful — bad rates and slow vendors.
-                Now I get payouts in minutes. It just works.
-              </p>
-            </div>
-
-            {/* Testimonial 2 */}
-            <div className="bg-[#F5F5F5] p-6 rounded-[32px] text-left relative overflow-hidden shadow-md">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white">
-                  <img src={avatar2} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <div className="font-bold">Tunde A.</div>
-                  <div className="text-xs opacity-40">App Store</div>
-                </div>
-              </div>
-              <p className="text-sm text-black/80">
-                I trade crypto often, so speed matters. Pexly pays fast every time.
-                No stress, no fake vendors.
-              </p>
-            </div>
-          </div>
+          <img src={awardLogo} className="w-48 h-48 mx-auto object-contain" />
         </div>
       </div>
     </section>
