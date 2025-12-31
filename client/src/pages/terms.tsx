@@ -211,6 +211,219 @@ export default function Terms() {
             </div>
 
             <div>
+              <h2 className="text-2xl font-bold mb-4">Pexly Wallet Service</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Pexly serves as a non-custodial digital wallet software intended for digital assets such as cryptocurrencies and virtual commodities ("Digital Assets"). This means that you, and only you, have complete control over and responsibility for your Digital Assets and private keys, thereby authorizing transactions from your wallet address autonomously. Please be fully aware that because Pexly operates as a non-custodial wallet software, all associated activities and potential risks of loss are entirely under your management at all times. Pexly equips you to:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
+                <li>Generate wallet addresses and associated private keys that enable you to send and receive various digital assets</li>
+                <li>Explore and utilize third-party decentralized application(s) ("DApp(s)") and third-party decentralized exchanges ("DEX") through integrated services</li>
+                <li>Conduct swaps or trade digital assets utilizing DApp features provided by independent third-party service providers</li>
+                <li>Deploy specific digital assets in a third-party 'Proof of Stake' network through staking services ("Staking Service")</li>
+                <li>Gain access to digital asset price information provided by independent third-party service providers</li>
+                <li>Broadcast Digital Asset Transaction data to various blockchain networks supported by Pexly</li>
+              </ul>
+              <p className="text-muted-foreground leading-relaxed">
+                Please remember that your usage of Pexly's features and services underpins your acceptance of the risks associated with digital asset management and transaction activities, including network variability, cybersecurity threats, and market volatility.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Wallet Address, Private Key, and Backup Capabilities</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                An encrypted backup of certain information associated with your wallet can be stored on eligible devices. The wallet address is linked to the private key; together, they permit the authorization of the transfer of Digital Assets from and into that wallet address. You bear exclusive responsibility for the preservation and security of your private key and any mnemonic phrase ("Secret Phrase") related to your wallet.
+              </p>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                It is imperative to safeguard access information for your wallet address, secret phrase, and private key. Equally crucial is the backup of your private keys, backup phrases, or passwords. Failing to do so may result in losing authority over Digital Assets tied to your wallet. Please note that we do not gain or retain your wallet password, encrypted private key, unencrypted private key, or secret phrase connected to your wallet. Furthermore, we cannot produce a replacement password for your wallet if you forgot your primary password.
+              </p>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                In case you have not securely preserved a backup of any private key and wallet address pair existing in your wallet, remember that all Digital Assets associated with such a wallet address will be unreachable. Hence, we expressly disclaim any responsibility or liability in the event you are unable to access your wallet for any reason, including but not limited to your failure to secure your wallet address, Secret Phrase, and private key information.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Protecting your Digital Assets requires your full caution and alertness. Pexly operations are premised on the principle that you're fully aware of the importance of your Digital Assets and will execute necessary steps to safeguard them. You agree to be solely responsible for any actions you perform within Pexly and acknowledge the risks associated with digital asset management.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Use of DApps and DEX</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                When accessing or using decentralized applications (DApps) or decentralized exchanges (DEX), including but not limited to the DApp functionality within our Services such as the "Trade/Swap Digital Assets" feature, you are required to understand and agree to the following terms:
+              </p>
+              <ul className="list-disc list-inside space-y-3 text-muted-foreground ml-4">
+                <li>Pexly does not control, endorse, or take responsibility for your engagement with or use of DApps or DEX. Pexly has no liability or obligation related to your use of DApps or DEX, including but not limited to any transactions that are disputed or result in losses.</li>
+                <li>The amount that you can trade through DEX each day is subject to the rules and limitations set by the third-party developers of the Smart Contracts. Pexly does not control these limits and is not responsible for enforcing them.</li>
+                <li>All transactions on the blockchain are final and cannot be reversed. This means that any transaction made via DApps or DEX is entirely under your control and responsibility. You take full responsibility for the outcomes of any issues related to these transactions, including but not limited to transfers to incorrect addresses or problems with the node servers you have selected.</li>
+                <li>Using DApps or DEX may result in handling or service fees associated with the third-party Smart Contracts. These fees are determined by the third-party developers and are not controlled by Pexly. Users should review the fee information provided by the third-party service providers before engaging in any transactions.</li>
+                <li>Pexly reserves the right to introduce charges in the future at its discretion. Any fee updates will apply to transactions conducted after the updated fees come into effect.</li>
+              </ul>
+              <p className="text-muted-foreground leading-relaxed mt-4">
+                By using DApps and DEX via Pexly, you acknowledge and accept these associated risks and potential fees. Pexly strives to create a user-friendly environment that rigorously adheres to legal standards and regulations.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">P2P Transactions and Smart Contracts</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Pexly facilitates peer-to-peer (P2P) transactions between users through smart contracts deployed on blockchain networks. These smart contracts automatically execute the terms agreed upon by both parties in a transaction. When utilizing P2P services with smart contracts, you acknowledge and agree to the following:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
+                <li>Pexly does not control or execute smart contracts. Execution is handled entirely by the respective blockchain network.</li>
+                <li>Once a smart contract transaction is initiated, it cannot be reversed or modified by Pexly or any party involved.</li>
+                <li>All P2P transactions are final and binding upon smart contract execution on the blockchain.</li>
+                <li>Pexly assumes no liability for disputes arising from P2P transactions, including disagreements about transaction terms or Smart Contract outcomes.</li>
+                <li>Users are solely responsible for ensuring they understand the terms of any P2P transaction and smart contract before initiating it.</li>
+              </ul>
+              <p className="text-muted-foreground leading-relaxed">
+                By utilizing P2P services and smart contracts via Pexly, you acknowledge these conditions and accept the immutable nature of blockchain transactions.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Gift Card Services</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Pexly offers gift card services through third-party providers that allow users to purchase, trade, and exchange gift cards for various retailers and brands. When utilizing gift card services, you acknowledge and agree to the following:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
+                <li>Pexly does not control or operate the gift card services. These services are provided by independent third-party providers.</li>
+                <li>Pexly assumes no liability for the validity, authenticity, or functionality of any gift cards purchased or traded through our platform.</li>
+                <li>Once a gift card transaction is completed and confirmed, Pexly cannot reverse, modify, or refund the transaction unless the third-party provider permits such actions.</li>
+                <li>Users are responsible for verifying the balance and terms of any gift card before accepting it in a transaction.</li>
+                <li>Pexly does not guarantee the redemption, acceptance, or value of gift cards by their respective issuers or retailers.</li>
+                <li>Any disputes regarding gift card authenticity, balance, or redemption must be addressed directly with the gift card issuer or the third-party service provider.</li>
+                <li>Gift card services are subject to the terms and conditions of both the third-party service provider and the respective gift card issuer.</li>
+              </ul>
+              <p className="text-muted-foreground leading-relaxed">
+                By using gift card services via Pexly, you acknowledge these conditions and accept full responsibility for your gift card transactions.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Airtime and Mobile Services</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Pexly offers airtime and mobile top-up services through third-party providers that enable users to purchase mobile credits and services from various telecommunications providers globally. When utilizing airtime and mobile services, you acknowledge and agree to the following:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
+                <li>Pexly does not control or operate the airtime and mobile services. These services are provided by independent third-party providers and telecommunications companies.</li>
+                <li>Pexly assumes no liability for delays, failures, or errors in airtime delivery or mobile service provisioning.</li>
+                <li>Once an airtime purchase is completed and confirmed on the blockchain, Pexly cannot reverse, modify, or refund the transaction unless the third-party provider permits such actions.</li>
+                <li>Users are responsible for providing accurate mobile phone numbers and subscriber information. Pexly is not liable for incorrect airtime delivery due to user error.</li>
+                <li>Pexly does not guarantee the availability or pricing of airtime services from specific telecommunications providers.</li>
+                <li>Service availability and airtime rates may vary by region, provider, and current market conditions and are subject to change without notice.</li>
+                <li>Any disputes regarding airtime delivery, pricing, or mobile service issues must be addressed directly with the telecommunications provider or the third-party service provider.</li>
+                <li>Airtime services are subject to the terms and conditions of both the third-party service provider and the respective telecommunications company.</li>
+              </ul>
+              <p className="text-muted-foreground leading-relaxed">
+                By using airtime and mobile services via Pexly, you acknowledge these conditions and accept full responsibility for your airtime transactions.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Digital Asset Transactions</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                For all intended Digital Asset transactions to be effectuated, they must be validated and chronicled in the respective Digital Asset's public blockchain. These networks, which are decentralized and peer-to-peer, are bolstered by independent third parties and are not under the ownership, control, or operation of Pexly.
+              </p>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Pexly has no control over these blockchain networks and, therefore, cannot guarantee the confirmation and execution of any transaction details that you submit via our Services. By opting to use Pexly, you must acknowledge and consent to the following:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
+                <li>Pexly is not equipped to cancel or modify your transaction</li>
+                <li>Blockchain networks might delay or fail to complete the transaction details you've submitted</li>
+                <li>Pexly does not store, transmit, or receive Digital Assets. All related actions occur wholly within the framework of the applicable blockchain protocol</li>
+                <li>Any transfer that relates to any Digital Asset is processed on the applicable blockchain network and not on a network owned or operated by Pexly</li>
+              </ul>
+              <p className="text-muted-foreground leading-relaxed">
+                By employing Pexly's services, you accept all inherent risks associated with the transaction process and the volatile nature of Digital Assets.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Accuracy of Information</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                You represent and guarantee that any information you provide via the Services is precise and comprehensive. You accept and understand that we hold no responsibility for any errors or omissions made by you in any Digital Asset transactions initiated via the Services. To avoid potential issues, we strongly urge you to meticulously review the details of your transaction before initiating a Digital Asset transfer.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Wallet Registration and Security</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                To utilize Pexly, you will need to either import an existing wallet or create a new one. Upon the creation of a wallet, a private key will be generated for you. In the event of unauthorized use of your private key or any other security breaches related to your wallet, you agree to notify us immediately.
+              </p>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                You understand and agree that all risks associated with the use of our Services are assumed by you, and you will bear full responsibility for maintaining the confidentiality and security of your private key. To avoid loss of access to or control over your wallet, we strongly advise that you:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
+                <li>Generate a unique and strong password not used elsewhere</li>
+                <li>Refrain from storing your private key and Secret Phrase in plain text online or in unsecured physical locations</li>
+                <li>Restrict access to your devices and wallet</li>
+                <li>Ensure protection from malware on your devices and networks</li>
+                <li>Immediately inform us of any known or suspected security breaches related to your wallet</li>
+              </ul>
+              <p className="text-muted-foreground leading-relaxed">
+                We hold no liability for activities on your wallet, whether they are authorized by you or not.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Third Party Services and Content</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Our platform connects you to a variety of services provided by our partners, which include but are not limited to peer-to-peer (P2P) transactions, smart contracts, crypto to crypto exchanges ("swap"), buying and selling of cryptocurrencies, services to display balances in fiat currency, cryptocurrency rate displays, decentralized finance applications, gift card trading and purchases, airtime and mobile top-up services, and other digital asset services. Note that we do not have any control over these third-party services ("Third Party Services").
+              </p>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Your engagement with these services and the associated informational content, products, or services ("Third Party Content") is purely voluntary, and any reliance on such content is done at your own risk. While this Agreement regulates your engagement with our service, your interaction with Third Party Content and Services will likely be subjected to additional terms and conditions set by the respective third-party providers.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                We deny any liability and responsibility related to your use of these Third Party Services. Any disputes or complaints relating to these services should be directed to the respective third-party provider.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Payment and Fees</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                The fees related to the Services, or any aspect thereof, are primarily established by our third-party partners and are available on pexly.com and/or in the Pexly application. These fees can include, but are not limited to, cost for account management, transaction fees, withdrawal fees, gas fees, or charges for specific services offered by our partnering entities.
+              </p>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Please note that these charges are controlled by the third-party entities and we neither influence nor regulate the creation or modification of these fees. In certain instances, Pexly may receive a revenue share from such fees exercised by third parties. However, receiving revenue does not grant us any control or decision-making power over these charges.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Any update or adjustment to such fee structure will be promptly reflected on our website and/or mobile application. Your continued use of our Services following such updates indicates your acceptance of these changes.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Transaction Fees</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Your virtual currency transactions may incur transaction fees, such as mining fees, which are mandated by the virtual currency system or blockchain network you choose to use. Before initiating a transaction, it is your responsibility to ensure that your wallet has a sufficient balance and/or "gas" (network processing power) to complete the transaction fully.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                It is crucial to note that we hold no control or influence over these fees or the fee setting mechanisms of third-party systems. Consequently, we are not liable for any transaction failures or financial losses you may experience due to inappropriately entered transaction fees.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Taxes</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Your tax obligations concerning your transactions made through our Services are solely your responsibility. You are required to determine what, if any, taxes apply to your transactions. We expressly clarify that our role does not include determining if taxes apply to your transactions. We are not in the business of collecting, reporting, withholding, or remitting any taxes arising from any Digital Asset-related transactions.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Intellectual Property License</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Subject to your agreement and adherence with these Terms, we provide you a non-exclusive, non-sublicensable, and non-transferable license to utilize Pexly strictly for your personal or internal business use. Unless otherwise explicitly stated in these Terms, you are prohibited from:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+                <li>Reproducing, altering, adapting, or creating derivative works of any part of Pexly</li>
+                <li>Leasing, distributing, selling, sublicensing, transferring, or enabling access to Pexly</li>
+                <li>Using Pexly for the benefit of any third party</li>
+                <li>Integrating Pexly into any product or service you offer to a third party without our prior written approval</li>
+                <li>Circumventing mechanisms in Pexly designed to limit your use</li>
+                <li>Performing reverse engineering, disassembling, decompiling, or seeking to extract or derive the source code underlying Pexly</li>
+                <li>Removing or obscuring any proprietary or other notices integrated into Pexly</li>
+                <li>Using Pexly for competitive analysis purposes or to develop competitive products</li>
+              </ul>
+            </div>
+
+            <div>
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <FileText className="h-6 w-6 text-primary" />
                 1. General
