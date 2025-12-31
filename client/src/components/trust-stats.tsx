@@ -5,7 +5,7 @@ import alertHorn from "@/assets/IMG_3375.jpeg";
 import trueOwnership from "@/assets/IMG_3386.png";
 import avatar1 from "@/assets/IMG_3383.jpeg";
 import avatar2 from "@/assets/IMG_3384.jpeg";
-import avatar3 from "@/assets/IMG_3385.png";
+import avatar3 from "@/assets/IMG_3382.png";
 import avatar4 from "@/assets/IMG_3385.png";
 import awardLogo from "@/assets/IMG_3385.png";
 import { Star } from "lucide-react";
