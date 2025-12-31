@@ -15,8 +15,8 @@ const steps = [
   },
   {
     icon: Shield,
-    title: "Trade with Escrow",
-    description: "Your funds are protected by our secure escrow system until trade completion.",
+    title: "Trade with Smart Contract Protection",
+    description: "Your transaction dey secured by automated smart contracts until both sides complete the trade.",
   },
 ];
 
