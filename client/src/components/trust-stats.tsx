@@ -30,7 +30,7 @@ export const TrustStats = () => {
         </div>
 
         {/* HERO CARD */}
-        <div className="bg-white rounded-[40px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm mb-12">
+        <div className="bg-white rounded-[40px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm mb-14">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <h3 className="text-3xl md:text-4xl font-bold text-black mb-6">
@@ -109,14 +109,17 @@ export const TrustStats = () => {
           </h2>
 
           <div className="flex justify-center -space-x-4">
-            {[avatar1, avatar2, avatar3, avatar4].map((a, i) => (
-              <div key={i} className="w-16 h-16 rounded-full border-4 border-primary overflow-hidden">
-                <img src={a} className="w-full h-full object-cover" />
+            {[avatar1, avatar2, avatar3, avatar4].map((avatar, i) => (
+              <div
+                key={i}
+                className="w-16 h-16 rounded-full border-4 border-primary overflow-hidden"
+              >
+                <img src={avatar} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
           </div>
 
-          <div className="flex justify-center items-center gap-2 text-2xl font-bold">
+          <div className="flex items-center justify-center gap-2 text-2xl font-bold">
             <span>4.9</span>
             <div className="flex text-yellow-400">
               {[...Array(5)].map((_, i) => (
@@ -125,7 +128,50 @@ export const TrustStats = () => {
             </div>
           </div>
 
-          <img src={awardLogo} className="w-48 h-48 mx-auto object-contain" />
+          <div className="flex justify-center py-8">
+            <img
+              src={awardLogo}
+              alt="Awards"
+              className="w-48 h-48 object-contain"
+            />
+          </div>
+
+          {/* TESTIMONIALS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto px-4">
+            {/* Testimonial 1 */}
+            <div className="bg-[#FFD700] p-6 rounded-[32px] text-left relative overflow-hidden shadow-md">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white">
+                  <img src={avatar1} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="font-bold">Charles O.</div>
+                  <div className="text-xs opacity-40">Twitter</div>
+                </div>
+              </div>
+              <p className="text-sm text-black/80">
+                Before Pexly, selling gift cards was stressful — bad rates and slow vendors.
+                Now I get payouts in minutes. No delays. It just works.
+              </p>
+            </div>
+
+            {/* Testimonial 2 */}
+            <div className="bg-[#F5F5F5] p-6 rounded-[32px] text-left relative overflow-hidden shadow-md">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white">
+                  <img src={avatar2} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="font-bold">Tunde A.</div>
+                  <div className="text-xs opacity-40">App Store</div>
+                </div>
+              </div>
+              <p className="text-sm text-black/80">
+                I trade crypto often, so speed matters. Pexly pays fast every time —
+                no stress, no fake vendors.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
