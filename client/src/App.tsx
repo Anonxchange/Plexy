@@ -25,7 +25,7 @@ import { ShopPost } from "@/pages/shop-post";
 import { CreateOffer } from "@/pages/create-offer";
 import { CreateOfferAdvanced } from "@/pages/create-offer-advanced";
 import { MyOffers } from "@/pages/my-offers";
-import Spot from "@/pages/spot";
+import { Spot } from "@/pages/spot";
 import NotFound from "@/pages/not-found";
 import { GiftCards } from "@/pages/gift-cards";
 import { GiftCardDetail } from "@/pages/gift-card-detail";
