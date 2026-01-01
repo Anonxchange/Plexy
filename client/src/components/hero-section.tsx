@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -10,6 +10,19 @@ import { currencies, cryptoCurrencies } from "@/lib/currencies";
 import { paymentMethods } from "@/lib/payment-methods";
 import { Globe } from "@/components/globe";
 import { getCryptoPrices } from "@/lib/crypto-prices";
+
+// Simple ErrorBoundary for the Globe component
+class ErrorBoundary extends React.Component<{ children: React.ReactNode, fallback: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
 
 export function HeroSection() {
   const [tradeType, setTradeType] = useState("buy");
@@ -78,7 +91,9 @@ export function HeroSection() {
 
       {/* Animated Globe Background */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] opacity-15 pointer-events-none">
-        <Globe />
+        <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
+          <Globe />
+        </ErrorBoundary>
       </div>
 
       {/* Gradient Orbs */}
