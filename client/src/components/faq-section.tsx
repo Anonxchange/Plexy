@@ -45,33 +45,13 @@ const faqs = [
   {
     question: "How can I send crypto to other Pexly users?",
     answer: "Go to 'Send' in your wallet, select the asset and amount, and enter the recipient's Pexly username or wallet address. P2P transfers between Pexly users are often free or have minimal network fees. You can track the transaction status in real-time."
-  },
-  {
-    question: "What security measures does Pexly use?",
-    answer: "Pexly uses industry-leading security including 256-bit encryption, biometric authentication (fingerprint/face ID), multi-signature wallets, and regular security audits. We also never store your private keys or recovery phrases on our servers."
-  },
-  {
-    question: "How do I verify my Pexly account?",
-    answer: "Pexly uses a tiered verification system. Level 1 requires basic information, Level 2 involves document verification (ID, passport), and Level 3 includes liveness checks. Higher verification levels unlock increased transaction limits and features."
-  },
-  {
-    question: "What happens if I lose my device?",
-    answer: "With our Encrypted Cloud Backup enabled, you can recover your wallet on any new device using your backup phrase. Without backup, only you can access your funds since private keys never leave your device. Make sure to enable cloud backup!"
-  },
-  {
-    question: "Can I trade crypto on Pexly?",
-    answer: "Yes! Pexly integrates with leading DEXs (Decentralized Exchanges) and swap providers. Access the 'Trade' or 'Swap' section to exchange one cryptocurrency for another at competitive rates powered by third-party liquidity providers."
-  },
-  {
-    question: "What payment methods can I use for peer-to-peer transactions?",
-    answer: "On Pexly's P2P marketplace, you can negotiate various payment methods directly with other users including bank transfers, mobile money (M-Pesa, etc.), Wise transfers, LocalBitcoins payments, and other regional payment options."
   }
 ];
 
 export function FAQSection() {
   return (
     <section className="py-20 bg-background transition-colors duration-200">
-      <div className="max-w-6xl mx-auto px-4 lg:px-6">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6">
         <div className="mb-12">
           <h2 className="text-2xl font-semibold text-foreground">
             FAQs
