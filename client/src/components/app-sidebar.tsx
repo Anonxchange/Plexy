@@ -158,7 +158,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     Listings
                   </Button>
                 </Link>
-                <Link href="/shop-post" onClick={handleLinkClick}>
+                <Link href="/shop/post" onClick={handleLinkClick}>
                   <Button className="w-full justify-start gap-2" size="sm" data-testid="nav-post-ad">
                     <Plus className="h-4 w-4" />
                     <span className="font-semibold">Post Ad</span>
