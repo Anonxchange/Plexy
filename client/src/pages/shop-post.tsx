@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Upload, X, AlertCircle } from "lucide-react";
+import { ArrowLeft, Upload, X, AlertCircle, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { useVerificationGuard } from "@/hooks/use-verification-guard";
 
 const CATEGORIES = [
   "Services",
@@ -36,6 +40,32 @@ const CURRENCIES = ["USD", "USDT", "BTC", "ETH"];
 
 export function ShopPost() {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { verificationLevel } = useVerificationGuard();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Authentication and Verification Guard
+  useEffect(() => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to post an ad",
+        variant: "destructive",
+      });
+      navigate("/signin");
+      return;
+    }
+
+    if (parseFloat(verificationLevel || "0") < 2) {
+      toast({
+        title: "Verification required",
+        description: "You must be Level 2 verified to post in the shop.",
+        variant: "destructive",
+      });
+      navigate("/verification");
+    }
+  }, [user, verificationLevel, navigate, toast]);
   const [listingType, setListingType] = useState<"fixed" | "auction">("fixed");
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
@@ -56,10 +86,64 @@ export function ShopPost() {
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log({ category, title, description, price, currency, location, attachments });
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to post an ad",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const metadata: any[] = [];
+      
+      // Upload images to R2 via your existing client-side integration if possible
+      // or just collect metadata for the database if that's what's intended
+      for (const file of attachments) {
+        // Assuming R2 handling is done elsewhere or we just store metadata
+        metadata.push({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
+        });
+      }
+
+      const { error } = await supabase
+        .from('shop_listings')
+        .insert({
+          user_id: user.id,
+          listing_type: listingType,
+          category,
+          title,
+          description,
+          price: parseFloat(price),
+          currency,
+          location,
+          images: [], // No images in Supabase
+          metadata: metadata, // Store metadata instead
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Your ad has been posted successfully!",
+      });
+      navigate("/shop");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to post ad",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -319,7 +403,7 @@ export function ShopPost() {
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-4 bg-primary/20 rounded" />
-                    <span className="text-sm text-muted-foreground">guest</span>
+                    <span className="text-sm text-muted-foreground">{user?.username || "guest"}</span>
                   </div>
                   <p className="text-2xl font-bold mb-1">
                     {price || "0"} {currency}
@@ -340,9 +424,16 @@ export function ShopPost() {
           <Button
             type="submit"
             className="w-full h-14 text-lg bg-primary hover:bg-primary/90"
-            disabled={!category || !title || !description || !price}
+            disabled={!category || !title || !description || !price || isSubmitting}
           >
-            Post Ad
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Posting Ad...
+              </>
+            ) : (
+              "Post Ad"
+            )}
           </Button>
         </form>
       </main>
