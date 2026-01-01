@@ -96,7 +96,7 @@ const recentTrades = [
   { price: 122255.50, amount: 0.0673, time: "18:42:11", type: "sell" },
 ];
 
-export default function Spot() {
+export function Spot() {
   useSchema(spotPageSchema, "spot-page-schema");
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -617,21 +617,21 @@ export default function Spot() {
               </Button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground text-xs md:text-sm">Last Price</p>
-                <p className="text-base md:text-lg font-semibold">${selectedPair.price.toLocaleString()}</p>
+              <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
+                <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">Last Price</p>
+                <p className="text-base md:text-lg font-bold">${selectedPair.price.toLocaleString()}</p>
               </div>
-              <div className="hidden sm:block">
-                <p className="text-muted-foreground text-xs md:text-sm">24h High</p>
-                <p className="text-base md:text-lg font-semibold text-green-600">${selectedPair.high.toLocaleString()}</p>
+              <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
+                <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">24h High</p>
+                <p className="text-base md:text-lg font-bold text-green-600">${selectedPair.high.toLocaleString()}</p>
               </div>
-              <div className="hidden sm:block">
-                <p className="text-muted-foreground text-xs md:text-sm">24h Low</p>
-                <p className="text-base md:text-lg font-semibold text-red-600">${selectedPair.low.toLocaleString()}</p>
+              <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
+                <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">24h Low</p>
+                <p className="text-base md:text-lg font-bold text-red-600">${selectedPair.low.toLocaleString()}</p>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs md:text-sm">24h Volume</p>
-                <p className="text-base md:text-lg font-semibold">{selectedPair.volume}</p>
+              <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
+                <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">24h Volume</p>
+                <p className="text-base md:text-lg font-bold">{selectedPair.volume}</p>
               </div>
             </div>
           </div>
