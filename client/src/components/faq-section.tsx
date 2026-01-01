@@ -65,49 +65,30 @@ const faqs = [
   {
     question: "What payment methods can I use for peer-to-peer transactions?",
     answer: "On Pexly's P2P marketplace, you can negotiate various payment methods directly with other users including bank transfers, mobile money (M-Pesa, etc.), Wise transfers, LocalBitcoins payments, and other regional payment options."
-  },
-  {
-    question: "Is there a minimum or maximum transaction limit?",
-    answer: "Transaction limits vary based on your account verification level, payment method, and local regulations. Level 1 accounts have basic limits that increase significantly with Level 2 and Level 3 verification. Check your account settings for your current limits."
-  },
-  {
-    question: "How do I earn rewards on Pexly?",
-    answer: "Pexly rewards referrals and active traders. Invite friends using your referral code to earn bonuses, and earn cashback on certain transactions. Higher verification levels and consistent trading activity can unlock additional rewards."
-  },
-  {
-    question: "What should I do if I made a transaction mistake?",
-    answer: "For pending transactions on the blockchain, you cannot cancel them once submitted. For P2P disputes, our support team can help mediate. Always double-check recipient addresses before confirming transactions - crypto transactions are irreversible."
-  },
-  {
-    question: "How are my taxes handled through Pexly transactions?",
-    answer: "Pexly does not calculate or file taxes on your behalf. You're responsible for tracking your transactions and reporting them to tax authorities as required by your jurisdiction. We provide transaction history reports to help with tax filing."
   }
 ];
 
 export function FAQSection() {
   return (
-    <section className="py-20 bg-background">
-      <div className="max-w-4xl mx-auto px-4 lg:px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-foreground">
-            Frequently Asked Questions
+    <section className="py-20 bg-background transition-colors duration-200">
+      <div className="max-w-6xl mx-auto px-4 lg:px-6">
+        <div className="mb-12">
+          <h2 className="text-2xl font-semibold text-foreground">
+            FAQs
           </h2>
-          <p className="text-xl text-muted-foreground">
-            Everything you need to know about Pexly
-          </p>
         </div>
 
-        <Accordion type="single" collapsible className="w-full space-y-4">
+        <Accordion type="single" collapsible className="w-full">
           {faqs.map((faq, index) => (
             <AccordionItem 
               key={index} 
               value={`item-${index}`}
-              className="border rounded-2xl px-6 bg-card"
+              className="border-b border-border border-t-0 border-x-0 rounded-none bg-transparent px-0 data-[state=open]:border-primary/50 transition-colors"
             >
-              <AccordionTrigger className="text-left font-semibold text-lg hover:no-underline py-6">
-                {faq.question}
+              <AccordionTrigger className="text-left font-normal text-lg hover:no-underline py-8 text-foreground group transition-all [&[data-state=open]>svg]:rotate-180">
+                <span className="flex-1">{faq.question}</span>
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-lg pb-6 leading-relaxed">
+              <AccordionContent className="text-muted-foreground text-lg pb-8 leading-relaxed">
                 {faq.answer}
               </AccordionContent>
             </AccordionItem>
