@@ -519,20 +519,19 @@ class NonCustodialWalletManager {
   private decryptPrivateKey(encryptedKey: string, password: string): string {
     try {
       const bytes = CryptoJS.AES.decrypt(encryptedKey, password);
-      // We use latin1 as a fallback if UTF-8 fails to avoid "Malformed UTF-8" hard errors
-      // during the initial decryption check, then validate the result.
+      // Fallback for character encoding if standard UTF-8 fails
       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
       
-      // Validate decryption result
+      // If the decryption was successful but result is empty, it means wrong password
       if (!decrypted || decrypted.trim() === "") {
-        throw new Error("Decryption failed: empty result");
+        throw new Error("Decryption returned empty string");
       }
       
       return decrypted;
     } catch (error: any) {
-      console.error("Decryption error:", error);
-      // If UTF-8 decryption fails, it's almost certainly a wrong password
-      throw new Error("Invalid wallet password. Please ensure you are using the correct password for your non-custodial wallet.");
+      console.error("Decryption error details:", error);
+      // Most likely an incorrect password if UTF-8 decryption fails
+      throw new Error("Invalid password. Please enter the correct password for your non-custodial wallet.");
     }
   }
 
