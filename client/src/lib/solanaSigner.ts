@@ -165,3 +165,27 @@ export function getEVMAddress(mnemonic: string): string {
   const wallet = getWalletFromMnemonic(mnemonic);
   return wallet.address;
 }
+
+// Solana transaction signing stub (not yet implemented)
+export interface SolanaTransactionRequest {
+  to: string;
+  amount: string;
+  currency: 'SOL' | 'USDT_SOL' | 'USDC_SOL';
+}
+
+export interface SignedSolanaTransaction {
+  signedTx: string;
+  txHash: string;
+  from: string;
+  to: string;
+  value: string;
+  currency: string;
+}
+
+export async function signSolanaTransaction(
+  _mnemonic: string,
+  _request: SolanaTransactionRequest
+): Promise<SignedSolanaTransaction> {
+  throw new Error('Solana transaction signing not yet implemented');
+}
+
