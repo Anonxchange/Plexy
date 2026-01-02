@@ -354,6 +354,9 @@ export function Spot() {
       const toToken = type === "buy" ? selectedPair.symbol : "USDT";
       const amountStr = type === "buy" ? buyAmount : sellAmount;
 
+      // For 'Buy', amountStr is USDT. For 'Sell', amountStr is Coin.
+      // This matches Bybit logic where Buy uses Quote asset and Sell uses Base asset.
+
       const quote = await swapExecutionService.getSwapQuote(
         fromToken,
         toToken,
@@ -792,14 +795,23 @@ export function Spot() {
 
                           <div className="space-y-1">
                             <div className="flex justify-between text-[10px] text-muted-foreground">
-                              <span>Amount</span>
-                              <span>{selectedPair.symbol}</span>
+                              <span>{orderType === "market" ? "Total (approx)" : "Total"}</span>
+                              <span>USDT</span>
                             </div>
                             <Input 
                               className="h-8 text-xs bg-muted/20" 
                               value={buyAmount}
                               onChange={(e) => setBuyAmount(e.target.value)}
+                              placeholder="0.00"
                             />
+                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
+                              <span>Est. Receive:</span>
+                              <span className="text-green-500">
+                                {buyAmount && !isNaN(parseFloat(buyAmount)) 
+                                  ? (parseFloat(buyAmount) / (orderType === "limit" ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price)).toFixed(6)
+                                  : "0.00"} {selectedPair.symbol}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="pt-1">
@@ -881,7 +893,16 @@ export function Spot() {
                               className="h-8 text-xs bg-muted/20" 
                               value={sellAmount}
                               onChange={(e) => setSellAmount(e.target.value)}
+                              placeholder="0.00"
                             />
+                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
+                              <span>Est. Receive:</span>
+                              <span className="text-red-500">
+                                {sellAmount && !isNaN(parseFloat(sellAmount)) 
+                                  ? (parseFloat(sellAmount) * (orderType === "limit" ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price)).toFixed(2)
+                                  : "0.00"} USDT
+                              </span>
+                            </div>
                           </div>
 
                           <div className="pt-1">
