@@ -4,7 +4,7 @@ import { mnemonicToSeed } from './keyDerivation';
 import { HDKey } from '@scure/bip32';
 
 // Basic Chain Configs (Inlined to avoid missing types file issues)
-export const CHAIN_CONFIGS = {
+export const CHAIN_CONFIGS: Record<string, { rpcUrl: string; chainId: number; symbol: string }> = {
   ETH: {
     rpcUrl: 'https://eth.llamarpc.com',
     chainId: 1,
@@ -14,14 +14,21 @@ export const CHAIN_CONFIGS = {
     rpcUrl: 'https://binance.llamarpc.com',
     chainId: 56,
     symbol: 'BNB'
+  },
+  BNB: {
+    rpcUrl: 'https://binance.llamarpc.com',
+    chainId: 56,
+    symbol: 'BNB'
   }
 };
 
-export const TOKEN_CONTRACTS = {
+export const TOKEN_CONTRACTS: Record<string, { address: string; decimals: number }> = {
   USDT_ETH: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
   USDC_ETH: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
   USDT_BSC: { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
-  USDC_BSC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18 }
+  USDC_BSC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18 },
+  USDT_BNB: { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
+  USDC_BNB: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18 }
 };
 
 const DERIVATION_PATH = "m/44'/60'/0'/0/0";
@@ -37,7 +44,7 @@ const ERC20_ABI = [
 export interface EVMTransactionRequest {
   to: string;
   amount: string;
-  currency: 'ETH' | 'BSC' | 'USDT_ETH' | 'USDC_ETH' | 'USDT_BSC' | 'USDC_BSC';
+  currency: 'ETH' | 'BSC' | 'BNB' | 'USDT_ETH' | 'USDC_ETH' | 'USDT_BSC' | 'USDC_BSC' | 'USDT_BNB' | 'USDC_BNB';
   gasPrice?: string;
   gasLimit?: string;
   nonce?: number;
@@ -57,26 +64,41 @@ function getWalletFromMnemonic(mnemonic: string): ethers.Wallet {
   return new ethers.Wallet(hdNode.privateKey);
 }
 
-function getProvider(chain: 'ETH' | 'BSC'): ethers.JsonRpcProvider {
-  const config = CHAIN_CONFIGS[chain];
+function getProvider(chain: string): ethers.JsonRpcProvider {
+  const normalizedChain = chain.toUpperCase() === 'BNB' ? 'BSC' : chain.toUpperCase();
+  const config = (CHAIN_CONFIGS as any)[normalizedChain];
+  
+  if (!config) {
+    console.error(`[evmSigner] Config not found for chain: ${chain} (normalized: ${normalizedChain})`);
+    // Fallback to ETH if config is missing to prevent total failure
+    const fallback = CHAIN_CONFIGS.ETH;
+    return new ethers.JsonRpcProvider(fallback.rpcUrl, fallback.chainId);
+  }
+  
   return new ethers.JsonRpcProvider(config.rpcUrl, config.chainId);
 }
 
 // Get wallet balance
 export async function getEVMBalance(
   mnemonic: string,
-  currency: 'ETH' | 'BSC' | 'USDT_ETH' | 'USDC_ETH' | 'USDT_BSC' | 'USDC_BSC'
+  currency: string
 ): Promise<string> {
   const wallet = getWalletFromMnemonic(mnemonic);
-  const isToken = currency.includes('_');
-  const chain = (isToken ? currency.split('_')[1] : currency) as 'ETH' | 'BSC';
+  const normalizedCurrency = (currency || '').replace('_BNB', '_BSC') as any;
+  const isToken = normalizedCurrency.includes('_');
+  const chain = (isToken ? normalizedCurrency.split('_')[1] : normalizedCurrency) || 'ETH';
   const provider = getProvider(chain);
   
   if (isToken) {
-    const tokenConfig = TOKEN_CONTRACTS[currency as keyof typeof TOKEN_CONTRACTS];
+    const tokenConfig = (TOKEN_CONTRACTS as any)[normalizedCurrency];
+    if (!tokenConfig) {
+      console.error(`[evmSigner] Token config not found for balance: ${normalizedCurrency}`);
+      return "0";
+    }
     const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, provider);
     const balance = await contract.balanceOf(wallet.address);
-    return ethers.formatUnits(balance, tokenConfig.decimals);
+    const decimals = tokenConfig.decimals;
+    return ethers.formatUnits(balance, decimals);
   } else {
     const balance = await provider.getBalance(wallet.address);
     return ethers.formatEther(balance);
@@ -89,17 +111,27 @@ export async function signEVMTransaction(
   request: EVMTransactionRequest
 ): Promise<SignedEVMTransaction> {
   const wallet = getWalletFromMnemonic(mnemonic);
-  const isToken = request.currency.includes('_');
-  const chain = (isToken ? request.currency.split('_')[1] : request.currency) as 'ETH' | 'BSC';
+  const normalizedCurrency = (request.currency || '').replace('_BNB', '_BSC') as any;
+  const isToken = normalizedCurrency.includes('_');
+  const chain = (isToken ? normalizedCurrency.split('_')[1] : normalizedCurrency) || 'ETH';
+  
+  console.log(`[evmSigner] Signing transaction. Request:`, request);
+  console.log(`[evmSigner] Normalized chain: ${chain}, isToken: ${isToken}`);
+  
   const provider = getProvider(chain);
   const connectedWallet = wallet.connect(provider);
 
   let tx: ethers.TransactionRequest;
 
   if (isToken) {
-    const tokenConfig = TOKEN_CONTRACTS[request.currency as keyof typeof TOKEN_CONTRACTS];
+    const tokenConfig = (TOKEN_CONTRACTS as any)[normalizedCurrency];
+    if (!tokenConfig) {
+      console.error(`[evmSigner] Token config not found for sign: ${normalizedCurrency}`);
+      throw new Error(`Token configuration not found for: ${request.currency}`);
+    }
     const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, connectedWallet);
-    const amount = ethers.parseUnits(request.amount, tokenConfig.decimals);
+    const decimals = tokenConfig.decimals;
+    const amount = ethers.parseUnits(request.amount, decimals);
     const data = contract.interface.encodeFunctionData('transfer', [request.to, amount]);
     
     tx = {
@@ -144,7 +176,7 @@ export async function signEVMTransaction(
 // Broadcast signed transaction
 export async function broadcastEVMTransaction(
   signedTx: string,
-  chain: 'ETH' | 'BSC'
+  chain: string
 ): Promise<string> {
   const provider = getProvider(chain);
   const txResponse = await provider.broadcastTransaction(signedTx);
@@ -153,15 +185,17 @@ export async function broadcastEVMTransaction(
 
 // Sign a message
 export async function signEVMMessage(
-  mnemonic: string,
+  mnemonic: string | undefined,
   message: string
 ): Promise<string> {
+  if (!mnemonic) throw new Error("Mnemonic is required for message signing");
   const wallet = getWalletFromMnemonic(mnemonic);
   return wallet.signMessage(message);
 }
 
 // Get address from mnemonic
-export function getEVMAddress(mnemonic: string): string {
+export function getEVMAddress(mnemonic: string | undefined): string {
+  if (!mnemonic) throw new Error("Mnemonic is required to get EVM address");
   const wallet = getWalletFromMnemonic(mnemonic);
   return wallet.address;
 }
