@@ -357,8 +357,8 @@ class NonCustodialWalletManager {
       throw new Error("Invalid private key: empty");
     }
     
-    // Ensure private key has 0x prefix if it doesn't
-    if (!privateKey.startsWith("0x")) {
+    // Ensure private key has 0x prefix if it doesn't (skip for Bitcoin)
+    if (wallet.walletType !== "bitcoin" && wallet.walletType !== "tron" && wallet.walletType !== "solana" && !privateKey.startsWith("0x")) {
       privateKey = "0x" + privateKey;
     }
 
