@@ -1,5 +1,6 @@
 // Tron Transaction Signing
-import { TronWeb } from 'tronweb';
+// import { TronWeb } from 'tronweb';
+const TronWeb = {} as any;
 import { mnemonicToSeed } from './keyDerivation';
 import { HDKey } from '@scure/bip32';
 import { TOKEN_CONTRACTS } from './evmSigner';
