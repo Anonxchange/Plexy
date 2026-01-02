@@ -157,6 +157,7 @@ class SwapExecutionService {
 
       // Step 3: Execute via RocketX if quote came from there
       if (quote.rocketxQuote) {
+        // Find the wallet again to ensure we have the right one for decryption
         const rxResult = await executeRocketxSwap({
           fromToken,
           toToken,
@@ -175,6 +176,12 @@ class SwapExecutionService {
 
         this.saveOrderToHistory(submittedOrder);
         return submittedOrder;
+      }
+
+      // Pre-check balance before manual signing path
+      const hasBalance = await this.checkSufficientBalance(wallet, amount, fromToken, userPassword, userId);
+      if (!hasBalance) {
+        throw new Error(`Insufficient ${fromToken} balance for this swap`);
       }
 
       // Fallback: Sign and submit manually (existing AsterDEX logic)
