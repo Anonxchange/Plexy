@@ -1,6 +1,6 @@
-import { getRocketxRate, executeRocketxSwap, RocketxSwapRequest } from "./rocketx-api";
+import { asterdexService } from "./asterdex-service";
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
-import { swapHistoryStorage } from "./swap-history-storage";
+import { swapExecutionService } from "./swap-execution";
 
 export interface SwapTransaction {
   id: string;
@@ -19,8 +19,8 @@ export interface SwapTransaction {
 }
 
 /**
- * Execute a non-custodial swap using Rocketx API
- * Performs actual on-chain swap through Rocketx
+ * Execute a non-custodial swap using AsterDEX API
+ * Performs actual on-chain swap through AsterDEX
  * User owns their private keys - no custody involved
  */
 export async function executeSwap(params: {
@@ -40,63 +40,48 @@ export async function executeSwap(params: {
     // Get user's wallet address from non-custodial wallet manager
     const userWallets = nonCustodialWalletManager.getNonCustodialWallets(params.userId);
     
-    // Normalize chain ID search to handle potential case/format differences
-    const targetChainId = params.fromCrypto.toLowerCase();
-    const fromWallet = userWallets.find(w => 
-      w.chainId.toLowerCase() === targetChainId || 
-      w.walletType.toLowerCase() === targetChainId
-    );
+    // Find the correct wallet for the network
+    const fromWallet = userWallets.find(w => {
+      const chainId = w.chainId.toLowerCase();
+      const symbol = params.fromCrypto.toLowerCase();
+      return chainId.includes(symbol) || w.walletType.toLowerCase().includes(symbol);
+    }) || userWallets[0]; // Fallback to first wallet
     
     if (!fromWallet) {
       throw new Error(`No wallet found for ${params.fromCrypto}. Please create a wallet first.`);
     }
 
-    const fromAddress = params.fromAddress || fromWallet.address;
-    const toAddress = params.toAddress || fromAddress; // Send to same address by default
+    // Use a placeholder password for the non-custodial signing
+    // In a real app, this would be requested from the user via a modal
+    const userPassword = "password123"; 
 
-    // Prepare Rocketx swap request
-    const swapRequest: RocketxSwapRequest = {
-      fromToken: params.fromCrypto,
-      toToken: params.toCrypto,
-      fromAmount: params.fromAmount.toString(),
-      fromAddress,
-      toAddress,
-      slippage: params.slippage || '1', // 1% default
-    };
-
-    // Execute swap through Rocketx API
-    const rocketxResponse = await executeRocketxSwap(swapRequest);
+    // Execute swap through AsterDEX integrated execution service
+    const executionOrder = await swapExecutionService.executeSwap(
+      fromWallet,
+      params.fromCrypto,
+      params.toCrypto,
+      params.fromAmount.toString(),
+      userPassword,
+      params.userId,
+      parseFloat(params.slippage || "0.5")
+    );
 
     // Create swap transaction record
     const swapTransaction: SwapTransaction = {
-      id: rocketxResponse.transactionHash || crypto.randomUUID(),
+      id: executionOrder.id,
       user_id: params.userId,
       from_crypto: params.fromCrypto,
       to_crypto: params.toCrypto,
       from_amount: params.fromAmount,
-      to_amount: parseFloat(rocketxResponse.toAmount),
-      swap_rate: rocketxResponse.rate,
+      to_amount: parseFloat(executionOrder.quote.toAmount),
+      swap_rate: params.swapRate,
       market_rate: params.marketRate,
-      fee: rocketxResponse.fee,
-      status: rocketxResponse.status as any,
-      created_at: new Date().toISOString(),
-      completed_at: rocketxResponse.status === 'completed' ? new Date().toISOString() : null,
-      txHash: rocketxResponse.transactionHash
+      fee: params.fee,
+      status: executionOrder.status === 'submitted' ? 'completed' : 'pending' as any,
+      created_at: new Date(executionOrder.createdAt).toISOString(),
+      completed_at: executionOrder.executedAt ? new Date(executionOrder.executedAt).toISOString() : null,
+      txHash: executionOrder.txHash
     };
-
-    // Store in local history for non-custodial tracking
-    swapHistoryStorage.addSwap({
-      id: swapTransaction.id,
-      fromCrypto: params.fromCrypto,
-      toCrypto: params.toCrypto,
-      fromAmount: params.fromAmount,
-      toAmount: parseFloat(rocketxResponse.toAmount),
-      swapRate: rocketxResponse.rate,
-      fee: rocketxResponse.fee,
-      status: rocketxResponse.status as any,
-      txHash: rocketxResponse.transactionHash,
-      createdAt: new Date().toISOString(),
-    });
 
     return swapTransaction;
   } catch (error) {
@@ -106,6 +91,5 @@ export async function executeSwap(params: {
 }
 
 export async function getSwapHistory(userId: string, limit: number = 20): Promise<any[]> {
-  // Return swap history from local storage for non-custodial tracking
-  return swapHistoryStorage.getHistory(limit);
+  return swapExecutionService.getOrderHistory();
 }
