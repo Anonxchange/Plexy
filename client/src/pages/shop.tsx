@@ -176,17 +176,16 @@ export function Shop() {
             <p className="text-muted-foreground">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {filteredProducts.map((product) => (
               <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-square bg-muted relative">
-                  {product.metadata?.[0] ? (
-                    <div className="w-full h-full flex items-center justify-center bg-primary/5">
-                      <Package className="h-12 w-12 text-primary/20" />
-                      <span className="absolute bottom-2 left-2 text-[10px] bg-background/80 px-2 py-0.5 rounded border">
-                        {product.metadata[0].name}
-                      </span>
-                    </div>
+                <div className="aspect-[4/3] bg-muted relative">
+                  {product.images && product.images.length > 0 ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Package className="h-12 w-12 text-muted-foreground/20" />
@@ -237,7 +236,15 @@ export function Shop() {
               </DialogHeader>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                 <div className="aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                   <Package className="h-20 w-20 text-muted-foreground/20" />
+                  {selectedProduct.images && selectedProduct.images.length > 0 ? (
+                    <img
+                      src={selectedProduct.images[0]}
+                      alt={selectedProduct.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Package className="h-20 w-20 text-muted-foreground/20" />
+                  )}
                 </div>
                 <div className="space-y-4">
                   <div>
