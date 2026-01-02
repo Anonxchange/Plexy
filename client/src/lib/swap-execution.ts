@@ -132,10 +132,16 @@ class SwapExecutionService {
       throw new Error("Mnemonic not found for signing");
     }
 
+    // Determine wallet type if undefined
+    const effectiveWalletType = wallet.walletType || 
+      ((wallet.chainId === "bitcoin" || wallet.chainId === "Bitcoin (SegWit)") ? "bitcoin" : 
+       (wallet.chainId === "Solana") ? "solana" :
+       (wallet.chainId === "Tron (TRC-20)") ? "tron" : "ethereum");
+
     try {
       let signedTxResult: any;
 
-      if (wallet.walletType === "bitcoin") {
+      if (effectiveWalletType === "bitcoin") {
         const btcTxData = {
           to: "bc1" + "q".repeat(39), // Placeholder DEX address
           amount: Math.floor(parseFloat(order.amount) * 1e8),
@@ -143,25 +149,25 @@ class SwapExecutionService {
           feeRate: 10,
         };
         signedTxResult = await signBitcoinTransaction(mnemonic, btcTxData as any);
-      } else if (wallet.walletType === "ethereum" || wallet.walletType === "tron") {
+      } else if (effectiveWalletType === "ethereum" || effectiveWalletType === "tron") {
         const txData = {
           to: "0x" + "1".repeat(40),
           amount: order.amount,
           currency: order.fromToken as any,
         };
-        if (wallet.walletType === "ethereum") {
+        if (effectiveWalletType === "ethereum") {
           signedTxResult = await signEVMTransaction(mnemonic, txData as any);
         } else {
           signedTxResult = await signTronTransaction(mnemonic, { ...txData, currency: (order.fromToken + "_TRX") as any });
         }
-      } else if (wallet.walletType === "solana") {
+      } else if (effectiveWalletType === "solana") {
         signedTxResult = await signSolanaTransaction(mnemonic, {
           to: "Sol" + "1".repeat(41),
           amount: order.amount,
           currency: "SOL"
         });
       } else {
-        throw new Error(`Unsupported wallet type for spot trading: ${wallet.walletType}`);
+        throw new Error(`Unsupported wallet type for spot trading: ${effectiveWalletType} (chainId: ${wallet.chainId})`);
       }
 
       return typeof signedTxResult.signedTx === 'string' ? signedTxResult.signedTx : JSON.stringify(signedTxResult.signedTx);
