@@ -32,7 +32,7 @@ const s3Client = new S3Client({
 
 export async function uploadToR2(
   file: File,
-  folder: 'profile-pictures' | 'verification-documents' | 'verification-videos' | 'liveness-captures' | 'gift-cards',
+  folder: 'profile-pictures' | 'verification-documents' | 'verification-videos' | 'liveness-captures' | 'gift-cards' | 'shop',
   userId: string
 ): Promise<UploadResult> {
   try {
@@ -101,7 +101,7 @@ export async function uploadToR2(
 
 export async function uploadBase64ToR2(
   base64Data: string,
-  folder: 'profile-pictures' | 'verification-documents' | 'verification-videos' | 'liveness-captures' | 'gift-cards',
+  folder: 'profile-pictures' | 'verification-documents' | 'verification-videos' | 'liveness-captures' | 'gift-cards' | 'shop',
   userId: string,
   fileExtension: string = 'jpg'
 ): Promise<UploadResult> {
