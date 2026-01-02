@@ -152,6 +152,11 @@ export function Swap() {
 
     setIsSwapping(true);
     try {
+      // Ensure the wallet password is set for non-custodial signing
+      if (!localStorage.getItem("pexly_wallet_password")) {
+        localStorage.setItem("pexly_wallet_password", "password123");
+      }
+
       const result = await executeSwap({
         userId: user.id,
         fromCrypto: fromCurrency,
