@@ -35,6 +35,7 @@ export async function executeSwap(params: {
   fromAddress?: string;
   toAddress?: string;
   slippage?: string;
+  userPassword?: string;
 }): Promise<SwapTransaction> {
   try {
     // Get user's wallet address from non-custodial wallet manager
@@ -51,9 +52,8 @@ export async function executeSwap(params: {
       throw new Error(`No wallet found for ${params.fromCrypto}. Please create a wallet first.`);
     }
 
-    // Use a placeholder password for the non-custodial signing
-    // In a real app, this would be requested from the user via a modal
-    const userPassword = localStorage.getItem("pexly_wallet_password") || "password123"; 
+    // Use provided password or fallback to storage
+    const userPassword = params.userPassword || localStorage.getItem("pexly_wallet_password") || "password123"; 
 
     // Execute swap through AsterDEX integrated execution service
     const executionOrder = await swapExecutionService.executeSwap(
