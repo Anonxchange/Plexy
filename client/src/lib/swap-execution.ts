@@ -1,5 +1,9 @@
 import { asterdexService } from "./asterdex-service";
 import { nonCustodialWalletManager, type NonCustodialWallet } from "./non-custodial-wallet";
+import { signBitcoinTransaction } from "./bitcoinSigner";
+import { signEVMTransaction } from "./evmSigner";
+import { signSolanaTransaction } from "./solanaSigner";
+import { signTronTransaction } from "./tronSigner";
 
 export interface SwapQuote {
   fromToken: string;
@@ -111,7 +115,7 @@ class SwapExecutionService {
   }
 
   /**
-   * Sign transaction with non-custodial wallet
+   * Sign transaction with non-custodial wallet using network-specific signers
    */
   async signSwapTransaction(
     wallet: NonCustodialWallet,
@@ -123,49 +127,45 @@ class SwapExecutionService {
       throw new Error("User ID required to sign transaction");
     }
 
+    const mnemonic = nonCustodialWalletManager.getWalletMnemonic(wallet.id, userPassword, userId);
+    if (!mnemonic) {
+      throw new Error("Mnemonic not found for signing");
+    }
+
     try {
-      let txData: any;
-      
-      // Format transaction data based on wallet type
+      let signedTxResult: any;
+
       if (wallet.walletType === "bitcoin") {
-        // Bitcoin transaction structure
-        txData = {
-          inputs: [
-            {
-              txid: "placeholder_txid_" + Math.random().toString(36).substr(2, 9),
-              vout: 0
-            }
-          ],
-          outputs: [
-            {
-              address: wallet.address,
-              value: parseInt(order.amount) * 100000000 // Convert to satoshis
-            }
-          ]
+        const btcTxData = {
+          to: "bc1" + "q".repeat(39), // Placeholder DEX address
+          amount: Math.floor(parseFloat(order.amount) * 1e8),
+          utxos: [], // Would fetch real UTXOs in production
+          feeRate: 10,
         };
+        signedTxResult = await signBitcoinTransaction(mnemonic, btcTxData as any);
+      } else if (wallet.walletType === "ethereum" || wallet.walletType === "tron") {
+        const txData = {
+          to: "0x" + "1".repeat(40),
+          amount: order.amount,
+          currency: order.fromToken as any,
+        };
+        if (wallet.walletType === "ethereum") {
+          signedTxResult = await signEVMTransaction(mnemonic, txData as any);
+        } else {
+          signedTxResult = await signTronTransaction(mnemonic, { ...txData, currency: (order.fromToken + "_TRX") as any });
+        }
+      } else if (wallet.walletType === "solana") {
+        signedTxResult = await signSolanaTransaction(mnemonic, {
+          to: "Sol" + "1".repeat(41),
+          amount: order.amount
+        });
       } else {
-        // EVM transaction structure
-        txData = {
-          to: "0x" + "1".repeat(40), // Placeholder: would be DEX router address
-          from: wallet.address,
-          value: "0",
-          data: this.buildSwapData(order),
-          gasLimit: "300000",
-          gasPrice: "20000000000", // 20 gwei
-        };
+        throw new Error(`Unsupported wallet type for spot trading: ${wallet.walletType}`);
       }
 
-      // Sign transaction with wallet
-      const signedTx = await nonCustodialWalletManager.signTransaction(
-        wallet.id,
-        txData,
-        userPassword,
-        userId
-      );
-
-      return signedTx;
+      return typeof signedTxResult.signedTx === 'string' ? signedTxResult.signedTx : JSON.stringify(signedTxResult.signedTx);
     } catch (error) {
-      throw new Error(`Failed to sign transaction: ${error}`);
+      throw new Error(`Failed to sign swap transaction: ${error}`);
     }
   }
 
