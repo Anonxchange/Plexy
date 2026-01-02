@@ -19,6 +19,10 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, Loader2, CheckCircle2, X, Copy } from "lucide-react";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
+import { signEVMTransaction } from "@/lib/evmSigner";
+import { signSolanaTransaction } from "@/lib/solanaSigner";
+import { signTronTransaction } from "@/lib/tronSigner";
 import { useAuth } from "@/lib/auth-context";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSendFee } from "@/hooks/use-fees";
@@ -183,26 +187,43 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     try {
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
       
-      // Force non-custodial logic as we no longer support custodial sends
       const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      const nonCustWallet = wallets.find(w => w.chainId === "ethereum"); // Default to eth for now as per schema
-      if (!nonCustWallet) {
-        setError("Non-custodial wallet not found. Please create one in your wallet settings first.");
-        setLoading(false);
-        return;
-      }
+      const nonCustWallet = wallets.find(w => w.chainId === "ethereum");
       
-      // Sign transaction client-side (private key never leaves browser)
+      const passwordToUse = sessionPassword || userPassword;
+      const mnemonic = nonCustodialWalletManager.getWalletMnemonic(wallets[0]?.id, passwordToUse, user.id);
+
+      if (!mnemonic || !nonCustWallet) {
+        throw new Error("Non-custodial wallet or mnemonic not found for signing");
+      }
+
+      let signedTx;
       const txData = {
         to: toAddress,
-        amount: cryptoAmountNum,
-        symbol: symbolToUse,
+        amount: cryptoAmountNum.toString(),
+        currency: symbolToUse as any,
       };
-      
-      // Use cached session password or newly entered password
-      const passwordToUse = sessionPassword || userPassword;
-      const signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, passwordToUse, user.id);
-      console.log("Signed Transaction:", signedTx);
+
+      if (selectedNetwork.includes("Bitcoin")) {
+        const btcTxData = {
+          to: toAddress,
+          amount: Math.floor(cryptoAmountNum * 1e8),
+          utxos: await (await fetch(`https://blockstream.info/api/address/${nonCustWallet.address}/utxo`)).json(),
+          feeRate: 10,
+        };
+        signedTx = await signBitcoinTransaction(mnemonic, btcTxData as any);
+      } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
+        signedTx = await signEVMTransaction(mnemonic, txData as any);
+      } else if (selectedNetwork.includes("Solana")) {
+        signedTx = await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString() });
+      } else if (selectedNetwork.includes("Tron")) {
+        signedTx = await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
+      } else {
+        // Fallback to manager's default signing
+        signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, passwordToUse, user.id);
+      }
+
+      console.log("Signed Transaction Result:", signedTx);
       
       // Cache password if not already cached
       if (!sessionPassword && userPassword) {
