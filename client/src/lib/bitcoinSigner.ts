@@ -34,7 +34,7 @@ export interface SignedBitcoinTransaction {
   fee: number;
 }
 
-async function getKeyPairFromMnemonic(mnemonic: string): Promise<{ keyPair: ReturnType<typeof ECPair.fromPrivateKey>; publicKey: Buffer }> {
+async function getKeyPairFromMnemonic(mnemonic: string): Promise<{ keyPair: any; publicKey: Buffer }> {
   const seed = await mnemonicToSeed(mnemonic);
   const hdKey = HDKey.fromMasterSeed(seed);
   const child = hdKey.derive(DERIVATION_PATH);
