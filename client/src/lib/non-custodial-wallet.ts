@@ -8,6 +8,11 @@ import { ethers } from "ethers";
 import * as bitcoin from "bitcoinjs-lib";
 import { BIP32Factory } from "bip32";
 import * as ecc from "tiny-secp256k1";
+import { ECPairFactory } from "ecpair";
+import { signBitcoinTransaction } from "./bitcoinSigner";
+import { signEVMTransaction } from "./evmSigner";
+import { signSolanaTransaction } from "./solanaSigner";
+import { signTronTransaction } from "./tronSigner";
 
 const bip32 = BIP32Factory(ecc);
 
@@ -97,10 +102,10 @@ class NonCustodialWalletManager {
     let walletType = "ethereum";
 
     if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
-      const root = bip32.fromSeed(seed);
+      const root = bip32.fromSeed(Buffer.from(seed));
       const account = root.derivePath("m/84'/0'/0'/0/0");
       const { address: btcAddress } = bitcoin.payments.p2wpkh({
-        pubkey: account.publicKey,
+        pubkey: Buffer.from(account.publicKey),
         network: bitcoin.networks.bitcoin,
       });
       if (!btcAddress) throw new Error("Failed to generate Bitcoin address");
@@ -226,10 +231,10 @@ class NonCustodialWalletManager {
       if (isMnemonic) {
         const seed = await bip39.mnemonicToSeed(importData);
         if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
-          const root = bip32.fromSeed(seed);
+          const root = bip32.fromSeed(Buffer.from(seed));
           const account = root.derivePath("m/84'/0'/0'/0/0");
           const { address: btcAddress } = bitcoin.payments.p2wpkh({
-            pubkey: account.publicKey,
+            pubkey: Buffer.from(account.publicKey),
             network: bitcoin.networks.bitcoin,
           });
           if (!btcAddress) throw new Error("Failed to derive Bitcoin address");
@@ -242,9 +247,10 @@ class NonCustodialWalletManager {
         }
       } else {
         if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
-          const keyPair = bitcoin.ECPair.fromWIF(importData);
+          const ECPair = ECPairFactory(ecc);
+          const keyPair = ECPair.fromWIF(importData);
           const { address: btcAddress } = bitcoin.payments.p2wpkh({
-            pubkey: keyPair.publicKey,
+            pubkey: Buffer.from(keyPair.publicKey),
             network: bitcoin.networks.bitcoin,
           });
           if (!btcAddress) throw new Error("Failed to derive Bitcoin address from WIF");
@@ -353,14 +359,49 @@ class NonCustodialWalletManager {
     // Sign transaction client-side
     try {
       if (wallet.walletType === "bitcoin") {
-        // Bitcoin transaction signing
-        const bitcoinSignedTx = this.signBitcoinTransaction(privateKey, transactionData);
-        // Clear private key from memory
-        privateKey = "";
-        return bitcoinSignedTx;
+        // Bitcoin transaction signing using the new dedicated signer
+        const mnemonic = this.getWalletMnemonic(walletId, userPassword, userId);
+        if (mnemonic) {
+          const bitcoinSignedTx = await signBitcoinTransaction(mnemonic, transactionData);
+          privateKey = "";
+          return bitcoinSignedTx.signedTx;
+        } else {
+          // Fallback to WIF signing if no mnemonic (legacy imported wallets)
+          const decryptedWIF = this.decryptPrivateKey(wallet.encryptedPrivateKey, userPassword);
+          const signedHex = await this.signBitcoinTransactionDirect(decryptedWIF, transactionData);
+          privateKey = "";
+          return signedHex;
+        }
       }
 
-      // Ethereum/EVM signing
+      if (wallet.walletType === "ethereum") {
+        const mnemonic = this.getWalletMnemonic(walletId, userPassword, userId);
+        if (mnemonic) {
+          const evmSignedTx = await signEVMTransaction(mnemonic, transactionData);
+          privateKey = "";
+          return evmSignedTx.signedTx;
+        }
+      }
+
+      if (wallet.walletType === "tron") {
+        const mnemonic = this.getWalletMnemonic(walletId, userPassword, userId);
+        if (mnemonic) {
+          const tronSignedTx = await signTronTransaction(mnemonic, transactionData);
+          privateKey = "";
+          return typeof tronSignedTx.signedTx === 'string' ? tronSignedTx.signedTx : JSON.stringify(tronSignedTx.signedTx);
+        }
+      }
+
+      if (wallet.walletType === "solana") {
+        const mnemonic = this.getWalletMnemonic(walletId, userPassword, userId);
+        if (mnemonic) {
+          const solanaSignedTx = await signSolanaTransaction(mnemonic, transactionData);
+          privateKey = "";
+          return solanaSignedTx.signedTx;
+        }
+      }
+
+      // Default Ethereum/EVM signing fallback
       let signer: ethers.Wallet;
       try {
         signer = new ethers.Wallet(privateKey);
@@ -482,57 +523,46 @@ class NonCustodialWalletManager {
   }
 
   /**
-   * Sign a Bitcoin transaction
+   * Sign a Bitcoin transaction (Legacy/Direct WIF)
    */
-  private signBitcoinTransaction(privateKeyHex: string, transactionData: any): string {
+  private async signBitcoinTransactionDirect(privateKeyWIF: string, transactionData: any): Promise<string> {
     try {
-      // Remove 0x prefix if present
-      let cleanPrivateKey = privateKeyHex.startsWith("0x") ? privateKeyHex.slice(2) : privateKeyHex;
-      
-      // For Bitcoin, private key should be in proper format
-      const privateKeyBuffer = Buffer.from(cleanPrivateKey, "hex");
-      
-      if (privateKeyBuffer.length !== 32) {
-        throw new Error("Invalid Bitcoin private key length");
-      }
-
-      // Create keypair using bitcoin.js
-      const keyPair = bitcoin.ECPair.fromPrivateKeyBuffer(privateKeyBuffer, {
-        compressed: true,
-        network: bitcoin.networks.bitcoin
-      });
+      const ECPair = ECPairFactory(ecc);
+      const keyPair = ECPair.fromWIF(privateKeyWIF, bitcoin.networks.bitcoin);
+      const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
 
       // Parse transaction data
       const inputs = transactionData.inputs || [];
       const outputs = transactionData.outputs || [];
-      
+
       if (inputs.length === 0 || outputs.length === 0) {
         throw new Error("Bitcoin transaction requires inputs and outputs");
       }
 
-      // Create transaction builder
-      const txBuilder = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
-
       // Add inputs
       for (const input of inputs) {
-        txBuilder.addInput(input.txid, input.vout);
+        psbt.addInput({
+          hash: input.txid,
+          index: input.vout,
+          nonWitnessUtxo: Buffer.from(input.rawTx || '', 'hex'),
+        });
       }
 
       // Add outputs
       for (const output of outputs) {
-        const address = output.address;
-        const value = parseInt(output.value, 10);
-        txBuilder.addOutput(address, value);
+        psbt.addOutput({
+          address: output.address,
+          value: parseInt(output.value, 10),
+        });
       }
 
       // Sign inputs
       for (let i = 0; i < inputs.length; i++) {
-        txBuilder.sign(i, keyPair);
+        psbt.signInput(i, keyPair);
       }
 
-      // Build and return signed transaction
-      const signedTx = txBuilder.build();
-      return signedTx.toHex();
+      psbt.finalizeAllInputs();
+      return psbt.extractTransaction().toHex();
     } catch (error) {
       throw new Error(`Bitcoin transaction signing failed: ${error}`);
     }
