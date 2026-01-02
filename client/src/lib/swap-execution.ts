@@ -1,9 +1,9 @@
 import { asterdexService } from "./asterdex-service";
 import { nonCustodialWalletManager, type NonCustodialWallet } from "./non-custodial-wallet";
-import { signBitcoinTransaction } from "./bitcoinSigner";
-import { signEVMTransaction } from "./evmSigner";
-import { signSolanaTransaction } from "./solanaSigner";
-import { signTronTransaction } from "./tronSigner";
+import { signBitcoinTransaction, getBitcoinBalance } from "./bitcoinSigner";
+import { signEVMTransaction, getEVMBalance } from "./evmSigner";
+import { signSolanaTransaction, getSolanaAddress } from "./solanaSigner";
+import { signTronTransaction, getTronBalance, getTRC20Balance } from "./tronSigner";
 
 export interface SwapQuote {
   fromToken: string;
@@ -67,8 +67,8 @@ class SwapExecutionService {
       const slippageAmount = baseAmount * (slippageTolerance / 100);
       const toAmount = baseAmount - slippageAmount;
       
-      // Spot trading fee (0.16% as per your setup)
-      const feePercentage = 0.16;
+      // Spot trading fee (0% - Removed platform fee)
+      const feePercentage = 0;
       const fee = fromToken === "USDT" ? (fromAmount * (feePercentage / 100)) : (toAmount * (feePercentage / 100));
       
       // Price impact simulation (based on order size relative to volume)
@@ -208,18 +208,19 @@ class SwapExecutionService {
   ): Promise<{ txHash: string; order: ExecutionOrder }> {
     try {
       // Generate placeholder transaction hash
-      // In production: this would be returned by the blockchain
       const txHash = `0x${Array.from({ length: 64 }, () =>
         Math.floor(Math.random() * 16).toString(16)
       ).join("")}`;
 
-      // Order remains in submitted state - only confirmed after on-chain confirmation
       const updatedOrder: ExecutionOrder = {
         ...order,
         status: "submitted",
         txHash,
         executedAt: Date.now(),
       };
+
+      // Store in order history (localStorage for now)
+      this.saveOrderToHistory(updatedOrder);
 
       return {
         txHash,
@@ -228,6 +229,16 @@ class SwapExecutionService {
     } catch (error) {
       throw new Error(`Failed to submit transaction: ${error}`);
     }
+  }
+
+  private saveOrderToHistory(order: ExecutionOrder) {
+    const history = JSON.parse(localStorage.getItem("pexly_swap_history") || "[]");
+    history.unshift(order);
+    localStorage.setItem("pexly_swap_history", JSON.stringify(history.slice(0, 50)));
+  }
+
+  getOrderHistory(): ExecutionOrder[] {
+    return JSON.parse(localStorage.getItem("pexly_swap_history") || "[]");
   }
 
   /**
@@ -253,6 +264,39 @@ class SwapExecutionService {
   }
 
   /**
+   * Check if wallet has sufficient balance for the swap
+   */
+  async checkSufficientBalance(
+    wallet: NonCustodialWallet,
+    amount: string,
+    currency: string,
+    userPassword: string,
+    userId: string
+  ): Promise<boolean> {
+    const mnemonic = nonCustodialWalletManager.getWalletMnemonic(wallet.id, userPassword, userId);
+    if (!mnemonic) throw new Error("Mnemonic not found for balance check");
+
+    let balanceStr = "0";
+    const type = wallet.walletType;
+
+    if (type === "bitcoin") {
+      const balanceSats = await getBitcoinBalance(wallet.address);
+      balanceStr = (balanceSats / 1e8).toString();
+    } else if (type === "ethereum") {
+      balanceStr = await getEVMBalance(mnemonic, currency as any);
+    } else if (type === "tron") {
+      if (currency === "TRX") {
+        balanceStr = await getTronBalance(mnemonic);
+      } else {
+        // Assume USDT_TRX for tokens on Tron in this context
+        balanceStr = await getTRC20Balance(mnemonic, "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"); 
+      }
+    }
+
+    return parseFloat(balanceStr) >= parseFloat(amount);
+  }
+
+  /**
    * Execute complete swap flow: quote -> sign -> submit -> monitor
    */
   async executeSwap(
@@ -264,6 +308,14 @@ class SwapExecutionService {
     userId?: string,
     slippageTolerance: number = 0.5
   ): Promise<ExecutionOrder> {
+    if (!userId) throw new Error("User ID required");
+
+    // Pre-check balance
+    const hasBalance = await this.checkSufficientBalance(wallet, amount, fromToken, userPassword, userId);
+    if (!hasBalance) {
+      throw new Error(`Insufficient ${fromToken} balance for this swap`);
+    }
+
     try {
       // Step 1: Get quote
       const quote = await this.getSwapQuote(
