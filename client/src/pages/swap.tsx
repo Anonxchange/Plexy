@@ -153,13 +153,7 @@ export function Swap() {
     setIsSwapping(true);
     try {
       // Ensure the wallet password is set for non-custodial signing
-      // In a real app, this would be requested from the user via a modal
-      // We check sessionPassword from auth context first as it's the source of truth
       const effectivePassword = localStorage.getItem("pexly_wallet_password") || "password123";
-      
-      if (!localStorage.getItem("pexly_wallet_password")) {
-        localStorage.setItem("pexly_wallet_password", "password123");
-      }
 
       const result = await executeSwap({
         userId: user.id,
@@ -170,6 +164,7 @@ export function Swap() {
         swapRate,
         marketRate,
         fee: feeAmount,
+        userPassword: effectivePassword
       });
 
       toast({
