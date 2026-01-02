@@ -196,7 +196,8 @@ export function Swap() {
       usdValue = fromAmountNum * fromPrice;
     }
 
-    // Enforce $10 minimum
+    // Enforce $10 minimum (REMOVED)
+    /*
     const MIN_SWAP_USD = 10;
     if (usdValue < MIN_SWAP_USD) {
       toast({
@@ -206,6 +207,7 @@ export function Swap() {
       });
       return;
     }
+    */
 
     setIsSwapping(true);
     try {
@@ -612,6 +614,14 @@ export function Swap() {
                   Pexly charges competitive fees for swaps. The exact fee depends on the trading pair and market conditions, but we always show you the total cost upfront before you confirm your swap.
                 </AccordionContent>
               </AccordionItem>
+              <AccordionItem value="item-4" className="bg-card/60 rounded-lg px-6 border-0">
+                <AccordionTrigger className="text-left hover:no-underline py-6">
+                  <span className="text-lg">What are the minimum swap amounts for cryptocurrencies?</span>
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground pb-6">
+                  There are no fixed minimum swap amounts on Pexly. You can swap any amount as long as it covers the network transaction fees.
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </div>
 
@@ -948,10 +958,6 @@ export function Swap() {
                   <span className="font-medium">
                     1 {fromCurrency} = {isLoading ? '...' : formatRate(marketRate)} {toCurrency}
                   </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Minimum swap:</span>
-                  <span className="font-medium">$10.00 USD</span>
                 </div>
               </div>
 
