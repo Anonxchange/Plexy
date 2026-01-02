@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
+import { uploadToR2 } from "@/lib/r2-storage";
 
 const CATEGORIES = [
   "Services",
@@ -100,17 +101,32 @@ export function ShopPost() {
     setIsSubmitting(true);
     try {
       const metadata: any[] = [];
+      const imageUrls: string[] = [];
       
-      // Upload images to R2 via your existing client-side integration if possible
-      // or just collect metadata for the database if that's what's intended
+      // Upload images to R2
       for (const file of attachments) {
-        // Assuming R2 handling is done elsewhere or we just store metadata
-        metadata.push({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          lastModified: file.lastModified
-        });
+        try {
+          // Check if it's an image before uploading
+          const isImage = file.type.startsWith('image/');
+          const uploadResult = await uploadToR2(file, 'shop', user.id);
+          
+          if (uploadResult.success && uploadResult.url) {
+            // Only add to images array if it's actually an image
+            if (isImage) {
+              imageUrls.push(uploadResult.url);
+            }
+          }
+          
+          metadata.push({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            url: uploadResult.url, // Store the actual URL in metadata too
+            lastModified: file.lastModified
+          });
+        } catch (uploadError) {
+          console.error('Error uploading file to R2:', uploadError);
+        }
       }
 
       const { error } = await supabase
@@ -124,8 +140,8 @@ export function ShopPost() {
           price: parseFloat(price),
           currency,
           location,
-          images: [], // No images in Supabase
-          metadata: metadata, // Store metadata instead
+          images: imageUrls,
+          metadata: metadata,
         });
 
       if (error) throw error;
