@@ -58,11 +58,51 @@ export function Shop() {
     try {
       const { data, error } = await supabase
         .from('shop_listings')
-        .select('*')
-        .eq('status', 'active');
+        .select('*');
 
       if (error) throw error;
-      setListings(data || []);
+      
+      // Transform data to handle different image formats (array vs string)
+      const transformedData = (data || []).map(item => {
+        let imageUrls: string[] = [];
+        
+        // Handle images field
+        if (Array.isArray(item.images)) {
+          imageUrls = item.images.filter(img => typeof img === 'string' && img.startsWith('http'));
+        } else if (typeof item.images === 'string' && item.images.trim() !== '') {
+          try {
+            const parsed = JSON.parse(item.images);
+            imageUrls = Array.isArray(parsed) ? parsed.filter(img => typeof img === 'string' && img.startsWith('http')) : [item.images];
+          } catch (e) {
+            if (item.images.startsWith('http')) {
+              imageUrls = [item.images];
+            }
+          }
+        }
+        
+        // Handle metadata fallback if images are empty
+        if (imageUrls.length === 0 && item.metadata) {
+          try {
+            const metadata = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
+            if (Array.isArray(metadata)) {
+              const firstWithUrl = metadata.find(m => m && m.url && typeof m.url === 'string' && m.url.startsWith('http'));
+              if (firstWithUrl) {
+                imageUrls = [firstWithUrl.url];
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing metadata for image fallback:', e);
+          }
+        }
+        
+        return {
+          ...item,
+          images: imageUrls
+        };
+      });
+
+      console.log('Final Transformed Shop Listings:', transformedData);
+      setListings(transformedData);
     } catch (error) {
       console.error('Error fetching listings:', error);
     } finally {
@@ -85,7 +125,7 @@ export function Shop() {
           return b.price - a.price;
         case "newest":
           // @ts-ignore
-          return new Date(b.created_at) - new Date(a.created_at);
+          return new Date(b.created_at || b.createdAt || 0).getTime() - new Date(a.created_at || a.createdAt || 0).getTime();
         default:
           return 0;
       }
