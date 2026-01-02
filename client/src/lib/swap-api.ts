@@ -39,7 +39,13 @@ export async function executeSwap(params: {
   try {
     // Get user's wallet address from non-custodial wallet manager
     const userWallets = nonCustodialWalletManager.getNonCustodialWallets(params.userId);
-    const fromWallet = userWallets.find(w => w.chainId === params.fromCrypto.toLowerCase());
+    
+    // Normalize chain ID search to handle potential case/format differences
+    const targetChainId = params.fromCrypto.toLowerCase();
+    const fromWallet = userWallets.find(w => 
+      w.chainId.toLowerCase() === targetChainId || 
+      w.walletType.toLowerCase() === targetChainId
+    );
     
     if (!fromWallet) {
       throw new Error(`No wallet found for ${params.fromCrypto}. Please create a wallet first.`);
