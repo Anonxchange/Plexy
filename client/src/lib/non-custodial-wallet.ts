@@ -9,8 +9,6 @@ import * as bitcoin from "bitcoinjs-lib";
 import { BIP32Factory } from "bip32";
 // import * as ecc from "tiny-secp256k1";
 const ecc = {} as any;
-// import { ECPairFactory } from "ecpair";
-const ECPairFactory = (...args: any[]) => ({}) as any;
 import { signBitcoinTransaction } from "./bitcoinSigner";
 import { signEVMTransaction } from "./evmSigner";
 import { signSolanaTransaction } from "./solanaSigner";
