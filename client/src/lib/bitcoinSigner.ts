@@ -198,6 +198,7 @@ export async function getBitcoinBalance(address: string): Promise<number> {
 // Sign a message (BIP322 style, simplified)
 export async function signBitcoinMessage(mnemonic: string, message: string): Promise<string> {
   const { keyPair } = await getKeyPairFromMnemonic(mnemonic);
+  // bitcoinjs-lib exports sha256 from the root in some versions or it's available via crypto.hash256
   const messageHash = bitcoin.crypto.sha256(Buffer.from(message));
   const signature = keyPair.sign(messageHash);
   return signature.toString('hex');
