@@ -7,8 +7,8 @@ import * as bip39 from "bip39";
 import { ethers } from "ethers";
 import * as bitcoin from "bitcoinjs-lib";
 import { BIP32Factory } from "bip32";
-// import * as ecc from "tiny-secp256k1";
-const ecc = {} as any;
+import * as ecc from "tiny-secp256k1";
+import { ECPairFactory } from "ecpair";
 import { signBitcoinTransaction } from "./bitcoinSigner";
 import { signEVMTransaction } from "./evmSigner";
 import { signSolanaTransaction } from "./solanaSigner";
@@ -552,7 +552,7 @@ class NonCustodialWalletManager {
       for (const output of outputs) {
         psbt.addOutput({
           address: output.address,
-          value: parseInt(output.value, 10),
+          value: BigInt(parseInt(output.value, 10)),
         });
       }
 
