@@ -157,7 +157,8 @@ class SwapExecutionService {
       } else if (wallet.walletType === "solana") {
         signedTxResult = await signSolanaTransaction(mnemonic, {
           to: "Sol" + "1".repeat(41),
-          amount: order.amount
+          amount: order.amount,
+          currency: "SOL"
         });
       } else {
         throw new Error(`Unsupported wallet type for spot trading: ${wallet.walletType}`);
