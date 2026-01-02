@@ -16,6 +16,8 @@ import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { executeSwap } from "@/lib/swap-api";
+import { swapExecutionService, type ExecutionOrder } from "@/lib/swap-execution";
+import { formatDistanceToNow } from "date-fns";
 
 const currencies = [
   { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC, chain: "BTC", identifier: "BTC.BTC" },
@@ -45,6 +47,44 @@ export function Swap() {
   );
 
   const [isSwapping, setIsSwapping] = useState(false);
+  const [history, setHistory] = useState<ExecutionOrder[]>([]);
+  const [estFees, setEstFees] = useState<Record<string, string>>({
+    BTC: "0.0001 BTC",
+    ETH: "0.002 ETH",
+    BSC: "0.001 BNB",
+    SOL: "0.000005 SOL",
+    TRX: "15 TRX"
+  });
+
+  useEffect(() => {
+    const fetchFees = async () => {
+      try {
+        // Fetch Bitcoin fees
+        const btcRes = await fetch('https://mempool.space/api/v1/fees/recommended');
+        if (btcRes.ok) {
+          const btcData = await btcRes.json();
+          // Average tx is ~140 vBytes, convert sat/vB to BTC
+          const btcFee = (btcData.hourFee * 140) / 1e8;
+          setEstFees(prev => ({ ...prev, BTC: `${btcFee.toFixed(6)} BTC` }));
+        }
+
+        // Fetch Ethereum Gas Price
+        const ethRes = await fetch('https://api.etherscan.io/api?module=proxy&action=eth_gasPrice');
+        if (ethRes.ok) {
+          const ethData = await ethRes.json();
+          const gasPrice = parseInt(ethData.result, 16);
+          // Typical swap is ~150k gas
+          const ethFee = (gasPrice * 150000) / 1e18;
+          setEstFees(prev => ({ ...prev, ETH: `${ethFee.toFixed(5)} ETH` }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch live fees", e);
+      }
+    };
+
+    fetchFees();
+    setHistory(swapExecutionService.getOrderHistory());
+  }, []);
 
   // Auto-update toAmount when prices change or fromAmount changes
   useEffect(() => {
@@ -128,6 +168,7 @@ export function Swap() {
         description: `Swapped ${fromAmountNum} ${fromCurrency} to ${result.to_amount.toFixed(6)} ${toCurrency}`,
       });
 
+      setHistory(swapExecutionService.getOrderHistory());
       setFromAmount("0.00001");
       setToAmount("");
     } catch (error: any) {
@@ -377,6 +418,15 @@ export function Swap() {
                   1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}
                 </span>
               </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Network Fee (Est.):</span>
+                <span className="font-medium text-orange-500">
+                  {fromCurrency === 'BTC' ? estFees.BTC : 
+                   fromCurrency === 'SOL' ? estFees.SOL : 
+                   fromCurrency === 'TRX' ? estFees.TRX : 
+                   fromCurrency === 'BNB' ? estFees.BSC : estFees.ETH}
+                </span>
+              </div>
             </div>
 
             <Button 
@@ -388,6 +438,37 @@ export function Swap() {
             </Button>
           </CardContent>
         </Card>
+
+        {history.length > 0 && (
+          <div className="mt-12 space-y-6">
+            <h2 className="text-2xl font-bold">Swap History</h2>
+            <div className="space-y-4">
+              {history.map((order) => (
+                <Card key={order.id} className="bg-card/50">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="flex -space-x-2">
+                        <img src={currencies.find(c => c.symbol === order.fromToken)?.iconUrl} className="w-8 h-8 rounded-full border-2 border-background" alt="" />
+                        <img src={currencies.find(c => c.symbol === order.toToken)?.iconUrl} className="w-8 h-8 rounded-full border-2 border-background" alt="" />
+                      </div>
+                      <div>
+                        <div className="font-semibold">
+                          {order.amount} {order.fromToken} → {order.quote.toAmount} {order.toToken}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(order.createdAt)} ago
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant={order.status === 'submitted' ? 'default' : 'secondary'} className="bg-primary/20 text-primary border-none">
+                      {order.status === 'submitted' ? 'Waiting on chain' : order.status}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <PexlyFooter />
     </div>
