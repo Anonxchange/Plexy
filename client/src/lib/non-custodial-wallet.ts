@@ -192,7 +192,9 @@ class NonCustodialWalletManager {
             id: `${newWallet.id}_${symbol}`,
             chainId: `${symbol}-${chainId}`,
             address,
-            walletType: newWallet.walletType,
+            walletType: newWallet.walletType || ((chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") ? "bitcoin" : 
+                        (chainId === "Solana") ? "solana" :
+                        (chainId === "Tron (TRC-20)") ? "tron" : "ethereum"),
             encryptedPrivateKey: newWallet.encryptedPrivateKey,
             createdAt: newWallet.createdAt,
             isActive: true,
