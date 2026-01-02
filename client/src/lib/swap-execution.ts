@@ -158,9 +158,10 @@ class SwapExecutionService {
       // Step 3: Execute via RocketX if quote came from there
       if (quote.rocketxQuote) {
         // Find the wallet again to ensure we have the right one for decryption
+        // and that tokens are properly connected
         const rxResult = await executeRocketxSwap({
-          fromToken,
-          toToken,
+          fromToken: this.normalizeToken(fromToken),
+          toToken: this.normalizeToken(toToken),
           fromAmount: amount,
           fromAddress: wallet.address,
           toAddress: wallet.address,
@@ -201,6 +202,20 @@ class SwapExecutionService {
     } catch (error) {
       throw new Error(`Swap execution failed: ${error}`);
     }
+  }
+
+  /**
+   * Normalize token symbol for RocketX integration
+   */
+  private normalizeToken(token: string): string {
+    // RocketX often expects tokens in Chain.Symbol format (e.g., ETH.ETH, BTC.BTC, ETH.USDT)
+    if (token === 'BTC') return 'BTC.BTC';
+    if (token === 'ETH') return 'ETH.ETH';
+    if (token === 'SOL') return 'SOL.SOL';
+    if (token === 'TRX') return 'TRX.TRX';
+    if (token === 'USDT') return 'ETH.USDT'; // Default to Ethereum USDT
+    if (token === 'USDC') return 'ETH.USDC';
+    return token;
   }
 
   async signSwapTransaction(
