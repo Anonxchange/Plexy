@@ -381,6 +381,7 @@ export function Spot() {
       const activeWallet = userWallets[0] as any;
 
       // Execute swap with provided password
+      // Use RocketX via swapExecutionService which now handles token normalization
       const result = await swapExecutionService.executeSwap(
         activeWallet,
         fromToken,
