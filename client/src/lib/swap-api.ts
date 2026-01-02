@@ -53,7 +53,7 @@ export async function executeSwap(params: {
 
     // Use a placeholder password for the non-custodial signing
     // In a real app, this would be requested from the user via a modal
-    const userPassword = "password123"; 
+    const userPassword = localStorage.getItem("pexly_wallet_password") || "password123"; 
 
     // Execute swap through AsterDEX integrated execution service
     const executionOrder = await swapExecutionService.executeSwap(
