@@ -146,7 +146,9 @@ class NonCustodialWalletManager {
       id: this.generateId(),
       chainId,
       address,
-      walletType,
+      walletType: (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") ? "bitcoin" : 
+                  (chainId === "Solana") ? "solana" :
+                  (chainId === "Tron (TRC-20)") ? "tron" : "ethereum",
       encryptedPrivateKey, // Encrypted, safe to store
       encryptedMnemonic, // Encrypted seed phrase for recovery
       createdAt: new Date().toISOString(),
@@ -275,9 +277,11 @@ class NonCustodialWalletManager {
       const newWallet: NonCustodialWallet = {
         id: this.generateId(),
         chainId,
-      address,
-      walletType: (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") ? "bitcoin" : "ethereum",
-      encryptedPrivateKey,
+        address,
+        walletType: (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") ? "bitcoin" : 
+                    (chainId === "Solana") ? "solana" :
+                    (chainId === "Tron (TRC-20)") ? "tron" : "ethereum",
+        encryptedPrivateKey,
         encryptedMnemonic,
         createdAt: new Date().toISOString(),
         isActive: true,
