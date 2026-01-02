@@ -19,6 +19,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Copy, CheckCircle2, Loader2, ArrowLeft, X, Lock } from "lucide-react";
 import { getDepositAddress } from "@/lib/wallet-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { getBitcoinAddress } from "@/lib/bitcoinSigner";
+import { getEVMAddress } from "@/lib/evmSigner";
+import { getSolanaAddress } from "@/lib/solanaSigner";
+import { getTronAddress } from "@/lib/tronSigner";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { QRCodeSVG } from "qrcode.react";
@@ -295,8 +299,26 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryp
 
     setIsGenerating(true);
     try {
+      const wallets = nonCustodialWalletManager.getNonCustodialWallets(user?.id || '');
+      const wallet = wallets[0]; // Get any wallet to retrieve mnemonic
+
+      if (wallet && user) {
+        // For non-custodial, we can derive the address locally
+        // We'll need the password to decrypt the mnemonic if we wanted to derive live,
+        // but the addresses are already stored in the wallet objects during generation.
+        // However, if we want to ensure we're showing the correct derived address from the mnemonic:
+        
+        // Find the wallet matching this network
+        const specificWallet = wallets.find(w => w.chainId === selectedNetwork || w.chainId.includes(selectedCrypto));
+        if (specificWallet) {
+          setDepositAddress(specificWallet.address);
+          setIsGenerating(false);
+          return;
+        }
+      }
+
+      // Fallback to API/stored addresses
       const cryptoSymbol = getCryptoSymbolWithNetwork();
-      console.log('Generating address for:', cryptoSymbol, 'on network:', selectedNetwork);
       const address = await getDepositAddress(user?.id || '', cryptoSymbol);
       setDepositAddress(address);
     } catch (error: any) {
