@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2, Lock } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -31,7 +32,7 @@ const currencies = [
 
 export function Swap() {
   useSchema(swapPageSchema, "swap-page-schema");
-  const { user } = useAuth();
+  const { user, sessionPassword, setSessionPassword } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [fromAmount, setFromAmount] = useState("0.00001");
@@ -39,6 +40,8 @@ export function Swap() {
   const [fromCurrency, setFromCurrency] = useState("BTC");
   const [toCurrency, setToCurrency] = useState("USDT");
   const [isUpdatingFromInput, setIsUpdatingFromInput] = useState(true);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [walletPassword, setWalletPassword] = useState("");
 
   // Fetch live swap prices
   const { marketRate, swapRate, percentageDiff, isLoading } = useSwapPrice(
@@ -144,19 +147,29 @@ export function Swap() {
 
     const fromAmountNum = parseFloat(fromAmount);
     const toAmountNum = parseFloat(toAmount);
-    const feeAmount = 0;
 
     if (fromAmountNum <= 0 || toAmountNum <= 0) {
       return;
     }
 
+    // If we have a cached session password, execute directly
+    if (sessionPassword) {
+      await performSwap(sessionPassword);
+    } else {
+      // Otherwise prompt for password (will be cached for session)
+      setShowPasswordDialog(true);
+    }
+  };
+
+  const performSwap = async (password: string) => {
+    const fromAmountNum = parseFloat(fromAmount);
+    const toAmountNum = parseFloat(toAmount);
+    const feeAmount = 0;
+
     setIsSwapping(true);
     try {
-      // Ensure the wallet password is set for non-custodial signing
-      const effectivePassword = localStorage.getItem("pexly_wallet_password") || "password123";
-
       const result = await executeSwap({
-        userId: user.id,
+        userId: user!.id,
         fromCrypto: fromCurrency,
         toCrypto: toCurrency,
         fromAmount: fromAmountNum,
@@ -164,7 +177,7 @@ export function Swap() {
         swapRate,
         marketRate,
         fee: feeAmount,
-        userPassword: effectivePassword
+        userPassword: password
       });
 
       toast({
@@ -175,6 +188,7 @@ export function Swap() {
       setHistory(swapExecutionService.getOrderHistory());
       setFromAmount("0.00001");
       setToAmount("");
+      setShowPasswordDialog(false);
     } catch (error: any) {
       console.error('Swap error:', error);
       toast({
@@ -184,6 +198,13 @@ export function Swap() {
       });
     } finally {
       setIsSwapping(false);
+    }
+  };
+
+  const handlePasswordSubmit = () => {
+    if (walletPassword.length > 0) {
+      setSessionPassword(walletPassword);
+      performSwap(walletPassword);
     }
   };
 
@@ -442,6 +463,36 @@ export function Swap() {
             </Button>
           </CardContent>
         </Card>
+
+        <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-primary" />
+                Wallet Password Required
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Enter your non-custodial wallet password to authorize this swap. Your password is only stored for this session.
+              </p>
+              <Input
+                type="password"
+                placeholder="Enter wallet password"
+                value={walletPassword}
+                onChange={(e) => setWalletPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>Cancel</Button>
+              <Button onClick={handlePasswordSubmit} disabled={isSwapping || walletPassword.length === 0}>
+                {isSwapping ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Confirm Swap"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {history.length > 0 && (
           <div className="mt-12 space-y-6">
