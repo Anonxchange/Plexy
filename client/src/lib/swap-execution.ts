@@ -213,6 +213,11 @@ class SwapExecutionService {
     if (token === 'ETH') return 'ETH.ETH';
     if (token === 'SOL') return 'SOL.SOL';
     if (token === 'TRX') return 'TRX.TRX';
+    if (token === 'BNB') return 'BSC.BNB';
+    if (token === 'XRP') return 'XRP.XRP';
+    if (token === 'LTC') return 'LTC.LTC';
+    if (token === 'ADA') return 'CARDANO.ADA';
+    if (token === 'TON') return 'TON.TON';
     if (token === 'USDT') return 'ETH.USDT'; // Default to Ethereum USDT
     if (token === 'USDC') return 'ETH.USDC';
     return token;
@@ -228,7 +233,7 @@ class SwapExecutionService {
       throw new Error("User ID required to sign transaction");
     }
 
-    const mnemonic = nonCustodialWalletManager.getWalletMnemonic(wallet.id, userPassword, userId);
+    const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(wallet.id, userPassword, userId);
     if (!mnemonic) {
       throw new Error("Mnemonic not found for signing");
     }
@@ -332,7 +337,7 @@ class SwapExecutionService {
     userPassword: string,
     userId: string
   ): Promise<boolean> {
-    const mnemonic = nonCustodialWalletManager.getWalletMnemonic(wallet.id, userPassword, userId);
+    const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(wallet.id, userPassword, userId);
     if (!mnemonic) throw new Error("Mnemonic not found for balance check");
 
     let balanceStr = "0";
