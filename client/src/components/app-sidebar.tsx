@@ -331,7 +331,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/help" onClick={handleLinkClick}>
+                <Link href="https://help.pexly.app" onClick={handleLinkClick}>
                   <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-help-center">
                     Help Center
                   </Button>
