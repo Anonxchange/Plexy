@@ -128,7 +128,7 @@ export async function signBitcoinTransaction(
       index: utxo.vout,
       witnessUtxo: {
         script: p2wpkh.output!,
-        value: utxo.value,
+        value: BigInt(utxo.value),
       },
     });
   }
@@ -136,7 +136,7 @@ export async function signBitcoinTransaction(
   // Add recipient output
   psbt.addOutput({
     address: request.to,
-    value: request.amount,
+    value: BigInt(request.amount),
   });
 
   // Add change output if needed (dust threshold ~546 satoshis)
@@ -144,7 +144,7 @@ export async function signBitcoinTransaction(
     const changeAddr = request.changeAddress || fromAddress;
     psbt.addOutput({
       address: changeAddr,
-      value: change,
+      value: BigInt(change),
     });
   }
 
