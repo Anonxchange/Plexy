@@ -26,6 +26,9 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "./theme-toggle";
 import { useAuth } from "@/lib/auth-context";
+import { useState, useEffect } from "react";
+import { ReceiveCryptoDialog } from "./receive-crypto-dialog";
+import { getUserWallets } from "@/lib/wallet-api";
 
 interface AppSidebarProps {
   onNavigate?: () => void;
@@ -34,6 +37,14 @@ interface AppSidebarProps {
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
+  const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  const [wallets, setWallets] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      getUserWallets(user.id).then(setWallets);
+    }
+  }, [user]);
 
   const handleLinkClick = () => {
     if (onNavigate) {
@@ -202,7 +213,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     </div>
                   </Button>
                 </Link>
-                <Link href="/wallet/receive" onClick={handleLinkClick}>
+                <button
+                  onClick={() => {
+                    setReceiveDialogOpen(true);
+                    handleLinkClick();
+                  }}
+                  className="w-full"
+                >
                   <Button
                     variant={location === "/wallet/receive" ? "secondary" : "ghost"}
                     className="w-full justify-start gap-3 h-auto py-3"
@@ -215,7 +232,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       <span className="text-xs text-muted-foreground leading-tight">Receive crypto or deposit using fiat</span>
                     </div>
                   </Button>
-                </Link>
+                </button>
                 <Link href="/wallet/visa-card" onClick={handleLinkClick}>
                   <Button
                     variant={location === "/wallet/visa-card" ? "secondary" : "ghost"}
@@ -331,11 +348,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="https://help.pexly.app" onClick={handleLinkClick}>
+                <a href="https://help.pexly.app" target="_blank" rel="noopener noreferrer">
                   <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-help-center">
                     Help Center
                   </Button>
-                </Link>
+                </a>
                 <Link href="/contact" onClick={handleLinkClick}>
                   <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-contact">
                     Contact Us
@@ -389,6 +406,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           </>
         )}
       </div>
+
+      <ReceiveCryptoDialog
+        open={receiveDialogOpen}
+        onOpenChange={setReceiveDialogOpen}
+        wallets={wallets}
+      />
     </div>
   );
 }
