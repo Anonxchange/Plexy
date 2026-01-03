@@ -191,7 +191,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
       const nonCustWallet = wallets.find(w => w.chainId === "ethereum");
       
       const passwordToUse = sessionPassword || userPassword;
-      const mnemonic = nonCustodialWalletManager.getWalletMnemonic(wallets[0]?.id, passwordToUse, user.id);
+      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(wallets[0]?.id, passwordToUse, user.id);
 
       if (!mnemonic || !nonCustWallet) {
         throw new Error("Non-custodial wallet or mnemonic not found for signing");
@@ -215,7 +215,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
       } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
         signedTx = await signEVMTransaction(mnemonic, txData as any);
       } else if (selectedNetwork.includes("Solana")) {
-        signedTx = await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString() });
+        signedTx = await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: "SOL" });
       } else if (selectedNetwork.includes("Tron")) {
         signedTx = await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
       } else {
