@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Sun, Moon, Zap, MapPin, Check, X } from "lucide-react";
-import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
+import { FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
 import { createClient } from "@/lib/supabase";
 import { CountryCodeSelector } from "@/components/country-code-selector";
@@ -542,12 +543,6 @@ export function SignUp() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Zap className="h-5 w-5 text-primary-foreground" />
             </div>
-            <img 
-              src="/assets/IMG_2740.png" 
-              alt="Christmas hat" 
-              className="absolute -top-4 -right-3 w-8 h-8 object-contain"
-              style={{ transform: 'rotate(-25deg)' }}
-            />
           </div>
           <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-black'}`}>
             Pexly
@@ -577,7 +572,7 @@ export function SignUp() {
         </div>
 
         {/* Right Column: Form */}
-        <div className="px-6 pt-12 lg:pt-32 max-w-md mx-auto pb-12 lg:flex lg:flex-col lg:justify-center">
+        <div className="px-6 pt-8 lg:pt-20 max-w-md mx-auto pb-12 lg:flex lg:flex-col lg:justify-center">
         {step === "email_verify" ? (
           <div className={`rounded-2xl p-6 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
             <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
@@ -671,7 +666,7 @@ export function SignUp() {
                     : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
                 }`}
               >
-                <FaGoogle className="w-5 h-5" />
+                <FcGoogle className="w-5 h-5" />
               </button>
               <button 
                 type="button"
@@ -682,7 +677,7 @@ export function SignUp() {
                     : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
                 }`}
               >
-                <FaFacebook className="w-5 h-5" />
+                <FaFacebook className="w-5 h-5 text-[#1877F2]" />
               </button>
               <button 
                 type="button"
@@ -693,7 +688,7 @@ export function SignUp() {
                     : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
                 }`}
               >
-                <FaApple className="w-5 h-5" />
+                <FaApple className={`w-5 h-5 ${isDark ? 'text-white' : 'text-black'}`} />
               </button>
             </div>
 
