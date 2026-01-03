@@ -14,6 +14,8 @@ import { signEVMTransaction } from "./evmSigner";
 import { signSolanaTransaction } from "./solanaSigner";
 import { signTronTransaction } from "./tronSigner";
 
+import { deriveKey } from "./keyDerivation";
+
 const bip32 = BIP32Factory(ecc);
 
 // Base58 alphabet
@@ -137,9 +139,9 @@ class NonCustodialWalletManager {
       address = wallet.address;
     }
     
-    // Encrypt private key and mnemonic with user password
-    const encryptedPrivateKey = this.encryptPrivateKey(privateKey, userPassword);
-    const encryptedMnemonic = this.encryptPrivateKey(mnemonic, userPassword);
+    // Encrypt private key and mnemonic with user password using KDF
+    const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, userId);
+    const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, userId);
     
     // Create wallet object (without sensitive data)
     const newWallet: NonCustodialWallet = {
@@ -273,8 +275,8 @@ class NonCustodialWalletManager {
         throw new Error(`Imported address ${address} does not match expected address ${expectedAddress}`);
       }
 
-      const encryptedPrivateKey = this.encryptPrivateKey(privateKey, userPassword);
-      const encryptedMnemonic = isMnemonic ? this.encryptPrivateKey(importData, userPassword) : undefined;
+      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, userId);
+      const encryptedMnemonic = isMnemonic ? await this.encryptPrivateKey(importData, userPassword, userId) : undefined;
       
       const newWallet: NonCustodialWallet = {
         id: this.generateId(),
@@ -347,7 +349,7 @@ class NonCustodialWalletManager {
     // Decrypt private key (only in memory, temporarily)
     let privateKey: string;
     try {
-      privateKey = this.decryptPrivateKey(wallet.encryptedPrivateKey, userPassword);
+      privateKey = await this.decryptPrivateKey(wallet.encryptedPrivateKey, userPassword, userId);
     } catch (error) {
       throw new Error("Invalid password or corrupted wallet data");
     }
@@ -366,14 +368,14 @@ class NonCustodialWalletManager {
     try {
       if (wallet.walletType === "bitcoin") {
         // Bitcoin transaction signing using the new dedicated signer
-        const mnemonic = this.getWalletMnemonic(walletId, userPassword, userId);
+        const mnemonic = await this.getWalletMnemonic(walletId, userPassword, userId);
         if (mnemonic) {
           const bitcoinSignedTx = await signBitcoinTransaction(mnemonic, transactionData);
           privateKey = "";
           return bitcoinSignedTx.signedTx;
         } else {
           // Fallback to WIF signing if no mnemonic (legacy imported wallets)
-          const decryptedWIF = this.decryptPrivateKey(wallet.encryptedPrivateKey, userPassword);
+          const decryptedWIF = await this.decryptPrivateKey(wallet.encryptedPrivateKey, userPassword, userId);
           const signedHex = await this.signBitcoinTransactionDirect(decryptedWIF, transactionData);
           privateKey = "";
           return signedHex;
@@ -381,7 +383,7 @@ class NonCustodialWalletManager {
       }
 
       if (wallet.walletType === "ethereum") {
-        const mnemonic = this.getWalletMnemonic(walletId, userPassword, userId);
+        const mnemonic = await this.getWalletMnemonic(walletId, userPassword, userId);
         if (mnemonic) {
           const evmSignedTx = await signEVMTransaction(mnemonic, transactionData);
           privateKey = "";
@@ -390,7 +392,7 @@ class NonCustodialWalletManager {
       }
 
       if (wallet.walletType === "tron") {
-        const mnemonic = this.getWalletMnemonic(walletId, userPassword, userId);
+        const mnemonic = await this.getWalletMnemonic(walletId, userPassword, userId);
         if (mnemonic) {
           const tronSignedTx = await signTronTransaction(mnemonic, transactionData);
           privateKey = "";
@@ -399,7 +401,7 @@ class NonCustodialWalletManager {
       }
 
       if (wallet.walletType === "solana") {
-        const mnemonic = this.getWalletMnemonic(walletId, userPassword, userId);
+        const mnemonic = await this.getWalletMnemonic(walletId, userPassword, userId);
         if (mnemonic) {
           const solanaSignedTx = await signSolanaTransaction(mnemonic, transactionData);
           privateKey = "";
@@ -451,7 +453,7 @@ class NonCustodialWalletManager {
   /**
    * Get decrypted mnemonic for a wallet
    */
-  getWalletMnemonic(walletId: string, password: string, userId?: string): string | null {
+  async getWalletMnemonic(walletId: string, password: string, userId?: string): Promise<string | null> {
     if (!userId) {
       throw new Error("userId is required to get wallet mnemonic");
     }
@@ -467,7 +469,7 @@ class NonCustodialWalletManager {
     }
     
     try {
-      const decrypted = this.decryptPrivateKey(wallet.encryptedMnemonic, password);
+      const decrypted = await this.decryptPrivateKey(wallet.encryptedMnemonic, password, userId);
       // Check if decryption resulted in valid data
       if (!decrypted || decrypted.trim() === '') {
         throw new Error("Decrypted phrase is empty - password may be incorrect");
@@ -507,22 +509,22 @@ class NonCustodialWalletManager {
   }
 
   /**
-   * Encrypt private key with user password
+   * Encrypt private key with user password using scrypt KDF
    */
-  private encryptPrivateKey(privateKey: string, password: string): string {
-    return CryptoJS.AES.encrypt(privateKey, password).toString();
+  private async encryptPrivateKey(privateKey: string, password: string, userId: string): Promise<string> {
+    const key = await deriveKey(password, userId);
+    return CryptoJS.AES.encrypt(privateKey, key).toString();
   }
 
   /**
-   * Decrypt private key (only in memory, temporarily)
+   * Decrypt private key with user password using scrypt KDF
    */
-  private decryptPrivateKey(encryptedKey: string, password: string): string {
+  private async decryptPrivateKey(encryptedKey: string, password: string, userId: string): Promise<string> {
     try {
-      const bytes = CryptoJS.AES.decrypt(encryptedKey, password);
-      // Fallback for character encoding if standard UTF-8 fails
+      const key = await deriveKey(password, userId);
+      const bytes = CryptoJS.AES.decrypt(encryptedKey, key);
       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
       
-      // If the decryption was successful but result is empty, it means wrong password
       if (!decrypted || decrypted.trim() === "") {
         throw new Error("Decryption returned empty string");
       }
@@ -530,7 +532,6 @@ class NonCustodialWalletManager {
       return decrypted;
     } catch (error: any) {
       console.error("Decryption error details:", error);
-      // Most likely an incorrect password if UTF-8 decryption fails
       throw new Error("Invalid password. Please enter the correct password for your non-custodial wallet.");
     }
   }
