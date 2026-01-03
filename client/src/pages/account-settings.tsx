@@ -524,15 +524,19 @@ export default function AccountSettings() {
       }
       
       // Try to decrypt the mnemonic with the provided password
-      const mnemonicPhrase = nonCustodialWalletManager.getWalletMnemonic(
+      const mnemonicPhrase = await nonCustodialWalletManager.getWalletMnemonic(
         wallets[0].id,
         backupPassword,
         user.id
       );
       
-      setMnemonic(mnemonicPhrase);
-      setShowBackupPhrase(true);
-      setBackupPassword("");
+      if (mnemonicPhrase) {
+        setMnemonic(mnemonicPhrase);
+        setShowBackupPhrase(true);
+        setBackupPassword("");
+      } else {
+        throw new Error("Failed to decrypt recovery phrase");
+      }
     } catch (error: any) {
       const errorMsg = error.message || "Failed to access recovery phrase";
       console.error("Backup phrase error:", error);
