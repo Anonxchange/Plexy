@@ -123,7 +123,7 @@ export function Spot() {
   }, []);
 
   // Trading Panel State
-  const [orderType, setOrderType] = useState<"limit" | "market">("limit");
+  const [orderType, setOrderType] = useState<"limit" | "market">("market");
   const [buyAmount, setBuyAmount] = useState("");
   const [buyPrice, setBuyPrice] = useState("");
   const [sellAmount, setSellAmount] = useState("");
@@ -208,6 +208,17 @@ export function Spot() {
         
         if (orderBookData) {
           setLiveOrderBook(orderBookData);
+          
+          // Auto-fill price box under Limit order type only if it's currently empty
+          if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
+            const bestBid = orderBookData.bids[0];
+            const bestAsk = orderBookData.asks[0];
+            if (bestBid && bestAsk) {
+              const middlePrice = ((parseFloat(bestBid[0]) + parseFloat(bestAsk[0])) / 2).toString();
+              setBuyPrice(middlePrice);
+              setSellPrice(middlePrice);
+            }
+          }
         }
         if (tradesData) {
           setLiveTrades(tradesData);
@@ -221,7 +232,7 @@ export function Spot() {
     const interval = setInterval(fetchOrderBookAndTrades, 5000); // Update every 5 seconds
     
     return () => clearInterval(interval);
-  }, [selectedPair]);
+  }, [selectedPair, orderType]);
 
   // Calculate buy fee
   useEffect(() => {
