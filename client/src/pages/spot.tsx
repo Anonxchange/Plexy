@@ -392,7 +392,25 @@ export function Spot() {
         description: `You will ${type === "buy" ? "receive" : "pay"} ~${type === "buy" ? quote.toAmount : quote.fromAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
       });
 
-      const activeWallet = userWallets[0] as any;
+      // Find the correct wallet for the network or default to first
+      const nonCustodialWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      const activeWallet = nonCustodialWallets.find((w: any) => {
+        const walletType = (w.walletType || "").toLowerCase();
+        const chainId = (w.chainId || "").toLowerCase();
+        
+        // Match by wallet type or chain ID
+        if (fromToken === "BTC" && (walletType === "bitcoin" || chainId.includes("bitcoin"))) return true;
+        if (fromToken === "SOL" && (walletType === "solana" || chainId.includes("solana"))) return true;
+        if (fromToken === "TRX" && (walletType === "tron" || chainId.includes("tron"))) return true;
+        // Default to EVM for others (USDT, ETH, BNB, etc)
+        if (["ETH", "BNB", "USDT", "USDC"].includes(fromToken) && (walletType === "ethereum" || walletType === "evm")) return true;
+        
+        return false;
+      }) || nonCustodialWallets[0];
+
+      if (!activeWallet) {
+        throw new Error("No non-custodial wallet found. Please create a wallet first.");
+      }
 
       // Execute swap with provided password
       // Use RocketX via swapExecutionService which now handles token normalization
