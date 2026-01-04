@@ -821,43 +821,54 @@ export default function Wallet() {
               </div>
             )}
 
-            {/* News Redesign - Big White Container */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-border/50">
+            {/* News Section */}
+            <div className="bg-card rounded-3xl p-6 shadow-sm border border-border">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Trending News</h2>
-                <button className="text-green-600 font-semibold text-sm hover:underline">See all</button>
+                <h2 className="text-2xl font-bold text-foreground">Trending News</h2>
+                <button className="text-primary font-semibold text-sm hover:underline">See all</button>
               </div>
 
               <div className="space-y-8">
                 {/* Main Featured News */}
                 {cryptoNews[0] && (
-                  <div className="group cursor-pointer">
-                    <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden mb-4 bg-slate-100">
+                  <a 
+                    href={cryptoNews[0].url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="group block cursor-pointer"
+                  >
+                    <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden mb-4 bg-muted">
                       <img 
                         src={cryptoNews[0].image || "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop"} 
                         alt="" 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 leading-tight mb-2 group-hover:text-green-600 transition-colors">
+                    <h3 className="text-xl font-bold text-foreground leading-tight mb-2 group-hover:text-primary transition-colors">
                       {cryptoNews[0].title}
                     </h3>
-                    <p className="text-slate-500 text-sm line-clamp-2 mb-3">
+                    <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
                       {cryptoNews[0].description}
                     </p>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                      <span className="font-medium text-slate-500">{cryptoNews[0].source}</span>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="font-medium text-primary">{cryptoNews[0].source}</span>
                       <span>•</span>
-                      <span>37 minutes ago</span>
+                      <span>{new Date(cryptoNews[0].published_at).toLocaleDateString()}</span>
                     </div>
-                  </div>
+                  </a>
                 )}
 
                 {/* List News */}
-                <div className="space-y-6 pt-6 border-t border-slate-100">
+                <div className="space-y-6 pt-6 border-t border-border">
                   {cryptoNews.slice(1, 10).map((article) => (
-                    <div key={article.id} className="flex gap-4 group cursor-pointer items-center">
-                      <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-slate-100">
+                    <a 
+                      key={article.id} 
+                      href={article.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex gap-4 group cursor-pointer items-center"
+                    >
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-muted">
                         <img 
                           src={article.image || "https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1287&auto=format&fit=crop"} 
                           alt="" 
@@ -865,16 +876,16 @@ export default function Wallet() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-base font-bold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-green-600 transition-colors">
+                        <h4 className="text-base font-bold text-foreground leading-snug mb-2 line-clamp-2 group-hover:text-primary transition-colors">
                           {article.title}
                         </h4>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                          <span className="font-medium text-slate-500">{article.source}</span>
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                          <span className="font-medium text-primary">{article.source}</span>
                           <span>•</span>
-                          <span>43 minutes ago</span>
+                          <span>{new Date(article.published_at).toLocaleDateString()}</span>
                         </div>
                       </div>
-                    </div>
+                    </a>
                   ))}
                 </div>
               </div>
