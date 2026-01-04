@@ -198,76 +198,40 @@ export default function Wallet() {
   const getFallbackNews = () => [
     {
       id: '1',
-      title: 'Bitcoin Surges Past $45,000 Amid Positive Market Sentiment',
-      description: 'Bitcoin reaches new heights',
-      url: 'https://coingecko.com',
-      image: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-      source: 'Crypto News',
+      title: 'Dogecon and Pepe Remain Viral Meme Coins as APEMARS Gains Early Attention Ahead of the Next Market Cycle',
+      description: "Here's what many crypto investors often ov...",
+      url: '#',
+      image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop',
+      source: 'Crypto Economy',
       published_at: new Date().toISOString(),
     },
     {
       id: '2',
-      title: 'Ethereum Network Upgrade Improves Scalability',
-      description: 'Latest improvements',
-      url: 'https://coingecko.com',
-      image: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-      source: 'Crypto Updates',
+      title: 'Top Bitcoin (BTC) Price Predictions for 2026',
+      description: '"If the 4-year cycle is still in ...',
+      url: '#',
+      image: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=2669&auto=format&fit=crop',
+      source: 'CryptoPotato',
       published_at: new Date().toISOString(),
     },
     {
       id: '3',
-      title: 'Major Institutions Increase Crypto Holdings',
-      description: 'Institutional interest grows',
-      url: 'https://coingecko.com',
-      image: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-      source: 'Market Analysis',
+      title: 'XRP Ledger Returns to Pre-Christmas Levels',
+      description: 'Most traders realize XRP Led...',
+      url: '#',
+      image: 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1287&auto=format&fit=crop',
+      source: 'UToday',
       published_at: new Date().toISOString(),
     },
     {
       id: '4',
-      title: 'Solana Network Reaches New Performance Milestone',
-      description: 'Solana updates',
-      url: 'https://coingecko.com',
-      image: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
-      source: 'Tech News',
+      title: "'Just The Beginning'- Bitcoin And Crypto Suddenly Braced For A 'Critical' $17.3 trillion Oil Price Shock",
+      description: 'Analysts are braced for a $17.',
+      url: '#',
+      image: 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1287&auto=format&fit=crop',
+      source: 'Forbes',
       published_at: new Date().toISOString(),
-    },
-    {
-      id: '5',
-      title: 'DeFi Protocol Launches New Features',
-      description: 'Protocol improvements',
-      url: 'https://coingecko.com',
-      image: 'https://assets.coingecko.com/coins/images/6319/small/uniswap.png',
-      source: 'Protocol Updates',
-      published_at: new Date().toISOString(),
-    },
-    {
-      id: '6',
-      title: 'Crypto Exchanges Report Record Trading Volumes',
-      description: 'Trading activity increases',
-      url: 'https://coingecko.com',
-      image: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-      source: 'Exchange News',
-      published_at: new Date().toISOString(),
-    },
-    {
-      id: '7',
-      title: 'Regulatory Updates: New Frameworks Announced',
-      description: 'Regulatory news',
-      url: 'https://coingecko.com',
-      image: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-      source: 'Regulation',
-      published_at: new Date().toISOString(),
-    },
-    {
-      id: '8',
-      title: 'NFT Market Shows Strong Recovery',
-      description: 'NFT market trends',
-      url: 'https://coingecko.com',
-      image: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-      source: 'NFT News',
-      published_at: new Date().toISOString(),
-    },
+    }
   ];
 
   // Load initial data and set up real-time subscriptions
@@ -857,61 +821,64 @@ export default function Wallet() {
               </div>
             )}
 
-            {/* Crypto News Card */}
-            <Card className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-blue-600 to-blue-500 p-4 text-white">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Newspaper className="h-5 w-5" />
-                    <h3 className="font-bold text-lg">Latest Crypto News</h3>
+            {/* News Redesign - Big White Container */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-border/50">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Trending News</h2>
+                <button className="text-green-600 font-semibold text-sm hover:underline">See all</button>
+              </div>
+
+              <div className="space-y-8">
+                {/* Main Featured News */}
+                {cryptoNews[0] && (
+                  <div className="group cursor-pointer">
+                    <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden mb-4 bg-slate-100">
+                      <img 
+                        src={cryptoNews[0].image || "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop"} 
+                        alt="" 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900 leading-tight mb-2 group-hover:text-green-600 transition-colors">
+                      {cryptoNews[0].title}
+                    </h3>
+                    <p className="text-slate-500 text-sm line-clamp-2 mb-3">
+                      {cryptoNews[0].description}
+                    </p>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                      <span className="font-medium text-slate-500">{cryptoNews[0].source}</span>
+                      <span>•</span>
+                      <span>37 minutes ago</span>
+                    </div>
                   </div>
-                  <p className="text-sm opacity-90">Stay informed with live updates</p>
-                </div>
-                <div className="p-4 space-y-3 max-h-screen overflow-y-auto">
-                  {!newsLoaded ? (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                      Loading news...
-                    </div>
-                  ) : cryptoNews.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                      No news available
-                    </div>
-                  ) : (
-                    cryptoNews.map((article) => (
-                      <a
-                        key={article.id}
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer block"
-                      >
-                        <div className="flex items-start gap-2 mb-2">
-                          {article.image && (
-                            <img
-                              src={article.image}
-                              alt={article.title}
-                              className="w-16 h-16 rounded object-cover flex-shrink-0"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-foreground line-clamp-2 mb-1">
-                              {article.title}
-                            </h4>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-muted-foreground">{article.source}</span>
-                              <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            </div>
-                          </div>
+                )}
+
+                {/* List News */}
+                <div className="space-y-6 pt-6 border-t border-slate-100">
+                  {cryptoNews.slice(1, 4).map((article) => (
+                    <div key={article.id} className="flex gap-4 group cursor-pointer items-center">
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-slate-100">
+                        <img 
+                          src={article.image || "https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1287&auto=format&fit=crop"} 
+                          alt="" 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-bold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-green-600 transition-colors">
+                          {article.title}
+                        </h4>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                          <span className="font-medium text-slate-500">{article.source}</span>
+                          <span>•</span>
+                          <span>43 minutes ago</span>
                         </div>
-                      </a>
-                    ))
-                  )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
           </div>
 
@@ -919,112 +886,6 @@ export default function Wallet() {
           <div className="lg:col-span-5 xl:col-span-4">
             <div className="space-y-6 lg:sticky lg:top-6">
 
-            {/* Markets Card */}
-            <Card className="mb-6">
-              <CardContent className="p-5">
-                {/* Header with Market dropdown */}
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-foreground">Markets</h2>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg text-sm font-medium text-foreground">
-                    Market
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </div>
-
-                {/* Tabs with underline */}
-                <div className="overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-6">
-                    {tabs.map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`pb-2 text-sm font-medium transition-colors whitespace-nowrap relative ${
-                          activeTab === tab
-                            ? "text-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {tab}
-                        {activeTab === tab && (
-                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Column Headers */}
-                <div className="mt-4">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 py-2">
-                    <span>Trading Pairs</span>
-                    <div className="flex">
-                      <span className="w-24 text-center">Price</span>
-                      <span className="w-20 text-right">24H Change</span>
-                    </div>
-                  </div>
-
-                  {/* Market Rows */}
-                  <div className="divide-y divide-border">
-                    {markets.map((market) => (
-                      <button
-                        key={market.symbol}
-                        className="w-full flex items-center justify-between py-4 hover:bg-muted/30 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={cryptoIconUrls[market.symbol] || `https://ui-avatars.com/api/?name=${market.symbol}&background=random`}
-                            alt={market.name}
-                            className="w-9 h-9 rounded-full"
-                          />
-                          <div className="text-left">
-                            <span className="font-semibold text-foreground">{market.symbol}</span>
-                            <span className="text-muted-foreground">/USDT</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center">
-                          <span className="w-24 text-center font-medium text-foreground">${market.price}</span>
-                          <div className={`w-20 text-right flex items-center justify-end gap-0.5 font-medium ${
-                            market.change >= 0 ? "text-primary" : "text-destructive"
-                          }`}>
-                            {market.change >= 0 ? (
-                              <TrendingUp className="h-3 w-3" />
-                            ) : (
-                              <TrendingDown className="h-3 w-3" />
-                            )}
-                            {Math.abs(market.change).toFixed(2)}%
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <button className="flex items-center gap-1 text-primary font-medium text-sm mt-4 hover:gap-2 transition-all">
-                    Market Overview
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Promotions Card */}
-            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 border-none text-white overflow-hidden">
-              <CardContent className="p-4">
-                <div className="mb-3">
-                  <h3 className="text-2xl font-bold mb-1">Save up to</h3>
-                  <p className="text-3xl font-bold text-orange-100">20% on gift cards</p>
-                </div>
-                <p className="text-xs mb-4 opacity-90">
-                  Exclusive discounts on the gift cards you love!
-                </p>
-                <Link href="/gift-cards">
-                  <Button className="w-full bg-white text-orange-600 hover:bg-gray-100" size="sm">
-                    <Gift className="h-4 w-4 mr-2" />
-                    Buy a gift card
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
 
             </div>
           </div>
