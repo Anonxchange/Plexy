@@ -174,7 +174,7 @@ export default function Wallet() {
       const data = await response.json();
       
       if (data && data.results && Array.isArray(data.results)) {
-        const news: CryptoNews[] = data.results.slice(0, 20).map((item: any) => ({
+        const news: CryptoNews[] = data.results.slice(0, 10).map((item: any) => ({
           id: item.article_id || Math.random().toString(),
           title: item.title || 'Crypto News',
           description: item.description || '',
@@ -202,7 +202,7 @@ export default function Wallet() {
       description: "Here's what many crypto investors often ov...",
       url: '#',
       image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop',
-      source: 'Crypto Economy',
+      source: 'NewsData.io',
       published_at: new Date().toISOString(),
     },
     {
@@ -211,7 +211,7 @@ export default function Wallet() {
       description: '"If the 4-year cycle is still in ...',
       url: '#',
       image: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=2669&auto=format&fit=crop',
-      source: 'CryptoPotato',
+      source: 'NewsData.io',
       published_at: new Date().toISOString(),
     },
     {
@@ -220,7 +220,7 @@ export default function Wallet() {
       description: 'Most traders realize XRP Led...',
       url: '#',
       image: 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1287&auto=format&fit=crop',
-      source: 'UToday',
+      source: 'NewsData.io',
       published_at: new Date().toISOString(),
     },
     {
@@ -229,7 +229,7 @@ export default function Wallet() {
       description: 'Analysts are braced for a $17.',
       url: '#',
       image: 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1287&auto=format&fit=crop',
-      source: 'Forbes',
+      source: 'NewsData.io',
       published_at: new Date().toISOString(),
     }
   ];
@@ -855,7 +855,7 @@ export default function Wallet() {
 
                 {/* List News */}
                 <div className="space-y-6 pt-6 border-t border-slate-100">
-                  {cryptoNews.slice(1, 4).map((article) => (
+                  {cryptoNews.slice(1, 10).map((article) => (
                     <div key={article.id} className="flex gap-4 group cursor-pointer items-center">
                       <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-slate-100">
                         <img 
