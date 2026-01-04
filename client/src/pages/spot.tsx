@@ -47,6 +47,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Check, X } from "lucide-react";
+
 interface TradingPair {
   pair: string;
   price: number;
@@ -130,6 +142,14 @@ export function Spot() {
   const [sellPrice, setSellPrice] = useState("");
   const [buyPercentage, setBuyPercentage] = useState([0]);
   const [sellPercentage, setSellPercentage] = useState([0]);
+  const [maxSlippage, setMaxSlippage] = useState("0.02");
+  const [isSlippageEnabled, setIsSlippageEnabled] = useState(true);
+  const [isSlippageDrawerOpen, setIsSlippageDrawerOpen] = useState(false);
+  const [isTPEnabled, setIsTPEnabled] = useState(false);
+  const [isPostOnlyEnabled, setIsPostOnlyEnabled] = useState(false);
+  const [tpPrice, setTpPrice] = useState("");
+  const [slPrice, setSlPrice] = useState("");
+  const [gtcType, setGtcType] = useState("GTC");
   const [buyFee, setBuyFee] = useState(0);
   const [sellFee, setSellFee] = useState(0);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -233,6 +253,68 @@ export function Spot() {
     
     return () => clearInterval(interval);
   }, [selectedPair, orderType]);
+
+  const SlippageSelector = () => (
+    <div className="flex items-center gap-1.5 mb-2">
+      <div className="flex items-center gap-1.5 cursor-pointer">
+        <input
+          type="checkbox"
+          id="slippage-checkbox"
+          checked={isSlippageEnabled}
+          onChange={(e) => setIsSlippageEnabled(e.target.checked)}
+          className="w-3 h-3 rounded border-gray-300 text-primary focus:ring-primary"
+        />
+        <label htmlFor="slippage-checkbox" className="text-[10px] font-medium text-muted-foreground cursor-pointer">Max. Slippage</label>
+      </div>
+      
+      <Drawer open={isSlippageDrawerOpen} onOpenChange={setIsSlippageDrawerOpen}>
+        <DrawerTrigger asChild>
+          <div className="ml-auto flex items-center gap-1 cursor-pointer hover:opacity-80 group">
+            <span className={`text-[10px] font-semibold ${!isSlippageEnabled ? 'opacity-40' : ''}`}>{maxSlippage}%</span>
+            <ChevronDown className={`w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors ${!isSlippageEnabled ? 'opacity-40' : ''}`} />
+          </div>
+        </DrawerTrigger>
+        <DrawerContent className="bg-background border-t">
+          <div className="mx-auto w-full max-w-sm">
+            <DrawerHeader className="flex flex-row items-center justify-between border-b pb-4">
+              <DrawerTitle className="text-lg font-bold">Slippage Tolerance</DrawerTitle>
+              <DrawerClose asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </DrawerHeader>
+            <div className="p-4 space-y-6">
+              <div className="flex gap-6 border-b">
+                <button className="pb-2 text-sm font-semibold border-b-2 border-primary">By Percent</button>
+                <button className="pb-2 text-sm font-medium text-muted-foreground">By Price</button>
+              </div>
+              <div className="space-y-1">
+                {["0.01", "0.02", "0.05", "0.1"].map((val) => (
+                  <button
+                    key={val}
+                    onClick={() => {
+                      setMaxSlippage(val);
+                      setIsSlippageDrawerOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between p-4 rounded-lg transition-colors ${
+                      maxSlippage === val ? "bg-muted/50" : "hover:bg-muted/30"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">{val}%</span>
+                    {maxSlippage === val && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                ))}
+                <button className="w-full text-left p-4 text-sm font-medium text-muted-foreground hover:bg-muted/30 rounded-lg transition-colors">
+                  Customize
+                </button>
+              </div>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </div>
+  );
 
   // Calculate buy fee
   useEffect(() => {
@@ -371,7 +453,8 @@ export function Spot() {
       const quote = await swapExecutionService.getSwapQuote(
         fromToken,
         toToken,
-        amountStr
+        amountStr,
+        parseFloat(maxSlippage)
       );
 
       toast({
@@ -420,7 +503,8 @@ export function Spot() {
         toToken,
         amountStr,
         password,
-        user.id
+        user.id,
+        isSlippageEnabled ? parseFloat(maxSlippage) : 100 // Use 100% if disabled
       );
 
       toast({
@@ -741,7 +825,7 @@ export function Spot() {
 
                   {/* Asks */}
                   <div className="space-y-0.5 mb-2">
-                    {liveOrderBook.asks.slice(-(isDesktop ? 10 : 6)).reverse().map((ask, i) => {
+                    {liveOrderBook.asks.slice(-(isDesktop ? 10 : 7)).reverse().map((ask, i) => {
                       const price = parseFloat(ask[0]);
                       const amount = parseFloat(ask[1]);
                       return (
@@ -763,7 +847,7 @@ export function Spot() {
 
                   {/* Bids */}
                   <div className="space-y-0.5">
-                    {liveOrderBook.bids.slice(0, isDesktop ? 10 : 6).map((bid, i) => {
+                    {liveOrderBook.bids.slice(0, isDesktop ? 10 : 8).map((bid, i) => {
                       const price = parseFloat(bid[0]);
                       const amount = parseFloat(bid[1]);
                       return (
@@ -861,11 +945,83 @@ export function Spot() {
                           </div>
 
                           <div className="space-y-1 pt-2 border-t border-border/50">
+                            {orderType === "market" && <SlippageSelector />}
                             <div className="flex justify-between text-[10px]">
                               <span className="text-muted-foreground">Avbl</span>
                               <span>{quoteWallet?.balance.toFixed(2) || "0.00"} USDT</span>
                             </div>
                           </div>
+
+                          {orderType === "limit" && (
+                            <div className="space-y-2 py-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="buy-tp-sl"
+                                    checked={isTPEnabled}
+                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="buy-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
+                                </div>
+                                {isTPEnabled && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
+                                    <span>Basic</span>
+                                    <ArrowUpDown className="w-3 h-3" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {isTPEnabled && (
+                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <div className="relative">
+                                    <Input
+                                      value={tpPrice}
+                                      onChange={(e) => setTpPrice(e.target.value)}
+                                      placeholder="Take Profit"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
+                                  </div>
+                                  <div className="relative">
+                                    <Input
+                                      value={slPrice}
+                                      onChange={(e) => setSlPrice(e.target.value)}
+                                      placeholder="Stop Loss"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="buy-post-only"
+                                    checked={isPostOnlyEnabled}
+                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="buy-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
+                                </div>
+                                <div className="ml-auto">
+                                  <Select value={gtcType} onValueChange={setGtcType}>
+                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
+                                      <SelectValue placeholder="GTC" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="GTC">GTC</SelectItem>
+                                      <SelectItem value="IOC">IOC</SelectItem>
+                                      <SelectItem value="FOK">FOK</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           <Button 
                             className="w-full h-9 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
@@ -952,11 +1108,83 @@ export function Spot() {
                           </div>
 
                           <div className="space-y-1 pt-2 border-t border-border/50">
+                            {orderType === "market" && <SlippageSelector />}
                             <div className="flex justify-between text-[10px]">
                               <span className="text-muted-foreground">Avbl</span>
                               <span>{baseWallet?.balance.toFixed(4) || "0.00"} {selectedPair.symbol}</span>
                             </div>
                           </div>
+
+                          {orderType === "limit" && (
+                            <div className="space-y-2 py-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="sell-tp-sl"
+                                    checked={isTPEnabled}
+                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="sell-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
+                                </div>
+                                {isTPEnabled && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
+                                    <span>Basic</span>
+                                    <ArrowUpDown className="w-3 h-3" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {isTPEnabled && (
+                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <div className="relative">
+                                    <Input
+                                      value={tpPrice}
+                                      onChange={(e) => setTpPrice(e.target.value)}
+                                      placeholder="Take Profit"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
+                                  </div>
+                                  <div className="relative">
+                                    <Input
+                                      value={slPrice}
+                                      onChange={(e) => setSlPrice(e.target.value)}
+                                      placeholder="Stop Loss"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="sell-post-only"
+                                    checked={isPostOnlyEnabled}
+                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="sell-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
+                                </div>
+                                <div className="ml-auto">
+                                  <Select value={gtcType} onValueChange={setGtcType}>
+                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
+                                      <SelectValue placeholder="GTC" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="GTC">GTC</SelectItem>
+                                      <SelectItem value="IOC">IOC</SelectItem>
+                                      <SelectItem value="FOK">FOK</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           <Button 
                             className="w-full h-9 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider"
