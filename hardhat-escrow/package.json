@@ -1,0 +1,25 @@
+{
+  "name": "p2p-escrow-contracts",
+  "version": "1.0.0",
+  "description": "P2P Escrow Smart Contracts for EVM chains",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "deploy:ethereum": "hardhat run scripts/deploy.js --network ethereum",
+    "deploy:bsc-testnet": "hardhat run scripts/deploy.js --network bscTestnet",
+    "deploy:bsc": "hardhat run scripts/deploy.js --network bsc",
+    "deploy:tron-nile": "hardhat run scripts/deploy.js --network tronNile",
+    "deploy:tron": "hardhat run scripts/deploy.js --network tronMainnet",
+    "verify:sepolia": "hardhat run scripts/verify.js --network sepolia",
+    "verify:ethereum": "hardhat run scripts/verify.js --network ethereum",
+    "verify:bsc": "hardhat run scripts/verify.js --network bsc",
+    "node": "hardhat node"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "dotenv": "^16.3.1",
+    "hardhat": "^2.19.0"
+  }
+}
