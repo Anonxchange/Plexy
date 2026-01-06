@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // Detect Replit + dev environment
 const isReplitDev =
@@ -14,6 +15,13 @@ export default defineConfig(() => {
     react(),
     wasm(),
     topLevelAwait(),
+    nodePolyfills({
+      globals: {
+        Buffer: true,
+        process: true,
+      },
+      protocolImports: true,
+    }),
   ];
 
   if (isReplitDev) {
@@ -39,6 +47,8 @@ export default defineConfig(() => {
         "@": path.resolve(import.meta.dirname, "client", "src"),
         "@shared": path.resolve(import.meta.dirname, "shared"),
         "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+        "stream": "stream-browserify",
+        "buffer": "buffer",
       },
     },
     build: {
@@ -51,6 +61,7 @@ export default defineConfig(() => {
       port: 5000,
       allowedHosts: true,
       hmr: {
+        overlay: false,
         clientPort: 443,
       },
     },
