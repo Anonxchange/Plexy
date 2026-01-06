@@ -436,8 +436,7 @@ export function CreateOffer() {
       }
     }
 
-    // Validate wallet balance for SELL offers only
-    // For BUY offers, total quantity can be any amount (no wallet balance check needed)
+    // For SELL offers: ensure total quantity is entered
     if (offerType === "sell") {
       if (!totalQuantityNum || totalQuantityNum <= 0) {
         toast({
@@ -447,51 +446,8 @@ export function CreateOffer() {
         });
         return;
       }
-
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('user_id', user.id)
-          .eq('crypto_symbol', crypto)
-          .single();
-
-        if (!wallet || !wallet.balance) {
-          toast({
-            title: "No Wallet Found",
-            description: `You don't have a ${crypto} wallet yet`,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const walletBalance = parseFloat(wallet.balance.toString());
-
-        // Check minimum balance requirement
-        const minBalanceRequired = 0.0001; // Minimum balance to create an offer
-        if (walletBalance < minBalanceRequired) {
-          toast({
-            title: "Balance Too Low",
-            description: `You need at least ${minBalanceRequired} ${crypto} to create a sell offer. Current balance: ${walletBalance} ${crypto}`,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (totalQuantityNum > walletBalance) {
-          toast({
-            title: "Insufficient Balance",
-            description: `You only have ${walletBalance} ${crypto} available. Cannot create offer for ${totalQuantityNum} ${crypto}`,
-            variant: "destructive",
-          });
-          return;
-        }
-      }
     } else if (offerType === "buy") {
-      // For BUY offers, ensure a total quantity is entered but no wallet balance check
+      // For BUY offers, ensure a total quantity is entered
       if (!totalQuantityNum || totalQuantityNum <= 0) {
         toast({
           title: "Total Quantity Required",
