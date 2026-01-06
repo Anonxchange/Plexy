@@ -168,24 +168,6 @@ export function P2P() {
       price: cryptoPrices['ETH']?.current_price || 0 
     },
     { 
-      symbol: "SOL", 
-      name: "Solana", 
-      iconUrl: cryptoIconUrls.SOL, 
-      price: cryptoPrices['SOL']?.current_price || 0 
-    },
-    { 
-      symbol: "BNB", 
-      name: "Binance Coin", 
-      iconUrl: cryptoIconUrls.BNB, 
-      price: cryptoPrices['BNB']?.current_price || 0 
-    },
-    { 
-      symbol: "TRX", 
-      name: "TRON", 
-      iconUrl: cryptoIconUrls.TRX, 
-      price: cryptoPrices['TRX']?.current_price || 0 
-    },
-    { 
       symbol: "USDC", 
       name: "USD Coin", 
       iconUrl: cryptoIconUrls.USDC, 
@@ -208,16 +190,13 @@ export function P2P() {
   useEffect(() => {
     const loadCryptoPrices = async () => {
       try {
-        const prices = await getRealtimeCryptoPrices(['BTC', 'ETH', 'SOL', 'BNB', 'TRX', 'USDC', 'USDT', 'LTC']);
+        const prices = await getRealtimeCryptoPrices(['BTC', 'ETH', 'USDC', 'USDT', 'LTC']);
         if (Object.keys(prices).length > 0) {
           setCryptoPrices(prices);
         } else {
           setCryptoPrices({
             'BTC': { symbol: 'BTC', name: 'Bitcoin', current_price: 95000, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
             'ETH': { symbol: 'ETH', name: 'Ethereum', current_price: 3500, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
-            'SOL': { symbol: 'SOL', name: 'Solana', current_price: 150, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
-            'BNB': { symbol: 'BNB', name: 'Binance Coin', current_price: 600, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
-            'TRX': { symbol: 'TRX', name: 'TRON', current_price: 0.15, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
             'USDC': { symbol: 'USDC', name: 'USD Coin', current_price: 1, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
             'USDT': { symbol: 'USDT', name: 'Tether', current_price: 1, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
             'LTC': { symbol: 'LTC', name: 'Litecoin', current_price: 100, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 }
@@ -228,9 +207,6 @@ export function P2P() {
         setCryptoPrices({
           'BTC': { symbol: 'BTC', name: 'Bitcoin', current_price: 95000, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
           'ETH': { symbol: 'ETH', name: 'Ethereum', current_price: 3500, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
-          'SOL': { symbol: 'SOL', name: 'Solana', current_price: 150, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
-          'BNB': { symbol: 'BNB', name: 'Binance Coin', current_price: 600, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
-          'TRX': { symbol: 'TRX', name: 'TRON', current_price: 0.15, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
           'USDC': { symbol: 'USDC', name: 'USD Coin', current_price: 1, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
           'USDT': { symbol: 'USDT', name: 'Tether', current_price: 1, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 },
           'LTC': { symbol: 'LTC', name: 'Litecoin', current_price: 100, price_change_percentage_24h: 0, market_cap: 0, total_volume: 0 }
@@ -567,7 +543,6 @@ export function P2P() {
     { id: "ethereum", name: "Ethereum (ETH)", icon: Coins, category: "digital" },
     { id: "usdt", name: "Tether (USDT)", icon: Coins, category: "digital" },
     { id: "usdc", name: "USD Coin (USDC)", icon: Coins, category: "digital" },
-    { id: "arweave", name: "Arweave (AR)", icon: Coins, category: "digital" },
     { id: "litecoin", name: "Litecoin (LTC)", icon: Coins, category: "digital" },
 
     // Goods and Services
