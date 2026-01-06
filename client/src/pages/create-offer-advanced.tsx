@@ -597,43 +597,41 @@ export function CreateOfferAdvanced() {
               <SelectContent>
                 <SelectItem value="BTC">
                   <div className="flex items-center gap-3">
-                    <Bitcoin className="h-5 w-5 text-orange-500" />
+                    <img 
+                      src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" 
+                      alt="BTC" 
+                      className="h-5 w-5 rounded-full object-contain"
+                    />
                     <span>Bitcoin (BTC)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="ETH">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg">Ξ</span>
+                    <img 
+                      src="https://assets.coingecko.com/coins/images/279/small/ethereum.png" 
+                      alt="ETH" 
+                      className="h-5 w-5 rounded-full object-contain"
+                    />
                     <span>Ethereum (ETH)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="SOL">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg text-purple-500">◎</span>
-                    <span>Solana (SOL)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="BNB">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg text-yellow-500">♦</span>
-                    <span>Binance Coin (BNB)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="TRX">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg text-red-500">⬡</span>
-                    <span>Tron (TRX)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="USDC">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg text-blue-600">$</span>
+                    <img 
+                      src="https://assets.coingecko.com/coins/images/6319/small/usdc.png" 
+                      alt="USDC" 
+                      className="h-5 w-5 rounded-full object-contain"
+                    />
                     <span>USD Coin (USDC)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="USDT">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg text-green-600">₮</span>
+                    <img 
+                      src="https://assets.coingecko.com/coins/images/325/small/Tether.png" 
+                      alt="USDT" 
+                      className="h-5 w-5 rounded-full object-contain"
+                    />
                     <span>Tether (USDT)</span>
                   </div>
                 </SelectItem>
