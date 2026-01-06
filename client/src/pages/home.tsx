@@ -4,7 +4,7 @@ import { FeatureCarousel } from "@/components/feature-carousel";
 import { HowItWorks } from "@/components/how-it-works";
 import { PaymentMethods } from "@/components/payment-methods";
 import { TrustStats } from "@/components/trust-stats";
-import { FAQSection } from "@/components/faq-section";
+import { Testimonials } from "@/components/testimonials";
 import { CTASection } from "@/components/cta-section";
 import { useSchema, homePageSchema } from "@/hooks/use-schema";
 
@@ -19,7 +19,7 @@ export default function Home() {
       <FeatureCarousel />
       <PaymentMethods />
       <TrustStats />
-      <FAQSection />
+      <Testimonials />
       <CTASection />
     </div>
   );
