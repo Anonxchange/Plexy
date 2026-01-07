@@ -66,7 +66,7 @@ class WalletClient {
   }
 
   /**
-   * Get all user wallets with balances
+   * Get all user wallets with balances (using monitor-deposits)
    */
   async getWallets(): Promise<{ wallets: Wallet[] }> {
     const { data: { session } } = await supabase.auth.getSession();
@@ -75,10 +75,11 @@ class WalletClient {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wallet-balance`, {
-      method: 'GET',
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monitor-deposits`, {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
       },
     });
 
@@ -87,7 +88,23 @@ class WalletClient {
       throw new Error(error.error || 'Failed to fetch wallets');
     }
 
-    return response.json();
+    const data = await response.json();
+    
+    // Map the monitor-deposits response to the Wallet interface
+    // Use user_wallets or walletBalances based on response structure
+    const balances = data.walletBalances || data.user_wallets || [];
+    
+    const wallets: Wallet[] = balances.map((wb: any) => ({
+      id: wb.wallet_id || wb.id,
+      user_id: wb.user_id,
+      currency: wb.chain_id || wb.currency,
+      address: wb.address,
+      balance: wb.balance || 0,
+      locked_balance: wb.locked_balance || 0,
+      created_at: wb.timestamp || wb.created_at,
+    }));
+
+    return { wallets };
   }
 
   /**
