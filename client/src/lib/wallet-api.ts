@@ -58,39 +58,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
     // For stablecoins, use chainId as-is (e.g., "USDT-Ethereum (ERC-20)")
 
-    // Fetch real balance from blockchain
-    try {
-      import("./blockchain-api").then(async (api) => {
-        console.log(`[SYNC] Starting sync for ${symbol} at ${w.address}`);
-        const balance = await api.getAddressBalance(w.address);
-        console.log(`[SYNC] Live ${symbol} balance: ${balance}`);
-        
-        if (balance !== null) {
-          // Force update the non-custodial manager
-          if (typeof nonCustodialWalletManager.updateWalletBalance === 'function') {
-            nonCustodialWalletManager.updateWalletBalance(userId, w.id, balance);
-            console.log(`[SYNC] Manager updated for ${symbol}`);
-          }
-          
-          // CRITICAL: Also update the local object directly so the immediate return is accurate
-          (w as any).balance = balance;
-        }
-        
-        // Full transaction history sync
-        try {
-          const addressData = await api.getAddress(w.address);
-          if (addressData && addressData.txs) {
-            console.log(`[SYNC] Found ${addressData.txs.length} total txs for ${symbol}`);
-          }
-        } catch (txError) {
-          console.error(`[SYNC] History error for ${symbol}:`, txError);
-        }
-      });
-    } catch (e) {
-      console.error(`[SYNC] Top-level error for ${symbol}:`, e);
-    }
-
-    return {
+    const walletObj = {
       id: w.id,
       user_id: userId,
       crypto_symbol: symbol,
@@ -101,6 +69,30 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       updated_at: w.createdAt,
       isNonCustodial: true
     };
+
+    // Fetch real balance from blockchain
+    try {
+      import("./blockchain-api").then(async (api) => {
+        console.log(`[SYNC] Starting sync for ${symbol} at ${w.address}`);
+        const balance = await api.getAddressBalance(w.address);
+        console.log(`[SYNC] Live ${symbol} balance: ${balance}`);
+        
+        if (balance !== null) {
+          // Update the wallet object IMMEDIATELY
+          walletObj.balance = balance;
+
+          // Force update the non-custodial manager
+          if (typeof (nonCustodialWalletManager as any).updateWalletBalance === 'function') {
+            (nonCustodialWalletManager as any).updateWalletBalance(userId, w.id, balance);
+            console.log(`[SYNC] Manager updated for ${symbol}`);
+          }
+        }
+      });
+    } catch (e) {
+      console.error(`[SYNC] Top-level error for ${symbol}:`, e);
+    }
+
+    return walletObj;
   });
 
   return nonCustodialWallets;
