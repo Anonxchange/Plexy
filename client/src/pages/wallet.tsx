@@ -310,13 +310,15 @@ export default function Wallet() {
       setWallets([...userWallets]);
       setWalletsLoaded(true);
       
-      // If we see zero but expect more, trigger a secondary sync in 2 seconds
-      if (userWallets.every(w => (w.balance || 0) === 0)) {
+      // Secondary check: if they're still zero, we might be hitting an async race condition
+      // Try several times with increasing delays to ensure the background sync catches up
+      [1000, 3000, 5000].forEach(delay => {
         setTimeout(async () => {
-          const reSync = await getUserWallets(user.id);
-          setWallets([...reSync]);
-        }, 2000);
-      }
+          const freshWallets = await getUserWallets(user.id);
+          console.log(`Wallet Page: Refresh (${delay}ms):`, freshWallets);
+          setWallets([...freshWallets]);
+        }, delay);
+      });
     } catch (error) {
       console.error("Wallet Page: Sync failed:", error);
     }
