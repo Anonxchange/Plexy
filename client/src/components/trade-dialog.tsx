@@ -125,8 +125,8 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       }
     }
 
-    // Check if password is needed for non-custodial signing
-    if (!sessionPassword) {
+    // Check if password is needed for non-custodial signing (SELL ONLY)
+    if (offer.type === 'sell' && !sessionPassword) {
       setShowPasswordDialog(true);
       return;
     }
