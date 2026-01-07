@@ -93,17 +93,8 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       return; // Prevent duplicate submissions
     }
 
-    // If this is a sell offer, validate available balance
+    // If this is a sell offer, proceed with trade creation
     if (offer.type === 'sell' && user) {
-      if (cryptoAmount > availableBalance) {
-        toast({
-          title: "Insufficient Available Balance",
-          description: `You only have ${availableBalance.toFixed(8)} ${offer.cryptoSymbol || 'BTC'} available. Your locked balance will be released once pending trades are completed.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Check for bank account selection
       if (!selectedBankAccount) {
         if (bankAccounts.length === 0) {
@@ -492,16 +483,6 @@ ${selectedBankAccount.account_number}`;
                 </p>
               </div>
             </div>
-
-            {/* Available Balance Display */}
-            {offer.type === 'sell' && user && (
-              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Available Balance:</span>
-                  <span className="font-bold text-primary">{availableBalance.toFixed(8)} {offer.cryptoSymbol || 'BTC'}</span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Offer Details */}
