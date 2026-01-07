@@ -1,4 +1,4 @@
-import securityLock from "@/assets/IMG_3386.png";
+import securityLock from "@/assets/IMG_3490.webp";
 import cloudBackup from "@/assets/IMG_3373.jpeg";
 import privacyShield from "@/assets/IMG_3374.jpeg";
 import alertHorn from "@/assets/IMG_3375.jpeg";
