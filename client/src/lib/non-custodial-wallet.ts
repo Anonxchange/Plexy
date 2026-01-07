@@ -61,6 +61,7 @@ export interface NonCustodialWallet {
   isBackedUp: boolean;
   assetType?: string; // 'native' for native coins, 'stablecoin' for USDT/USDC
   baseChainWalletId?: string; // Reference to parent native chain wallet for stablecoins
+  balance?: number;
 }
 
 const STORAGE_KEY_PREFIX = "pexly_non_custodial_wallets";
@@ -645,6 +646,18 @@ class NonCustodialWalletManager {
     } catch (error) {
       console.error("Failed to load wallets from Supabase:", error);
       return [];
+    }
+  }
+
+  /**
+   * Update wallet balance
+   */
+  public updateWalletBalance(userId: string, walletId: string, balance: number): void {
+    const wallets = this.getWalletsFromStorage(userId);
+    const walletIndex = wallets.findIndex(w => w.id === walletId);
+    if (walletIndex !== -1) {
+      wallets[walletIndex].balance = balance;
+      this.saveWalletsToStorage(wallets, userId);
     }
   }
 
