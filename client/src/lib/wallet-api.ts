@@ -67,15 +67,35 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       console.log(`[SYNC] Result for ${symbol} (${w.address}): ${liveBalance}`);
       
       if (liveBalance !== null && !isNaN(Number(liveBalance))) {
-        balance = Number(liveBalance);
+        const newBalance = Number(liveBalance);
         // Sync back to local storage wallet object
-        w.balance = balance;
+        w.balance = newBalance;
+        balance = newBalance;
+        
+        // Persistence: also update the source of truth in localStorage immediately
+        const stored = localStorage.getItem('pexly_wallets');
+        if (stored) {
+          try {
+            const wallets = JSON.parse(stored);
+            const idx = wallets.findIndex((item: any) => item.id === w.id);
+            if (idx !== -1) {
+              wallets[idx].balance = newBalance;
+              wallets[idx].lastUpdated = new Date().toISOString();
+              localStorage.setItem('pexly_wallets', JSON.stringify(wallets));
+              console.log(`[SYNC] Updated localStorage cache for ${symbol}`);
+            }
+          } catch (e) {
+            console.error("[SYNC] LocalStorage parse error:", e);
+          }
+        }
+
         // Force update the non-custodial manager
         if (typeof (nonCustodialWalletManager as any).updateWalletBalance === 'function') {
-          (nonCustodialWalletManager as any).updateWalletBalance(userId, w.id, balance);
+          (nonCustodialWalletManager as any).updateWalletBalance(userId, w.id, newBalance);
         }
       } else {
-        console.warn(`[SYNC] Received null or invalid balance for ${symbol} at ${w.address}`);
+        // IMPORTANT: Fallback to existing balance instead of 0 if API fails
+        console.warn(`[SYNC] Received null/invalid balance for ${symbol} at ${w.address}. PRESERVING existing balance: ${balance}`);
       }
     } catch (e) {
       console.error(`[SYNC] Error for ${symbol} at ${w.address}:`, e);
