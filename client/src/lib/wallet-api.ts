@@ -58,11 +58,45 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
     // For stablecoins, use chainId as-is (e.g., "USDT-Ethereum (ERC-20)")
 
+    // Fetch real balance from blockchain
+    try {
+      import("./blockchain-api").then(async (api) => {
+        const balance = await api.getAddressBalance(w.address);
+        if (balance !== null && balance !== (w as any).balance) {
+          // Update the wallet in memory/storage if balance changed
+          if (typeof nonCustodialWalletManager.updateWalletBalance === 'function') {
+            nonCustodialWalletManager.updateWalletBalance(userId, w.id, balance);
+            console.log(`[getUserWallets] Updated balance for ${symbol}: ${balance}`);
+          } else {
+            // Fallback: update in memory at least for this session
+            (w as any).balance = balance;
+          }
+        }
+        
+        // Check for recent transactions (last 20 mins)
+        try {
+          const addressData = await api.getAddress(w.address);
+          if (addressData && addressData.txs) {
+            const twentyMinsAgo = Math.floor(Date.now() / 1000) - (20 * 60);
+            const recentTxs = addressData.txs.filter((tx: any) => (tx.time || 0) > twentyMinsAgo);
+            if (recentTxs.length > 0) {
+              console.log(`[getUserWallets] Found ${recentTxs.length} recent transactions for ${symbol}`);
+              // In a real app, we'd sync these to a local transaction history
+            }
+          }
+        } catch (txError) {
+          console.error("Failed to fetch recent transactions", txError);
+        }
+      });
+    } catch (e) {
+      console.error("Failed to fetch blockchain balance", e);
+    }
+
     return {
       id: w.id,
       user_id: userId,
       crypto_symbol: symbol,
-      balance: 0,
+      balance: w.balance || 0,
       locked_balance: 0,
       deposit_address: w.address,
       created_at: w.createdAt,
