@@ -56,45 +56,47 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     let balance = originalBalance;
 
     try {
-      const api = await import("./blockchain-api");
-      console.log(`[SYNC] Fetching live balance for ${symbol} at ${w.address}`);
-      const liveBalance = await api.getAddressBalance(w.address);
-      console.log(`[SYNC] Result for ${symbol} (${w.address}): ${liveBalance}`);
-      
-      // Only update if we got a valid response
-      if (liveBalance !== null && liveBalance !== undefined && !isNaN(Number(liveBalance))) {
-        const newBalance = Number(liveBalance);
-        w.balance = newBalance;
-        balance = newBalance;
-        
-        const stored = localStorage.getItem('pexly_wallets');
-        if (stored) {
-          try {
-            const wallets = JSON.parse(stored);
-            const idx = wallets.findIndex((item: any) => item.id === w.id);
-            if (idx !== -1) {
-              wallets[idx].balance = newBalance;
-              wallets[idx].lastUpdated = new Date().toISOString();
-              localStorage.setItem('pexly_wallets', JSON.stringify(wallets));
-              console.log(`[SYNC] Updated localStorage cache for ${symbol}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log(`[SYNC] Fetching live balance for ${symbol} via monitor-deposits at ${w.address}`);
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monitor-deposits`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const balances = data.walletBalances || data.user_wallets || [];
+          const walletData = balances.find((wb: any) => wb.address === w.address || (wb.wallet_id === w.id));
+          
+          if (walletData && typeof walletData.balance === 'number') {
+            const newBalance = walletData.balance;
+            w.balance = newBalance;
+            balance = newBalance;
+            
+            // Update localStorage
+            const stored = localStorage.getItem('pexly_wallets');
+            if (stored) {
+              try {
+                const wallets = JSON.parse(stored);
+                const idx = wallets.findIndex((item: any) => item.id === w.id);
+                if (idx !== -1) {
+                  wallets[idx].balance = newBalance;
+                  wallets[idx].lastUpdated = new Date().toISOString();
+                  localStorage.setItem('pexly_wallets', JSON.stringify(wallets));
+                }
+              } catch (e) {
+                console.error("[SYNC] LocalStorage update error:", e);
+              }
             }
-          } catch (e) {
-            console.error("[SYNC] LocalStorage parse error:", e);
           }
         }
-
-        if (typeof (nonCustodialWalletManager as any).updateWalletBalance === 'function') {
-          (nonCustodialWalletManager as any).updateWalletBalance(userId, w.id, newBalance);
-        }
-      } else {
-        // Explicitly preserve original balance on API failure
-        balance = originalBalance;
-        console.warn(`[SYNC] Received null/invalid balance for ${symbol} at ${w.address}. PRESERVING existing balance: ${balance}`);
       }
     } catch (e) {
-      // Explicitly preserve original balance on error
-      balance = originalBalance;
-      console.error(`[SYNC] Error for ${symbol} at ${w.address}. PRESERVING balance: ${balance}`, e);
+      console.error(`[SYNC] Error for ${symbol} via monitor-deposits:`, e);
     }
 
     return {
