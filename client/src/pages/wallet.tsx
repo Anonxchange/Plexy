@@ -306,31 +306,8 @@ export default function Wallet() {
       const userWallets = await getUserWallets(user.id);
       console.log("Wallet Page: API Response:", userWallets);
       
-      setWallets(prev => {
-        // Skeptical update: If we have existing balances and the new ones are zero, PRESERVE.
-        const hasExistingBalances = prev.some(w => Number(w.balance) > 0);
-        const allNewBalancesZero = userWallets.every(w => Number(w.balance) === 0);
-        
-        if (hasExistingBalances && allNewBalancesZero) {
-          console.warn("[Wallet UI] Blocking 0.00 fallback - preserving cached balances.");
-          return prev;
-        }
-        return [...userWallets];
-      });
+      setWallets(userWallets);
       setWalletsLoaded(true);
-      
-      // Background re-checks for eventual consistency
-      [2000, 5000].forEach(delay => {
-        setTimeout(async () => {
-          const freshWallets = await getUserWallets(user.id);
-          setWallets(prev => {
-            const hasExisting = prev.some(w => Number(w.balance) > 0);
-            const allFreshZero = freshWallets.every(w => Number(w.balance) === 0);
-            if (hasExisting && allFreshZero) return prev;
-            return [...freshWallets];
-          });
-        }, delay);
-      });
     } catch (error) {
       console.error("Wallet Page: Sync failed:", error);
     }
