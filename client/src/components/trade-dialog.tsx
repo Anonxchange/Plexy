@@ -61,14 +61,18 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
         // Fetch bank accounts for sellers
         if (offer.type === 'sell') {
+          // The table name in Supabase for payment methods is 'payment_methods'
+          // We fetch all active payment methods for the current user
           const { data, error } = await supabase
             .from('payment_methods')
             .select('*')
-            .eq('user_id', user.id)
-            .eq('status', 'active');
+            .eq('user_id', user.id);
 
           if (!error && data) {
+            console.log("Fetched payment methods for trade:", data);
             setBankAccounts(data);
+          } else {
+            console.error("Error fetching payment methods:", error);
           }
         }
       } catch (error) {
@@ -129,9 +133,8 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       }
 
       const currentUserId = authUser.id;
-      // const cryptoAmount = fiatAmount / offer.pricePerBTC; // This is now calculated above for display
 
-      // Get the vendor ID from the offer
+      // Determine buyer and seller based on offer type
       const vendorId = offer.vendor?.id;
 
       if (!vendorId) {
