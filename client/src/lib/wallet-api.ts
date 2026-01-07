@@ -33,23 +33,17 @@ export interface WalletTransaction {
 }
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  // First, try to load wallets from Supabase to support cross-browser access
-  // This ensures wallets created in one browser are available in another
   const supabase = createClient();
   try {
     const supabaseWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
     console.log("[getUserWallets] Loaded from Supabase:", supabaseWallets.length, "wallets");
   } catch (error) {
     console.error("[getUserWallets] Failed to sync from Supabase:", error);
-    // If Supabase sync fails, continue with local storage only
   }
   
-  // Fetch non-custodial wallets from local storage (with user-specific key)
-  // They should now include any wallets synced from Supabase
   const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
   
   const nonCustodialWallets: Wallet[] = await Promise.all(localWallets.map(async (w) => {
-    // Determine crypto symbol based on chainId
     let symbol = w.chainId;
     if (w.chainId === 'Ethereum (ERC-20)') symbol = 'ETH';
     else if (w.chainId === 'Bitcoin (SegWit)') symbol = 'BTC';
@@ -57,22 +51,22 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     else if (w.chainId === 'Solana') symbol = 'SOL';
     else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
 
-    let balance = Number(w.balance) || 0;
+    // Preserve original balance - use typeof check to handle 0 as valid
+    const originalBalance = typeof w.balance === 'number' ? w.balance : (parseFloat(String(w.balance)) || 0);
+    let balance = originalBalance;
 
-    // Fetch real balance from blockchain
     try {
       const api = await import("./blockchain-api");
       console.log(`[SYNC] Fetching live balance for ${symbol} at ${w.address}`);
       const liveBalance = await api.getAddressBalance(w.address);
       console.log(`[SYNC] Result for ${symbol} (${w.address}): ${liveBalance}`);
       
-      if (liveBalance !== null && !isNaN(Number(liveBalance))) {
+      // Only update if we got a valid response
+      if (liveBalance !== null && liveBalance !== undefined && !isNaN(Number(liveBalance))) {
         const newBalance = Number(liveBalance);
-        // Sync back to local storage wallet object
         w.balance = newBalance;
         balance = newBalance;
         
-        // Persistence: also update the source of truth in localStorage immediately
         const stored = localStorage.getItem('pexly_wallets');
         if (stored) {
           try {
@@ -89,16 +83,18 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
           }
         }
 
-        // Force update the non-custodial manager
         if (typeof (nonCustodialWalletManager as any).updateWalletBalance === 'function') {
           (nonCustodialWalletManager as any).updateWalletBalance(userId, w.id, newBalance);
         }
       } else {
-        // IMPORTANT: Fallback to existing balance instead of 0 if API fails
+        // Explicitly preserve original balance on API failure
+        balance = originalBalance;
         console.warn(`[SYNC] Received null/invalid balance for ${symbol} at ${w.address}. PRESERVING existing balance: ${balance}`);
       }
     } catch (e) {
-      console.error(`[SYNC] Error for ${symbol} at ${w.address}:`, e);
+      // Explicitly preserve original balance on error
+      balance = originalBalance;
+      console.error(`[SYNC] Error for ${symbol} at ${w.address}. PRESERVING balance: ${balance}`, e);
     }
 
     return {
@@ -179,14 +175,12 @@ export async function sendCrypto(
 export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
   const wallets = await getUserWallets(userId);
   
-  // Find exact match first
   let wallet = wallets.find(w => w.crypto_symbol === cryptoSymbol);
   
   if (wallet?.deposit_address) {
     return wallet.deposit_address;
   }
   
-  // If searching for a stablecoin without chain specified, find the first available instance
   if ((cryptoSymbol === 'USDT' || cryptoSymbol === 'USDC') && !cryptoSymbol.includes('-')) {
     wallet = wallets.find(w => w.crypto_symbol.startsWith(`${cryptoSymbol}-`));
     if (wallet?.deposit_address) {
@@ -194,7 +188,6 @@ export async function getDepositAddress(userId: string, cryptoSymbol: string): P
     }
   }
   
-  // If we have any non-custodial wallet, use its address as fallback
   const anyWallet = wallets.find(w => w.isNonCustodial);
   if (anyWallet?.deposit_address) {
     return anyWallet.deposit_address;
@@ -207,7 +200,6 @@ export async function getWalletTransactions(
   userId: string,
   limit: number = 20
 ): Promise<WalletTransaction[]> {
-  // Return empty transactions as we are moving away from server-side history for non-custodial
   return [];
 }
 
@@ -216,7 +208,6 @@ export async function monitorDeposits(userId: string, cryptoSymbol: string): Pro
   transactions?: any[];
   message?: string;
 }> {
-  // Non-custodial wallets monitor on-chain, not through server functions
   return { detected: false, message: 'Non-custodial monitoring handled on-client' };
 }
 
@@ -300,7 +291,6 @@ export async function sendPexlyPayment(
       note
     });
 
-    // Call the pexly-pay-send edge function
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pexly-pay-send`, {
       method: 'POST',
       headers: {
