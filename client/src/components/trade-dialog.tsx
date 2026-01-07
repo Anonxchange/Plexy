@@ -85,17 +85,24 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
 
   const handleProceed = async () => {
-    if (!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max) {
-      return;
-    }
+    if (!amount) return;
 
     if (isCreatingTrade) {
       return; // Prevent duplicate submissions
     }
 
-    // If this is a sell offer, proceed with trade creation
+    const fiatAmount = parseFloat(amount);
+    if (fiatAmount < offer.limits.min || fiatAmount > offer.limits.max) {
+      toast({
+        title: "Amount outside limits",
+        description: `Please enter an amount between ${offer.limits.min.toLocaleString()} and ${offer.limits.max.toLocaleString()} ${offer.currency}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If this is a sell offer, proceed with bank selection if needed
     if (offer.type === 'sell' && user) {
-      // Check for bank account selection
       if (!selectedBankAccount) {
         if (bankAccounts.length === 0) {
           alert("Please add a payment method first in your settings");
@@ -113,14 +120,15 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       const supabase = createClient();
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
         console.error("User not authenticated");
         alert("Please sign in to create a trade");
+        setIsCreatingTrade(false);
         return;
       }
 
-      const fiatAmount = parseFloat(amount);
+      const currentUserId = authUser.id;
       // const cryptoAmount = fiatAmount / offer.pricePerBTC; // This is now calculated above for display
 
       // Get the vendor ID from the offer
@@ -142,12 +150,12 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       // If vendor posted a "buy" offer, they want to buy, so current user is seller
       // If vendor posted a "sell" offer, they want to sell, so current user is buyer
       const isBuyOffer = offer.type === "buy";
-      const buyerId = isBuyOffer ? vendorId : user.id;  // vendor buys OR user buys
-      const sellerId = isBuyOffer ? user.id : vendorId;  // user sells OR vendor sells
+      const buyerId = isBuyOffer ? vendorId : currentUserId;  // vendor buys OR user buys
+      const sellerId = isBuyOffer ? currentUserId : vendorId;  // user sells OR vendor sells
 
       console.log("Trade creation:", {
         offerType: offer.type,
-        currentUserId: user.id,
+        currentUserId,
         vendorId,
         buyerId,
         sellerId,
@@ -161,7 +169,7 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
         const { data: newOffer, error: offerError } = await supabase
           .from("p2p_offers")
           .insert({
-            user_id: offer.vendor?.id || user.id, // This line might need adjustment if offer.vendor is unreliable
+            user_id: offer.vendor?.id || currentUserId, // This line might need adjustment if offer.vendor is unreliable
             type: offer.type,
             crypto_symbol: offer.cryptoSymbol,
             fiat_currency: offer.currency,
@@ -235,7 +243,7 @@ ${selectedBankAccount.account_number}`;
             .from("trade_messages")
             .insert({
               trade_id: trade.id,
-              sender_id: user.id,
+              sender_id: currentUserId,
               content: bankDetailsMessage,
             });
 
@@ -251,7 +259,7 @@ ${selectedBankAccount.account_number}`;
         const { data: currentUserProfile } = await supabase
           .from('user_profiles')
           .select('username, avatar_url')
-          .eq('id', user.id)
+          .eq('id', currentUserId)
           .single();
 
         const { data: counterpartProfile } = await supabase
@@ -260,14 +268,14 @@ ${selectedBankAccount.account_number}`;
           .eq('id', vendorId)
           .single();
 
-        const currentUserName = currentUserProfile?.username || user.email?.split('@')[0] || 'User';
+        const currentUserName = currentUserProfile?.username || authUser.email?.split('@')[0] || 'User';
         const currentUserAvatar = currentUserProfile?.avatar_url || null;
         const counterpartName = counterpartProfile?.username || offer.vendor?.name || 'User';
         const counterpartAvatar = counterpartProfile?.avatar_url || offer.vendor?.avatar || null;
 
         // Notification for the current user (trade initiator)
         await createNotification(
-          user.id,
+          currentUserId,
           'New Trade Started',
           `Trade with ${counterpartName} for ${fiatAmount} ${offer.currency}`,
           'trade',
@@ -585,7 +593,6 @@ ${selectedBankAccount.account_number}`;
           {/* Proceed Button */}
           <Button
             className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!amount || parseFloat(amount) < offer.limits.min || parseFloat(amount) > offer.limits.max || isCreatingTrade || (offer.type === 'sell' && !selectedBankAccount)}
             onClick={(e) => {
               e.preventDefault();
               handleProceed();
