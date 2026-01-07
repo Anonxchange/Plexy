@@ -302,13 +302,23 @@ export default function Wallet() {
   const loadWalletData = async () => {
     if (!user) return;
     try {
+      console.log("Wallet Page: Refreshing all balances...");
       const userWallets = await getUserWallets(user.id);
-      console.log("Loaded wallets from API:", userWallets);
-      setWallets(userWallets);
+      console.log("Wallet Page: API Response:", userWallets);
+      
+      // Force an immediate UI update with the new data
+      setWallets([...userWallets]);
       setWalletsLoaded(true);
+      
+      // If we see zero but expect more, trigger a secondary sync in 2 seconds
+      if (userWallets.every(w => (w.balance || 0) === 0)) {
+        setTimeout(async () => {
+          const reSync = await getUserWallets(user.id);
+          setWallets([...reSync]);
+        }, 2000);
+      }
     } catch (error) {
-      console.error("Error loading wallets:", error);
-      // Don't reset wallets on error - keep previous data
+      console.error("Wallet Page: Sync failed:", error);
     }
   };
 
