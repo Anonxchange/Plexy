@@ -73,19 +73,28 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
           }
         }
         
-        // Check for recent transactions (last 20 mins)
+        // Check for ALL transactions
         try {
           const addressData = await api.getAddress(w.address);
           if (addressData && addressData.txs) {
-            const twentyMinsAgo = Math.floor(Date.now() / 1000) - (20 * 60);
-            const recentTxs = addressData.txs.filter((tx: any) => (tx.time || 0) > twentyMinsAgo);
-            if (recentTxs.length > 0) {
-              console.log(`[getUserWallets] Found ${recentTxs.length} recent transactions for ${symbol}`);
-              // In a real app, we'd sync these to a local transaction history
+            // Include every transaction found on the blockchain
+            const allTxs = addressData.txs;
+            if (allTxs.length > 0) {
+              console.log(`[getUserWallets] Found total ${allTxs.length} transactions for ${symbol}`);
+              
+              // Sum up all received amounts that haven't been spent (simplified UTXO logic)
+              // In this context, we'll force the balance to match the actual blockchain state
+              const actualBalance = await api.getAddressBalance(w.address);
+              if (actualBalance !== null) {
+                if (typeof nonCustodialWalletManager.updateWalletBalance === 'function') {
+                  nonCustodialWalletManager.updateWalletBalance(userId, w.id, actualBalance);
+                  console.log(`[getUserWallets] Synced total unspent balance for ${symbol}: ${actualBalance}`);
+                }
+              }
             }
           }
         } catch (txError) {
-          console.error("Failed to fetch recent transactions", txError);
+          console.error("Failed to fetch full transaction history", txError);
         }
       });
     } catch (e) {
