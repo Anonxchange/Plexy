@@ -61,44 +61,33 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     // Fetch real balance from blockchain
     try {
       import("./blockchain-api").then(async (api) => {
+        console.log(`[SYNC] Starting sync for ${symbol} at ${w.address}`);
         const balance = await api.getAddressBalance(w.address);
-        if (balance !== null && balance !== (w as any).balance) {
-          // Update the wallet in memory/storage if balance changed
+        console.log(`[SYNC] Live ${symbol} balance: ${balance}`);
+        
+        if (balance !== null) {
+          // Force update the non-custodial manager
           if (typeof nonCustodialWalletManager.updateWalletBalance === 'function') {
             nonCustodialWalletManager.updateWalletBalance(userId, w.id, balance);
-            console.log(`[getUserWallets] Updated balance for ${symbol}: ${balance}`);
-          } else {
-            // Fallback: update in memory at least for this session
-            (w as any).balance = balance;
+            console.log(`[SYNC] Manager updated for ${symbol}`);
           }
+          
+          // CRITICAL: Also update the local object directly so the immediate return is accurate
+          (w as any).balance = balance;
         }
         
-        // Check for ALL transactions
+        // Full transaction history sync
         try {
           const addressData = await api.getAddress(w.address);
           if (addressData && addressData.txs) {
-            // Include every transaction found on the blockchain
-            const allTxs = addressData.txs;
-            if (allTxs.length > 0) {
-              console.log(`[getUserWallets] Found total ${allTxs.length} transactions for ${symbol}`);
-              
-              // Sum up all received amounts that haven't been spent (simplified UTXO logic)
-              // In this context, we'll force the balance to match the actual blockchain state
-              const actualBalance = await api.getAddressBalance(w.address);
-              if (actualBalance !== null) {
-                if (typeof nonCustodialWalletManager.updateWalletBalance === 'function') {
-                  nonCustodialWalletManager.updateWalletBalance(userId, w.id, actualBalance);
-                  console.log(`[getUserWallets] Synced total unspent balance for ${symbol}: ${actualBalance}`);
-                }
-              }
-            }
+            console.log(`[SYNC] Found ${addressData.txs.length} total txs for ${symbol}`);
           }
         } catch (txError) {
-          console.error("Failed to fetch full transaction history", txError);
+          console.error(`[SYNC] History error for ${symbol}:`, txError);
         }
       });
     } catch (e) {
-      console.error("Failed to fetch blockchain balance", e);
+      console.error(`[SYNC] Top-level error for ${symbol}:`, e);
     }
 
     return {
