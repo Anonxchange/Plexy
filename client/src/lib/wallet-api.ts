@@ -48,7 +48,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
   // They should now include any wallets synced from Supabase
   const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
   
-  const nonCustodialWallets: Wallet[] = localWallets.map(w => {
+  const nonCustodialWallets: Wallet[] = await Promise.all(localWallets.map(async (w) => {
     // Determine crypto symbol based on chainId
     let symbol = w.chainId;
     if (w.chainId === 'Ethereum (ERC-20)') symbol = 'ETH';
@@ -56,45 +56,45 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     else if (w.chainId === 'Binance Smart Chain (BEP-20)') symbol = 'BNB';
     else if (w.chainId === 'Solana') symbol = 'SOL';
     else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
-    // For stablecoins, use chainId as-is (e.g., "USDT-Ethereum (ERC-20)")
 
-    const walletObj = {
+    let balance = Number(w.balance) || 0;
+
+    // Fetch real balance from blockchain
+    try {
+      const api = await import("./blockchain-api");
+      console.log(`[SYNC] Fetching live balance for ${symbol} at ${w.address}`);
+      const liveBalance = await api.getAddressBalance(w.address);
+      console.log(`[SYNC] Result for ${symbol} (${w.address}): ${liveBalance}`);
+      
+      if (liveBalance !== null && !isNaN(Number(liveBalance))) {
+        balance = Number(liveBalance);
+        // Sync back to local storage wallet object
+        w.balance = balance;
+        // Force update the non-custodial manager
+        if (typeof (nonCustodialWalletManager as any).updateWalletBalance === 'function') {
+          (nonCustodialWalletManager as any).updateWalletBalance(userId, w.id, balance);
+        }
+      } else {
+        console.warn(`[SYNC] Received null or invalid balance for ${symbol} at ${w.address}`);
+      }
+    } catch (e) {
+      console.error(`[SYNC] Error for ${symbol} at ${w.address}:`, e);
+    }
+
+    return {
       id: w.id,
       user_id: userId,
       crypto_symbol: symbol,
-      balance: w.balance || 0,
+      balance: balance,
       locked_balance: 0,
       deposit_address: w.address,
       created_at: w.createdAt,
       updated_at: w.createdAt,
       isNonCustodial: true
     };
+  }));
 
-    // Fetch real balance from blockchain
-    try {
-      import("./blockchain-api").then(async (api) => {
-        console.log(`[SYNC] Starting sync for ${symbol} at ${w.address}`);
-        const balance = await api.getAddressBalance(w.address);
-        console.log(`[SYNC] Live ${symbol} balance: ${balance}`);
-        
-        if (balance !== null) {
-          // Update the wallet object IMMEDIATELY
-          walletObj.balance = balance;
-
-          // Force update the non-custodial manager
-          if (typeof (nonCustodialWalletManager as any).updateWalletBalance === 'function') {
-            (nonCustodialWalletManager as any).updateWalletBalance(userId, w.id, balance);
-            console.log(`[SYNC] Manager updated for ${symbol}`);
-          }
-        }
-      });
-    } catch (e) {
-      console.error(`[SYNC] Top-level error for ${symbol}:`, e);
-    }
-
-    return walletObj;
-  });
-
+  console.log("[getUserWallets] Final synced wallets:", nonCustodialWallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
   return nonCustodialWallets;
 }
 
