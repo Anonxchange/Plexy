@@ -435,15 +435,15 @@ export default function Wallet() {
   // Both wallets AND prices must be successfully loaded before showing calculated values
   // This prevents showing 0 during loading or when price fetch fails
   const hasFreshReliableData = walletsLoaded && pricesLoadedSuccessfully && Object.keys(cryptoPrices).length > 0;
-  const totalBalance = (!hasFreshReliableData && cachedBalance !== null) 
+  const totalBalance = (!hasFreshReliableData && cachedBalance !== null && cachedBalance > 0) 
     ? cachedBalance 
-    : calculatedBalance;
+    : (calculatedBalance || 0);
   const totalPnL = (!hasFreshReliableData && cachedPnL !== null) 
     ? cachedPnL 
-    : calculatedPnL;
+    : (calculatedPnL || 0);
   const totalPnLPercentage = (!hasFreshReliableData && cachedPnLPercentage !== null) 
     ? cachedPnLPercentage 
-    : calculatedPnLPercentage;
+    : (calculatedPnLPercentage || 0);
 
   // Cache balance ONLY when we have confirmed fresh reliable data from BOTH sources
   // This prevents caching bad data from failed price fetches
