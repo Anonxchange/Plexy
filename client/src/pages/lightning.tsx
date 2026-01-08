@@ -340,49 +340,10 @@ export default function Lightning() {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* FAQ Section Moved to Sidebar on Desktop */}
-              <div id="faq">
-                <h2 className="text-xl font-bold mb-4 px-2">FAQ</h2>
-                <Accordion type="single" collapsible className="space-y-3">
-                  <AccordionItem value="item-1" className="bg-card border-2 rounded-xl px-4 overflow-hidden">
-                    <AccordionTrigger className="text-sm font-semibold hover:no-underline py-4">
-                      Is the Lightning Network safe?
-                    </AccordionTrigger>
-                    <AccordionContent className="text-xs text-muted-foreground leading-relaxed">
-                      Yes, the Lightning Network is built on top of the Bitcoin blockchain and uses smart contracts to ensure that your funds are secure. It's a well-tested and widely used technology in the Bitcoin ecosystem.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="item-2" className="bg-card border-2 rounded-xl px-4 overflow-hidden">
-                    <AccordionTrigger className="text-sm font-semibold hover:no-underline py-4 text-left">
-                      How to receive?
-                    </AccordionTrigger>
-                    <AccordionContent className="text-xs text-muted-foreground leading-relaxed">
-                      Select "Receive Bitcoin", enter an amount, and click "Create Invoice". Share the resulting invoice or QR code with the sender.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="item-3" className="bg-card border-2 rounded-xl px-4 overflow-hidden">
-                    <AccordionTrigger className="text-sm font-semibold hover:no-underline py-4 text-left">
-                      How to send?
-                    </AccordionTrigger>
-                    <AccordionContent className="text-xs text-muted-foreground leading-relaxed">
-                      Select "Send Bitcoin", enter an amount, and click "Send Now". Paste the recipient's Lightning invoice in the prompt to complete payment.
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-                <div className="mt-4 px-2">
-                  <Button variant="ghost" className="text-primary text-xs w-full justify-start p-0 h-auto font-medium hover:bg-transparent" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                    See more questions in help center
-                  </Button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Modal components remain unchanged but wrapped properly */}
         <Dialog open={showReceiveModal} onOpenChange={setShowReceiveModal}>
           <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
