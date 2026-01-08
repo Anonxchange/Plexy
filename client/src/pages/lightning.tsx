@@ -286,7 +286,7 @@ export default function Lightning() {
               <div className="pt-4">
                 <h2 className="text-2xl font-bold mb-4">Transactions</h2>
                 <Card className="bg-muted/30 border-dashed border-2">
-                  <CardContent className="py-24">
+                  <CardContent className="py-32">
                     <div className="flex flex-col items-center justify-center text-center">
                       <div className="w-24 h-24 mb-8 rounded-full bg-muted/50 flex items-center justify-center">
                         <Search className="h-12 w-12 text-muted-foreground" />
