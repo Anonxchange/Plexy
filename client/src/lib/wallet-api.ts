@@ -59,6 +59,21 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         console.log(`[SYNC] Fetching live balance for ${symbol} via monitor-deposits at ${w.address}`);
+        
+        // Map symbol to the correct chain identifier for the edge function
+        let chainParam = symbol;
+        if (symbol === 'ETH' || symbol === 'USDT' || symbol === 'USDC' || symbol === 'Ethereum (ERC-20)') {
+          chainParam = 'ETH';
+        } else if (symbol === 'BTC' || symbol === 'Bitcoin (SegWit)') {
+          chainParam = 'BTC';
+        } else if (symbol === 'SOL' || symbol === 'Solana') {
+          chainParam = 'SOL';
+        } else if (symbol === 'TRX' || symbol === 'Tron (TRC-20)') {
+          chainParam = 'TRX';
+        } else if (symbol === 'BNB' || symbol === 'Binance Smart Chain (BEP-20)') {
+          chainParam = 'BNB';
+        }
+
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monitor-deposits`, {
           method: 'POST',
           headers: {
@@ -67,14 +82,16 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
           },
           body: JSON.stringify({
             address: w.address,
-            chain: symbol
+            chain: chainParam
           })
         });
 
         if (response.ok) {
           const result = await response.json();
+          console.log(`[SYNC] API Response for ${symbol} (${chainParam}):`, result);
           if (result.success && typeof result.balance === 'number') {
             const newBalance = result.balance;
+            console.log(`[SYNC] New balance for ${symbol}: ${newBalance}`);
             w.balance = newBalance;
             balance = newBalance;
             
@@ -94,6 +111,8 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
               }
             }
           }
+        } else {
+          console.error(`[SYNC] API Error for ${symbol}:`, response.status, await response.text());
         }
       }
     } catch (e) {
