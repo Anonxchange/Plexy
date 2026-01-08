@@ -472,134 +472,133 @@ export default function Wallet() {
         {/* My Assets Header */}
         <h1 className="text-2xl font-bold mb-6">My Wallet</h1>
 
-        {/* Total Assets Card */}
-        <div className="bg-card rounded-2xl p-5 mb-6 shadow-sm border border-border">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm font-medium">Total Assets</span>
-              <button 
-                onClick={() => setBalanceVisible(!balanceVisible)}
-                className="p-1 hover:bg-muted rounded transition-colors"
-              >
-                {balanceVisible ? (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-foreground">
-                  {balanceVisible ? totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••••"}
-                </span>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <span className="text-lg font-medium">{preferredCurrency}</span>
-                  <ChevronDown className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="text-muted-foreground text-sm mt-1">
-                ≈ {balanceVisible ? (totalBalance / (cryptoPrices.BTC?.current_price || 1)).toFixed(5) : "••••••"} BTC
-              </p>
-              <div className="flex items-center gap-2 mt-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLocation("/analysis")}>
-                <span className="text-sm text-muted-foreground">Today's P&L</span>
-                <div className={`flex items-center gap-1 ${totalPnL >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                  {totalPnL >= 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  <span className="text-sm font-medium">{balanceVisible ? `${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)} ${preferredCurrency}` : '••••••'} ({totalPnLPercentage.toFixed(2)}%)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Mini Sparkline Chart */}
-            <div className="w-24 h-12">
-              <Sparkline data={portfolioSparklineData} color={portfolioTrend === 'up' ? '#10b981' : portfolioTrend === 'down' ? '#ef4444' : '#6b7280'} />
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions - Below Total Assets Card */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          <button
-            onClick={() => setReceiveDialogOpen(true)}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
-          >
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.1))`,
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
-              }}
-            >
-              <ArrowDownToLine className="h-6 w-6 text-blue-500" />
-            </div>
-            <span className="text-xs font-medium text-foreground text-center leading-tight">Receive</span>
-          </button>
-
-          <button
-            onClick={() => setSendDialogOpen(true)}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
-          >
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(168, 85, 247, 0.1))`,
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(168, 85, 247, 0.3)",
-              }}
-            >
-              <ArrowUpFromLine className="h-6 w-6 text-purple-500" />
-            </div>
-            <span className="text-xs font-medium text-foreground text-center leading-tight">Send</span>
-          </button>
-
-          <button
-            onClick={() => setLocation("/swap")}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
-          >
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.1))`,
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(34, 197, 94, 0.3)",
-              }}
-            >
-              <ArrowLeftRight className="h-6 w-6 text-green-500" />
-            </div>
-            <span className="text-xs font-medium text-foreground text-center leading-tight">Swap</span>
-          </button>
-
-          <button
-            onClick={() => setLocation("/wallet/mobile-topup")}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
-          >
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.1))`,
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(249, 115, 22, 0.3)",
-              }}
-            >
-              <Smartphone className="h-6 w-6 text-orange-500" />
-            </div>
-            <span className="text-xs font-medium text-foreground text-center leading-tight">Topup</span>
-          </button>
-        </div>
-
         {/* 2-Column Layout for Desktop */}
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
 
           {/* LEFT COLUMN - Main Wallet Content */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+            {/* Total Assets Card */}
+            <div className="bg-card rounded-2xl p-5 mb-6 shadow-sm border border-border">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-sm font-medium">Total Assets</span>
+                  <button 
+                    onClick={() => setBalanceVisible(!balanceVisible)}
+                    className="p-1 hover:bg-muted rounded transition-colors"
+                  >
+                    {balanceVisible ? (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold text-foreground">
+                      {balanceVisible ? totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••••"}
+                    </span>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <span className="text-lg font-medium">{preferredCurrency}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    ≈ {balanceVisible ? (totalBalance / (cryptoPrices.BTC?.current_price || 1)).toFixed(5) : "••••••"} BTC
+                  </p>
+                  <div className="flex items-center gap-2 mt-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLocation("/analysis")}>
+                    <span className="text-sm text-muted-foreground">Today's P&L</span>
+                    <div className={`flex items-center gap-1 ${totalPnL >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                      {totalPnL >= 0 ? (
+                        <TrendingUp className="h-3 w-3" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3" />
+                      )}
+                      <span className="text-sm font-medium">{balanceVisible ? `${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)} ${preferredCurrency}` : '••••••'} ({totalPnLPercentage.toFixed(2)}%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mini Sparkline Chart */}
+                <div className="w-24 h-12">
+                  <Sparkline data={portfolioSparklineData} color={portfolioTrend === 'up' ? '#10b981' : portfolioTrend === 'down' ? '#ef4444' : '#6b7280'} />
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions - Below Total Assets Card */}
+            <div className="grid grid-cols-4 gap-3 mb-6">
+              <button
+                onClick={() => setReceiveDialogOpen(true)}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+              >
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.1))`,
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(59, 130, 246, 0.3)",
+                  }}
+                >
+                  <ArrowDownToLine className="h-6 w-6 text-blue-500" />
+                </div>
+                <span className="text-xs font-medium text-foreground text-center leading-tight">Receive</span>
+              </button>
+
+              <button
+                onClick={() => setSendDialogOpen(true)}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+              >
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(168, 85, 247, 0.1))`,
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(168, 85, 247, 0.3)",
+                  }}
+                >
+                  <ArrowUpFromLine className="h-6 w-6 text-purple-500" />
+                </div>
+                <span className="text-xs font-medium text-foreground text-center leading-tight">Send</span>
+              </button>
+
+              <button
+                onClick={() => setLocation("/swap")}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+              >
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.1))`,
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(34, 197, 94, 0.3)",
+                  }}
+                >
+                  <ArrowLeftRight className="h-6 w-6 text-green-500" />
+                </div>
+                <span className="text-xs font-medium text-foreground text-center leading-tight">Swap</span>
+              </button>
+
+              <button
+                onClick={() => setLocation("/wallet/mobile-topup")}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
+              >
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.1))`,
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(249, 115, 22, 0.3)",
+                  }}
+                >
+                  <Smartphone className="h-6 w-6 text-orange-500" />
+                </div>
+                <span className="text-xs font-medium text-foreground text-center leading-tight">Topup</span>
+              </button>
+            </div>
 
             {/* Asset Tabs */}
             <div className="flex gap-4 sm:gap-6 mb-4 border-b overflow-x-auto">
@@ -822,87 +821,83 @@ export default function Wallet() {
               </div>
             )}
 
-            {/* News Section */}
-            <div className="bg-card rounded-3xl p-6 shadow-sm border border-border">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-foreground">Trending News</h2>
-                <button className="text-primary font-semibold text-sm hover:underline">See all</button>
-              </div>
+          </div>
 
-              <div className="space-y-8">
-                {/* Main Featured News */}
-                {cryptoNews[0] && (
-                  <a 
-                    href={cryptoNews[0].url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="group block cursor-pointer"
-                  >
-                    <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden mb-4 bg-muted">
-                      <img 
-                        src={cryptoNews[0].image || "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop"} 
-                        alt="" 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                    <h3 className="text-xl font-bold text-foreground leading-tight mb-2 group-hover:text-primary transition-colors">
-                      {cryptoNews[0].title}
-                    </h3>
-                    <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
-                      {cryptoNews[0].description}
-                    </p>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span className="font-medium text-primary">{cryptoNews[0].source}</span>
-                      <span>•</span>
-                      <span>{new Date(cryptoNews[0].published_at).toLocaleDateString()}</span>
-                    </div>
-                  </a>
-                )}
+          {/* RIGHT COLUMN - Markets & News */}
+          <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+            <div className="lg:sticky lg:top-6 space-y-6">
+              {/* News Section */}
+              <div className="bg-card rounded-3xl p-6 shadow-sm border border-border">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-foreground">Trending News</h2>
+                  <button className="text-primary font-semibold text-sm hover:underline">See all</button>
+                </div>
 
-                {/* List News */}
-                <div className="space-y-6 pt-6 border-t border-border">
-                  {cryptoNews.slice(1, 10).map((article) => (
+                <div className="space-y-8">
+                  {/* Main Featured News */}
+                  {cryptoNews[0] && (
                     <a 
-                      key={article.id} 
-                      href={article.url} 
+                      href={cryptoNews[0].url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex gap-4 group cursor-pointer items-center"
+                      className="group block cursor-pointer"
                     >
-                      <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-muted">
+                      <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden mb-4 bg-muted">
                         <img 
-                          src={article.image || "https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1287&auto=format&fit=crop"} 
+                          src={cryptoNews[0].image || "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop"} 
                           alt="" 
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-base font-bold text-foreground leading-snug mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                          {article.title}
-                        </h4>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <span className="font-medium text-primary">{article.source}</span>
-                          <span>•</span>
-                          <span>{new Date(article.published_at).toLocaleDateString()}</span>
-                        </div>
+                      <h3 className="text-xl font-bold text-foreground leading-tight mb-2 group-hover:text-primary transition-colors">
+                        {cryptoNews[0].title}
+                      </h3>
+                      <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+                        {cryptoNews[0].description}
+                      </p>
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="font-medium text-primary">{cryptoNews[0].source}</span>
+                        <span>•</span>
+                        <span>{new Date(cryptoNews[0].published_at).toLocaleDateString()}</span>
                       </div>
                     </a>
-                  ))}
+                  )}
+
+                  {/* List News */}
+                  <div className="space-y-6 pt-6 border-t border-border">
+                    {cryptoNews.slice(1, 10).map((article) => (
+                      <a 
+                        key={article.id} 
+                        href={article.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex gap-4 group cursor-pointer items-center"
+                      >
+                        <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-muted">
+                          <img 
+                            src={article.image || "https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1287&auto=format&fit=crop"} 
+                            alt="" 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-base font-bold text-foreground leading-snug mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                            {article.title}
+                          </h4>
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <span className="font-medium text-primary">{article.source}</span>
+                            <span>•</span>
+                            <span>{new Date(article.published_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-
-          </div>
-
-          {/* RIGHT COLUMN - Markets */}
-          <div className="lg:col-span-5 xl:col-span-4">
-            <div className="space-y-6 lg:sticky lg:top-6">
-
-
-            </div>
           </div>
         </div>
-
       </div>
 
       <PexlyFooter />
