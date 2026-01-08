@@ -280,28 +280,6 @@ export default function Lightning() {
                 </p>
               </CardContent>
             </Card>
-
-            {/* Transactions Header & Section */}
-            {user && (
-              <div className="pt-4">
-                <h2 className="text-2xl font-bold mb-4">Transactions</h2>
-                <Card className="bg-muted/30 border-dashed border-2">
-                  <CardContent className="py-32">
-                    <div className="flex flex-col items-center justify-center text-center">
-                      <div className="w-24 h-24 mb-8 rounded-full bg-muted/50 flex items-center justify-center">
-                        <Search className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                      <p className="text-xl font-medium text-muted-foreground">
-                        No transactions found
-                      </p>
-                      <p className="text-base text-muted-foreground/60 max-w-sm mx-auto mt-3">
-                        Your Lightning network activity will appear here once you start transacting.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </div>
 
           {/* Right Column: FAQ and Information */}
@@ -340,6 +318,28 @@ export default function Lightning() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Transactions Section - Moved here to match FAQ width */}
+              {user && (
+                <div className="pt-4">
+                  <h2 className="text-2xl font-bold mb-4">Transactions</h2>
+                  <Card className="bg-muted/30 border-dashed border-2">
+                    <CardContent className="py-12">
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                          <Search className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <p className="text-lg font-medium text-muted-foreground">
+                          No transactions found
+                        </p>
+                        <p className="text-sm text-muted-foreground/60 max-w-[200px] mx-auto mt-2">
+                          Your Lightning activity will appear here.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           </div>
         </div>
