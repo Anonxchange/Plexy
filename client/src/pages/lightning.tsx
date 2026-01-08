@@ -286,15 +286,15 @@ export default function Lightning() {
               <div className="pt-4">
                 <h2 className="text-2xl font-bold mb-4">Transactions</h2>
                 <Card className="bg-muted/30 border-dashed border-2">
-                  <CardContent className="py-20">
+                  <CardContent className="py-24">
                     <div className="flex flex-col items-center justify-center text-center">
-                      <div className="w-20 h-20 mb-6 rounded-full bg-muted/50 flex items-center justify-center">
-                        <Search className="h-10 w-10 text-muted-foreground" />
+                      <div className="w-24 h-24 mb-8 rounded-full bg-muted/50 flex items-center justify-center">
+                        <Search className="h-12 w-12 text-muted-foreground" />
                       </div>
-                      <p className="text-lg font-medium text-muted-foreground">
+                      <p className="text-xl font-medium text-muted-foreground">
                         No transactions found
                       </p>
-                      <p className="text-sm text-muted-foreground/60 max-w-xs mx-auto mt-2">
+                      <p className="text-base text-muted-foreground/60 max-w-sm mx-auto mt-3">
                         Your Lightning network activity will appear here once you start transacting.
                       </p>
                     </div>
