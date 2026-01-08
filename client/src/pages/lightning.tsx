@@ -261,7 +261,7 @@ export default function Lightning() {
                   <Button 
                     size="lg" 
                     className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/10 hover:shadow-primary/20 transition-all active:scale-[0.98]"
-                    onClick={() => setLocation("/auth")}
+                    onClick={() => setLocation("/signin")}
                   >
                     Sign In to Continue
                   </Button>
