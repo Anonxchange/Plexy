@@ -65,15 +65,16 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            address: w.address,
+            chain: symbol
+          })
         });
 
         if (response.ok) {
-          const data = await response.json();
-          const balances = data.walletBalances || data.user_wallets || [];
-          const walletData = balances.find((wb: any) => wb.address === w.address || (wb.wallet_id === w.id));
-          
-          if (walletData && typeof walletData.balance === 'number') {
-            const newBalance = walletData.balance;
+          const result = await response.json();
+          if (result.success && typeof result.balance === 'number') {
+            const newBalance = result.balance;
             w.balance = newBalance;
             balance = newBalance;
             
