@@ -361,125 +361,163 @@ export function Swap() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Swap Cryptocurrency</h1>
-        <Card className="bg-card/50">
-          <CardContent className="p-6 space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-muted-foreground text-base">From</Label>
-              </div>
-              <div className="flex gap-3">
-                <Input
-                  type="number"
-                  value={fromAmount}
-                  onChange={(e) => handleFromAmountChange(e.target.value)}
-                  className="flex-1 h-16 text-2xl bg-background"
-                  placeholder="0.00"
-                />
-                <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                  <SelectTrigger className="w-36 h-16 bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((curr) => (
-                      <SelectItem key={curr.symbol} value={curr.symbol}>
-                        <div className="flex items-center gap-2">
-                          <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
-                          {curr.symbol}
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Left Column: Swap Card */}
+          <div className="space-y-6">
+            <Card className="bg-card/50">
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-muted-foreground text-base">From</Label>
+                  </div>
+                  <div className="flex gap-3">
+                    <Input
+                      type="number"
+                      value={fromAmount}
+                      onChange={(e) => handleFromAmountChange(e.target.value)}
+                      className="flex-1 h-16 text-2xl bg-background"
+                      placeholder="0.00"
+                    />
+                    <Select value={fromCurrency} onValueChange={setFromCurrency}>
+                      <SelectTrigger className="w-36 h-16 bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currencies.map((curr) => (
+                          <SelectItem key={curr.symbol} value={curr.symbol}>
+                            <div className="flex items-center gap-2">
+                              <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
+                              {curr.symbol}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <Button
+                    size="icon"
+                    variant="default"
+                    className="rounded-full bg-primary hover:bg-primary/90 h-12 w-12"
+                    onClick={handleSwapCurrencies}
+                  >
+                    <ArrowUpDown className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-muted-foreground text-base">To</Label>
+                  </div>
+                  <div className="flex gap-3">
+                    <Input
+                      type="number"
+                      value={toAmount}
+                      onChange={(e) => handleToAmountChange(e.target.value)}
+                      className="flex-1 h-16 text-2xl bg-background"
+                      placeholder="0.00"
+                    />
+                    <Select value={toCurrency} onValueChange={setToCurrency}>
+                      <SelectTrigger className="w-36 h-16 bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currencies.map((curr) => (
+                          <SelectItem key={curr.symbol} value={curr.symbol}>
+                            <div className="flex items-center gap-2">
+                              <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
+                              {curr.symbol}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Swap rate:</span>
+                    <span className="font-medium flex items-center gap-2">
+                      1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Network Fee (Est.):</span>
+                    <span className="font-medium text-orange-500">
+                      {fromCurrency === 'BTC' ? estFees.BTC : 
+                       fromCurrency === 'SOL' ? estFees.SOL : 
+                       fromCurrency === 'TRX' ? estFees.TRX : 
+                       fromCurrency === 'BNB' ? estFees.BSC : estFees.ETH}
+                    </span>
+                  </div>
+                </div>
+
+                <Button 
+                  className="w-full h-16 text-xl font-bold bg-primary hover:bg-primary/90" 
+                  onClick={handleSwap}
+                  disabled={isSwapping || isLoading || parseFloat(fromAmount) <= 0}
+                >
+                  {isSwapping ? <Loader2 className="animate-spin h-6 w-6" /> : "Swap Now"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* History Section Moved Here */}
+            {history.length > 0 && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Swap History</h2>
+                <div className="space-y-4">
+                  {history.map((order) => (
+                    <Card key={order.id} className="bg-card/50">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex -space-x-2">
+                            <img src={currencies.find(c => c.symbol === order.fromToken)?.iconUrl} className="w-8 h-8 rounded-full border-2 border-background" alt="" />
+                            <img src={currencies.find(c => c.symbol === order.toToken)?.iconUrl} className="w-8 h-8 rounded-full border-2 border-background" alt="" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-sm sm:text-base">
+                              {order.amount} {order.fromToken} → {order.quote.toAmount} {order.toToken}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(order.createdAt)} ago
+                            </div>
+                          </div>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        <Badge variant={order.status === 'submitted' ? 'default' : 'secondary'} className="bg-primary/20 text-primary border-none text-[10px] sm:text-xs">
+                          {order.status === 'submitted' ? 'Waiting on chain' : order.status}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div className="flex justify-center">
-              <Button
-                size="icon"
-                variant="default"
-                className="rounded-full bg-primary hover:bg-primary/90 h-12 w-12"
-                onClick={handleSwapCurrencies}
-              >
-                <ArrowUpDown className="h-5 w-5" />
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-muted-foreground text-base">To</Label>
-              </div>
-              <div className="flex gap-3">
-                <Input
-                  type="number"
-                  value={toAmount}
-                  onChange={(e) => handleToAmountChange(e.target.value)}
-                  className="flex-1 h-16 text-2xl bg-background"
-                  placeholder="0.00"
-                />
-                <Select value={toCurrency} onValueChange={setToCurrency}>
-                  <SelectTrigger className="w-36 h-16 bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((curr) => (
-                      <SelectItem key={curr.symbol} value={curr.symbol}>
-                        <div className="flex items-center gap-2">
-                          <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
-                          {curr.symbol}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Swap rate:</span>
-                <span className="font-medium flex items-center gap-2">
-                  1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Network Fee (Est.):</span>
-                <span className="font-medium text-orange-500">
-                  {fromCurrency === 'BTC' ? estFees.BTC : 
-                   fromCurrency === 'SOL' ? estFees.SOL : 
-                   fromCurrency === 'TRX' ? estFees.TRX : 
-                   fromCurrency === 'BNB' ? estFees.BSC : estFees.ETH}
-                </span>
-              </div>
-            </div>
-
-            <Button 
-              className="w-full h-16 text-xl font-bold bg-primary hover:bg-primary/90" 
-              onClick={handleSwap}
-              disabled={isSwapping || isLoading || parseFloat(fromAmount) <= 0}
-            >
-              {isSwapping ? <Loader2 className="animate-spin h-6 w-6" /> : "Swap Now"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* TradingView Chart Section */}
-        <div className="mt-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              {fromCurrency}/{toCurrency} Price Chart
-            </h2>
+            )}
           </div>
-          <Card className="bg-card/50 overflow-hidden h-[400px] relative">
-            <iframe
-              key={`${fromCurrency}-${toCurrency}`}
-              src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency}&interval=60&hidesidetoolbar=1&symboledit=0&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=pexly.com&utm_medium=widget&utm_campaign=chart`}
-              className="absolute inset-0 w-full h-full"
-              title="TradingView Chart"
-            ></iframe>
-          </Card>
+
+          {/* Right Column: Chart Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                {fromCurrency}/{toCurrency} Price Chart
+              </h2>
+            </div>
+            <Card className="bg-card/50 overflow-hidden h-[500px] lg:h-[600px] relative">
+              <iframe
+                key={`${fromCurrency}-${toCurrency}`}
+                src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency}&interval=60&hidesidetoolbar=1&symboledit=0&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=pexly.com&utm_medium=widget&utm_campaign=chart`}
+                className="absolute inset-0 w-full h-full"
+                title="TradingView Chart"
+              ></iframe>
+            </Card>
+          </div>
         </div>
 
         <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
@@ -511,37 +549,6 @@ export function Swap() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {history.length > 0 && (
-          <div className="mt-12 space-y-6">
-            <h2 className="text-2xl font-bold">Swap History</h2>
-            <div className="space-y-4">
-              {history.map((order) => (
-                <Card key={order.id} className="bg-card/50">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="flex -space-x-2">
-                        <img src={currencies.find(c => c.symbol === order.fromToken)?.iconUrl} className="w-8 h-8 rounded-full border-2 border-background" alt="" />
-                        <img src={currencies.find(c => c.symbol === order.toToken)?.iconUrl} className="w-8 h-8 rounded-full border-2 border-background" alt="" />
-                      </div>
-                      <div>
-                        <div className="font-semibold">
-                          {order.amount} {order.fromToken} → {order.quote.toAmount} {order.toToken}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(order.createdAt)} ago
-                        </div>
-                      </div>
-                    </div>
-                    <Badge variant={order.status === 'submitted' ? 'default' : 'secondary'} className="bg-primary/20 text-primary border-none">
-                      {order.status === 'submitted' ? 'Waiting on chain' : order.status}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
       <PexlyFooter />
     </div>
