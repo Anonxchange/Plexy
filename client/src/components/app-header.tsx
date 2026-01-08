@@ -216,6 +216,8 @@ export function AppHeader() {
 
   const walletBalance = balance; // Assuming walletBalance is the same as balance for this context
 
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
@@ -244,42 +246,51 @@ export function AppHeader() {
 
         {/* Desktop Navigation - Hidden on mobile */}
         <nav className="hidden lg:flex items-center gap-1 flex-1 ml-8">
-          {/* Trade Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={location.startsWith("/p2p") || location === "/spot" || location === "/swap" || location === "/my-offers" || location === "/create-offer" ? "secondary" : "ghost"}
-                size="sm"
-                className="gap-2"
+          <DropdownMenu open={activeDropdown === 'trade'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
+            <div 
+              className="relative flex items-center h-full"
+              onPointerEnter={() => setActiveDropdown('trade')}
+              onPointerLeave={() => setActiveDropdown(null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={location.startsWith("/p2p") || location === "/spot" || location === "/swap" || location === "/my-offers" || location === "/create-offer" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-2 group"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Trade
+                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-56"
+                onPointerEnter={() => setActiveDropdown('trade')}
               >
-                <ShoppingCart className="h-4 w-4" />
-                Trade
-                <ChevronDown className="h-3 w-3 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={() => navigate('/p2p')} className="cursor-pointer">
-                <div className="flex items-center justify-between w-full">
-                  <span>P2P Trading</span>
-                  <Badge variant="secondary" className="text-xs">LOW FEES</Badge>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/spot')} className="cursor-pointer">
-                Spot Trading
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/swap')} className="cursor-pointer">
-                Swap
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/my-offers')} className="cursor-pointer">
-                <List className="h-4 w-4 mr-2" />
-                My Offers
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/create-offer')} className="cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Offer
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+                <DropdownMenuItem onClick={() => { navigate('/p2p'); setActiveDropdown(null); }} className="cursor-pointer">
+                  <div className="flex items-center justify-between w-full">
+                    <span>P2P Trading</span>
+                    <Badge variant="secondary" className="text-xs">LOW FEES</Badge>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/spot'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Spot Trading
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/swap'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Swap
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => { navigate('/my-offers'); setActiveDropdown(null); }} className="cursor-pointer">
+                  <List className="h-4 w-4 mr-2" />
+                  My Offers
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/create-offer'); setActiveDropdown(null); }} className="cursor-pointer">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Offer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </div>
           </DropdownMenu>
 
           {/* Gift Cards - No dropdown */}
@@ -307,123 +318,153 @@ export function AppHeader() {
           </Link>
 
           {/* Wallet Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={location.startsWith("/wallet") ? "secondary" : "ghost"}
-                size="sm"
-                className="gap-2"
+          <DropdownMenu open={activeDropdown === 'wallet'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
+            <div 
+              className="relative flex items-center h-full"
+              onPointerEnter={() => setActiveDropdown('wallet')}
+              onPointerLeave={() => setActiveDropdown(null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={location.startsWith("/wallet") ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-2 group"
+                >
+                  <Wallet className="h-4 w-4" />
+                  Wallet
+                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-72"
+                onPointerEnter={() => setActiveDropdown('wallet')}
               >
-                <Wallet className="h-4 w-4" />
-                Wallet
-                <ChevronDown className="h-3 w-3 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-72">
-              <DropdownMenuItem onClick={() => navigate('/wallet')} className="cursor-pointer h-auto py-3">
-                <Bitcoin className="h-5 w-5 mr-3 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">Assets</span>
-                  <span className="text-xs text-muted-foreground">My assets in the Pexly wallet</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/wallet/receive')} className="cursor-pointer h-auto py-3">
-                <ArrowDownToLine className="h-5 w-5 mr-3 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">Receive</span>
-                  <span className="text-xs text-muted-foreground">Receive crypto or deposit using fiat</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/wallet/visa-card')} className="cursor-pointer h-auto py-3">
-                <CreditCard className="h-5 w-5 mr-3 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">Visa card</span>
-                  <span className="text-xs text-muted-foreground">Spend your crypto</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/wallet/buy-crypto')} className="cursor-pointer h-auto py-3">
-                <ShoppingBag className="h-5 w-5 mr-3 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">Buy crypto</span>
-                  <span className="text-xs text-muted-foreground">Pay using card, bank, or mobile money</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/wallet/crypto-to-bank')} className="cursor-pointer h-auto py-3">
-                <Banknote className="h-5 w-5 mr-3 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">Crypto to Bank</span>
-                  <span className="text-xs text-muted-foreground">Cash out to bank or MoMo wallet</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/wallet/lightning')} className="cursor-pointer h-auto py-3">
-                <Zap className="h-5 w-5 mr-3 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">Lightning</span>
-                  <span className="text-xs text-muted-foreground">Send Bitcoin ultra fast</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/wallet/mobile-topup')} className="cursor-pointer h-auto py-3">
-                <Smartphone className="h-5 w-5 mr-3 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">Mobile top-up</span>
-                  <span className="text-xs text-muted-foreground">Recharge your phone using crypto</span>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+                <DropdownMenuItem onClick={() => { navigate('/wallet'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
+                  <Bitcoin className="h-5 w-5 mr-3 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Assets</span>
+                    <span className="text-xs text-muted-foreground">My assets in the Pexly wallet</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/wallet/receive'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
+                  <ArrowDownToLine className="h-5 w-5 mr-3 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Receive</span>
+                    <span className="text-xs text-muted-foreground">Receive crypto or deposit using fiat</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/wallet/visa-card'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
+                  <CreditCard className="h-5 w-5 mr-3 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Visa card</span>
+                    <span className="text-xs text-muted-foreground">Spend your crypto</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/wallet/buy-crypto'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
+                  <ShoppingBag className="h-5 w-5 mr-3 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Buy crypto</span>
+                    <span className="text-xs text-muted-foreground">Pay using card, bank, or mobile money</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/wallet/crypto-to-bank'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
+                  <Banknote className="h-5 w-5 mr-3 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Crypto to Bank</span>
+                    <span className="text-xs text-muted-foreground">Cash out to bank or MoMo wallet</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/wallet/lightning'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
+                  <Zap className="h-5 w-5 mr-3 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Lightning</span>
+                    <span className="text-xs text-muted-foreground">Send Bitcoin ultra fast</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/wallet/mobile-topup'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
+                  <Smartphone className="h-5 w-5 mr-3 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Mobile top-up</span>
+                    <span className="text-xs text-muted-foreground">Recharge your phone using crypto</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </div>
           </DropdownMenu>
 
           {/* Shop Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={location.startsWith("/shop") ? "secondary" : "ghost"}
-                size="sm"
-                className="gap-2"
+          <DropdownMenu open={activeDropdown === 'shop'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
+            <div 
+              className="relative flex items-center h-full"
+              onPointerEnter={() => setActiveDropdown('shop')}
+              onPointerLeave={() => setActiveDropdown(null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={location.startsWith("/shop") ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-2 group"
+                >
+                  <Store className="h-4 w-4" />
+                  Shop
+                  <Badge variant="secondary" className="ml-1 text-[10px] px-1">BETA</Badge>
+                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-56"
+                onPointerEnter={() => setActiveDropdown('shop')}
               >
-                <Store className="h-4 w-4" />
-                Shop
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1">BETA</Badge>
-                <ChevronDown className="h-3 w-3 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={() => navigate('/shop')} className="cursor-pointer">
-                <List className="h-4 w-4 mr-2" />
-                Listings
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/shop/post')} className="cursor-pointer">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center">
-                    <Plus className="h-4 w-4 mr-2" />
-                    <span className="font-semibold">Post Ad</span>
+                <DropdownMenuItem onClick={() => { navigate('/shop'); setActiveDropdown(null); }} className="cursor-pointer">
+                  <List className="h-4 w-4 mr-2" />
+                  Listings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/shop/post'); setActiveDropdown(null); }} className="cursor-pointer">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <Plus className="h-4 w-4 mr-2" />
+                      <span className="font-semibold">Post Ad</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">FREE</Badge>
                   </div>
-                  <Badge variant="secondary" className="text-xs">FREE</Badge>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </div>
           </DropdownMenu>
 
           {/* Earn with Us Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={location === "/affiliate" || location === "/rewards" ? "secondary" : "ghost"}
-                size="sm"
-                className="gap-2"
+          <DropdownMenu open={activeDropdown === 'earn'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
+            <div 
+              className="relative flex items-center h-full"
+              onPointerEnter={() => setActiveDropdown('earn')}
+              onPointerLeave={() => setActiveDropdown(null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={location === "/affiliate" || location === "/rewards" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-2 group"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  Earn with Us
+                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-56"
+                onPointerEnter={() => setActiveDropdown('earn')}
               >
-                <TrendingUp className="h-4 w-4" />
-                Earn with Us
-                <ChevronDown className="h-3 w-3 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={() => navigate('/affiliate')} className="cursor-pointer">
-                Affiliate Program
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/rewards')} className="cursor-pointer">
-                Rewards
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+                <DropdownMenuItem onClick={() => { navigate('/affiliate'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Affiliate Program
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/rewards'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Rewards
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </div>
           </DropdownMenu>
         </nav>
 
