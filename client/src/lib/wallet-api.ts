@@ -43,7 +43,56 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
   
   const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
   
-  const nonCustodialWallets: Wallet[] = await Promise.all(localWallets.map(async (w) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      console.log(`[SYNC] Fetching all live balances via monitor-deposits invoke`);
+      
+      const { data: result, error: invokeError } = await supabase.functions.invoke('monitor-deposits');
+
+      if (invokeError) {
+        console.error(`[SYNC] Supabase function invoke error:`, invokeError);
+      } else if (result && result.balances) {
+        console.log(`[SYNC] API Response:`, result.balances);
+        
+        // Update local wallet balances based on the response
+        localWallets.forEach(w => {
+          const walletData = result.balances.find((b: any) => 
+            b.address.toLowerCase() === w.address.toLowerCase() && 
+            (b.symbol === w.chainId || (w.chainId === 'Ethereum (ERC-20)' && b.symbol === 'ETH') || 
+             (w.chainId === 'Bitcoin (SegWit)' && b.symbol === 'BTC'))
+          );
+          
+          if (walletData && typeof walletData.balance === 'number') {
+            w.balance = walletData.balance;
+            console.log(`[SYNC] Updated balance for ${w.chainId}: ${w.balance}`);
+          }
+        });
+
+        // Persist to localStorage
+        const stored = localStorage.getItem('pexly_wallets');
+        if (stored) {
+          try {
+            const wallets = JSON.parse(stored);
+            localWallets.forEach(w => {
+              const idx = wallets.findIndex((item: any) => item.id === w.id);
+              if (idx !== -1) {
+                wallets[idx].balance = w.balance;
+                wallets[idx].lastUpdated = new Date().toISOString();
+              }
+            });
+            localStorage.setItem('pexly_wallets', JSON.stringify(wallets));
+          } catch (e) {
+            console.error("[SYNC] LocalStorage update error:", e);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error(`[SYNC] Global sync error:`, e);
+  }
+
+  const nonCustodialWallets: Wallet[] = localWallets.map((w) => {
     let symbol = w.chainId;
     if (w.chainId === 'Ethereum (ERC-20)') symbol = 'ETH';
     else if (w.chainId === 'Bitcoin (SegWit)') symbol = 'BTC';
@@ -51,86 +100,18 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     else if (w.chainId === 'Solana') symbol = 'SOL';
     else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
 
-    // Preserve original balance - use typeof check to handle 0 as valid
-    const originalBalance = typeof w.balance === 'number' ? w.balance : (parseFloat(String(w.balance)) || 0);
-    let balance = originalBalance;
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        console.log(`[SYNC] Fetching live balance for ${symbol} via monitor-deposits at ${w.address}`);
-        
-        // Map symbol to the correct chain identifier for the edge function
-        let chainParam = symbol;
-        if (symbol === 'ETH' || symbol === 'USDT' || symbol === 'USDC' || symbol === 'Ethereum (ERC-20)') {
-          chainParam = 'ETH';
-        } else if (symbol === 'BTC' || symbol === 'Bitcoin (SegWit)') {
-          chainParam = 'BTC';
-        } else if (symbol === 'SOL' || symbol === 'Solana') {
-          chainParam = 'SOL';
-        } else if (symbol === 'TRX' || symbol === 'Tron (TRC-20)') {
-          chainParam = 'TRX';
-        } else if (symbol === 'BNB' || symbol === 'Binance Smart Chain (BEP-20)') {
-          chainParam = 'BNB';
-        }
-
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monitor-deposits`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            address: w.address,
-            chain: chainParam
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log(`[SYNC] API Response for ${symbol} (${chainParam}):`, result);
-          if (result.success && typeof result.balance === 'number') {
-            const newBalance = result.balance;
-            console.log(`[SYNC] New balance for ${symbol}: ${newBalance}`);
-            w.balance = newBalance;
-            balance = newBalance;
-            
-            // Update localStorage
-            const stored = localStorage.getItem('pexly_wallets');
-            if (stored) {
-              try {
-                const wallets = JSON.parse(stored);
-                const idx = wallets.findIndex((item: any) => item.id === w.id);
-                if (idx !== -1) {
-                  wallets[idx].balance = newBalance;
-                  wallets[idx].lastUpdated = new Date().toISOString();
-                  localStorage.setItem('pexly_wallets', JSON.stringify(wallets));
-                }
-              } catch (e) {
-                console.error("[SYNC] LocalStorage update error:", e);
-              }
-            }
-          }
-        } else {
-          console.error(`[SYNC] API Error for ${symbol}:`, response.status, await response.text());
-        }
-      }
-    } catch (e) {
-      console.error(`[SYNC] Error for ${symbol} via monitor-deposits:`, e);
-    }
-
     return {
       id: w.id,
       user_id: userId,
       crypto_symbol: symbol,
-      balance: balance,
+      balance: typeof w.balance === 'number' ? w.balance : 0,
       locked_balance: 0,
       deposit_address: w.address,
       created_at: w.createdAt,
       updated_at: w.createdAt,
       isNonCustodial: true
     };
-  }));
+  });
 
   console.log("[getUserWallets] Final synced wallets:", nonCustodialWallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
   return nonCustodialWallets;
