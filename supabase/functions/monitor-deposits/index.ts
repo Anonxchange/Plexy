@@ -1,279 +1,206 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Blockchain API endpoints
-const RPC_ENDPOINTS = {
-  BTC: 'https://blockstream.info/api',
-  ETH: 'https://eth.llamarpc.com',
-  BSC: 'https://bsc-dataseed.binance.org',
-  SOL: 'https://api.mainnet-beta.solana.com',
-  TRX: 'https://api.trongrid.io',
-}
-
-interface Transaction {
-  txHash: string
-  amount: number
-  confirmations: number
-  timestamp: number
-  from?: string
-}
-
-// Fetch Bitcoin transactions
-async function fetchBitcoinTransactions(address: string): Promise<Transaction[]> {
-  try {
-    const res = await fetch(`${RPC_ENDPOINTS.BTC}/address/${address}/txs`)
-    if (!res.ok) return []
-    
-    const txs = await res.json()
-    if (!Array.isArray(txs)) return []
-
-    const tipRes = await fetch(`${RPC_ENDPOINTS.BTC}/blocks/tip/height`)
-    const currentHeight = tipRes.ok ? parseInt(await tipRes.text()) : 0
-
-    const normalizedAddr = address.toLowerCase()
-    
-    return txs.slice(0, 50).map((tx: any) => {
-      let amount = 0
-      for (const vout of tx.vout || []) {
-        const outAddr = vout.scriptpubkey_address?.toLowerCase()
-        if (outAddr === normalizedAddr) {
-          amount += vout.value / 100000000
-        }
-      }
-      
-      const blockHeight = tx.status?.block_height || 0
-      const confirmations = blockHeight > 0 ? currentHeight - blockHeight + 1 : 0
-      
-      return {
-        txHash: tx.txid,
-        amount,
-        confirmations,
-        timestamp: tx.status?.block_time || Math.floor(Date.now() / 1000),
-        from: tx.vin?.[0]?.prevout?.scriptpubkey_address,
-      }
-    }).filter((tx: Transaction) => tx.amount > 0)
-  } catch (e) {
-    console.error('BTC fetch error:', e)
-    return []
-  }
-}
-
-// Fetch Ethereum transactions
-async function fetchEthereumTransactions(address: string): Promise<Transaction[]> {
-  try {
-    // Get latest block
-    const blockRes = await fetch(RPC_ENDPOINTS.ETH, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_blockNumber',
-        params: [],
-        id: 1,
-      }),
-    })
-    
-    if (!blockRes.ok) return []
-    const { result: latestHex } = await blockRes.json()
-    const latest = parseInt(latestHex, 16)
-    
-    // Get balance instead of scanning blocks (much faster)
-    const balRes = await fetch(RPC_ENDPOINTS.ETH, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_getBalance',
-        params: [address, 'latest'],
-        id: 2,
-      }),
-    })
-    
-    if (!balRes.ok) return []
-    const { result: balHex } = await balRes.json()
-    const balance = parseInt(balHex, 16) / 1e18
-    
-    // Return balance as a single "transaction" for simplicity
-    if (balance > 0) {
-      return [{
-        txHash: 'balance',
-        amount: balance,
-        confirmations: 999,
-        timestamp: Math.floor(Date.now() / 1000),
-      }]
-    }
-    
-    return []
-  } catch (e) {
-    console.error('ETH fetch error:', e)
-    return []
-  }
-}
-
-// Fetch Solana transactions
-async function fetchSolanaTransactions(address: string): Promise<Transaction[]> {
-  try {
-    const res = await fetch(RPC_ENDPOINTS.SOL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'getBalance',
-        params: [address],
-      }),
-    })
-    
-    if (!res.ok) return []
-    const { result } = await res.json()
-    const balance = (result?.value || 0) / 1e9
-    
-    if (balance > 0) {
-      return [{
-        txHash: 'balance',
-        amount: balance,
-        confirmations: 999,
-        timestamp: Math.floor(Date.now() / 1000),
-      }]
-    }
-    
-    return []
-  } catch (e) {
-    console.error('SOL fetch error:', e)
-    return []
-  }
-}
-
-// Fetch Tron transactions  
-async function fetchTronTransactions(address: string): Promise<Transaction[]> {
-  try {
-    const res = await fetch(`${RPC_ENDPOINTS.TRX}/v1/accounts/${address}`)
-    if (!res.ok) return []
-    
-    const data = await res.json()
-    const balance = (data.data?.[0]?.balance || 0) / 1e6
-    
-    if (balance > 0) {
-      return [{
-        txHash: 'balance',
-        amount: balance,
-        confirmations: 999,
-        timestamp: Math.floor(Date.now() / 1000),
-      }]
-    }
-    
-    return []
-  } catch (e) {
-    console.error('TRX fetch error:', e)
-    return []
-  }
-}
-
-// Fetch BNB transactions
-async function fetchBNBTransactions(address: string): Promise<Transaction[]> {
-  try {
-    const balRes = await fetch(RPC_ENDPOINTS.BSC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_getBalance',
-        params: [address, 'latest'],
-        id: 1,
-      }),
-    })
-    
-    if (!balRes.ok) return []
-    const { result: balHex } = await balRes.json()
-    const balance = parseInt(balHex, 16) / 1e18
-    
-    if (balance > 0) {
-      return [{
-        txHash: 'balance',
-        amount: balance,
-        confirmations: 999,
-        timestamp: Math.floor(Date.now() / 1000),
-      }]
-    }
-    
-    return []
-  } catch (e) {
-    console.error('BNB fetch error:', e)
-    return []
-  }
-}
-
-// Main handler
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { address, chain } = await req.json()
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!address || !chain) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing address or chain' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+    console.log('Starting non-custodial wallet balance monitoring...');
+
+    // Fetch all connected user wallets (non-custodial)
+    const { data: userWallets, error: walletsError } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('is_active', 'true');
+
+    if (walletsError) {
+      throw walletsError;
     }
 
-    console.log(`Fetching ${chain} balance for: ${address}`)
+    console.log(`Monitoring ${userWallets?.length || 0} connected wallets`);
 
-    let transactions: Transaction[] = []
-    const chainUpper = chain.toUpperCase()
+    const results = [];
 
-    switch (chainUpper) {
-      case 'BTC':
-      case 'BITCOIN':
-        transactions = await fetchBitcoinTransactions(address)
-        break
-      case 'ETH':
-      case 'ETHEREUM':
-        transactions = await fetchEthereumTransactions(address)
-        break
-      case 'SOL':
-      case 'SOLANA':
-        transactions = await fetchSolanaTransactions(address)
-        break
-      case 'TRX':
-      case 'TRON':
-        transactions = await fetchTronTransactions(address)
-        break
-      case 'BNB':
-      case 'BSC':
-        transactions = await fetchBNBTransactions(address)
-        break
-      default:
-        return new Response(
-          JSON.stringify({ success: false, error: `Unsupported chain: ${chain}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        )
+    for (const wallet of userWallets || []) {
+      try {
+        const { chain_id, address, user_id, id: wallet_id } = wallet;
+        
+        console.log(`Checking ${chain_id} address: ${address}`);
+
+        let balance = 0;
+        let blockchain = chain_id.toUpperCase();
+
+        // Normalize chain identifiers
+        if (blockchain.includes('ERC20') || blockchain === 'ETH' || blockchain === 'ETHEREUM') {
+          blockchain = 'ETH';
+        } else if (blockchain.includes('BEP20') || blockchain === 'BNB' || blockchain === 'BSC') {
+          blockchain = 'BNB';
+        } else if (blockchain.includes('TRC20') || blockchain === 'TRX' || blockchain === 'TRON') {
+          blockchain = 'TRX';
+        } else if (blockchain.includes('SOL') || blockchain === 'SOLANA') {
+          blockchain = 'SOL';
+        } else if (blockchain === 'BTC' || blockchain === 'BITCOIN') {
+          blockchain = 'BTC';
+        }
+
+        // Fetch on-chain balance based on blockchain
+        if (blockchain === 'BTC') {
+          const response = await fetch(
+            `https://blockstream.info/api/address/${address}`
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            // Balance in satoshis, convert to BTC
+            const confirmedBalance = data.chain_stats?.funded_txo_sum - data.chain_stats?.spent_txo_sum || 0;
+            balance = confirmedBalance / 100000000;
+            console.log(`BTC balance for ${address}: ${balance} BTC`);
+          } else {
+            console.error(`Failed to fetch BTC balance: ${response.status}`);
+          }
+        } else if (blockchain === 'ETH') {
+          const response = await fetch(
+            'https://eth.llamarpc.com',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'eth_getBalance',
+                params: [address, 'latest'],
+                id: 1,
+              }),
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.result) {
+              balance = parseInt(data.result, 16) / 1e18;
+              console.log(`ETH balance for ${address}: ${balance} ETH`);
+            }
+          } else {
+            console.error(`Failed to fetch ETH balance: ${response.status}`);
+          }
+        } else if (blockchain === 'BNB') {
+          const response = await fetch(
+            'https://bsc-dataseed.binance.org/',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'eth_getBalance',
+                params: [address, 'latest'],
+                id: 1,
+              }),
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.result) {
+              balance = parseInt(data.result, 16) / 1e18;
+              console.log(`BNB balance for ${address}: ${balance} BNB`);
+            }
+          } else {
+            console.error(`Failed to fetch BNB balance: ${response.status}`);
+          }
+        } else if (blockchain === 'SOL') {
+          const response = await fetch(
+            'https://api.mainnet-beta.solana.com',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'getBalance',
+                params: [address]
+              }),
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.result?.value !== undefined) {
+              balance = data.result.value / 1e9; // lamports to SOL
+              console.log(`SOL balance for ${address}: ${balance} SOL`);
+            }
+          } else {
+            console.error(`Failed to fetch SOL balance: ${response.status}`);
+          }
+        } else if (blockchain === 'TRX') {
+          const response = await fetch(
+            `https://api.trongrid.io/v1/accounts/${address}`,
+            {
+              headers: { 'Accept': 'application/json' },
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data?.[0]?.balance !== undefined) {
+              balance = data.data[0].balance / 1e6; // sun to TRX
+              console.log(`TRX balance for ${address}: ${balance} TRX`);
+            }
+          } else {
+            console.error(`Failed to fetch TRX balance: ${response.status}`);
+          }
+        }
+
+        // Store the balance snapshot for trade matching purposes
+        // This is non-custodial - we're just tracking on-chain balances
+        results.push({
+          wallet_id,
+          user_id,
+          address,
+          chain_id: blockchain,
+          balance,
+          timestamp: new Date().toISOString(),
+        });
+
+      } catch (error) {
+        console.error(`Error checking wallet ${wallet.address}:`, error);
+      }
     }
 
-    const balance = transactions.reduce((sum, tx) => sum + tx.amount, 0)
-
-    console.log(`${chain} balance for ${address}: ${balance}`)
+    console.log(`Monitoring complete. Checked ${results.length} wallets.`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        address,
-        chain: chainUpper,
-        balance,
-        transactions,
-        timestamp: new Date().toISOString(),
+        message: `Monitored ${userWallets?.length || 0} connected wallets (non-custodial)`,
+        walletBalances: results,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  } catch (e) {
-    console.error('Error:', e)
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
+
+  } catch (error) {
+    console.error('Error in monitor-deposits:', error);
     return new Response(
-      JSON.stringify({ success: false, error: e instanceof Error ? e.message : 'Unknown error' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: 'Failed to monitor wallet balances',
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
+    );
   }
-})
+});
