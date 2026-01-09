@@ -49,15 +49,21 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       throw new Error(result.error);
     }
 
-    const balances = result?.balances || result?.walletBalances || result?.data?.balances || [];
+    const balances = result?.balances || result?.walletBalances || result?.data?.balances || result?.data || [];
     
-    const wallets: Wallet[] = balances.map((b: any) => ({
-      id: b.wallet_id || b.address,
+    // If it's an object with keys being symbols
+    const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances).map(([symbol, data]: [string, any]) => ({
+      symbol,
+      ...(typeof data === 'object' ? data : { balance: data })
+    }));
+
+    const wallets: Wallet[] = balancesArray.map((b: any) => ({
+      id: b.wallet_id || b.address || b.id || `wallet-${b.symbol}`,
       user_id: userId,
-      crypto_symbol: b.symbol,
+      crypto_symbol: b.symbol || b.crypto_symbol || b.currency,
       balance: typeof b.balance === 'number' ? b.balance : 0,
-      locked_balance: 0,
-      deposit_address: b.address,
+      locked_balance: typeof b.locked_balance === 'number' ? b.locked_balance : 0,
+      deposit_address: b.address || b.deposit_address,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       isNonCustodial: true
