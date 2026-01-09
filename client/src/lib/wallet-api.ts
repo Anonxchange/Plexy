@@ -49,7 +49,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       throw new Error(result.error);
     }
 
-    const balances = result?.balances ?? [];
+    const balances = result?.balances || result?.walletBalances || [];
     
     const wallets: Wallet[] = balances.map((b: any) => ({
       id: b.wallet_id || b.address,
