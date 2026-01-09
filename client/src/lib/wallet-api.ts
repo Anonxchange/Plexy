@@ -34,92 +34,84 @@ export interface WalletTransaction {
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
   const supabase = createClient();
-  try {
-    const supabaseWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
-    console.log("[getUserWallets] Loaded from Supabase:", supabaseWallets.length, "wallets");
-  } catch (error) {
-    console.error("[getUserWallets] Failed to sync from Supabase:", error);
-  }
-  
-  const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
-  
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      console.log(`[SYNC] Fetching all live balances via monitor-deposits invoke`);
-      
-      const { data: result, error: invokeError } = await supabase.functions.invoke('monitor-deposits');
+  console.log("[getUserWallets] Fetching balances for user:", userId);
 
-      if (invokeError) {
-        console.error(`[SYNC] Supabase function invoke error:`, invokeError);
-      } else if (result && result.balances) {
-        console.log(`[SYNC] API Response:`, result.balances);
-        
-        // Update local wallet balances based on the response
-        localWallets.forEach(w => {
-          const walletData = result.balances.find((b: any) => 
-            b.address.toLowerCase() === w.address.toLowerCase() && 
-            (b.symbol === w.chainId || (w.chainId === 'Ethereum (ERC-20)' && b.symbol === 'ETH') || 
-             (w.chainId === 'Bitcoin (SegWit)' && b.symbol === 'BTC'))
-          );
-          
-          if (walletData && typeof walletData.balance === 'number') {
-            w.balance = walletData.balance;
-            console.log(`[SYNC] Updated balance for ${w.chainId}: ${w.balance}`);
-          }
-        });
+  try {
+    const { data: result, error } = await supabase.functions.invoke('monitor-deposits');
 
-        // Persist to localStorage
-        const stored = localStorage.getItem('pexly_wallets');
-        if (stored) {
-          try {
-            const wallets = JSON.parse(stored);
-            localWallets.forEach(w => {
-              const idx = wallets.findIndex((item: any) => item.id === w.id);
-              if (idx !== -1) {
-                wallets[idx].balance = w.balance;
-                wallets[idx].lastUpdated = new Date().toISOString();
-              }
-            });
-            localStorage.setItem('pexly_wallets', JSON.stringify(wallets));
-          } catch (e) {
-            console.error("[SYNC] LocalStorage update error:", e);
-          }
-        }
-      }
+    if (error) {
+      console.error("[getUserWallets] Edge function error:", error);
+      throw new Error(error.message);
     }
-  } catch (e) {
-    console.error(`[SYNC] Global sync error:`, e);
-  }
 
-  const nonCustodialWallets: Wallet[] = localWallets.map((w) => {
-    let symbol = w.chainId;
-    if (w.chainId === 'Ethereum (ERC-20)') symbol = 'ETH';
-    else if (w.chainId === 'Bitcoin (SegWit)') symbol = 'BTC';
-    else if (w.chainId === 'Binance Smart Chain (BEP-20)') symbol = 'BNB';
-    else if (w.chainId === 'Solana') symbol = 'SOL';
-    else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
+    if (result?.error) {
+      console.error("[getUserWallets] API error:", result.error);
+      throw new Error(result.error);
+    }
 
-    return {
-      id: w.id,
+    const balances = result?.balances ?? [];
+    
+    const wallets: Wallet[] = balances.map((b: any) => ({
+      id: b.wallet_id || b.address,
       user_id: userId,
-      crypto_symbol: symbol,
-      balance: typeof w.balance === 'number' ? w.balance : 0,
+      crypto_symbol: b.symbol,
+      balance: typeof b.balance === 'number' ? b.balance : 0,
       locked_balance: 0,
-      deposit_address: w.address,
-      created_at: w.createdAt,
-      updated_at: w.createdAt,
+      deposit_address: b.address,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       isNonCustodial: true
-    };
-  });
+    }));
 
-  console.log("[getUserWallets] Final synced wallets:", nonCustodialWallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
-  return nonCustodialWallets;
+    console.log("[getUserWallets] Synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
+    return wallets;
+  } catch (e) {
+    console.error(`[getUserWallets] Global sync error:`, e);
+    // Fallback to local wallets if sync fails
+    const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
+    return localWallets.map((w) => {
+      let symbol = w.chainId;
+      if (w.chainId === 'Ethereum (ERC-20)') symbol = 'ETH';
+      else if (w.chainId === 'Bitcoin (SegWit)') symbol = 'BTC';
+      else if (w.chainId === 'Binance Smart Chain (BEP-20)') symbol = 'BNB';
+      else if (w.chainId === 'Solana') symbol = 'SOL';
+      else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
+
+      return {
+        id: w.id,
+        user_id: userId,
+        crypto_symbol: symbol,
+        balance: typeof w.balance === 'number' ? w.balance : 0,
+        locked_balance: 0,
+        deposit_address: w.address,
+        created_at: w.createdAt,
+        updated_at: w.createdAt,
+        isNonCustodial: true
+      };
+    });
+  }
 }
 
 export async function getWalletBalance(userId: string, cryptoSymbol: string): Promise<Wallet | null> {
   const wallets = await getUserWallets(userId);
   return wallets.find(w => w.crypto_symbol === cryptoSymbol) || null;
+}
+
+export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('wallet_transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[getWalletTransactions] Error:", error);
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as WalletTransaction[];
 }
 
 export async function sendCrypto(
@@ -196,14 +188,7 @@ export async function getDepositAddress(userId: string, cryptoSymbol: string): P
     return anyWallet.deposit_address;
   }
   
-  throw new Error('No deposit address found for this non-custodial wallet.');
-}
-
-export async function getWalletTransactions(
-  userId: string,
-  limit: number = 20
-): Promise<WalletTransaction[]> {
-  return [];
+  throw new Error('No deposit address found for this wallet.');
 }
 
 export async function monitorDeposits(userId: string, cryptoSymbol: string): Promise<{
