@@ -49,13 +49,26 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       throw new Error(result.error);
     }
 
-    const balances = result?.balances || result?.walletBalances || result?.data?.balances || result?.data || [];
+    const balances = result?.balances || result?.walletBalances || result?.data?.balances || result?.data || result || [];
+    console.log("[getUserWallets] Raw result from monitor-deposits:", JSON.stringify(result, null, 2));
     
     // If it's an object with keys being symbols
-    const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances).map(([symbol, data]: [string, any]) => ({
-      symbol,
-      ...(typeof data === 'object' ? data : { balance: data })
-    }));
+    const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances).map(([symbol, data]: [string, any]) => {
+      if (typeof data === 'object' && data !== null) {
+        return {
+          symbol: data.symbol || data.currency || data.chainId || symbol,
+          balance: typeof data.balance === 'number' ? data.balance : 0,
+          locked_balance: typeof data.locked_balance === 'number' ? data.locked_balance : 0,
+          address: data.address || data.deposit_address
+        };
+      }
+      return {
+        symbol,
+        balance: typeof data === 'number' ? data : 0
+      };
+    });
+
+    console.log("[getUserWallets] Normalized balances array:", JSON.stringify(balancesArray, null, 2));
 
     const wallets: Wallet[] = balancesArray.map((b: any) => ({
       id: b.wallet_id || b.address || b.id || `wallet-${b.symbol}`,
