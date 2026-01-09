@@ -306,10 +306,16 @@ export default function Wallet() {
       const userWallets = await getUserWallets(user.id);
       console.log("Wallet Page: API Response:", userWallets);
       
-      setWallets(userWallets);
-      setWalletsLoaded(true);
+      if (userWallets && Array.isArray(userWallets)) {
+        setWallets(userWallets);
+        setWalletsLoaded(true);
+      }
     } catch (error) {
       console.error("Wallet Page: Sync failed:", error);
+      // Even on error, we should try to mark loaded if we have cached data
+      if (wallets.length === 0) {
+        setWalletsLoaded(true);
+      }
     }
   };
 
@@ -362,22 +368,19 @@ export default function Wallet() {
   const mergedAssets = cryptoAssets.map(asset => {
     const wallet = wallets.find(w => w.crypto_symbol === asset.symbol);
     const priceData = cryptoPrices[asset.symbol];
-    const balance = wallet?.balance || asset.balance;
+    const balance = wallet?.balance || 0; // Default to 0 instead of asset.balance
     const lockedBalance = wallet?.locked_balance || 0;
-    const totalAssetBalance = balance + lockedBalance; // Sum both balances
+    const totalAssetBalance = balance + lockedBalance;
     const currentPrice = priceData?.current_price || 0;
-    const usdValue = totalAssetBalance * currentPrice; // Use total for display
+    const usdValue = totalAssetBalance * currentPrice;
 
     if (totalAssetBalance > 0) {
       console.log(`Wallet Page - ${asset.symbol}: ${totalAssetBalance} (${balance} available + ${lockedBalance} locked) × $${currentPrice} = $${usdValue.toFixed(2)}`);
     }
     const ngnValue = convertToNGN(usdValue);
 
-    // Calculate PnL based on actual market movements
-    // Use 24h price change to simulate realistic entry price
     let avgCost = asset.avgCost || currentPrice;
     if (!asset.avgCost && priceData && totalAssetBalance > 0) {
-      // Simulate realistic entry based on 24h movement
       const changeMultiplier = 1 - (priceData.price_change_percentage_24h / 100);
       avgCost = currentPrice * changeMultiplier;
     }
@@ -391,9 +394,9 @@ export default function Wallet() {
 
     return {
       ...asset,
-      balance: totalAssetBalance, // Show total in display
-      availableBalance: balance, // Keep track of available separately
-      lockedBalance: lockedBalance, // Keep track of locked separately
+      balance: totalAssetBalance,
+      availableBalance: balance,
+      lockedBalance: lockedBalance,
       ngnValue,
       usdValue,
       currentPrice,
