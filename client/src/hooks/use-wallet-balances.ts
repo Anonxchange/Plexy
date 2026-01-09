@@ -1,28 +1,68 @@
-import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase";
-import { getUserWallets, type Wallet } from "@/lib/wallet-api";
+import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-export type { Wallet }x;
+interface WalletBalance {
+  wallet_id: string;
+  user_id: string;
+  address: string;
+  chain_id: string;
+  symbol: string;
+  balance: string;
+  balanceFormatted: string;
+  decimals: number;
+  timestamp: string;
+}
 
-export function useWalletBalances(userId?: string) {
-  return useQuery({
-    queryKey: ["wallet-balances", userId],
-    queryFn: async (): Promise<Wallet[]> => {
-      const supabase = createClient();
-      // Get current user if no userId provided
-      let uid = userId;
-      if (!uid) {
-        const { data: { user } } = await supabase.auth.getUser();
-        uid = user?.id;
+interface BalanceResponse {
+  success: boolean;
+  message?: string;
+  balances: WalletBalance[];
+  error?: string;
+  timestamp: string;
+}
+
+export function useWalletBalances() {
+  const [balances, setBalances] = useState<WalletBalance[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchBalances = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
+      const response = await supabase.functions.invoke<BalanceResponse>('monitor-deposits', {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to fetch balances');
       }
-      
-      if (!uid) {
-        return [];
-      }
 
-      return getUserWallets(uid);
-    },
-    refetchInterval: 30000,
-    staleTime: 15000,
-  });
+      if (response.data?.success) {
+        setBalances(response.data.balances);
+        return response.data.balances;
+      } else {
+        throw new Error(response.data?.error || 'Unknown error');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch balances';
+      setError(message);
+      console.error('Balance fetch error:', err);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    balances,
+    loading,
+    error,
+    fetchBalances,
+    refetch: fetchBalances,
+  };
 }
