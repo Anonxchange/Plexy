@@ -42,7 +42,7 @@ import { createClient } from "@/lib/supabase";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { Sparkline } from "@/components/ui/sparkline";
 import { useToast } from "@/hooks/use-toast";
-import { useWalletMonitoring } from "@/hooks/use-wallet-monitoring";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 
 const cryptoAssets = [
   { symbol: "BTC", name: "Bitcoin", balance: 0, ngnValue: 0, iconUrl: cryptoIconUrls.BTC, color: "text-orange-500", avgCost: 0 },
@@ -151,8 +151,7 @@ export default function Wallet() {
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [transactionsLoaded, setTransactionsLoaded] = useState(false);
   const { toast } = useToast();
-
-  useWalletMonitoring(['BTC', 'ETH', 'SOL', 'BNB', 'TRX', 'USDC', 'USDT'], !!user);
+  const { balances, fetchBalances, loading: balancesLoading } = useWalletBalances();
 
   // Redirect to signin if not logged in (no loading state)
   useEffect(() => {
@@ -243,17 +242,20 @@ export default function Wallet() {
     loadWalletData();
     loadCryptoPrices();
     loadCryptoNews();
+    fetchBalances();
     // loadTransactions(); // Removed for non-custodial pure mode
 
     // Increase price update interval to reduce calls
     const priceInterval = setInterval(loadCryptoPrices, 120000); // 2 minutes
     const newsInterval = setInterval(loadCryptoNews, 600000); // 10 minutes
+    const balanceInterval = setInterval(fetchBalances, 30000); // 30 seconds
 
     return () => {
       clearInterval(priceInterval);
       clearInterval(newsInterval);
+      clearInterval(balanceInterval);
     };
-  }, [user]);
+  }, [user, fetchBalances]);
 
   const loadUserProfile = async () => {
     if (!user) return;
@@ -366,9 +368,10 @@ export default function Wallet() {
   }
 
   const mergedAssets = cryptoAssets.map(asset => {
+    const balanceFromHook = balances.find(b => b.symbol === asset.symbol);
     const wallet = wallets.find(w => w.crypto_symbol === asset.symbol);
     const priceData = cryptoPrices[asset.symbol];
-    const balance = wallet?.balance || 0; // Default to 0 instead of asset.balance
+    const balance = balanceFromHook ? parseFloat(balanceFromHook.balance) : (wallet?.balance || 0);
     const lockedBalance = wallet?.locked_balance || 0;
     const totalAssetBalance = balance + lockedBalance;
     const currentPrice = priceData?.current_price || 0;
