@@ -1,4 +1,4 @@
- import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift, ShieldAlert } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
@@ -8,6 +8,7 @@ import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { Button } from "@/components/ui/button";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
 // ... rest of imports and helpers
@@ -73,11 +74,49 @@ export const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("Hot");
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
-  const [totalBalance, setTotalBalance] = useState(0);
-  const [equivalentBtc, setEquivalentBtc] = useState(0);
   const [markets, setMarkets] = useState(defaultMarkets);
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
   const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
+  const { balances: monitoredBalances, fetchBalances } = useWalletBalances();
+
+  useEffect(() => {
+    if (user) {
+      fetchBalances();
+      const interval = setInterval(fetchBalances, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user, fetchBalances]);
+
+  const totalBalance = useMemo(() => {
+    let total = 0;
+    
+    // First, use userWallets (local/database)
+    wallets.forEach(wallet => {
+      const price = cryptoPrices[wallet.crypto_symbol]?.current_price || 0;
+      total += (wallet.balance || 0) * price;
+    });
+
+    // Then, add/update with monitoredBalances (real-time from Supabase)
+    monitoredBalances.forEach(monitored => {
+      const price = cryptoPrices[monitored.symbol]?.current_price || 0;
+      const balance = parseFloat(monitored.balanceFormatted) || 0;
+      
+      const existing = wallets.find(w => w.crypto_symbol === monitored.symbol);
+      if (existing) {
+        total -= (existing.balance || 0) * price;
+      }
+      total += balance * price;
+    });
+
+    return total;
+  }, [wallets, monitoredBalances, cryptoPrices]);
+
+  const equivalentBtc = useMemo(() => {
+    if (cryptoPrices.BTC?.current_price) {
+      return totalBalance / cryptoPrices.BTC.current_price;
+    }
+    return 0;
+  }, [totalBalance, cryptoPrices]);
 
   useEffect(() => {
     if (!user) return;
@@ -89,26 +128,11 @@ export const Dashboard = () => {
         setWalletBackupProcessed(existingWallets.length > 0);
 
         const userWallets = await getUserWallets(user.id);
-// ... rest of loadData
         setWallets(userWallets);
         
         const symbols = userWallets.map(w => w.crypto_symbol);
         const prices = await getCryptoPrices(symbols.length > 0 ? symbols : ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"]);
         setCryptoPrices(prices);
-
-        // Calculate total balance in USD
-        let total = 0;
-        let btcEquivalent = 0;
-        userWallets.forEach(wallet => {
-          const price = prices[wallet.crypto_symbol]?.current_price || 0;
-          const usdValue = wallet.balance * price;
-          total += usdValue;
-        });
-
-        setTotalBalance(total);
-        if (prices.BTC?.current_price) {
-          setEquivalentBtc(total / prices.BTC.current_price);
-        }
 
         // Update markets with real prices
         const updatedMarkets = defaultMarkets.map(market => {
