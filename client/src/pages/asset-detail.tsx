@@ -36,9 +36,27 @@ export default function AssetDetail() {
   const { toast } = useToast();
   const supabase = createClient();
 
-  const [balance, setBalance] = useState(0);
-  const [lockedBalance, setLockedBalance] = useState(0);
-  const [price, setPrice] = useState(0);
+  const [balance, setBalance] = useState(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      const cached = localStorage.getItem(`pexly_balance_${symbol}_${user.id}`);
+      return cached ? parseFloat(cached) : 0;
+    }
+    return 0;
+  });
+  const [lockedBalance, setLockedBalance] = useState(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      const cached = localStorage.getItem(`pexly_locked_balance_${symbol}_${user.id}`);
+      return cached ? parseFloat(cached) : 0;
+    }
+    return 0;
+  });
+  const [price, setPrice] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(`pexly_price_${symbol}`);
+      return cached ? parseFloat(cached) : 0;
+    }
+    return 0;
+  });
   const [priceChange24h, setPriceChange24h] = useState(0);
   const [avgCost, setAvgCost] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
@@ -182,6 +200,10 @@ export default function AssetDetail() {
       const assetLockedBalance = walletData?.locked_balance || 0;
       setBalance(assetBalance);
       setLockedBalance(assetLockedBalance);
+      if (user?.id) {
+        localStorage.setItem(`pexly_balance_${symbol}_${user.id}`, assetBalance.toString());
+        localStorage.setItem(`pexly_locked_balance_${symbol}_${user.id}`, assetLockedBalance.toString());
+      }
 
       // Fetch real-time crypto prices
       const prices = await getCryptoPrices([symbol]);
@@ -197,6 +219,7 @@ export default function AssetDetail() {
         }
 
         setPrice(displayPrice);
+        localStorage.setItem(`pexly_price_${symbol}`, displayPrice.toString());
         setPriceChange24h(priceData.price_change_percentage_24h);
 
         // Set trading pairs with converted prices
