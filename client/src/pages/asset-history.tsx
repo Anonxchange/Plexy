@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
-import { type WalletTransaction } from "@/lib/wallet-api";
+import { type WalletTransaction, getWalletTransactions } from "@/lib/wallet-api";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import {
   Dialog,
@@ -80,7 +80,7 @@ export default function AssetHistory() {
     try {
       const data = await getWalletTransactions(user.id, 100);
 
-      const parsedData = (data || []).map(tx => ({
+      const parsedData = (data || []).map((tx: WalletTransaction) => ({
         ...tx,
         amount: typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount,
         fee: typeof tx.fee === 'string' ? parseFloat(tx.fee) : tx.fee,
@@ -89,9 +89,9 @@ export default function AssetHistory() {
           : null,
       }));
 
-      const uniqueTransactions = parsedData.filter((tx, index, self) => {
+      const uniqueTransactions = parsedData.filter((tx: WalletTransaction, index: number, self: WalletTransaction[]) => {
         if (!tx.tx_hash) return true;
-        return index === self.findIndex((t) => 
+        return index === self.findIndex((t: WalletTransaction) => 
           t.tx_hash === tx.tx_hash && 
           t.crypto_symbol === tx.crypto_symbol &&
           t.type === tx.type
