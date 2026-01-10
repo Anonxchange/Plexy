@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
-import { type WalletTransaction } from "@/lib/wallet-api";
+import { type WalletTransaction, getWalletTransactions } from "@/lib/wallet-api";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import {
   Dialog,
   DialogContent,
@@ -45,13 +46,13 @@ export default function AssetHistory() {
   const symbol = params?.symbol || "";
 
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [selectedCrypto, setSelectedCrypto] = useState<string>(symbol || "all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<WalletTransaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { balances, fetchBalances, loading: balancesLoading } = useWalletBalances();
 
   const tabs = [
     { id: "all", label: "All Transactions" },
@@ -67,11 +68,8 @@ export default function AssetHistory() {
       return;
     }
     loadTransactions();
-  }, [user, symbol]);
-
-  useEffect(() => {
-    filterTransactions();
-  }, [transactions, activeTab, selectedCrypto, statusFilter, symbol]);
+    fetchBalances();
+  }, [user, symbol, fetchBalances]);
 
   const loadTransactions = async () => {
     if (!user) return;
@@ -107,7 +105,7 @@ export default function AssetHistory() {
     }
   };
 
-  const filterTransactions = () => {
+  const filteredTransactions = useMemo(() => {
     let filtered = [...transactions];
 
     if (activeTab !== "all") {
@@ -133,8 +131,8 @@ export default function AssetHistory() {
       filtered = filtered.filter(tx => tx.status === statusFilter);
     }
 
-    setFilteredTransactions(filtered);
-  };
+    return filtered;
+  }, [transactions, activeTab, selectedCrypto, statusFilter, symbol]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -183,6 +181,14 @@ export default function AssetHistory() {
             <h1 className="text-lg font-semibold">Asset History</h1>
           </div>
           <div className="flex items-center gap-2">
+            {balances.find(b => b.symbol === symbol) && (
+              <div className="text-right mr-2">
+                <div className="text-xs text-muted-foreground uppercase">Available Balance</div>
+                <div className="font-bold text-sm">
+                  {parseFloat(balances.find(b => b.symbol === symbol)?.balance || "0").toFixed(8)} {symbol}
+                </div>
+              </div>
+            )}
             <img 
               src={cryptoIconUrls[symbol as keyof typeof cryptoIconUrls] || `https://ui-avatars.com/api/?name=${symbol}&background=random`}
               alt={symbol}
