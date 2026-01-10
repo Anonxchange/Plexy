@@ -9,6 +9,7 @@ import { getCryptoPrices, getHistoricalPrices, getIntradayPrices, type CryptoPri
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useToast } from "@/hooks/use-toast";
 import { getWalletTransactions, type WalletTransaction } from "@/lib/wallet-api";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -52,6 +53,7 @@ export default function AssetDetail() {
     eur: { price: 0, change: 0 }
   });
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const { balances, fetchBalances } = useWalletBalances();
 
   const assetInfo = cryptoData[symbol] || { name: symbol, icon: symbol[0], color: "text-gray-500" };
 
@@ -62,6 +64,7 @@ export default function AssetDetail() {
     }
     loadAssetData();
     loadChartData();
+    fetchBalances();
 
     // Subscribe to real-time transaction updates
     const channel = supabase
@@ -108,6 +111,7 @@ export default function AssetDetail() {
           if (payload.new && (payload.new as any).crypto_symbol === symbol) {
             console.log('Wallet changed, refreshing balance...');
             loadAssetData();
+            fetchBalances();
           }
         }
       )
@@ -173,7 +177,8 @@ export default function AssetDetail() {
         .eq('crypto_symbol', symbol)
         .single();
 
-      const assetBalance = walletData?.balance || 0;
+      const balanceFromHook = balances.find(b => b.symbol === symbol);
+      const assetBalance = balanceFromHook ? parseFloat(balanceFromHook.balance) : (walletData?.balance || 0);
       const assetLockedBalance = walletData?.locked_balance || 0;
       setBalance(assetBalance);
       setLockedBalance(assetLockedBalance);
