@@ -120,24 +120,24 @@ export default function Wallet() {
   const [cryptoNews, setCryptoNews] = useState<CryptoNews[]>([]);
   const [newsLoaded, setNewsLoaded] = useState(false);
   
-  // Initialize cached values from sessionStorage to prevent 0 display on refresh
+  // Initialize cached values from localStorage to prevent 0 display on refresh
   const [cachedBalance, setCachedBalance] = useState<number | null>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = sessionStorage.getItem('wallet_cached_balance');
+    if (typeof window !== 'undefined' && user?.id) {
+      const stored = localStorage.getItem(`pexly_wallet_balance_${user.id}`);
       return stored ? parseFloat(stored) : null;
     }
     return null;
   });
   const [cachedPnL, setCachedPnL] = useState<number | null>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = sessionStorage.getItem('wallet_cached_pnl');
+    if (typeof window !== 'undefined' && user?.id) {
+      const stored = localStorage.getItem(`pexly_wallet_pnl_${user.id}`);
       return stored ? parseFloat(stored) : null;
     }
     return null;
   });
   const [cachedPnLPercentage, setCachedPnLPercentage] = useState<number | null>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = sessionStorage.getItem('wallet_cached_pnl_percentage');
+    if (typeof window !== 'undefined' && user?.id) {
+      const stored = localStorage.getItem(`pexly_wallet_pnl_percentage_${user.id}`);
       return stored ? parseFloat(stored) : null;
     }
     return null;
@@ -447,10 +447,12 @@ export default function Wallet() {
       setCachedBalance(calculatedBalance);
       setCachedPnL(calculatedPnL);
       setCachedPnLPercentage(calculatedPnLPercentage);
-      // Persist to sessionStorage (including zeros for accurate display)
-      sessionStorage.setItem('wallet_cached_balance', calculatedBalance.toString());
-      sessionStorage.setItem('wallet_cached_pnl', calculatedPnL.toString());
-      sessionStorage.setItem('wallet_cached_pnl_percentage', calculatedPnLPercentage.toString());
+      // Persist to localStorage (including zeros for accurate display)
+      if (user?.id) {
+        localStorage.setItem(`pexly_wallet_balance_${user.id}`, calculatedBalance.toString());
+        localStorage.setItem(`pexly_wallet_pnl_${user.id}`, calculatedPnL.toString());
+        localStorage.setItem(`pexly_wallet_pnl_percentage_${user.id}`, calculatedPnLPercentage.toString());
+      }
     }
   }, [calculatedBalance, calculatedPnL, calculatedPnLPercentage, hasFreshReliableData]);
 
