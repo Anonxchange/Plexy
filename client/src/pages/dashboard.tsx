@@ -87,6 +87,14 @@ export const Dashboard = () => {
     }
   }, [user, fetchBalances]);
 
+  const [cachedTotalBalance, setCachedTotalBalance] = useState<number | null>(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      const stored = localStorage.getItem(`pexly_dashboard_balance_${user.id}`);
+      return stored ? parseFloat(stored) : null;
+    }
+    return null;
+  });
+
   const totalBalance = useMemo(() => {
     let total = 0;
     
@@ -108,8 +116,12 @@ export const Dashboard = () => {
       total += balance * price;
     });
 
-    return total;
-  }, [wallets, monitoredBalances, cryptoPrices]);
+    if (total > 0 && user?.id) {
+      localStorage.setItem(`pexly_dashboard_balance_${user.id}`, total.toString());
+    }
+
+    return total > 0 ? total : (cachedTotalBalance || 0);
+  }, [wallets, monitoredBalances, cryptoPrices, user, cachedTotalBalance]);
 
   const equivalentBtc = useMemo(() => {
     if (cryptoPrices.BTC?.current_price) {
