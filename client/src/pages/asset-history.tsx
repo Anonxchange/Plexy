@@ -67,48 +67,38 @@ export default function AssetHistory() {
       return;
     }
     loadTransactions();
-  }, [user]);
+  }, [user, symbol]);
 
   useEffect(() => {
     filterTransactions();
-  }, [transactions, activeTab, selectedCrypto, statusFilter]);
+  }, [transactions, activeTab, selectedCrypto, statusFilter, symbol]);
 
   const loadTransactions = async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const data = await getWalletTransactions(user.id, 100);
 
-      if (error) {
-        console.error("Error loading transactions:", error);
-        setTransactions([]);
-      } else {
-        const parsedData = (data || []).map(tx => ({
-          ...tx,
-          amount: typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount,
-          fee: typeof tx.fee === 'string' ? parseFloat(tx.fee) : tx.fee,
-          confirmations: tx.confirmations !== null && tx.confirmations !== undefined
-            ? (typeof tx.confirmations === 'string' ? parseInt(tx.confirmations, 10) : tx.confirmations)
-            : null,
-        }));
+      const parsedData = (data || []).map(tx => ({
+        ...tx,
+        amount: typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount,
+        fee: typeof tx.fee === 'string' ? parseFloat(tx.fee) : tx.fee,
+        confirmations: tx.confirmations !== null && tx.confirmations !== undefined
+          ? (typeof tx.confirmations === 'string' ? parseInt(tx.confirmations, 10) : tx.confirmations)
+          : null,
+      }));
 
-        const uniqueTransactions = parsedData.filter((tx, index, self) => {
-          if (!tx.tx_hash) return true;
-          return index === self.findIndex((t) => 
-            t.tx_hash === tx.tx_hash && 
-            t.crypto_symbol === tx.crypto_symbol &&
-            t.type === tx.type
-          );
-        });
+      const uniqueTransactions = parsedData.filter((tx, index, self) => {
+        if (!tx.tx_hash) return true;
+        return index === self.findIndex((t) => 
+          t.tx_hash === tx.tx_hash && 
+          t.crypto_symbol === tx.crypto_symbol &&
+          t.type === tx.type
+        );
+      });
 
-        setTransactions(uniqueTransactions);
-      }
+      setTransactions(uniqueTransactions);
     } catch (error) {
       console.error("Error loading transactions:", error);
       setTransactions([]);
@@ -132,8 +122,11 @@ export default function AssetHistory() {
       }
     }
 
-    if (selectedCrypto !== "all") {
-      filtered = filtered.filter(tx => tx.crypto_symbol === selectedCrypto);
+    // Default to the symbol from URL if provided and not "all"
+    const cryptoFilter = selectedCrypto === "all" ? (symbol !== "all" ? symbol : "all") : selectedCrypto;
+
+    if (cryptoFilter !== "all") {
+      filtered = filtered.filter(tx => tx.crypto_symbol === cryptoFilter);
     }
 
     if (statusFilter !== "all") {
