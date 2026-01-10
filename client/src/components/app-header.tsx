@@ -39,8 +39,19 @@ export function AppHeader() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { toast } = useToast();
   const [userName, setUserName] = useState<string>('');
-  const [balance, setBalance] = useState<number>(0);
-  const [preferredCurrency, setPreferredCurrency] = useState<string>('USD');
+  const [balance, setBalance] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(`pexly_balance_${user?.id}`);
+      return cached ? parseFloat(cached) : 0;
+    }
+    return 0;
+  });
+  const [preferredCurrency, setPreferredCurrency] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(`pexly_currency_${user?.id}`) || 'USD';
+    }
+    return 'USD';
+  });
   const [lastBalanceUpdate, setLastBalanceUpdate] = useState<number>(0);
 
   useEffect(() => {
@@ -140,6 +151,7 @@ export function AppHeader() {
       // Set preferred currency
       const currency = profileResult.data?.preferred_currency?.toUpperCase() || 'USD';
       setPreferredCurrency(currency);
+      if (user?.id) localStorage.setItem(`pexly_currency_${user.id}`, currency);
 
       // Calculate balance from non-custodial wallets
       if (userWallets && userWallets.length > 0) {
@@ -148,6 +160,7 @@ export function AppHeader() {
 
         if (walletsWithAddress.length === 0) {
           setBalance(0);
+          if (user?.id) localStorage.setItem(`pexly_balance_${user.id}`, "0");
           return;
         }
 
@@ -166,15 +179,17 @@ export function AppHeader() {
         }, 0);
 
         // Convert to preferred currency if needed
+        let finalBalance = totalUSD;
         if (currency !== 'USD') {
           const { convertCurrency } = await import('@/lib/crypto-prices');
-          const finalBalance = await convertCurrency(totalUSD, currency);
-          setBalance(finalBalance);
-        } else {
-          setBalance(totalUSD);
+          finalBalance = await convertCurrency(totalUSD, currency);
         }
+        
+        setBalance(finalBalance);
+        if (user?.id) localStorage.setItem(`pexly_balance_${user.id}`, finalBalance.toString());
       } else {
         setBalance(0);
+        if (user?.id) localStorage.setItem(`pexly_balance_${user.id}`, "0");
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
