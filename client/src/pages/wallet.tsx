@@ -142,6 +142,16 @@ export default function Wallet() {
     }
     return null;
   });
+
+  // Load individual asset balances from cache for instant display
+  const [cachedAssetBalances, setCachedAssetBalances] = useState<Record<string, number>>(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      const stored = localStorage.getItem(`pexly_asset_balances_${user.id}`);
+      return stored ? JSON.parse(stored) : {};
+    }
+    return {};
+  });
+
   const [spotPairs, setSpotPairs] = useState(initialSpotPairs);
   const [limitsExpanded, setLimitsExpanded] = useState(false);
   const [userVerificationLevel, setUserVerificationLevel] = useState<number>(0);
@@ -371,7 +381,13 @@ export default function Wallet() {
     const balanceFromHook = balances.find(b => b.symbol === asset.symbol);
     const wallet = wallets.find(w => w.crypto_symbol === asset.symbol);
     const priceData = cryptoPrices[asset.symbol];
-    const balance = balanceFromHook ? parseFloat(balanceFromHook.balance) : (wallet?.balance || 0);
+    
+    // Use fresh data if available, otherwise fallback to cachedAssetBalances
+    let balance = balanceFromHook ? parseFloat(balanceFromHook.balance) : (wallet?.balance || 0);
+    if (balance === 0 && !hasFreshReliableData && cachedAssetBalances[asset.symbol]) {
+      balance = cachedAssetBalances[asset.symbol];
+    }
+    
     const lockedBalance = wallet?.locked_balance || 0;
     const totalAssetBalance = balance + lockedBalance;
     const currentPrice = priceData?.current_price || 0;
@@ -462,9 +478,16 @@ export default function Wallet() {
         localStorage.setItem(`pexly_wallet_balance_${user.id}`, calculatedBalance.toString());
         localStorage.setItem(`pexly_wallet_pnl_${user.id}`, calculatedPnL.toString());
         localStorage.setItem(`pexly_wallet_pnl_percentage_${user.id}`, calculatedPnLPercentage.toString());
+        
+        // Cache individual asset balances
+        const assetBalances: Record<string, number> = {};
+        mergedAssets.forEach(a => {
+          if (a.balance > 0) assetBalances[a.symbol] = a.balance;
+        });
+        localStorage.setItem(`pexly_asset_balances_${user.id}`, JSON.stringify(assetBalances));
       }
     }
-  }, [calculatedBalance, calculatedPnL, calculatedPnLPercentage, hasFreshReliableData]);
+  }, [calculatedBalance, calculatedPnL, calculatedPnLPercentage, hasFreshReliableData, mergedAssets]);
 
   const portfolioTrend = totalPnLPercentage > 0 ? 'up' : totalPnLPercentage < 0 ? 'down' : 'neutral';
   const portfolioSparklineData = generateSparklineData(totalBalance * 0.95, portfolioTrend, 30);
