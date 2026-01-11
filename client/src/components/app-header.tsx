@@ -92,7 +92,7 @@ export function AppHeader() {
   useEffect(() => {
     if (user) {
       fetchProfileAvatar();
-      // Only fetch on mount
+      // fetchUserData() is already called here on mount
       fetchUserData();
 
       // Subscribe to wallet changes for real-time balance updates
