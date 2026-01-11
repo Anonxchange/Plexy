@@ -144,6 +144,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     false // assuming external send, set to true for internal transfers
   );
   
+  // Platform fee removed as per user request
   const networkFee = feeData?.networkFee || 0;
   const total = (cryptoAmountForFee || 0) + (networkFee || 0);
 
@@ -185,16 +186,21 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
     setLoading(true);
 
     try {
+      // Use non-custodial signer directly
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
       
-      const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      const nonCustWallet = wallets.find(w => w.chainId === "ethereum");
-      
+      const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      const targetWallet = userWallets.find(w => w.chainId === symbolToUse);
       const passwordToUse = sessionPassword || userPassword;
-      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(wallets[0]?.id, passwordToUse, user.id);
+      
+      if (!targetWallet) {
+        throw new Error("Local wallet not found for the selected asset");
+      }
 
-      if (!mnemonic || !nonCustWallet) {
-        throw new Error("Non-custodial wallet or mnemonic not found for signing");
+      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(targetWallet.id, passwordToUse, user.id);
+
+      if (!mnemonic) {
+        throw new Error("Mnemonic phrase not found for signing");
       }
 
       let signedTx;
@@ -205,11 +211,16 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
       };
 
       if (selectedNetwork.includes("Bitcoin")) {
+        // Fetch real network fee rate for Bitcoin
+        const feeResponse = await fetch('https://blockstream.info/api/fee-estimates');
+        const fees = await feeResponse.json();
+        const fastFee = fees['1'] || 10; // default to 10 if API fails
+        
         const btcTxData = {
           to: toAddress,
           amount: Math.floor(cryptoAmountNum * 1e8),
-          utxos: await (await fetch(`https://blockstream.info/api/address/${nonCustWallet.address}/utxo`)).json(),
-          feeRate: 10,
+          utxos: await (await fetch(`https://blockstream.info/api/address/${targetWallet.address}/utxo`)).json(),
+          feeRate: fastFee,
         };
         signedTx = await signBitcoinTransaction(mnemonic, btcTxData as any);
       } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
@@ -220,7 +231,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
         signedTx = await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
       } else {
         // Fallback to manager's default signing
-        signedTx = await nonCustodialWalletManager.signTransaction(nonCustWallet.id, txData, passwordToUse, user.id);
+        signedTx = await nonCustodialWalletManager.signTransaction(targetWallet.id, txData, passwordToUse, user.id);
       }
 
       console.log("Signed Transaction Result:", signedTx);
@@ -543,12 +554,10 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: Sen
                   </div>
                 ) : feeData ? (
                   <>
-                    {feeData.networkFee > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Network Fee</span>
-                        <span>{feeData.networkFee.toFixed(8)} {selectedCrypto}</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Network Fee</span>
+                      <span>{feeData.networkFee.toFixed(8)} {selectedCrypto}</span>
+                    </div>
                     <div className="flex justify-between pt-2 border-t border-border">
                       <span className="font-semibold">Total</span>
                       <span className="font-semibold">{total.toFixed(8)} {selectedCrypto}</span>
