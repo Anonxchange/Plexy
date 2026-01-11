@@ -429,9 +429,19 @@ export default function Wallet() {
   // Use cached values ONLY while fresh data is loading
   // Both wallets AND prices must be successfully loaded before showing calculated values
   // This prevents showing 0 during loading or when price fetch fails
+  // We also check localStorage for any globally pre-fetched data from AppHeader
   const hasFreshReliableData = walletsLoaded && pricesLoadedSuccessfully && Object.keys(cryptoPrices).length > 0;
-  const totalBalance = (!hasFreshReliableData && cachedBalance !== null && cachedBalance > 0) 
-    ? cachedBalance 
+
+  const getGlobalCachedBalance = () => {
+    if (typeof window !== 'undefined' && user?.id) {
+      const stored = localStorage.getItem(`pexly_balance_${user.id}`);
+      return stored ? parseFloat(stored) : null;
+    }
+    return null;
+  };
+
+  const totalBalance = (!hasFreshReliableData && (cachedBalance !== null || getGlobalCachedBalance() !== null))
+    ? (cachedBalance ?? getGlobalCachedBalance() ?? 0)
     : (calculatedBalance || 0);
   const totalPnL = (!hasFreshReliableData && cachedPnL !== null) 
     ? cachedPnL 
