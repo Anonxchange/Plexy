@@ -54,10 +54,20 @@ export default function AdminGiftCards() {
     const file = e.target.files?.[0];
     if (!file || !user?.id) return;
 
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file type",
-        description: "Please upload an image file",
+        description: "Please upload an image file (PNG, JPG, etc)",
         variant: "destructive",
       });
       return;
@@ -65,13 +75,15 @@ export default function AdminGiftCards() {
 
     setUploadingImage(true);
     try {
+      console.log('Starting upload for gift card image:', file.name);
       const uploadResult = await uploadToR2(file, 'gift-cards', user.id);
 
       if (!uploadResult.success || !uploadResult.url) {
         throw new Error(uploadResult.error || 'Upload failed');
       }
 
-      setFormData({ ...formData, image_url: uploadResult.url });
+      console.log('Upload successful, URL:', uploadResult.url);
+      setFormData(prev => ({ ...prev, image_url: uploadResult.url }));
 
       toast({
         title: "Success",
@@ -80,8 +92,8 @@ export default function AdminGiftCards() {
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload image",
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload image to storage",
         variant: "destructive",
       });
     } finally {
