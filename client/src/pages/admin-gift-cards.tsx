@@ -76,6 +76,8 @@ export default function AdminGiftCards() {
     setUploadingImage(true);
     try {
       console.log('Starting upload for gift card image:', file.name);
+      
+      // Pass 'gift-cards' as folder and use current user id
       const uploadResult = await uploadToR2(file, 'gift-cards', user.id);
 
       if (!uploadResult.success || !uploadResult.url) {
@@ -83,7 +85,12 @@ export default function AdminGiftCards() {
       }
 
       console.log('Upload successful, URL:', uploadResult.url);
-      setFormData(prev => ({ ...prev, image_url: uploadResult.url }));
+      
+      // Ensure state is updated correctly
+      setFormData(prev => ({ 
+        ...prev, 
+        image_url: uploadResult.url as string 
+      }));
 
       toast({
         title: "Success",
