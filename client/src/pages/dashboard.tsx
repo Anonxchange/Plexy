@@ -89,8 +89,10 @@ export const Dashboard = () => {
 
   const [cachedTotalBalance, setCachedTotalBalance] = useState<number | null>(() => {
     if (typeof window !== 'undefined' && user?.id) {
-      const stored = localStorage.getItem(`pexly_dashboard_balance_${user.id}`);
-      return stored ? parseFloat(stored) : null;
+      // Check both dashboard-specific and global header cache
+      const dashboardStored = localStorage.getItem(`pexly_dashboard_balance_${user.id}`);
+      const globalStored = localStorage.getItem(`pexly_balance_${user.id}`);
+      return dashboardStored ? parseFloat(dashboardStored) : (globalStored ? parseFloat(globalStored) : null);
     }
     return null;
   });
