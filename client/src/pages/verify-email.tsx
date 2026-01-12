@@ -40,7 +40,7 @@ export function VerifyEmail() {
           // Provide specific messages for different error types
           let errorMessage = "The verification link is invalid or has expired.";
           if (errorCode === "otp_expired") {
-            errorMessage = "Your verification link has expired. Please request a new one.";
+            errorMessage = "Your verification link has expired (codes expire after 5 minutes). Please request a new one.";
           } else if (errorCode === "access_denied") {
             errorMessage = "Access denied. The verification link may have already been used or is invalid.";
           }
@@ -154,7 +154,7 @@ export function VerifyEmail() {
           const expiresAt = new Date(data.expires_at);
           if (expiresAt < new Date()) {
             setStatus("error");
-            setMessage("Verification link has expired");
+            setMessage("Verification link has expired (codes expire after 5 minutes). Please request a new one.");
             return;
           }
 
