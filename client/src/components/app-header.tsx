@@ -28,6 +28,32 @@ import {
 } from "@/lib/notifications-api";
 import { useToast } from "@/hooks/use-toast";
 
+interface NotificationIconProps {
+  count?: number;
+  onClick?: () => void;
+}
+
+const NotificationIcon = ({ count = 0, onClick }: NotificationIconProps) => {
+  const displayCount = count > 99 ? "99+" : count;
+  const showBadge = count > 0;
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative flex items-center justify-center w-10 h-10 bg-card rounded-xl shadow-notification hover:shadow-notification-hover transition-all duration-200 hover:scale-105 active:scale-95"
+      aria-label={`Notifications${count > 0 ? `, ${count} unread` : ""}`}
+    >
+      <Bell className="w-5 h-5 text-foreground" strokeWidth={2} />
+      
+      {showBadge && (
+        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full animate-badge-pop">
+          {displayCount}
+        </span>
+      )}
+    </button>
+  );
+};
+
 export function AppHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
@@ -508,21 +534,11 @@ export function AppHeader() {
                 </div>
               </div>
 
-              {/* Notification Icon - All screens */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative h-9 w-9"
-                onClick={() => navigate('/notifications')}
-                data-testid="button-notifications"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 bg-red-500 hover:bg-red-600 text-[10px] rounded-full flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </Badge>
-                )}
-              </Button>
+              {/* Notification Icon - Real data */}
+              <NotificationIcon 
+                count={unreadCount} 
+                onClick={() => navigate('/notifications')} 
+              />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
