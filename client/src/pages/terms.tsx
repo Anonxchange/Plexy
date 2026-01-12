@@ -146,7 +146,7 @@ export default function Terms() {
             <div>
               <h2 className="text-2xl font-bold mb-4">Services Definition</h2>
               <p className="text-muted-foreground leading-relaxed">
-                The services are: a marketplace to enable buyers and sellers of "Digital Assets" (such term to be broadly understood to include digital currencies such as Bitcoin, Ether, and others supported by Pexly subject to change from time to time) to engage in transactions with each other (the "Marketplace") and the offer of a hosted digital wallet service for purposes of accessing the Marketplace (the "Pexly Account" or "Account"), holding and releasing Digital Assets as instructed upon completion of a purchase of Digital Assets and any other services described in this Agreement (collectively the "Services" and individually, a "Service") provided by us, to you as an individual ("user" or "you").
+                The services provided by Pexly consist of a software platform to enable buyers and sellers of Digital Assets (including Bitcoin, Ether, and others supported by Pexly) to engage in transactions with each other. This includes a non-custodial digital wallet service for the purpose of accessing the Marketplace, as well as software mechanisms to lock and release Digital Assets as instructed by users.
               </p>
               <p className="text-muted-foreground leading-relaxed mt-4">
                 Pexly.com and its related Services are owned and operated by Pexly. Your use of the Services will also be governed by our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link> and <Link href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.
@@ -195,18 +195,58 @@ export default function Terms() {
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold mb-4">About Pexly Services</h2>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                The Pexly Services are: the Pexly Marketplace and the Pexly Account.
+              <h2 className="text-2xl font-bold mb-4">What Pexly Is</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Pexly is strictly a non-custodial software service provider that provides technical infrastructure for users to discover, communicate, and transact directly with each other. Pexly provides the software tools for the peer-to-peer exchange of digital assets but does not itself provide exchange services, does not operate as a financial institution, and is not a party to any transactions conducted through the software.
               </p>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Pexly offers a peer-to-peer marketplace which facilitates the purchase and sale of certain select Digital Assets through various payment methods. Payment methods are negotiated and exchanged on a peer-to-peer basis between the buyers in the Marketplace ("Buyers") and sellers in the Marketplace ("Sellers"). Users agree upon which payment methods to use to complete a transaction and are fully responsible and liable for using such payment methods in a lawful manner.
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Non-Party to Transactions</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Pexly is a neutral software infrastructure provider and is not a party to any agreement, trade, or transaction between users. All interactions and transactions occur directly and exclusively between users on a peer-to-peer basis. Pexly does not buy, sell, exchange, take possession of, or take ownership of any digital assets or fiat currency.
               </p>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Pexly offers a hosted digital wallet (the "Pexly Account" or "Account") through a digital asset wallet provider. Users are able to post offers to buy or sell Digital Assets through the Marketplace. The creator of the offer is responsible for listing terms of the transaction, including the payment methods the Seller will accept. Once an offer is selected by another Pexly user, the Seller's Digital Assets are locked as part of our transaction procedures (the "Pexly Escrow") until all conditions necessary to consummate the transaction have occurred.
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Fiat Disclaimer</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                All fiat currency payments occur strictly outside the Pexly software environment and are arranged solely between users. Pexly does not process, monitor, verify, facilitate, guarantee, or settle fiat payments. Pexly does not provide payment processing services and has no involvement whatsoever in any fiat transfer between users.
               </p>
-              <p className="text-muted-foreground leading-relaxed font-semibold uppercase">
-                PEXLY DOES NOT ACT AS A PAYMENT PROCESSOR. ALL LIABILITY FOR SENDING AND RECEIVING PAYMENT AND CONFIRMING THE VALIDITY OF THE TRANSACTIONS LIE BETWEEN THE BUYER AND SELLER.
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Non-Custodial / Escrow Explanation</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Where escrow functionality is used, digital assets are locked using non-custodial mechanisms such as smart contracts or multi-signature arrangements. Pexly does not have unilateral control over digital assets, does not control users’ private keys, and cannot independently move, release, or access user funds.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">No Control / No Settlement Authority</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Pexly does not determine whether a fiat payment has been completed and does not guarantee the completion of any transaction. Any confirmation of payment is made solely by users at their own discretion and risk.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">User Responsibility & Risk</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Users acknowledge and agree that they bear full responsibility for verifying counterparties, completing payments, and managing all risks associated with peer-to-peer transactions, including but not limited to fraud, non-payment, chargebacks, or disputes.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">No Financial Advice</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Pexly does not provide financial, investment, legal, or tax advice. All information provided on the platform is for general informational purposes only.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Regulatory Positioning</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Pexly operates as a software service provider and does not engage in regulated financial activities such as banking, remittance, or custody of client funds. Regulatory obligations, if any, are fulfilled in accordance with applicable laws based on the nature of services provided.
               </p>
             </div>
 
