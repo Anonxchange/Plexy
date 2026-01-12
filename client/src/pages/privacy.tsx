@@ -150,8 +150,7 @@ export default function Privacy() {
                   Personal Information We Collect
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  We collect information that relates to you ("Personal Data") in connection with your use of the Website, our Services, or otherwise in the context of our relationship with you. The types of Personal Data that we may obtain from you may include:
-                </p>
+                  The following account activity information consists solely of user-generated content, metadata, and technical logs created as a result of user interactions with the Pexly software. The collection or display of such information does not constitute monitoring, verification, approval, or control of any transaction, payment, or settlement, whether fiat or digital asset-related.  </p>
                 
                 <div className="space-y-4">
                   <div className="bg-muted/30 p-4 rounded-lg">
