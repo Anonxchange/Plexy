@@ -141,7 +141,8 @@ export function SignUp() {
   const [emailOtp, setEmailOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [otpCountdown, setOtpCountdown] = useState(60);
+  const [otpCountdown, setOtpCountdown] = useState(300);
+  const [resendCooldown, setResendCooldown] = useState(60);
   const [isResending, setIsResending] = useState(false);
   const { signUp, signIn, user } = useAuth();
   const [, setLocation] = useLocation();
@@ -269,22 +270,17 @@ export function SignUp() {
     }
   }, [user, setLocation]);
 
-  // Countdown timer for OTP expiry
+  // Countdown timer for OTP expiry and resend cooldown
   useEffect(() => {
-    if (step !== "email_verify" || otpCountdown <= 0) return;
+    if (step !== "email_verify") return;
 
     const timer = setInterval(() => {
-      setOtpCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [step, otpCountdown]);
+  }, [step]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -526,7 +522,8 @@ export function SignUp() {
       return;
     }
 
-    setOtpCountdown(60);
+    setOtpCountdown(300);
+    setResendCooldown(60);
     setEmailOtp("");
     toast({
       title: "Code resent!",
@@ -604,8 +601,8 @@ export function SignUp() {
 
             {/* Countdown Timer */}
             <div className="mb-4 text-center">
-              <p className={`text-sm ${otpCountdown > 10 ? (isDark ? 'text-gray-400' : 'text-gray-600') : 'text-red-500 font-medium'}`}>
-                Code expires in: <span className="font-mono font-bold">{otpCountdown}s</span>
+              <p className={`text-sm ${otpCountdown > 30 ? (isDark ? 'text-gray-400' : 'text-gray-600') : 'text-red-500 font-medium'}`}>
+                Code expires in: <span className="font-mono font-bold">{Math.floor(otpCountdown / 60)}:{(otpCountdown % 60).toString().padStart(2, '0')}</span>
               </p>
             </div>
 
@@ -620,9 +617,9 @@ export function SignUp() {
             {/* Resend Button */}
             <button
               onClick={handleResendOtp}
-              disabled={otpCountdown > 0 || isResending}
+              disabled={resendCooldown > 0 || isResending}
               className={`w-full py-3 rounded-xl text-sm font-medium transition-colors mb-4 ${
-                otpCountdown > 0 || isResending
+                resendCooldown > 0 || isResending
                   ? isDark
                     ? 'text-gray-600 bg-gray-800 cursor-not-allowed'
                     : 'text-gray-400 bg-gray-100 cursor-not-allowed'
@@ -631,7 +628,7 @@ export function SignUp() {
                   : 'text-lime-600 hover:text-lime-700 hover:bg-gray-100'
               }`}
             >
-              {isResending ? "Sending..." : otpCountdown > 0 ? `Resend in ${otpCountdown}s` : "Resend Code"}
+              {isResending ? "Sending..." : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
             </button>
 
             <button
