@@ -135,8 +135,21 @@ export default function AMLPolicy() {
               <div>
                 <h2 className="text-2xl font-bold mb-4">Introduction</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Pexly is committed to maintaining the highest standards of anti-money laundering (AML) and counter-terrorist financing (CTF) compliance. This policy outlines our procedures to prevent our platform from being used for money laundering or terrorist financing activities.
+                  Pexly is a non-custodial software service provider. We provide technical infrastructure and software tools that enable users to interact on a peer-to-peer basis. Pexly is not a financial institution, digital asset exchange, or money transmitter. This policy outlines our procedures to ensure our software environment is used responsibly.
                 </p>
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-bold mb-4">Non-Involvement in Fiat Transactions</h2>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Pexly does not process, hold, or transmit fiat currency. All fiat payments occur strictly between users outside of the Pexly platform. Pexly:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+                  <li>Does not operate as a payment processor or money transmitter</li>
+                  <li>Does not monitor or verify bank transfers or other fiat payments</li>
+                  <li>Does not facilitate the settlement of fiat funds</li>
+                  <li>Has no access to users' bank accounts or payment processor accounts</li>
+                </ul>
               </div>
 
               <div>
