@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Users, FileCheck, Settings, BarChart3, Gift } from "lucide-react";
+import { Shield, Users, FileCheck, Settings, BarChart3, Gift, ArrowRightLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 
@@ -144,6 +144,13 @@ export default function AdminPage() {
       title: "Gift Card Management",
       description: "Upload and manage gift cards",
       href: "/admin/gift-cards",
+      badge: "Active"
+    },
+    {
+      icon: ArrowRightLeft,
+      title: "Admin Transfer",
+      description: "Move funds from custodian to user wallets",
+      href: "/admin/transfer",
       badge: "Active"
     },
     {
