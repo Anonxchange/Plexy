@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Banknote, Smartphone } from "lucide-react";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Banknote, Smartphone, HelpCircle, MessageSquare } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -475,34 +475,36 @@ export function AppHeader() {
             </div>
           </DropdownMenu>
 
-          {/* Earn with Us Dropdown */}
-          <DropdownMenu open={activeDropdown === 'earn'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
+          {/* Support Dropdown */}
+          <DropdownMenu open={activeDropdown === 'support'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
             <div 
               className="relative flex items-center h-full"
-              onPointerEnter={() => setActiveDropdown('earn')}
+              onPointerEnter={() => setActiveDropdown('support')}
               onPointerLeave={() => setActiveDropdown(null)}
             >
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant={location === "/affiliate" || location === "/rewards" ? "secondary" : "ghost"}
+                  variant={location.startsWith("/support") || location === "/faq" ? "secondary" : "ghost"}
                   size="sm"
                   className="gap-2 group"
                 >
-                  <TrendingUp className="h-4 w-4" />
-                  Earn with Us
+                  <HelpCircle className="h-4 w-4" />
+                  Support
                   <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
                 align="start" 
                 className="w-56"
-                onPointerEnter={() => setActiveDropdown('earn')}
+                onPointerEnter={() => setActiveDropdown('support')}
               >
-                <DropdownMenuItem onClick={() => { navigate('/affiliate'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Affiliate Program
+                <DropdownMenuItem onClick={() => { navigate('/support'); setActiveDropdown(null); }} className="cursor-pointer">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Contact Support
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate('/rewards'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Rewards
+                <DropdownMenuItem onClick={() => { navigate('/faq'); setActiveDropdown(null); }} className="cursor-pointer">
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Help Center / FAQ
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </div>
