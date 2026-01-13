@@ -139,43 +139,41 @@ export default function Terms() {
 
               <div>
               <p className="text-muted-foreground leading-relaxed">
-                You agree and understand that by signing up to Pexly and using the services, you are agreeing to enter into this user agreement (the "Agreement") by and between you and Pexly Global Corp., and be legally bound by its terms and conditions, so please read them carefully. By accessing and using Pexly, you're entering into a legally binding contract, with the waiving of certain legal rights such as a jury trial and class actions. If any term or condition of this User Agreement is unacceptable to you, please do not visit, access, or use Pexly. Use of the words "Pexly" "company", "we,","us," or "our" in this User Agreement refers to Pexly Global Corp., and any or all of its affiliates.
+                You agree and understand that by signing up to Pexly and using the interface, you are agreeing to enter into this user agreement (the "Agreement") by and between you and Pexly.app, and be legally bound by its terms and conditions, so please read them carefully. By accessing and using Pexly, you're entering into a legally binding contract, with the waiving of certain legal rights such as a jury trial and class actions. If any term or condition of this User Agreement is unacceptable to you, please do not visit, access, or use Pexly. Use of the words "Pexly" "company", "we,","us," or "our" in this User Agreement refers to Pexly.app.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">Services Definition</h2>
               <p className="text-muted-foreground leading-relaxed">
-                The services provided by Pexly consist of a software platform to enable buyers and sellers of Digital Assets (including Bitcoin, Ether, and others supported by Pexly) to engage in transactions with each other. This includes a non-custodial digital wallet service for the purpose of accessing the Marketplace, as well as software mechanisms to lock and release Digital Assets as instructed by users.
+                The services provided by Pexly consist of a self-custody software interface to enable users to interact with public blockchain protocols and discover other users for the purpose of initiating peer-to-peer interactions. This includes a self-hosted digital wallet interface for the purpose of accessing decentralized marketplaces, as well as unmanaged software mechanisms to facilitate user-initiated cryptographic time-locks and releases as instructed by users.
               </p>
               <p className="text-muted-foreground leading-relaxed mt-4">
-                Pexly.com and its related Services are owned and operated by Pexly. Your use of the Services will also be governed by our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link> and <Link href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.
+                Pexly.app and its related interface are owned and operated by Pexly. Your use of the interface will also be governed by our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link> and <Link href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">Regulatory Compliance</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Your conduct on Pexly is subject to the laws, regulations, and rules of any applicable governmental or regulatory authority (the "Applicable Laws and Regulations") including, but not limited to:
+                Your conduct on Pexly is subject to the laws, regulations, and rules of your local jurisdiction and any applicable governmental authority. Pexly does not provide regulated financial services and operates strictly as a technology provider:
               </p>
               <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-                <li>Money Service Business ("MSB") regulations under the Financial Crimes Enforcement Network ("FinCEN")</li>
+                <li>Compliance with applicable regional digital asset regulations</li>
                 <li>Laws, regulations, and rules of relevant tax authorities</li>
-                <li>Applicable regulations and guidance set forth by FinCEN</li>
-                <li>The Bank Secrecy Act of 1970 ("BSA")</li>
-                <li>The USA PATRIOT Act of 2001 ("Patriot Act")</li>
-                <li>AML/CTF provisions as mandated by U.S. federal law and any other rules and regulations regarding AML/CTF</li>
-                <li>Issuances from the Office of Foreign Assets Control ("OFAC")</li>
+                <li>Applicable guidance regarding self-hosted wallet software</li>
+                <li>The Bank Secrecy Act and similar global anti-money laundering frameworks where applicable to users</li>
+                <li>Adherence to global sanctions lists including OFAC where technical measures permit</li>
               </ul>
               <p className="text-muted-foreground leading-relaxed mt-4">
-                You unequivocally agree and understand that by using Pexly in any capacity, you agree and understand to act in compliance with and be legally bound by this User Agreement as well as the Applicable Laws and Regulations.
+                You unequivocally agree and understand that by using Pexly in any capacity, you represent that you are acting in compliance with and be legally bound by this User Agreement as well as the Applicable Laws in your jurisdiction.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">Updates</h2>
               <p className="text-muted-foreground leading-relaxed">
-                We may make changes or updates to this Agreement for legal or regulatory reasons or at our discretion. If you continue to use the Services after these updates, you agree to the updated Agreement. The updated version will supersede all prior versions. We reserve the right to discontinue or make changes to any of the Services. If you have supplied us with an email address, we may also notify you by email that the Agreement has been changed or updated.
+                We may make changes or updates to this Agreement for legal or regulatory reasons or at our discretion to reflect the evolving nature of decentralized technology. If you continue to use the interface after these updates, you agree to the updated Agreement. The updated version will supersede all prior versions. We reserve the right to discontinue or make changes to any of the software features.
               </p>
             </div>
 
@@ -189,7 +187,7 @@ export default function Terms() {
                   THE VALUE OF DIGITAL ASSETS CAN GO UP OR DOWN. THERE CAN BE SUBSTANTIAL RISK THAT YOU LOSE MONEY BUYING, SELLING, TRADING OR HOLDING DIGITAL ASSETS. YOU ARE RESPONSIBLE FOR ASSESSING WHETHER DEALING IN DIGITAL ASSETS IS SUITABLE FOR YOU.
                 </p>
                 <p className="font-semibold uppercase">
-                  THE TREATMENT OF DIGITAL ASSETS VARIES BY JURISDICTION. THE SERVICES ARE NOT AVAILABLE WHERE PROHIBITED BY LAW OR BY PEXLY POLICY. DUE TO CHANGING REGULATORY REQUIREMENTS AND INTERPRETATION IN THE DIGITAL ASSET MARKETS, PEXLY MAY USE ITS SOLE DISCRETION TO REJECT USERS, PROHIBIT USE OF PART OR ALL OF THE SERVICES AND / OR CLOSE, FREEZE OR SUSPEND PEXLY ACCOUNTS WHERE PEXLY HAS DETERMINED THAT REGULATORY POLICY PREVENTS THE OFFERING OF THE SERVICES. PEXLY IS NOT LIABLE FOR ANY LOSS OR DAMAGE RESULTING FROM SUCH TEMPORARY OR PERMANENT LOSS OF ACCESS OR USE TO ANY SERVICE.
+                  THE TREATMENT OF DIGITAL ASSETS VARIES BY JURISDICTION. THE INTERFACE IS NOT INTENDED FOR USE WHERE PROHIBITED BY LAW. DUE TO CHANGING REGULATORY REQUIREMENTS IN THE DIGITAL ASSET MARKETS, PEXLY MAY USE ITS SOLE DISCRETION TO RESTRICT ACCESS TO THE INTERFACE WHERE REGULATORY POLICY PREVENTS THE OFFERING OF SUCH TECHNOLOGY.
                 </p>
               </div>
             </div>
@@ -197,14 +195,14 @@ export default function Terms() {
             <div>
               <h2 className="text-2xl font-bold mb-4">What Pexly Is</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Pexly is strictly a non-custodial software service provider that provides technical infrastructure for users to discover, communicate, and transact directly with each other. Pexly provides the software tools for the peer-to-peer exchange of digital assets but does not itself provide exchange services, does not operate as a financial institution, and is not a party to any transactions conducted through the software.
+                Pexly is strictly a technology provider that provides unmanaged software infrastructure for users to discover, communicate, and interact directly with each other on public blockchain networks. Pexly provides the software tools for the self-hosted exchange of digital assets but does not itself provide exchange services, does not operate as a financial institution, does not act as a CASP (Crypto-Asset Service Provider), and is not a party to any transactions conducted through the software.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">Non-Party to Transactions</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Pexly is a neutral software infrastructure provider and is not a party to any agreement, trade, or transaction between users. All interactions and transactions occur directly and exclusively between users on a peer-to-peer basis. Pexly does not buy, sell, exchange, take possession of, or take ownership of any digital assets or fiat currency.
+                Pexly is a neutral technology infrastructure provider and is not a party to any agreement, trade, or transaction between users. All interactions and transactions occur directly and exclusively between users on a peer-to-peer, self-hosted basis. Pexly does not buy, sell, exchange, take possession of, or take ownership of any digital assets or fiat currency.
               </p>
             </div>
 
@@ -216,105 +214,104 @@ export default function Terms() {
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold mb-4">Non-Custodial / Escrow Explanation</h2>
+              <h2 className="text-2xl font-bold mb-4">Self-Hosted / Escrow Interface</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Where escrow functionality is used, digital assets are locked using non-custodial mechanisms such as smart contracts or multi-signature arrangements. Pexly does not have unilateral control over digital assets, does not control users’ private keys, and cannot independently move, release, or access user funds.
+                Where escrow functionality is utilized, digital assets are locked using self-hosted cryptographic mechanisms such as smart contracts or multi-signature arrangements on public blockchains. Pexly does not have unilateral control over digital assets, does not control users’ private keys, and cannot independently move, release, or access user funds. The software acts as an interface to these public protocols.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">No Control / No Settlement Authority</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Pexly does not determine whether a fiat payment has been completed and does not guarantee the completion of any transaction. Any confirmation of payment is made solely by users at their own discretion and risk.
+                Pexly does not determine whether a fiat payment has been completed and does not guarantee the completion of any transaction. Any confirmation of payment is made solely by users at their own discretion and risk through the software interface.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">User Responsibility & Risk</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Users acknowledge and agree that they bear full responsibility for verifying counterparties, completing payments, and managing all risks associated with peer-to-peer transactions, including but not limited to fraud, non-payment, chargebacks, or disputes.
+                Users acknowledge and agree that they bear full responsibility for verifying counterparties, completing payments, and managing all risks associated with peer-to-peer interactions, including but not limited to fraud, non-payment, chargebacks, or disputes.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">No Financial Advice</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Pexly does not provide financial, investment, legal, or tax advice. All information provided on the platform is for general informational purposes only.
+                Pexly does not provide financial, investment, legal, or tax advice. All information provided through the interface is for general informational purposes only.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">Regulatory Positioning</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Pexly operates as a software service provider and does not engage in regulated financial activities such as banking, remittance, or custody of client funds. Regulatory obligations, if any, are fulfilled in accordance with applicable laws based on the nature of services provided.
+                Pexly operates as a technology provider and does not engage in regulated financial activities such as banking, remittance, or custody of client funds. The platform provides a decentralized interface for user-governed interactions.
               </p>
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold mb-4">Pexly Wallet Service</h2>
+              <h2 className="text-2xl font-bold mb-4">Pexly Wallet Interface</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Pexly serves as a non-custodial digital wallet software intended for digital assets such as cryptocurrencies and virtual commodities ("Digital Assets"). This means that you, and only you, have complete control over and responsibility for your Digital Assets and private keys, thereby authorizing transactions from your wallet address autonomously. Please be fully aware that because Pexly operates as a non-custodial wallet software, all associated activities and potential risks of loss are entirely under your management at all times. Pexly equips you to:
+                Pexly serves as a self-hosted digital wallet software interface intended for digital assets such as cryptocurrencies and virtual commodities ("Digital Assets"). This means that you, and only you, have complete control over and responsibility for your Digital Assets and private keys, thereby authorizing transactions from your wallet address autonomously via the blockchain. Please be fully aware that because Pexly operates as a self-hosted wallet interface, all associated activities and potential risks of loss are entirely under your management at all times. Pexly equips you to:
               </p>
               <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
-                <li>Generate wallet addresses and associated private keys that enable you to send and receive various digital assets</li>
-                <li>Explore and utilize third-party decentralized application(s) ("DApp(s)") and third-party decentralized exchanges ("DEX") through integrated services</li>
-                <li>Conduct swaps or trade digital assets utilizing DApp features provided by independent third-party service providers</li>
-                <li>Deploy specific digital assets in a third-party 'Proof of Stake' network through staking services ("Staking Service")</li>
-                <li>Gain access to digital asset price information provided by independent third-party service providers</li>
-                <li>Broadcast Digital Asset Transaction data to various blockchain networks supported by Pexly</li>
+                <li>Generate local wallet addresses and associated private keys that enable you to interact with various public blockchain networks</li>
+                <li>Explore and utilize third-party decentralized application(s) ("DApp(s)") and third-party decentralized exchanges ("DEX") through independent external links</li>
+                <li>Conduct self-governed swaps or trades utilizing public DApp features provided by independent third-party protocols</li>
+                <li>Access staking functionality provided by third-party 'Proof of Stake' networks</li>
+                <li>View digital asset price information provided by independent third-party data providers</li>
+                <li>Broadcast user-signed transaction data to various public blockchain networks</li>
               </ul>
               <p className="text-muted-foreground leading-relaxed">
-                Please remember that your usage of Pexly's features and services underpins your acceptance of the risks associated with digital asset management and transaction activities, including network variability, cybersecurity threats, and market volatility.
+                Please remember that your usage of Pexly's features underpins your acceptance of the risks associated with self-governed digital asset management and transaction activities.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-bold mb-4">Wallet Address, Private Key, and Backup Capabilities</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                An encrypted backup of certain information associated with your wallet can be stored on eligible devices. The wallet address is linked to the private key; together, they permit the authorization of the transfer of Digital Assets from and into that wallet address. You bear exclusive responsibility for the preservation and security of your private key and any mnemonic phrase ("Secret Phrase") related to your wallet.
+                An encrypted local backup of certain information associated with your wallet can be stored on your device. The wallet address is linked to the private key; together, they permit the authorization of the transfer of Digital Assets. You bear exclusive responsibility for the preservation and security of your private key and any mnemonic phrase ("Secret Phrase") related to your wallet.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                It is imperative to safeguard access information for your wallet address, secret phrase, and private key. Equally crucial is the backup of your private keys, backup phrases, or passwords. Failing to do so may result in losing authority over Digital Assets tied to your wallet. Please note that we do not gain or retain your wallet password, encrypted private key, unencrypted private key, or secret phrase connected to your wallet. Furthermore, we cannot produce a replacement password for your wallet if you forgot your primary password.
+                It is imperative to safeguard access information for your wallet. Failing to do so may result in losing authority over Digital Assets. Please note that we do not gain or retain your wallet password, encrypted private key, unencrypted private key, or secret phrase. Furthermore, we cannot produce a replacement password for your wallet.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                In case you have not securely preserved a backup of any private key and wallet address pair existing in your wallet, remember that all Digital Assets associated with such a wallet address will be unreachable. Hence, we expressly disclaim any responsibility or liability in the event you are unable to access your wallet for any reason, including but not limited to your failure to secure your wallet address, Secret Phrase, and private key information.
+                In case you have not securely preserved a backup, remember that all Digital Assets associated with your wallet address will be unreachable. Hence, we expressly disclaim any responsibility or liability in the event you are unable to access your wallet for any reason.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                Protecting your Digital Assets requires your full caution and alertness. Pexly operations are premised on the principle that you're fully aware of the importance of your Digital Assets and will execute necessary steps to safeguard them. You agree to be solely responsible for any actions you perform within Pexly and acknowledge the risks associated with digital asset management.
+                Protecting your Digital Assets requires your full caution and alertness. Pexly operations are premised on the principle that you're fully aware of the importance of your Digital Assets and will execute necessary steps to safeguard them.
               </p>
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold mb-4">Use of DApps and DEX</h2>
+              <h2 className="text-2xl font-bold mb-4">Interaction with DApps and DEX</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                When accessing or using decentralized applications (DApps) or decentralized exchanges (DEX), including but not limited to the DApp functionality within our Services such as the "Trade/Swap Digital Assets" feature, you are required to understand and agree to the following terms:
+                When accessing independent decentralized applications (DApps) or decentralized exchanges (DEX) via the interface, you acknowledge the following:
               </p>
               <ul className="list-disc list-inside space-y-3 text-muted-foreground ml-4">
-                <li>Pexly does not control, endorse, or take responsibility for your engagement with or use of DApps or DEX. Pexly has no liability or obligation related to your use of DApps or DEX, including but not limited to any transactions that are disputed or result in losses.</li>
-                <li>The amount that you can trade through DEX each day is subject to the rules and limitations set by the third-party developers of the Smart Contracts. Pexly does not control these limits and is not responsible for enforcing them.</li>
-                <li>All transactions on the blockchain are final and cannot be reversed. This means that any transaction made via DApps or DEX is entirely under your control and responsibility. You take full responsibility for the outcomes of any issues related to these transactions, including but not limited to transfers to incorrect addresses or problems with the node servers you have selected.</li>
-                <li>Using DApps or DEX may result in handling or service fees associated with the third-party Smart Contracts. These fees are determined by the third-party developers and are not controlled by Pexly. Users should review the fee information provided by the third-party service providers before engaging in any transactions.</li>
-                <li>Pexly reserves the right to introduce charges in the future at its discretion. Any fee updates will apply to transactions conducted after the updated fees come into effect.</li>
+                <li>Pexly does not control, endorse, or take responsibility for your engagement with external DApps or DEX protocols. Pexly has no liability or obligation related to your use of such third-party technology.</li>
+                <li>Any trading limits are determined by the rules of the third-party Smart Contracts. Pexly does not control these limits.</li>
+                <li>All transactions on the blockchain are final and cannot be reversed. This means that any transaction made via the interface to a DApp or DEX is entirely under your control.</li>
+                <li>Using external protocols may result in handling or service fees associated with third-party Smart Contracts. These fees are not controlled by Pexly.</li>
               </ul>
               <p className="text-muted-foreground leading-relaxed mt-4">
-                By using DApps and DEX via Pexly, you acknowledge and accept these associated risks and potential fees. Pexly strives to create a user-friendly environment that rigorously adheres to legal standards and regulations.
+                By using the interface to interact with DApps and DEX, you acknowledge and accept these associated risks.
               </p>
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold mb-4">P2P Transactions and Smart Contracts</h2>
+              <h2 className="text-2xl font-bold mb-4">P2P Interactions and Smart Contracts</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Pexly facilitates peer-to-peer (P2P) transactions between users through smart contracts deployed on blockchain networks. These smart contracts automatically execute the terms agreed upon by both parties in a transaction. When utilizing P2P services with smart contracts, you acknowledge and agree to the following:
+                Pexly provides an interface for peer-to-peer (P2P) interactions through smart contracts deployed on public blockchain networks. These smart contracts automatically execute terms governed by the protocol. When utilizing the P2P interface, you acknowledge the following:
               </p>
               <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
-                <li>Pexly does not control or execute smart contracts. Execution is handled entirely by the respective blockchain network.</li>
-                <li>Once a smart contract transaction is initiated, it cannot be reversed or modified by Pexly or any party involved.</li>
-                <li>All P2P transactions are final and binding upon smart contract execution on the blockchain.</li>
-                <li>Pexly assumes no liability for disputes arising from P2P transactions, including disagreements about transaction terms or Smart Contract outcomes.</li>
-                <li>Users are solely responsible for ensuring they understand the terms of any P2P transaction and smart contract before initiating it.</li>
+                <li>Pexly does not control or execute smart contracts. Execution is handled entirely by the public blockchain network.</li>
+                <li>Once a transaction is initiated, it is governed by the immutable logic of the blockchain protocol.</li>
+                <li>All transactions are final and binding upon execution on the blockchain.</li>
+                <li>Pexly assumes no liability for disputes arising from user-to-user interactions.</li>
+                <li>Users are solely responsible for ensuring they understand the technical terms of any interaction.</li>
               </ul>
               <p className="text-muted-foreground leading-relaxed">
-                By utilizing P2P services and smart contracts via Pexly, you acknowledge these conditions and accept the immutable nature of blockchain transactions.
+                By utilizing the P2P interface, you acknowledge these conditions and accept the immutable nature of blockchain technology.
               </p>
             </div>
 
