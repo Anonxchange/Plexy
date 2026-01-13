@@ -16,8 +16,8 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
   const [showBalance, setShowBalance] = useState(true);
   
   return (
-    <Card className="border-none shadow-none bg-accent/5 overflow-hidden">
-      <CardContent className="p-6">
+    <div className="bg-accent/5 overflow-hidden">
+      <div className="p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -61,7 +61,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
