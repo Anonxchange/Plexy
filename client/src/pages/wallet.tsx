@@ -156,9 +156,9 @@ export default function Wallet() {
   // Redirect to signin if not logged in (no loading state)
   useEffect(() => {
     if (!loading && !user) {
-      setLocation("/signin");
+      window.location.href = "/signin";
     }
-  }, [user, loading, setLocation]);
+  }, [user, loading]);
 
   const loadCryptoNews = async () => {
     try {
@@ -363,7 +363,15 @@ export default function Wallet() {
   };
 
   // Redirect immediately if not logged in (no loading state shown)
-  if (!loading && !user) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
     return null;
   }
 
