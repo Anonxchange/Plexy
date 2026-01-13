@@ -64,9 +64,14 @@ export function AssetList() {
               <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 transition-colors">
                 <TableCell className="py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-xs">
-                      {asset.symbol.substring(0, 1)}
-                    </div>
+                    <img 
+                      src={`/assets/coins/${asset.symbol.toLowerCase()}.png`} 
+                      alt={asset.symbol}
+                      className="w-8 h-8 rounded-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`;
+                      }}
+                    />
                     <div className="font-bold">{asset.symbol}</div>
                   </div>
                 </TableCell>
