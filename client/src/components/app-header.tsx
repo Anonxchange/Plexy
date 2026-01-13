@@ -553,7 +553,12 @@ export function AppHeader() {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[280px] p-0" sideOffset={8}>
+              <DropdownMenuContent 
+                align="end" 
+                className="w-[280px] p-0" 
+                sideOffset={8}
+                alignOffset={0}
+              >
                 <div className="p-2">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
