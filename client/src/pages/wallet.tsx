@@ -156,7 +156,7 @@ export default function Wallet() {
   // Redirect to signin if not logged in (no loading state)
   useEffect(() => {
     if (!loading && !user) {
-      window.location.href = "/signin";
+      window.location.replace("/signin");
     }
   }, [user, loading]);
 
@@ -241,7 +241,12 @@ export default function Wallet() {
     loadUserProfile();
     loadWalletData();
     loadCryptoPrices();
-    loadCryptoNews();
+    
+    // Lazy load news to speed up initial render
+    setTimeout(() => {
+      loadCryptoNews();
+    }, 1000);
+    
     fetchBalances();
     // loadTransactions(); // Removed for non-custodial pure mode
 
@@ -365,8 +370,9 @@ export default function Wallet() {
   // Redirect immediately if not logged in (no loading state shown)
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground animate-pulse">Loading your assets...</p>
       </div>
     );
   }
