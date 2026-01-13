@@ -247,13 +247,14 @@ export default function Wallet() {
       loadCryptoNews();
     }, 1000);
     
+    // Initial fetch
     fetchBalances();
     // loadTransactions(); // Removed for non-custodial pure mode
 
-    // Increase price update interval to reduce calls
-    const priceInterval = setInterval(loadCryptoPrices, 120000); // 2 minutes
-    const newsInterval = setInterval(loadCryptoNews, 600000); // 10 minutes
-    const balanceInterval = setInterval(fetchBalances, 30000); // 30 seconds
+    // Set up regular background updates (every 30s for balances, 2m for prices)
+    const priceInterval = setInterval(loadCryptoPrices, 120000); 
+    const newsInterval = setInterval(loadCryptoNews, 600000);
+    const balanceInterval = setInterval(fetchBalances, 30000);
 
     return () => {
       clearInterval(priceInterval);
@@ -368,7 +369,10 @@ export default function Wallet() {
   };
 
   // Redirect immediately if not logged in (no loading state shown)
-  if (loading) {
+  // Check if we have cached data to show immediately
+  const hasCachedData = cachedBalance !== null || wallets.length > 0;
+
+  if (loading || (balancesLoading && !hasCachedData)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
