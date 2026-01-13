@@ -101,6 +101,31 @@ export default function AdminTransferPage() {
     transferMutation.mutate();
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('is_admin')
+        .eq('id', user?.id)
+        .single();
+      
+      if (error || !data?.is_admin) {
+        alert("Access denied. You don't have admin privileges.");
+        return;
+      }
+      
+      const session = {
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+      };
+      localStorage.setItem('admin_session', JSON.stringify(session));
+      setIsAdmin(true);
+    } catch (error) {
+      alert("Authentication failed");
+    }
+  };
+
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -116,16 +141,24 @@ export default function AdminTransferPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-6 w-6 text-destructive" />
-              Access Denied
+              Admin Access Required
             </CardTitle>
             <CardDescription>
-              Admin privileges are required to access this page.
+              You need admin privileges to access this page
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => setLocation("/admin")} className="w-full">
-              Go to Admin Login
-            </Button>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <Alert>
+                <AlertDescription>
+                  Only users with admin privileges can access transfer management.
+                  Click the button below to verify your access.
+                </AlertDescription>
+              </Alert>
+              <Button type="submit" className="w-full">
+                Check Admin Access
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
