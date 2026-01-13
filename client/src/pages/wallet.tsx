@@ -371,9 +371,26 @@ export default function Wallet() {
   // Check if we have cached data to show immediately
   const hasCachedData = cachedBalance !== null || wallets.length > 0 || (balances && balances.length > 0);
 
-  // REMOVED: Initial loading state that was causing blank screens on refresh
-  // The page will now render immediately with cached data or empty state
-  // while fresh data is fetched in the background.
+  // Use a more granular loading state that only triggers if we have ZERO data
+  // Use a secondary ref or flag to prevent showing the spinner once data has ever been seen
+  const [hasEverSeenData, setHasEverSeenData] = useState(false);
+  
+  useEffect(() => {
+    if (hasCachedData) {
+      setHasEverSeenData(true);
+    }
+  }, [hasCachedData]);
+
+  const isInitialColdLoad = loading || (balancesLoading && !hasEverSeenData);
+
+  if (isInitialColdLoad) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4 bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground animate-pulse">Initializing wallet...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return null;
