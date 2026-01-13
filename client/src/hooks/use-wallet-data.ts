@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
 
 export interface WalletData {
   totalBalance: number;
+  userId?: string;
   assets: {
     symbol: string;
     name: string;
@@ -12,12 +14,14 @@ export interface WalletData {
 }
 
 export function useWalletData() {
+  const { user } = useAuth();
   return useQuery<WalletData>({
-    queryKey: ["/api/wallet"],
+    queryKey: ["/api/wallet", user?.id],
     queryFn: async () => {
       // Mock data for initial implementation
       return {
         totalBalance: 0,
+        userId: user?.id,
         assets: [
           { symbol: "BTC", name: "Bitcoin", balance: 0, value: 0, change24h: 0 },
           { symbol: "ETH", name: "Ethereum", balance: 0, value: 0, change24h: 0 },
