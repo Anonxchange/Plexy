@@ -14,6 +14,7 @@ interface WalletHeaderProps {
 export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeaderProps) {
   const { data: wallet } = useWalletData();
   const [showBalance, setShowBalance] = useState(true);
+  const preferredCurrency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
   
   return (
     <div className="bg-[#EBF7F2]/40 overflow-hidden">
@@ -32,7 +33,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             
             <div className="space-y-1">
               <div className="text-4xl font-bold tracking-tight">
-                {showBalance ? `0 NGN` : "****"}
+                {showBalance ? `0 ${preferredCurrency}` : "****"}
               </div>
               <div className="text-sm text-muted-foreground">
                 There are no assets in your account <button onClick={onReceive} className="text-primary font-medium hover:underline">Deposit</button>
