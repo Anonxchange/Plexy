@@ -76,12 +76,12 @@ export function AssetList() {
                   </div>
                 </TableCell>
                 <TableCell className="py-4">
-                  <div className="font-semibold">0 NGN</div>
+                  <div className="font-semibold">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
                   <div className="text-[10px] text-green-500 font-bold">+0.00%</div>
                 </TableCell>
                 <TableCell className="py-4">
                   <div className="font-bold">0</div>
-                  <div className="text-[10px] text-muted-foreground font-medium">0 NGN</div>
+                  <div className="text-[10px] text-muted-foreground font-medium">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
                 </TableCell>
                 <TableCell className="text-right py-4">
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
