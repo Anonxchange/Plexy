@@ -60,7 +60,12 @@ export default function Wallet() {
 
         <div className="space-y-6">
           <WalletHeader />
-          <WalletActions />
+          <WalletActions 
+            onSend={() => setSendDialogOpen(true)}
+            onReceive={() => setReceiveDialogOpen(true)}
+            onSwap={() => setLocation("/swap")}
+            onTopup={() => setLocation("/wallet/mobile-topup")}
+          />
           
           <div className="mt-8">
             <div className="flex items-center justify-between mb-4">
