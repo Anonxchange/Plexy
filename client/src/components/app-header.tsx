@@ -502,7 +502,7 @@ export function AppHeader() {
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Contact Support
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate('/faq'); setActiveDropdown(null); }} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => { window.open('https://help.pexly.app', '_blank'); setActiveDropdown(null); }} className="cursor-pointer">
                   <HelpCircle className="h-4 w-4 mr-2" />
                   Help Center / FAQ
                 </DropdownMenuItem>
@@ -553,7 +553,7 @@ export function AppHeader() {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[280px] p-0">
+              <DropdownMenuContent align="end" className="w-[280px] p-0" sideOffset={8}>
                 <div className="p-2">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
