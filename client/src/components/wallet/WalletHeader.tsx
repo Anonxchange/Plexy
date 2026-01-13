@@ -41,7 +41,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center bg-background rounded-lg border p-1 mr-2">
+            <div className="flex items-center bg-background rounded-lg border p-1">
               <Button variant="ghost" size="sm" className="h-8 gap-2 px-3" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span className="text-xs">Mobile top-up</span>
@@ -59,16 +59,6 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
                 <span className="text-xs">Deposit</span>
               </Button>
             </div>
-
-            <Button variant="outline" className="gap-2 shadow-sm">
-              <Landmark className="h-4 w-4" />
-              Crypto to Bank
-            </Button>
-            
-            <Button className="gap-2 bg-[#B4F22E] hover:bg-[#A3D929] text-black font-semibold shadow-sm">
-              <Zap className="h-4 w-4 fill-current" />
-              Direct buy
-            </Button>
           </div>
         </div>
       </CardContent>
