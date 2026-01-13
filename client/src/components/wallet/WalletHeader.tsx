@@ -16,7 +16,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
   const [showBalance, setShowBalance] = useState(true);
   
   return (
-    <div className="bg-accent/5 overflow-hidden">
+    <div className="bg-[#EBF7F2]/40 overflow-hidden">
       <div className="p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-4">
