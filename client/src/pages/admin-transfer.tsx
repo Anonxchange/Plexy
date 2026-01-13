@@ -1,37 +1,27 @@
-
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, ArrowRightLeft, Search, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Shield, Send, ArrowRight, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
-
-const SUPPORTED_ASSETS = [
-  { symbol: "BTC", name: "Bitcoin" },
-  { symbol: "ETH", name: "Ethereum" },
-  { symbol: "USDT", name: "Tether" },
-  { symbol: "USDC", name: "USD Coin" },
-  { symbol: "SOL", name: "Solana" },
-  { symbol: "TRX", name: "Tron" },
-];
+import { useLocation } from "wouter";
 
 export default function AdminTransferPage() {
   const supabase = createClient();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
-  
-  const [targetUserId, setTargetUserId] = useState("");
-  const [targetUsername, setTargetUsername] = useState("");
-  const [selectedAsset, setSelectedAsset] = useState("BTC");
+
+  // Form state
+  const [userId, setUserId] = useState("");
+  const [cryptoSymbol, setCryptoSymbol] = useState("BTC");
   const [amount, setAmount] = useState("");
-  const [notes, setNotes] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
+  const [toAddress, setToAddress] = useState("");
 
   useEffect(() => {
     const checkAdminAccess = async () => {
@@ -43,8 +33,6 @@ export default function AdminTransferPage() {
             setIsAdmin(true);
             setCheckingSession(false);
             return;
-          } else {
-            localStorage.removeItem('admin_session');
           }
         } catch (e) {
           localStorage.removeItem('admin_session');
@@ -65,98 +53,79 @@ export default function AdminTransferPage() {
         }
       }
 
-      setIsAdmin(false);
       setCheckingSession(false);
     };
 
     checkAdminAccess();
   }, [user]);
 
-  const searchUser = async () => {
-    if (!targetUsername) return;
-    setIsSearching(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, username')
-        .ilike('username', targetUsername)
-        .single();
-      
-      if (error) throw error;
-      if (data) {
-        setTargetUserId(data.id);
-        alert(`User found: ${data.username} (${data.id})`);
-      }
-    } catch (err: any) {
-      alert("User not found or error: " + err.message);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   const transferMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('admin-transfer', {
-        body: {
-          user_id: targetUserId,
-          crypto_symbol: selectedAsset,
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session found");
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-transfer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          user_id: userId || null,
+          crypto_symbol: cryptoSymbol.toUpperCase(),
           amount: parseFloat(amount),
-          notes: notes
-        }
+          to_address: toAddress,
+        }),
       });
 
-      if (error) throw error;
-      return data;
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Transfer failed");
+      return result;
     },
     onSuccess: (data) => {
-      alert(`Transfer successful! ${data.message}`);
+      alert(`Transfer successful! TX Hash: ${data.tx_hash}`);
       setAmount("");
-      setNotes("");
+      setToAddress("");
     },
     onError: (error: any) => {
       alert(`Transfer failed: ${error.message}`);
     }
   });
 
-  const handleTransfer = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!targetUserId) {
-      alert("Please select a target user first");
+    if (!cryptoSymbol || !amount || !toAddress) {
+      alert("Please fill in all required fields");
       return;
     }
-    if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount");
-      return;
-    }
-    if (confirm(`Confirm transfer of ${amount} ${selectedAsset} to user ${targetUserId}?`)) {
-      transferMutation.mutate();
-    }
+    transferMutation.mutate();
   };
 
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Checking access...</p>
-          </CardContent>
-        </Card>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-6 w-6" />
-              Admin Access Required
+              <Shield className="h-6 w-6 text-destructive" />
+              Access Denied
             </CardTitle>
+            <CardDescription>
+              Admin privileges are required to access this page.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>You need admin privileges to access this page.</p>
+            <Button onClick={() => setLocation("/admin")} className="w-full">
+              Go to Admin Login
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -164,72 +133,47 @@ export default function AdminTransferPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-3xl">
+    <div className="container mx-auto p-6 max-w-2xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Admin Fund Transfer</h1>
         <p className="text-muted-foreground">
-          Move funds from master wallet to user custodial wallets
+          Move funds from custodian wallet to on-chain address
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ArrowRightLeft className="h-5 w-5" />
+            <Send className="h-5 w-5" />
             Transfer Details
           </CardTitle>
           <CardDescription>
-            Enter the recipient details and amount to transfer
+            This will initiate an on-chain transfer and optionally update user internal balance.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleTransfer} className="space-y-6">
-            <div className="space-y-4 border p-4 rounded-lg bg-muted/50">
-              <div className="space-y-2">
-                <Label htmlFor="username">Recipient Username</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="username"
-                    placeholder="Enter username"
-                    value={targetUsername}
-                    onChange={(e) => setTargetUsername(e.target.value)}
-                  />
-                  <Button type="button" variant="outline" onClick={searchUser} disabled={isSearching}>
-                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="userId">Recipient User ID</Label>
-                <Input
-                  id="userId"
-                  placeholder="User ID (auto-filled on search)"
-                  value={targetUserId}
-                  onChange={(e) => setTargetUserId(e.target.value)}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="userId">Recipient User ID (Optional)</Label>
+              <Input
+                id="userId"
+                placeholder="User UUID (to update internal balance)"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="asset">Asset</Label>
-                <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-                  <SelectTrigger id="asset">
-                    <SelectValue placeholder="Select asset" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_ASSETS.map((asset) => (
-                      <SelectItem key={asset.symbol} value={asset.symbol}>
-                        {asset.name} ({asset.symbol})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="cryptoSymbol">Asset Symbol</Label>
+                <Input
+                  id="cryptoSymbol"
+                  placeholder="BTC, ETH, USDT..."
+                  value={cryptoSymbol}
+                  onChange={(e) => setCryptoSymbol(e.target.value)}
+                  required
+                />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="amount">Amount</Label>
                 <Input
@@ -239,25 +183,38 @@ export default function AdminTransferPage() {
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
+                  required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Internal memo for this transfer"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+              <Label htmlFor="toAddress">Destination On-Chain Address</Label>
+              <Input
+                id="toAddress"
+                placeholder="0x... or bc1..."
+                value={toAddress}
+                onChange={(e) => setToAddress(e.target.value)}
+                required
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={transferMutation.isPending}>
+            <Alert className="bg-primary/5 border-primary/20">
+              <AlertDescription className="flex items-center gap-2">
+                <ArrowRight className="h-4 w-4 text-primary" />
+                This action will call the <code className="bg-primary/10 px-1 rounded">process-withdrawal</code> function.
+              </AlertDescription>
+            </Alert>
+
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={transferMutation.isPending}
+            >
               {transferMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing Transfer...
+                  Processing...
                 </>
               ) : (
                 "Execute Transfer"
