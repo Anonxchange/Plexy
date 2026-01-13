@@ -57,27 +57,29 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
-      <div className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
-        <h1 className="text-3xl font-bold mb-8">My assets</h1>
+      <div className="flex-1 w-full mx-auto px-0 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl">
+        <h1 className="text-3xl font-bold mb-6 sm:mb-8 px-4 sm:px-0">My assets</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-8 space-y-8">
-            <div className="space-y-6">
-              <Tabs defaultValue="wallet" className="w-full">
-                <TabsList className="bg-transparent p-0 h-auto gap-1">
-                  <TabsTrigger value="wallet" className="rounded-lg px-6 py-2 data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black font-semibold border bg-white">
-                    <WalletIcon className="h-4 w-4 mr-2" />
-                    Wallet
-                  </TabsTrigger>
-                  <TabsTrigger value="visa" className="rounded-lg px-6 py-2 font-semibold border bg-white opacity-60">
-                    <Landmark className="h-4 w-4 mr-2" />
-                    Visa card
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+          <div className="lg:col-span-8 space-y-4 sm:space-y-8">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="px-4 sm:px-0">
+                <Tabs defaultValue="wallet" className="w-full">
+                  <TabsList className="bg-transparent p-0 h-auto gap-1">
+                    <TabsTrigger value="wallet" className="rounded-lg px-6 py-2 data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black font-semibold border bg-white">
+                      <WalletIcon className="h-4 w-4 mr-2" />
+                      Wallet
+                    </TabsTrigger>
+                    <TabsTrigger value="visa" className="rounded-lg px-6 py-2 font-semibold border bg-white opacity-60">
+                      <Landmark className="h-4 w-4 mr-2" />
+                      Visa card
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
 
-              <Card className="border-none shadow-sm bg-white overflow-hidden rounded-2xl">
+              <Card className="border-none sm:border shadow-sm bg-white overflow-hidden sm:rounded-2xl rounded-none">
                 <CardContent className="p-0">
                   <div className="divide-y divide-border">
                     <WalletHeader 
@@ -97,7 +99,7 @@ export default function WalletPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 space-y-6 px-4 sm:px-0">
             <Card className="border-none shadow-sm bg-card overflow-hidden">
               <CardContent className="p-0">
                 <div className="p-4 flex items-center justify-between border-b cursor-pointer hover:bg-muted/30 transition-colors">
