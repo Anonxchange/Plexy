@@ -50,7 +50,7 @@ export default function Privacy() {
           </h1>
           
           <p className="text-lg md:text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-            Pexly, Inc. (also referred to as "Pexly," "we," "us," or "our") takes steps to protect your privacy
+            Pexly.app (also referred to as "Pexly," "we," "us," or "our") takes steps to protect your privacy
           </p>
 
           <p className="text-sm text-primary-foreground/80">
@@ -134,10 +134,10 @@ export default function Privacy() {
             <div className="space-y-8">
               <div>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  In this Privacy Notice ("Notice"), we describe the types of personal information we may collect from you in connection with your use of our websites including, but not limited to, https://pexly.com/, the Pexly Wallet, our online bitcoin trading platform, mobile application, social media pages, or other online properties (collectively, the "Website"), or when you use any of the products, services, content, features, technologies, or functions we offer (collectively, the "Services").
+                  In this Privacy Notice ("Notice"), we describe the types of personal information we may collect from you in connection with your use of our websites including, but not limited to, https://pexly.app/, the Pexly Wallet, our online bitcoin trading interface, mobile application, social media pages, or other online properties (collectively, the "Website"), or when you use any of the products, interface features, technologies, or functions we offer (collectively, the "Services").
                 </p>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  This Notice is designed to help you obtain information about our privacy practices and to help you understand your privacy choices when you use our Website and Services. Please note that our Service offerings may vary by region.
+                  This Notice is designed to help you obtain information about our privacy practices and to help you understand your privacy choices when you use our Website and Interface. Please note that our offerings may vary by region.
                 </p>
                 <p className="text-muted-foreground leading-relaxed font-semibold">
                   For all purposes, the English language version of this privacy notice shall be the original, governing instrument. In the event of any conflict between the English language version of this privacy notice and any subsequent translation into any other language, the English language version shall govern and control.
@@ -239,11 +239,11 @@ export default function Privacy() {
                 </p>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
-                    <h3 className="font-semibold mb-2 text-foreground">Service Delivery</h3>
+                    <h3 className="font-semibold mb-2 text-foreground">Infrastructure Support</h3>
                     <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-                      <li>Provide, maintain, and improve our services</li>
-                      <li>Process transactions and send related information</li>
-                      <li>Enable peer-to-peer trading functionality</li>
+                      <li>Provide, maintain, and improve our software</li>
+                      <li>Process technical data and related information</li>
+                      <li>Enable peer-to-peer interface functionality</li>
                     </ul>
                   </div>
                   <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
