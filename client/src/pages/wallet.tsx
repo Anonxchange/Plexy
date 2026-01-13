@@ -77,14 +77,22 @@ export default function WalletPage() {
                 </TabsList>
               </Tabs>
 
-              <WalletHeader 
-                onSend={() => setSendDialogOpen(true)}
-                onReceive={() => setReceiveDialogOpen(true)}
-                onSwap={() => setLocation("/swap")}
-                onTopup={() => setLocation("/wallet/mobile-topup")}
-              />
-              
-              <AssetList />
+              <Card className="border-none shadow-sm bg-card overflow-hidden rounded-2xl">
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border">
+                    <WalletHeader 
+                      onSend={() => setSendDialogOpen(true)}
+                      onReceive={() => setReceiveDialogOpen(true)}
+                      onSwap={() => setLocation("/swap")}
+                      onTopup={() => setLocation("/wallet/mobile-topup")}
+                    />
+                    
+                    <div className="p-6">
+                      <AssetList />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
