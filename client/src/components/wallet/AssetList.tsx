@@ -37,7 +37,7 @@ export function AssetList() {
           </TabsList>
         </Tabs>
         
-        <Button variant="ghost" className="text-sm font-medium px-0 h-auto pb-3 hover:bg-transparent">
+        <Button variant="ghost" className="text-sm font-medium px-0 h-auto pb-3 hover:bg-transparent hidden sm:flex">
           See full operations
         </Button>
       </div>
