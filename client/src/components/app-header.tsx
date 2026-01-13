@@ -553,128 +553,127 @@ export function AppHeader() {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                align="end" 
-                className="w-[280px] p-0" 
-                sideOffset={8}
-                alignOffset={0}
-              >
-                <div className="p-2">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                <div>
-                  <div className="font-medium">Dashboard</div>
-                  <div className="text-xs text-muted-foreground">Your main dashboard</div>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
-                <div>
-                  <div className="font-medium">Profile</div>
-                  <div className="text-xs text-muted-foreground">Your public profile</div>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/notifications')} className="cursor-pointer">
-                <Bell className="mr-2 h-4 w-4" />
-                <div className="flex flex-1 items-center justify-between">
-                  <div>
-                    <div className="font-medium">Notifications</div>
-                    <div className="text-xs text-muted-foreground">Messages and updates</div>
-                  </div>
-                  {unreadCount > 0 && (
-                    <Badge className="ml-2 h-5 px-2 bg-red-500 hover:bg-red-600 text-xs">
-                      {unreadCount}
-                    </Badge>
-                  )}
-                </div>
-              </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/trade-history")}>
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Trade statistics</span>
-                      <span className="text-xs text-muted-foreground">Trade history, partners, statistics</span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/account-settings")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Account settings</span>
-                      <span className="text-xs text-muted-foreground">Verification, notifications, security</span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/submit-idea")}>
-                    <Lightbulb className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Submit an idea</span>
-                      <span className="text-xs text-muted-foreground">Improve Pexly with us</span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={async () => {
-                    await signOut();
-                    navigate("/");
-                  }}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </div>
-
-                <DropdownMenuSeparator className="my-0" />
-
-                <div className="p-4 bg-muted/30">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                      <Wallet className="h-4 w-4" />
-                      <span>Your limits: Level {verificationLevel}</span>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={() => navigate("/verification")}
-                    >
-                      {verificationLevel === 0 ? "Verify Now" : "Upgrade"}
-                    </Button>
-                  </div>
-                  {levelConfig && (
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Daily</span>
-                        <span className="font-medium">
-                          {levelConfig.dailyLimit 
-                            ? `$${levelConfig.dailyLimit.toLocaleString()}` 
-                            : "Unlimited"}
-                        </span>
+                <DropdownMenuContent 
+                  align="end" 
+                  className="w-[280px] p-0" 
+                  sideOffset={8}
+                >
+                  <div className="p-2">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <div>
+                        <div className="font-medium">Dashboard</div>
+                        <div className="text-xs text-muted-foreground">Your main dashboard</div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Per Trade</span>
-                        <span className="font-medium">
-                          {levelConfig.perTradeLimit 
-                            ? `$${levelConfig.perTradeLimit.toLocaleString()}` 
-                            : "Unlimited"}
-                        </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <div>
+                        <div className="font-medium">Profile</div>
+                        <div className="text-xs text-muted-foreground">Your public profile</div>
                       </div>
-                      {levelConfig.lifetimeTradeLimit && (
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/notifications')} className="cursor-pointer">
+                      <Bell className="mr-2 h-4 w-4" />
+                      <div className="flex flex-1 items-center justify-between">
+                        <div>
+                          <div className="font-medium">Notifications</div>
+                          <div className="text-xs text-muted-foreground">Messages and updates</div>
+                        </div>
+                        {unreadCount > 0 && (
+                          <Badge className="ml-2 h-5 px-2 bg-red-500 hover:bg-red-600 text-xs">
+                            {unreadCount}
+                          </Badge>
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/trade-history")}>
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Trade statistics</span>
+                        <span className="text-xs text-muted-foreground">Trade history, partners, statistics</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/account-settings")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Account settings</span>
+                        <span className="text-xs text-muted-foreground">Verification, notifications, security</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/submit-idea")}>
+                      <Lightbulb className="mr-2 h-4 w-4" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Submit an idea</span>
+                        <span className="text-xs text-muted-foreground">Improve Pexly with us</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={async () => {
+                      await signOut();
+                      navigate("/");
+                    }}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </div>
+
+                  <DropdownMenuSeparator className="my-0" />
+
+                  <div className="p-4 bg-muted/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                        <Wallet className="h-4 w-4" />
+                        <span>Your limits: Level {verificationLevel}</span>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => navigate("/verification")}
+                      >
+                        {verificationLevel === 0 ? "Verify Now" : "Upgrade"}
+                      </Button>
+                    </div>
+                    {levelConfig && (
+                      <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Lifetime</span>
+                          <span className="text-muted-foreground">Daily</span>
                           <span className="font-medium">
-                            ${levelConfig.lifetimeTradeLimit.toLocaleString()}
+                            {levelConfig.dailyLimit 
+                              ? `$${levelConfig.dailyLimit.toLocaleString()}` 
+                              : "Unlimited"}
                           </span>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Per Trade</span>
+                          <span className="font-medium">
+                            {levelConfig.perTradeLimit 
+                              ? `$${levelConfig.perTradeLimit.toLocaleString()}` 
+                              : "Unlimited"}
+                          </span>
+                        </div>
+                        {levelConfig.lifetimeTradeLimit && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Lifetime</span>
+                            <span className="font-medium">
+                              ${levelConfig.lifetimeTradeLimit.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {/* Notification Icon - Real data */}
-            <NotificationIcon 
-              count={unreadCount} 
-              onClick={() => navigate('/notifications')} 
-            />
+              {/* Notification Icon - Real data */}
+              <NotificationIcon 
+                count={unreadCount} 
+                onClick={() => navigate('/notifications')} 
+              />
             </>
           ) : (
             <>
