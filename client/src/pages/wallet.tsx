@@ -56,7 +56,7 @@ export default function WalletPage() {
   }));
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
       <div className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
         <h1 className="text-3xl font-bold mb-8">My assets</h1>
 
@@ -65,19 +65,19 @@ export default function WalletPage() {
           <div className="lg:col-span-8 space-y-8">
             <div className="space-y-6">
               <Tabs defaultValue="wallet" className="w-full">
-                <TabsList className="bg-muted/50 p-1 rounded-xl h-auto gap-1">
-                  <TabsTrigger value="wallet" className="rounded-lg px-6 py-2 data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black font-semibold">
+                <TabsList className="bg-transparent p-0 h-auto gap-1">
+                  <TabsTrigger value="wallet" className="rounded-lg px-6 py-2 data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black font-semibold border bg-white">
                     <WalletIcon className="h-4 w-4 mr-2" />
                     Wallet
                   </TabsTrigger>
-                  <TabsTrigger value="visa" className="rounded-lg px-6 py-2 font-semibold">
+                  <TabsTrigger value="visa" className="rounded-lg px-6 py-2 font-semibold border bg-white opacity-60">
                     <Landmark className="h-4 w-4 mr-2" />
                     Visa card
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
 
-              <Card className="border-none shadow-sm bg-card overflow-hidden rounded-2xl">
+              <Card className="border-none shadow-sm bg-white overflow-hidden rounded-2xl">
                 <CardContent className="p-0">
                   <div className="divide-y divide-border">
                     <WalletHeader 
