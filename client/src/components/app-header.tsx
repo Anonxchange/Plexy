@@ -534,12 +534,6 @@ export function AppHeader() {
                 </div>
               </div>
 
-              {/* Notification Icon - Real data */}
-              <NotificationIcon 
-                count={unreadCount} 
-                onClick={() => navigate('/notifications')} 
-              />
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -668,6 +662,12 @@ export function AppHeader() {
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Notification Icon - Real data */}
+            <NotificationIcon 
+              count={unreadCount} 
+              onClick={() => navigate('/notifications')} 
+            />
             </>
           ) : (
             <>
