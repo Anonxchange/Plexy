@@ -368,11 +368,10 @@ export default function Wallet() {
     }
   };
 
-  // Redirect immediately if not logged in (no loading state shown)
   // Check if we have cached data to show immediately
-  const hasCachedData = cachedBalance !== null || wallets.length > 0;
+  const hasCachedData = cachedBalance !== null || wallets.length > 0 || (balances && balances.length > 0);
 
-  if (loading || (balancesLoading && !hasCachedData)) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
