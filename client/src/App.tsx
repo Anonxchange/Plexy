@@ -54,6 +54,7 @@ import ReferralPage from "@/pages/referral";
 import MerchantApplicationPage from "@/pages/merchant-application";
 import MerchantDowngradePage from "@/pages/merchant-downgrade";
 import AdminMerchantsPage from "@/pages/admin-merchants";
+import AdminTransferPage from "@/pages/admin-transfer";
 import PexlyPay from "@/pages/pexly-pay";
 import PexlyPayHistory from "@/pages/pexly-pay-history";
 import PexlyPaySettings from "@/pages/pexly-pay-settings";
@@ -148,6 +149,7 @@ function Router() {
       <Route path="/admin" component={AdminPage} />
       <Route path="/admin/verifications" component={AdminVerificationsPage} />
       <Route path="/admin/merchants" component={AdminMerchantsPage} />
+      <Route path="/admin/transfer" component={AdminTransferPage} />
       <Route path="/admin/blog" component={AdminBlog} />
       <Route path="/admin/gift-cards" component={AdminGiftCards} />
       <Route path="/notifications" component={NotificationsPage} />
