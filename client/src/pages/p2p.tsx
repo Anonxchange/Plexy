@@ -112,15 +112,18 @@ export function P2P() {
 
   const initialTab = (queryParams.get("tab") as "buy" | "sell") || "buy";
   const initialCrypto = queryParams.get("crypto") || "BTC";
+  const initialPayment = queryParams.get("payment") || "All Payment Methods";
 
   const [activeTab, setActiveTab] = useState<"buy" | "sell">(initialTab);
   const [selectedCrypto, setSelectedCrypto] = useState(initialCrypto.toUpperCase());
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(initialPayment);
 
   // Sync state with URL params when they change
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
     const crypto = params.get("crypto");
+    const payment = params.get("payment");
     
     if (tab === "buy" || tab === "sell") {
       setActiveTab(tab);
@@ -130,14 +133,18 @@ export function P2P() {
       const upperCrypto = crypto.toUpperCase();
       setSelectedCrypto(upperCrypto);
     }
+
+    if (payment) {
+      setSelectedPaymentMethod(payment);
+    }
   }, [location]);
+
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("");
   const [offerLocation, setOfferLocation] = useState("worldwide");
   const [traderLocation, setTraderLocation] = useState("usa");
   const [openCurrencyDialog, setOpenCurrencyDialog] = useState(false);
   const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("All Payment Methods");
   const [paymentSearchQuery, setPaymentSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [rawOffers, setRawOffers] = useState<any[]>([]);
