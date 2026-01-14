@@ -41,23 +41,23 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center bg-background rounded-lg border p-1 overflow-x-auto no-scrollbar max-w-[calc(100vw-2rem)] sm:max-w-none whitespace-nowrap">
-              <Button variant="ghost" size="sm" className="h-8 gap-2 px-3 flex-shrink-0" onClick={onTopup}>
-                <Smartphone className="h-4 w-4" />
-                <span className="text-xs">Top-up</span>
+          <div className="w-full">
+            <div className="grid grid-cols-4 bg-background rounded-lg border p-1 w-full">
+              <Button variant="ghost" size="sm" className="h-8 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onTopup}>
+                <Smartphone className="h-3.5 w-3.5" />
+                <span className="text-[9px] font-medium leading-tight mt-0.5">Top-up</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 gap-2 px-3 flex-shrink-0" onClick={onSwap}>
-                <RefreshCw className="h-4 w-4" />
-                <span className="text-xs">Swap</span>
+              <Button variant="ghost" size="sm" className="h-8 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onSwap}>
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span className="text-[9px] font-medium leading-tight mt-0.5">Swap</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 gap-2 px-3 flex-shrink-0" onClick={onSend}>
-                <Send className="h-4 w-4" />
-                <span className="text-xs">Send</span>
+              <Button variant="ghost" size="sm" className="h-8 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onSend}>
+                <Send className="h-3.5 w-3.5" />
+                <span className="text-[9px] font-medium leading-tight mt-0.5">Send</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 gap-2 px-3 text-primary flex-shrink-0" onClick={onReceive}>
-                <ArrowDownToLine className="h-4 w-4" />
-                <span className="text-xs">Deposit</span>
+              <Button variant="ghost" size="sm" className="h-8 flex-col gap-0 px-1 text-primary hover:bg-muted/50" onClick={onReceive}>
+                <ArrowDownToLine className="h-3.5 w-3.5" />
+                <span className="text-[9px] font-medium leading-tight mt-0.5">Deposit</span>
               </Button>
             </div>
           </div>
