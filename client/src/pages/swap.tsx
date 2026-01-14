@@ -240,7 +240,7 @@ export function Swap() {
 
                   {/* Swap Button Middle */}
                   <div className="flex justify-center -my-6 relative z-10">
-                    <div className="rounded-full bg-[#58B383] text-white h-10 w-10 flex items-center justify-center border-4 border-card shadow-lg">
+                    <div className="rounded-full bg-[#B4F22E] text-black h-10 w-10 flex items-center justify-center border-4 border-card shadow-lg">
                       <ArrowUpDown className="h-5 w-5" />
                     </div>
                   </div>
@@ -265,7 +265,7 @@ export function Swap() {
                   </div>
 
                   <Button 
-                    className="w-full h-14 text-lg font-bold bg-[#58B383] hover:bg-[#4da175] text-white rounded-xl shadow-sm transition-all" 
+                    className="w-full h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-xl shadow-sm transition-all" 
                     onClick={() => setLocation("/signin")}
                   >
                     Log in/Join us
@@ -339,9 +339,9 @@ export function Swap() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                 {[
-                  { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "https://via.placeholder.com/300x200" },
-                  { step: "2. Open Swap page", desc: "From the Trade menu in the header, select Swap", img: "https://via.placeholder.com/300x200" },
-                  { step: "3. Select a pair and swap", desc: "Enter the amount, select your cryptocurrencies, and proceed to swap", img: "https://via.placeholder.com/300x200" }
+                  { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "/assets/IMG_1541.png" },
+                  { step: "2. Open Swap page", desc: "From the Trade menu in the header, select Swap", img: "/assets/IMG_2645.png" },
+                  { step: "3. Select a pair and swap", desc: "Enter the amount, select your cryptocurrencies, and proceed to swap", img: "/assets/IMG_2657.png" }
                 ].map((item, i) => (
                   <div key={i} className="space-y-6">
                     <h3 className="text-xl font-bold">{item.step}</h3>
@@ -354,7 +354,7 @@ export function Swap() {
               </div>
               <div className="text-center mt-20">
                 <Button 
-                  className="px-12 h-14 text-lg font-bold bg-[#58B383] hover:bg-[#4da175] text-white rounded-full shadow-lg transition-all"
+                  className="px-12 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-full shadow-lg transition-all"
                   onClick={() => setLocation("/signin")}
                 >
                   Swap now
@@ -656,4 +656,3 @@ export function Swap() {
     </div>
   );
 }
-
