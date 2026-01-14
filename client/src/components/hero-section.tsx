@@ -35,6 +35,10 @@ export function HeroSection() {
   const [openPayment, setOpenPayment] = useState(false);
   const [openCrypto, setOpenCrypto] = useState(false);
 
+  const [openCurrencyDesktop, setOpenCurrencyDesktop] = useState(false);
+  const [openPaymentDesktop, setOpenPaymentDesktop] = useState(false);
+  const [openCryptoDesktop, setOpenCryptoDesktop] = useState(false);
+
   useEffect(() => {
     const fetchPrices = async () => {
       try {
@@ -405,14 +409,15 @@ export function HeroSection() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Cryptocurrency</label>
-                  <Popover open={openCrypto} onOpenChange={setOpenCrypto}>
+                  <Popover open={openCryptoDesktop} onOpenChange={setOpenCryptoDesktop}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
-                        aria-expanded={openCrypto}
+                        aria-expanded={openCryptoDesktop}
                         className="h-14 w-full justify-between text-base"
-                        data-testid="select-crypto"
+                        data-testid="select-crypto-desktop"
+                        type="button"
                       >
                         {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -429,7 +434,7 @@ export function HeroSection() {
                               value={c.code}
                               onSelect={() => {
                                 setCrypto(c.code.toUpperCase());
-                                setOpenCrypto(false);
+                                setOpenCryptoDesktop(false);
                               }}
                             >
                               <Check
@@ -449,14 +454,15 @@ export function HeroSection() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Currency</label>
-                  <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
+                  <Popover open={openCurrencyDesktop} onOpenChange={setOpenCurrencyDesktop}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
-                        aria-expanded={openCurrency}
+                        aria-expanded={openCurrencyDesktop}
                         className="h-14 w-full justify-between text-base"
-                        data-testid="select-currency"
+                        data-testid="select-currency-desktop"
+                        type="button"
                       >
                         {currency ? currencies.find((c) => c.code === currency)?.flag + " " + currency : "Select currency..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -473,7 +479,7 @@ export function HeroSection() {
                               value={c.code}
                               onSelect={() => {
                                 setCurrency(c.code.toUpperCase());
-                                setOpenCurrency(false);
+                                setOpenCurrencyDesktop(false);
                               }}
                             >
                               <Check
@@ -502,14 +508,15 @@ export function HeroSection() {
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground">Payment Method</label>
-                <Popover open={openPayment} onOpenChange={setOpenPayment}>
+                <Popover open={openPaymentDesktop} onOpenChange={setOpenPaymentDesktop}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
-                      aria-expanded={openPayment}
+                      aria-expanded={openPaymentDesktop}
                       className="h-14 w-full justify-between text-base"
-                      data-testid="select-payment-method"
+                      data-testid="select-payment-method-desktop"
+                      type="button"
                     >
                       {paymentMethod ? paymentMethods.find((p) => p.id === paymentMethod)?.name : "Select method..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -526,7 +533,7 @@ export function HeroSection() {
                               value={p.id}
                               onSelect={() => {
                                 setPaymentMethod(p.id);
-                                setOpenPayment(false);
+                                setOpenPaymentDesktop(false);
                               }}
                             >
                               <Check
