@@ -339,9 +339,9 @@ export function Swap() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                 {[
-                  { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "/assets/IMG_1541.png" },
-                  { step: "2. Open Trade page", desc: "From the Trade menu in the header, select Exchange", img: "/assets/IMG_2645.png" },
-                  { step: "3. Choose a pair and execute", desc: "Enter the amount, select your assets, and proceed with the transaction", img: "/assets/IMG_2657.png" }
+                  { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "/assets/IMG_3627.jpeg" },
+                  { step: "2. Open Trade page", desc: "From the Trade menu in the header, select Exchange", img: "/assets/IMG_3628.jpeg" },
+                  { step: "3. Choose a pair and execute", desc: "Enter the amount, select your assets, and proceed with the transaction", img: "/assets/IMG_3629.jpeg" }
                 ].map((item, i) => (
                   <div key={i} className="space-y-6">
                     <h3 className="text-xl font-bold">{item.step}</h3>
