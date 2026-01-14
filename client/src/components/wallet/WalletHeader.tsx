@@ -45,7 +45,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             <div className="flex items-center bg-background rounded-lg border p-1 overflow-x-auto no-scrollbar max-w-[calc(100vw-2rem)] sm:max-w-none whitespace-nowrap">
               <Button variant="ghost" size="sm" className="h-8 gap-2 px-3 flex-shrink-0" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
-                <span className="text-xs">Mobile top-up</span>
+                <span className="text-xs">Top-up</span>
               </Button>
               <Button variant="ghost" size="sm" className="h-8 gap-2 px-3 flex-shrink-0" onClick={onSwap}>
                 <RefreshCw className="h-4 w-4" />
