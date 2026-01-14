@@ -201,8 +201,8 @@ export function HeroSection() {
                             <CommandItem
                               key={c.code}
                               value={c.code}
-                              onSelect={(currentValue) => {
-                                setCrypto(currentValue.toUpperCase());
+                              onSelect={() => {
+                                setCrypto(c.code.toUpperCase());
                                 setOpenCrypto(false);
                               }}
                             >
@@ -245,8 +245,8 @@ export function HeroSection() {
                             <CommandItem
                               key={c.code}
                               value={c.code}
-                              onSelect={(currentValue) => {
-                                setCurrency(currentValue.toUpperCase());
+                              onSelect={() => {
+                                setCurrency(c.code.toUpperCase());
                                 setOpenCurrency(false);
                               }}
                             >
@@ -298,8 +298,8 @@ export function HeroSection() {
                             <CommandItem
                               key={p.id}
                               value={p.id}
-                              onSelect={(currentValue) => {
-                                setPaymentMethod(currentValue);
+                              onSelect={() => {
+                                setPaymentMethod(p.id);
                                 setOpenPayment(false);
                               }}
                             >
@@ -427,8 +427,8 @@ export function HeroSection() {
                             <CommandItem
                               key={c.code}
                               value={c.code}
-                              onSelect={(currentValue) => {
-                                setCrypto(currentValue.toUpperCase());
+                              onSelect={() => {
+                                setCrypto(c.code.toUpperCase());
                                 setOpenCrypto(false);
                               }}
                             >
@@ -471,8 +471,8 @@ export function HeroSection() {
                             <CommandItem
                               key={c.code}
                               value={c.code}
-                              onSelect={(currentValue) => {
-                                setCurrency(currentValue.toUpperCase());
+                              onSelect={() => {
+                                setCurrency(c.code.toUpperCase());
                                 setOpenCurrency(false);
                               }}
                             >
@@ -524,8 +524,8 @@ export function HeroSection() {
                             <CommandItem
                               key={p.id}
                               value={p.id}
-                              onSelect={(currentValue) => {
-                                setPaymentMethod(currentValue);
+                              onSelect={() => {
+                                setPaymentMethod(p.id);
                                 setOpenPayment(false);
                               }}
                             >
