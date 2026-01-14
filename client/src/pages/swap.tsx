@@ -216,10 +216,10 @@ export function Swap() {
           <section className="relative py-20 px-4 overflow-hidden">
             <div className="max-w-4xl mx-auto text-center relative z-10">
               <h1 className="text-4xl md:text-6xl font-black text-foreground mb-6 leading-tight">
-                Swap cryptocurrencies<br />effortlessly
+                Exchange cryptocurrencies<br />seamlessly
               </h1>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
-                Instantly swap cryptocurrencies with minimal fees and top-tier security for a seamless experience
+                Instantly convert digital assets with competitive rates and high-speed execution
               </p>
 
               <Card className="max-w-lg mx-auto bg-card border-none shadow-2xl overflow-hidden rounded-2xl">
@@ -275,18 +275,18 @@ export function Swap() {
             </div>
           </section>
 
-          {/* Why Swap Section */}
+          {/* Why Exchange Section */}
           <section className="py-20 bg-background">
             <div className="max-w-7xl mx-auto px-4">
               <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-black mb-4">Why Swap on Pexly</h2>
-                <p className="text-muted-foreground">Easily exchange cryptocurrencies with Pexly Swap in just a few clicks</p>
+                <h2 className="text-4xl md:text-5xl font-black mb-4">Why use Pexly</h2>
+                <p className="text-muted-foreground">Easily trade digital assets with Pexly in just a few clicks</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {[
-                  { title: "Lowest fees", desc: "Swap coins at the best available market rates", icon: <TrendingDown className="h-6 w-6 text-primary" /> },
-                  { title: "Monero supported", desc: "Buy and sell XMR for USDT anonymously", icon: <Shield className="h-6 w-6 text-primary" /> },
-                  { title: "Earn on swaps", desc: "Earn from SOL, TON, and BTC price fluctuations", icon: <Gift className="h-6 w-6 text-primary" /> }
+                  { title: "Best rates", desc: "Exchange assets at the most competitive market rates", icon: <TrendingDown className="h-6 w-6 text-primary" /> },
+                  { title: "Privacy first", desc: "Secure and confidential transactions for all users", icon: <Shield className="h-6 w-6 text-primary" /> },
+                  { title: "Fast execution", desc: "Benefit from rapid processing and instant settlements", icon: <Gift className="h-6 w-6 text-primary" /> }
                 ].map((item, i) => (
                   <Card key={i} className="bg-card/50 border-none shadow-sm hover:shadow-md transition-shadow p-8 text-center flex flex-col items-center">
                     <div className="w-12 h-12 rounded-full bg-accent/5 flex items-center justify-center mb-6">
@@ -300,12 +300,12 @@ export function Swap() {
             </div>
           </section>
 
-          {/* Swap Pairs Section */}
+          {/* Asset Pairs Section */}
           <section className="py-20 bg-accent/5">
             <div className="max-w-7xl mx-auto px-4">
               <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-black mb-4">Access a wide range of swap pairs</h2>
-                <p className="text-muted-foreground">Easily swap between a variety of cryptocurrencies</p>
+                <h2 className="text-4xl md:text-5xl font-black mb-4">Wide range of trading pairs</h2>
+                <p className="text-muted-foreground">Easily trade between a variety of digital assets</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
@@ -340,8 +340,8 @@ export function Swap() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                 {[
                   { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "/assets/IMG_1541.png" },
-                  { step: "2. Open Swap page", desc: "From the Trade menu in the header, select Swap", img: "/assets/IMG_2645.png" },
-                  { step: "3. Select a pair and swap", desc: "Enter the amount, select your cryptocurrencies, and proceed to swap", img: "/assets/IMG_2657.png" }
+                  { step: "2. Open Trade page", desc: "From the Trade menu in the header, select Exchange", img: "/assets/IMG_2645.png" },
+                  { step: "3. Choose a pair and execute", desc: "Enter the amount, select your assets, and proceed with the transaction", img: "/assets/IMG_2657.png" }
                 ].map((item, i) => (
                   <div key={i} className="space-y-6">
                     <h3 className="text-xl font-bold">{item.step}</h3>
@@ -357,7 +357,7 @@ export function Swap() {
                   className="px-12 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-full shadow-lg transition-all"
                   onClick={() => setLocation("/signin")}
                 >
-                  Swap now
+                  Start now
                 </Button>
               </div>
             </div>
@@ -372,10 +372,10 @@ export function Swap() {
               </div>
               <Accordion type="single" collapsible className="w-full space-y-4">
                 {[
-                  "Are there any fees for swapping on Pexly?",
-                  "My swap failed. What should I do next?",
-                  "My swap failed, and my funds are either reserved or missing. What should I do?",
-                  "What are the minimum swap amounts for cryptocurrencies?"
+                  "Are there any fees for transactions on Pexly?",
+                  "My transaction failed. What should I do next?",
+                  "My transaction failed, and my funds are either reserved or missing. What should I do?",
+                  "What are the minimum transaction amounts?"
                 ].map((q, i) => (
                   <AccordionItem key={i} value={`item-${i}`} className="border rounded-xl px-4 bg-card shadow-sm border-border/40 overflow-hidden">
                     <AccordionTrigger className="text-left font-bold py-6 hover:no-underline">{q}</AccordionTrigger>
