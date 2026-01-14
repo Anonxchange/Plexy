@@ -211,148 +211,182 @@ export function Swap() {
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-1 px-4 py-8">
-          <div className="mb-8">
-            <Card className="bg-card/50">
-              <CardContent className="p-6 space-y-6">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-muted-foreground text-base">From</Label>
-                  </div>
-                  <div className="flex gap-3">
-                    <Input
-                      type="number"
-                      value={fromAmount}
-                      onChange={(e) => handleFromAmountChange(e.target.value)}
-                      className="flex-1 h-16 text-2xl bg-background"
-                      placeholder="0.00"
-                    />
-                    <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                      <SelectTrigger className="w-36 h-16 bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currencies.map((curr) => (
-                          <SelectItem key={curr.symbol} value={curr.symbol}>
-                            <div className="flex items-center gap-2">
-                              <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
-                              {curr.symbol}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex justify-center">
-                  <Button
-                    size="icon"
-                    variant="default"
-                    className="rounded-full bg-primary hover:bg-primary/90 h-12 w-12"
-                    onClick={handleSwapCurrencies}
-                  >
-                    <ArrowUpDown className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-muted-foreground text-base">To</Label>
-                  </div>
-                  <div className="flex gap-3">
-                    <Input
-                      type="number"
-                      value={toAmount}
-                      onChange={(e) => handleToAmountChange(e.target.value)}
-                      className="flex-1 h-16 text-2xl bg-background"
-                      placeholder="0.00"
-                    />
-                    <Select value={toCurrency} onValueChange={setToCurrency}>
-                      <SelectTrigger className="w-36 h-16 bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currencies.map((curr) => (
-                          <SelectItem key={curr.symbol} value={curr.symbol}>
-                            <div className="flex items-center gap-2">
-                              <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
-                              {curr.symbol}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Swap rate:</span>
-                    <span className="font-medium flex items-center gap-2">
-                      1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}
-                      {!isLoading && percentageDiff > 0 && (
-                        <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20">
-                          {percentageDiff.toFixed(2)}%
-                        </Badge>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Market rate:</span>
-                    <span className="font-medium">
-                      1 {fromCurrency} = {isLoading ? '...' : formatRate(marketRate)} {toCurrency}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="mb-8">
-            <Button className="w-full h-16 text-lg bg-primary hover:bg-primary/90" onClick={() => setLocation("/signin")}>
-              Log in/Join us
-            </Button>
-          </div>
-
-          <div className="mb-12">
-            <div className="text-center space-y-6">
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground">Why Swap on Pexly</h1>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Easily exchange cryptocurrencies with Pexly Swap in just a few clicks
+        <div className="flex-1">
+          {/* Hero Section */}
+          <section className="relative py-20 px-4 overflow-hidden">
+            <div className="max-w-4xl mx-auto text-center relative z-10">
+              <h1 className="text-4xl md:text-6xl font-black text-foreground mb-6 leading-tight">
+                Swap cryptocurrencies<br />effortlessly
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
+                Instantly swap cryptocurrencies with minimal fees and top-tier security for a seamless experience
               </p>
+
+              <Card className="max-w-lg mx-auto bg-card border-none shadow-2xl overflow-hidden rounded-2xl">
+                <CardContent className="p-6 space-y-4">
+                  {/* From Box */}
+                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-foreground font-bold text-sm">From</Label>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl font-bold text-muted-foreground/30">0</span>
+                      <div className="ml-auto flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
+                        <img src={currencies.find(c => c.symbol === fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                        <span className="font-bold">{fromCurrency}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Swap Button Middle */}
+                  <div className="flex justify-center -my-6 relative z-10">
+                    <div className="rounded-full bg-[#58B383] text-white h-10 w-10 flex items-center justify-center border-4 border-card shadow-lg">
+                      <ArrowUpDown className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  {/* To Box */}
+                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-foreground font-bold text-sm">To</Label>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl font-bold text-muted-foreground/30">0</span>
+                      <div className="ml-auto flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
+                        <img src={currencies.find(c => c.symbol === toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                        <span className="font-bold">{toCurrency}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-left pt-2">
+                    <span className="text-xs text-muted-foreground block mb-1">Market rate</span>
+                    <span className="text-xs font-bold">1 {fromCurrency} = {isLoading ? '...' : formatRate(marketRate)} {toCurrency}</span>
+                  </div>
+
+                  <Button 
+                    className="w-full h-14 text-lg font-bold bg-[#58B383] hover:bg-[#4da175] text-white rounded-xl shadow-sm transition-all" 
+                    onClick={() => setLocation("/signin")}
+                  >
+                    Log in/Join us
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-4 mb-12">
-            <Card className="bg-card/80 hover:bg-card transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <TrendingDown className="h-7 w-7 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold mb-2">Lowest fees</h3>
-                    <p className="text-muted-foreground">Swap coins at the best available market rates</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Why Swap Section */}
+          <section className="py-20 bg-background">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-black mb-4">Why Swap on Pexly</h2>
+                <p className="text-muted-foreground">Easily exchange cryptocurrencies with Pexly Swap in just a few clicks</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {[
+                  { title: "Lowest fees", desc: "Swap coins at the best available market rates", icon: <TrendingDown className="h-6 w-6 text-primary" /> },
+                  { title: "Monero supported", desc: "Buy and sell XMR for USDT anonymously", icon: <Shield className="h-6 w-6 text-primary" /> },
+                  { title: "Earn on swaps", desc: "Earn from SOL, TON, and BTC price fluctuations", icon: <Gift className="h-6 w-6 text-primary" /> }
+                ].map((item, i) => (
+                  <Card key={i} className="bg-card/50 border-none shadow-sm hover:shadow-md transition-shadow p-8 text-center flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full bg-accent/5 flex items-center justify-center mb-6">
+                      {item.icon}
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                    <p className="text-muted-foreground text-sm">{item.desc}</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
 
-            <Card className="bg-card/80 hover:bg-card transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Shield className="h-7 w-7 text-primary" />
+          {/* Swap Pairs Section */}
+          <section className="py-20 bg-accent/5">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-black mb-4">Access a wide range of swap pairs</h2>
+                <p className="text-muted-foreground">Easily swap between a variety of cryptocurrencies</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { pair: "BTC/USDT", color: "from-orange-500/10 to-transparent", icon: cryptoIconUrls.BTC },
+                  { pair: "XMR/USDT", color: "from-orange-600/10 to-transparent", icon: cryptoIconUrls.BTC }, // Placeholder for XMR
+                  { pair: "SOL/USDT", color: "from-purple-500/10 to-transparent", icon: cryptoIconUrls.SOL },
+                  { pair: "ETH/USDT", color: "from-blue-500/10 to-transparent", icon: cryptoIconUrls.ETH }
+                ].map((item, i) => (
+                  <Card key={i} className="bg-card border-none shadow-sm overflow-hidden p-4 group cursor-pointer hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3 mb-4">
+                      <img src={item.icon} className="w-8 h-8 rounded-full" alt="" />
+                      <span className="font-bold text-sm uppercase">{item.pair} ↑</span>
+                    </div>
+                    <div className={`h-24 w-full rounded-lg bg-gradient-to-t ${item.color} relative overflow-hidden`}>
+                      <div className="absolute inset-0 flex items-end">
+                        <div className="w-full h-1/2 bg-gradient-to-t from-background/20 to-transparent" />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* How It Works Section */}
+          <section className="py-20 bg-background border-t">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-black mb-4">How it works</h2>
+                <p className="text-muted-foreground">Log in to your Pexly account and select Swap from the Trade menu in the header</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                {[
+                  { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "https://via.placeholder.com/300x200" },
+                  { step: "2. Open Swap page", desc: "From the Trade menu in the header, select Swap", img: "https://via.placeholder.com/300x200" },
+                  { step: "3. Select a pair and swap", desc: "Enter the amount, select your cryptocurrencies, and proceed to swap", img: "https://via.placeholder.com/300x200" }
+                ].map((item, i) => (
+                  <div key={i} className="space-y-6">
+                    <h3 className="text-xl font-bold">{item.step}</h3>
+                    <p className="text-muted-foreground text-sm">{item.desc}</p>
+                    <div className="rounded-xl overflow-hidden border border-border/40 shadow-sm bg-accent/5 p-4">
+                      <img src={item.img} className="w-full rounded-lg" alt="" />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold mb-2">Secure & Private</h3>
-                    <p className="text-muted-foreground">Safe and anonymous exchanges</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                ))}
+              </div>
+              <div className="text-center mt-20">
+                <Button 
+                  className="px-12 h-14 text-lg font-bold bg-[#58B383] hover:bg-[#4da175] text-white rounded-full shadow-lg transition-all"
+                  onClick={() => setLocation("/signin")}
+                >
+                  Swap now
+                </Button>
+              </div>
+            </div>
+          </section>
+
+          {/* FAQ Section */}
+          <section className="py-20 bg-background border-t">
+            <div className="max-w-3xl mx-auto px-4">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-6xl font-black mb-4 leading-tight">Frequently asked questions</h2>
+                <p className="text-muted-foreground">Find answers to the most popular questions asked by our users</p>
+              </div>
+              <Accordion type="single" collapsible className="w-full space-y-4">
+                {[
+                  "Are there any fees for swapping on Pexly?",
+                  "My swap failed. What should I do next?",
+                  "My swap failed, and my funds are either reserved or missing. What should I do?",
+                  "What are the minimum swap amounts for cryptocurrencies?"
+                ].map((q, i) => (
+                  <AccordionItem key={i} value={`item-${i}`} className="border rounded-xl px-4 bg-card shadow-sm border-border/40 overflow-hidden">
+                    <AccordionTrigger className="text-left font-bold py-6 hover:no-underline">{q}</AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground pb-6">
+                      Detailed information about this topic will be provided here for users to understand the process.
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
+          </section>
         </div>
         <PexlyFooter />
       </div>
@@ -622,3 +656,4 @@ export function Swap() {
     </div>
   );
 }
+
