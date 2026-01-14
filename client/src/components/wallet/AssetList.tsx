@@ -13,33 +13,29 @@ export function AssetList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-1">
-        <Tabs defaultValue="assets" className="w-auto">
-          <TabsList className="bg-transparent h-auto p-0 gap-8">
+      <div className="border-b pb-1 overflow-x-auto no-scrollbar">
+        <Tabs defaultValue="assets" className="w-full">
+          <TabsList className="bg-transparent h-auto p-0 gap-8 min-w-max flex">
             <TabsTrigger 
               value="assets" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold whitespace-nowrap"
             >
               Wallet assets
             </TabsTrigger>
             <TabsTrigger 
               value="activity" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold text-muted-foreground"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold text-muted-foreground whitespace-nowrap"
             >
               Recent activity
             </TabsTrigger>
             <TabsTrigger 
               value="operations" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold text-muted-foreground"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold text-muted-foreground whitespace-nowrap"
             >
               All operations
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        
-        <Button variant="ghost" className="text-sm font-medium px-0 h-auto pb-3 hover:bg-transparent hidden sm:flex">
-          See full operations
-        </Button>
       </div>
 
       <div className="flex items-center space-x-2">
@@ -49,14 +45,14 @@ export function AssetList() {
         </Label>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
-        <Table>
+      <div className="rounded-lg border bg-card overflow-x-auto no-scrollbar">
+        <Table className="min-w-[500px] sm:min-w-full">
           <TableHeader className="bg-muted/30">
             <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="w-[100px] text-xs uppercase font-bold tracking-wider">Asset</TableHead>
-              <TableHead className="text-xs uppercase font-bold tracking-wider">Current price</TableHead>
-              <TableHead className="text-xs uppercase font-bold tracking-wider">Balance</TableHead>
-              <TableHead className="w-[50px] text-xs uppercase font-bold tracking-wider text-right">Action</TableHead>
+              <TableHead className="w-[100px] text-[10px] sm:text-xs uppercase font-bold tracking-wider">Asset</TableHead>
+              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider">Current price</TableHead>
+              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider">Balance</TableHead>
+              <TableHead className="w-[50px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
