@@ -7,8 +7,25 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ArrowRight, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import heroImage from "@assets/generated_images/Crypto_P2P_trading_hero_641f4218.png";
-import { currencies, cryptoCurrencies } from "@/lib/currencies";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
+
+import { currencies } from "@/lib/currencies";
+const cryptoCurrencies = [
+  { code: "BTC", name: "Bitcoin" },
+  { code: "ETH", name: "Ethereum" },
+  { code: "USDT", name: "Tether" },
+  { code: "USDC", name: "USD Coin" },
+];
 import { paymentMethods } from "@/lib/payment-methods";
+
+const popularPaymentMethods = [
+  { id: "all", name: "All Payment Methods" },
+  { id: "bank-transfer", name: "Bank Transfer" },
+  { id: "paypal", name: "PayPal" },
+  { id: "apple-pay", name: "Apple Pay" },
+  { id: "google-pay", name: "Google Pay" },
+  { id: "zelle", name: "Zelle" },
+];
 import { Globe } from "@/components/globe";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 
@@ -29,7 +46,7 @@ export function HeroSection() {
   const [tradeType, setTradeType] = useState("buy");
   const [crypto, setCrypto] = useState("BTC");
   const [currency, setCurrency] = useState("USD");
-  const [paymentMethod, setPaymentMethod] = useState("all");
+  const [paymentMethod, setPaymentMethod] = useState("All Payment Methods");
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [openCurrency, setOpenCurrency] = useState(false);
   const [openPayment, setOpenPayment] = useState(false);
@@ -95,7 +112,7 @@ export function HeroSection() {
     params.set("currency", currency);
     params.set("payment", paymentMethod);
     
-    setLocation(`/p2p?${params.toString()}`);
+    window.location.href = `/p2p?${params.toString()}`;
   };
 
   return (
@@ -192,7 +209,10 @@ export function HeroSection() {
                         className="h-14 w-full justify-between text-base"
                         data-testid="select-crypto"
                       >
-                        {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
+                        <div className="flex items-center">
+                          {crypto && <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-5 h-5 mr-2" />}
+                          {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
+                        </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -216,6 +236,7 @@ export function HeroSection() {
                                   crypto === c.code ? "opacity-100" : "opacity-0"
                                 )}
                               />
+                              <img src={cryptoIconUrls[c.code]} alt={c.name} className="w-5 h-5 mr-2" />
                               {c.name} ({c.code})
                             </CommandItem>
                           ))}
@@ -282,41 +303,38 @@ export function HeroSection() {
                 <label className="text-sm font-semibold text-foreground">Payment Method</label>
                 <Popover open={openPayment} onOpenChange={setOpenPayment}>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openPayment}
-                      className="h-14 w-full justify-between text-base"
-                      data-testid="select-payment-method"
-                    >
-                      {paymentMethod ? paymentMethods.find((p) => p.id === paymentMethod)?.name : "Select method..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openPayment}
+                        className="h-14 w-full justify-between text-base"
+                        data-testid="select-payment-method"
+                      >
+                        {paymentMethod || "Select method..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
                   </PopoverTrigger>
                     <PopoverContent className="w-[280px] p-0">
                       <Command>
                         <CommandInput placeholder="Search payment method..." />
                         <CommandEmpty>No payment method found.</CommandEmpty>
                         <CommandGroup className="max-h-64 overflow-auto">
-                          {paymentMethods.map((p) => (
+                          {popularPaymentMethods.map((p) => (
                             <CommandItem
                               key={p.id}
                               value={p.id}
                               onSelect={() => {
-                                setPaymentMethod(p.id);
+                                setPaymentMethod(p.name);
                                 setOpenPayment(false);
                               }}
                             >
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  paymentMethod === p.id ? "opacity-100" : "opacity-0"
+                                  paymentMethod === p.name ? "opacity-100" : "opacity-0"
                                 )}
                               />
                               {p.name}
-                              {p.category !== "All" && (
-                                <span className="ml-auto text-xs text-muted-foreground">{p.category}</span>
-                              )}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -419,7 +437,10 @@ export function HeroSection() {
                         data-testid="select-crypto-desktop"
                         type="button"
                       >
-                        {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
+                        <div className="flex items-center">
+                          {crypto && <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-5 h-5 mr-2" />}
+                          {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
+                        </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -443,6 +464,7 @@ export function HeroSection() {
                                   crypto === c.code ? "opacity-100" : "opacity-0"
                                 )}
                               />
+                              <img src={cryptoIconUrls[c.code]} alt={c.name} className="w-5 h-5 mr-2" />
                               {c.name} ({c.code})
                             </CommandItem>
                           ))}
@@ -518,7 +540,7 @@ export function HeroSection() {
                       data-testid="select-payment-method-desktop"
                       type="button"
                     >
-                      {paymentMethod ? paymentMethods.find((p) => p.id === paymentMethod)?.name : "Select method..."}
+                      {paymentMethod || "Select method..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -527,25 +549,22 @@ export function HeroSection() {
                         <CommandInput placeholder="Search payment method..." />
                         <CommandEmpty>No payment method found.</CommandEmpty>
                         <CommandGroup className="max-h-64 overflow-auto">
-                          {paymentMethods.map((p) => (
+                          {popularPaymentMethods.map((p) => (
                             <CommandItem
                               key={p.id}
                               value={p.id}
                               onSelect={() => {
-                                setPaymentMethod(p.id);
+                                setPaymentMethod(p.name);
                                 setOpenPaymentDesktop(false);
                               }}
                             >
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  paymentMethod === p.id ? "opacity-100" : "opacity-0"
+                                  paymentMethod === p.name ? "opacity-100" : "opacity-0"
                                 )}
                               />
                               {p.name}
-                              {p.category !== "All" && (
-                                <span className="ml-auto text-xs text-muted-foreground">{p.category}</span>
-                              )}
                             </CommandItem>
                           ))}
                         </CommandGroup>
