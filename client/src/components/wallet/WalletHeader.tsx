@@ -42,7 +42,8 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
           </div>
 
           <div className="w-full">
-            <div className="grid grid-cols-4 bg-background rounded-lg border p-1 w-full">
+            {/* Mobile View: 4-column grid as requested */}
+            <div className="grid grid-cols-4 bg-background rounded-lg border p-1 w-full md:hidden">
               <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span className="text-[10px] font-semibold leading-tight mt-0.5">Top-up</span>
@@ -58,6 +59,26 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
               <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 text-primary hover:bg-muted/50" onClick={onReceive}>
                 <ArrowDownToLine className="h-4 w-4" />
                 <span className="text-[10px] font-semibold leading-tight mt-0.5">Deposit</span>
+              </Button>
+            </div>
+
+            {/* Desktop View: Horizontal list, mobile top-up on left, then send, deposit, swap */}
+            <div className="hidden md:flex flex-row items-center gap-2 w-full justify-end">
+              <Button variant="outline" size="sm" className="h-10 gap-2 px-4 font-semibold" onClick={onTopup}>
+                <Smartphone className="h-4 w-4" />
+                <span>Mobile top up</span>
+              </Button>
+              <Button className="h-10 gap-2 px-4 font-semibold" onClick={onSend}>
+                <Send className="h-4 w-4" />
+                <span>Send</span>
+              </Button>
+              <Button variant="outline" size="sm" className="h-10 gap-2 px-4 font-semibold text-primary" onClick={onReceive}>
+                <ArrowDownToLine className="h-4 w-4" />
+                <span>Deposit</span>
+              </Button>
+              <Button variant="outline" size="sm" className="h-10 gap-2 px-4 font-semibold" onClick={onSwap}>
+                <RefreshCw className="h-4 w-4" />
+                <span>Swap</span>
               </Button>
             </div>
           </div>
