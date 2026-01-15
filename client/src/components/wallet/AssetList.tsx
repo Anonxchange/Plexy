@@ -46,11 +46,11 @@ export function AssetList() {
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto no-scrollbar">
-        <Table className="min-w-[500px] sm:min-w-full">
+        <Table className="min-w-full">
           <TableHeader className="bg-muted/30">
             <TableRow className="hover:bg-transparent border-none">
               <TableHead className="w-[100px] text-[10px] sm:text-xs uppercase font-bold tracking-wider">Asset</TableHead>
-              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider">Current price</TableHead>
+              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider hidden sm:table-cell">Current price</TableHead>
               <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider">Balance</TableHead>
               <TableHead className="w-[50px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-right">Action</TableHead>
             </TableRow>
@@ -71,7 +71,7 @@ export function AssetList() {
                     <div className="font-bold">{asset.symbol}</div>
                   </div>
                 </TableCell>
-                <TableCell className="py-4">
+                <TableCell className="py-4 hidden sm:table-cell">
                   <div className="font-semibold">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
                   <div className="text-[10px] text-green-500 font-bold">+0.00%</div>
                 </TableCell>
