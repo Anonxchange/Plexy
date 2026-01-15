@@ -31,10 +31,25 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
   const isMobile = useIsMobile();
 
   const ActionMenu = ({ symbol }: { symbol: string }) => {
+    const handleSend = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onSend?.(symbol);
+    };
+
+    const handleReceive = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onReceive?.(symbol);
+    };
+
+    const handleSwap = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onSwap?.(symbol);
+    };
+
     if (isMobile) {
       return (
         <Drawer>
-          <DrawerTrigger asChild>
+          <DrawerTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground bg-muted/20">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
@@ -47,7 +62,7 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
               <Button 
                 variant="outline" 
                 className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
-                onClick={() => onReceive?.(symbol)}
+                onClick={handleReceive}
               >
                 <div className="bg-muted/10 p-2 rounded-lg">
                   <ArrowDownToLine className="h-5 w-5" />
@@ -57,7 +72,7 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
               <Button 
                 variant="outline" 
                 className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
-                onClick={() => onSend?.(symbol)}
+                onClick={handleSend}
               >
                 <div className="bg-muted/10 p-2 rounded-lg">
                   <Send className="h-5 w-5" />
@@ -67,7 +82,7 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
               <Button 
                 variant="outline" 
                 className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
-                onClick={() => onSwap?.(symbol)}
+                onClick={handleSwap}
               >
                 <div className="bg-muted/10 p-2 rounded-lg">
                   <RefreshCw className="h-5 w-5" />
@@ -82,15 +97,15 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
 
     return (
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onReceive?.(symbol)}>Deposit</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onSend?.(symbol)}>Send</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onSwap?.(symbol)}>Swap</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleReceive}>Deposit</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSend}>Send</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSwap}>Swap</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
