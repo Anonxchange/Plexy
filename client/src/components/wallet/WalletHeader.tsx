@@ -41,7 +41,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             </div>
           </div>
 
-          <div className="w-full">
+          <div className="w-full flex justify-end">
             {/* Mobile View: 4-column grid as requested */}
             <div className="grid grid-cols-4 bg-background rounded-lg border p-1 w-full md:hidden">
               <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onTopup}>
