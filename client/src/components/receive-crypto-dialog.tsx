@@ -35,7 +35,6 @@ interface ReceiveCryptoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wallets: Array<{ symbol: string; name: string; icon: string }>;
-  initialSymbol?: string;
 }
 
 type Step = "method" | "asset" | "details";
@@ -50,26 +49,12 @@ const networkMap: Record<string, string[]> = {
   USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
 };
 
-export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol }: ReceiveCryptoDialogProps) {
+export function ReceiveCryptoDialog({ open, onOpenChange, wallets }: ReceiveCryptoDialogProps) {
   const { user } = useAuth();
   const supabase = createClient();
   const [step, setStep] = useState<Step>("method");
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
-
-  useEffect(() => {
-    if (open) {
-      if (initialSymbol) {
-        setSelectedMethod("crypto");
-        handleCryptoChange(initialSymbol);
-        setStep("details");
-      } else {
-        setStep("method");
-        setSelectedCrypto("");
-        setSelectedMethod("");
-      }
-    }
-  }, [open, initialSymbol]);
   const [selectedNetwork, setSelectedNetwork] = useState<string>("");
   const [depositAddress, setDepositAddress] = useState<string>("");
   const [loading, setLoading] = useState(false);
