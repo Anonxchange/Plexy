@@ -4,12 +4,93 @@ import { useWalletData } from "@/hooks/use-wallet-data";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, ArrowDownToLine, Send, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export function AssetList() {
+interface AssetListProps {
+  onSend?: (symbol: string) => void;
+  onReceive?: (symbol: string) => void;
+  onSwap?: (symbol: string) => void;
+}
+
+export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
   const { data: wallet } = useWalletData();
   const [hideZero, setHideZero] = useState(false);
+  const isMobile = useIsMobile();
+
+  const ActionMenu = ({ symbol }: { symbol: string }) => {
+    if (isMobile) {
+      return (
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground bg-muted/20">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="pb-8">
+            <DrawerHeader className="border-b">
+              <DrawerTitle className="text-left font-bold">Select an action</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-3">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
+                onClick={() => onReceive?.(symbol)}
+              >
+                <div className="bg-muted/10 p-2 rounded-lg">
+                  <ArrowDownToLine className="h-5 w-5" />
+                </div>
+                Deposit
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
+                onClick={() => onSend?.(symbol)}
+              >
+                <div className="bg-muted/10 p-2 rounded-lg">
+                  <Send className="h-5 w-5" />
+                </div>
+                Send
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
+                onClick={() => onSwap?.(symbol)}
+              >
+                <div className="bg-muted/10 p-2 rounded-lg">
+                  <RefreshCw className="h-5 w-5" />
+                </div>
+                Swap
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      );
+    }
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onReceive?.(symbol)}>Deposit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSend?.(symbol)}>Send</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSwap?.(symbol)}>Swap</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -80,9 +161,7 @@ export function AssetList() {
                   <div className="text-[10px] text-muted-foreground font-medium">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
                 </TableCell>
                 <TableCell className="text-right py-4">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <ActionMenu symbol={asset.symbol} />
                 </TableCell>
               </TableRow>
             ))}
