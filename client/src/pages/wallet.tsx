@@ -56,9 +56,9 @@ export default function WalletPage() {
   }));
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
+    <div className="min-h-screen flex flex-col bg-[#F8F9FA] dark:bg-background transition-colors">
       <div className="flex-1 w-full mx-auto px-0 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl">
-        <h1 className="text-3xl font-bold mb-6 sm:mb-8 px-4 sm:px-0">My assets</h1>
+        <h1 className="text-3xl font-bold mb-6 sm:mb-8 px-4 sm:px-0 text-foreground">My assets</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
           {/* Main Content */}
@@ -67,11 +67,11 @@ export default function WalletPage() {
               <div className="px-4 sm:px-0">
                 <Tabs defaultValue="wallet" className="w-full">
                   <TabsList className="bg-transparent p-0 h-auto gap-1">
-                    <TabsTrigger value="wallet" className="rounded-lg px-6 py-2 data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black font-semibold border bg-white">
+                    <TabsTrigger value="wallet" className="rounded-lg px-6 py-2 data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black font-semibold border bg-white dark:bg-card text-foreground transition-colors">
                       <WalletIcon className="h-4 w-4 mr-2" />
                       Wallet
                     </TabsTrigger>
-                    <TabsTrigger value="visa" className="rounded-lg px-6 py-2 font-semibold border bg-white opacity-60">
+                    <TabsTrigger value="visa" className="rounded-lg px-6 py-2 font-semibold border bg-white dark:bg-card text-foreground opacity-60 transition-colors">
                       <Landmark className="h-4 w-4 mr-2" />
                       Visa card
                     </TabsTrigger>
@@ -79,7 +79,7 @@ export default function WalletPage() {
                 </Tabs>
               </div>
 
-              <Card className="border-none sm:border shadow-sm bg-white overflow-hidden sm:rounded-2xl rounded-none">
+              <Card className="border-none sm:border shadow-sm bg-white dark:bg-card overflow-hidden sm:rounded-2xl rounded-none transition-colors">
                 <CardContent className="p-0">
                   <div className="divide-y divide-border">
                     <WalletHeader 
