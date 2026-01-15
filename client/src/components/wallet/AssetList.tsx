@@ -122,25 +122,25 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
       </div>
 
       <div className="flex items-center space-x-2">
-        <Checkbox id="hide-zero" checked={hideZero} onCheckedChange={(checked) => setHideZero(!!checked)} />
+        <Checkbox id="hide-zero" checked={hideZero} onCheckedChange={(checked) => setHideZero(!!checked)} className="dark:border-muted-foreground" />
         <Label htmlFor="hide-zero" className="text-sm font-medium text-muted-foreground cursor-pointer">
           Hide 0 balance
         </Label>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-x-auto no-scrollbar">
+      <div className="rounded-lg border bg-card dark:bg-card/50 overflow-x-auto no-scrollbar transition-colors">
         <Table className="min-w-full">
-          <TableHeader className="bg-muted/30">
+          <TableHeader className="bg-muted/30 dark:bg-muted/10">
             <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="w-[100px] text-[10px] sm:text-xs uppercase font-bold tracking-wider">Asset</TableHead>
-              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider hidden sm:table-cell">Current price</TableHead>
-              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider">Balance</TableHead>
-              <TableHead className="w-[50px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-right">Action</TableHead>
+              <TableHead className="w-[100px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-muted-foreground">Asset</TableHead>
+              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider hidden sm:table-cell text-muted-foreground">Current price</TableHead>
+              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-muted-foreground">Balance</TableHead>
+              <TableHead className="w-[50px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-right text-muted-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {wallet?.assets.filter(a => !hideZero || a.balance > 0).map((asset) => (
-              <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
                 <TableCell className="py-4">
                   <div className="flex items-center gap-3">
                     <img 
@@ -151,15 +151,15 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
                         (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
                       }}
                     />
-                    <div className="font-bold">{asset.symbol}</div>
+                    <div className="font-bold text-foreground">{asset.symbol}</div>
                   </div>
                 </TableCell>
                 <TableCell className="py-4 hidden sm:table-cell">
-                  <div className="font-semibold">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
+                  <div className="font-semibold text-foreground">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
                   <div className="text-[10px] text-green-500 font-bold">+0.00%</div>
                 </TableCell>
                 <TableCell className="py-4">
-                  <div className="font-bold">0</div>
+                  <div className="font-bold text-foreground">0</div>
                   <div className="text-[10px] text-muted-foreground font-medium">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
                 </TableCell>
                 <TableCell className="text-right py-4">
