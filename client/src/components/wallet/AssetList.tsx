@@ -96,7 +96,7 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
     <div className="space-y-6">
       <div className="border-b pb-1 overflow-x-auto no-scrollbar">
         <Tabs defaultValue="assets" className="w-full">
-          <TabsList className="bg-transparent h-auto p-0 gap-8 min-w-max flex">
+          <TabsList className="bg-transparent h-auto p-0 gap-8 min-w-max flex justify-start">
             <TabsTrigger 
               value="assets" 
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold whitespace-nowrap"
