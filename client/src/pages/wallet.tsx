@@ -50,10 +50,26 @@ export default function WalletPage() {
 
   const walletsForDialog = wallets.map(wallet => ({
     symbol: wallet.crypto_symbol,
-    name: wallet.crypto_symbol,
+    name: wallet.crypto_symbol === "BTC" ? "Bitcoin" : 
+          wallet.crypto_symbol === "ETH" ? "Ethereum" :
+          wallet.crypto_symbol === "SOL" ? "Solana" :
+          wallet.crypto_symbol === "USDT" ? "Tether" :
+          wallet.crypto_symbol === "USDC" ? "USD Coin" : wallet.crypto_symbol,
     icon: wallet.crypto_symbol,
     balance: wallet.balance
   }));
+
+  const [selectedAsset, setSelectedAsset] = useState<string | undefined>();
+
+  const handleSend = (symbol?: string) => {
+    setSelectedAsset(symbol);
+    setSendDialogOpen(true);
+  };
+
+  const handleReceive = (symbol?: string) => {
+    setSelectedAsset(symbol);
+    setReceiveDialogOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA] dark:bg-background transition-colors">
@@ -83,17 +99,17 @@ export default function WalletPage() {
                 <CardContent className="p-0">
                   <div className="divide-y divide-border">
                     <WalletHeader 
-                      onSend={() => setSendDialogOpen(true)}
-                      onReceive={() => setReceiveDialogOpen(true)}
+                      onSend={() => handleSend()}
+                      onReceive={() => handleReceive()}
                       onSwap={() => setLocation("/swap")}
                       onTopup={() => setLocation("/wallet/mobile-topup")}
                     />
                     
                     <div className="p-6">
                       <AssetList 
-                        onSend={() => setSendDialogOpen(true)}
-                        onReceive={() => setReceiveDialogOpen(true)}
-                        onSwap={() => setLocation("/swap")}
+                        onSend={handleSend}
+                        onReceive={handleReceive}
+                        onSwap={(symbol) => setLocation(symbol ? `/swap?symbol=${symbol}` : "/swap")}
                       />
                     </div>
                   </div>
@@ -155,6 +171,7 @@ export default function WalletPage() {
         open={sendDialogOpen}
         onOpenChange={setSendDialogOpen}
         wallets={walletsForDialog}
+        initialSymbol={selectedAsset}
         onSuccess={loadWalletData}
       />
 
@@ -162,6 +179,7 @@ export default function WalletPage() {
         open={receiveDialogOpen}
         onOpenChange={setReceiveDialogOpen}
         wallets={walletsForDialog}
+        initialSymbol={selectedAsset}
       />
     </div>
   );
