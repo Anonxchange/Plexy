@@ -17,7 +17,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
   const preferredCurrency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
   
   return (
-    <div className="bg-[#EBF7F2]/40 overflow-hidden">
+    <div className="bg-[#EBF7F2]/40 dark:bg-[#EBF7F2]/10 overflow-hidden transition-colors">
       <div className="p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-4">
@@ -32,7 +32,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             </div>
             
             <div className="space-y-1">
-              <div className="text-4xl font-bold tracking-tight">
+              <div className="text-4xl font-bold tracking-tight text-foreground">
                 {showBalance ? `0 ${preferredCurrency}` : "****"}
               </div>
               <div className="text-sm text-muted-foreground">
@@ -43,16 +43,16 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
 
           <div className="w-full flex justify-end">
             {/* Mobile View: 4-column grid as requested */}
-            <div className="grid grid-cols-4 bg-background rounded-lg border p-1 w-full md:hidden">
-              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onTopup}>
+            <div className="grid grid-cols-4 bg-background dark:bg-muted/20 rounded-lg border p-1 w-full md:hidden transition-colors">
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50 text-foreground" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span className="text-[10px] font-semibold leading-tight mt-0.5">Top-up</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onSwap}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50 text-foreground" onClick={onSwap}>
                 <RefreshCw className="h-4 w-4" />
                 <span className="text-[10px] font-semibold leading-tight mt-0.5">Swap</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onSend}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50 text-foreground" onClick={onSend}>
                 <Send className="h-4 w-4" />
                 <span className="text-[10px] font-semibold leading-tight mt-0.5">Send</span>
               </Button>
@@ -63,12 +63,12 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             </div>
 
             {/* Desktop View: Long white container (same as mobile) containing horizontal actions */}
-            <div className="hidden md:flex flex-row items-center gap-2 bg-background rounded-lg border p-1 w-fit">
-              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50" onClick={onTopup}>
+            <div className="hidden md:flex flex-row items-center gap-2 bg-background dark:bg-muted/20 rounded-lg border p-1 w-fit transition-colors">
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50 text-foreground" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span>Mobile top up</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50" onClick={onSend}>
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50 text-foreground" onClick={onSend}>
                 <Send className="h-4 w-4" />
                 <span>Send</span>
               </Button>
@@ -76,7 +76,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
                 <ArrowDownToLine className="h-4 w-4" />
                 <span>Deposit</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50" onClick={onSwap}>
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50 text-foreground" onClick={onSwap}>
                 <RefreshCw className="h-4 w-4" />
                 <span>Swap</span>
               </Button>
