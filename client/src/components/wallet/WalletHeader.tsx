@@ -43,7 +43,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
 
           <div className="w-full flex justify-end">
             {/* Mobile View: 4-column grid as requested */}
-            <div className="grid grid-cols-4 bg-background dark:bg-muted/20 rounded-lg border p-1 w-full md:hidden transition-colors">
+            <div className="grid grid-cols-4 bg-background dark:bg-card rounded-lg border p-1 w-full md:hidden transition-colors">
               <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50 text-foreground" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span className="text-[10px] font-semibold leading-tight mt-0.5">Top-up</span>
@@ -63,7 +63,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             </div>
 
             {/* Desktop View: Long white container (same as mobile) containing horizontal actions */}
-            <div className="hidden md:flex flex-row items-center gap-2 bg-background dark:bg-muted/20 rounded-lg border p-1 w-fit transition-colors">
+            <div className="hidden md:flex flex-row items-center gap-2 bg-background dark:bg-card rounded-lg border p-1 w-fit transition-colors">
               <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50 text-foreground" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span>Mobile top up</span>
