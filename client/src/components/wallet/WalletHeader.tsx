@@ -43,21 +43,21 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
 
           <div className="w-full">
             <div className="grid grid-cols-4 bg-background rounded-lg border p-1 w-full">
-              <Button variant="ghost" size="sm" className="h-8 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onTopup}>
-                <Smartphone className="h-3.5 w-3.5" />
-                <span className="text-[9px] font-medium leading-tight mt-0.5">Top-up</span>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onTopup}>
+                <Smartphone className="h-4 w-4" />
+                <span className="text-[10px] font-semibold leading-tight mt-0.5">Top-up</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onSwap}>
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span className="text-[9px] font-medium leading-tight mt-0.5">Swap</span>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onSwap}>
+                <RefreshCw className="h-4 w-4" />
+                <span className="text-[10px] font-semibold leading-tight mt-0.5">Swap</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onSend}>
-                <Send className="h-3.5 w-3.5" />
-                <span className="text-[9px] font-medium leading-tight mt-0.5">Send</span>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50" onClick={onSend}>
+                <Send className="h-4 w-4" />
+                <span className="text-[10px] font-semibold leading-tight mt-0.5">Send</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 flex-col gap-0 px-1 text-primary hover:bg-muted/50" onClick={onReceive}>
-                <ArrowDownToLine className="h-3.5 w-3.5" />
-                <span className="text-[9px] font-medium leading-tight mt-0.5">Deposit</span>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 text-primary hover:bg-muted/50" onClick={onReceive}>
+                <ArrowDownToLine className="h-4 w-4" />
+                <span className="text-[10px] font-semibold leading-tight mt-0.5">Deposit</span>
               </Button>
             </div>
           </div>
