@@ -62,21 +62,21 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
               </Button>
             </div>
 
-            {/* Desktop View: Horizontal list, mobile top-up on left, then send, deposit, swap */}
-            <div className="hidden md:flex flex-row items-center gap-2 w-full justify-end">
-              <Button variant="outline" size="sm" className="h-10 gap-2 px-4 font-semibold" onClick={onTopup}>
+            {/* Desktop View: Long white container (same as mobile) containing horizontal actions */}
+            <div className="hidden md:flex flex-row items-center gap-2 w-full justify-end bg-background rounded-lg border p-1">
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span>Mobile top up</span>
               </Button>
-              <Button className="h-10 gap-2 px-4 font-semibold" onClick={onSend}>
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50" onClick={onSend}>
                 <Send className="h-4 w-4" />
                 <span>Send</span>
               </Button>
-              <Button variant="outline" size="sm" className="h-10 gap-2 px-4 font-semibold text-primary" onClick={onReceive}>
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold text-primary hover:bg-muted/50" onClick={onReceive}>
                 <ArrowDownToLine className="h-4 w-4" />
                 <span>Deposit</span>
               </Button>
-              <Button variant="outline" size="sm" className="h-10 gap-2 px-4 font-semibold" onClick={onSwap}>
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50" onClick={onSwap}>
                 <RefreshCw className="h-4 w-4" />
                 <span>Swap</span>
               </Button>
