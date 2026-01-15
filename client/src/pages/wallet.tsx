@@ -90,7 +90,11 @@ export default function WalletPage() {
                     />
                     
                     <div className="p-6">
-                      <AssetList />
+                      <AssetList 
+                        onSend={() => setSendDialogOpen(true)}
+                        onReceive={() => setReceiveDialogOpen(true)}
+                        onSwap={() => setLocation("/swap")}
+                      />
                     </div>
                   </div>
                 </CardContent>
