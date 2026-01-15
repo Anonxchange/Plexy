@@ -15,6 +15,8 @@ import {
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+import { cryptoIconUrls } from "@/lib/crypto-icons";
+
 interface AssetListProps {
   onSend?: (symbol: string) => void;
   onReceive?: (symbol: string) => void;
@@ -142,11 +144,11 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
                 <TableCell className="py-4">
                   <div className="flex items-center gap-3">
                     <img 
-                      src={`/assets/coins/${asset.symbol.toLowerCase()}.png`} 
+                      src={cryptoIconUrls[asset.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`} 
                       alt={asset.symbol}
                       className="w-8 h-8 rounded-full object-contain"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`;
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
                       }}
                     />
                     <div className="font-bold">{asset.symbol}</div>
