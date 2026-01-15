@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useWalletData } from "@/hooks/use-wallet-data";
+import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ interface AssetListProps {
 
 export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
   const { data: wallet } = useWalletData();
+  const { data: prices } = useCryptoPrices();
   const [hideZero, setHideZero] = useState(false);
   const isMobile = useIsMobile();
 
@@ -94,6 +96,10 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
     );
   };
 
+  const getAssetPrice = (symbol: string) => {
+    return prices?.find(p => p.symbol === symbol.toUpperCase()) || { price: 0, change24h: 0 };
+  };
+
   return (
     <div className="space-y-6">
       <div className="border-b pb-1 overflow-x-auto no-scrollbar">
@@ -139,34 +145,42 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {wallet?.assets.filter(a => !hideZero || a.balance > 0).map((asset) => (
-              <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
-                <TableCell className="py-4">
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={cryptoIconUrls[asset.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`} 
-                      alt={asset.symbol}
-                      className="w-8 h-8 rounded-full object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
-                      }}
-                    />
-                    <div className="font-bold text-foreground">{asset.symbol}</div>
-                  </div>
-                </TableCell>
-                <TableCell className="py-4 hidden sm:table-cell">
-                  <div className="font-semibold text-foreground">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
-                  <div className="text-[10px] text-green-500 font-bold">+0.00%</div>
-                </TableCell>
-                <TableCell className="py-4">
-                  <div className="font-bold text-foreground">0</div>
-                  <div className="text-[10px] text-muted-foreground font-medium">0 {localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD"}</div>
-                </TableCell>
-                <TableCell className="text-right py-4">
-                  <ActionMenu symbol={asset.symbol} />
-                </TableCell>
-              </TableRow>
-            ))}
+            {wallet?.assets.filter(a => !hideZero || a.balance > 0).map((asset) => {
+              const { price, change24h } = getAssetPrice(asset.symbol);
+              const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
+              const balanceValue = asset.balance * price;
+              
+              return (
+                <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
+                  <TableCell className="py-4">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={cryptoIconUrls[asset.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`} 
+                        alt={asset.symbol}
+                        className="w-8 h-8 rounded-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
+                        }}
+                      />
+                      <div className="font-bold text-foreground">{asset.symbol}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-4 hidden sm:table-cell">
+                    <div className="font-semibold text-foreground">{price.toLocaleString()} {currency}</div>
+                    <div className={`text-[10px] font-bold ${change24h >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-4">
+                    <div className="font-bold text-foreground">{asset.balance}</div>
+                    <div className="text-[10px] text-muted-foreground font-medium">{balanceValue.toLocaleString()} {currency}</div>
+                  </TableCell>
+                  <TableCell className="text-right py-4">
+                    <ActionMenu symbol={asset.symbol} />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {(!wallet?.assets || wallet.assets.length === 0) && (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
