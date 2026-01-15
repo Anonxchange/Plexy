@@ -33,16 +33,28 @@ interface SendCryptoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wallets: Array<{ symbol: string; balance: number; name: string; icon: string }>;
+  initialSymbol?: string;
   onSuccess?: () => void;
 }
 
 type Step = "select" | "details";
 
-export function SendCryptoDialog({ open, onOpenChange, wallets, onSuccess }: SendCryptoDialogProps) {
+export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, onSuccess }: SendCryptoDialogProps) {
   const { user, sessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState<Step>("select");
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
+
+  useEffect(() => {
+    if (open) {
+      if (initialSymbol) {
+        handleSelectCrypto(initialSymbol);
+      } else {
+        setStep("select");
+        setSelectedCrypto("");
+      }
+    }
+  }, [open, initialSymbol]);
   const [toAddress, setToAddress] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
