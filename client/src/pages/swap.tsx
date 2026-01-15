@@ -476,11 +476,11 @@ export function Swap() {
                 </div>
 
                 {/* Rates Info */}
-                <div className="grid grid-cols-3 gap-4 pt-2">
+                <div className="flex flex-col sm:grid sm:grid-cols-3 gap-4 pt-2">
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground block">Swap rate</span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs font-bold whitespace-nowrap">1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}</span>
+                    <div className="flex items-center flex-wrap gap-1">
+                      <span className="text-xs font-bold">1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}</span>
                       {!isLoading && percentageDiff > 0 && (
                         <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 px-1 py-0 h-4 text-[10px]">
                           {percentageDiff.toFixed(2)}%
