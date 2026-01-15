@@ -63,7 +63,7 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             </div>
 
             {/* Desktop View: Long white container (same as mobile) containing horizontal actions */}
-            <div className="hidden md:flex flex-row items-center gap-2 w-full justify-end bg-background rounded-lg border p-1">
+            <div className="hidden md:flex flex-row items-center gap-2 bg-background rounded-lg border p-1 w-fit">
               <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span>Mobile top up</span>
