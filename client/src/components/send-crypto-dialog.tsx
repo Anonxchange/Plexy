@@ -33,7 +33,7 @@ interface SendCryptoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wallets: Array<{ symbol: string; balance: number; name: string; icon: string }>;
-  initialSymbol?: string;
+  initialSymbol?: why tstring;
   onSuccess?: () => void;
 }
 
