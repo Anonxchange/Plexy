@@ -127,7 +127,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
         <div className="p-4 space-y-4">
           {/* Asset Selection */}
-          <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground/70">Asset</label>
             <Select value={selectedCrypto} onValueChange={handleAssetChange}>
               <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
@@ -142,38 +142,50 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                   </div>
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="rounded-lg max-h-[250px] overflow-y-auto">
-                {wallets
-                  .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
-                  .map((wallet) => (
-                  <SelectItem key={wallet.symbol} value={wallet.symbol} className="rounded-md">
-                    <div className="flex items-center gap-2 py-0.5">
-                      <img 
-                        src={cryptoIconUrls[wallet.symbol] || `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`} 
-                        alt={wallet.symbol}
-                        className="w-5 h-5 rounded-full"
-                      />
-                      <span className="font-bold text-sm">{wallet.symbol}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+              <SelectContent 
+                className="rounded-lg max-h-[250px] overflow-y-auto"
+                position="popper"
+                sideOffset={4}
+              >
+                <ScrollArea className="h-full w-full">
+                  {wallets
+                    .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
+                    .map((wallet) => (
+                    <SelectItem key={wallet.symbol} value={wallet.symbol} className="rounded-md">
+                      <div className="flex items-center gap-2 py-0.5">
+                        <img 
+                          src={cryptoIconUrls[wallet.symbol] || `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`} 
+                          alt={wallet.symbol}
+                          className="w-5 h-5 rounded-full"
+                        />
+                        <span className="font-bold text-sm">{wallet.symbol}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
               </SelectContent>
             </Select>
           </div>
 
           {/* Network Display */}
-          <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground/70">Network</label>
             <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
               <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
                 <SelectValue placeholder="Select a network" />
               </SelectTrigger>
-              <SelectContent className="rounded-lg">
-                {(networkMap[selectedCrypto] || ["Mainnet"]).map((network) => (
-                  <SelectItem key={network} value={network} className="rounded-md">
-                    <span className="font-medium text-sm">{network}</span>
-                  </SelectItem>
-                ))}
+              <SelectContent 
+                className="rounded-lg"
+                position="popper"
+                sideOffset={4}
+              >
+                <ScrollArea className="h-full w-full">
+                  {(networkMap[selectedCrypto] || ["Mainnet"]).map((network) => (
+                    <SelectItem key={network} value={network} className="rounded-md">
+                      <span className="font-medium text-sm">{network}</span>
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
               </SelectContent>
             </Select>
           </div>
