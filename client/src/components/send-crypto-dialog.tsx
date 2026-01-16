@@ -393,19 +393,15 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
               }}>
                 <SelectTrigger className="h-12 bg-muted">
                   <div className="flex items-center gap-2">
-                    {selectedWallet && (
-                      <>
-                        <img 
-                          src={cryptoIconUrls[selectedCrypto]} 
-                          alt={selectedCrypto}
-                          className="w-6 h-6 rounded-full"
-                          onError={(e) => {
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCrypto}&background=random`;
-                          }}
-                        />
-                        <span>{selectedCrypto}</span>
-                      </>
-                    )}
+                    <img 
+                      src={cryptoIconUrls[selectedCrypto] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${selectedCrypto.toLowerCase()}.png`} 
+                      alt={selectedCrypto}
+                      className="w-6 h-6 rounded-full"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCrypto}&background=random`;
+                      }}
+                    />
+                    <span>{selectedCrypto}</span>
                   </div>
                 </SelectTrigger>
                 <SelectContent>
@@ -413,7 +409,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                     <SelectItem key={wallet.symbol} value={wallet.symbol}>
                       <div className="flex items-center gap-2">
                         <img 
-                          src={cryptoIconUrls[wallet.symbol]} 
+                          src={cryptoIconUrls[wallet.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${wallet.symbol.toLowerCase()}.png`} 
                           alt={wallet.symbol}
                           className="w-6 h-6 rounded-full"
                           onError={(e) => {
