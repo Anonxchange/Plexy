@@ -105,7 +105,11 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   // Auto-load or generate address when step changes to details
   useEffect(() => {
     if (selectedCrypto && selectedNetwork && user && step === "details") {
-      loadDepositAddress();
+      // Small delay to ensure state is settled
+      const timer = setTimeout(() => {
+        loadDepositAddress();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [selectedCrypto, selectedNetwork, user, step]);
 
@@ -583,10 +587,12 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                   <Label className="text-sm font-medium mb-2 block">Asset</Label>
                   <Select value={selectedCrypto} onValueChange={handleCryptoChange}>
                     <SelectTrigger className="h-12">
-                      <SelectValue />
+                      <SelectValue placeholder="Select asset" />
                     </SelectTrigger>
                     <SelectContent>
-                      {wallets.map((wallet) => (
+                      {wallets
+                        .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
+                        .map((wallet) => (
                         <SelectItem key={wallet.symbol} value={wallet.symbol}>
                           <span className="flex items-center gap-2">
                             <img
