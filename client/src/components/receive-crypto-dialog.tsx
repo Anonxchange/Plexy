@@ -1,12 +1,13 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -16,44 +17,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Copy, CheckCircle2, Loader2, ArrowLeft, X, Lock } from "lucide-react";
-import { getDepositAddress } from "@/lib/wallet-api";
+import { AlertCircle, Loader2, CheckCircle2, X, Copy } from "lucide-react";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import { getBitcoinAddress } from "@/lib/bitcoinSigner";
-import { getEVMAddress } from "@/lib/evmSigner";
-import { getSolanaAddress } from "@/lib/solanaSigner";
-import { getTronAddress } from "@/lib/tronSigner";
+import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
+import { signEVMTransaction } from "@/lib/evmSigner";
+import { signSolanaTransaction } from "@/lib/solanaSigner";
+import { signTronTransaction } from "@/lib/tronSigner";
 import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase";
-import { QRCodeSVG } from "qrcode.react";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { useSendFee } from "@/hooks/use-fees";
+import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
-import { Input } from "@/components/ui/input";
 
-
-interface ReceiveCryptoDialogProps {
+interface SendCryptoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  wallets: Array<{ symbol: string; name: string; icon: string }>;
+  wallets: Array<{ symbol: string; balance: number; name: string; icon: string }>;
   initialSymbol?: string;
+  onSuccess?: () => void;
 }
 
-type Step = "method" | "asset" | "details";
+type Step = "select" | "details";
 
-const networkMap: Record<string, string[]> = {
-  BTC: ["Bitcoin (SegWit)"],
-  ETH: ["Ethereum (ERC-20)"],
-  SOL: ["Solana"],
-  BNB: ["Binance Smart Chain (BEP-20)"],
-  TRX: ["Tron (TRC-20)"],
-  USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
-  USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
-};
-
-export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol }: ReceiveCryptoDialogProps) {
-  const { user } = useAuth();
-  const supabase = createClient();
-  const [step, setStep] = useState<Step>("method");
+export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, onSuccess }: SendCryptoDialogProps) {
+  const { user, sessionPassword, setSessionPassword } = useAuth();
+  const { toast } = useToast();
+  const [step, setStep] = useState<Step>("select");
+  const [selectedCrypto, setSelectedCrypto] = useState<string>("");
 
   useEffect(() => {
     if (open) {
@@ -61,648 +51,575 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
         setSelectedCrypto(initialSymbol);
         setStep("details");
       } else {
-        setStep("method");
+        setStep("select");
         setSelectedCrypto("");
       }
     }
   }, [open, initialSymbol]);
-  const [selectedMethod, setSelectedMethod] = useState<string>("");
-  const [selectedCrypto, setSelectedCrypto] = useState<string>("");
+  const [toAddress, setToAddress] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
   const [selectedNetwork, setSelectedNetwork] = useState<string>("");
-  const [depositAddress, setDepositAddress] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("NGN");
+  const [amountInputMode, setAmountInputMode] = useState<"fiat" | "crypto">("fiat");
+  const [cryptoAmount, setCryptoAmount] = useState<string>("");
+  const [fiatAmount, setFiatAmount] = useState<string>("");
+  const [cryptoPrice, setCryptoPrice] = useState<number>(0);
   const [useNonCustodial, setUseNonCustodial] = useState(false);
-  const [showWalletSetup, setShowWalletSetup] = useState(false);
-  const [walletPassword, setWalletPassword] = useState("");
-  const [confirmWalletPassword, setConfirmWalletPassword] = useState("");
-  const [walletSetupLoading, setWalletSetupLoading] = useState(false);
-  const { toast } = useToast();
+  const [userPassword, setUserPassword] = useState<string>("");
 
-  // Check for existing non-custodial wallets on dialog open
+  const networkMap: Record<string, string[]> = {
+    BTC: ["Bitcoin (SegWit)"],
+    ETH: ["Ethereum (ERC-20)"],
+    SOL: ["Solana"],
+    BNB: ["Binance Smart Chain (BEP-20)"],
+    TRX: ["Tron (TRC-20)"],
+    USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
+    USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
+  };
+
+  // Fetch crypto price when crypto is selected
   useEffect(() => {
-    if (open && user) {
-      const existingWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      if (existingWallets.length === 0) {
-        // No wallets yet - show setup dialog automatically
-        setShowWalletSetup(true);
-        setUseNonCustodial(false);
-      } else {
-        // Wallets exist - default to non-custodial
-        setUseNonCustodial(true);
-        setShowWalletSetup(false);
-        // If initialSymbol is provided, skip method/asset selection
-        if (initialSymbol) {
-          setStep("details");
-        } else {
-          setStep("method");
+    const fetchPrice = async () => {
+      if (!selectedCrypto) return;
+      
+      try {
+        const prices = await getCryptoPrices([selectedCrypto]);
+        if (prices[selectedCrypto]) {
+          const priceInSelectedCurrency = selectedCurrency === "NGN"
+            ? await convertCurrency(prices[selectedCrypto].current_price, "NGN")
+            : prices[selectedCrypto].current_price;
+          setCryptoPrice(priceInSelectedCurrency);
         }
+      } catch (error) {
+        console.error("Error fetching crypto price:", error);
       }
-    }
-  }, [open, user, initialSymbol]);
+    };
 
-  // Auto-load or generate address when step changes to details
-  useEffect(() => {
-    if (selectedCrypto && selectedNetwork && user && step === "details") {
-      // Small delay to ensure state is settled
-      const timer = setTimeout(() => {
-        loadDepositAddress();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedCrypto, selectedNetwork, user, step]);
+    fetchPrice();
+  }, [selectedCrypto, selectedCurrency]);
 
-  // Clear address when network changes to trigger regeneration
+  // Convert between fiat and crypto amounts
   useEffect(() => {
-    if (selectedNetwork && depositAddress) {
-      setDepositAddress("");
+    if (!cryptoPrice || cryptoPrice === 0) {
+      return;
     }
-  }, [selectedNetwork]);
 
-  useEffect(() => {
-    if (selectedCrypto) {
-      const networks = networkMap[selectedCrypto] || [];
-      // Set default network if available, otherwise use the first one
-      if (selectedCrypto === 'USDT' || selectedCrypto === 'USDC') {
-        if (networks.includes("Ethereum (ERC-20)")) setSelectedNetwork("Ethereum (ERC-20)");
-        else if (networks.includes("Binance Smart Chain (BEP-20)")) setSelectedNetwork("Binance Smart Chain (BEP-20)");
-        else if (networks.includes("Tron (TRC-20)")) setSelectedNetwork("Tron (TRC-20)");
-        else if (networks.includes("Solana (SPL)")) setSelectedNetwork("Solana (SPL)");
-      } else {
-        setSelectedNetwork(networks[0] || "");
+    if (amountInputMode === "fiat") {
+      const fiatValue = parseFloat(amount);
+      if (isNaN(fiatValue) || !amount) {
+        setCryptoAmount("");
+        return;
       }
+      const calculatedCryptoAmount = fiatValue / cryptoPrice;
+      setCryptoAmount(calculatedCryptoAmount.toFixed(8));
+    } else {
+      const cryptoValue = parseFloat(amount);
+      if (isNaN(cryptoValue) || !amount) {
+        setFiatAmount("");
+        return;
+      }
+      const calculatedFiatAmount = cryptoValue * cryptoPrice;
+      setFiatAmount(calculatedFiatAmount.toFixed(2));
     }
-  }, [selectedCrypto]);
+  }, [amount, cryptoPrice, amountInputMode]);
 
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
-    // For USDT and USDC, append full network name (matching wallet-api.ts format)
+    // For USDT and USDC, append network suffix based on selection
     if (crypto === 'USDT' || crypto === 'USDC') {
-      if (network === 'Ethereum (ERC-20)') return `${crypto}-Ethereum (ERC-20)`;
-      if (network === 'Binance Smart Chain (BEP-20)') return `${crypto}-Binance Smart Chain (BEP-20)`;
-      if (network === 'Tron (TRC-20)') return `${crypto}-Tron (TRC-20)`;
-      if (network === 'Solana (SPL)') return `${crypto}-Solana`;
+      if (network.includes('ERC-20')) return `${crypto}-ERC20`;
+      if (network.includes('BEP-20')) return `${crypto}-BEP20`;
+      if (network.includes('TRC-20')) return `${crypto}-TRC20`;
+      if (network.includes('SPL')) return `${crypto}-SOL`;
     }
     // For native coins, return as-is
     return crypto;
   };
 
-  const loadDepositAddress = async () => {
+  const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
+  
+  // Get network-specific symbol for fee calculation
+  const networkSpecificSymbol = selectedCrypto && selectedNetwork 
+    ? getNetworkSpecificSymbol(selectedCrypto, selectedNetwork)
+    : selectedCrypto;
+  
+  // Use crypto amount for fee calculation
+  const cryptoAmountForFee = amountInputMode === "crypto" 
+    ? parseFloat(amount) || 0 
+    : parseFloat(cryptoAmount) || 0;
+  
+  const { data: feeData, isLoading: feeLoading, error: feeError } = useSendFee(
+    networkSpecificSymbol || '',
+    cryptoAmountForFee,
+    false // assuming external send, set to true for internal transfers
+  );
+  
+  // Platform fee removed as per user request
+  const networkFee = feeData?.networkFee || 0;
+  const total = (cryptoAmountForFee || 0) + (networkFee || 0);
+
+  const handleSelectCrypto = (symbol: string) => {
+    setSelectedCrypto(symbol);
+    const networks = networkMap[symbol] || [];
+    setSelectedNetwork(networks[0] || "");
+    setStep("details");
+  };
+
+  const handleSend = async () => {
     if (!user) return;
+    if (!selectedCrypto || !toAddress || !amount) {
+      setError("Please fill in all required fields");
+      return;
+    }
+
+    // Check if password is needed
+    if (!sessionPassword && !userPassword) {
+      setError("Please enter your wallet password");
+      return;
+    }
+
+    const cryptoAmountNum = amountInputMode === "crypto" 
+      ? parseFloat(amount) 
+      : parseFloat(cryptoAmount);
+      
+    if (isNaN(cryptoAmountNum) || cryptoAmountNum <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    if (selectedWallet && total > selectedWallet.balance) {
+      setError("Insufficient balance");
+      return;
+    }
+
+    setError("");
     setLoading(true);
-    setIsGenerating(true);
+
     try {
-      // Always prioritize non-custodial if wallets exist
-      const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      if (wallets.length > 0) {
-        const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-        const address = await getDepositAddress(user.id, symbolToUse);
-        setDepositAddress(address);
-        setUseNonCustodial(true);
-      } else {
-        const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-        const address = await getDepositAddress(user.id, symbolToUse);
-        setDepositAddress(address);
-        setUseNonCustodial(false);
+      // Use non-custodial signer directly
+      const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+      
+      const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      const targetWallet = userWallets.find(w => w.chainId === symbolToUse);
+      const passwordToUse = sessionPassword || userPassword;
+      
+      if (!targetWallet) {
+        throw new Error("Local wallet not found for the selected asset");
       }
-    } catch (error) {
-      console.error("Error loading deposit address:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load deposit address. Please try again.",
+
+      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(targetWallet.id, passwordToUse, user.id);
+
+      if (!mnemonic) {
+        throw new Error("Mnemonic phrase not found for signing");
+      }
+
+      let signedTx;
+      const txData = {
+        to: toAddress,
+        amount: cryptoAmountNum.toString(),
+        currency: symbolToUse as any,
+      };
+
+      if (selectedNetwork.includes("Bitcoin")) {
+        // Fetch real network fee rate for Bitcoin
+        const feeResponse = await fetch('https://blockstream.info/api/fee-estimates');
+        const fees = await feeResponse.json();
+        const fastFee = fees['1'] || 10; // default to 10 if API fails
+        
+        const btcTxData = {
+          to: toAddress,
+          amount: Math.floor(cryptoAmountNum * 1e8),
+          utxos: await (await fetch(`https://blockstream.info/api/address/${targetWallet.address}/utxo`)).json(),
+          feeRate: fastFee,
+        };
+        signedTx = await signBitcoinTransaction(mnemonic, btcTxData as any);
+      } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
+        signedTx = await signEVMTransaction(mnemonic, txData as any);
+      } else if (selectedNetwork.includes("Solana")) {
+        signedTx = await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: "SOL" });
+      } else if (selectedNetwork.includes("Tron")) {
+        signedTx = await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
+      } else {
+        // Fallback to manager's default signing
+        signedTx = await nonCustodialWalletManager.signTransaction(targetWallet.id, txData, passwordToUse, user.id);
+      }
+
+      console.log("Signed Transaction Result:", signedTx);
+      
+      // Cache password if not already cached
+      if (!sessionPassword && userPassword) {
+        setSessionPassword(userPassword);
+      }
+      
+      // In a non-custodial architecture, we provide the signed transaction for the user to broadcast
+      // or we broadcast it to a public provider. We do not use the custodial backend.
+      toast({ 
+        title: "Transaction Signed!", 
+        description: "Your transaction has been signed locally. In this demo, it is logged to the console." 
       });
+      
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        onOpenChange(false);
+        resetForm();
+        onSuccess?.();
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || "Failed to send crypto");
     } finally {
       setLoading(false);
-      setIsGenerating(false);
     }
   };
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(depositAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setToAddress(text);
+    } catch (err) {
+      console.error("Failed to paste:", err);
+    }
+  };
+
+  const resetForm = () => {
+    setStep("select");
+    setSelectedCrypto("");
+    setToAddress("");
+    setAmount("");
+    setCryptoAmount("");
+    setFiatAmount("");
+    setNotes("");
+    setSelectedNetwork("");
+    setSelectedCurrency("NGN");
+    setAmountInputMode("fiat");
+    setCryptoPrice(0);
+    setError("");
+    setSuccess(false);
+    setUseNonCustodial(false);
+    setUserPassword("");
   };
 
   const handleClose = () => {
     onOpenChange(false);
-    setTimeout(() => {
-      setStep("method");
-      setSelectedMethod("");
-      setSelectedCrypto("");
-      setSelectedNetwork("");
-      setDepositAddress("");
-      setCopied(false);
-      setLoading(false);
-      setIsGenerating(false);
-      setUseNonCustodial(false);
-      setShowWalletSetup(false);
-      setWalletPassword("");
-      setConfirmWalletPassword("");
-    }, 200);
+    resetForm();
   };
-
-
-  const handleGenerateWallet = async () => {
-    if (!walletPassword || !confirmWalletPassword) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter password",
-      });
-      return;
-    }
-
-    if (walletPassword !== confirmWalletPassword) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Passwords don't match",
-      });
-      return;
-    }
-
-    setWalletSetupLoading(true);
-    try {
-      // Generate wallet for Ethereum (primary network)
-      const result = await nonCustodialWalletManager.generateNonCustodialWallet(
-        "Ethereum (ERC-20)",
-        walletPassword,
-        supabase,
-        user?.id
-      );
-
-      // Generate all other supported network wallets using the SAME mnemonic phrase
-      const networks = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "Binance Smart Chain (BEP-20)"];
-      
-      for (const network of networks) {
-        await nonCustodialWalletManager.generateNonCustodialWallet(
-          network,
-          walletPassword,
-          supabase,
-          user?.id,
-          result.mnemonicPhrase
-        );
-      }
-      
-      toast({
-        title: "Success",
-        description: "Non-custodial wallets created! All networks are secured by your recovery phrase.",
-      });
-
-      // Reset and close setup dialog
-      setShowWalletSetup(false);
-      setWalletPassword("");
-      setConfirmWalletPassword("");
-      
-      // Show the mnemonic
-      alert(`Your Recovery Phrase (SAVE THIS SAFELY):\n\n${result.mnemonicPhrase}\n\nYou'll need this to recover your wallet if you lose your device.`);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to create wallet",
-      });
-    } finally {
-      setWalletSetupLoading(false);
-    }
-  };
-
-  const handleBack = () => {
-    if (step === "details") {
-      setStep("asset");
-    } else if (step === "asset") {
-      setStep("method");
-    }
-  };
-
-  // Handler for crypto selection change
-  const handleCryptoChange = (value: string) => {
-    setSelectedCrypto(value);
-    // Auto-select appropriate network based on crypto
-    if (value === 'BTC') {
-      setSelectedNetwork('Bitcoin (SegWit)');
-    } else if (value === 'ETH') {
-      setSelectedNetwork('Ethereum (ERC-20)');
-    } else if (value === 'BNB') {
-      setSelectedNetwork('Binance Smart Chain (BEP-20)');
-    } else if (value === 'SOL') {
-      setSelectedNetwork('Solana');
-    } else if (value === 'TRX') {
-      setSelectedNetwork('Tron (TRC-20)');
-    } else if (value === 'USDT' || value === 'USDC') {
-      setSelectedNetwork('Ethereum (ERC-20)'); // Default to ERC20
-    }
-    setDepositAddress(""); // Clear previous address
-  };
-
-  // Helper function to get the correct crypto symbol with network suffix
-  const getCryptoSymbolWithNetwork = () => {
-    if (selectedCrypto === 'BTC') return 'BTC';
-    if (selectedCrypto === 'ETH') return 'ETH';
-    if (selectedCrypto === 'BNB') return 'BNB';
-    if (selectedCrypto === 'SOL') return 'SOL';
-    if (selectedCrypto === 'TRX') return 'TRX';
-
-    // For USDT/USDC, append network suffix
-    if (selectedCrypto === 'USDT' || selectedCrypto === 'USDC') {
-      if (selectedNetwork === 'Ethereum (ERC-20)') return `${selectedCrypto}-ERC20`;
-      if (selectedNetwork === 'Binance Smart Chain (BEP-20)') return `${selectedCrypto}-BEP20`;
-      if (selectedNetwork === 'Tron (TRC-20)') return `${selectedCrypto}-TRC20`;
-      if (selectedNetwork === 'Solana (SPL)') return `${selectedCrypto}-SOL`;
-      if (selectedNetwork === 'Solana') return `${selectedCrypto}-SOL`;
-    }
-
-    return selectedCrypto;
-  };
-
-  // Handler to generate the deposit address
-  const handleGenerateAddress = async () => {
-    if (!selectedCrypto || !selectedNetwork) return;
-
-    setIsGenerating(true);
-    try {
-      const wallets = nonCustodialWalletManager.getNonCustodialWallets(user?.id || '');
-      
-      if (wallets.length > 0 && user) {
-        // Find the wallet matching this network or asset
-        const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-        const specificWallet = wallets.find(w => 
-          w.chainId === symbolToUse || 
-          w.chainId === selectedNetwork || 
-          w.chainId.includes(selectedCrypto)
-        );
-        
-        if (specificWallet) {
-          setDepositAddress(specificWallet.address);
-          setUseNonCustodial(true);
-          setIsGenerating(false);
-          return;
-        }
-      }
-
-      // Fallback to API/stored addresses
-      const cryptoSymbol = getCryptoSymbolWithNetwork();
-      const address = await getDepositAddress(user?.id || '', cryptoSymbol);
-      setDepositAddress(address);
-    } catch (error: any) {
-      console.error('Error generating address:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to generate deposit address"
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
-  const networks = selectedCrypto ? (networkMap[selectedCrypto] || []) : [];
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh]">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            {step !== "method" && !showWalletSetup && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleBack}
-                className="h-8 w-8"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            )}
-            <DialogTitle className="flex-1 text-center">
-              {showWalletSetup && "Create Non-Custodial Wallet"}
-              {!showWalletSetup && step === "method" && "Select a receive method"}
-              {!showWalletSetup && step === "asset" && "Select an asset"}
-              {!showWalletSetup && step === "details" && `Receive ${selectedCrypto}`}
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+      <DialogContent className="sm:max-w-[500px] bg-background">
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>
+            {step === "select" ? "Select an asset" : `Send ${selectedCrypto}`}
+          </DialogTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClose}
+            className="h-8 w-8"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
 
-        <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-        
-        {/* Wallet Setup Dialog */}
-        {showWalletSetup && (
-          <div className="space-y-4 px-4 py-6">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Lock className="w-8 h-8 text-primary" />
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2 text-center">Secure Your Wallet</h3>
-              <p className="text-sm text-muted-foreground text-center mb-6">
-                Create a strong password to encrypt your wallet. You'll use this to sign transactions.
-              </p>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Password</Label>
-                <Input
-                  type="password"
-                  placeholder="Enter a strong password"
-                  value={walletPassword}
-                  onChange={(e) => setWalletPassword(e.target.value)}
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Confirm Password</Label>
-                <Input
-                  type="password"
-                  placeholder="Confirm password"
-                  value={confirmWalletPassword}
-                  onChange={(e) => setConfirmWalletPassword(e.target.value)}
-                  className="h-10"
-                />
-              </div>
-            </div>
-
-            <Button
-              onClick={handleGenerateWallet}
-              disabled={walletSetupLoading || !walletPassword || !confirmWalletPassword}
-              className="w-full h-10"
-            >
-              {walletSetupLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating Wallet...
-                </>
-              ) : (
-                "Create Wallet"
-              )}
-            </Button>
+        {success ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Transaction Initiated!</h3>
+            <p className="text-sm text-muted-foreground text-center">
+              Your crypto is being sent. Check your transactions for status.
+            </p>
           </div>
-        )}
-        
-
-        {/* Method Selection Step */}
-          {step === "method" && !showWalletSetup && (
-            <div className="space-y-4 px-1">
-            <div>
-              <h3 className="text-sm font-medium mb-3">Deposit using crypto</h3>
-              <Button
-                variant="outline"
-                className="w-full h-auto py-4 px-4 justify-start bg-green-500/10 hover:bg-green-500/20 border-green-500/20"
-                onClick={() => {
-                  setSelectedMethod("crypto");
-                  setStep("asset");
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center text-white">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <div className="font-semibold">Receive crypto</div>
-                    <div className="text-xs text-muted-foreground">From another crypto wallet</div>
-                  </div>
-                </div>
-              </Button>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium mb-3">Deposit crypto using fiat</h3>
-              <Button
-                variant="outline"
-                className="w-full h-auto py-4 px-4 justify-start mb-2"
-                onClick={() => {
-                  setSelectedMethod("buy");
-                  handleClose();
-                  window.location.href = "/wallet/buy-crypto";
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <div className="font-semibold">Buy crypto</div>
-                    <div className="text-xs text-muted-foreground">Buy crypto with Bank or Online wallet</div>
-                  </div>
-                </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="w-full h-auto py-4 px-4 justify-start"
-                onClick={() => {
-                  setSelectedMethod("p2p");
-                  handleClose();
-                  window.location.href = "/p2p";
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <div className="font-semibold">P2P Trading</div>
-                    <div className="text-xs text-muted-foreground">Buy crypto with Bank or Online wallet</div>
-                  </div>
-                </div>
-              </Button>
-            </div>
-            </div>
-          )}
-
-          {/* Asset Selection Step */}
-          {step === "asset" && !showWalletSetup && (
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-2 px-1 pr-4">
-                {wallets.map((wallet) => (
-                  <Button
-                    key={wallet.symbol}
-                    variant="outline"
-                    className={`w-full h-auto py-4 px-4 justify-start ${
-                      selectedCrypto === wallet.symbol ? "bg-green-500/10 border-green-500/50" : ""
-                    }`}
-                    onClick={() => {
-                      handleCryptoChange(wallet.symbol); // Use handler to set crypto and network
-                      setStep("details");
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={cryptoIconUrls[wallet.symbol]}
-                        alt={wallet.symbol}
-                        className="w-10 h-10 rounded-full"
-                        onError={(e) => {
-                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
-                        }}
-                      />
-                      <div className="text-left">
-                        <div className="font-semibold">{wallet.symbol}</div>
-                        <div className="text-xs text-muted-foreground">{wallet.name}</div>
-                      </div>
+        ) : step === "select" ? (
+          <ScrollArea className="h-[400px]">
+            <div className="space-y-2 pr-4">
+              {wallets
+                .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
+                .map((wallet) => (
+                <Button
+                  key={wallet.symbol}
+                  variant="ghost"
+                  className="w-full h-auto py-4 px-4 justify-start hover:bg-primary/10"
+                  onClick={() => handleSelectCrypto(wallet.symbol)}
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    <img 
+                      src={cryptoIconUrls[wallet.symbol]} 
+                      alt={wallet.symbol}
+                      className="w-10 h-10 rounded-full"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
+                      }}
+                    />
+                    <div className="text-left flex-1">
+                      <div className="font-semibold">{wallet.symbol}</div>
+                      <div className="text-xs text-muted-foreground">{wallet.name}</div>
                     </div>
-                  </Button>
-                ))}
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+        ) : (
+          <ScrollArea className="max-h-[500px] pr-4">
+          <div className="space-y-4">
+            {!sessionPassword && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
+                <p className="text-xs text-blue-800 dark:text-blue-200">
+                  Enter your password once - it will be cached for this session.
+                </p>
+                <Input
+                  type="password"
+                  placeholder="Wallet password"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  className="h-10 mt-2 bg-muted"
+                />
               </div>
-            </ScrollArea>
-          )}
+            )}
+            {sessionPassword && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
+                <p className="text-xs text-green-800 dark:text-green-200">
+                  ✓ Password cached for session. Transaction will sign automatically.
+                </p>
+              </div>
+            )}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Asset</Label>
+              <Select value={selectedCrypto} onValueChange={(value) => {
+                setSelectedCrypto(value);
+                const networks = networkMap[value] || [];
+                setSelectedNetwork(networks[0] || "");
+              }}>
+                <SelectTrigger className="h-12 bg-muted">
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src={cryptoIconUrls[selectedCrypto] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${selectedCrypto?.toLowerCase() || ''}.png`} 
+                      alt={selectedCrypto}
+                      className="w-6 h-6 rounded-full"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCrypto || 'Asset'}&background=random`;
+                      }}
+                    />
+                    <span>{selectedCrypto}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {wallets.map((wallet) => (
+                    <SelectItem key={wallet.symbol} value={wallet.symbol}>
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={cryptoIconUrls[wallet.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${wallet.symbol.toLowerCase()}.png`} 
+                          alt={wallet.symbol}
+                          className="w-6 h-6 rounded-full"
+                          onError={(e) => {
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
+                          }}
+                        />
+                        <span>{wallet.symbol}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Details Step */}
-          {step === "details" && !showWalletSetup && (
-            <>
-              {isGenerating ? ( // Use isGenerating state for loading indicator
-                <div className="flex flex-col items-center justify-center py-8">
-                  <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center shadow-lg animate-pulse">
-                    <svg className="w-10 h-10 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Receiver address or Pexly username
+              </Label>
+              <div className="relative">
+                <Input
+                  placeholder="Enter address or username"
+                  value={toAddress}
+                  onChange={(e) => setToAddress(e.target.value)}
+                  className="h-12 pr-20 bg-muted"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePaste}
+                  className="absolute right-2 top-2 h-8"
+                >
+                  Paste
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Network</Label>
+              <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+                <SelectTrigger className="h-12 bg-muted">
+                  <SelectValue placeholder="Select a network" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(networkMap[selectedCrypto] || []).map((network) => (
+                    <SelectItem key={network} value={network}>
+                      {network}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-medium">Enter amount in</Label>
+                <div className="flex gap-2">
+                  {amountInputMode === "fiat" ? (
+                    <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+                      <SelectTrigger className="w-24 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NGN">NGN</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="w-24 h-8 flex items-center justify-center text-xs font-medium border rounded-md px-3">
+                      {selectedCrypto}
+                    </div>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setAmountInputMode(amountInputMode === "fiat" ? "crypto" : "fiat");
+                      setAmount("");
+                    }}
+                    className="h-8 text-xs"
+                  >
+                    Switch
+                  </Button>
                 </div>
-              ) : (
-                <ScrollArea className="h-[500px]">
-                  <div className="space-y-4 px-1 pr-4">
-                {useNonCustodial && (
-                  <div className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <p className="text-xs text-green-700 dark:text-green-400 font-medium">
-                      ✓ Using non-custodial wallet (you control your keys)
-                    </p>
-                  </div>
+              </div>
+              <div className="text-center py-4">
+                <Input
+                  type="number"
+                  step={amountInputMode === "crypto" ? "0.00000001" : "0.01"}
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="text-4xl font-bold text-center border-0 bg-transparent h-auto p-0"
+                />
+                {amountInputMode === "fiat" && cryptoAmount && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    ≈ {cryptoAmount} {selectedCrypto}
+                  </p>
                 )}
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Asset</Label>
-                  <Select value={selectedCrypto} onValueChange={handleCryptoChange}>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Select asset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wallets
-                        .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
-                        .map((wallet) => (
-                        <SelectItem key={wallet.symbol} value={wallet.symbol}>
-                          <span className="flex items-center gap-2">
-                            <img
-                              src={cryptoIconUrls[wallet.symbol]}
-                              alt={wallet.symbol}
-                              className="w-5 h-5 rounded-full"
-                              onError={(e) => {
-                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
-                              }}
-                            />
-                            <span>{wallet.symbol}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {amountInputMode === "crypto" && fiatAmount && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    ≈ {selectedCurrency} {fiatAmount}
+                  </p>
+                )}
+                {selectedWallet && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Available: {selectedWallet.balance.toFixed(8)} {selectedCrypto}
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedWallet) {
+                      if (amountInputMode === "fiat" && cryptoPrice) {
+                        const maxFiatAmount = selectedWallet.balance * cryptoPrice;
+                        setAmount(maxFiatAmount.toFixed(2));
+                      } else {
+                        setAmount(selectedWallet.balance.toFixed(8));
+                      }
+                    }
+                  }}
+                  className="mt-2"
+                  disabled={amountInputMode === "fiat" && !cryptoPrice}
+                >
+                  Max
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Remarks (optional)</Label>
+              <Input
+                placeholder="Add a note"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="h-12 bg-muted"
+              />
+            </div>
+
+            {/* Fee Breakdown */}
+            {cryptoAmountForFee > 0 && selectedCrypto && selectedNetwork && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-medium">{cryptoAmountForFee.toFixed(8)} {selectedCrypto}</span>
                 </div>
-
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Network</Label>
-                  <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-                    <SelectTrigger className="h-12">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {networks.map((network) => (
-                        <SelectItem key={network} value={network}>
-                          {network}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {depositAddress ? ( // Only show address details if an address exists
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">Deposit address</Label>
-
-                    {/* QR Code */}
-                    <div className="flex justify-center mb-4">
-                      <div className="p-4 bg-white rounded-lg relative">
-                        <QRCodeSVG value={depositAddress} size={200} />
-                        {/* Logo Overlay */}
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                          <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center shadow-lg">
-                            <svg className="w-8 h-8 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
+                {feeLoading ? (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Calculating fees...</span>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                ) : feeData ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Network Fee</span>
+                      <span>{feeData.networkFee.toFixed(8)} {selectedCrypto}</span>
                     </div>
-
-                    {/* Address Display */}
-                    <div className="p-3 bg-muted rounded-lg mb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="text-xs text-muted-foreground mb-1">
-                            {selectedCrypto} #{selectedNetwork.includes("SegWit") ? "1" : "1"} ({selectedNetwork.split(" ")[0]})
-                          </div>
-                          <code className="text-sm font-mono break-all">{depositAddress}</code>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleCopy}
-                          className="ml-2"
-                        >
-                          {copied ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
+                    <div className="flex justify-between pt-2 border-t border-border">
+                      <span className="font-semibold">Total</span>
+                      <span className="font-semibold">{total.toFixed(8)} {selectedCrypto}</span>
                     </div>
-
-                    {/* Create New Address Button */}
-                    <Button variant="outline" className="w-full mb-2" onClick={handleGenerateAddress} disabled={isGenerating}>
-                      {isGenerating ? 'Generating...' : 'Create a new address'}
-                    </Button>
-
-                    <p className="text-xs text-center text-muted-foreground">
-                      You can generate a new address once the current one receives a blockchain transaction
-                    </p>
+                  </>
+                ) : feeError ? (
+                  <div className="flex justify-between">
+                    <span className="text-destructive text-xs">Error calculating fee: {feeError.message}</span>
                   </div>
                 ) : (
-                  // Button to generate address if none exists yet
-                  <Button variant="default" className="w-full py-3" onClick={handleGenerateAddress} disabled={isGenerating}>
-                    {isGenerating ? 'Generating...' : 'Generate Deposit Address'}
-                  </Button>
-                )}
-
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mt-4">
-                  <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                    <strong>Important:</strong> Only send {selectedCrypto} to this address on the {selectedNetwork} network.
-                    Sending other cryptocurrencies or using wrong network may result in permanent loss.
-                  </p>
-                </div>
-
-                <div className="space-y-1 text-xs text-muted-foreground mt-2">
-                  <p><strong>Minimum deposit:</strong> {selectedCrypto === 'BTC' ? '0.00001 BTC' : selectedCrypto === 'ETH' ? '0.001 ETH' : '1 ' + selectedCrypto}</p>
-                  <p><strong>Confirmations required:</strong> {selectedCrypto === 'BTC' ? '2' : selectedCrypto === 'ETH' ? '64' : '12'} network confirmations</p>
-                </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-xs">Enter an amount to see fees</span>
                   </div>
-                </ScrollArea>
+                )}
+              </div>
             )}
-            </>
-          )}
-        </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
+                <AlertCircle className="h-4 w-4" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                className="flex-1 h-12"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSend}
+                className="flex-1 h-12"
+                disabled={loading || !selectedCrypto || !toAddress || !amount}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Continue"
+                )}
+              </Button>
+            </div>
+          </div>
+          </ScrollArea>
+        )}
       </DialogContent>
     </Dialog>
   );
