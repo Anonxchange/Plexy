@@ -127,7 +127,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
         <div className="p-4 space-y-4">
           {/* Asset Selection */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
             <label className="text-xs font-semibold text-foreground/70">Asset</label>
             <Select value={selectedCrypto} onValueChange={handleAssetChange}>
               <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
@@ -162,7 +162,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
           </div>
 
           {/* Network Display */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
             <label className="text-xs font-semibold text-foreground/70">Network</label>
             <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
               <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
