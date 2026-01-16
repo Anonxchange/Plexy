@@ -4,6 +4,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
+import { ReceiveMethodDialog } from "@/components/receive-method-dialog";
 import { type Wallet, getUserWallets } from "@/lib/wallet-api";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
@@ -18,6 +19,7 @@ export default function WalletPage() {
   const [, setLocation] = useLocation();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
 
   useEffect(() => {
@@ -68,7 +70,22 @@ export default function WalletPage() {
 
   const handleReceive = (symbol?: string) => {
     setSelectedAsset(symbol);
-    setReceiveDialogOpen(true);
+    if (symbol) {
+      setReceiveDialogOpen(true);
+    } else {
+      setReceiveMethodDialogOpen(true);
+    }
+  };
+
+  const handleSelectReceiveMethod = (method: "crypto" | "fiat" | "p2p") => {
+    setReceiveMethodDialogOpen(false);
+    if (method === "crypto") {
+      setReceiveDialogOpen(true);
+    } else if (method === "fiat") {
+      setLocation("/buy-crypto");
+    } else if (method === "p2p") {
+      setLocation("/p2p");
+    }
   };
 
   return (
@@ -180,6 +197,12 @@ export default function WalletPage() {
         onOpenChange={setReceiveDialogOpen}
         wallets={walletsForDialog}
         initialSymbol={selectedAsset}
+      />
+
+      <ReceiveMethodDialog
+        open={receiveMethodDialogOpen}
+        onOpenChange={setReceiveMethodDialogOpen}
+        onSelectMethod={handleSelectReceiveMethod}
       />
     </div>
   );
