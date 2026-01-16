@@ -92,9 +92,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
         // Wallets exist - default to non-custodial
         setUseNonCustodial(true);
         setShowWalletSetup(false);
+        // If initialSymbol is provided, skip method/asset selection
+        if (initialSymbol) {
+          setStep("details");
+        } else {
+          setStep("method");
+        }
       }
     }
-  }, [open, user]);
+  }, [open, user, initialSymbol]);
 
   // Auto-load or generate address when step changes to details
   useEffect(() => {
@@ -313,18 +319,19 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     setIsGenerating(true);
     try {
       const wallets = nonCustodialWalletManager.getNonCustodialWallets(user?.id || '');
-      const wallet = wallets[0]; // Get any wallet to retrieve mnemonic
-
-      if (wallet && user) {
-        // For non-custodial, we can derive the address locally
-        // We'll need the password to decrypt the mnemonic if we wanted to derive live,
-        // but the addresses are already stored in the wallet objects during generation.
-        // However, if we want to ensure we're showing the correct derived address from the mnemonic:
+      
+      if (wallets.length > 0 && user) {
+        // Find the wallet matching this network or asset
+        const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+        const specificWallet = wallets.find(w => 
+          w.chainId === symbolToUse || 
+          w.chainId === selectedNetwork || 
+          w.chainId.includes(selectedCrypto)
+        );
         
-        // Find the wallet matching this network
-        const specificWallet = wallets.find(w => w.chainId === selectedNetwork || w.chainId.includes(selectedCrypto));
         if (specificWallet) {
           setDepositAddress(specificWallet.address);
+          setUseNonCustodial(true);
           setIsGenerating(false);
           return;
         }
