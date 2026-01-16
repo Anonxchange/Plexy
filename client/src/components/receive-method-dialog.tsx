@@ -37,15 +37,15 @@ export function ReceiveMethodDialog({ open, onOpenChange, onSelectMethod }: Rece
             <h4 className="text-sm font-semibold text-foreground/70">Deposit using crypto</h4>
             <Button
               variant="outline"
-              className="w-full h-auto p-4 justify-start gap-4 border-none bg-[#55B586] hover:bg-[#489d74] text-white rounded-xl group transition-all"
+              className="w-full h-auto p-4 justify-start gap-4 border-none bg-primary hover:opacity-90 text-black rounded-xl group transition-all"
               onClick={() => onSelectMethod("crypto")}
             >
-              <div className="bg-white/20 p-2 rounded-lg group-hover:bg-white/30 transition-colors">
+              <div className="bg-black/10 p-2 rounded-lg group-hover:bg-black/20 transition-colors">
                 <ArrowDownToLine className="h-5 w-5" />
               </div>
               <div className="text-left">
                 <div className="font-bold">Deposit crypto</div>
-                <div className="text-[11px] opacity-80">From another crypto wallet</div>
+                <div className="text-[11px] font-medium opacity-70">From another crypto wallet</div>
               </div>
             </Button>
           </div>
