@@ -33,7 +33,7 @@ interface SendCryptoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wallets: Array<{ symbol: string; balance: number; name: string; icon: string }>;
-  initialSymbol?: why tstring;
+  initialSymbol?: string;
   onSuccess?: () => void;
 }
 
@@ -394,11 +394,11 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                 <SelectTrigger className="h-12 bg-muted">
                   <div className="flex items-center gap-2">
                     <img 
-                      src={cryptoIconUrls[selectedCrypto] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${selectedCrypto.toLowerCase()}.png`} 
+                      src={cryptoIconUrls[selectedCrypto] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${selectedCrypto?.toLowerCase() || ''}.png`} 
                       alt={selectedCrypto}
                       className="w-6 h-6 rounded-full"
                       onError={(e) => {
-                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCrypto}&background=random`;
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCrypto || 'Asset'}&background=random`;
                       }}
                     />
                     <span>{selectedCrypto}</span>
