@@ -567,7 +567,7 @@ class NonCustodialWalletManager {
       for (const output of outputs) {
         psbt.addOutput({
           address: output.address,
-          value: BigInt(Math.floor(Number(output.value))),
+          value: Number(output.value),
         });
       }
 
