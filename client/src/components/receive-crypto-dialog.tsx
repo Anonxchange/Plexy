@@ -83,50 +83,50 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[450px] p-0 bg-background border-none gap-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2 flex flex-row items-center justify-between border-b border-border/50">
-          <DialogTitle className="text-lg font-bold">
+      <DialogContent className="sm:max-w-[420px] p-0 bg-background border-none gap-0 overflow-hidden">
+        <DialogHeader className="p-4 flex flex-row items-center justify-between border-b border-border/50">
+          <DialogTitle className="text-base font-bold">
             Receive {selectedCrypto}
           </DialogTitle>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleClose}
-            className="h-8 w-8 rounded-full"
+            className="h-7 w-7 rounded-full"
           >
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 space-y-4">
           {/* Asset Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground/70">Asset</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground/70">Asset</label>
             <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-              <SelectTrigger className="h-14 bg-muted/30 border-border/50 focus:ring-0 rounded-xl">
+              <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
                 <SelectValue>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <img 
                       src={cryptoIconUrls[selectedCrypto] || `https://ui-avatars.com/api/?name=${selectedCrypto}&background=random`} 
                       alt={selectedCrypto}
-                      className="w-6 h-6 rounded-full"
+                      className="w-5 h-5 rounded-full"
                     />
-                    <span className="font-bold">{selectedCrypto}</span>
+                    <span className="font-bold text-sm">{selectedCrypto}</span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="rounded-xl max-h-[300px] overflow-y-auto">
+              <SelectContent className="rounded-lg max-h-[250px] overflow-y-auto">
                 {wallets
                   .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
                   .map((wallet) => (
-                  <SelectItem key={wallet.symbol} value={wallet.symbol} className="rounded-lg">
-                    <div className="flex items-center gap-3 py-1">
+                  <SelectItem key={wallet.symbol} value={wallet.symbol} className="rounded-md">
+                    <div className="flex items-center gap-2 py-0.5">
                       <img 
                         src={cryptoIconUrls[wallet.symbol] || `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`} 
                         alt={wallet.symbol}
-                        className="w-6 h-6 rounded-full"
+                        className="w-5 h-5 rounded-full"
                       />
-                      <span className="font-bold">{wallet.symbol}</span>
+                      <span className="font-bold text-sm">{wallet.symbol}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -134,63 +134,63 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
             </Select>
           </div>
 
-          {/* Network Display (ReadOnly like in screenshot) */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground/70">Network</label>
-            <div className="h-14 px-4 flex items-center bg-muted/20 border border-border/30 rounded-xl text-foreground/40 font-medium">
+          {/* Network Display */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground/70">Network</label>
+            <div className="h-11 px-3 flex items-center bg-muted/20 border border-border/30 rounded-lg text-foreground/40 font-medium text-sm">
               {networkMap[selectedCrypto] || "Mainnet"}
             </div>
           </div>
 
           {/* Deposit Address Section */}
-          <div className="space-y-4 pt-2">
-            <label className="text-sm font-semibold text-foreground/70">Deposit address</label>
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-foreground/70">Deposit address</label>
             
-            <div className="flex flex-col items-center justify-center space-y-6 py-2">
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-border/10">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="bg-white p-3 rounded-xl shadow-sm border border-border/10">
                 <QRCodeCanvas
                   value={walletAddress || "No address"}
-                  size={180}
+                  size={140}
                   level="M"
                   includeMargin={false}
                   imageSettings={{
                     src: cryptoIconUrls[selectedCrypto],
                     x: undefined,
                     y: undefined,
-                    height: 40,
-                    width: 40,
+                    height: 30,
+                    width: 30,
                     excavate: true,
                   }}
                 />
               </div>
 
-              <div className="w-full space-y-3">
+              <div className="w-full space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold">{selectedCrypto} #1 ({networkMap[selectedCrypto]?.split(' ')[0] || selectedCrypto})</span>
+                  <span className="text-xs font-bold">{selectedCrypto} #1 ({networkMap[selectedCrypto]?.split(' ')[0] || selectedCrypto})</span>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={handleCopyAddress}
-                    className="h-8 w-8 text-foreground/50 hover:text-foreground"
+                    className="h-7 w-7 text-foreground/50 hover:text-foreground"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <div className="p-3 bg-muted/10 rounded-lg break-all text-xs font-mono text-foreground/80 leading-relaxed tracking-tight">
+                <div className="p-2.5 bg-muted/10 rounded-lg break-all text-[11px] font-mono text-foreground/80 leading-normal tracking-tight border border-border/50">
                   {walletAddress || "Generating address..."}
                 </div>
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1">
               <Button 
                 variant="outline" 
-                className="w-full h-12 rounded-xl border-border/50 text-foreground/40 font-bold bg-muted/10"
+                className="w-full h-10 rounded-lg border-border/50 text-foreground/40 font-bold bg-muted/10 text-xs"
                 disabled
               >
                 Create a new address
               </Button>
-              <p className="text-[11px] text-destructive/80 text-center mt-3 leading-tight px-6">
+              <p className="text-[10px] text-destructive/80 text-center mt-2 leading-tight px-4">
                 You can generate a new address once the current one receives a blockchain transaction
               </p>
             </div>
