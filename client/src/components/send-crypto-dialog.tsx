@@ -335,7 +335,9 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
         ) : step === "select" ? (
           <ScrollArea className="h-[400px]">
             <div className="space-y-2 pr-4">
-              {wallets.map((wallet) => (
+              {wallets
+                .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
+                .map((wallet) => (
                 <Button
                   key={wallet.symbol}
                   variant="ghost"
