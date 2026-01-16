@@ -50,13 +50,13 @@ export default function WalletPage() {
 
   const walletsForDialog = wallets.map(wallet => ({
     symbol: wallet.crypto_symbol,
+    balance: wallet.balance,
     name: wallet.crypto_symbol === "BTC" ? "Bitcoin" : 
           wallet.crypto_symbol === "ETH" ? "Ethereum" :
           wallet.crypto_symbol === "SOL" ? "Solana" :
           wallet.crypto_symbol === "USDT" ? "Tether" :
           wallet.crypto_symbol === "USDC" ? "USD Coin" : wallet.crypto_symbol,
-    icon: wallet.crypto_symbol,
-    balance: wallet.balance
+    icon: wallet.crypto_symbol
   }));
 
   const [selectedAsset, setSelectedAsset] = useState<string | undefined>();
