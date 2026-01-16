@@ -58,11 +58,19 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   useEffect(() => {
     if (open) {
       const symbol = initialSymbol || wallets[0]?.symbol || "BTC";
+      console.log("Receive Dialog: Initializing with", symbol);
       setSelectedCrypto(symbol);
       const networks = networkMap[symbol] || ["Mainnet"];
       setSelectedNetwork(networks[0]);
     }
   }, [open, initialSymbol, wallets]);
+
+  const handleAssetChange = (value: string) => {
+    console.log("Receive Dialog: Asset changed to", value);
+    setSelectedCrypto(value);
+    const networks = networkMap[value] || ["Mainnet"];
+    setSelectedNetwork(networks[0]);
+  };
 
   useEffect(() => {
     if (!selectedCrypto || !user || !selectedNetwork) {
@@ -72,13 +80,16 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
     const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+    console.log("Receive Dialog: Found wallets", userWallets.length);
     const targetWallet = userWallets.find(w => w.chainId === symbolToUse);
     
     if (targetWallet) {
+      console.log("Receive Dialog: Found target wallet", symbolToUse, targetWallet.address);
       setWalletAddress(targetWallet.address);
     } else {
       // If specific wallet not found, try to get the base one
       const baseWallet = userWallets.find(w => w.chainId === selectedCrypto);
+      console.log("Receive Dialog: Fallback to base wallet", selectedCrypto, baseWallet?.address);
       setWalletAddress(baseWallet?.address || "");
     }
   }, [selectedCrypto, selectedNetwork, user]);
@@ -118,11 +129,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
           {/* Asset Selection */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground/70">Asset</label>
-            <Select value={selectedCrypto} onValueChange={(value) => {
-              setSelectedCrypto(value);
-              const networks = networkMap[value] || ["Mainnet"];
-              setSelectedNetwork(networks[0]);
-            }}>
+            <Select value={selectedCrypto} onValueChange={handleAssetChange}>
               <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
                 <SelectValue>
                   <div className="flex items-center gap-2">
