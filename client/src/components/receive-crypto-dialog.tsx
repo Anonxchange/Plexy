@@ -32,30 +32,56 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
+  const [selectedNetwork, setSelectedNetwork] = useState<string>("");
   const [walletAddress, setWalletAddress] = useState<string>("");
+
+  const networkMap: Record<string, string[]> = {
+    BTC: ["Bitcoin (SegWit)"],
+    ETH: ["Ethereum (ERC-20)"],
+    SOL: ["Solana"],
+    BNB: ["Binance Smart Chain (BEP-20)"],
+    TRX: ["Tron (TRC-20)"],
+    USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
+    USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
+  };
+
+  const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
+    if (crypto === 'USDT' || crypto === 'USDC') {
+      if (network.includes('ERC-20')) return `${crypto}-ERC20`;
+      if (network.includes('BEP-20')) return `${crypto}-BEP20`;
+      if (network.includes('TRC-20')) return `${crypto}-TRC20`;
+      if (network.includes('SPL')) return `${crypto}-SOL`;
+    }
+    return crypto;
+  };
 
   useEffect(() => {
     if (open) {
       const symbol = initialSymbol || wallets[0]?.symbol || "BTC";
       setSelectedCrypto(symbol);
+      const networks = networkMap[symbol] || ["Mainnet"];
+      setSelectedNetwork(networks[0]);
     }
   }, [open, initialSymbol, wallets]);
 
   useEffect(() => {
-    if (!selectedCrypto || !user) {
+    if (!selectedCrypto || !user || !selectedNetwork) {
       setWalletAddress("");
       return;
     }
 
+    const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
     const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-    const targetWallet = userWallets.find(w => w.chainId === selectedCrypto);
+    const targetWallet = userWallets.find(w => w.chainId === symbolToUse);
     
     if (targetWallet) {
       setWalletAddress(targetWallet.address);
     } else {
-      setWalletAddress("");
+      // If specific wallet not found, try to get the base one
+      const baseWallet = userWallets.find(w => w.chainId === selectedCrypto);
+      setWalletAddress(baseWallet?.address || "");
     }
-  }, [selectedCrypto, user]);
+  }, [selectedCrypto, selectedNetwork, user]);
 
   const handleCopyAddress = () => {
     if (walletAddress) {
@@ -69,16 +95,6 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
   const handleClose = () => {
     onOpenChange(false);
-  };
-
-  const networkMap: Record<string, string> = {
-    BTC: "Bitcoin (SegWit)",
-    ETH: "Ethereum (ERC-20)",
-    SOL: "Solana",
-    BNB: "Binance Smart Chain (BEP-20)",
-    TRX: "Tron (TRC-20)",
-    USDT: "Ethereum (ERC-20)",
-    USDC: "Ethereum (ERC-20)",
   };
 
   return (
@@ -102,7 +118,11 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
           {/* Asset Selection */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground/70">Asset</label>
-            <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+            <Select value={selectedCrypto} onValueChange={(value) => {
+              setSelectedCrypto(value);
+              const networks = networkMap[value] || ["Mainnet"];
+              setSelectedNetwork(networks[0]);
+            }}>
               <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
                 <SelectValue>
                   <div className="flex items-center gap-2">
@@ -137,9 +157,18 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
           {/* Network Display */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground/70">Network</label>
-            <div className="h-11 px-3 flex items-center bg-muted/20 border border-border/30 rounded-lg text-foreground/40 font-medium text-sm">
-              {networkMap[selectedCrypto] || "Mainnet"}
-            </div>
+            <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+              <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
+                <SelectValue placeholder="Select a network" />
+              </SelectTrigger>
+              <SelectContent className="rounded-lg">
+                {(networkMap[selectedCrypto] || ["Mainnet"]).map((network) => (
+                  <SelectItem key={network} value={network} className="rounded-md">
+                    <span className="font-medium text-sm">{network}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Deposit Address Section */}
@@ -166,7 +195,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
               <div className="w-full space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold">{selectedCrypto} #1 ({networkMap[selectedCrypto]?.split(' ')[0] || selectedCrypto})</span>
+                  <span className="text-xs font-bold">{selectedCrypto} #1 ({selectedNetwork?.split(' ')[0] || selectedCrypto})</span>
                   <Button
                     variant="ghost"
                     size="icon"
