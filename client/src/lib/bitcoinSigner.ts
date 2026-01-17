@@ -1,14 +1,13 @@
-// Bitcoin Transaction Signing (Native SegWit - bc1...)
 import * as bitcoin from 'bitcoinjs-lib';
 import { mnemonicToSeed } from './keyDerivation';
 import { HDKey } from '@scure/bip32';
-
-// const ECPair = ECPairFactory(ecc);
-// bitcoin.initEccLib(ecc);
-const ECPair = {} as any;
+import * as ecc from 'tiny-secp256k1';
 
 const DERIVATION_PATH = "m/84'/0'/0'/0/0"; // BIP84 for native SegWit
 const NETWORK = bitcoin.networks.bitcoin;
+
+// Initialize ECC for bitcoinjs-lib
+bitcoin.initEccLib(ecc);
 
 export interface BitcoinUTXO {
   txid: string;
@@ -128,7 +127,7 @@ export async function signBitcoinTransaction(
       index: utxo.vout,
       witnessUtxo: {
         script: p2wpkh.output!,
-        value: BigInt(utxo.value),
+        value: BigInt(Math.floor(utxo.value)),
       },
     });
   }
@@ -136,7 +135,7 @@ export async function signBitcoinTransaction(
   // Add recipient output
   psbt.addOutput({
     address: request.to,
-    value: BigInt(request.amount),
+    value: BigInt(Math.floor(request.amount)),
   });
 
   // Add change output if needed (dust threshold ~546 satoshis)
@@ -144,22 +143,32 @@ export async function signBitcoinTransaction(
     const changeAddr = request.changeAddress || fromAddress;
     psbt.addOutput({
       address: changeAddr,
-      value: BigInt(change),
+      value: BigInt(Math.floor(change)),
     });
   }
 
   // Sign all inputs
   for (let i = 0; i < request.utxos.length; i++) {
-    // psbt.signInput(i, keyPair);
+    const seed = await mnemonicToSeed(mnemonic);
+    const hdKey = HDKey.fromMasterSeed(seed);
+    const child = hdKey.derive(DERIVATION_PATH);
+    const privateKey = Buffer.from(child.privateKey!);
+    
+    // We need an ECPair to sign
+    const { ECPairFactory } = await import('ecpair');
+    const ECPair = ECPairFactory(ecc);
+    const signer = ECPair.fromPrivateKey(privateKey);
+    
+    psbt.signInput(i, signer);
   }
 
   // Finalize and extract transaction
-  // psbt.finalizeAllInputs();
-  // const signedTx = psbt.extractTransaction();
+  psbt.finalizeAllInputs();
+  const signedTx = psbt.extractTransaction();
 
   return {
-    signedTx: '', // signedTx.toHex(),
-    txid: '', // signedTx.getId(),
+    signedTx: signedTx.toHex(),
+    txid: signedTx.getId(),
     from: fromAddress,
     to: request.to,
     amount: request.amount,
