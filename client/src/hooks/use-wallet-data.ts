@@ -39,16 +39,19 @@ export function useWalletData() {
         
         let totalBalance = 0;
         const assets = wallets.map(wallet => {
-          const priceData = prices[wallet.crypto_symbol] || { current_price: 0, price_change_percentage_24h: 0 };
-          const value = wallet.balance * priceData.current_price;
+          const rawSymbol = wallet.crypto_symbol || '';
+          const baseSymbol = rawSymbol.includes('-') ? rawSymbol.split('-')[0].toUpperCase() : rawSymbol.toUpperCase();
+          const priceData = prices[rawSymbol] || prices[baseSymbol] || { current_price: 0, price_change_percentage_24h: 0 };
+          const balance = typeof wallet.balance === 'number' ? wallet.balance : 0;
+          const value = balance * (priceData.current_price || 0);
           totalBalance += value;
           
           return {
-            symbol: wallet.crypto_symbol,
-            name: ASSET_NAMES[wallet.crypto_symbol] || wallet.crypto_symbol,
-            balance: wallet.balance,
+            symbol: rawSymbol,
+            name: ASSET_NAMES[rawSymbol] || ASSET_NAMES[baseSymbol] || rawSymbol,
+            balance: balance,
             value: value,
-            change24h: priceData.price_change_percentage_24h
+            change24h: priceData.price_change_percentage_24h || 0
           };
         });
 
