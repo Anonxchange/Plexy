@@ -80,17 +80,29 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
     const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-    console.log("Receive Dialog: Found wallets", userWallets.length);
-    const targetWallet = userWallets.find(w => w.chainId === symbolToUse);
+    console.log("Receive Dialog: Found wallets", userWallets.length, "for user", user.id);
+    
+    // Look for a wallet matching the specific symbol or base symbol
+    const targetWallet = userWallets.find(w => {
+      const normalizedChainId = w.chainId.toUpperCase();
+      const normalizedSymbolToUse = symbolToUse.toUpperCase();
+      const normalizedSelectedCrypto = selectedCrypto.toUpperCase();
+      
+      return normalizedChainId === normalizedSymbolToUse || 
+             normalizedChainId === normalizedSelectedCrypto ||
+             normalizedChainId === `${normalizedSelectedCrypto}-ERC20` ||
+             normalizedChainId === `${normalizedSelectedCrypto}-BEP20` ||
+             normalizedChainId === `${normalizedSelectedCrypto}-TRC20` ||
+             normalizedChainId === `${normalizedSelectedCrypto}-SOL` ||
+             normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`);
+    });
     
     if (targetWallet) {
-      console.log("Receive Dialog: Found target wallet", symbolToUse, targetWallet.address);
+      console.log("Receive Dialog: Found target wallet", targetWallet.chainId, targetWallet.address);
       setWalletAddress(targetWallet.address);
     } else {
-      // If specific wallet not found, try to get the base one
-      const baseWallet = userWallets.find(w => w.chainId === selectedCrypto);
-      console.log("Receive Dialog: Fallback to base wallet", selectedCrypto, baseWallet?.address);
-      setWalletAddress(baseWallet?.address || "");
+      console.log("Receive Dialog: No target wallet found for", symbolToUse);
+      setWalletAddress("");
     }
   }, [selectedCrypto, selectedNetwork, user]);
 
