@@ -135,9 +135,10 @@ class NonCustodialWalletManager {
       walletType = "tron";
     } else {
       // Default to Ethereum (BNB, ETH, etc)
-      const hdNode = ethers.HDNodeWallet.fromSeed(seed, undefined, "m/44'/60'/0'/0/0");
-      privateKey = hdNode.privateKey;
-      address = hdNode.address;
+      const hdNode = ethers.HDNodeWallet.fromSeed(seed);
+      const derivedNode = hdNode.derivePath("m/44'/60'/0'/0/0");
+      privateKey = derivedNode.privateKey;
+      address = derivedNode.address;
     }
     
     // Encrypt private key and mnemonic with user password using KDF
@@ -259,9 +260,10 @@ class NonCustodialWalletManager {
           address = "T" + base58Encode(publicKey).slice(0, 33);
           privateKey = account.toWIF();
         } else {
-          const hdNode = ethers.HDNodeWallet.fromSeed(seed, undefined, "m/44'/60'/0'/0/0");
-          privateKey = hdNode.privateKey;
-          address = hdNode.address;
+          const hdNode = ethers.HDNodeWallet.fromSeed(seed);
+          const derivedNode = hdNode.derivePath("m/44'/60'/0'/0/0");
+          privateKey = derivedNode.privateKey;
+          address = derivedNode.address;
         }
       } else {
         if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
