@@ -49,17 +49,16 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       throw new Error(result.error);
     }
 
-    const balances = result?.balances || result?.walletBalances || result?.data?.balances || result?.data || result || [];
+    const balances = result?.balances || result?.walletBalances || result?.data?.balances || result?.data || result || {};
     console.log("[getUserWallets] Raw result from monitor-deposits:", JSON.stringify(result, null, 2));
     
     // Ensure balances is an array or object before processing
     if (!balances || (typeof balances !== 'object' && !Array.isArray(balances))) {
       console.warn("[getUserWallets] No valid balances found in result");
-      return [];
     }
 
     // If it's an object with keys being symbols
-    const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances).map(([symbol, data]: [string, any]) => {
+    const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances || {}).map(([symbol, data]: [string, any]) => {
       if (typeof data === 'object' && data !== null) {
         return {
           symbol: data.symbol || data.currency || data.chainId || symbol,
