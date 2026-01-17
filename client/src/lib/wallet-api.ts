@@ -88,6 +88,25 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       isNonCustodial: true
     }));
 
+    // Sync with local non-custodial wallets to ensure we have all addresses
+    const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
+    localWallets.forEach(local => {
+      const exists = wallets.find(w => w.crypto_symbol === local.chainId || w.deposit_address === local.address);
+      if (!exists) {
+        wallets.push({
+          id: local.id,
+          user_id: userId,
+          crypto_symbol: local.chainId,
+          balance: local.balance || 0,
+          locked_balance: 0,
+          deposit_address: local.address,
+          created_at: local.createdAt,
+          updated_at: local.createdAt,
+          isNonCustodial: true
+        });
+      }
+    });
+
     console.log("[getUserWallets] Synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
     return wallets;
   } catch (e) {
