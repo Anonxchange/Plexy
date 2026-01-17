@@ -135,9 +135,9 @@ class NonCustodialWalletManager {
       walletType = "tron";
     } else {
       // Default to Ethereum (BNB, ETH, etc)
-      const wallet = ethers.HDNodeWallet.fromSeed(seed);
-      privateKey = wallet.privateKey;
-      address = wallet.address;
+      const hdNode = ethers.HDNodeWallet.fromSeed(seed, undefined, "m/44'/60'/0'/0/0");
+      privateKey = hdNode.privateKey;
+      address = hdNode.address;
     }
     
     // Encrypt private key and mnemonic with user password using KDF
@@ -247,10 +247,21 @@ class NonCustodialWalletManager {
           if (!btcAddress) throw new Error("Failed to derive Bitcoin address");
           address = btcAddress;
           privateKey = account.toWIF();
+        } else if (chainId === "Solana") {
+          const root = bip32.fromSeed(seed);
+          const account = root.derivePath("m/44'/501'/0'/0'");
+          address = base58Encode(account.publicKey);
+          privateKey = account.toWIF();
+        } else if (chainId === "Tron (TRC-20)") {
+          const root = bip32.fromSeed(seed);
+          const account = root.derivePath("m/44'/195'/0'/0/0");
+          const publicKey = account.publicKey.slice(1);
+          address = "T" + base58Encode(publicKey).slice(0, 33);
+          privateKey = account.toWIF();
         } else {
-          const wallet = ethers.HDNodeWallet.fromSeed(seed);
-          privateKey = wallet.privateKey;
-          address = wallet.address;
+          const hdNode = ethers.HDNodeWallet.fromSeed(seed, undefined, "m/44'/60'/0'/0/0");
+          privateKey = hdNode.privateKey;
+          address = hdNode.address;
         }
       } else {
         if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
