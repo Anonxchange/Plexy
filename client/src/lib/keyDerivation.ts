@@ -6,8 +6,10 @@ export async function mnemonicToSeed(mnemonic: string): Promise<Uint8Array> {
   return bip39MnemonicToSeed(mnemonic);
 }
 
-export async function deriveKey(password: string, salt: string, iterations: number = 16384): Promise<string> {
+export async function deriveKey(password: string, userId: string, iterations: number = 16384): Promise<string> {
   const passwordBuffer = Buffer.from(password.normalize('NFKC'));
+  // Use a stable prefix + userId as salt to ensure consistency across devices
+  const salt = `pexly_salt_v1_${userId}`;
   const saltBuffer = Buffer.from(salt);
   
   // scrypt parameters: N (cost), r (block size), p (parallelization)
