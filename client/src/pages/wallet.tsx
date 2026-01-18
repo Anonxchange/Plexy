@@ -57,7 +57,13 @@ export default function WalletPage() {
           wallet.crypto_symbol === "ETH" ? "Ethereum" :
           wallet.crypto_symbol === "SOL" ? "Solana" :
           wallet.crypto_symbol === "USDT" ? "Tether" :
-          wallet.crypto_symbol === "USDC" ? "USD Coin" : wallet.crypto_symbol,
+          wallet.crypto_symbol === "USDC" ? "USD Coin" : 
+          wallet.crypto_symbol === "BNB" ? "BNB" :
+          wallet.crypto_symbol === "XRP" ? "XRP" :
+          wallet.crypto_symbol === "MATIC" ? "Polygon" :
+          wallet.crypto_symbol === "ARB" ? "Arbitrum" :
+          wallet.crypto_symbol === "BASE" ? "Base" :
+          wallet.crypto_symbol,
     icon: wallet.crypto_symbol
   }));
 
