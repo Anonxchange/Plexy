@@ -186,6 +186,10 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
                          asset.symbol === "USDT" ? "Tether" : 
                          asset.symbol === "USDC" ? "USD Coin" : 
                          asset.symbol === "BNB" ? "BNB" :
+                         asset.symbol === "XRP" ? "XRP" :
+                         asset.symbol === "MATIC" ? "Polygon" :
+                         asset.symbol === "ARB" ? "Arbitrum" :
+                         asset.symbol === "BASE" ? "Base" :
                          asset.symbol === "TRX" ? "Tron" : asset.symbol}
                       </div>
                     </div>
