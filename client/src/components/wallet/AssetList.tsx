@@ -187,7 +187,6 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
                          asset.symbol === "USDC" ? "USD Coin" : 
                          asset.symbol === "BNB" ? "BNB" :
                          asset.symbol === "TRX" ? "Tron" : asset.symbol}
-                        <span className="ml-2 text-[10px] text-muted-foreground font-medium">{asset.symbol}</span>
                       </div>
                     </div>
                   </TableCell>
