@@ -31,9 +31,23 @@ const VALID_CRYPTO_SYMBOLS = Object.keys(ASSET_NAMES);
 export function useWalletData() {
   const { user } = useAuth();
   
+  // Initial placeholder data based on supported assets
+  const initialData: WalletData = {
+    totalBalance: 0,
+    userId: user?.id,
+    assets: Object.entries(ASSET_NAMES).map(([symbol, name]) => ({
+      symbol,
+      name,
+      balance: 0,
+      value: 0,
+      change24h: 0
+    }))
+  };
+
   return useQuery<WalletData>({
     queryKey: ["/api/wallet", user?.id],
     enabled: !!user?.id,
+    placeholderData: initialData,
     queryFn: async () => {
       try {
         const rawWallets = await getUserWallets(user!.id);
