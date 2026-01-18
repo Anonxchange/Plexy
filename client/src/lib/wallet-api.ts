@@ -37,26 +37,9 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
   console.log("[getUserWallets] Fetching balances for user:", userId);
 
   try {
-    const { data: result, error } = await supabase.functions.invoke('monitor-deposits');
-
-    if (error) {
-      console.error("[getUserWallets] Edge function error:", error);
-      throw new Error(error.message);
-    }
-
-    if (result?.error) {
-      console.error("[getUserWallets] API error:", result.error);
-      throw new Error(result.error);
-    }
-
-    const balances = result?.balances || result?.walletBalances || result?.data?.balances || result?.data || result || {};
-    console.log("[getUserWallets] Raw result from monitor-deposits:", JSON.stringify(result, null, 2));
+    const result = await supabase.functions.invoke('monitor-deposits');
+    const balances = result?.data?.balances || result?.balances || result?.walletBalances || result?.data || result || {};
     
-    // Ensure balances is an array or object before processing
-    if (!balances || (typeof balances !== 'object' && !Array.isArray(balances))) {
-      console.warn("[getUserWallets] No valid balances found in result");
-    }
-
     // If it's an object with keys being symbols
     const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances || {}).map(([symbol, data]: [string, any]) => {
       if (typeof data === 'object' && data !== null) {
@@ -73,19 +56,25 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       };
     });
 
-    console.log("[getUserWallets] Normalized balances array:", JSON.stringify(balancesArray, null, 2));
-
-    const wallets: Wallet[] = balancesArray.map((b: any) => ({
-      id: b.wallet_id || b.address || b.id || `wallet-${b.symbol}`,
-      user_id: userId,
-      crypto_symbol: b.symbol || b.crypto_symbol || b.currency,
-      balance: typeof b.balance === 'number' ? b.balance : 0,
-      locked_balance: typeof b.locked_balance === 'number' ? b.locked_balance : 0,
-      deposit_address: b.address || b.deposit_address,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      isNonCustodial: true
-    }));
+    // CRITICAL: Filter out non-crypto symbols (junk from API responses like "success", "message", etc.)
+    const VALID_CRYPTO_SYMBOLS = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'TRX', 'LTC', 'XRP', 'ADA', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'NEAR', 'FTM', 'ALGO', 'VET'];
+    
+    const wallets: Wallet[] = balancesArray
+      .filter((b: any) => {
+        const symbol = (b.symbol || b.crypto_symbol || b.currency || '').toUpperCase();
+        return VALID_CRYPTO_SYMBOLS.includes(symbol) || VALID_CRYPTO_SYMBOLS.some(s => symbol.startsWith(s + '-'));
+      })
+      .map((b: any) => ({
+        id: b.wallet_id || b.address || b.id || `wallet-${b.symbol}`,
+        user_id: userId,
+        crypto_symbol: (b.symbol || b.crypto_symbol || b.currency).toUpperCase(),
+        balance: typeof b.balance === 'number' ? b.balance : 0,
+        locked_balance: typeof b.locked_balance === 'number' ? b.locked_balance : 0,
+        deposit_address: b.address || b.deposit_address,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        isNonCustodial: true
+      }));
 
     // Sync with local non-custodial wallets to ensure we have all addresses
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
@@ -106,10 +95,13 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       }
     });
 
+    // For non-custodial, we should really be checking the blockchain directly
+    // but for now we ensure it's handled as much as possible on the client side
+    // avoiding unnecessary backend calls if possible, or ensuring they are non-blocking
     console.log("[getUserWallets] Synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
     return wallets;
   } catch (e) {
-    console.error(`[getUserWallets] Global sync error:`, e);
+    console.warn(`[getUserWallets] Remote sync failed, using local non-custodial data:`, e);
     // Fallback to local wallets if sync fails
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
     return localWallets.map((w) => {
