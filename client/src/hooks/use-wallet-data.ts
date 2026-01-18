@@ -23,6 +23,10 @@ const ASSET_NAMES: Record<string, string> = {
   USDT: "Tether",
   USDC: "USD Coin",
   BNB: "BNB",
+  XRP: "XRP",
+  MATIC: "Polygon",
+  ARB: "Arbitrum",
+  BASE: "Base",
 };
 
 // Valid crypto symbols to prevent junk data (like "message", "success", etc.)
