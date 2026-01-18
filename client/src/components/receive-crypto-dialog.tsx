@@ -78,17 +78,28 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
     const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
     
+    // Look for a wallet matching the specific symbol or base symbol
     const targetWallet = userWallets.find(w => {
       const normalizedChainId = w.chainId.toUpperCase();
       const normalizedSymbolToUse = symbolToUse.toUpperCase();
       const normalizedSelectedCrypto = selectedCrypto.toUpperCase();
       
+      // Strict matching for networks to avoid Tron/ETH address mixup
+      if (selectedNetwork.includes('TRC-20')) {
+        return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX');
+      }
+      if (selectedNetwork.includes('ERC-20')) {
+        return normalizedChainId.includes('ERC20') || (normalizedChainId === 'ETH' && normalizedSelectedCrypto === 'ETH');
+      }
+      if (selectedNetwork.includes('BEP-20')) {
+        return normalizedChainId.includes('BEP20') || (normalizedChainId === 'BNB' && normalizedSelectedCrypto === 'BNB');
+      }
+      if (selectedNetwork.includes('SPL') || selectedNetwork === 'Solana') {
+        return normalizedChainId.includes('SOL') || (normalizedChainId === 'SOLANA' && normalizedSelectedCrypto === 'SOL');
+      }
+      
       return normalizedChainId === normalizedSymbolToUse || 
              normalizedChainId === normalizedSelectedCrypto ||
-             normalizedChainId === `${normalizedSelectedCrypto}-ERC20` ||
-             normalizedChainId === `${normalizedSelectedCrypto}-BEP20` ||
-             normalizedChainId === `${normalizedSelectedCrypto}-TRC20` ||
-             normalizedChainId === `${normalizedSelectedCrypto}-SOL` ||
              normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`);
     });
     
