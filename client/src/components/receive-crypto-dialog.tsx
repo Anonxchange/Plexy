@@ -120,12 +120,22 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     onOpenChange(false);
   };
 
+  const ASSET_NAMES: Record<string, string> = {
+    BTC: "Bitcoin",
+    ETH: "Ethereum",
+    USDT: "Tether",
+    USDC: "USD Coin",
+    BNB: "BNB",
+    SOL: "Solana",
+    TRX: "Tron",
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[420px] p-0 bg-background border-none gap-0 overflow-hidden">
         <DialogHeader className="p-4 flex flex-row items-center justify-between border-b border-border/50">
           <DialogTitle className="text-base font-bold">
-            Receive {selectedCrypto}
+            Receive {ASSET_NAMES[selectedCrypto] || selectedCrypto}
           </DialogTitle>
           <Button
             variant="ghost"
@@ -151,13 +161,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                       className="w-5 h-5 rounded-full"
                     />
                     <span className="font-bold text-sm">
-                      {selectedCrypto === "ETH" ? "Ethereum" : 
-                       selectedCrypto === "BTC" ? "Bitcoin" : 
-                       selectedCrypto === "SOL" ? "Solana" : 
-                       selectedCrypto === "USDT" ? "Tether" : 
-                       selectedCrypto === "USDC" ? "USD Coin" : 
-                       selectedCrypto === "BNB" ? "BNB" :
-                       selectedCrypto === "TRX" ? "Tron" : selectedCrypto}
+                      {ASSET_NAMES[selectedCrypto] || selectedCrypto}
                     </span>
                   </div>
                 </SelectValue>
@@ -168,25 +172,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                 sideOffset={4}
               >
                 <ScrollArea className="h-full w-full">
-                  {wallets
-                    .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
-                    .map((wallet) => (
-                    <SelectItem key={wallet.symbol} value={wallet.symbol} className="rounded-md">
+                  {Object.entries(ASSET_NAMES).map(([symbol, name]) => (
+                    <SelectItem key={symbol} value={symbol} className="rounded-md">
                       <div className="flex items-center gap-2 py-0.5">
                         <img 
-                          src={cryptoIconUrls[wallet.symbol] || `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`} 
-                          alt={wallet.symbol}
+                          src={cryptoIconUrls[symbol] || `https://ui-avatars.com/api/?name=${symbol}&background=random`} 
+                          alt={symbol}
                           className="w-5 h-5 rounded-full"
                         />
-                        <span className="font-bold text-sm">
-                          {wallet.symbol === "ETH" ? "Ethereum" : 
-                           wallet.symbol === "BTC" ? "Bitcoin" : 
-                           wallet.symbol === "SOL" ? "Solana" : 
-                           wallet.symbol === "USDT" ? "Tether" : 
-                           wallet.symbol === "USDC" ? "USD Coin" : 
-                           wallet.symbol === "BNB" ? "BNB" :
-                           wallet.symbol === "TRX" ? "Tron" : wallet.symbol}
-                        </span>
+                        <span className="font-bold text-sm">{name}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -241,13 +235,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
               <div className="w-full space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold">
-                    {selectedCrypto === "ETH" ? "Ethereum" : 
-                     selectedCrypto === "BTC" ? "Bitcoin" : 
-                     selectedCrypto === "SOL" ? "Solana" : 
-                     selectedCrypto === "USDT" ? "Tether" : 
-                     selectedCrypto === "USDC" ? "USD Coin" : 
-                     selectedCrypto === "BNB" ? "BNB" :
-                     selectedCrypto === "TRX" ? "Tron" : selectedCrypto} #1 ({selectedNetwork?.split(' ')[0] || selectedCrypto})
+                    {ASSET_NAMES[selectedCrypto] || selectedCrypto} #1 ({selectedNetwork?.split(' ')[0] || selectedCrypto})
                   </span>
                   <Button
                     variant="ghost"
