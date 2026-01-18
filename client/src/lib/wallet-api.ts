@@ -38,6 +38,12 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
 
   try {
     const result = await supabase.functions.invoke('monitor-deposits');
+    
+    // Check for potential error without stopping execution
+    if (result?.error) {
+      console.warn("[getUserWallets] Edge function sync failed:", result.error);
+    }
+
     const balances = result?.data?.balances || result?.balances || result?.walletBalances || result?.data || result || {};
     
     // If it's an object with keys being symbols
