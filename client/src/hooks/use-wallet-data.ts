@@ -41,6 +41,7 @@ export function useWalletData() {
         // Filter out junk data immediately
         const wallets = rawWallets.filter(w => {
           const symbol = (w.crypto_symbol || "").toUpperCase();
+          // Filter out technical fields like "success", "message", "timestamp"
           return VALID_CRYPTO_SYMBOLS.includes(symbol) || 
                  VALID_CRYPTO_SYMBOLS.some(s => symbol.startsWith(s + "-"));
         });
