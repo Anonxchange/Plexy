@@ -45,6 +45,20 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
   };
 
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
+  const handleCopyAddress = () => {
+    if (walletAddress) {
+      navigator.clipboard.writeText(walletAddress);
+      toast({
+        title: "Copied",
+        description: "Wallet address copied to clipboard",
+      });
+    }
+  };
+
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
     if (crypto === 'USDT' || crypto === 'USDC') {
       if (network.includes('ERC-20')) return `${crypto}-ERC20`;
@@ -56,23 +70,6 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   };
 
   useEffect(() => {
-    if (open) {
-      const symbol = initialSymbol || wallets[0]?.symbol || "BTC";
-      console.log("Receive Dialog: Initializing with", symbol);
-      setSelectedCrypto(symbol);
-      const networks = networkMap[symbol] || ["Mainnet"];
-      setSelectedNetwork(networks[0]);
-    }
-  }, [open, initialSymbol, wallets]);
-
-  const handleAssetChange = (value: string) => {
-    console.log("Receive Dialog: Asset changed to", value);
-    setSelectedCrypto(value);
-    const networks = networkMap[value] || ["Mainnet"];
-    setSelectedNetwork(networks[0]);
-  };
-
-  useEffect(() => {
     if (!selectedCrypto || !user || !selectedNetwork) {
       setWalletAddress("");
       return;
@@ -80,9 +77,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
     const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-    console.log("Receive Dialog: Found wallets", userWallets.length, "for user", user.id);
     
-    // Look for a wallet matching the specific symbol or base symbol
     const targetWallet = userWallets.find(w => {
       const normalizedChainId = w.chainId.toUpperCase();
       const normalizedSymbolToUse = symbolToUse.toUpperCase();
@@ -98,27 +93,24 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     });
     
     if (targetWallet) {
-      console.log("Receive Dialog: Found target wallet", targetWallet.chainId, targetWallet.address);
       setWalletAddress(targetWallet.address);
     } else {
-      console.log("Receive Dialog: No target wallet found for", symbolToUse);
       setWalletAddress("");
     }
   }, [selectedCrypto, selectedNetwork, user]);
 
-  const handleCopyAddress = () => {
-    if (walletAddress) {
-      navigator.clipboard.writeText(walletAddress);
-      toast({
-        title: "Copied",
-        description: "Wallet address copied to clipboard",
-      });
-    }
+  const handleAssetChange = (value: string) => {
+    setSelectedCrypto(value);
+    const networks = networkMap[value] || ["Mainnet"];
+    setSelectedNetwork(networks[0]);
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-  };
+  useEffect(() => {
+    if (open) {
+      const symbol = initialSymbol || "BTC";
+      handleAssetChange(symbol);
+    }
+  }, [open, initialSymbol]);
 
   const ASSET_NAMES: Record<string, string> = {
     BTC: "Bitcoin",
@@ -173,8 +165,8 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
               >
                 <ScrollArea className="h-full w-full">
                   {Object.entries(ASSET_NAMES).map(([symbol, name]) => (
-                    <SelectItem key={symbol} value={symbol} className="rounded-md">
-                      <div className="flex items-center gap-2 py-0.5">
+                    <SelectItem key={symbol} value={symbol} className="rounded-md cursor-pointer">
+                      <div className="flex items-center gap-2 py-1">
                         <img 
                           src={cryptoIconUrls[symbol] || `https://ui-avatars.com/api/?name=${symbol}&background=random`} 
                           alt={symbol}
