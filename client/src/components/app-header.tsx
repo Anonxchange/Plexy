@@ -498,7 +498,7 @@ export function AppHeader() {
                 className="w-56"
                 onPointerEnter={() => setActiveDropdown('support')}
               >
-                <DropdownMenuItem onClick={() => { navigate('/support'); setActiveDropdown(null); }} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => { navigate('/contact'); setActiveDropdown(null); }} className="cursor-pointer">
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Contact Support
                 </DropdownMenuItem>
