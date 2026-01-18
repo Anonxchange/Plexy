@@ -25,6 +25,9 @@ const ASSET_NAMES: Record<string, string> = {
   TRX: "Tron",
 };
 
+// Valid crypto symbols to prevent junk data (like "message", "success", etc.)
+const VALID_CRYPTO_SYMBOLS = Object.keys(ASSET_NAMES);
+
 export function useWalletData() {
   const { user } = useAuth();
   
@@ -33,9 +36,17 @@ export function useWalletData() {
     enabled: !!user?.id,
     queryFn: async () => {
       try {
-        const wallets = await getUserWallets(user!.id);
+        const rawWallets = await getUserWallets(user!.id);
+        
+        // Filter out junk data immediately
+        const wallets = rawWallets.filter(w => {
+          const symbol = (w.crypto_symbol || "").toUpperCase();
+          return VALID_CRYPTO_SYMBOLS.includes(symbol) || 
+                 VALID_CRYPTO_SYMBOLS.some(s => symbol.startsWith(s + "-"));
+        });
+
         const symbols = wallets.map(w => w.crypto_symbol);
-        const prices = await getCryptoPrices(symbols.length > 0 ? symbols : Object.keys(ASSET_NAMES));
+        const prices = await getCryptoPrices(symbols.length > 0 ? symbols : VALID_CRYPTO_SYMBOLS);
         
         let totalBalance = 0;
         const assets = wallets.map(wallet => {
