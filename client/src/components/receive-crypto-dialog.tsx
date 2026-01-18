@@ -150,7 +150,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                       alt={selectedCrypto}
                       className="w-5 h-5 rounded-full"
                     />
-                    <span className="font-bold text-sm">{selectedCrypto}</span>
+                    <span className="font-bold text-sm">
+                      {selectedCrypto === "ETH" ? "Ethereum" : 
+                       selectedCrypto === "BTC" ? "Bitcoin" : 
+                       selectedCrypto === "SOL" ? "Solana" : 
+                       selectedCrypto === "USDT" ? "Tether" : 
+                       selectedCrypto === "USDC" ? "USD Coin" : 
+                       selectedCrypto === "BNB" ? "BNB" :
+                       selectedCrypto === "TRX" ? "Tron" : selectedCrypto}
+                    </span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
@@ -170,7 +178,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                           alt={wallet.symbol}
                           className="w-5 h-5 rounded-full"
                         />
-                        <span className="font-bold text-sm">{wallet.symbol}</span>
+                        <span className="font-bold text-sm">
+                          {wallet.symbol === "ETH" ? "Ethereum" : 
+                           wallet.symbol === "BTC" ? "Bitcoin" : 
+                           wallet.symbol === "SOL" ? "Solana" : 
+                           wallet.symbol === "USDT" ? "Tether" : 
+                           wallet.symbol === "USDC" ? "USD Coin" : 
+                           wallet.symbol === "BNB" ? "BNB" :
+                           wallet.symbol === "TRX" ? "Tron" : wallet.symbol}
+                        </span>
                       </div>
                     </SelectItem>
                   ))}
@@ -215,8 +231,6 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                   includeMargin={false}
                   imageSettings={{
                     src: cryptoIconUrls[selectedCrypto],
-                    x: undefined,
-                    y: undefined,
                     height: 30,
                     width: 30,
                     excavate: true,
@@ -226,7 +240,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
               <div className="w-full space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold">{selectedCrypto} #1 ({selectedNetwork?.split(' ')[0] || selectedCrypto})</span>
+                  <span className="text-xs font-bold">
+                    {selectedCrypto === "ETH" ? "Ethereum" : 
+                     selectedCrypto === "BTC" ? "Bitcoin" : 
+                     selectedCrypto === "SOL" ? "Solana" : 
+                     selectedCrypto === "USDT" ? "Tether" : 
+                     selectedCrypto === "USDC" ? "USD Coin" : 
+                     selectedCrypto === "BNB" ? "BNB" :
+                     selectedCrypto === "TRX" ? "Tron" : selectedCrypto} #1 ({selectedNetwork?.split(' ')[0] || selectedCrypto})
+                  </span>
                   <Button
                     variant="ghost"
                     size="icon"
