@@ -160,10 +160,12 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {wallet?.assets.filter(a => !hideZero || a.balance > 0).map((asset) => {
+            {wallet?.assets.map((asset) => {
               const { price, change24h } = getAssetPrice(asset.symbol);
               const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
               const balanceValue = asset.balance * price;
+              
+              if (hideZero && asset.balance <= 0) return null;
               
               return (
                 <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
@@ -177,7 +179,16 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
                           (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
                         }}
                       />
-                      <div className="font-bold text-foreground">{asset.symbol}</div>
+                      <div className="font-bold text-foreground">
+                        {asset.symbol === "ETH" ? "Ethereum" : 
+                         asset.symbol === "BTC" ? "Bitcoin" : 
+                         asset.symbol === "SOL" ? "Solana" : 
+                         asset.symbol === "USDT" ? "Tether" : 
+                         asset.symbol === "USDC" ? "USD Coin" : 
+                         asset.symbol === "BNB" ? "BNB" :
+                         asset.symbol === "TRX" ? "Tron" : asset.symbol}
+                        <span className="ml-2 text-[10px] text-muted-foreground font-medium">{asset.symbol}</span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="py-4 hidden sm:table-cell">
