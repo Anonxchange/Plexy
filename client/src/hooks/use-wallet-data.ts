@@ -18,11 +18,11 @@ export interface WalletData {
 const ASSET_NAMES: Record<string, string> = {
   BTC: "Bitcoin",
   ETH: "Ethereum",
+  SOL: "Solana",
+  TRX: "Tron",
   USDT: "Tether",
   USDC: "USD Coin",
   BNB: "BNB",
-  SOL: "Solana",
-  TRX: "Tron",
 };
 
 // Valid crypto symbols to prevent junk data (like "message", "success", etc.)
