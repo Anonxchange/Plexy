@@ -166,8 +166,16 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {wallet?.assets?.map((asset) => {
-              if (!asset) return null;
+            {useMemo(() => {
+              if (!wallet?.assets) return [];
+              const seen = new Set();
+              return wallet.assets.filter(asset => {
+                const symbol = asset?.symbol?.toUpperCase();
+                if (!symbol || seen.has(symbol)) return false;
+                seen.add(symbol);
+                return true;
+              });
+            }, [wallet?.assets]).map((asset) => {
               const { price, change24h } = getAssetPrice(asset.symbol);
               const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
               const balanceValue = (asset.balance || 0) * (price || 0);
