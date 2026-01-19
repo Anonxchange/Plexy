@@ -88,6 +88,7 @@ import { TrustedUsers } from "@/pages/trusted-users";
 import { BlockedUsers } from "@/pages/blocked-users";
 import { TradeStatistics } from "@/pages/trade-statistics";
 import { Developer } from "./pages/developer";
+import { FundStaging } from "@/components/fund-staging";
 import KYCCallback from "@/pages/kyc-callback";
 import Analysis from "@/pages/analysis";
 import { OfferDetail } from "@/pages/offer-detail";
@@ -142,6 +143,7 @@ function Router() {
       <Route path="/devices" component={DevicesPage} />
       <Route path="/notification-settings" component={NotificationSettings} />
       <Route path="/developer" component={Developer} />
+      <Route path="/fund-staging" component={FundStaging} />
       <Route path="/verification" component={VerificationPage} />
       <Route path="/kyc/callback" component={KYCCallback} />
       <Route path="/merchant-application" component={MerchantApplicationPage} />
@@ -217,35 +219,69 @@ function AppContent() {
   );
 }
 
+import { OnchainKitProvider } from '@coinbase/onchainkit';
+import { base } from 'viem/chains';
+import { WagmiProvider, createConfig, http } from 'wagmi';
+import { coinbaseWallet } from 'wagmi/connectors';
+
+const wagmiConfig = createConfig({
+  chains: [base],
+  connectors: [
+    coinbaseWallet({
+      appName: 'Pexly',
+      preference: 'smartWalletOnly',
+    }),
+  ],
+  transports: {
+    [base.id]: http(),
+  },
+});
+
 function App() {
   // Check if on help subdomain - show only support page
   const isHelpSubdomain = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
   
   if (isHelpSubdomain) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <Support />
-            </TooltipProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <OnchainKitProvider
+            apiKey={(import.meta as any).env.VITE_ONCHAINKIT_API_KEY}
+            projectId={(import.meta as any).env.VITE_CDP_PROJECT_ID}
+            chain={base}
+          >
+            <ThemeProvider>
+              <AuthProvider>
+                <TooltipProvider>
+                  <Support />
+                </TooltipProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </OnchainKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
     );
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <TooltipProvider>
-            <GlobalNotificationListener />
-            <AppContent />
-          </TooltipProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <OnchainKitProvider
+          apiKey={(import.meta as any).env.VITE_ONCHAINKIT_API_KEY}
+          projectId={(import.meta as any).env.VITE_CDP_PROJECT_ID}
+          chain={base}
+        >
+          <ThemeProvider>
+            <AuthProvider>
+              <TooltipProvider>
+                <GlobalNotificationListener />
+                <AppContent />
+              </TooltipProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </OnchainKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }
 
