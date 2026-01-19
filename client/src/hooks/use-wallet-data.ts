@@ -64,38 +64,59 @@ export function useWalletData() {
                  VALID_CRYPTO_SYMBOLS.some(s => symbol.startsWith(s + "-"));
         });
 
-        const symbols = wallets.map(w => w.crypto_symbol);
+        const symbols = wallets.map(w => w.crypto_symbol).filter(Boolean);
         const prices = await getCryptoPrices(symbols.length > 0 ? symbols : VALID_CRYPTO_SYMBOLS);
         
         let totalBalance = 0;
         const assets = wallets.map(wallet => {
-          const rawSymbol = wallet.crypto_symbol || '';
-          const baseSymbol = rawSymbol.includes('-') ? rawSymbol.split('-')[0].toUpperCase() : rawSymbol.toUpperCase();
-          const priceData = prices[rawSymbol] || prices[baseSymbol] || { current_price: 0, price_change_percentage_24h: 0 };
-          const balance = typeof wallet.balance === 'number' ? wallet.balance : 0;
-          const value = balance * (priceData.current_price || 0);
-          totalBalance += value;
-          
-          return {
-            symbol: rawSymbol,
-            name: ASSET_NAMES[baseSymbol] || ASSET_NAMES[rawSymbol] || baseSymbol || rawSymbol,
-            balance: balance,
-            value: value,
-            change24h: priceData.price_change_percentage_24h || 0
-          };
-        });
+          try {
+            const rawSymbol = wallet?.crypto_symbol || '';
+            if (!rawSymbol) return null;
+            const baseSymbol = rawSymbol.includes('-') ? rawSymbol.split('-')[0].toUpperCase() : rawSymbol.toUpperCase();
+            
+            // Safe price data access
+            let priceData = { current_price: 0, price_change_percentage_24h: 0 };
+            if (prices) {
+              const found = Array.isArray(prices) 
+                ? prices.find((p: any) => p && (p.symbol === rawSymbol || p.symbol === (baseSymbol || "")))
+                : (prices[rawSymbol] || (baseSymbol ? prices[baseSymbol] : null));
+              
+              if (found) {
+                priceData = { 
+                  current_price: Number(found.price || found.current_price || 0), 
+                  price_change_percentage_24h: Number(found.change24h || found.price_change_percentage_24h || 0) 
+                };
+              }
+            }
+
+            const balance = typeof wallet.balance === 'number' ? wallet.balance : 0;
+            const value = balance * (priceData.current_price || 0);
+            totalBalance += value;
+            
+            return {
+              symbol: rawSymbol,
+              name: (ASSET_NAMES && baseSymbol && ASSET_NAMES[baseSymbol]) || (ASSET_NAMES && rawSymbol && ASSET_NAMES[rawSymbol]) || baseSymbol || rawSymbol,
+              balance: balance,
+              value: value,
+              change24h: priceData.price_change_percentage_24h || 0
+            };
+          } catch (e) {
+            console.error("Error processing wallet asset:", e);
+            return null;
+          }
+        }).filter((a): a is NonNullable<typeof a> => a !== null);
 
         // Ensure we always show the main assets even if 0 balance
-        const mainSymbols = Object.keys(ASSET_NAMES);
+        const mainSymbols = Object.keys(ASSET_NAMES || {});
         mainSymbols.forEach(symbol => {
-          if (!assets.find(a => a.symbol === symbol)) {
-            const priceData = prices[symbol] || { current_price: 0, price_change_percentage_24h: 0 };
+          if (assets && !assets.find(a => a?.symbol === symbol)) {
+            const priceData = (prices && !Array.isArray(prices) && prices[symbol]) || { current_price: 0, price_change_percentage_24h: 0 };
             assets.push({
               symbol,
-              name: ASSET_NAMES[symbol],
+              name: (ASSET_NAMES && ASSET_NAMES[symbol]) || symbol,
               balance: 0,
               value: 0,
-              change24h: priceData.price_change_percentage_24h
+              change24h: Number(priceData.price_change_percentage_24h || 0)
             });
           }
         });
