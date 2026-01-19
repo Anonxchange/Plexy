@@ -39,27 +39,7 @@ export function FundStaging() {
       console.log("Fetching CDP token for address:", userAddress);
       // Assets supported by OnchainKit Fund for simple onramp
       const assets = ["ETH", "USDC"];
-      // Using the CDP Create Session endpoint directly
-      const response = await fetch('https://api.cdp.coinbase.com/v1/onramp/sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_CDP_API_KEY}`
-        },
-        body: JSON.stringify({
-          address: userAddress,
-          assets: assets,
-          projectId: import.meta.env.VITE_CDP_PROJECT_ID
-        })
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error?.message || errData.message || 'Failed to create session');
-      }
-
-      const data = await response.json();
-      const token = data.session_token || data.token;
+      const token = await createCDPSession(userAddress, assets);
       console.log("CDP token received:", token ? "Yes" : "No");
       setSessionToken(token);
     } catch (err) {
