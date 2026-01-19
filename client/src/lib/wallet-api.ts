@@ -63,15 +63,15 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     });
 
     // CRITICAL: Filter out non-crypto symbols (junk from API responses like "success", "message", etc.)
-    const VALID_CRYPTO_SYMBOLS = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'TRX', 'LTC', 'XRP', 'ADA', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'NEAR', 'FTM', 'ALGO', 'VET'];
+    const VALID_CRYPTO_SYMBOLS = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'TRX', 'LTC', 'XRP', 'ADA', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'NEAR', 'FTM', 'ALGO', 'VET', 'BASE'];
     
     const wallets: Wallet[] = balancesArray
       .filter((b: any) => {
-        const symbol = (b.symbol || b.crypto_symbol || b.currency || '').toUpperCase();
-        return VALID_CRYPTO_SYMBOLS.includes(symbol) || VALID_CRYPTO_SYMBOLS.some(s => symbol.startsWith(s + '-'));
+        const symbol = (b?.symbol || b?.crypto_symbol || b?.currency || '').toUpperCase();
+        return symbol && (VALID_CRYPTO_SYMBOLS.includes(symbol) || VALID_CRYPTO_SYMBOLS.some(s => symbol.startsWith(s + '-')));
       })
       .map((b: any) => ({
-        id: b.wallet_id || b.address || b.id || `wallet-${b.symbol}`,
+        id: b.wallet_id || b.address || b.id || `wallet-${(b.symbol || b.crypto_symbol || b.currency)}`,
         user_id: userId,
         crypto_symbol: (b.symbol || b.crypto_symbol || b.currency).toUpperCase(),
         balance: typeof b.balance === 'number' ? b.balance : 0,
