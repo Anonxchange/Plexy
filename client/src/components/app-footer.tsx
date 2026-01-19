@@ -66,7 +66,7 @@ export function AppFooter() {
               <li><a href="wallet" className="text-sm hover:text-white transition-colors">Wallet</a></li>
               <li><a href="https://help.pexly.app" className="text-sm hover:text-white transition-colors">Support</a></li>
               <li><Link href="/bitcoin-calculator" className="text-sm hover:text-white transition-colors">Bitcoin Calculator</Link></li>
-              <li><a href="#" className="text-sm hover:text-white transition-colors">Peer-to-Peer Market Prices</a></li>
+              <li><Link href="/markets" className="text-sm hover:text-white transition-colors">Market Prices</Link></li>
             </ul>
           </div>
 
