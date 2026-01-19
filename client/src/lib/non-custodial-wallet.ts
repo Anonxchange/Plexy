@@ -133,8 +133,16 @@ class NonCustodialWalletManager {
       address = "T" + base58Encode(publicKey).slice(0, 33); // Simplified Tron address
       privateKey = account.toWIF();
       walletType = "tron";
+    } else if (chainId === "XRP") {
+      // XRP uses m/44'/144'/0'/0/0
+      const root = bip32.fromSeed(seed);
+      const account = root.derivePath("m/44'/144'/0'/0/0");
+      // XRP address format is complex, using simplified version for placeholder
+      address = "r" + base58Encode(account.publicKey).slice(0, 33);
+      privateKey = account.toWIF();
+      walletType = "xrp";
     } else {
-      // Default to Ethereum (BNB, ETH, etc)
+      // Default to Ethereum (BNB, ETH, Polygon, Arbitrum, Base, etc)
       const hdNode = ethers.HDNodeWallet.fromSeed(seed);
       const derivedNode = hdNode.derivePath("m/44'/60'/0'/0/0");
       privateKey = derivedNode.privateKey;
