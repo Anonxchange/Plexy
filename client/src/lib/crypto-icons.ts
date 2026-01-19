@@ -14,7 +14,7 @@ export const cryptoIconUrls: Record<string, string> = {
   XRP: "https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png",
   MATIC: "https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png",
   ARB: "https://assets.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg",
-  BASE: "https://assets.coingecko.com/coins/images/31069/small/base.png",
+  OP: "https://assets.coingecko.com/coins/images/25244/small/Optimism.png",
 };
 
 export const getCryptoIconUrl = (symbol: string): string => {
