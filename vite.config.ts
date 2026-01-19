@@ -5,11 +5,6 @@ import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
-// Detect Replit + dev environment
-const isReplitDev =
-  process.env.NODE_ENV !== "production" &&
-  process.env.REPL_ID !== undefined;
-
 export default defineConfig(() => {
   const plugins: PluginOption[] = [
     react(),
@@ -24,29 +19,16 @@ export default defineConfig(() => {
     }),
   ];
 
-  if (isReplitDev) {
-    // Dynamic import to avoid errors in production builds
-    plugins.push((async () => {
-      const { default: runtimeErrorModal } = await import("@replit/vite-plugin-runtime-error-modal");
-      return runtimeErrorModal();
-    })() as unknown as PluginOption);
-    
-    plugins.push((async () => {
-      const { devBanner } = await import("@replit/vite-plugin-dev-banner");
-      return devBanner();
-    })() as unknown as PluginOption);
-  }
-
   return {
     plugins,
-    root: path.resolve(import.meta.dirname, "client"),
-    envDir: path.resolve(import.meta.dirname),
+    root: path.resolve(process.cwd(), "client"),
+    envDir: path.resolve(process.cwd()),
     base: "/",
     resolve: {
       alias: {
-        "@": path.resolve(import.meta.dirname, "client", "src"),
-        "@shared": path.resolve(import.meta.dirname, "shared"),
-        "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+        "@": path.resolve(process.cwd(), "client", "src"),
+        "@shared": path.resolve(process.cwd(), "shared"),
+        "@assets": path.resolve(process.cwd(), "attached_assets"),
         "stream": "stream-browserify",
         "buffer": "buffer",
       },
@@ -63,6 +45,12 @@ export default defineConfig(() => {
       hmr: {
         overlay: false,
         clientPort: 443,
+      },
+      proxy: {
+        "/api": {
+          target: "http://localhost:3000",
+          changeOrigin: true,
+        },
       },
     },
     preview: {
