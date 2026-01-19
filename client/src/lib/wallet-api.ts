@@ -256,7 +256,7 @@ export async function createCDPSession(address: string, assets: string[]): Promi
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
 
-  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cdp-create-session`, {
+  const response = await fetch('/api/wallet/cdp-create-session', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
