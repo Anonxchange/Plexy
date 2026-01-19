@@ -251,12 +251,30 @@ export async function monitorDeposits(userId: string, cryptoSymbol: string): Pro
   return { detected: false, message: 'Non-custodial monitoring handled on-client' };
 }
 
-export async function monitorWithdrawals(userId: string): Promise<{
-  monitored: number;
-  updated: any[];
-  message?: string;
-}> {
-  return { monitored: 0, updated: [], message: 'Non-custodial monitoring handled on-client' };
+export async function createCDPSession(address: string, assets: string[]): Promise<string> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cdp-create-session`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      address,
+      assets,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create CDP session');
+  }
+
+  const result = await response.json();
+  return result.token || result.sessionToken;
 }
 
 export function startDepositMonitoring(
