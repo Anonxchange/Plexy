@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FundCard } from '@coinbase/onchainkit';
+import { FundCard } from '@coinbase/onchainkit/fund';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
 import { useWalletData } from "@/hooks/use-wallet-data";
