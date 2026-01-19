@@ -6,7 +6,9 @@ import { useWalletData } from "@/hooks/use-wallet-data";
 import { createCDPSession } from "@/lib/wallet-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Wallet } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function FundStaging() {
   const { user } = useAuth();
@@ -14,30 +16,41 @@ export function FundStaging() {
   const [sessionToken, setSessionToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [manualAddress, setManualAddress] = useState("");
 
   // Find Base wallet address
-  const baseWallet = walletBalances?.find(w => w.crypto_symbol === 'BASE' || w.crypto_symbol === 'ETH' && w.deposit_address?.startsWith('0x'));
-  const userAddress = baseWallet?.deposit_address;
+  const baseWallet = walletBalances?.find(w => 
+    w.crypto_symbol === 'BASE' || 
+    (w.crypto_symbol === 'ETH' && w.deposit_address?.startsWith('0x')) ||
+    w.isNonCustodial && w.deposit_address?.startsWith('0x')
+  );
+  
+  const userAddress = manualAddress || baseWallet?.deposit_address;
+
+  const fetchToken = async () => {
+    if (!userAddress) {
+      console.warn("No user address found for CDP session");
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      console.log("Fetching CDP token for address:", userAddress);
+      // Assets supported by OnchainKit Fund for simple onramp
+      const assets = ["ETH", "USDC"];
+      const token = await createCDPSession(userAddress, assets);
+      console.log("CDP token received:", token ? "Yes" : "No");
+      setSessionToken(token);
+    } catch (err) {
+      console.error("Failed to fetch CDP token:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate funding session");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchToken() {
-      if (!userAddress) return;
-      
-      setIsLoading(true);
-      setError(null);
-      try {
-        // Assets supported by OnchainKit Fund for simple onramp
-        const assets = ["ETH", "USDC"];
-        const token = await createCDPSession(userAddress, assets);
-        setSessionToken(token);
-      } catch (err) {
-        console.error("Failed to fetch CDP token:", err);
-        setError(err instanceof Error ? err.message : "Failed to generate funding session");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     if (userAddress && !sessionToken && !isLoading && !error) {
       fetchToken();
     }
@@ -52,6 +65,35 @@ export function FundStaging() {
         <CardContent className="space-y-4">
           <div className="text-sm text-muted-foreground mb-4">
             This page uses the Coinbase CDP API to generate a session token for the OnchainKit FundCard.
+          </div>
+
+          <div className="space-y-2 pb-4 border-b">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              Base Wallet Address (Manual Override)
+            </label>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Enter 0x address..." 
+                value={manualAddress}
+                onChange={(e) => {
+                  setManualAddress(e.target.value);
+                  setSessionToken(""); // Reset token when address changes
+                  setError(null);
+                }}
+                className="font-mono text-sm"
+              />
+              <Button 
+                onClick={fetchToken}
+                disabled={!manualAddress || isLoading}
+                size="sm"
+              >
+                {isLoading ? "Loading..." : "Apply"}
+              </Button>
+            </div>
+            {manualAddress && !manualAddress.startsWith('0x') && (
+              <p className="text-[10px] text-destructive">Address should start with 0x</p>
+            )}
           </div>
 
           {isWalletLoading || isLoading ? (
@@ -71,16 +113,17 @@ export function FundStaging() {
             <div className="text-center py-10 border-2 border-dashed rounded-lg">
               <p className="text-muted-foreground">
                 {!userAddress 
-                  ? "No Base wallet address found. Please ensure your non-custodial wallet is initialized." 
+                  ? "No Base wallet address found. Please enter one above or ensure your wallet is initialized." 
                   : "Initializing session..."}
               </p>
             </div>
           )}
 
           <div className="mt-8 p-4 bg-muted rounded-md overflow-hidden">
-            <h3 className="font-semibold mb-2">Debug Info:</h3>
-            <div className="grid grid-cols-1 gap-2 text-xs font-mono">
-              <p>User Address: {userAddress || "Not found"}</p>
+            <h3 className="font-semibold mb-2 text-sm">Debug Info:</h3>
+            <div className="grid grid-cols-1 gap-2 text-[10px] font-mono">
+              <p>Current Address: {userAddress || "Not found"}</p>
+              <p>Detection Source: {manualAddress ? "Manual Input" : (baseWallet ? "Auto-detected" : "None")}</p>
               <p className="truncate">Session Token: {sessionToken || "Waiting..."}</p>
             </div>
           </div>
