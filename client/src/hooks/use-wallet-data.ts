@@ -26,7 +26,7 @@ const ASSET_NAMES: Record<string, string> = {
   XRP: "XRP",
   MATIC: "Polygon",
   ARB: "Arbitrum",
-  BASE: "Base",
+  OP: "Optimism",
 };
 
 // Valid crypto symbols to prevent junk data (like "message", "success", etc.)
