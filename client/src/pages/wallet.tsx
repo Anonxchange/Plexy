@@ -37,12 +37,16 @@ export default function WalletPage() {
       }
     } catch (error) {
       console.error("Wallet Page: Sync failed:", error);
+      // Ensure we don't have undefined wallets even on error
+      setWallets([]);
     }
   };
 
   useEffect(() => {
     if (user) {
       loadWalletData();
+    } else {
+      setWallets([]);
     }
   }, [user]);
 
@@ -50,22 +54,31 @@ export default function WalletPage() {
     return null;
   }
 
-  const walletsForDialog = wallets.map(wallet => ({
-    symbol: wallet.crypto_symbol,
-    balance: wallet.balance,
-    name: wallet.crypto_symbol === "BTC" ? "Bitcoin" : 
-          wallet.crypto_symbol === "ETH" ? "Ethereum" :
-          wallet.crypto_symbol === "SOL" ? "Solana" :
-          wallet.crypto_symbol === "USDT" ? "Tether" :
-          wallet.crypto_symbol === "USDC" ? "USD Coin" : 
-          wallet.crypto_symbol === "BNB" ? "BNB" :
-          wallet.crypto_symbol === "XRP" ? "XRP" :
-          wallet.crypto_symbol === "MATIC" ? "Polygon" :
-          wallet.crypto_symbol === "ARB" ? "Arbitrum" :
-          wallet.crypto_symbol === "BASE" ? "Base" :
-          wallet.crypto_symbol,
-    icon: wallet.crypto_symbol
-  }));
+  const walletsForDialog = (wallets || []).map(wallet => {
+    if (!wallet) return null;
+    try {
+      const symbol = wallet.crypto_symbol || "";
+      return {
+        symbol: symbol,
+        balance: wallet.balance || 0,
+        name: symbol === "BTC" ? "Bitcoin" : 
+              symbol === "ETH" ? "Ethereum" :
+              symbol === "SOL" ? "Solana" :
+              symbol === "USDT" ? "Tether" :
+              symbol === "USDC" ? "USD Coin" : 
+              symbol === "BNB" ? "BNB" :
+              symbol === "XRP" ? "XRP" :
+              symbol === "MATIC" ? "Polygon" :
+              symbol === "ARB" ? "Arbitrum" :
+              symbol === "BASE" ? "Base" :
+              symbol,
+        icon: symbol
+      };
+    } catch (e) {
+      console.error("Wallet Page: Error mapping wallet for dialog:", e);
+      return null;
+    }
+  }).filter((w): w is NonNullable<typeof w> => w !== null);
 
   const [selectedAsset, setSelectedAsset] = useState<string | undefined>();
 
