@@ -32,16 +32,19 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
 
   const ActionMenu = ({ symbol }: { symbol: string }) => {
     const handleSend = (e: React.MouseEvent) => {
+      if (!e) return;
       e.stopPropagation();
       onSend?.(symbol);
     };
 
     const handleReceive = (e: React.MouseEvent) => {
+      if (!e) return;
       e.stopPropagation();
       onReceive?.(symbol);
     };
 
     const handleSwap = (e: React.MouseEvent) => {
+      if (!e) return;
       e.stopPropagation();
       onSwap?.(symbol);
     };
@@ -112,7 +115,10 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
   };
 
   const getAssetPrice = (symbol: string) => {
-    return prices?.find(p => p.symbol === symbol.toUpperCase()) || { price: 0, change24h: 0 };
+    if (!symbol || !prices || !Array.isArray(prices)) return { price: 0, change24h: 0 };
+    const upperSymbol = symbol.toUpperCase();
+    const priceData = (prices as any[]).find(p => p && p.symbol === upperSymbol);
+    return priceData ? { price: priceData.price || (priceData as any).current_price || 0, change24h: priceData.change24h || (priceData as any).price_change_percentage_24h || 0 } : { price: 0, change24h: 0 };
   };
 
   return (
@@ -160,10 +166,11 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {wallet?.assets.map((asset) => {
+            {wallet?.assets?.map((asset) => {
+              if (!asset) return null;
               const { price, change24h } = getAssetPrice(asset.symbol);
               const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
-              const balanceValue = asset.balance * price;
+              const balanceValue = (asset.balance || 0) * (price || 0);
               
               if (hideZero && asset.balance <= 0) return null;
               
@@ -190,19 +197,19 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
                          asset.symbol === "MATIC" ? "Polygon" :
                          asset.symbol === "ARB" ? "Arbitrum" :
                          asset.symbol === "BASE" ? "Base" :
-                         asset.symbol === "TRX" ? "Tron" : asset.symbol}
+                         asset.symbol === "TRX" ? "Tron" : asset.name || asset.symbol}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="py-4 hidden sm:table-cell">
-                    <div className="font-semibold text-foreground">{price.toLocaleString()} {currency}</div>
-                    <div className={`text-[10px] font-bold ${change24h >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
+                    <div className="font-semibold text-foreground">{(price || 0).toLocaleString()} {currency}</div>
+                    <div className={`text-[10px] font-bold ${(change24h || 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {(change24h || 0) >= 0 ? "+" : ""}{(change24h || 0).toFixed(2)}%
                     </div>
                   </TableCell>
                   <TableCell className="py-4">
-                    <div className="font-bold text-foreground">{asset.balance}</div>
-                    <div className="text-[10px] text-muted-foreground font-medium">{balanceValue.toLocaleString()} {currency}</div>
+                    <div className="font-bold text-foreground">{asset.balance || 0}</div>
+                    <div className="text-[10px] text-muted-foreground font-medium">{(balanceValue || 0).toLocaleString()} {currency}</div>
                   </TableCell>
                   <TableCell className="text-right py-4">
                     <ActionMenu symbol={asset.symbol} />
