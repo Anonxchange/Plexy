@@ -256,25 +256,19 @@ export async function createCDPSession(address: string, assets: string[]): Promi
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
 
-  const response = await fetch('/api/wallet/cdp-create-session', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  const { data, error } = await supabase.functions.invoke('cdp-create-session', {
+    body: {
       address,
       assets,
-    }),
+    },
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to create CDP session');
+  if (error) {
+    console.error("[createCDPSession] Error:", error);
+    throw new Error(error.message || 'Failed to create CDP session');
   }
 
-  const result = await response.json();
-  return result.token || result.sessionToken;
+  return data.token || data.sessionToken;
 }
 
 export function startDepositMonitoring(
