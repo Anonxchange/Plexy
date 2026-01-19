@@ -67,20 +67,31 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     
     const wallets: Wallet[] = balancesArray
       .filter((b: any) => {
-        const symbol = (b?.symbol || b?.crypto_symbol || b?.currency || '').toUpperCase();
-        return symbol && (VALID_CRYPTO_SYMBOLS.includes(symbol) || VALID_CRYPTO_SYMBOLS.some(s => symbol.startsWith(s + '-')));
+        try {
+          const symbol = (b?.symbol || b?.crypto_symbol || b?.currency || '').toUpperCase();
+          return symbol && (VALID_CRYPTO_SYMBOLS.includes(symbol) || VALID_CRYPTO_SYMBOLS.some((s: string) => symbol.startsWith(s + '-')));
+        } catch (e) {
+          return false;
+        }
       })
-      .map((b: any) => ({
-        id: b.wallet_id || b.address || b.id || `wallet-${(b.symbol || b.crypto_symbol || b.currency)}`,
-        user_id: userId,
-        crypto_symbol: (b.symbol || b.crypto_symbol || b.currency).toUpperCase(),
-        balance: typeof b.balance === 'number' ? b.balance : 0,
-        locked_balance: typeof b.locked_balance === 'number' ? b.locked_balance : 0,
-        deposit_address: b.address || b.deposit_address,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        isNonCustodial: true
-      }));
+      .map((b: any) => {
+        try {
+          const symbol = (b.symbol || b.crypto_symbol || b.currency || '').toUpperCase();
+          return {
+            id: b.wallet_id || b.address || b.id || `wallet-${symbol}`,
+            user_id: userId,
+            crypto_symbol: symbol,
+            balance: typeof b.balance === 'number' ? b.balance : 0,
+            locked_balance: typeof b.locked_balance === 'number' ? b.locked_balance : 0,
+            deposit_address: b.address || b.deposit_address,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            isNonCustodial: true
+          };
+        } catch (e) {
+          return null;
+        }
+      }).filter((w: Wallet | null): w is Wallet => w !== null);
 
     // Sync with local non-custodial wallets to ensure we have all addresses
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
