@@ -78,7 +78,7 @@ export function useWalletData() {
           
           return {
             symbol: rawSymbol,
-            name: ASSET_NAMES[rawSymbol] || ASSET_NAMES[baseSymbol] || rawSymbol,
+            name: ASSET_NAMES[baseSymbol] || ASSET_NAMES[rawSymbol] || baseSymbol || rawSymbol,
             balance: balance,
             value: value,
             change24h: priceData.price_change_percentage_24h || 0
