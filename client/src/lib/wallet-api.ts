@@ -119,7 +119,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       else if (local.chainId === 'Solana') localSymbol = 'SOL';
       else if (local.chainId === 'Tron (TRC-20)') localSymbol = 'TRX';
 
-      const exists = wallets.find(w => w.crypto_symbol === localSymbol || w.deposit_address === local.address);
+      const exists = wallets.find(w => w.crypto_symbol === localSymbol);
       if (!exists) {
         wallets.push({
           id: local.id,
@@ -132,6 +132,9 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
           updated_at: local.createdAt,
           isNonCustodial: true
         });
+      } else if (!exists.deposit_address && local.address) {
+        // Update address if missing
+        exists.deposit_address = local.address;
       }
     });
 
