@@ -49,6 +49,7 @@ import {
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Separator } from "@/components/ui/separator";
 import { P2PFiltersDialog } from "@/components/p2p-filters-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getCryptoPrices, getRealtimeCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { countries as localizationCountries } from "@/lib/localization";
 
@@ -1224,38 +1225,49 @@ export function P2P() {
             </div>
           )}
 
-          {/* Offers List */}
-          {offers.length > 0 && (
             <div className={activeTrades.length > 0 ? "space-y-4" : "mt-8 space-y-4"}>
               <h2 className="text-2xl font-bold">
                 {activeTab === "buy" ? "Buy" : "Sell"} Offers ({filteredAndSortedOffers.length})
               </h2>
               <div className="grid gap-4">
-                {filteredAndSortedOffers.map((offer) => (
-                  <OfferCard key={offer.id} {...offer} />
-                ))}
+                {loading ? (
+                  [1, 2, 3].map((i) => (
+                    <Card key={i} className="border-none shadow-sm bg-white dark:bg-card p-4 sm:p-6 overflow-hidden transition-colors">
+                      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                        <div className="flex-1 space-y-4">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Skeleton className="h-6 w-full max-w-[400px]" />
+                            <Skeleton className="h-4 w-full max-w-[300px]" />
+                          </div>
+                        </div>
+                        <div className="sm:w-48 space-y-4">
+                          <Skeleton className="h-10 w-full" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                ) : filteredAndSortedOffers.length > 0 ? (
+                  filteredAndSortedOffers.map((offer) => (
+                    <OfferCard key={offer.id} {...offer} />
+                  ))
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <h3 className="text-xl font-semibold mb-2">No offers found</h3>
+                      <p className="text-muted-foreground">Try adjusting your filters or create your own offer.</p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
-          )}
-
-          {/* Empty State */}
-          {!loading && offers.length === 0 && (
-            <Card className="mt-8">
-              <CardContent className="p-12 text-center">
-                <h3 className="text-xl font-semibold mb-2">No offers found</h3>
-                <p className="text-muted-foreground">
-                  Try adjusting your filters or create your own offer to {activeTab === "buy" ? "sell" : "buy"} {selectedCrypto}.
-                </p>
-                <Button 
-                  className="mt-6" 
-                  variant="outline"
-                  onClick={() => window.location.href = '/create-offer'}
-                >
-                  Create an Offer
-                </Button>
-              </CardContent>
-            </Card>
-          )}
 
           {/* How to Get Started Section */}
             <div className="mt-12 space-y-6">
