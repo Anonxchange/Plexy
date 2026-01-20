@@ -318,8 +318,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const supabase = createClient();
 
+  const [lastCheckedUserId, setLastCheckedUserId] = useState<string | null>(null);
+
   const checkWalletOnAuth = useCallback(async (userId: string) => {
+    if (lastCheckedUserId === userId) return;
     try {
+      setLastCheckedUserId(userId);
       console.log("[AuthContext] checkWalletOnAuth started for user:", userId);
       
       // Load persisted wallets from Supabase
