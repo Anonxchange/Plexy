@@ -31,17 +31,36 @@ export default function WalletPage() {
     }
   }, [user, loading, setLocation]);
 
-  const loadWalletData = async () => {
+  const loadWalletData = async (useCache = true) => {
     if (!user) return;
-    setIsWalletLoading(true);
+
+    // 1. Try to load from cache first for "instant" feel
+    if (useCache) {
+      const cached = localStorage.getItem(`pexly_wallet_cache_${user.id}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          setWallets(parsed);
+          setIsWalletLoading(false); // Hide skeleton immediately if we have cache
+        } catch (e) {
+          console.error("Cache parse error", e);
+        }
+      }
+    }
+
+    // 2. Fetch fresh data in the background
     try {
       const userWallets = await getUserWallets(user.id);
       if (userWallets && Array.isArray(userWallets)) {
         setWallets(userWallets);
+        // Save to cache for next time
+        localStorage.setItem(`pexly_wallet_cache_${user.id}`, JSON.stringify(userWallets));
       }
     } catch (error) {
       console.error("Wallet Page: Sync failed:", error);
-      setWallets([]);
+      if (!localStorage.getItem(`pexly_wallet_cache_${user.id}`)) {
+        setWallets([]);
+      }
     } finally {
       setIsWalletLoading(false);
     }
@@ -49,7 +68,7 @@ export default function WalletPage() {
 
   useEffect(() => {
     if (user) {
-      loadWalletData();
+      loadWalletData(true); // Enable cache on initial load
     } else {
       setWallets([]);
     }
@@ -151,20 +170,20 @@ export default function WalletPage() {
                     />
                     
                     <div className="p-6">
-                      {isWalletLoading ? (
+                      {isWalletLoading && wallets.length === 0 ? (
                         <div className="space-y-4">
                           {[1, 2, 3, 4].map((i) => (
                             <div key={i} className="flex items-center justify-between py-4">
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-4">
                                 <Skeleton className="h-10 w-10 rounded-full" />
                                 <div className="space-y-2">
-                                  <Skeleton className="h-4 w-24" />
-                                  <Skeleton className="h-3 w-16" />
+                                  <Skeleton className="h-5 w-32" />
+                                  <Skeleton className="h-3 w-20" />
                                 </div>
                               </div>
                               <div className="text-right space-y-2">
-                                <Skeleton className="h-4 w-20 ml-auto" />
-                                <Skeleton className="h-3 w-12 ml-auto" />
+                                <Skeleton className="h-5 w-24 ml-auto" />
+                                <Skeleton className="h-3 w-16 ml-auto" />
                               </div>
                             </div>
                           ))}
