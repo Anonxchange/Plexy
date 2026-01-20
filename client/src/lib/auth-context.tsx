@@ -42,6 +42,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Move supabase client outside component to prevent recreation
+const supabase = createClient();
+
 function getDeviceInfo() {
   const ua = navigator.userAgent;
   let browser = 'Unknown Browser';
@@ -51,12 +54,10 @@ function getDeviceInfo() {
   let deviceName = 'Desktop';
   let deviceModel = '';
 
-  // Helper: Check if device has touch capability (for detecting mobile/tablet)
   const hasTouchScreen = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
   const screenWidth = window.screen.width;
   const screenHeight = window.screen.height;
   const minDimension = Math.min(screenWidth, screenHeight);
-  const maxDimension = Math.max(screenWidth, screenHeight);
 
   // Detect browser and version
   if (ua.includes('CriOS')) {
@@ -95,7 +96,7 @@ function getDeviceInfo() {
     if (match) browserVersion = match[1];
   }
 
-  // Detect OS and device - check mobile patterns first
+  // Detect OS and device
   if (ua.includes('iPhone')) {
     os = 'iOS';
     deviceName = 'iPhone';
@@ -111,15 +112,12 @@ function getDeviceInfo() {
     const match = ua.match(/Android (\d+\.?\d*)/);
     if (match) osVersion = match[1];
     
-    // Try to get device model from user agent
     const modelMatch = ua.match(/;\s*([^;)]+)\s*Build\//);
     if (modelMatch) {
       deviceModel = modelMatch[1].trim();
-      // Clean up common prefixes
       deviceModel = deviceModel.replace(/^(SM-|LG-|SAMSUNG|Xiaomi|HUAWEI|OPPO|vivo|OnePlus|Pixel)\s*/i, '');
     }
     
-    // Determine if tablet or phone based on screen size and model name
     const isTablet = minDimension >= 600 || 
       (deviceModel && (
         deviceModel.toLowerCase().includes('tablet') || 
@@ -143,8 +141,6 @@ function getDeviceInfo() {
   } else if (ua.includes('Windows')) {
     os = 'Windows';
   } else if (ua.includes('Mac OS X') || ua.includes('Macintosh')) {
-    // Check if this is actually an iPad pretending to be Mac (Request Desktop Website)
-    // iPads in desktop mode: have touch, Safari browser, and typical iPad screen ratios
     const isLikelyIPad = hasTouchScreen && 
       ua.includes('Safari') && 
       !ua.includes('Chrome') &&
@@ -168,21 +164,17 @@ function getDeviceInfo() {
     os = 'Linux';
     if (ua.includes('Ubuntu')) os = 'Ubuntu';
     
-    // Check if this might be Android without proper identification
     if (hasTouchScreen && minDimension < 800) {
       os = 'Android';
       deviceName = 'Android Phone';
     }
   }
 
-  // Final device name determination
   let fullDeviceName = deviceName;
   
   if (deviceModel && deviceModel.length > 0 && deviceModel.length < 30) {
-    // Use the actual device model if we found one
     fullDeviceName = deviceModel;
   } else if (deviceName === 'Desktop') {
-    // Make desktop names more specific based on OS
     if (os === 'macOS') {
       fullDeviceName = 'Mac';
     } else if (os === 'Windows') {
@@ -194,7 +186,6 @@ function getDeviceInfo() {
     }
   }
 
-  // Build full OS string
   const fullOs = osVersion ? `${os} ${osVersion}` : os;
   const fullBrowser = browserVersion ? `${browser} ${browserVersion}` : browser;
 
@@ -206,7 +197,7 @@ function getDeviceInfo() {
   };
 }
 
-async function trackDevice(supabase: any, userId: string) {
+async function trackDevice(userId: string) {
   try {
     const deviceInfo = getDeviceInfo();
     let ipAddress = 'Unknown';
@@ -214,7 +205,7 @@ async function trackDevice(supabase: any, userId: string) {
       const ipResponse = await fetch('https://api.ipify.org?format=json');
       const ipData = await ipResponse.json();
       ipAddress = ipData.ip;
-    } catch (ipError) {
+    } catch {
       // IP fetch failed, proceeding with Unknown
     }
 
@@ -232,7 +223,6 @@ async function trackDevice(supabase: any, userId: string) {
         .update({ is_current: true, last_active: new Date().toISOString() })
         .eq('id', deviceId);
     } else {
-      const { data: { user } } = await supabase.auth.getUser();
       await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
       await supabase.from('user_devices').insert({
         user_id: userId,
@@ -245,8 +235,17 @@ async function trackDevice(supabase: any, userId: string) {
         last_active: new Date().toISOString(),
       });
     }
-  } catch (error) {
+  } catch {
     // Silent fail for tracking
+  }
+}
+
+// Helper to check pending OTP from sessionStorage (avoids stale closure)
+function hasPendingOTP(): boolean {
+  try {
+    return !!sessionStorage.getItem('pendingOTP_data');
+  } catch {
+    return false;
   }
 }
 
@@ -254,48 +253,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(null);
-  const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(null);
-  const [walletImportState, setWalletImportState] = useState<WalletImportState>({ required: false, expectedAddress: null });
   
-  // Load sessionPassword from sessionStorage on mount, or initialize to null
+  const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('pendingOTP_data');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  
+  const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('pendingOTP_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+
+  const [walletImportState, setWalletImportState] = useState<WalletImportState>({ 
+    required: false, 
+    expectedAddress: null 
+  });
+  
   const [sessionPassword, setSessionPasswordState] = useState<string | null>(() => {
     try {
       return sessionStorage.getItem('walletPassword');
-    } catch (error) {
-      console.error('Error reading from sessionStorage:', error);
+    } catch {
       return null;
     }
   });
   
-  // Custom setter that updates both state and sessionStorage
-  const setSessionPassword = (password: string | null) => {
-    setSessionPasswordState(password);
-    if (password === null) {
-      try {
-        sessionStorage.removeItem('walletPassword');
-      } catch (error) {
-        console.error('Error clearing sessionStorage:', error);
-      }
-    } else {
-      try {
-        sessionStorage.setItem('walletPassword', password);
-      } catch (error) {
-        console.error('Error saving to sessionStorage:', error);
-      }
-    }
-  };
-  
-  const lastForceCheckRef = useRef<number>(0);
-  const supabase = createClient();
   const checkedUsersRef = useRef<Set<string>>(new Set());
+  const isTrackingRef = useRef<boolean>(false);
+  const lastForceCheckRef = useRef<number>(0);
+
+  // Sync OTP state to sessionStorage
+  useEffect(() => {
+    try {
+      if (pendingOTPVerification) {
+        sessionStorage.setItem('pendingOTP_data', JSON.stringify(pendingOTPVerification));
+      } else {
+        sessionStorage.removeItem('pendingOTP_data');
+      }
+      
+      if (pendingSession) {
+        sessionStorage.setItem('pendingOTP_session', JSON.stringify(pendingSession));
+      } else {
+        sessionStorage.removeItem('pendingOTP_session');
+      }
+    } catch { /* silent */ }
+  }, [pendingOTPVerification, pendingSession]);
+
+  const setSessionPassword = useCallback((password: string | null) => {
+    setSessionPasswordState(password);
+    try {
+      if (password === null) {
+        sessionStorage.removeItem('walletPassword');
+      } else {
+        sessionStorage.setItem('walletPassword', password);
+      }
+    } catch { /* silent */ }
+  }, []);
 
   const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
     if (!userId) return;
-    if (!force && checkedUsersRef.current.has(userId)) return;
+    
+    const storageKey = `wallet_checked_${userId}`;
+    if (!force && (checkedUsersRef.current.has(userId) || sessionStorage.getItem(storageKey))) {
+      return;
+    }
     
     try {
       checkedUsersRef.current.add(userId);
+      sessionStorage.setItem(storageKey, 'true');
+      
       const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
       
       if (persistedWallets.length > 0) {
@@ -303,7 +332,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      const { data: profile } = await supabase.from('user_profiles').select('wallet_address').eq('id', userId).maybeSingle();
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('wallet_address')
+        .eq('id', userId)
+        .maybeSingle();
+        
       let walletAddress = profile?.wallet_address;
 
       if (!walletAddress) {
@@ -318,12 +352,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           expectedAddress: !hasLocal ? walletAddress : null 
         });
       }
-    } catch (error) {
+    } catch {
       checkedUsersRef.current.delete(userId);
       setWalletImportState({ required: false, expectedAddress: null });
     }
-  }, [supabase]);
+  }, []);
 
+  // Main auth effect - subscribe once with empty deps
   useEffect(() => {
     if (window.location.pathname === '/verify-email') {
       setSession(null);
@@ -332,45 +367,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      // INITIAL_SESSION event in onAuthStateChange will handle logic
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (window.location.pathname === '/verify-email') {
         setSession(null);
         setUser(null);
         return;
       }
 
-      if (event === 'SIGNED_OUT' || !session) {
+      // Handle logout/session clear
+      if (event === 'SIGNED_OUT' || !currentSession) {
         setSession(null);
         setUser(null);
         setWalletImportState({ required: false, expectedAddress: null });
         checkedUsersRef.current.clear();
+        isTrackingRef.current = false;
         presenceTracker.stopTracking();
         return;
       }
 
-      if (!pendingOTPVerification) {
-        setSession(session);
-        setUser(session.user);
+      // Check sessionStorage directly to avoid stale closure
+      if (!hasPendingOTP()) {
+        setSession(currentSession);
+        setUser(currentSession.user);
         
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          await trackDevice(supabase, session.user.id);
-          await checkWalletOnAuth(session.user.id);
+          await trackDevice(currentSession.user.id);
+          await checkWalletOnAuth(currentSession.user.id);
         }
       }
 
-      if (session.user) {
-        presenceTracker.startTracking(session.user.id);
+      if (currentSession.user && !isTrackingRef.current) {
+        isTrackingRef.current = true;
+        presenceTracker.startTracking(currentSession.user.id);
       }
     });
 
-    const handleForceCheck = (e: any) => {
+    // Then get initial session
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (!hasPendingOTP()) {
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+      }
+      setLoading(false);
+    });
+
+    // Force wallet check handler
+    const handleForceCheck = (e: CustomEvent<{ userId: string }>) => {
       if (e.detail?.userId) {
         const userId = e.detail.userId;
         const now = Date.now();
@@ -379,27 +422,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         checkWalletOnAuth(userId, true);
       }
     };
-    window.addEventListener('force-wallet-check', handleForceCheck);
+    
+    window.addEventListener('force-wallet-check', handleForceCheck as EventListener);
 
     return () => {
       subscription.unsubscribe();
-      presenceTracker.stopTracking();
-      window.removeEventListener('force-wallet-check', handleForceCheck);
+      window.removeEventListener('force-wallet-check', handleForceCheck as EventListener);
     };
-  }, [pendingOTPVerification]);
+  }, [checkWalletOnAuth]);
 
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      const stayLoggedIn = localStorage.getItem('stayLoggedIn');
-      if (!stayLoggedIn && user) {
-        navigator.sendBeacon('/api/logout');
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [user]);
-
-  const signUp = async (email: string, password: string, captchaToken?: string) => {
+  const signUp = useCallback(async (email: string, password: string, captchaToken?: string) => {
     const baseUrl = window.location.hostname.includes('pexly.app') 
       ? 'https://pexly.app' 
       : window.location.origin;
@@ -415,14 +447,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (!error && data.user) {
-      await trackDevice(supabase, data.user.id);
+      await trackDevice(data.user.id);
       await checkWalletOnAuth(data.user.id);
     }
 
     return { error };
-  };
+  }, [checkWalletOnAuth]);
 
-  const signIn = async (email: string, password: string, captchaToken?: string) => {
+  const signIn = useCallback(async (email: string, password: string, captchaToken?: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({ 
       email, 
       password,
@@ -432,59 +464,97 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) return { error, data };
 
     if (data.user && data.session) {
-      await trackDevice(supabase, data.user.id);
+      await trackDevice(data.user.id);
       await checkWalletOnAuth(data.user.id);
-      presenceTracker.startTracking(data.user.id);
+      
+      if (!isTrackingRef.current) {
+        isTrackingRef.current = true;
+        presenceTracker.startTracking(data.user.id);
+      }
     }
 
     return { error, data };
-  };
+  }, [checkWalletOnAuth]);
 
   const completeOTPVerification = useCallback(async () => {
-    if (!pendingOTPVerification || !pendingSession) return;
-    const { user: pendingUser } = pendingSession;
+    if (!pendingSession) return;
     
-    // Track device and check wallet after OTP completion
-    await trackDevice(supabase, pendingUser.id);
+    const { user: pendingUser, session: pendingSessionData } = pendingSession;
+    
+    // Actually set the session and user state now
+    setSession(pendingSessionData);
+    setUser(pendingUser);
+    
+    await trackDevice(pendingUser.id);
     await checkWalletOnAuth(pendingUser.id);
     
+    // Clear pending state
     setPendingOTPVerification(null);
     setPendingSession(null);
-    presenceTracker.startTracking(pendingUser.id);
-  }, [pendingOTPVerification, pendingSession, supabase, checkWalletOnAuth]);
+    
+    if (!isTrackingRef.current) {
+      isTrackingRef.current = true;
+      presenceTracker.startTracking(pendingUser.id);
+    }
+    
+    try {
+      sessionStorage.removeItem('pendingOTP_data');
+      sessionStorage.removeItem('pendingOTP_session');
+    } catch { /* silent */ }
+  }, [pendingSession, checkWalletOnAuth]);
 
   const cancelOTPVerification = useCallback(async () => {
+    // Sign out from Supabase to clear the pending session
+    await supabase.auth.signOut();
+    
     setPendingOTPVerification(null);
     setPendingSession(null);
+    
     try {
-      sessionStorage.removeItem('pendingOTP');
-    } catch (e) {}
+      sessionStorage.removeItem('pendingOTP_data');
+      sessionStorage.removeItem('pendingOTP_session');
+    } catch { /* silent */ }
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     presenceTracker.stopTracking();
     setSessionPassword(null);
     setWalletImportState({ required: false, expectedAddress: null });
     checkedUsersRef.current.clear();
+    isTrackingRef.current = false;
     setPendingOTPVerification(null);
     setPendingSession(null);
+    
     try {
       sessionStorage.removeItem('walletPassword');
-      sessionStorage.removeItem('pendingOTP');
-    } catch (error) {
-      // Silent error for sessionStorage
-    }
+      sessionStorage.removeItem('pendingOTP_data');
+      sessionStorage.removeItem('pendingOTP_session');
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('wallet_checked_')) sessionStorage.removeItem(key);
+      });
+    } catch { /* silent */ }
+    
     await supabase.auth.signOut();
+  }, [setSessionPassword]);
+
+  const value = {
+    user,
+    session,
+    signUp,
+    signIn,
+    signOut,
+    completeOTPVerification,
+    cancelOTPVerification,
+    loading,
+    pendingOTPVerification,
+    walletImportState,
+    setWalletImportState,
+    sessionPassword,
+    setSessionPassword,
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, session, signUp, signIn, signOut, 
-      completeOTPVerification, cancelOTPVerification,
-      loading, pendingOTPVerification,
-      walletImportState, setWalletImportState,
-      sessionPassword, setSessionPassword,
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
