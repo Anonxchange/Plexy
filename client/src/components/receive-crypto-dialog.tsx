@@ -272,7 +272,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                 className="w-full h-10 rounded-lg border-border/50 text-foreground/40 font-bold bg-muted/10 text-xs"
                 disabled
               >
-                Create a new address
+                Deposit to your wallet
               </Button>
               <p className="text-[10px] text-destructive/80 text-center mt-2 leading-tight px-4">
                 You can generate a new address once the current one receives a blockchain transaction
