@@ -66,7 +66,7 @@ export default function MarketsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <Card className="bg-white border-none shadow-sm rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg font-bold">Market Sentiment</CardTitle>
+                  <CardTitle className="text-lg font-bold text-slate-700">Market Sentiment</CardTitle>
                   <Button variant="link" className="text-primary font-bold p-0 flex items-center gap-1">View More <ChevronRight className="h-4 w-4" /></Button>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center py-6">
@@ -90,7 +90,7 @@ export default function MarketsPage() {
 
               <Card className="bg-white border-none shadow-sm rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg font-bold">Market Data</CardTitle>
+                  <CardTitle className="text-lg font-bold text-slate-700">Market Data</CardTitle>
                   <Button variant="link" className="text-primary font-bold p-0 flex items-center gap-1">View More <ChevronRight className="h-4 w-4" /></Button>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-4">
@@ -115,7 +115,7 @@ export default function MarketsPage() {
               </Card>
 
               <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader><CardTitle className="text-lg font-bold">Trending Sectors</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg font-bold text-slate-700">Trending Sectors</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   {[
                     { name: "Privacy Coins", change: "16.55%", coin: "ROSE", coinPrice: "44.26%" },
@@ -211,20 +211,21 @@ export default function MarketsPage() {
 
         {mainTab === "key-metrics" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Top Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardHeader className="pb-2">
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Market Sentiment</span>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center py-4">
-                  <div className="relative w-32 h-16">
+                  <div className="relative w-40 h-20">
                     <svg viewBox="0 0 100 50" className="w-full h-full">
                       <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="#E2E8F0" strokeWidth="8" strokeLinecap="round" />
                       <path d="M10,50 A40,40 0 0,1 50,10" fill="none" stroke="#22C55E" strokeWidth="8" strokeLinecap="round" />
                       <path d="M50,10 A40,40 0 0,1 90,50" fill="none" stroke="#EF4444" strokeWidth="8" strokeLinecap="round" />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
-                      <span className="text-xl font-bold text-primary">44</span>
+                      <span className="text-2xl font-bold text-primary">44</span>
                       <span className="text-[10px] font-bold text-muted-foreground">Neutral</span>
                     </div>
                   </div>
@@ -233,21 +234,33 @@ export default function MarketsPage() {
 
               <Card className="bg-white border-none shadow-sm rounded-xl">
                 <CardHeader className="pb-2">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Market Cap</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">Market Cap <ExternalLink className="h-3 w-3" /></span>
                 </CardHeader>
                 <CardContent>
                   <div className="text-red-500 text-lg font-bold">-2.77%</div>
                   <div className="text-slate-900 font-bold">3362.53 B USD</div>
+                  <div className="h-8 mt-2 w-full bg-red-50/50 rounded overflow-hidden">
+                    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
+                      <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20 L100,40 Z" fill="#FEE2E2" />
+                      <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20" fill="none" stroke="#EF4444" strokeWidth="2" />
+                    </svg>
+                  </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-white border-none shadow-sm rounded-xl">
                 <CardHeader className="pb-2">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Trading Vol.</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">Trading Vol. <ExternalLink className="h-3 w-3" /></span>
                 </CardHeader>
                 <CardContent>
                   <div className="text-red-500 text-lg font-bold">-25.65%</div>
                   <div className="text-slate-900 font-bold">529.48 B USD</div>
+                  <div className="h-8 mt-2 w-full bg-red-50/50 rounded overflow-hidden">
+                    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
+                      <path d="M0,40 L20,38 L40,35 L60,30 L80,32 L100,28 L100,40 Z" fill="#FEE2E2" />
+                      <path d="M0,40 L20,38 L40,35 L60,30 L80,32 L100,28" fill="none" stroke="#EF4444" strokeWidth="2" />
+                    </svg>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -260,6 +273,147 @@ export default function MarketsPage() {
                   <div className="text-xs font-bold text-muted-foreground">≈ 0.003 USD</div>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Middle Section: Trend Distribution and Top Movers */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <Card className="bg-white border-none shadow-sm rounded-xl">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg font-bold text-slate-700">Price Trend Distribution</CardTitle>
+                    <Button variant="link" className="text-xs font-bold text-muted-foreground p-0 flex items-center gap-1">View More <ChevronRight className="h-3 w-3" /></Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex h-5 w-full rounded-full overflow-hidden mb-6">
+                      <div className="bg-red-500 h-full" style={{ width: '85%' }}></div>
+                      <div className="bg-slate-300 h-full" style={{ width: '5%' }}></div>
+                      <div className="bg-green-500 h-full" style={{ width: '10%' }}></div>
+                    </div>
+                    <div className="grid grid-cols-3 text-center">
+                      <div className="flex flex-col">
+                        <span className="text-red-500 text-base font-bold">429</span>
+                        <span className="text-[10px] font-bold text-muted-foreground">Down</span>
+                      </div>
+                      <div className="flex flex-col border-x">
+                        <span className="text-slate-700 text-base font-bold">16</span>
+                        <span className="text-[10px] font-bold text-muted-foreground">No Change</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-green-500 text-base font-bold">45</span>
+                        <span className="text-[10px] font-bold text-muted-foreground">Up</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white border-none shadow-sm rounded-xl">
+                  <CardHeader><CardTitle className="text-lg font-bold text-slate-700">Trending Sectors</CardTitle></CardHeader>
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[
+                      { name: "Privacy Coins", change: "15.77%", coin: "ROSE", coinPrice: "39.92%" },
+                      { name: "AI", change: "12.76%", coin: "ROSE", coinPrice: "39.92%" },
+                      { name: "Pantera Portfolio", change: "7.88%", coin: "ROSE", coinPrice: "39.92%" },
+                      { name: "Polychain Portfolio", change: "7.86%", coin: "ROSE", coinPrice: "39.92%" },
+                      { name: "a16z Portfolio", change: "7.51%", coin: "ROSE", coinPrice: "39.92%" },
+                      { name: "Rollups", change: "3.89%", coin: "MINA", coinPrice: "7.44%" },
+                      { name: "DeFi", change: "3.66%", coin: "RPL", coinPrice: "10.16%" },
+                      { name: "Liquid Staking", change: "3.48%", coin: "RPL", coinPrice: "10.16%" }
+                    ].map((sector, i) => (
+                      <div key={i} className="p-4 bg-[#F9FAFB] rounded-xl border border-transparent hover:border-primary transition-colors cursor-pointer group">
+                        <div className="text-xs font-bold text-slate-700 mb-1">{sector.name}</div>
+                        <div className="text-green-500 font-bold text-lg mb-1">{sector.change}</div>
+                        <div className="text-[10px] font-bold text-muted-foreground flex items-center justify-between">
+                          <span>{sector.coin}</span>
+                          <span className="text-green-500">{sector.coinPrice}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="space-y-6">
+                <Card className="bg-white border-none shadow-sm rounded-xl">
+                  <CardHeader><CardTitle className="text-lg font-bold text-slate-700">Top Movers</CardTitle></CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-[#F9FAFB]/50 border-b">
+                          <tr>
+                            <th className="px-4 py-3">Name</th>
+                            <th className="px-4 py-3 text-right">Type</th>
+                            <th className="px-4 py-3 text-right">24H Change</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {[
+                            { name: "VOOI/USDT", time: "01/20 00:30", type: "15m Gainers", change: "+15.55%" },
+                            { name: "VOOI/USDT", time: "01/20 00:28", type: "15m Gainers", change: "+15.55%" },
+                            { name: "RESOLV/USDT", time: "01/20 00:23", type: "24h Gainers", change: "+54.29%" },
+                            { name: "NAKA/USDT", time: "01/20 00:19", type: "24h Gainers", change: "+36.35%" },
+                            { name: "BERA/USDT", time: "01/20 00:10", type: "24h Gainers", change: "+23.65%" },
+                            { name: "AXS/USDT", time: "01/20 00:07", type: "15m Gainers", change: "+6.59%" }
+                          ].map((mover, i) => (
+                            <tr key={i} className="text-xs hover:bg-[#F9FAFB] transition-colors cursor-pointer group">
+                              <td className="px-4 py-4">
+                                <div className="font-bold text-slate-900">{mover.name}</div>
+                                <div className="text-[10px] text-muted-foreground">{mover.time}</div>
+                              </td>
+                              <td className="px-4 py-4 text-right font-medium text-muted-foreground">{mover.type}</td>
+                              <td className="px-4 py-4 text-right font-bold text-green-500">{mover.change}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="p-4 border-t">
+                      <Button className="w-full bg-orange-400 hover:bg-orange-500 text-white font-bold rounded-lg h-12 shadow-sm">Trade</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Bottom Markets Lists */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+              {[
+                { title: "Most Traded", data: [{ p: "BTC/USDT", v: "92,661", c: "+0.10%" }, { p: "ETH/USDT", v: "3,187.38", ch: "-0.65%" }, { p: "USDC/USDT", v: "1.0004", ch: "+0.03%" }, { p: "XRP/USDT", v: "1.9863", ch: "+2.48%" }, { p: "SOL/USDT", v: "133.61", ch: "-0.63%" }] },
+                { title: "Trending", data: [{ p: "BTC/USDT", v: "92,661", c: "+0.10%" }, { p: "ETH/USDT", v: "3,187.38", ch: "-0.65%" }, { p: "XRP/USDT", v: "1.9863", ch: "+2.48%" }, { p: "SOL/USDT", v: "133.61", ch: "-0.63%" }, { p: "MNT/USDT", v: "0.9174", ch: "+1.08%" }] },
+                { title: "Newly Listed", data: [{ p: "LIT/USDT", v: "1.642", ch: "-8.52%" }, { p: "FOGO/USDT", v: "0.03048", ch: "+3.78%" }, { p: "FRAX/USDT", v: "1.1698", ch: "-3.91%" }, { p: "BREV/USDT", v: "0.2692", ch: "-3.30%" }, { p: "WHITEWHALE/USDT", v: "0.03953", ch: "-40.61%" }] }
+              ].map((list, i) => (
+                <Card key={i} className="bg-white border-none shadow-sm rounded-xl overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between pb-3 bg-[#F9FAFB]/50 border-b">
+                    <CardTitle className="text-base font-bold">{list.title}</CardTitle>
+                    <Select defaultValue="spot">
+                      <SelectTrigger className="w-[80px] h-7 bg-white border-none text-[10px] font-bold">
+                        <SelectValue placeholder="Spot" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="spot">Spot</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <table className="w-full text-left">
+                      <thead className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b">
+                        <tr><th className="px-4 py-2">Market</th><th className="px-4 py-2 text-right">Price</th><th className="px-4 py-2 text-right">24H Change</th></tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {list.data.map((item, j) => (
+                          <tr key={j} className="text-xs hover:bg-[#F9FAFB] transition-colors cursor-pointer">
+                            <td className="px-4 py-3 font-bold text-slate-700 flex items-center gap-2">
+                              <span className="text-muted-foreground/50 w-3">{j + 1}</span>
+                              {item.p}
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-900">{item.v}</td>
+                            <td className={`px-4 py-3 text-right font-bold ${(item.c || item.ch).startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>{item.c || item.ch}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         )}
