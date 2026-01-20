@@ -18,14 +18,15 @@ export function FundStaging() {
   const [error, setError] = useState<string | null>(null);
   const [manualAddress, setManualAddress] = useState("");
 
-  // Find Base wallet address
-  const baseWallet = walletBalances?.find(w => 
-    w.crypto_symbol === 'BASE' || 
+  // Find Optimism wallet address
+  const optimismWallet = walletBalances?.find(w => 
+    w.crypto_symbol === 'OP' || 
+    w.crypto_symbol === 'BASE' ||
     (w.crypto_symbol === 'ETH' && w.deposit_address?.startsWith('0x')) ||
     (w.isNonCustodial && w.deposit_address?.startsWith('0x'))
   );
 
-  const userAddress = manualAddress || baseWallet?.deposit_address;
+  const userAddress = manualAddress || optimismWallet?.deposit_address;
 
   const fetchToken = async () => {
     if (!userAddress) {
@@ -39,7 +40,10 @@ export function FundStaging() {
       // Assets supported by OnchainKit Fund for simple onramp
       const assets = ["ETH", "USDC"];
       const token = await createCDPSession(userAddress, assets);
-      console.log("CDP token received:", token ? "Yes" : "No");
+      console.log("CDP token received length:", token?.length || 0);
+      if (!token) {
+        throw new Error("No session token received from the server. Check Supabase logs for CDP API errors.");
+      }
       setSessionToken(token);
     } catch (err) {
       console.error("Failed to fetch CDP token:", err);
@@ -69,7 +73,7 @@ export function FundStaging() {
           <div className="space-y-2 pb-4 border-b">
             <label className="text-sm font-medium flex items-center gap-2">
               <Wallet className="h-4 w-4" />
-              Base Wallet Address (Manual Override)
+              Optimism Wallet Address (Manual Override)
             </label>
             <div className="flex gap-2">
               <Input 
@@ -112,7 +116,7 @@ export function FundStaging() {
             <div className="text-center py-10 border-2 border-dashed rounded-lg">
               <p className="text-muted-foreground">
                 {!userAddress 
-                  ? "No Base wallet address found. Please enter one above or ensure your wallet is initialized." 
+                  ? "No Optimism wallet address found. Please enter one above or ensure your wallet is initialized." 
                   : "Initializing session..."}
               </p>
             </div>
@@ -122,8 +126,8 @@ export function FundStaging() {
             <h3 className="font-semibold mb-2 text-sm">Debug Info:</h3>
             <div className="grid grid-cols-1 gap-2 text-[10px] font-mono">
               <p>Current Address: {userAddress || "Not found"}</p>
-              <p>Detection Source: {manualAddress ? "Manual Input" : (baseWallet ? "Auto-detected" : "None")}</p>
-              <p className="truncate">Session Token: {sessionToken || "Waiting..."}</p>
+              <p>Detection Source: {manualAddress ? "Manual Input" : (optimismWallet ? "Auto-detected" : "None")}</p>
+              <p className="break-all whitespace-pre-wrap">Session Token: {sessionToken || "Waiting..."}</p>
             </div>
           </div>
         </CardContent>
