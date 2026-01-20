@@ -87,13 +87,13 @@ export async function getCryptoPrices(symbols: string[]): Promise<Record<string,
   }
   
   try {
-    const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
+    const { data, error } = await supabase.functions.invoke('crypto-prices', {
       body: { symbols, type: 'markets' }
     });
     
     if (error) throw error;
     
-    const pricesMap = data as Record<string, CryptoPrice>;
+    const pricesMap = (data?.data || data) as Record<string, CryptoPrice>;
     cryptoPricesCache = pricesMap;
     lastPricesFetchTime = now;
     
@@ -115,13 +115,13 @@ export async function getRealtimeCryptoPrices(symbols: string[]): Promise<Record
   }
   
   try {
-    const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
+    const { data, error } = await supabase.functions.invoke('crypto-prices', {
       body: { symbols, type: 'simple' }
     });
     
     if (error) throw error;
     
-    const pricesMap = data as Record<string, CryptoPrice>;
+    const pricesMap = (data?.data || data) as Record<string, CryptoPrice>;
     realtimePricesCache = pricesMap;
     lastRealtimeFetchTime = now;
     
@@ -134,12 +134,12 @@ export async function getRealtimeCryptoPrices(symbols: string[]): Promise<Record
 
 export async function getHistoricalPrices(symbol: string, days: number = 30): Promise<HistoricalPrice[]> {
   try {
-    const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
-      body: { symbol, days, type: 'historical' }
+    const { data, error } = await supabase.functions.invoke('crypto-prices', {
+      body: { symbols: [symbol], days, type: 'historical' }
     });
     
     if (error) throw error;
-    return data as HistoricalPrice[];
+    return (data?.data || data) as HistoricalPrice[];
   } catch (error) {
     console.error('Error fetching historical prices from Supabase:', error);
     return [];
@@ -148,12 +148,12 @@ export async function getHistoricalPrices(symbol: string, days: number = 30): Pr
 
 export async function getIntradayPrices(symbol: string): Promise<HistoricalPrice[]> {
   try {
-    const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
-      body: { symbol, type: 'intraday' }
+    const { data, error } = await supabase.functions.invoke('crypto-prices', {
+      body: { symbols: [symbol], days: 1, type: 'historical' }
     });
     
     if (error) throw error;
-    return data as HistoricalPrice[];
+    return (data?.data || data) as HistoricalPrice[];
   } catch (error) {
     console.error('Error fetching intraday prices from Supabase:', error);
     return [];
