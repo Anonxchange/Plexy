@@ -41,7 +41,9 @@ export default function WalletPage() {
         try {
           const parsed = JSON.parse(cached);
           setWallets(parsed);
-          setIsWalletLoading(false); // Hide skeleton immediately if we have cache
+          // If the cache is very old (e.g. > 5 mins), keep loading state true
+          // so the user sees a "background" loading shimmer or just keeps the cache visible
+          setIsWalletLoading(false); 
         } catch (e) {
           console.error("Cache parse error", e);
         }
@@ -58,6 +60,7 @@ export default function WalletPage() {
       }
     } catch (error) {
       console.error("Wallet Page: Sync failed:", error);
+      // Only clear if we have absolutely nothing
       if (!localStorage.getItem(`pexly_wallet_cache_${user.id}`)) {
         setWallets([]);
       }
