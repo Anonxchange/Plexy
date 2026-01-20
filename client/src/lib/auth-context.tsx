@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { createClient } from "./supabase";
 import { presenceTracker } from './presence';
@@ -318,13 +318,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const supabase = createClient();
 
-  const [lastCheckedUserId, setLastCheckedUserId] = useState<string | null>(null);
+  const checkedUsersRef = useRef<Set<string>>(new Set());
 
-  const checkWalletOnAuth = useCallback(async (userId: string) => {
-    if (lastCheckedUserId === userId) return;
+  const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
+    // Synchronous guard using Ref
+    if (!userId) return;
+    
+    if (!force && checkedUsersRef.current.has(userId)) {
+      console.log("[AuthContext] Wallet already checked for session:", userId);
+      return;
+    }
+    
     try {
-      setLastCheckedUserId(userId);
-      console.log("[AuthContext] checkWalletOnAuth started for user:", userId);
+      checkedUsersRef.current.add(userId);
+      console.log("[AuthContext] checkWalletOnAuth executing for user:", userId, force ? "(FORCED)" : "");
       
       // Load persisted wallets from Supabase
       const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
@@ -397,6 +404,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        console.log("[AuthContext] Initial session load check for:", session.user.id);
         await trackDevice(supabase, session.user.id);
         await checkWalletOnAuth(session.user.id);
         presenceTracker.startTracking(session.user.id);
@@ -407,18 +415,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (window.location.pathname === '/verify-email') {
         setSession(null);
         setUser(null);
         return;
       }
 
+      console.log("[AuthContext] Auth state change:", event, session?.user?.id);
+
       if (!pendingOTPVerification) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
+        // Single source of truth: Only trigger on SIGNED_IN or INITIAL_SESSION
+        // Most events are handled by the initial getSession or the manual signIn call
+        // but we keep this for resilience on specific events if needed
+        if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
           checkWalletOnAuth(session.user.id);
         }
       }
@@ -433,7 +446,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for manual trigger from dashboard
     const handleForceCheck = (e: any) => {
       if (e.detail?.userId) {
-        checkWalletOnAuth(e.detail.userId);
+        checkWalletOnAuth(e.detail.userId, true);
       }
     };
     window.addEventListener('force-wallet-check', handleForceCheck);
