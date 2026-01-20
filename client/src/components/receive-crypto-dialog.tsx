@@ -78,6 +78,13 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
     const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
     
+    console.log("[ReceiveCryptoDialog] Debug search:", {
+      selectedCrypto,
+      selectedNetwork,
+      symbolToUse,
+      availableWallets: userWallets.map(w => ({ chainId: w.chainId, address: w.address }))
+    });
+
     // Look for a wallet matching the specific symbol or base symbol
     const targetWallet = userWallets.find(w => {
       const normalizedChainId = w.chainId.toUpperCase();
@@ -86,21 +93,25 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
       
       // Strict matching for networks to avoid Tron/ETH address mixup
       if (selectedNetwork.includes('TRC-20')) {
-        return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX');
+        return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
       }
       if (selectedNetwork.includes('ERC-20')) {
-        return normalizedChainId.includes('ERC20') || (normalizedChainId === 'ETH' && normalizedSelectedCrypto === 'ETH');
+        return normalizedChainId.includes('ERC20') || (normalizedChainId === 'ETH' && normalizedSelectedCrypto === 'ETH') || (normalizedChainId === 'ETHEREUM (ERC-20)') || (normalizedChainId === 'ETHEREUM');
       }
       if (selectedNetwork.includes('BEP-20')) {
-        return normalizedChainId.includes('BEP20') || (normalizedChainId === 'BNB' && normalizedSelectedCrypto === 'BNB');
+        return normalizedChainId.includes('BEP20') || (normalizedChainId === 'BNB' && normalizedSelectedCrypto === 'BNB') || (normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)');
       }
       if (selectedNetwork.includes('SPL') || selectedNetwork === 'Solana') {
-        return normalizedChainId.includes('SOL') || (normalizedChainId === 'SOLANA' && normalizedSelectedCrypto === 'SOL');
+        return normalizedChainId.includes('SOL') || (normalizedChainId === 'SOLANA' && normalizedSelectedCrypto === 'SOL') || (normalizedChainId === 'SOLANA');
+      }
+      if (selectedNetwork.includes('SegWit') || selectedNetwork === 'Bitcoin') {
+        return normalizedChainId.includes('BITCOIN') || (normalizedChainId === 'BTC' && normalizedSelectedCrypto === 'BTC');
       }
       
       return normalizedChainId === normalizedSymbolToUse || 
              normalizedChainId === normalizedSelectedCrypto ||
-             normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`);
+             normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`) ||
+             normalizedChainId.includes(normalizedSelectedCrypto);
     });
     
     if (targetWallet) {
