@@ -52,9 +52,13 @@ export function FundStaging() {
       const errorMessage = err.message || "Failed to generate funding session";
       setError(errorMessage);
       
-      // If we see "load fail", it might be a connectivity or session issue
-      if (errorMessage.toLowerCase().includes("load fail") || errorMessage.toLowerCase().includes("failed to fetch")) {
-        setError("Network error or session expired. Please refresh the page and try again.");
+      // If we see "load fail", it might be a connectivity, session, or CORS issue
+      if (
+        errorMessage.toLowerCase().includes("load fail") || 
+        errorMessage.toLowerCase().includes("failed to fetch") ||
+        errorMessage.toLowerCase().includes("network error")
+      ) {
+        setError(`Connection Error: Unable to reach the server. Please check your internet connection or try again later. (Error: ${errorMessage})`);
       }
     } finally {
       setIsLoading(false);
