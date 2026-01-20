@@ -43,37 +43,54 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     }
 
     const resultData: any = data || {};
-    const balances = resultData.balances || resultData.walletBalances || resultData.data || resultData || {};
+    // Extended search for balance data in response
+    const balances = resultData.balances || resultData.walletBalances || resultData.data || resultData.result || resultData || {};
     
-    const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances || {}).map(([symbol, data]: [string, any]) => {
-      if (typeof data === 'object' && data !== null) {
+    let balancesArray: any[] = [];
+    if (Array.isArray(balances)) {
+      balancesArray = balances;
+    } else if (typeof balances === 'object' && balances !== null) {
+      balancesArray = Object.entries(balances).map(([key, value]: [string, any]) => {
+        // Skip metadata keys
+        if (['success', 'message', 'timestamp', 'user_id', 'status'].includes(key.toLowerCase())) return null;
+        
+        if (typeof value === 'object' && value !== null) {
+          return {
+            symbol: value.symbol || value.currency || value.chainId || key,
+            balance: typeof value.balance === 'number' ? value.balance : 0,
+            locked_balance: typeof value.locked_balance === 'number' ? value.locked_balance : 0,
+            address: value.address || value.deposit_address
+          };
+        }
         return {
-          symbol: data.symbol || data.currency || data.chainId || symbol,
-          balance: typeof data.balance === 'number' ? data.balance : 0,
-          locked_balance: typeof data.locked_balance === 'number' ? data.locked_balance : 0,
-          address: data.address || data.deposit_address
+          symbol: key,
+          balance: typeof value === 'number' ? value : 0
         };
-      }
-      return {
-        symbol,
-        balance: typeof data === 'number' ? data : 0
-      };
-    });
+      }).filter(Boolean);
+    }
 
     const VALID_CRYPTO_SYMBOLS = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'TRX', 'LTC', 'XRP', 'ADA', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'NEAR', 'FTM', 'ALGO', 'VET', 'BASE'];
     
     const wallets: Wallet[] = (balancesArray
       .filter((b: any) => {
         try {
-          const symbol = (b?.symbol || b?.crypto_symbol || b?.currency || '').toUpperCase();
-          return symbol && (VALID_CRYPTO_SYMBOLS.includes(symbol) || VALID_CRYPTO_SYMBOLS.some((s: string) => symbol.startsWith(s + '-')));
+          const symbol = (b?.symbol || b?.crypto_symbol || b?.currency || b?.chainId || '').toUpperCase();
+          if (!symbol) return false;
+          // Check if it's a valid symbol or a chain-specific one like USDT-ERC20
+          return VALID_CRYPTO_SYMBOLS.includes(symbol) || 
+                 VALID_CRYPTO_SYMBOLS.some((s: string) => symbol.startsWith(s + '-')) ||
+                 symbol.includes('ETHEREUM') || symbol.includes('BITCOIN');
         } catch (e) {
           return false;
         }
       })
       .map((b: any) => {
         try {
-          const symbol = (b.symbol || b.crypto_symbol || b.currency || '').toUpperCase();
+          let symbol = (b.symbol || b.crypto_symbol || b.currency || b.chainId || '').toUpperCase();
+          // Normalize common names to symbols
+          if (symbol.includes('ETHEREUM')) symbol = 'ETH';
+          if (symbol.includes('BITCOIN')) symbol = 'BTC';
+          
           return {
             id: b.wallet_id || b.address || b.id || `wallet-${symbol}`,
             user_id: userId,
@@ -91,14 +108,23 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       }) as (Wallet | null)[])
       .filter((w: Wallet | null): w is Wallet => w !== null);
 
+    // Sync with local non-custodial wallets to ensure we have all addresses
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
     localWallets.forEach(local => {
-      const exists = wallets.find(w => w.crypto_symbol === local.chainId || w.deposit_address === local.address);
+      // Normalize local chainId to symbol for comparison
+      let localSymbol = local.chainId;
+      if (local.chainId === 'Ethereum (ERC-20)' || local.chainId === 'ethereum') localSymbol = 'ETH';
+      else if (local.chainId === 'Bitcoin (SegWit)' || local.chainId === 'bitcoin') localSymbol = 'BTC';
+      else if (local.chainId === 'Binance Smart Chain (BEP-20)') localSymbol = 'BNB';
+      else if (local.chainId === 'Solana') localSymbol = 'SOL';
+      else if (local.chainId === 'Tron (TRC-20)') localSymbol = 'TRX';
+
+      const exists = wallets.find(w => w.crypto_symbol === localSymbol || w.deposit_address === local.address);
       if (!exists) {
         wallets.push({
           id: local.id,
           user_id: userId,
-          crypto_symbol: local.chainId,
+          crypto_symbol: localSymbol,
           balance: local.balance || 0,
           locked_balance: 0,
           deposit_address: local.address,
@@ -109,15 +135,15 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       }
     });
 
-    console.log("[getUserWallets] Synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
+    console.log("[getUserWallets] Final synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
     return wallets;
   } catch (e) {
     console.warn(`[getUserWallets] Remote sync failed, using local non-custodial data:`, e);
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
     return localWallets.map((w) => {
       let symbol = w.chainId;
-      if (w.chainId === 'Ethereum (ERC-20)') symbol = 'ETH';
-      else if (w.chainId === 'Bitcoin (SegWit)') symbol = 'BTC';
+      if (w.chainId === 'Ethereum (ERC-20)' || w.chainId === 'ethereum') symbol = 'ETH';
+      else if (w.chainId === 'Bitcoin (SegWit)' || w.chainId === 'bitcoin') symbol = 'BTC';
       else if (w.chainId === 'Binance Smart Chain (BEP-20)') symbol = 'BNB';
       else if (w.chainId === 'Solana') symbol = 'SOL';
       else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
