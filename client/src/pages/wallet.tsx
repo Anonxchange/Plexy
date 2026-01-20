@@ -8,6 +8,7 @@ import { ReceiveMethodDialog } from "@/components/receive-method-dialog";
 import { type Wallet, getUserWallets } from "@/lib/wallet-api";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ export default function WalletPage() {
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [isWalletLoading, setIsWalletLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -31,6 +33,7 @@ export default function WalletPage() {
 
   const loadWalletData = async () => {
     if (!user) return;
+    setIsWalletLoading(true);
     try {
       const userWallets = await getUserWallets(user.id);
       if (userWallets && Array.isArray(userWallets)) {
@@ -38,8 +41,9 @@ export default function WalletPage() {
       }
     } catch (error) {
       console.error("Wallet Page: Sync failed:", error);
-      // Ensure we don't have undefined wallets even on error
       setWallets([]);
+    } finally {
+      setIsWalletLoading(false);
     }
   };
 
@@ -147,11 +151,31 @@ export default function WalletPage() {
                     />
                     
                     <div className="p-6">
-                      <AssetList 
-                        onSend={handleSend}
-                        onReceive={handleReceive}
-                        onSwap={(symbol) => setLocation(symbol ? `/swap?symbol=${symbol}` : "/swap")}
-                      />
+                      {isWalletLoading ? (
+                        <div className="space-y-4">
+                          {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="flex items-center justify-between py-4">
+                              <div className="flex items-center gap-3">
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <div className="space-y-2">
+                                  <Skeleton className="h-4 w-24" />
+                                  <Skeleton className="h-3 w-16" />
+                                </div>
+                              </div>
+                              <div className="text-right space-y-2">
+                                <Skeleton className="h-4 w-20 ml-auto" />
+                                <Skeleton className="h-3 w-12 ml-auto" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <AssetList 
+                          onSend={handleSend}
+                          onReceive={handleReceive}
+                          onSwap={(symbol) => setLocation(symbol ? `/swap?symbol=${symbol}` : "/swap")}
+                        />
+                      )}
                     </div>
                   </div>
                 </CardContent>
