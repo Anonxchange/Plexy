@@ -403,8 +403,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      // getSession is usually followed by INITIAL_SESSION event in onAuthStateChange
+      // but we set initial state here for UI responsiveness.
+      // The wallet check logic will be handled by onAuthStateChange logic or this block
+      // The ref guard prevents double-execution if both fire.
       if (session?.user) {
-        console.log("[AuthContext] Initial session load check for:", session.user.id);
+        console.log("[AuthContext] Initial session load:", session.user.id);
         await trackDevice(supabase, session.user.id);
         await checkWalletOnAuth(session.user.id);
         presenceTracker.startTracking(session.user.id);
@@ -422,24 +426,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("[AuthContext] Auth state change:", event, session?.user?.id);
+      // Handle logout/session clear
+      if (event === 'SIGNED_OUT' || !session) {
+        setSession(null);
+        setUser(null);
+        setWalletImportState({ required: false, expectedAddress: null }); // Reset import state
+        checkedUsersRef.current.clear(); // Clear guard on logout
+        presenceTracker.stopTracking();
+        return;
+      }
 
       if (!pendingOTPVerification) {
         setSession(session);
-        setUser(session?.user ?? null);
+        setUser(session.user);
         
-        // Single source of truth: Only trigger on SIGNED_IN or INITIAL_SESSION
-        // Most events are handled by the initial getSession or the manual signIn call
-        // but we keep this for resilience on specific events if needed
-        if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+        // Only trigger wallet check for login-like events
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          await trackDevice(supabase, session.user.id);
           checkWalletOnAuth(session.user.id);
         }
       }
 
-      if (session?.user) {
+      if (session.user) {
         presenceTracker.startTracking(session.user.id);
-      } else {
-        presenceTracker.stopTracking();
       }
     });
 
@@ -504,6 +513,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (syncError) {
         console.error("[AuthContext] Error syncing wallet on signup:", syncError);
       }
+
+      // Track device on signup if auto-logged in
+      await trackDevice(supabase, data.user.id);
     }
 
     return { error };
@@ -523,11 +535,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.user && data.session) {
       console.log("[AuthContext] Sign in successful for:", data.user.id);
       
-      // Force a session refresh to get latest metadata
-      await supabase.auth.refreshSession();
+      // We explicitly DO NOT call checkWalletOnAuth here because
+      // onAuthStateChange will catch the SIGNED_IN event
       
       await trackDevice(supabase, data.user.id);
-      await checkWalletOnAuth(data.user.id);
       presenceTracker.startTracking(data.user.id);
     }
 
@@ -537,11 +548,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const completeOTPVerification = useCallback(async () => {
     if (!pendingOTPVerification || !pendingSession) return;
     const { user: pendingUser } = pendingSession;
+    
+    // Track device and check wallet after OTP completion
     await trackDevice(supabase, pendingUser.id);
+    await checkWalletOnAuth(pendingUser.id);
+    
     setPendingOTPVerification(null);
     setPendingSession(null);
     presenceTracker.startTracking(pendingUser.id);
-  }, [pendingOTPVerification, pendingSession, supabase]);
+  }, [pendingOTPVerification, pendingSession, supabase, checkWalletOnAuth]);
 
   const cancelOTPVerification = useCallback(async () => {
     setPendingOTPVerification(null);
@@ -551,6 +566,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     presenceTracker.stopTracking();
     setSessionPassword(null); // Clear session password from sessionStorage on logout
+    setWalletImportState({ required: false, expectedAddress: null }); // Clear import state on logout
+    checkedUsersRef.current.clear(); // Reset wallet check guard
     try {
       sessionStorage.removeItem('walletPassword');
     } catch (error) {
