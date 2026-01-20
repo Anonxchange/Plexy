@@ -7,6 +7,7 @@ import { useSchema, marketsPageSchema } from "@/hooks/use-schema";
 import { Badge } from "@/components/ui/badge";
 import { Search, Star, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useWalletData } from "@/hooks/use-wallet-data";
 
 interface MarketPair {
   id: string;
@@ -21,32 +22,51 @@ interface MarketPair {
   volume?: string;
 }
 
-const marketPairs: MarketPair[] = [
-  { id: "1", symbol: "BTC", pair: "BTC/USDT", icon: "₿", price: 110553.3, change24h: -1.78, leverage: "10X", isFavorite: true },
-  { id: "2", symbol: "ETH", pair: "ETH/USDT", icon: "Ξ", price: 3920.26, change24h: -1.59, leverage: "10X", isFavorite: true },
-  { id: "3", symbol: "USDC", pair: "USDC/USDT", icon: "⊙", price: 0.9998, change24h: -0.01, leverage: "10X", fees: true, isFavorite: false },
-  { id: "4", symbol: "SOL", pair: "SOL/USDT", icon: "◎", price: 194.42, change24h: 0.12, leverage: "10X", isFavorite: false },
-  { id: "5", symbol: "TRUMP", pair: "TRUMP/USDT", icon: "🇺🇸", price: 8.53, change24h: 15.27, leverage: "10X", isFavorite: false },
-  { id: "6", symbol: "ENSO", pair: "ENSO/USDT", icon: "⚡", price: 1.609, change24h: -5.02, isFavorite: false },
-  { id: "7", symbol: "XAUT", pair: "XAUT/USDT", icon: "🪙", price: 3957.6, change24h: -0.33, leverage: "10X", isFavorite: false },
-  { id: "8", symbol: "PUMP", pair: "PUMP/USDT", icon: "💎", price: 0.005215, change24h: 13.59, leverage: "10X", isFavorite: false },
-  { id: "9", symbol: "XPL", pair: "XPL/USDT", icon: "🔷", price: 0.3306, change24h: -9.03, leverage: "10X", isFavorite: false },
-  { id: "10", symbol: "ASTER", pair: "ASTER/USDT", icon: "⭐", price: 1.022, change24h: -4.80, leverage: "10X", isFavorite: false },
-  { id: "11", symbol: "BNB", pair: "BNB/USDT", icon: "💛", price: 1117.9, change24h: 1.30, leverage: "10X", isFavorite: false },
-  { id: "12", symbol: "STETH", pair: "STETH/USDT", icon: "💧", price: 3920.32, change24h: -1.54, isFavorite: false },
-];
+const ASSET_ICONS: Record<string, string> = {
+  BTC: "₿",
+  ETH: "Ξ",
+  SOL: "◎",
+  TRX: "TRX",
+  USDT: "₮",
+  USDC: "⊙",
+  BNB: "BNB",
+  XRP: "XRP",
+  MATIC: "M",
+  ARB: "A",
+  OP: "OP",
+};
 
 export default function MarketsPage() {
   useSchema(marketsPageSchema, "markets-page-schema");
+  const { data: walletData } = useWalletData();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("spot");
   const [currentPage, setCurrentPage] = useState(1);
   const [mainTab, setMainTab] = useState("overview");
   const [contractSubTab, setContractSubTab] = useState("perpetual");
 
+  const marketPairs = useMemo(() => {
+    if (!walletData?.assets) return [];
+    return walletData.assets.map((asset, index) => ({
+      id: String(index + 1),
+      symbol: asset.symbol,
+      pair: `${asset.symbol}/USDT`,
+      icon: ASSET_ICONS[asset.symbol] || asset.symbol[0],
+      price: asset.value / (asset.balance || 1) || 0, // Simplified price calculation
+      change24h: asset.change24h,
+      leverage: "10X",
+      isFavorite: index < 2,
+      volume: `${(Math.random() * 500 + 100).toFixed(2)}M(USDT)`
+    }));
+  }, [walletData]);
+
   const filteredPairs = useMemo(() => marketPairs.filter(pair => {
     return pair.pair.toLowerCase().includes(searchQuery.toLowerCase());
-  }), [searchQuery]);
+  }), [marketPairs, searchQuery]);
+
+  const topGainers = useMemo(() => [...marketPairs].sort((a, b) => b.change24h - a.change24h).slice(0, 3), [marketPairs]);
+  const newlyListed = useMemo(() => [...marketPairs].slice(-3), [marketPairs]);
+  const trending = useMemo(() => [...marketPairs].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0, 3), [marketPairs]);
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] pb-20 pt-4">
@@ -159,10 +179,10 @@ export default function MarketsPage() {
                       <div>
                         <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Top Gainers</h4>
                         <div className="space-y-3">
-                          {[{ pair: "ROSE/USDT", price: "0.01897", change: "+44.26%" }, { pair: "RESOLV/USDT", price: "0.1026", change: "+41.13%" }, { pair: "SERAPH/USDT", price: "0.01426", change: "+37.12%" }].map((item, i) => (
+                          {topGainers.map((item, i) => (
                             <div key={i} className="flex items-center justify-between text-sm font-bold">
                               <span className="text-slate-700">{item.pair}</span>
-                              <div className="flex gap-4"><span>{item.price}</span><span className="text-green-500">{item.change}</span></div>
+                              <div className="flex gap-4"><span>{item.price.toFixed(2)}</span><span className="text-green-500">{item.change24h > 0 ? "+" : ""}{item.change24h.toFixed(2)}%</span></div>
                             </div>
                           ))}
                         </div>
@@ -170,10 +190,10 @@ export default function MarketsPage() {
                       <div>
                         <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Newly Listed</h4>
                         <div className="space-y-3">
-                          {[{ pair: "LIT/USDT", price: "1.663", change: "-7.09%" }, { pair: "FOGO/USDT", price: "0.03142", change: "+2.18%" }, { pair: "FRAX/USDT", price: "1.1432", change: "-0.22%" }].map((item, i) => (
+                          {newlyListed.map((item, i) => (
                             <div key={i} className="flex items-center justify-between text-sm font-bold">
                               <span className="text-slate-700">{item.pair}</span>
-                              <div className="flex gap-4"><span>{item.price}</span><span className={`${item.change.startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>{item.change}</span></div>
+                              <div className="flex gap-4"><span>{item.price.toFixed(2)}</span><span className={`${item.change24h < 0 ? 'text-red-500' : 'text-green-500'}`}>{item.change24h > 0 ? "+" : ""}{item.change24h.toFixed(2)}%</span></div>
                             </div>
                           ))}
                         </div>
@@ -181,10 +201,10 @@ export default function MarketsPage() {
                       <div>
                         <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Trending</h4>
                         <div className="space-y-3">
-                          {[{ pair: "BTC/USDT", price: "92,739.6", change: "--" }, { pair: "ETH/USDT", price: "3,194.96", change: "-1.47%" }, { pair: "SOL/USDT", price: "133.57", change: "-0.47%" }].map((item, i) => (
+                          {trending.map((item, i) => (
                             <div key={i} className="flex items-center justify-between text-sm font-bold">
                               <span className="text-slate-700">{item.pair}</span>
-                              <div className="flex gap-4"><span>{item.price}</span><span className={`${item.change === '--' ? 'text-slate-400' : item.change.startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>{item.change}</span></div>
+                              <div className="flex gap-4"><span>{item.price.toFixed(2)}</span><span className={`${item.change24h < 0 ? 'text-red-500' : 'text-green-500'}`}>{item.change24h > 0 ? "+" : ""}{item.change24h.toFixed(2)}%</span></div>
                             </div>
                           ))}
                         </div>
@@ -211,7 +231,6 @@ export default function MarketsPage() {
 
         {mainTab === "key-metrics" && (
           <div className="space-y-6">
-            {/* Top Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="bg-white border-none shadow-sm rounded-xl">
                 <CardHeader className="pb-2">
@@ -275,7 +294,6 @@ export default function MarketsPage() {
               </Card>
             </div>
 
-            {/* Middle Section: Trend Distribution and Top Movers */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
                 <Card className="bg-white border-none shadow-sm rounded-xl">
@@ -374,12 +392,11 @@ export default function MarketsPage() {
               </div>
             </div>
 
-            {/* Bottom Markets Lists */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
               {[
-                { title: "Most Traded", data: [{ p: "BTC/USDT", v: "92,661", c: "+0.10%" }, { p: "ETH/USDT", v: "3,187.38", ch: "-0.65%" }, { p: "USDC/USDT", v: "1.0004", ch: "+0.03%" }, { p: "XRP/USDT", v: "1.9863", ch: "+2.48%" }, { p: "SOL/USDT", v: "133.61", ch: "-0.63%" }] },
-                { title: "Trending", data: [{ p: "BTC/USDT", v: "92,661", c: "+0.10%" }, { p: "ETH/USDT", v: "3,187.38", ch: "-0.65%" }, { p: "XRP/USDT", v: "1.9863", ch: "+2.48%" }, { p: "SOL/USDT", v: "133.61", ch: "-0.63%" }, { p: "MNT/USDT", v: "0.9174", ch: "+1.08%" }] },
-                { title: "Newly Listed", data: [{ p: "LIT/USDT", v: "1.642", ch: "-8.52%" }, { p: "FOGO/USDT", v: "0.03048", ch: "+3.78%" }, { p: "FRAX/USDT", v: "1.1698", ch: "-3.91%" }, { p: "BREV/USDT", v: "0.2692", ch: "-3.30%" }, { p: "WHITEWHALE/USDT", v: "0.03953", ch: "-40.61%" }] }
+                { title: "Most Traded", data: [...marketPairs].sort((a, b) => parseFloat(b.volume || "0") - parseFloat(a.volume || "0")).slice(0, 5) },
+                { title: "Trending", data: trending.slice(0, 5) },
+                { title: "Newly Listed", data: newlyListed.slice(0, 5) }
               ].map((list, i) => (
                 <Card key={i} className="bg-white border-none shadow-sm rounded-xl overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between pb-3 bg-[#F9FAFB]/50 border-b">
@@ -403,10 +420,10 @@ export default function MarketsPage() {
                           <tr key={j} className="text-xs hover:bg-[#F9FAFB] transition-colors cursor-pointer">
                             <td className="px-4 py-3 font-bold text-slate-700 flex items-center gap-2">
                               <span className="text-muted-foreground/50 w-3">{j + 1}</span>
-                              {item.p}
+                              {item.pair}
                             </td>
-                            <td className="px-4 py-3 text-right font-bold text-slate-900">{item.v}</td>
-                            <td className={`px-4 py-3 text-right font-bold ${(item.c || item.ch).startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>{item.c || item.ch}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-900">{item.price.toFixed(2)}</td>
+                            <td className={`px-4 py-3 text-right font-bold ${item.change24h < 0 ? 'text-red-500' : 'text-green-500'}`}>{item.change24h > 0 ? "+" : ""}{item.change24h.toFixed(2)}%</td>
                           </tr>
                         ))}
                       </tbody>
@@ -613,9 +630,9 @@ function MarketList({ pairs }: { pairs: MarketPair[] }) {
                   </div>
                 </div>
               </td>
-              <td className="p-4 font-bold text-slate-900">{pair.price.toLocaleString()}</td>
+              <td className="p-4 font-bold text-slate-900">{pair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               <td className={`p-4 font-bold ${pair.change24h >= 0 ? "text-green-500" : "text-red-500"}`}>
-                {pair.change24h >= 0 ? "+" : ""}{pair.change24h}%
+                {pair.change24h >= 0 ? "+" : ""}{pair.change24h.toFixed(2)}%
               </td>
               <td className="p-4 font-bold text-slate-700 hidden md:table-cell">{(pair.price * 1.05).toFixed(2)}</td>
               <td className="p-4 font-bold text-slate-700 hidden md:table-cell">{(pair.price * 0.95).toFixed(2)}</td>
