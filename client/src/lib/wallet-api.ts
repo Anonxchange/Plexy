@@ -37,14 +37,18 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
   console.log("[getUserWallets] Fetching balances for user:", userId);
 
   try {
-    const result = await supabase.functions.invoke('monitor-deposits');
+    const { data: { session } } = await supabase.auth.getSession();
+    const result = await supabase.functions.invoke<any>('monitor-deposits', {
+      headers: session ? { Authorization: `Bearer ${session.access_token}` } : {}
+    });
     
     // Check for potential error without stopping execution
     if (result?.error) {
       console.warn("[getUserWallets] Edge function sync failed:", result.error);
     }
 
-    const balances = result?.data?.balances || result?.balances || result?.walletBalances || result?.data || result || {};
+    const data: any = (result as any)?.data || {};
+    const balances = data.balances || data.walletBalances || (result as any)?.balances || (result as any)?.walletBalances || (result as any)?.data || result || {};
     
     // If it's an object with keys being symbols
     const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances || {}).map(([symbol, data]: [string, any]) => {
@@ -65,7 +69,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     // CRITICAL: Filter out non-crypto symbols (junk from API responses like "success", "message", etc.)
     const VALID_CRYPTO_SYMBOLS = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'TRX', 'LTC', 'XRP', 'ADA', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'NEAR', 'FTM', 'ALGO', 'VET', 'BASE'];
     
-    const wallets: Wallet[] = balancesArray
+    const wallets: Wallet[] = (balancesArray
       .filter((b: any) => {
         try {
           const symbol = (b?.symbol || b?.crypto_symbol || b?.currency || '').toUpperCase();
@@ -91,7 +95,8 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
         } catch (e) {
           return null;
         }
-      }).filter((w: Wallet | null): w is Wallet => w !== null);
+      }) as (Wallet | null)[])
+      .filter((w: Wallet | null): w is Wallet => w !== null);
 
     // Sync with local non-custodial wallets to ensure we have all addresses
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
@@ -263,6 +268,7 @@ export async function createCDPSession(address: string, assets: string[]): Promi
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
+      'X-Client-Info': 'pexly-client',
     },
     body: JSON.stringify({
       address,
@@ -317,6 +323,13 @@ export function startDepositMonitoring(
   checkDeposits();
 
   return () => clearInterval(intervalId);
+}
+
+export async function monitorWithdrawals(userId: string): Promise<{
+  updated: any[];
+  message?: string;
+}> {
+  return { updated: [], message: 'Withdrawal monitoring handled on-client' };
 }
 
 export function startWithdrawalMonitoring(
