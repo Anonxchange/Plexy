@@ -1,5 +1,5 @@
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
-import { createClient } from "./supabase";
+import { supabase } from "./supabase";
 
 export interface Wallet {
   id: string;
@@ -33,24 +33,18 @@ export interface WalletTransaction {
 }
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  const supabase = createClient();
   console.log("[getUserWallets] Fetching balances for user:", userId);
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const result = await supabase.functions.invoke<any>('monitor-deposits', {
-      headers: session ? { Authorization: `Bearer ${session.access_token}` } : {}
-    });
+    const { data, error } = await supabase.functions.invoke('monitor-deposits');
     
-    // Check for potential error without stopping execution
-    if (result?.error) {
-      console.warn("[getUserWallets] Edge function sync failed:", result.error);
+    if (error) {
+      console.warn("[getUserWallets] Edge function sync failed:", error);
     }
 
-    const data: any = (result as any)?.data || {};
-    const balances = data.balances || data.walletBalances || (result as any)?.balances || (result as any)?.walletBalances || (result as any)?.data || result || {};
+    const resultData: any = data || {};
+    const balances = resultData.balances || resultData.walletBalances || resultData.data || resultData || {};
     
-    // If it's an object with keys being symbols
     const balancesArray = Array.isArray(balances) ? balances : Object.entries(balances || {}).map(([symbol, data]: [string, any]) => {
       if (typeof data === 'object' && data !== null) {
         return {
@@ -66,7 +60,6 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       };
     });
 
-    // CRITICAL: Filter out non-crypto symbols (junk from API responses like "success", "message", etc.)
     const VALID_CRYPTO_SYMBOLS = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'TRX', 'LTC', 'XRP', 'ADA', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'NEAR', 'FTM', 'ALGO', 'VET', 'BASE'];
     
     const wallets: Wallet[] = (balancesArray
@@ -98,7 +91,6 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       }) as (Wallet | null)[])
       .filter((w: Wallet | null): w is Wallet => w !== null);
 
-    // Sync with local non-custodial wallets to ensure we have all addresses
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
     localWallets.forEach(local => {
       const exists = wallets.find(w => w.crypto_symbol === local.chainId || w.deposit_address === local.address);
@@ -117,14 +109,10 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       }
     });
 
-    // For non-custodial, we should really be checking the blockchain directly
-    // but for now we ensure it's handled as much as possible on the client side
-    // avoiding unnecessary backend calls if possible, or ensuring they are non-blocking
     console.log("[getUserWallets] Synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
     return wallets;
   } catch (e) {
     console.warn(`[getUserWallets] Remote sync failed, using local non-custodial data:`, e);
-    // Fallback to local wallets if sync fails
     const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
     return localWallets.map((w) => {
       let symbol = w.chainId;
@@ -155,7 +143,6 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
 }
 
 export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('wallet_transactions')
     .select('*')
@@ -178,31 +165,20 @@ export async function sendCrypto(
   amount: number,
   notes?: string
 ): Promise<WalletTransaction> {
-  const supabase = createClient();
-  
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not authenticated');
-
-  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-withdrawal`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  const { data, error } = await supabase.functions.invoke('process-withdrawal', {
+    body: {
       user_id: userId,
       crypto_symbol: cryptoSymbol,
       amount: amount,
       to_address: toAddress,
-    }),
+    },
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to process withdrawal');
+  if (error) {
+    throw new Error(error.message || 'Failed to process withdrawal');
   }
 
-  const result = await response.json();
+  const result = data as any;
   
   return {
     id: result.transaction.id,
@@ -257,7 +233,6 @@ export async function monitorDeposits(userId: string, cryptoSymbol: string): Pro
 }
 
 export async function createCDPSession(address: string, assets: string[]): Promise<string> {
-  const supabase = createClient();
   console.log("[createCDPSession] Calling cdp-create-session for address:", address);
 
   const { data, error } = await supabase.functions.invoke('cdp-create-session', {
@@ -272,18 +247,15 @@ export async function createCDPSession(address: string, assets: string[]): Promi
     throw new Error(error.message || 'Failed to create CDP session');
   }
 
-  // Debug raw response
   console.log("[createCDPSession] Raw result:", JSON.stringify(data, null, 2));
 
-  // The Supabase Edge function response structure might vary
-  // Check for session_token, sessionToken, or token in common locations
-  const token = data?.session_token || data?.sessionToken || data?.token || 
-                data?.data?.session_token || data?.data?.sessionToken || data?.data?.token ||
-                data?.result?.session_token || data?.result?.sessionToken || data?.result?.token;
+  const result = data as any;
+  const token = result?.session_token || result?.sessionToken || result?.token || 
+                result?.data?.session_token || result?.data?.sessionToken || result?.data?.token ||
+                result?.result?.session_token || result?.result?.sessionToken || result?.result?.token;
   
   if (!token) {
     console.error("[createCDPSession] No token found in response:", data);
-    // If the data itself is a string, it might be the token
     if (typeof data === 'string' && data.length > 20) return data;
   }
 
@@ -353,14 +325,7 @@ export async function sendPexlyPayment(
   transactionId?: string;
   error?: string;
 }> {
-  const supabase = createClient();
-  
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
     console.log('🚀 DEBUG: Calling pexly-pay-send edge function:', {
       sender_id: senderId,
       recipient_id: recipientId,
@@ -369,34 +334,26 @@ export async function sendPexlyPayment(
       note
     });
 
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pexly-pay-send`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const { data, error } = await supabase.functions.invoke('pexly-pay-send', {
+      body: {
         sender_id: senderId,
         recipient_id: recipientId,
         amount,
         crypto_symbol: cryptoSymbol,
         note: note || null,
-      }),
+      },
     });
 
-    console.log('📡 DEBUG: Edge function response status:', response.status);
-
-    const result = await response.json();
-    
-    console.log('📦 DEBUG: Edge function response:', result);
-
-    if (!response.ok) {
-      console.error('❌ Edge function error:', result);
+    if (error) {
+      console.error('❌ Edge function error:', error);
       return { 
         success: false, 
-        error: result.error || result.message || 'Failed to process transfer' 
+        error: error.message || 'Failed to process transfer' 
       };
     }
+
+    const result = data as any;
+    console.log('📦 DEBUG: Edge function response:', result);
 
     return {
       success: true,
