@@ -60,38 +60,151 @@ export default function MarketsPage() {
         </div>
 
         {mainTab === "overview" && (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-20">
-            <div className="p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h2 className="text-2xl font-bold">Markets</h2>
-                <div className="relative w-full sm:w-80">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-11 bg-[#F9FAFB] border-none font-medium" />
-                </div>
-              </div>
-
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="w-full justify-start h-12 bg-transparent p-0 border-none gap-6 mb-6">
-                  {["Favorites", "Spot", "Derivatives", "TradFi", "Newly Listed"].map((tab) => (
-                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 h-full font-bold text-sm text-muted-foreground">{tab}</TabsTrigger>
-                  ))}
-                </TabsList>
-                <TabsContent value="spot" className="mt-0">
-                  <MarketList pairs={filteredPairs} />
-                  
-                  <div className="flex items-center justify-center gap-2 mt-8 py-4 border-t">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
-                    {[1, 2, 3, 4].map((page) => (
-                      <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-9 w-9 rounded-lg font-bold ${currentPage === page ? 'bg-primary' : ''}`} onClick={() => setCurrentPage(page)}>{page}</Button>
-                    ))}
-                    <span className="text-sm font-bold text-muted-foreground">...</span>
-                    <Button variant="ghost" size="sm" className="h-9 font-bold" onClick={() => setCurrentPage(34)}>34</Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg"><ChevronRight className="h-4 w-4" /></Button>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card className="bg-white border-none shadow-sm rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-lg font-bold">Market Sentiment</CardTitle>
+                  <Button variant="link" className="text-primary font-bold p-0 flex items-center gap-1">View More <ChevronRight className="h-4 w-4" /></Button>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center py-6">
+                  <div className="relative w-48 h-24 mb-4">
+                    <svg viewBox="0 0 100 50" className="w-full h-full">
+                      <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="#E2E8F0" strokeWidth="8" strokeLinecap="round" />
+                      <path d="M10,50 A40,40 0 0,1 50,10" fill="none" stroke="#22C55E" strokeWidth="8" strokeLinecap="round" />
+                      <path d="M50,10 A40,40 0 0,1 90,50" fill="none" stroke="#EF4444" strokeWidth="8" strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
+                      <span className="text-3xl font-bold text-primary">44</span>
+                      <span className="text-xs font-bold text-muted-foreground">Neutral</span>
+                    </div>
                   </div>
-                </TabsContent>
-              </Tabs>
+                  <div className="w-full flex justify-between text-[10px] font-bold text-muted-foreground mt-2 px-4">
+                    <div className="flex flex-col items-start"><span className="text-green-500">25</span><span>Long</span></div>
+                    <div className="flex flex-col items-end"><span className="text-red-500">75</span><span>Short</span></div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-none shadow-sm rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-lg font-bold">Market Data</CardTitle>
+                  <Button variant="link" className="text-primary font-bold p-0 flex items-center gap-1">View More <ChevronRight className="h-4 w-4" /></Button>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-4">
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-wider">Current ETH Gas Price</p>
+                    <p className="text-sm font-bold text-slate-900">0.034972676 Gwei ≈ <span className="text-muted-foreground">0.002 USD</span></p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-wider">Trading Vol.</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-bold text-red-500">-25.65%</span>
+                      <span className="text-lg font-bold text-slate-900">529.48 B USD</span>
+                    </div>
+                    <div className="h-8 mt-2 w-full bg-red-50/30 rounded overflow-hidden">
+                      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full opacity-50">
+                        <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20 L100,40 Z" fill="#FEE2E2" />
+                        <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20" fill="none" stroke="#EF4444" strokeWidth="2" />
+                      </svg>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-none shadow-sm rounded-xl">
+                <CardHeader><CardTitle className="text-lg font-bold">Trending Sectors</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    { name: "Privacy Coins", change: "16.55%", coin: "ROSE", coinPrice: "44.26%" },
+                    { name: "AI", change: "12.80%", coin: "ROSE", coinPrice: "44.26%" },
+                    { name: "Pantera Portfolio", change: "7.79%", coin: "ROSE", coinPrice: "44.26%" },
+                    { name: "Polychain Portfolio", change: "7.37%", coin: "ROSE", coinPrice: "44.26%" }
+                  ].map((sector, i) => (
+                    <div key={i} className="flex items-center justify-between group cursor-pointer">
+                      <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">{sector.name}</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-bold text-green-500">{sector.change}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground bg-muted/30 px-2 py-0.5 rounded uppercase tracking-tighter w-24 text-right">
+                          {sector.coin} <span className="text-green-500">{sector.coinPrice}</span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             </div>
-          </div>
+
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-20">
+              <div className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <h2 className="text-2xl font-bold">Markets</h2>
+                  <div className="relative w-full sm:w-80">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-11 bg-[#F9FAFB] border-none font-medium" />
+                  </div>
+                </div>
+
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="w-full justify-start h-12 bg-transparent p-0 border-none gap-6 mb-6">
+                    {["Favorites", "Spot", "Derivatives", "TradFi", "Newly Listed"].map((tab) => (
+                      <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 h-full font-bold text-sm text-muted-foreground">{tab}</TabsTrigger>
+                    ))}
+                  </TabsList>
+                  
+                  <TabsContent value="spot" className="mt-0 space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b">
+                      <div>
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Top Gainers</h4>
+                        <div className="space-y-3">
+                          {[{ pair: "ROSE/USDT", price: "0.01897", change: "+44.26%" }, { pair: "RESOLV/USDT", price: "0.1026", change: "+41.13%" }, { pair: "SERAPH/USDT", price: "0.01426", change: "+37.12%" }].map((item, i) => (
+                            <div key={i} className="flex items-center justify-between text-sm font-bold">
+                              <span className="text-slate-700">{item.pair}</span>
+                              <div className="flex gap-4"><span>{item.price}</span><span className="text-green-500">{item.change}</span></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Newly Listed</h4>
+                        <div className="space-y-3">
+                          {[{ pair: "LIT/USDT", price: "1.663", change: "-7.09%" }, { pair: "FOGO/USDT", price: "0.03142", change: "+2.18%" }, { pair: "FRAX/USDT", price: "1.1432", change: "-0.22%" }].map((item, i) => (
+                            <div key={i} className="flex items-center justify-between text-sm font-bold">
+                              <span className="text-slate-700">{item.pair}</span>
+                              <div className="flex gap-4"><span>{item.price}</span><span className={`${item.change.startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>{item.change}</span></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Trending</h4>
+                        <div className="space-y-3">
+                          {[{ pair: "BTC/USDT", price: "92,739.6", change: "--" }, { pair: "ETH/USDT", price: "3,194.96", change: "-1.47%" }, { pair: "SOL/USDT", price: "133.57", change: "-0.47%" }].map((item, i) => (
+                            <div key={i} className="flex items-center justify-between text-sm font-bold">
+                              <span className="text-slate-700">{item.pair}</span>
+                              <div className="flex gap-4"><span>{item.price}</span><span className={`${item.change === '--' ? 'text-slate-400' : item.change.startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>{item.change}</span></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <MarketList pairs={filteredPairs} />
+                    
+                    <div className="flex items-center justify-center gap-2 mt-8 py-4 border-t">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
+                      {[1, 2, 3, 4].map((page) => (
+                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-9 w-9 rounded-lg font-bold ${currentPage === page ? 'bg-primary' : ''}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                      ))}
+                      <span className="text-sm font-bold text-muted-foreground">...</span>
+                      <Button variant="ghost" size="sm" className="h-9 font-bold" onClick={() => setCurrentPage(34)}>34</Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg"><ChevronRight className="h-4 w-4" /></Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
+          </>
         )}
 
         {mainTab === "key-metrics" && (
@@ -254,31 +367,6 @@ export default function MarketsPage() {
                     </div>
                   </CardContent>
                 </Card>
-
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-primary">
-                    <h4 className="text-sm font-bold mb-2">Most Traded</h4>
-                    <div className="space-y-2">
-                      {[{ p: "BTC/USDT", val: "92,661", ch: "+0.10%" }, { p: "ETH/USDT", val: "3,187.38", ch: "-0.65%" }].map((it, i) => (
-                        <div key={i} className="flex justify-between text-xs font-bold">
-                          <span>{it.p}</span>
-                          <div className="flex gap-3"><span>{it.val}</span><span className={it.ch.startsWith('-') ? 'text-red-500' : 'text-green-500'}>{it.ch}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-primary">
-                    <h4 className="text-sm font-bold mb-2">Trending</h4>
-                    <div className="space-y-2">
-                      {[{ p: "XRP/USDT", val: "1.9863", ch: "+2.48%" }, { p: "SOL/USDT", val: "133.61", ch: "-0.63%" }].map((it, i) => (
-                        <div key={i} className="flex justify-between text-xs font-bold">
-                          <span>{it.p}</span>
-                          <div className="flex gap-3"><span>{it.val}</span><span className={it.ch.startsWith('-') ? 'text-red-500' : 'text-green-500'}>{it.ch}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
