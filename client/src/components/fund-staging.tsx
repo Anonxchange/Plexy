@@ -11,15 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export function FundStaging() {
-  const { user } = useAuth();
-  const { walletBalances, isLoading: isWalletLoading } = useWalletData();
+  const { data: walletData, isLoading: isWalletLoading } = useWalletData();
+  const walletBalances = (walletData as any)?.walletBalances || [];
   const [sessionToken, setSessionToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manualAddress, setManualAddress] = useState("");
 
   // Find Optimism wallet address
-  const optimismWallet = walletBalances?.find(w => 
+  const optimismWallet = walletBalances?.find((w: any) => 
     w.crypto_symbol === 'OP' || 
     w.crypto_symbol === 'BASE' ||
     (w.crypto_symbol === 'ETH' && w.deposit_address?.startsWith('0x')) ||
@@ -41,13 +41,21 @@ export function FundStaging() {
       const assets = ["ETH", "USDC"];
       const token = await createCDPSession(userAddress, assets);
       console.log("CDP token received length:", token?.length || 0);
+      
       if (!token) {
         throw new Error("No session token received from the server. Check Supabase logs for CDP API errors.");
       }
       setSessionToken(token);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch CDP token:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate funding session");
+      // Improved error reporting for load fail issues
+      const errorMessage = err.message || "Failed to generate funding session";
+      setError(errorMessage);
+      
+      // If we see "load fail", it might be a connectivity or session issue
+      if (errorMessage.toLowerCase().includes("load fail") || errorMessage.toLowerCase().includes("failed to fetch")) {
+        setError("Network error or session expired. Please refresh the page and try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +118,11 @@ export function FundStaging() {
             </Alert>
           ) : sessionToken ? (
             <div className="flex justify-center border rounded-lg p-6 bg-slate-50">
-              <FundCard sessionToken={sessionToken} />
+              <FundCard 
+                sessionToken={sessionToken} 
+                assetSymbol="USDC"
+                country="US"
+              />
             </div>
           ) : (
             <div className="text-center py-10 border-2 border-dashed rounded-lg">
