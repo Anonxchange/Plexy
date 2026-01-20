@@ -209,28 +209,18 @@ function getDeviceInfo() {
 async function trackDevice(supabase: any, userId: string) {
   try {
     const deviceInfo = getDeviceInfo();
-
     let ipAddress = 'Unknown';
     try {
       const ipResponse = await fetch('https://api.ipify.org?format=json');
       const ipData = await ipResponse.json();
       ipAddress = ipData.ip;
     } catch (ipError) {
-      console.error('Error fetching IP:', ipError);
+      // IP fetch failed, proceeding with Unknown
     }
-
-    // Check if this IP exists for this user
-    const { data: existingIPs } = await supabase
-      .from('user_devices')
-      .select('ip_address')
-      .eq('user_id', userId)
-      .eq('ip_address', ipAddress);
-
-    const isNewIP = !existingIPs || existingIPs.length === 0;
 
     const { data: existingDevices } = await supabase
       .from('user_devices')
-      .select('*')
+      .select('id, ip_address')
       .eq('user_id', userId)
       .eq('user_agent', deviceInfo.userAgent)
       .eq('ip_address', ipAddress);
@@ -242,9 +232,7 @@ async function trackDevice(supabase: any, userId: string) {
         .update({ is_current: true, last_active: new Date().toISOString() })
         .eq('id', deviceId);
     } else {
-      // Get user's email
       const { data: { user } } = await supabase.auth.getUser();
-      
       await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
       await supabase.from('user_devices').insert({
         user_id: userId,
@@ -256,27 +244,9 @@ async function trackDevice(supabase: any, userId: string) {
         is_current: true,
         last_active: new Date().toISOString(),
       });
-
-      // If this is a new IP, create a notification (non-blocking)
-      if (isNewIP && user?.email) {
-        console.log('New IP detected, creating account change notification:', ipAddress);
-        // Dynamic import to avoid circular dependency
-        import('./notifications-api').then(({ createAccountChangeNotification }) => {
-          createAccountChangeNotification(userId, 'login_attempt', {
-            ip_address: ipAddress,
-            device: deviceInfo.deviceName,
-            browser: deviceInfo.browser,
-            os: deviceInfo.os,
-            timestamp: new Date().toISOString(),
-            email: user.email
-          }).then(success => {
-            console.log('Account change notification created:', success);
-          }).catch(err => console.error('Error creating account change notification:', err));
-        }).catch(err => console.error('Error importing notifications-api:', err));
-      }
     }
   } catch (error) {
-    console.error('Error in trackDevice:', error);
+    // Silent fail for tracking
   }
 }
 
@@ -284,8 +254,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(null);
-  const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(null);
+  const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(() => {
+    // Persist OTP state across reloads
+    try {
+      const saved = sessionStorage.getItem('pendingOTP_data');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
+  });
+  const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(() => {
+    // Persist pending session state across reloads
+    try {
+      const saved = sessionStorage.getItem('pendingOTP_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
+  });
+
+  // Effect to sync OTP state to sessionStorage
+  useEffect(() => {
+    try {
+      if (pendingOTPVerification) sessionStorage.setItem('pendingOTP_data', JSON.stringify(pendingOTPVerification));
+      else sessionStorage.removeItem('pendingOTP_data');
+      
+      if (pendingSession) sessionStorage.setItem('pendingOTP_session', JSON.stringify(pendingSession));
+      else sessionStorage.removeItem('pendingOTP_session');
+    } catch (e) {}
+  }, [pendingOTPVerification, pendingSession]);
   const [walletImportState, setWalletImportState] = useState<WalletImportState>({ required: false, expectedAddress: null });
   
   // Load sessionPassword from sessionStorage on mount, or initialize to null
@@ -316,81 +309,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
   
+  // Synchronous guard using Ref and sessionStorage for cross-tab sync
+  const lastForceCheckRef = useRef<number>(0);
   const supabase = createClient();
-
   const checkedUsersRef = useRef<Set<string>>(new Set());
+  const isTrackingRef = useRef<boolean>(false);
 
   const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
-    // Synchronous guard using Ref
     if (!userId) return;
     
-    if (!force && checkedUsersRef.current.has(userId)) {
-      console.log("[AuthContext] Wallet already checked for session:", userId);
+    // Cross-tab coordination using sessionStorage
+    const storageKey = `wallet_checked_${userId}`;
+    if (!force && (checkedUsersRef.current.has(userId) || sessionStorage.getItem(storageKey))) {
       return;
     }
     
     try {
       checkedUsersRef.current.add(userId);
-      console.log("[AuthContext] checkWalletOnAuth executing for user:", userId, force ? "(FORCED)" : "");
-      
-      // Load persisted wallets from Supabase
+      sessionStorage.setItem(storageKey, 'true'); // Mark as checked for this tab session
       const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
-      console.log("[AuthContext] Loaded persisted wallets from Supabase:", persistedWallets.length);
       
       if (persistedWallets.length > 0) {
-        // User has persisted wallets, no need to import
-        setWalletImportState({ 
-          required: false, 
-          expectedAddress: null 
-        });
+        setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
       
-      // Force a fresh profile fetch
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('wallet_address')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("[AuthContext] Error fetching profile:", profileError);
-      }
-
+      const { data: profile } = await supabase.from('user_profiles').select('wallet_address').eq('id', userId).maybeSingle();
       let walletAddress = profile?.wallet_address;
-      console.log("[AuthContext] DB Wallet Address:", walletAddress);
 
-      // Fallback to auth metadata if not in profile
       if (!walletAddress) {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) {
-          console.error("[AuthContext] Error fetching auth user:", userError);
-        }
+        const { data: { user } } = await supabase.auth.getUser();
         walletAddress = user?.user_metadata?.wallet_address;
-        console.log("[AuthContext] Metadata Wallet Address:", walletAddress);
       }
 
       if (walletAddress) {
         const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress, userId);
-        console.log("[AuthContext] Has local wallet for", walletAddress, "?", hasLocal);
-        
-        if (!hasLocal) {
-          console.log("[AuthContext] Triggering import dialog for:", walletAddress);
-          setWalletImportState({ 
-            required: true, 
-            expectedAddress: walletAddress 
-          });
-        } else {
-          setWalletImportState({ 
-            required: false, 
-            expectedAddress: null 
-          });
-        }
-      } else {
-        console.log("[AuthContext] No wallet address found in DB or Metadata");
+        setWalletImportState({ 
+          required: !hasLocal, 
+          expectedAddress: !hasLocal ? walletAddress : null 
+        });
       }
     } catch (error) {
-      console.error("Error checking wallet on auth:", error);
+      checkedUsersRef.current.delete(userId);
+      setWalletImportState({ required: false, expectedAddress: null });
     }
   }, [supabase]);
 
@@ -403,17 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      // getSession is usually followed by INITIAL_SESSION event in onAuthStateChange
-      // but we set initial state here for UI responsiveness.
-      // The wallet check logic will be handled by onAuthStateChange logic or this block
-      // The ref guard prevents double-execution if both fire.
-      if (session?.user) {
-        console.log("[AuthContext] Initial session load:", session.user.id);
-        await trackDevice(supabase, session.user.id);
-        await checkWalletOnAuth(session.user.id);
-        presenceTracker.startTracking(session.user.id);
-      }
-
+      // INITIAL_SESSION event in onAuthStateChange will handle logic
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -430,8 +381,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT' || !session) {
         setSession(null);
         setUser(null);
-        setWalletImportState({ required: false, expectedAddress: null }); // Reset import state
-        checkedUsersRef.current.clear(); // Clear guard on logout
+        setWalletImportState({ required: false, expectedAddress: null });
+        checkedUsersRef.current.clear();
+        isTrackingRef.current = false; // Reset tracking flag
         presenceTracker.stopTracking();
         return;
       }
@@ -440,22 +392,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session.user);
         
-        // Only trigger wallet check for login-like events
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           await trackDevice(supabase, session.user.id);
-          checkWalletOnAuth(session.user.id);
+          await checkWalletOnAuth(session.user.id);
         }
       }
 
-      if (session.user) {
+      if (session.user && !isTrackingRef.current) {
+        isTrackingRef.current = true; // Prevent double-starting
         presenceTracker.startTracking(session.user.id);
       }
     });
 
-    // Listen for manual trigger from dashboard
     const handleForceCheck = (e: any) => {
       if (e.detail?.userId) {
-        checkWalletOnAuth(e.detail.userId, true);
+        const userId = e.detail.userId;
+        const now = Date.now();
+        if (now - lastForceCheckRef.current < 2000) return;
+        lastForceCheckRef.current = now;
+        checkWalletOnAuth(userId, true);
       }
     };
     window.addEventListener('force-wallet-check', handleForceCheck);
@@ -484,38 +439,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       : window.location.origin;
     const redirectUrl = `${baseUrl}/verify-email`;
     
-    // Check if we have a local wallet to associate during signup
-    // Note: At signup time, we don't have a userId yet, so we can't fetch user-specific wallets
-    // This should be handled after user creation in the response
-    const walletAddress = undefined;
-
-    console.log("[AuthContext] Signing up with wallet address:", walletAddress);
-
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: { 
         emailRedirectTo: redirectUrl,
         captchaToken,
-        data: {
-          wallet_address: walletAddress
-        }
       },
     });
 
-    if (!error && data.user && walletAddress) {
-      console.log("[AuthContext] Syncing wallet to user_profiles for new user:", data.user.id);
-      const { error: syncError } = await supabase.from('user_profiles').upsert({
-        id: data.user.id,
-        wallet_address: walletAddress
-      }, { onConflict: 'id' });
-      
-      if (syncError) {
-        console.error("[AuthContext] Error syncing wallet on signup:", syncError);
-      }
-
-      // Track device on signup if auto-logged in
+    if (!error && data.user) {
       await trackDevice(supabase, data.user.id);
+      await checkWalletOnAuth(data.user.id);
     }
 
     return { error };
@@ -528,17 +463,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: { captchaToken },
     });
 
-    if (error) {
-      return { error, data };
-    }
+    if (error) return { error, data };
 
     if (data.user && data.session) {
-      console.log("[AuthContext] Sign in successful for:", data.user.id);
-      
-      // We explicitly DO NOT call checkWalletOnAuth here because
-      // onAuthStateChange will catch the SIGNED_IN event
-      
       await trackDevice(supabase, data.user.id);
+      await checkWalletOnAuth(data.user.id);
       presenceTracker.startTracking(data.user.id);
     }
 
@@ -549,29 +478,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!pendingOTPVerification || !pendingSession) return;
     const { user: pendingUser } = pendingSession;
     
-    // Track device and check wallet after OTP completion
     await trackDevice(supabase, pendingUser.id);
     await checkWalletOnAuth(pendingUser.id);
     
     setPendingOTPVerification(null);
     setPendingSession(null);
-    presenceTracker.startTracking(pendingUser.id);
+    
+    // Safety check for presence tracking
+    if (!isTrackingRef.current) {
+      isTrackingRef.current = true;
+      presenceTracker.startTracking(pendingUser.id);
+    }
+    
+    try { sessionStorage.removeItem('pendingOTP_data'); sessionStorage.removeItem('pendingOTP_session'); } catch (e) {}
   }, [pendingOTPVerification, pendingSession, supabase, checkWalletOnAuth]);
 
   const cancelOTPVerification = useCallback(async () => {
     setPendingOTPVerification(null);
     setPendingSession(null);
+    try {
+      sessionStorage.removeItem('pendingOTP_data');
+      sessionStorage.removeItem('pendingOTP_session');
+    } catch (e) {}
   }, []);
 
   const signOut = async () => {
     presenceTracker.stopTracking();
-    setSessionPassword(null); // Clear session password from sessionStorage on logout
-    setWalletImportState({ required: false, expectedAddress: null }); // Clear import state on logout
-    checkedUsersRef.current.clear(); // Reset wallet check guard
+    setSessionPassword(null);
+    setWalletImportState({ required: false, expectedAddress: null });
+    checkedUsersRef.current.clear();
+    isTrackingRef.current = false;
+    setPendingOTPVerification(null);
+    setPendingSession(null);
     try {
       sessionStorage.removeItem('walletPassword');
+      sessionStorage.removeItem('pendingOTP_data');
+      sessionStorage.removeItem('pendingOTP_session');
+      // Clear wallet checked status for this tab
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('wallet_checked_')) sessionStorage.removeItem(key);
+      });
     } catch (error) {
-      console.error('Error clearing sessionStorage on logout:', error);
+      // Silent error for sessionStorage
     }
     await supabase.auth.signOut();
   };
