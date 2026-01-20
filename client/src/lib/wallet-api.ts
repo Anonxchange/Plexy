@@ -268,8 +268,8 @@ export async function createCDPSession(address: string, assets: string[]): Promi
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
-      'X-Client-Info': 'pexly-client',
     },
+    mode: 'cors',
     body: JSON.stringify({
       address,
       assets,
