@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 export interface CryptoPrice {
   symbol: string;
   name: string;
@@ -21,161 +23,10 @@ let realtimePricesCache: Record<string, CryptoPrice> | null = null;
 let lastRealtimeFetchTime = 0;
 const REALTIME_CACHE_DURATION = 3000; // 3 seconds for real-time pricing
 
-const COINGECKO_IDS: Record<string, string> = {
-  BTC: 'bitcoin',
-  ETH: 'ethereum',
-  USDT: 'tether',
-  USDC: 'usd-coin',
-  SOL: 'solana',
-  BNB: 'binancecoin',
-  TRX: 'tron',
-  LTC: 'litecoin',
-  XRP: 'ripple',
-  ADA: 'cardano',
-  DOGE: 'dogecoin',
-  AVAX: 'avalanche-2',
-  MATIC: 'matic-network',
-  DOT: 'polkadot',
-  LINK: 'chainlink',
-  UNI: 'uniswap',
-  ATOM: 'cosmos',
-  APT: 'aptos',
-  ARB: 'arbitrum',
-  OP: 'optimism',
-  NEAR: 'near',
-  FTM: 'fantom',
-  ALGO: 'algorand',
-  VET: 'vechain'
-};
-
-export async function getCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
-  const now = Date.now();
-  
-  // Return cached prices if still valid and contains all requested symbols
-  if (cryptoPricesCache && (now - lastPricesFetchTime) < PRICES_CACHE_DURATION) {
-    const hasAllSymbols = symbols.every(s => cryptoPricesCache![s]);
-    if (hasAllSymbols) {
-      return cryptoPricesCache;
-    }
-  }
-  
-  const ids = symbols.map(s => COINGECKO_IDS[s]).filter(Boolean).join(',');
-  
-  if (!ids) {
-    return {};
-  }
-  
-  try {
-    const response = await fetch(
-      `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=false`
-    );
-    
-    if (!response.ok) {
-      // If rate limited or error, return cached data if available
-      if (cryptoPricesCache) {
-        console.warn('Using cached crypto prices due to API error');
-        return cryptoPricesCache;
-      }
-      throw new Error('Failed to fetch crypto prices');
-    }
-    
-    const data = await response.json();
-    
-    const pricesMap: Record<string, CryptoPrice> = {};
-    
-    data.forEach((coin: any) => {
-      const symbol = Object.keys(COINGECKO_IDS).find(
-        key => COINGECKO_IDS[key] === coin.id
-      );
-      
-      if (symbol) {
-        pricesMap[symbol] = {
-          symbol,
-          name: coin.name,
-          current_price: coin.current_price,
-          price_change_percentage_24h: coin.price_change_percentage_24h,
-          market_cap: coin.market_cap,
-          total_volume: coin.total_volume
-        };
-      }
-    });
-    
-    cryptoPricesCache = pricesMap;
-    lastPricesFetchTime = now;
-    
-    return pricesMap;
-  } catch (error) {
-    console.error('Error fetching crypto prices:', error);
-    // Return cached data if available, otherwise empty object
-    return cryptoPricesCache || {};
-  }
-}
-
-// Real-time price fetching for P2P offers (5 second refresh to avoid rate limits)
-export async function getRealtimeCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
-  const now = Date.now();
-  
-  // Return cached prices if still valid (5 seconds to avoid rate limits)
-  if (realtimePricesCache && (now - lastRealtimeFetchTime) < 5000) {
-    const hasAllSymbols = symbols.every(s => realtimePricesCache![s]);
-    if (hasAllSymbols) {
-      return realtimePricesCache;
-    }
-  }
-  
-  // If cache exists and is less than 30 seconds old, use it to reduce API calls
-  if (realtimePricesCache && (now - lastRealtimeFetchTime) < 30000) {
-    return realtimePricesCache;
-  }
-  
-  const ids = symbols.map(s => COINGECKO_IDS[s]).filter(Boolean).join(',');
-  
-  if (!ids) {
-    return realtimePricesCache || cryptoPricesCache || generateFallbackPrices(symbols);
-  }
-  
-  try {
-    const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`,
-      { signal: AbortSignal.timeout(5000) }
-    );
-    
-    if (!response.ok) {
-      // If rate limited, return cached data
-      if (realtimePricesCache) {
-        return realtimePricesCache;
-      }
-      // Fallback to regular cache or generate fallback
-      return cryptoPricesCache || generateFallbackPrices(symbols);
-    }
-    
-    const data = await response.json();
-    
-    const pricesMap: Record<string, CryptoPrice> = {};
-    
-    Object.entries(COINGECKO_IDS).forEach(([symbol, coinId]) => {
-      if (data[coinId]) {
-        pricesMap[symbol] = {
-          symbol,
-          name: symbol,
-          current_price: data[coinId].usd,
-          price_change_percentage_24h: data[coinId].usd_24h_change || 0,
-          market_cap: 0,
-          total_volume: 0
-        };
-      }
-    });
-    
-    realtimePricesCache = pricesMap;
-    lastRealtimeFetchTime = now;
-    
-    return pricesMap;
-  } catch (error) {
-    // Silently return cached or fallback data to avoid console spam
-    if (realtimePricesCache) return realtimePricesCache;
-    if (cryptoPricesCache) return cryptoPricesCache;
-    return generateFallbackPrices(symbols);
-  }
+export interface HistoricalPrice {
+  timestamp: number;
+  price: number;
+  date: string;
 }
 
 // Generate fallback prices if API is unavailable
@@ -223,6 +74,90 @@ function generateFallbackPrices(symbols: string[]): Record<string, CryptoPrice> 
   });
   
   return pricesMap;
+}
+
+export async function getCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
+  const now = Date.now();
+  
+  if (cryptoPricesCache && (now - lastPricesFetchTime) < PRICES_CACHE_DURATION) {
+    const hasAllSymbols = symbols.every(s => cryptoPricesCache![s]);
+    if (hasAllSymbols) {
+      return cryptoPricesCache;
+    }
+  }
+  
+  try {
+    const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
+      body: { symbols, type: 'markets' }
+    });
+    
+    if (error) throw error;
+    
+    const pricesMap = data as Record<string, CryptoPrice>;
+    cryptoPricesCache = pricesMap;
+    lastPricesFetchTime = now;
+    
+    return pricesMap;
+  } catch (error) {
+    console.error('Error fetching crypto prices from Supabase:', error);
+    return cryptoPricesCache || generateFallbackPrices(symbols);
+  }
+}
+
+export async function getRealtimeCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
+  const now = Date.now();
+  
+  if (realtimePricesCache && (now - lastRealtimeFetchTime) < REALTIME_CACHE_DURATION) {
+    const hasAllSymbols = symbols.every(s => realtimePricesCache![s]);
+    if (hasAllSymbols) {
+      return realtimePricesCache;
+    }
+  }
+  
+  try {
+    const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
+      body: { symbols, type: 'simple' }
+    });
+    
+    if (error) throw error;
+    
+    const pricesMap = data as Record<string, CryptoPrice>;
+    realtimePricesCache = pricesMap;
+    lastRealtimeFetchTime = now;
+    
+    return pricesMap;
+  } catch (error) {
+    console.error('Error fetching realtime crypto prices from Supabase:', error);
+    return realtimePricesCache || cryptoPricesCache || generateFallbackPrices(symbols);
+  }
+}
+
+export async function getHistoricalPrices(symbol: string, days: number = 30): Promise<HistoricalPrice[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
+      body: { symbol, days, type: 'historical' }
+    });
+    
+    if (error) throw error;
+    return data as HistoricalPrice[];
+  } catch (error) {
+    console.error('Error fetching historical prices from Supabase:', error);
+    return [];
+  }
+}
+
+export async function getIntradayPrices(symbol: string): Promise<HistoricalPrice[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
+      body: { symbol, type: 'intraday' }
+    });
+    
+    if (error) throw error;
+    return data as HistoricalPrice[];
+  } catch (error) {
+    console.error('Error fetching intraday prices from Supabase:', error);
+    return [];
+  }
 }
 
 // Calculate floating price based on premium percentage (Bybit-style)
@@ -378,79 +313,5 @@ export async function getOfferLimits(currency: string): Promise<{ min: number; m
     };
   } catch (error) {
     throw new Error(`Cannot calculate limits for currency ${currency}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-export interface HistoricalPrice {
-  timestamp: number;
-  price: number;
-  date: string;
-}
-
-export async function getHistoricalPrices(
-  symbol: string, 
-  days: number = 30
-): Promise<HistoricalPrice[]> {
-  const coinId = COINGECKO_IDS[symbol];
-  
-  if (!coinId) {
-    console.error(`No CoinGecko ID found for ${symbol}`);
-    return [];
-  }
-
-  try {
-    const response = await fetch(
-      `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=daily`
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch historical prices');
-    }
-
-    const data = await response.json();
-    
-    return data.prices.map(([timestamp, price]: [number, number]) => ({
-      timestamp,
-      price,
-      date: new Date(timestamp).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      })
-    }));
-  } catch (error) {
-    console.error('Error fetching historical prices:', error);
-    return [];
-  }
-}
-
-export async function getIntradayPrices(symbol: string): Promise<HistoricalPrice[]> {
-  const coinId = COINGECKO_IDS[symbol];
-  
-  if (!coinId) {
-    return [];
-  }
-
-  try {
-    const response = await fetch(
-      `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=1&interval=hourly`
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch intraday prices');
-    }
-
-    const data = await response.json();
-    
-    return data.prices.map(([timestamp, price]: [number, number]) => ({
-      timestamp,
-      price,
-      date: new Date(timestamp).toLocaleTimeString('en-US', { 
-        hour: 'numeric',
-        minute: '2-digit'
-      })
-    }));
-  } catch (error) {
-    console.error('Error fetching intraday prices:', error);
-    return [];
   }
 }
