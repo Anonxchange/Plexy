@@ -268,7 +268,22 @@ export async function createCDPSession(address: string, assets: string[]): Promi
     throw new Error(error.message || 'Failed to create CDP session');
   }
 
-  return data.token || data.sessionToken;
+  // Debug raw response
+  console.log("[createCDPSession] Raw result:", JSON.stringify(data, null, 2));
+
+  // The Supabase Edge function response structure might vary
+  // Check for session_token, sessionToken, or token in common locations
+  const token = data?.session_token || data?.sessionToken || data?.token || 
+                data?.data?.session_token || data?.data?.sessionToken || data?.data?.token ||
+                data?.result?.session_token || data?.result?.sessionToken || data?.result?.token;
+  
+  if (!token) {
+    console.error("[createCDPSession] No token found in response:", data);
+    // If the data itself is a string, it might be the token
+    if (typeof data === 'string' && data.length > 20) return data;
+  }
+
+  return token;
 }
 
 export function startDepositMonitoring(
