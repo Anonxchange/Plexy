@@ -256,17 +256,27 @@ export async function createCDPSession(address: string, assets: string[]): Promi
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
 
-  const { data, error } = await supabase.functions.invoke('cdp-create-session', {
-    body: {
+  console.log("[createCDPSession] Calling cdp-create-session for address:", address);
+
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cdp-create-session`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
       address,
       assets,
-    },
+    }),
   });
 
-  if (error) {
-    console.error("[createCDPSession] Error:", error);
-    throw new Error(error.message || 'Failed to create CDP session');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+    console.error("[createCDPSession] Error response:", errorData);
+    throw new Error(errorData.error || errorData.message || `Failed to create CDP session: ${response.statusText}`);
   }
+
+  const data = await response.json();
 
   // Debug raw response
   console.log("[createCDPSession] Raw result:", JSON.stringify(data, null, 2));
