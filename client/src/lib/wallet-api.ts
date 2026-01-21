@@ -69,7 +69,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       }).filter(Boolean);
     }
 
-    const VALID_CRYPTO_SYMBOLS = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'TRX', 'LTC', 'XRP', 'ADA', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'NEAR', 'FTM', 'ALGO', 'VET', 'BASE'];
+    const VALID_CRYPTO_SYMBOLS = ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'BNB', 'TRX', 'LTC', 'XRP', 'ADA', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'NEAR', 'FTM', 'ALGO', 'VET', 'BASE', 'POLYGON', 'OPTIMISM'];
     
     const wallets: Wallet[] = (balancesArray
       .filter((b: any) => {
