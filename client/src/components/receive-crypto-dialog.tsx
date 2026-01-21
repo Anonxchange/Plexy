@@ -44,9 +44,8 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     MATIC: ["Polygon"],
     OP: ["Optimism"],
     ARB: ["Arbitrum"],
-    BASE: ["Base"],
-    USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum", "Base"],
-    USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum", "Base"],
+    USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum"],
+    USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum"],
   };
 
   const ASSET_NAMES: Record<string, string> = {
@@ -60,7 +59,6 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     MATIC: "Polygon",
     OP: "Optimism",
     ARB: "Arbitrum",
-    BASE: "Base",
   };
 
   const handleClose = () => {
@@ -113,9 +111,9 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     if (selectedNetwork.includes('TRC-20')) {
       return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
     }
-    if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM', 'BASE'].includes(selectedNetwork.toUpperCase())) {
+    if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM'].includes(selectedNetwork.toUpperCase())) {
       return normalizedChainId.includes('ERC-20') || 
-             ['ETH', 'MATIC', 'OP', 'ARB', 'BASE'].includes(normalizedChainId) ||
+             ['ETH', 'MATIC', 'OP', 'ARB'].includes(normalizedChainId) ||
              normalizedChainId === 'ETHEREUM' || normalizedChainId === normalizedSelectedCrypto;
     }
       if (selectedNetwork.includes('BEP-20')) {
