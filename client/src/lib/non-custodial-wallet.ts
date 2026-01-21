@@ -189,6 +189,25 @@ class NonCustodialWalletManager {
         };
         walletsToStore.push(stablecoinWallet);
       });
+
+      // Also ensure Optimism and Polygon use the same address as Ethereum if they aren't the primary chain being generated
+      const evmChains = ['Optimism', 'Polygon', 'Arbitrum', 'Base'];
+      evmChains.forEach(chain => {
+        if (chainId !== chain && chainId === 'ethereum') {
+          const sidechainWallet: NonCustodialWallet = {
+            id: `${newWallet.id}_${chain}`,
+            chainId: chain,
+            address, // Same EVM address
+            walletType: 'ethereum',
+            encryptedPrivateKey: newWallet.encryptedPrivateKey,
+            createdAt: newWallet.createdAt,
+            isActive: true,
+            isBackedUp: false,
+            baseChainWalletId: newWallet.id,
+          };
+          walletsToStore.push(sidechainWallet);
+        }
+      });
     }
     
     this.saveWalletsToStorage(walletsToStore, userId);
