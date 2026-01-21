@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { createClient } from "./supabase";
+import { supabase } from "./supabase";
 import { presenceTracker } from './presence';
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
 
@@ -41,9 +41,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Move supabase client outside component to prevent recreation
-const supabase = createClient();
 
 function getDeviceInfo() {
   const ua = navigator.userAgent;
@@ -260,6 +257,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
+
+  const setPendingOTPWithTimestamp = useCallback((data: PendingAuth | null) => {
+    setPendingOTPVerification(data);
+    try {
+      if (data) {
+        const dataWithTimestamp = { ...data, createdAt: Date.now() };
+        sessionStorage.setItem('pendingOTP_data', JSON.stringify(dataWithTimestamp));
+      } else {
+        sessionStorage.removeItem('pendingOTP_data');
+      }
+    } catch { /* silent */ }
+  }, []);
   
   const [pendingSession, setPendingSession] = useState<{ user: User; session: Session } | null>(() => {
     try {
@@ -284,6 +293,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkedUsersRef = useRef<Set<string>>(new Set());
   const isTrackingRef = useRef<boolean>(false);
   const lastForceCheckRef = useRef<number>(0);
+  const sessionTokenRef = useRef<string | null>(null);
+  const checkWalletOnAuthRef = useRef<(userId: string, force?: boolean) => Promise<void>>(
+    async () => {} // dummy function, will be updated by useEffect
+  );
+
+  useEffect(() => {
+    checkWalletOnAuthRef.current = checkWalletOnAuth;
+  }, [checkWalletOnAuth]);
+
+  // Clear checkedUsersRef when user logs out
+  useEffect(() => {
+    if (!user?.id) {
+      checkedUsersRef.current.clear();
+    }
+  }, [user?.id]);
+
+  // Check wallet whenever user becomes available after loading
+  useEffect(() => {
+    if (user?.id && !loading && !hasPendingOTP()) {
+      checkWalletOnAuthRef.current(user.id);
+    }
+  }, [user?.id, loading]);
+
+  // Update sessionTokenRef when session changes
+  useEffect(() => {
+    sessionTokenRef.current = session?.access_token ?? null;
+  }, [session?.access_token]);
 
   // Sync OTP state to sessionStorage
   useEffect(() => {
@@ -316,14 +352,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
     if (!userId) return;
     
-    const storageKey = `wallet_checked_${userId}`;
-    if (!force && (checkedUsersRef.current.has(userId) || sessionStorage.getItem(storageKey))) {
+    if (!force && checkedUsersRef.current.has(userId)) {
       return;
     }
     
     try {
       checkedUsersRef.current.add(userId);
-      sessionStorage.setItem(storageKey, 'true');
       
       const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
       
@@ -358,8 +392,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Main auth effect - subscribe once with empty deps
+  // Main auth effect
   useEffect(() => {
+    // Clean up stale OTP data older than 10 minutes
+    try {
+      const otpData = sessionStorage.getItem('pendingOTP_data');
+      if (otpData) {
+        const parsed = JSON.parse(otpData);
+        const createdAt = parsed.createdAt || 0;
+        if (Date.now() - createdAt > 10 * 60 * 1000) {
+          sessionStorage.removeItem('pendingOTP_data');
+          sessionStorage.removeItem('pendingOTP_session');
+          setPendingOTPVerification(null);
+          setPendingSession(null);
+        }
+      }
+    } catch { /* silent */ }
+
     if (window.location.pathname === '/verify-email') {
       setSession(null);
       setUser(null);
@@ -368,10 +417,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (window.location.pathname === '/verify-email') {
         setSession(null);
         setUser(null);
+        return;
+      }
+
+      // ALWAYS update session for token refresh
+      if (event === 'TOKEN_REFRESHED') {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         return;
       }
 
@@ -392,8 +448,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentSession.user);
         
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          await trackDevice(currentSession.user.id);
-          await checkWalletOnAuth(currentSession.user.id);
+          // Defer async work to avoid blocking the callback
+          setTimeout(() => {
+            trackDevice(currentSession.user.id);
+            checkWalletOnAuth(currentSession.user.id);
+          }, 0);
         }
       }
 
@@ -402,6 +461,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         presenceTracker.startTracking(currentSession.user.id);
       }
     });
+
+    // Add periodic session health check
+    const healthCheckInterval = setInterval(async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession && sessionTokenRef.current !== currentSession.access_token && !hasPendingOTP()) {
+        setSession(currentSession);
+        setUser(currentSession.user);
+      }
+    }, 60000);
 
     // Then get initial session
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
@@ -427,6 +495,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       subscription.unsubscribe();
+      clearInterval(healthCheckInterval);
       window.removeEventListener('force-wallet-check', handleForceCheck as EventListener);
     };
   }, [checkWalletOnAuth]);
@@ -489,7 +558,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await checkWalletOnAuth(pendingUser.id);
     
     // Clear pending state
-    setPendingOTPVerification(null);
+    setPendingOTPWithTimestamp(null);
     setPendingSession(null);
     
     if (!isTrackingRef.current) {
@@ -501,20 +570,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.removeItem('pendingOTP_data');
       sessionStorage.removeItem('pendingOTP_session');
     } catch { /* silent */ }
-  }, [pendingSession, checkWalletOnAuth]);
+  }, [pendingSession, checkWalletOnAuth, setPendingOTPWithTimestamp]);
 
   const cancelOTPVerification = useCallback(async () => {
     // Sign out from Supabase to clear the pending session
     await supabase.auth.signOut();
     
-    setPendingOTPVerification(null);
+    setPendingOTPWithTimestamp(null);
     setPendingSession(null);
     
     try {
       sessionStorage.removeItem('pendingOTP_data');
       sessionStorage.removeItem('pendingOTP_session');
     } catch { /* silent */ }
-  }, []);
+  }, [setPendingOTPWithTimestamp]);
 
   const signOut = useCallback(async () => {
     presenceTracker.stopTracking();
@@ -522,20 +591,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setWalletImportState({ required: false, expectedAddress: null });
     checkedUsersRef.current.clear();
     isTrackingRef.current = false;
-    setPendingOTPVerification(null);
+    setPendingOTPWithTimestamp(null);
     setPendingSession(null);
     
     try {
       sessionStorage.removeItem('walletPassword');
       sessionStorage.removeItem('pendingOTP_data');
       sessionStorage.removeItem('pendingOTP_session');
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('wallet_checked_')) sessionStorage.removeItem(key);
-      });
     } catch { /* silent */ }
     
     await supabase.auth.signOut();
-  }, [setSessionPassword]);
+  }, [setSessionPassword, setPendingOTPWithTimestamp]);
 
   const value = {
     user,
