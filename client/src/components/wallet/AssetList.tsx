@@ -196,7 +196,10 @@ export function AssetList({
                   <TableCell className="py-4">
                     <div className="flex items-center gap-3">
                       <img 
-                        src={cryptoIconUrls[asset.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`} 
+                        src={cryptoIconUrls[asset.symbol] || 
+                             (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arb.png" :
+                              asset.symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/eth.png" :
+                              `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`)} 
                         alt={asset.symbol}
                         className="w-8 h-8 rounded-full object-contain"
                         onError={(e) => {
