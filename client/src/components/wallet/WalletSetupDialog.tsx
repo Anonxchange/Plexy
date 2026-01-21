@@ -49,7 +49,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
     try {
       // Generate the master wallet (Ethereum) which auto-generates sidechains (Optimism, Polygon, etc.)
       // and stablecoin entries (USDT, USDC).
-      await nonCustodialWalletManager.generateNonCustodialWallet(
+      const { mnemonicPhrase } = await nonCustodialWalletManager.generateNonCustodialWallet(
         "ethereum",
         password,
         null, // Supabase client could be passed here if needed for cloud sync
@@ -61,7 +61,35 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
         "Bitcoin (SegWit)",
         password,
         null,
-        userId
+        userId,
+        mnemonicPhrase
+      );
+
+      // Generate Solana
+      await nonCustodialWalletManager.generateNonCustodialWallet(
+        "Solana",
+        password,
+        null,
+        userId,
+        mnemonicPhrase
+      );
+
+      // Generate Tron
+      await nonCustodialWalletManager.generateNonCustodialWallet(
+        "Tron (TRC-20)",
+        password,
+        null,
+        userId,
+        mnemonicPhrase
+      );
+
+      // Generate XRP
+      await nonCustodialWalletManager.generateNonCustodialWallet(
+        "XRP",
+        password,
+        null,
+        userId,
+        mnemonicPhrase
       );
 
       setStep("success");
@@ -183,7 +211,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
             <div className="bg-muted/30 p-4 rounded-xl text-left border border-border/50">
               <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-2">READY NETWORKS</p>
               <div className="flex flex-wrap gap-2">
-                {["BTC", "ETH", "MATIC", "OP", "ARB", "SOL", "USDT", "USDC"].map((s) => (
+                {["BTC", "ETH", "BNB", "TRX", "SOL", "XRP", "USDT", "USDC"].map((s) => (
                   <span key={s} className="px-2 py-1 bg-background border rounded text-[10px] font-bold">
                     {s}
                   </span>
