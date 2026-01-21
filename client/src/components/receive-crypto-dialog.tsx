@@ -44,6 +44,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     MATIC: ["Polygon"],
     OP: ["Optimism"],
     ARB: ["Arbitrum"],
+    XRP: ["Ripple"],
     USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum"],
     USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum"],
   };
@@ -59,6 +60,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     MATIC: "Polygon",
     OP: "Optimism",
     ARB: "Arbitrum",
+    XRP: "Ripple",
   };
 
   const handleClose = () => {
@@ -124,6 +126,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
       }
       if (selectedNetwork.includes('SegWit') || selectedNetwork === 'Bitcoin') {
         return normalizedChainId.includes('BITCOIN') || (normalizedChainId === 'BTC' && normalizedSelectedCrypto === 'BTC');
+      }
+      if (selectedNetwork.includes('BEP-20') || ['BNB', 'BSC'].includes(normalizedSelectedCrypto)) {
+        return normalizedChainId.includes('BEP20') || 
+               normalizedChainId === 'BNB' || 
+               normalizedChainId === 'BSC' ||
+               normalizedChainId.includes('BINANCE');
+      }
+      if (selectedNetwork === 'Ripple' || selectedCrypto === 'XRP') {
+        return normalizedChainId === 'XRP' || normalizedChainId.includes('RIPPLE');
       }
       
       return normalizedChainId === normalizedSymbolToUse || 
