@@ -225,8 +225,8 @@ class NonCustodialWalletManager {
         walletsToStore.push(stablecoinWallet);
       });
 
-      // Also ensure Optimism and Polygon use the same address as Ethereum if they aren't the primary chain being generated
-      const evmChains = ['Optimism', 'Polygon', 'Arbitrum', 'Base'];
+      // Also ensure Optimism, Polygon, and BNB use the same address as Ethereum
+      const evmChains = ['Optimism', 'Polygon', 'Arbitrum', 'Base', 'Binance Smart Chain (BEP-20)'];
       evmChains.forEach(chain => {
         if (chainId !== chain && chainId === 'ethereum') {
           const sidechainWallet: NonCustodialWallet = {
