@@ -198,7 +198,7 @@ export function AssetList({
                       <img 
                         src={cryptoIconUrls[asset.symbol] || 
                              (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arb.png" :
-                              asset.symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/eth.png" :
+                              asset.symbol === "OP" ? "https://raw.githubusercontent.com/Cryptofonts/cryptoicons/refs/heads/master/128/op.png" :
                               `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`)} 
                         alt={asset.symbol}
                         className="w-8 h-8 rounded-full object-contain"
