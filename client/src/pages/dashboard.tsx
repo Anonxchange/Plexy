@@ -77,6 +77,7 @@ export const Dashboard = () => {
   const [markets, setMarkets] = useState(defaultMarkets);
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
   const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { balances: monitoredBalances, fetchBalances } = useWalletBalances();
 
   useEffect(() => {
@@ -136,6 +137,7 @@ export const Dashboard = () => {
     if (!user) return;
     
     const loadData = async () => {
+      setIsLoading(true);
       try {
         // Check if user has existing wallets
         const existingWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
@@ -160,6 +162,8 @@ export const Dashboard = () => {
         setMarkets(updatedMarkets);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -195,17 +199,25 @@ export const Dashboard = () => {
               <div className="flex items-end justify-between">
                 <div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-foreground">
-                      {showBalance ? totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••••"}
-                    </span>
+                    {isLoading ? (
+                      <div className="h-10 w-40 bg-muted/50 animate-pulse rounded-lg mt-1" />
+                    ) : (
+                      <span className="text-4xl font-bold text-foreground">
+                        {showBalance ? totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••••"}
+                      </span>
+                    )}
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <span className="text-lg font-medium">USD</span>
                       <ChevronDown className="h-4 w-4" />
                     </div>
                   </div>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    ≈ {showBalance ? equivalentBtc.toFixed(5) : "••••••"} BTC
-                  </p>
+                  {isLoading ? (
+                    <div className="h-4 w-24 bg-muted/30 animate-pulse rounded mt-2" />
+                  ) : (
+                    <p className="text-muted-foreground text-sm mt-1">
+                      ≈ {showBalance ? equivalentBtc.toFixed(5) : "••••••"} BTC
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-3">
                     <span className="text-sm text-muted-foreground">Today's P&L</span>
                     <div className="flex items-center gap-1 text-destructive">
