@@ -11,15 +11,38 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-         e.stopPropagation();
-      onReceive?.(symbol);
-    };
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
-    const handleSwap = (e: React.MouseEvent) => {
-      if (!e) return;
-      e.stopPropagation();
-      onSwap?.(symbol);
-    };
+const cryptoIconUrls: Record<string, string> = {};
+
+interface ActionMenuProps {
+  symbol: string;
+  onSend?: (symbol: string) => void;
+  onReceive?: (symbol: string) => void;
+  onSwap?: (symbol: string) => void;
+  isMobile?: boolean;
+}
+
+const ActionMenu = ({ symbol, onSend, onReceive, onSwap, isMobile }: ActionMenuProps) => {
+  const handleSend = (e: React.MouseEvent) => {
+    if (!e) return;
+    e.stopPropagation();
+    onSend?.(symbol);
+  };
+
+  const handleReceive = (e: React.MouseEvent) => {
+    if (!e) return;
+    e.stopPropagation();
+    onReceive?.(symbol);
+  };
+
+  const handleSwap = (e: React.MouseEvent) => {
+    if (!e) return;
+    e.stopPropagation();
+    onSwap?.(symbol);
+  };
 
     if (isMobile) {
       return (
@@ -87,6 +110,7 @@ import {
   };
 
   const getAssetPrice = (symbol: string) => {
+    const { prices } = useCryptoPrices();
     if (!symbol || !prices || !Array.isArray(prices)) return { price: 0, change24h: 0 };
     const upperSymbol = symbol.toUpperCase();
     const priceData = (prices as any[]).find(p => p && p.symbol === upperSymbol);
