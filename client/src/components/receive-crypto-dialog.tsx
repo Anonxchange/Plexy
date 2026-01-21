@@ -285,7 +285,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                     <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <div className="p-2.5 bg-muted/10 rounded-lg break-all text-[11px] font-mono text-foreground/80 leading-normal tracking-tight border border-border/50">
+                <div className="p-3 bg-muted/10 rounded-lg break-all text-sm font-mono text-foreground/90 leading-relaxed tracking-tight border border-border/50 shadow-inner">
                   {walletAddress || "Generating address..."}
                 </div>
               </div>
