@@ -145,6 +145,13 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     setSelectedNetwork(networks[0]);
   };
 
+  useEffect(() => {
+    if (open) {
+      const symbol = initialSymbol || "BTC";
+      handleAssetChange(symbol);
+    }
+  }, [open, initialSymbol]);
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[420px] p-0 bg-background border-none gap-0 overflow-hidden">
