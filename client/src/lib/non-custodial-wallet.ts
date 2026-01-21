@@ -116,30 +116,65 @@ class NonCustodialWalletManager {
       privateKey = account.toWIF();
       walletType = "bitcoin";
     } else if (chainId === "Solana") {
-      // Solana uses Ed25519. We derive using the standard path m/44'/501'/0'/0'
+      // Solana uses Ed25519. Path: m/44'/501'/0'/0'
       const root = bip32.fromSeed(seed);
       const account = root.derivePath("m/44'/501'/0'/0'");
-      // Note: In production we'd use @solana/web3.js for proper base58 address
-      // For now, using derived public key as base
+      // Proper Base58 encoding for Solana (using ALPHABET defined in file)
       address = base58Encode(account.publicKey); 
-      privateKey = account.toWIF(); // Placeholder for Solana private key
+      privateKey = base58Encode(Buffer.concat([account.privateKey!, account.publicKey]));
       walletType = "solana";
     } else if (chainId === "Tron (TRC-20)") {
       // Tron uses BIP44 path m/44'/195'/0'/0/0
       const root = bip32.fromSeed(seed);
       const account = root.derivePath("m/44'/195'/0'/0/0");
+      
       // Tron address derivation: Keccak256(PubKey) -> Last 20 bytes -> Base58Check with 0x41 prefix
-      const publicKey = account.publicKey.slice(1); // Remove compression prefix if needed
-      address = "T" + base58Encode(publicKey).slice(0, 33); // Simplified Tron address
-      privateKey = account.toWIF();
+      const publicKey = account.publicKey.slice(1); // Uncompressed
+      const hash = CryptoJS.SHA3(CryptoJS.enc.Hex.parse(Buffer.from(publicKey).toString('hex')), { outputLength: 256 }).toString();
+      const addressBytes = Buffer.from(hash.slice(-40), 'hex');
+      
+      const versioned = Buffer.concat([Buffer.from([0x41]), addressBytes]);
+      const checksum = Buffer.from(CryptoJS.SHA256(CryptoJS.SHA256(CryptoJS.enc.Hex.parse(versioned.toString('hex'))).toString()).toString(), 'hex').slice(0, 4);
+      address = base58Encode(Buffer.concat([versioned, checksum]));
+      
+      privateKey = account.privateKey!.toString('hex');
       walletType = "tron";
     } else if (chainId === "XRP") {
       // XRP uses m/44'/144'/0'/0/0
       const root = bip32.fromSeed(seed);
       const account = root.derivePath("m/44'/144'/0'/0/0");
-      // XRP address format is complex, using simplified version for placeholder
-      address = "r" + base58Encode(account.publicKey).slice(0, 33);
-      privateKey = account.toWIF();
+      
+      // XRP address: SHA256 then RIPEMD160 of public key -> Base58Check with 0x00 prefix
+      const sha256 = CryptoJS.SHA256(CryptoJS.enc.Hex.parse(Buffer.from(account.publicKey).toString('hex'))).toString();
+      const hash160 = CryptoJS.RIPEMD160(CryptoJS.enc.Hex.parse(sha256)).toString();
+      
+      // Standard XRP Base58 alphabet for address derivation
+      const XRP_ALPHABET = 'rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxy';
+      function xrpBase58Encode(buffer: Uint8Array): string {
+        let digits = [0];
+        for (let i = 0; i < buffer.length; i++) {
+          let carry = buffer[i];
+          for (let j = 0; j < digits.length; j++) {
+            carry += digits[j] << 8;
+            digits[j] = carry % 58;
+            carry = (carry / 58) | 0;
+          }
+          while (carry > 0) {
+            digits.push(carry % 58);
+            carry = (carry / 58) | 0;
+          }
+        }
+        let result = '';
+        for (let i = 0; buffer[i] === 0 && i < buffer.length - 1; i++) result += XRP_ALPHABET[0];
+        for (let i = digits.length - 1; i >= 0; i--) result += XRP_ALPHABET[digits[i]];
+        return result;
+      }
+
+      const versioned = Buffer.concat([Buffer.from([0x00]), Buffer.from(hash160, 'hex')]);
+      const checksum = Buffer.from(CryptoJS.SHA256(CryptoJS.SHA256(CryptoJS.enc.Hex.parse(versioned.toString('hex'))).toString()).toString(), 'hex').slice(0, 4);
+      
+      address = xrpBase58Encode(Buffer.concat([versioned, checksum]));
+      privateKey = account.privateKey!.toString('hex');
       walletType = "xrp";
     } else {
       // Default to Ethereum (BNB, ETH, Polygon, Arbitrum, Base, etc)
