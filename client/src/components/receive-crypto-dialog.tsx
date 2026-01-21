@@ -41,8 +41,26 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     SOL: ["Solana"],
     BNB: ["Binance Smart Chain (BEP-20)"],
     TRX: ["Tron (TRC-20)"],
-    USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
-    USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
+    MATIC: ["Polygon"],
+    OP: ["Optimism"],
+    ARB: ["Arbitrum"],
+    BASE: ["Base"],
+    USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum", "Base"],
+    USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum", "Base"],
+  };
+
+  const ASSET_NAMES: Record<string, string> = {
+    BTC: "Bitcoin",
+    ETH: "Ethereum",
+    USDT: "Tether",
+    USDC: "USD Coin",
+    BNB: "BNB",
+    SOL: "Solana",
+    TRX: "Tron",
+    MATIC: "Polygon",
+    OP: "Optimism",
+    ARB: "Arbitrum",
+    BASE: "Base",
   };
 
   const handleClose = () => {
@@ -91,13 +109,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
       const normalizedSymbolToUse = symbolToUse.toUpperCase();
       const normalizedSelectedCrypto = selectedCrypto.toUpperCase();
       
-      // Strict matching for networks to avoid Tron/ETH address mixup
-      if (selectedNetwork.includes('TRC-20')) {
-        return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
-      }
-      if (selectedNetwork.includes('ERC-20')) {
-        return normalizedChainId.includes('ERC20') || (normalizedChainId === 'ETH' && normalizedSelectedCrypto === 'ETH') || (normalizedChainId === 'ETHEREUM (ERC-20)') || (normalizedChainId === 'ETHEREUM');
-      }
+    // Strict matching for networks to avoid Tron/ETH address mixup
+    if (selectedNetwork.includes('TRC-20')) {
+      return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
+    }
+    if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM', 'BASE'].includes(selectedNetwork.toUpperCase())) {
+      return normalizedChainId.includes('ERC-20') || 
+             ['ETH', 'MATIC', 'OP', 'ARB', 'BASE'].includes(normalizedChainId) ||
+             normalizedChainId === 'ETHEREUM' || normalizedChainId === normalizedSelectedCrypto;
+    }
       if (selectedNetwork.includes('BEP-20')) {
         return normalizedChainId.includes('BEP20') || (normalizedChainId === 'BNB' && normalizedSelectedCrypto === 'BNB') || (normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)');
       }
@@ -190,9 +210,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                     <SelectItem key={symbol} value={symbol} className="rounded-md cursor-pointer">
                       <div className="flex items-center gap-2 py-1">
                         <img 
-                          src={cryptoIconUrls[symbol] || `https://ui-avatars.com/api/?name=${symbol}&background=random`} 
+                          src={cryptoIconUrls[symbol] || 
+                               (symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
+                                symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
+                                `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`)} 
                           alt={symbol}
                           className="w-5 h-5 rounded-full"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${symbol}&background=random`;
+                          }}
                         />
                         <span className="font-bold text-sm">{name}</span>
                       </div>
