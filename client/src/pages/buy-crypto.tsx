@@ -31,8 +31,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { MoonPayWidget } from "@/components/moonpay-widget";
-import { MoonPayIcon } from "@/components/icons/moonpay-icon";
 import { CryptoCurrencySelector } from "@/components/crypto-currency-selector";
 import { FiatCurrencySelector } from "@/components/fiat-currency-selector";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
@@ -130,14 +128,6 @@ const paymentMethods: PaymentMethod[] = [
     iconBg: "#E8F5E9",
     price: "₦ 1,486.47",
     subtitle: "UPI, IMPS, FAST, SPEI, VietQR",
-  },
-  {
-    id: "moonpay",
-    name: "Moonpay",
-    icon: "moonpay-icon",
-    iconBg: "#627EEA",
-    price: "₦ 1,514.8",
-    subtitle: "Credit Card, Maestro, Google Pay",
   },
 ];
 
@@ -385,57 +375,25 @@ const Index = () => {
                         className="w-full flex items-center gap-3 border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
                       >
                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden" style={{ backgroundColor: selectedPaymentMethod.iconBg }}>
-                          {selectedPaymentMethod.icon === "moonpay-icon" ? (
-                            <MoonPayIcon />
-                          ) : (
-                            selectedPaymentMethod.icon
-                          )}
+                          {selectedPaymentMethod.icon}
                         </div>
                         <span className="flex-1 text-left font-semibold text-foreground">{selectedPaymentMethod.name}</span>
                         <ChevronDown className="w-5 h-5 text-muted-foreground" />
                       </button>
                     </div>
 
-                    {/* MoonPay Widget or Login */}
-                    {selectedPaymentMethod.id === "moonpay" && (
-                      <>
-                        {user ? (
-                          <MoonPayWidget
-                            amount={spendAmount ? parseFloat(spendAmount.replace(/,/g, '')) : undefined}
-                            currency="usd"
-                            onSuccess={() => {
-                              console.log('MoonPay payment completed');
-                            }}
-                            onError={(error) => {
-                              console.error('MoonPay error:', error);
-                            }}
-                          />
-                        ) : (
-                          <Button
-                            onClick={() => navigate("/signin")}
-                            className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                          >
-                            Login to Buy
-                          </Button>
-                        )}
-                      </>
-                    )}
-
-                    {selectedPaymentMethod.id !== "moonpay" && (
-                      <>
-                        {user ? (
-                          <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
-                            Buy With NGN
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => navigate("/signin")}
-                            className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                          >
-                            Login to Buy
-                          </Button>
-                        )}
-                      </>
+                    {/* Login to Buy */}
+                    {user ? (
+                      <Button className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg" disabled={!spendAmount}>
+                        Buy With NGN
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => navigate("/signin")}
+                        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                      >
+                        Login to Buy
+                      </Button>
                     )}
 
                     <button className="w-full flex items-center justify-center gap-2 py-3 text-foreground font-medium hover:opacity-70 transition-opacity">
