@@ -6,8 +6,10 @@ import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
 import { ReceiveMethodDialog } from "@/components/receive-method-dialog";
 import { type Wallet, getUserWallets } from "@/lib/wallet-api";
+import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
+import { WalletSetupDialog } from "@/components/wallet/WalletSetupDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +26,7 @@ export default function WalletPage() {
   const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isWalletLoading, setIsWalletLoading] = useState(true);
+  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -33,6 +36,14 @@ export default function WalletPage() {
 
   const loadWalletData = async (useCache = true) => {
     if (!user) return;
+
+    // Check if user has non-custodial wallets
+    const localWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
+    if (localWallets.length === 0) {
+      setSetupDialogOpen(true);
+      setIsWalletLoading(false);
+      return;
+    }
 
     // 1. Try to load from cache first for "instant" feel
     if (useCache) {
@@ -274,6 +285,15 @@ export default function WalletPage() {
         onOpenChange={setReceiveMethodDialogOpen}
         onSelectMethod={handleSelectReceiveMethod}
       />
+
+      {user && (
+        <WalletSetupDialog
+          open={setupDialogOpen}
+          onOpenChange={setSetupDialogOpen}
+          userId={user.id}
+          onSuccess={() => loadWalletData(false)}
+        />
+      )}
     </div>
   );
 }
