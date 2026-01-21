@@ -109,7 +109,9 @@ export function useWalletData() {
         // Ensure we always show the main assets even if 0 balance
         const mainSymbols = Object.keys(ASSET_NAMES || {});
         mainSymbols.forEach(symbol => {
-          if (assets && !assets.find(a => a?.symbol === symbol)) {
+          // Normalize symbol check to prevent duplicates
+          const normalizedSymbol = symbol.toUpperCase();
+          if (assets && !assets.find(a => a?.symbol?.toUpperCase() === normalizedSymbol)) {
             const priceData = (prices && !Array.isArray(prices) && prices[symbol]) || { current_price: 0, price_change_percentage_24h: 0 };
             assets.push({
               symbol,
@@ -121,10 +123,46 @@ export function useWalletData() {
           }
         });
 
+        // Deduplicate the final assets list just in case
+        const seen = new Set();
+        const deduplicatedAssets = assets.filter(asset => {
+          const s = asset.symbol.toUpperCase();
+          if (seen.has(s)) return false;
+          seen.add(s);
+          return true;
+        });
+
+        // Defined custom order for a professional look
+        const SORT_ORDER: Record<string, number> = {
+          BTC: 1,
+          ETH: 2,
+          SOL: 3,
+          TRX: 4,
+          USDT: 5,
+          USDC: 6,
+          BNB: 7,
+          XRP: 8,
+          MATIC: 9,
+          ARB: 10,
+          OP: 11
+        };
+
         return {
           totalBalance,
           userId: user?.id,
-          assets: assets.sort((a, b) => b.value - a.value || a.symbol.localeCompare(b.symbol))
+          assets: deduplicatedAssets.sort((a, b) => {
+            // First sort by balance value (non-zero balances first)
+            if (b.value !== a.value) return b.value - a.value;
+            
+            // Then sort by predefined professional order
+            const orderA = SORT_ORDER[a.symbol.toUpperCase()] || 99;
+            const orderB = SORT_ORDER[b.symbol.toUpperCase()] || 99;
+            
+            if (orderA !== orderB) return orderA - orderB;
+            
+            // Finally alphabetical
+            return a.symbol.localeCompare(b.symbol);
+          })
         };
       } catch (error) {
         console.error("Failed to fetch real wallet data:", error);
