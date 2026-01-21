@@ -294,6 +294,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isTrackingRef = useRef<boolean>(false);
   const lastForceCheckRef = useRef<number>(0);
   const sessionTokenRef = useRef<string | null>(null);
+
+  const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
+    if (!userId) return;
+    
+    if (!force && checkedUsersRef.current.has(userId)) {
+      return;
+    }
+    
+    try {
+      checkedUsersRef.current.add(userId);
+      
+      const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+      
+      if (persistedWallets.length > 0) {
+        setWalletImportState({ required: false, expectedAddress: null });
+        return;
+      }
+      
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('wallet_address')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      let walletAddress = profile?.wallet_address;
+
+      if (!walletAddress) {
+        const { data: { user } } = await supabase.auth.getUser();
+        walletAddress = user?.user_metadata?.wallet_address;
+      }
+
+      if (walletAddress) {
+        const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress, userId);
+        setWalletImportState({ 
+          required: !hasLocal, 
+          expectedAddress: !hasLocal ? walletAddress : null 
+        });
+      }
+    } catch {
+      checkedUsersRef.current.delete(userId);
+      setWalletImportState({ required: false, expectedAddress: null });
+    }
+  }, []);
+
   const checkWalletOnAuthRef = useRef<(userId: string, force?: boolean) => Promise<void>>(
     async () => {} // dummy function, will be updated by useEffect
   );
@@ -347,49 +391,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.setItem('walletPassword', password);
       }
     } catch { /* silent */ }
-  }, []);
-
-  const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
-    if (!userId) return;
-    
-    if (!force && checkedUsersRef.current.has(userId)) {
-      return;
-    }
-    
-    try {
-      checkedUsersRef.current.add(userId);
-      
-      const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
-      
-      if (persistedWallets.length > 0) {
-        setWalletImportState({ required: false, expectedAddress: null });
-        return;
-      }
-      
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('wallet_address')
-        .eq('id', userId)
-        .maybeSingle();
-        
-      let walletAddress = profile?.wallet_address;
-
-      if (!walletAddress) {
-        const { data: { user } } = await supabase.auth.getUser();
-        walletAddress = user?.user_metadata?.wallet_address;
-      }
-
-      if (walletAddress) {
-        const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress, userId);
-        setWalletImportState({ 
-          required: !hasLocal, 
-          expectedAddress: !hasLocal ? walletAddress : null 
-        });
-      }
-    } catch {
-      checkedUsersRef.current.delete(userId);
-      setWalletImportState({ required: false, expectedAddress: null });
-    }
   }, []);
 
   // Main auth effect
@@ -451,7 +452,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Defer async work to avoid blocking the callback
           setTimeout(() => {
             trackDevice(currentSession.user.id);
-            checkWalletOnAuth(currentSession.user.id);
+            checkWalletOnAuthRef.current(currentSession.user.id);
           }, 0);
         }
       }
@@ -487,7 +488,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const now = Date.now();
         if (now - lastForceCheckRef.current < 2000) return;
         lastForceCheckRef.current = now;
-        checkWalletOnAuth(userId, true);
+        checkWalletOnAuthRef.current(userId, true);
       }
     };
     
@@ -498,7 +499,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearInterval(healthCheckInterval);
       window.removeEventListener('force-wallet-check', handleForceCheck as EventListener);
     };
-  }, [checkWalletOnAuth]);
+  }, []);
 
   const signUp = useCallback(async (email: string, password: string, captchaToken?: string) => {
     const baseUrl = window.location.hostname.includes('pexly.app') 
@@ -517,11 +518,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!error && data.user) {
       await trackDevice(data.user.id);
-      await checkWalletOnAuth(data.user.id);
     }
 
     return { error };
-  }, [checkWalletOnAuth]);
+  }, []);
 
   const signIn = useCallback(async (email: string, password: string, captchaToken?: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({ 
@@ -534,7 +534,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data.user && data.session) {
       await trackDevice(data.user.id);
-      await checkWalletOnAuth(data.user.id);
       
       if (!isTrackingRef.current) {
         isTrackingRef.current = true;
@@ -543,7 +542,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { error, data };
-  }, [checkWalletOnAuth]);
+  }, []);
 
   const completeOTPVerification = useCallback(async () => {
     if (!pendingSession) return;
@@ -555,7 +554,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(pendingUser);
     
     await trackDevice(pendingUser.id);
-    await checkWalletOnAuth(pendingUser.id);
     
     // Clear pending state
     setPendingOTPWithTimestamp(null);
@@ -570,7 +568,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.removeItem('pendingOTP_data');
       sessionStorage.removeItem('pendingOTP_session');
     } catch { /* silent */ }
-  }, [pendingSession, checkWalletOnAuth, setPendingOTPWithTimestamp]);
+  }, [pendingSession, setPendingOTPWithTimestamp]);
 
   const cancelOTPVerification = useCallback(async () => {
     // Sign out from Supabase to clear the pending session
