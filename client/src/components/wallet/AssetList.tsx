@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
-const cryptoIconUrls: Record<string, string> = {};
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 interface ActionMenuProps {
   symbol: string;
@@ -197,8 +197,8 @@ export function AssetList({
                     <div className="flex items-center gap-3">
                       <img 
                         src={cryptoIconUrls[asset.symbol] || 
-                             (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arb.png" :
-                              asset.symbol === "OP" ? "https://raw.githubusercontent.com/Cryptofonts/cryptoicons/refs/heads/master/128/op.png" :
+                             (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
+                              asset.symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
                               `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`)} 
                         alt={asset.symbol}
                         className="w-8 h-8 rounded-full object-contain"
