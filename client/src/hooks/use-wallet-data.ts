@@ -67,19 +67,21 @@ export function useWalletData() {
         const symbols = wallets.map(w => w.crypto_symbol).filter(Boolean);
         const prices = await getCryptoPrices(symbols.length > 0 ? symbols : VALID_CRYPTO_SYMBOLS);
         
-        let totalBalance = 0;
-        const assets = wallets.map(wallet => {
+        const assetMap = new Map();
+        
+        // Add real wallets first (with balance)
+        wallets.forEach(wallet => {
           try {
             const rawSymbol = wallet?.crypto_symbol || '';
-            if (!rawSymbol) return null;
+            if (!rawSymbol) return;
             const baseSymbol = rawSymbol.includes('-') ? rawSymbol.split('-')[0].toUpperCase() : rawSymbol.toUpperCase();
+            const normalizedKey = baseSymbol; // Deduplicate by base symbol (e.g., USDT-ERC20 and USDT-TRC20 become USDT)
             
-            // Safe price data access
             let priceData = { current_price: 0, price_change_percentage_24h: 0 };
             if (prices) {
               const found = Array.isArray(prices) 
-                ? prices.find((p: any) => p && (p.symbol === rawSymbol || p.symbol === (baseSymbol || "")))
-                : (prices[rawSymbol] || (baseSymbol ? prices[baseSymbol] : null));
+                ? prices.find((p: any) => p && (p.symbol === rawSymbol || p.symbol === baseSymbol))
+                : (prices[rawSymbol] || prices[baseSymbol]);
               
               if (found) {
                 priceData = { 
@@ -93,29 +95,32 @@ export function useWalletData() {
             const value = balance * (priceData.current_price || 0);
             totalBalance += value;
             
-            return {
-              symbol: rawSymbol,
-              name: (ASSET_NAMES && baseSymbol && ASSET_NAMES[baseSymbol]) || (ASSET_NAMES && rawSymbol && ASSET_NAMES[rawSymbol]) || baseSymbol || rawSymbol,
-              balance: balance,
-              value: value,
-              change24h: priceData.price_change_percentage_24h || 0
-            };
+            const existing = assetMap.get(normalizedKey);
+            if (existing) {
+              // Combine balances for same asset on different chains
+              existing.balance += balance;
+              existing.value += value;
+            } else {
+              assetMap.set(normalizedKey, {
+                symbol: normalizedKey,
+                name: ASSET_NAMES[normalizedKey] || normalizedKey,
+                balance: balance,
+                value: value,
+                change24h: priceData.price_change_percentage_24h || 0
+              });
+            }
           } catch (e) {
             console.error("Error processing wallet asset:", e);
-            return null;
           }
-        }).filter((a): a is NonNullable<typeof a> => a !== null);
+        });
 
-        // Ensure we always show the main assets even if 0 balance
-        const mainSymbols = Object.keys(ASSET_NAMES || {});
-        mainSymbols.forEach(symbol => {
-          // Normalize symbol check to prevent duplicates
-          const normalizedSymbol = symbol.toUpperCase();
-          if (assets && !assets.find(a => a?.symbol?.toUpperCase() === normalizedSymbol)) {
+        // Add missing main assets with 0 balance
+        Object.keys(ASSET_NAMES).forEach(symbol => {
+          if (!assetMap.has(symbol)) {
             const priceData = (prices && !Array.isArray(prices) && prices[symbol]) || { current_price: 0, price_change_percentage_24h: 0 };
-            assets.push({
+            assetMap.set(symbol, {
               symbol,
-              name: (ASSET_NAMES && ASSET_NAMES[symbol]) || symbol,
+              name: ASSET_NAMES[symbol],
               balance: 0,
               value: 0,
               change24h: Number(priceData.price_change_percentage_24h || 0)
@@ -123,45 +128,21 @@ export function useWalletData() {
           }
         });
 
-        // Deduplicate the final assets list just in case
-        const seen = new Set();
-        const deduplicatedAssets = assets.filter(asset => {
-          const s = asset.symbol.toUpperCase();
-          if (seen.has(s)) return false;
-          seen.add(s);
-          return true;
-        });
+        const assets = Array.from(assetMap.values());
 
         // Defined custom order for a professional look
         const SORT_ORDER: Record<string, number> = {
-          BTC: 1,
-          ETH: 2,
-          SOL: 3,
-          TRX: 4,
-          USDT: 5,
-          USDC: 6,
-          BNB: 7,
-          XRP: 8,
-          MATIC: 9,
-          ARB: 10,
-          OP: 11
+          BTC: 1, ETH: 2, SOL: 3, TRX: 4, USDT: 5, USDC: 6, BNB: 7, XRP: 8, MATIC: 9, ARB: 10, OP: 11
         };
 
         return {
           totalBalance,
           userId: user?.id,
-          assets: deduplicatedAssets.sort((a, b) => {
-            // First sort by balance value (non-zero balances first)
+          assets: assets.sort((a, b) => {
             if (b.value !== a.value) return b.value - a.value;
-            
-            // Then sort by predefined professional order
             const orderA = SORT_ORDER[a.symbol.toUpperCase()] || 99;
             const orderB = SORT_ORDER[b.symbol.toUpperCase()] || 99;
-            
-            if (orderA !== orderB) return orderA - orderB;
-            
-            // Finally alphabetical
-            return a.symbol.localeCompare(b.symbol);
+            return orderA - orderB || a.symbol.localeCompare(b.symbol);
           })
         };
       } catch (error) {
