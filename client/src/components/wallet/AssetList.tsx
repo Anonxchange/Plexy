@@ -11,35 +11,7 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
-
-import { cryptoIconUrls } from "@/lib/crypto-icons";
-
-interface AssetListProps {
-  onSend?: (symbol: string) => void;
-  onReceive?: (symbol: string) => void;
-  onSwap?: (symbol: string) => void;
-}
-
-export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
-  const { data: wallet } = useWalletData();
-  const { data: prices } = useCryptoPrices();
-  const [hideZero, setHideZero] = useState(false);
-  const isMobile = useIsMobile();
-
-  const ActionMenu = ({ symbol }: { symbol: string }) => {
-    const handleSend = (e: React.MouseEvent) => {
-      if (!e) return;
-      e.stopPropagation();
-      onSend?.(symbol);
-    };
-
-    const handleReceive = (e: React.MouseEvent) => {
-      if (!e) return;
-      e.stopPropagation();
+         e.stopPropagation();
       onReceive?.(symbol);
     };
 
