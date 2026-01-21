@@ -169,6 +169,7 @@ export function AssetList({ onSend, onReceive, onSwap }: AssetListProps) {
             {useMemo(() => {
               if (!wallet?.assets) return [];
               const seen = new Set();
+              // Use symbol as the unique identifier for deduplication
               return wallet.assets.filter(asset => {
                 const symbol = asset?.symbol?.toUpperCase();
                 if (!symbol || seen.has(symbol)) return false;
