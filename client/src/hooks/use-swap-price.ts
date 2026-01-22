@@ -26,7 +26,13 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string) {
     let isMounted = true;
     let intervalId: NodeJS.Timeout;
 
+    // Set loading state when dependencies change
+    setPriceData(prev => ({ ...prev, isLoading: true }));
+
     const fetchPrices = async () => {
+      if (isMounted) {
+        setPriceData(prev => ({ ...prev, isLoading: true }));
+      }
       try {
         // For stablecoins to stablecoins, rate is 1:1
         if (
