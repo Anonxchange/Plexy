@@ -265,10 +265,12 @@ export function Swap() {
                   </div>
 
                   <div className="text-left pt-2">
-                    <span className="text-xs text-muted-foreground block mb-1">Market rate</span>
+                    <span className="text-xs text-muted-foreground block mb-1 text-[10px] uppercase font-bold tracking-wider">Market rate</span>
                     <div className="h-4 flex items-center">
                       {isLoading ? (
-                        <Skeleton className="h-3 w-32" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-32" />
+                        </div>
                       ) : (
                         <span className="text-xs font-bold">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
                       )}
@@ -489,10 +491,12 @@ export function Swap() {
                 {/* Rates Info */}
                 <div className="flex flex-col sm:grid sm:grid-cols-3 gap-4 pt-2">
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground block">Swap rate</span>
+                    <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Swap rate</span>
                     <div className="flex items-center flex-wrap gap-1 min-h-[16px]">
                       {isLoading ? (
-                        <Skeleton className="h-3 w-32" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-32" />
+                        </div>
                       ) : (
                         <>
                           <span className="text-xs font-bold">1 {fromCurrency} = {formatRate(swapRate)} {toCurrency}</span>
@@ -506,10 +510,12 @@ export function Swap() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground block">Market rate</span>
+                    <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Market rate</span>
                     <div className="min-h-[16px] flex items-center">
                       {isLoading ? (
-                        <Skeleton className="h-3 w-32" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-32" />
+                        </div>
                       ) : (
                         <span className="text-xs font-bold block">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
                       )}
