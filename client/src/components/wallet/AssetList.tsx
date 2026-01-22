@@ -121,6 +121,7 @@ export function AssetList({
   const { data: wallet } = useWalletData();
   const { data: prices } = useCryptoPrices();
   const [hideZero, setHideZero] = useState(false);
+  const [activeTab, setActiveTab] = useState("assets");
 
   const getAssetPrice = (symbol: string) => {
     if (!symbol || !prices || !Array.isArray(prices)) return { price: 0, change24h: 0 };
@@ -129,11 +130,23 @@ export function AssetList({
     return priceData ? { price: priceData.price || (priceData as any).current_price || 0, change24h: priceData.change24h || (priceData as any).price_change_percentage_24h || 0 } : { price: 0, change24h: 0 };
   };
 
+  const assets = useMemo(() => {
+    const assets = (wallet as any)?.assets;
+    if (!assets) return [];
+    const seen = new Set();
+    return assets.filter((asset: any) => {
+      const symbol = asset?.symbol?.toUpperCase();
+      if (!symbol || seen.has(symbol)) return false;
+      seen.add(symbol);
+      return true;
+    });
+  }, [wallet]);
+
   return (
     <div className="space-y-6">
       <div className="border-b pb-1 overflow-x-auto no-scrollbar">
-        <Tabs defaultValue="assets" className="w-full">
-          <TabsList className="bg-transparent h-auto p-0 gap-8 min-w-max flex justify-start">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-transparent h-auto p-0 gap-8 min-w-max flex justify-start items-end">
             <TabsTrigger 
               value="assets" 
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold whitespace-nowrap"
@@ -142,7 +155,7 @@ export function AssetList({
             </TabsTrigger>
             <TabsTrigger 
               value="activity" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold text-muted-foreground whitespace-nowrap"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold whitespace-nowrap"
             >
               Recent activity
             </TabsTrigger>
@@ -152,106 +165,175 @@ export function AssetList({
             >
               All operations
             </TabsTrigger>
+            <div className="flex-1" />
+            <Button variant="ghost" className="text-muted-foreground font-semibold px-0 pb-3 h-auto hidden sm:flex hover:bg-transparent">
+              See full operations
+            </Button>
           </TabsList>
         </Tabs>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox id="hide-zero" checked={hideZero} onCheckedChange={(checked) => setHideZero(!!checked)} className="dark:border-muted-foreground" />
-        <Label htmlFor="hide-zero" className="text-sm font-medium text-muted-foreground cursor-pointer">
-          Hide 0 balance
-        </Label>
-      </div>
+      {activeTab === "assets" && (
+        <>
+          <div className="flex items-center space-x-2">
+            <Checkbox id="hide-zero" checked={hideZero} onCheckedChange={(checked) => setHideZero(!!checked)} className="dark:border-muted-foreground" />
+            <Label htmlFor="hide-zero" className="text-sm font-medium text-muted-foreground cursor-pointer">
+              Hide 0 balance
+            </Label>
+          </div>
 
-      <div className="rounded-lg border bg-card dark:bg-card/50 overflow-x-auto no-scrollbar transition-colors">
-        <Table className="min-w-full">
-          <TableHeader className="bg-muted/30 dark:bg-muted/10">
-            <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="w-[100px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-muted-foreground">Asset</TableHead>
-              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider hidden sm:table-cell text-muted-foreground">Current price</TableHead>
-              <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-muted-foreground">Balance</TableHead>
-              <TableHead className="w-[50px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-right text-muted-foreground">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {useMemo(() => {
-              const assets = (wallet as any)?.assets;
-              if (!assets) return [];
-              const seen = new Set();
-              return assets.filter((asset: any) => {
-                const symbol = asset?.symbol?.toUpperCase();
-                if (!symbol || seen.has(symbol)) return false;
-                seen.add(symbol);
-                return true;
-              });
-            }, [wallet]).map((asset: any) => {
-              const { price, change24h } = getAssetPrice(asset.symbol);
-              const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
-              const balanceValue = (asset.balance || 0) * (price || 0);
-              
-              if (hideZero && asset.balance <= 0) return null;
-              
-              return (
-                <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
-                  <TableCell className="py-4">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={cryptoIconUrls[asset.symbol] || 
-                             (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
-                              asset.symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
-                              `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`)} 
-                        alt={asset.symbol}
-                        className="w-8 h-8 rounded-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
-                        }}
-                      />
-                      <div className="font-bold text-foreground">
-                        {asset.symbol === "ETH" ? "Ethereum" : 
-                         asset.symbol === "BTC" ? "Bitcoin" : 
-                         asset.symbol === "SOL" ? "Solana" : 
-                         asset.symbol === "USDT" ? "Tether" : 
-                         asset.symbol === "USDC" ? "USD Coin" : 
-                         asset.symbol === "BNB" ? "BNB" :
-                         asset.symbol === "XRP" ? "XRP" :
-                         asset.symbol === "MATIC" ? "Polygon" :
-                         asset.symbol === "ARB" ? "Arbitrum" :
-                         asset.symbol === "OP" ? "Optimism" :
-                         asset.symbol === "TRX" ? "Tron" : asset.name || asset.symbol}
+          <div className="rounded-lg border bg-card dark:bg-card/50 overflow-x-auto no-scrollbar transition-colors">
+            <Table className="min-w-full">
+              <TableHeader className="bg-muted/30 dark:bg-muted/10">
+                <TableRow className="hover:bg-transparent border-none">
+                  <TableHead className="w-[100px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-muted-foreground">Asset</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider hidden sm:table-cell text-muted-foreground">Current price</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-muted-foreground">Balance</TableHead>
+                  <TableHead className="w-[50px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-right text-muted-foreground">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assets.map((asset: any) => {
+                  const { price, change24h } = getAssetPrice(asset.symbol);
+                  const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
+                  const balanceValue = (asset.balance || 0) * (price || 0);
+                  
+                  if (hideZero && asset.balance <= 0) return null;
+                  
+                  return (
+                    <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={cryptoIconUrls[asset.symbol] || 
+                                 (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
+                                  asset.symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
+                                  `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`)} 
+                            alt={asset.symbol}
+                            className="w-8 h-8 rounded-full object-contain"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
+                            }}
+                          />
+                          <div className="font-bold text-foreground">
+                            {asset.symbol === "ETH" ? "Ethereum" : 
+                             asset.symbol === "BTC" ? "Bitcoin" : 
+                             asset.symbol === "SOL" ? "Solana" : 
+                             asset.symbol === "USDT" ? "Tether" : 
+                             asset.symbol === "USDC" ? "USD Coin" : 
+                             asset.symbol === "BNB" ? "BNB" :
+                             asset.symbol === "XRP" ? "XRP" :
+                             asset.symbol === "MATIC" ? "Polygon" :
+                             asset.symbol === "ARB" ? "Arbitrum" :
+                             asset.symbol === "OP" ? "Optimism" :
+                             asset.symbol === "TRX" ? "Tron" : asset.name || asset.symbol}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 hidden sm:table-cell">
+                        <div className="font-semibold text-foreground">{(price || 0).toLocaleString()} {currency}</div>
+                        <div className={`text-[10px] font-bold ${(change24h || 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                          {(change24h || 0) >= 0 ? "+" : ""}{(change24h || 0).toFixed(2)}%
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="font-bold text-foreground">{asset.balance || 0}</div>
+                        <div className="text-[10px] text-muted-foreground font-medium">{(balanceValue || 0).toLocaleString()} {currency}</div>
+                      </TableCell>
+                      <TableCell className="text-right py-4">
+                        <ActionMenu 
+                          symbol={asset.symbol} 
+                          onSend={onSend}
+                          onReceive={onReceive}
+                          onSwap={onSwap}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {(!wallet || !assets || assets.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                      No assets found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+
+      {(activeTab === "activity" || activeTab === "operations") && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-bold text-foreground mr-1">Filter</span>
+            
+            <div className="flex items-center gap-1.5 bg-muted/10 px-3 py-1.5 rounded-md border border-muted/50 cursor-pointer hover:bg-muted/20">
+              <span className="text-muted-foreground">Asset:</span>
+              <span className="font-semibold">All</span>
+              <MoreHorizontal className="h-3 w-3 rotate-90 ml-1" />
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-muted/10 px-3 py-1.5 rounded-md border border-muted/50 cursor-pointer hover:bg-muted/20">
+              <span className="text-muted-foreground">Type:</span>
+              <span className="font-semibold">All</span>
+              <MoreHorizontal className="h-3 w-3 rotate-90 ml-1" />
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-muted/10 px-3 py-1.5 rounded-md border border-muted/50 cursor-pointer hover:bg-muted/20">
+              <span className="text-muted-foreground">Status:</span>
+              <span className="font-semibold">All</span>
+              <MoreHorizontal className="h-3 w-3 rotate-90 ml-1" />
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-muted/10 px-3 py-1.5 rounded-md border border-muted/50 cursor-pointer hover:bg-muted/20">
+              <span className="text-muted-foreground">Date:</span>
+              <span className="font-semibold text-primary">From the beginning</span>
+              <MoreHorizontal className="h-3 w-3 rotate-90 ml-1" />
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-card dark:bg-card/50 overflow-x-auto no-scrollbar">
+            <Table className="min-w-full">
+              <TableHeader className="bg-transparent border-b">
+                <TableRow className="hover:bg-transparent border-none">
+                  <TableHead className="text-[10px] sm:text-xs font-medium text-muted-foreground py-4">Type</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium text-muted-foreground py-4 text-center">Asset</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium text-muted-foreground py-4 text-center">Amount</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium text-muted-foreground py-4 text-center">Date</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium text-muted-foreground py-4 text-right">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow className="hover:bg-transparent border-none">
+                  <TableCell colSpan={5} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="w-12 h-12 rounded-lg bg-muted/10 flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-muted-foreground/30 rounded-sm flex items-center justify-center">
+                          <div className="w-2 h-2 bg-muted-foreground/30 rounded-full" />
+                        </div>
                       </div>
+                      <div className="space-y-1">
+                        <p className="text-base font-bold text-muted-foreground">Nothing to show yet</p>
+                        <p className="text-xs text-muted-foreground/60 max-w-[250px] mx-auto">
+                          You currently have no assets deposited in your NoOnes wallet
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={() => onReceive?.("BTC")}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 rounded-lg transition-all"
+                      >
+                        Deposit
+                      </Button>
                     </div>
-                  </TableCell>
-                  <TableCell className="py-4 hidden sm:table-cell">
-                    <div className="font-semibold text-foreground">{(price || 0).toLocaleString()} {currency}</div>
-                    <div className={`text-[10px] font-bold ${(change24h || 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      {(change24h || 0) >= 0 ? "+" : ""}{(change24h || 0).toFixed(2)}%
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4">
-                    <div className="font-bold text-foreground">{asset.balance || 0}</div>
-                    <div className="text-[10px] text-muted-foreground font-medium">{(balanceValue || 0).toLocaleString()} {currency}</div>
-                  </TableCell>
-                  <TableCell className="text-right py-4">
-                    <ActionMenu 
-                      symbol={asset.symbol} 
-                      onSend={onSend}
-                      onReceive={onReceive}
-                      onSwap={onSwap}
-                    />
                   </TableCell>
                 </TableRow>
-              );
-            })}
-            {(!wallet || !(wallet as any).assets || (wallet as any).assets.length === 0) && (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  No assets found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
