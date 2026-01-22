@@ -13,40 +13,53 @@ interface SwapPriceData {
 // Platform spread percentage (how much above/below market rate)
 const SWAP_SPREAD_PERCENTAGE = 0.2; // 0.2% spread
 
+// Cache for prices to avoid unnecessary re-fetching and provide instant UI
+const priceCache: Record<string, { data: SwapPriceData; timestamp: number }> = {};
+const CACHE_TTL = 30000; // 30 seconds cache
+
 export function useSwapPrice(fromCrypto: string, toCrypto: string) {
-  const [priceData, setPriceData] = useState<SwapPriceData>({
-    marketRate: 0,
-    swapRate: 0,
-    percentageDiff: 0,
-    isLoading: true,
-    error: null,
+  const cacheKey = `${fromCrypto}-${toCrypto}`;
+  
+  const [priceData, setPriceData] = useState<SwapPriceData>(() => {
+    // Initialize from cache if available
+    const cached = priceCache[cacheKey];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return { ...cached.data, isLoading: false };
+    }
+    return {
+      marketRate: 0,
+      swapRate: 0,
+      percentageDiff: 0,
+      isLoading: true,
+      error: null,
+    };
   });
 
   useEffect(() => {
     let isMounted = true;
     let intervalId: NodeJS.Timeout;
 
-    // Set loading state when dependencies change
-    setPriceData(prev => ({ ...prev, isLoading: true }));
-
-    const fetchPrices = async () => {
-      if (isMounted) {
+    const fetchPrices = async (showLoading = false) => {
+      if (showLoading && isMounted) {
         setPriceData(prev => ({ ...prev, isLoading: true }));
       }
+      
       try {
         // For stablecoins to stablecoins, rate is 1:1
         if (
           (fromCrypto === 'USDT' || fromCrypto === 'USDC') &&
           (toCrypto === 'USDT' || toCrypto === 'USDC')
         ) {
+          const data = {
+            marketRate: 1,
+            swapRate: 1,
+            percentageDiff: 0,
+            isLoading: false,
+            error: null,
+          };
           if (isMounted) {
-            setPriceData({
-              marketRate: 1,
-              swapRate: 1,
-              percentageDiff: 0,
-              isLoading: false,
-              error: null,
-            });
+            setPriceData(data);
+            priceCache[cacheKey] = { data, timestamp: Date.now() };
           }
           return;
         }
@@ -69,21 +82,22 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string) {
         // Calculate swap rate with spread
         const isSellingCrypto = toCrypto === 'USDT' || toCrypto === 'USDC';
         const spreadMultiplier = isSellingCrypto 
-          ? (1 - SWAP_SPREAD_PERCENTAGE / 100)  // Give less when selling crypto
-          : (1 + SWAP_SPREAD_PERCENTAGE / 100); // Charge more when buying crypto
+          ? (1 - SWAP_SPREAD_PERCENTAGE / 100)
+          : (1 + SWAP_SPREAD_PERCENTAGE / 100);
         
         const swapRate = marketRate * spreadMultiplier;
-
-        // Calculate actual percentage difference
         const percentageDiff = Math.abs(((swapRate - marketRate) / marketRate) * 100);
 
-        setPriceData({
+        const data = {
           marketRate,
           swapRate,
           percentageDiff,
           isLoading: false,
           error: null,
-        });
+        };
+
+        setPriceData(data);
+        priceCache[cacheKey] = { data, timestamp: Date.now() };
       } catch (error) {
         console.error('Error fetching swap prices:', error);
         if (isMounted) {
@@ -96,17 +110,24 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string) {
       }
     };
 
-    // Initial fetch
-    fetchPrices();
+    // Use cached data if fresh, otherwise fetch
+    const cached = priceCache[cacheKey];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      setPriceData({ ...cached.data, isLoading: false });
+      // Still fetch in background to keep it updated, but don't show loading
+      fetchPrices(false);
+    } else {
+      fetchPrices(true);
+    }
 
-    // Refresh every 10 seconds
-    intervalId = setInterval(fetchPrices, 10000);
+    // Refresh every 15 seconds (slightly longer than before since we have cache)
+    intervalId = setInterval(() => fetchPrices(false), 15000);
 
     return () => {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [fromCrypto, toCrypto]);
+  }, [fromCrypto, toCrypto, cacheKey]);
 
   return priceData;
 }
