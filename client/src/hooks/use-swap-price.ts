@@ -120,8 +120,8 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string) {
       fetchPrices(true);
     }
 
-    // Refresh every 15 seconds (slightly longer than before since we have cache)
-    intervalId = setInterval(() => fetchPrices(false), 15000);
+    // Refresh every 7 seconds for higher accuracy
+    intervalId = setInterval(() => fetchPrices(false), 7000);
 
     return () => {
       isMounted = false;
