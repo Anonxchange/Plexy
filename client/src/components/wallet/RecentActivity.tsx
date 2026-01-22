@@ -48,7 +48,7 @@ const ActivityTable = ({ isOperations, onDeposit }: { isOperations: boolean; onD
                 <p className="text-xs text-muted-foreground/60 max-w-[300px] mx-auto">
                   {isOperations 
                     ? "No results match your current filters. Adjust the filters and try again."
-                    : "You currently have no assets deposited in your NoOnes wallet"}
+                    : "You currently have no assets deposited in your  wallet"}
                 </p>
               </div>
               {!isOperations && (
