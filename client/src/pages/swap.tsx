@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -261,7 +262,13 @@ export function Swap() {
 
                   <div className="text-left pt-2">
                     <span className="text-xs text-muted-foreground block mb-1">Market rate</span>
-                    <span className="text-xs font-bold">1 {fromCurrency} = {isLoading ? '...' : formatRate(marketRate)} {toCurrency}</span>
+                    <div className="h-4 flex items-center">
+                      {isLoading ? (
+                        <Skeleton className="h-3 w-32" />
+                      ) : (
+                        <span className="text-xs font-bold">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
+                      )}
+                    </div>
                   </div>
 
                   <Button 
@@ -479,18 +486,30 @@ export function Swap() {
                 <div className="flex flex-col sm:grid sm:grid-cols-3 gap-4 pt-2">
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground block">Swap rate</span>
-                    <div className="flex items-center flex-wrap gap-1">
-                      <span className="text-xs font-bold">1 {fromCurrency} = {isLoading ? '...' : formatRate(swapRate)} {toCurrency}</span>
-                      {!isLoading && percentageDiff > 0 && (
-                        <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 px-1 py-0 h-4 text-[10px]">
-                          {percentageDiff.toFixed(2)}%
-                        </Badge>
+                    <div className="flex items-center flex-wrap gap-1 min-h-[16px]">
+                      {isLoading ? (
+                        <Skeleton className="h-3 w-32" />
+                      ) : (
+                        <>
+                          <span className="text-xs font-bold">1 {fromCurrency} = {formatRate(swapRate)} {toCurrency}</span>
+                          {percentageDiff > 0 && (
+                            <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 px-1 py-0 h-4 text-[10px]">
+                              {percentageDiff.toFixed(2)}%
+                            </Badge>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground block">Market rate</span>
-                    <span className="text-xs font-bold block">1 {fromCurrency} = {isLoading ? '...' : formatRate(marketRate)} {toCurrency}</span>
+                    <div className="min-h-[16px] flex items-center">
+                      {isLoading ? (
+                        <Skeleton className="h-3 w-32" />
+                      ) : (
+                        <span className="text-xs font-bold block">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-1 text-right">
                     <span className="text-xs text-muted-foreground block">Rate will refresh in</span>
