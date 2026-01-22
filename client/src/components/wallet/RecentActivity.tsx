@@ -5,7 +5,7 @@ import { MoreHorizontal } from "lucide-react";
 
 interface RecentActivityProps {
   type: "activity" | "operations";
-  onDeposit?: (symbol: string) => void;
+  onDeposit?: (symbol?: string) => void;
 }
 
 const FilterItem = ({ label, value, isPrimary = false }: { label: string; value: string; isPrimary?: boolean }) => (
@@ -16,7 +16,7 @@ const FilterItem = ({ label, value, isPrimary = false }: { label: string; value:
   </div>
 );
 
-const ActivityTable = ({ isOperations, onDeposit }: { isOperations: boolean; onDeposit?: (symbol: string) => void }) => (
+const ActivityTable = ({ isOperations, onDeposit }: { isOperations: boolean; onDeposit?: (symbol?: string) => void }) => (
   <div className="rounded-lg border bg-card dark:bg-card/50 overflow-x-auto no-scrollbar">
     <Table className="min-w-full">
       <TableHeader className="bg-transparent border-b">
@@ -53,7 +53,7 @@ const ActivityTable = ({ isOperations, onDeposit }: { isOperations: boolean; onD
               </div>
               {!isOperations && (
                 <Button 
-                  onClick={() => onDeposit?.("BTC")}
+                  onClick={() => onDeposit?.()}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 rounded-lg transition-all"
                 >
                   Deposit
