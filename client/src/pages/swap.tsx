@@ -99,7 +99,12 @@ export function Swap() {
     if (isUpdatingFromInput && swapRate > 0) {
       const amount = parseFloat(fromAmount) || 0;
       const calculated = calculateSwapAmount(amount, swapRate);
-      setToAmount(calculated.toFixed(6));
+      // Round to 8 decimal places for better precision, especially for BTC
+      setToAmount(calculated.toLocaleString('en-US', { 
+        useGrouping: false, 
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 8 
+      }));
     }
   }, [fromAmount, swapRate, isUpdatingFromInput]);
 
@@ -108,7 +113,11 @@ export function Swap() {
     if (!isUpdatingFromInput && swapRate > 0) {
       const amount = parseFloat(toAmount) || 0;
       const calculated = amount / swapRate;
-      setFromAmount(calculated.toFixed(8));
+      setFromAmount(calculated.toLocaleString('en-US', { 
+        useGrouping: false, 
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 8 
+      }));
     }
   }, [toAmount, swapRate, isUpdatingFromInput]);
 
@@ -266,13 +275,11 @@ export function Swap() {
 
                   <div className="text-left pt-2">
                     <span className="text-xs text-muted-foreground block mb-1 text-[10px] uppercase font-bold tracking-wider">Market rate</span>
-                    <div className="h-4 flex items-center">
+                    <div className="flex items-center gap-1 min-h-[16px] overflow-hidden">
                       {isLoading ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-3 w-32" />
-                        </div>
+                        <Skeleton className="h-3 w-32" />
                       ) : (
-                        <span className="text-xs font-bold">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
+                        <span className="text-xs font-bold truncate">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
                       )}
                     </div>
                   </div>
@@ -492,16 +499,14 @@ export function Swap() {
                 <div className="flex flex-col sm:grid sm:grid-cols-3 gap-4 pt-2">
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Swap rate</span>
-                    <div className="flex items-center flex-wrap gap-1 min-h-[16px]">
+                    <div className="flex items-center flex-wrap gap-1 min-h-[16px] overflow-hidden">
                       {isLoading ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-3 w-32" />
-                        </div>
+                        <Skeleton className="h-3 w-32" />
                       ) : (
                         <>
-                          <span className="text-xs font-bold">1 {fromCurrency} = {formatRate(swapRate)} {toCurrency}</span>
+                          <span className="text-xs font-bold truncate">1 {fromCurrency} = {formatRate(swapRate)} {toCurrency}</span>
                           {percentageDiff > 0 && (
-                            <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 px-1 py-0 h-4 text-[10px]">
+                            <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 px-1 py-0 h-4 text-[10px] flex-shrink-0">
                               {percentageDiff.toFixed(2)}%
                             </Badge>
                           )}
@@ -511,13 +516,11 @@ export function Swap() {
                   </div>
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Market rate</span>
-                    <div className="min-h-[16px] flex items-center">
+                    <div className="min-h-[16px] flex items-center overflow-hidden">
                       {isLoading ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-3 w-32" />
-                        </div>
+                        <Skeleton className="h-3 w-32" />
                       ) : (
-                        <span className="text-xs font-bold block">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
+                        <span className="text-xs font-bold block truncate">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
                       )}
                     </div>
                   </div>
