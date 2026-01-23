@@ -94,7 +94,6 @@ export function useWalletData() {
 
             const balance = typeof wallet.balance === 'number' ? wallet.balance : 0;
             const value = balance * (priceData.current_price || 0);
-            totalBalance += value;
             
             const existing = assetMap.get(normalizedKey);
             if (existing) {
@@ -130,6 +129,9 @@ export function useWalletData() {
         });
 
         const assets = Array.from(assetMap.values());
+        
+        // Recalculate total balance from final asset list to ensure consistency
+        totalBalance = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
 
         // Defined custom order for a professional look
         const SORT_ORDER: Record<string, number> = {
