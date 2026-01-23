@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-interface WalletBalance {
+export interface WalletBalance {
   wallet_id: string;
   user_id: string;
   address: string;
@@ -22,36 +22,13 @@ interface BalanceResponse {
 }
 
 export function useWalletBalances() {
-  const [balances, setBalances] = useState<WalletBalance[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchBalances = useCallback(async () => {
-    // We only set loading if we don't have any balances yet
-    if (balances.length === 0) {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
+  const query = useQuery({
+    queryKey: ['wallet-balances'],
+    queryFn: async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData?.session?.user;
       
-      // Load from cache first ONLY on the very first load
-      if (typeof window !== 'undefined' && user?.id && balances.length === 0) {
-        const cached = localStorage.getItem(`pexly_balances_${user.id}`);
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed)) {
-              setBalances(parsed);
-              // After loading cache, we still want to fetch fresh data
-            }
-          } catch (e) {
-            console.error('Error parsing cached balances:', e);
-          }
-        }
-      }
+      if (!user) return [];
 
       const accessToken = sessionData?.session?.access_token;
 
@@ -64,32 +41,23 @@ export function useWalletBalances() {
       }
 
       if (response.data?.success) {
-        setBalances(response.data.balances);
-        
-        // Cache the successful response
-        if (user?.id) {
-          localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(response.data.balances));
-        }
-        
+        // Cache the successful response for offline/fallback use
+        localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(response.data.balances));
         return response.data.balances;
       } else {
         throw new Error(response.data?.error || 'Unknown error');
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch balances';
-      setError(message);
-      console.error('Balance fetch error:', err);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchInterval: 60000, // Refetch every minute automatically
+    retry: 1,
+  });
 
   return {
-    balances,
-    loading,
-    error,
-    fetchBalances,
-    refetch: fetchBalances,
+    balances: query.data || [],
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : null,
+    fetchBalances: query.refetch,
+    refetch: query.refetch,
   };
 }
