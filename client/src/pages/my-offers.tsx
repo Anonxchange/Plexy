@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import DOMPurify from "dompurify";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -190,7 +191,7 @@ export function MyOffers() {
           : selectedOffer.payment_methods
       );
 
-      container.innerHTML = `
+      container.innerHTML = DOMPurify.sanitize(`
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 24px; padding: 32px; color: white;">
           <!-- Header with Owner Info -->
           <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
@@ -252,7 +253,7 @@ export function MyOffers() {
             <div style="font-size: 14px; opacity: 0.9;">Scan QR code to trade instantly</div>
           </div>
         </div>
-      `;
+      `);
 
       document.body.appendChild(container);
 
