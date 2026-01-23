@@ -150,7 +150,7 @@ class NonCustodialWalletManager {
       
       // Standard XRP Base58 alphabet for address derivation
       const XRP_ALPHABET = 'rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxy';
-      function xrpBase58Encode(buffer: Uint8Array): string {
+      const xrpBase58Encode = (buffer: Uint8Array): string => {
         let digits = [0];
         for (let i = 0; i < buffer.length; i++) {
           let carry = buffer[i];
@@ -168,7 +168,7 @@ class NonCustodialWalletManager {
         for (let i = 0; buffer[i] === 0 && i < buffer.length - 1; i++) result += XRP_ALPHABET[0];
         for (let i = digits.length - 1; i >= 0; i--) result += XRP_ALPHABET[digits[i]];
         return result;
-      }
+      };
 
       const versioned = Buffer.concat([Buffer.from([0x00]), Buffer.from(hash160, 'hex')]);
       const checksum = Buffer.from(CryptoJS.SHA256(CryptoJS.SHA256(CryptoJS.enc.Hex.parse(versioned.toString('hex'))).toString()).toString(), 'hex').slice(0, 4);
@@ -196,7 +196,7 @@ class NonCustodialWalletManager {
       walletType: (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") ? "bitcoin" : 
                   (chainId === "Solana") ? "solana" :
                   (chainId === "Tron (TRC-20)") ? "tron" : "ethereum",
-      encryptedPrivateKey, // Encrypted, safe to store
+      encryptedPrivateKey, // Encrypted with KDF-derived key, safe for local storage
       encryptedMnemonic, // Encrypted seed phrase for recovery
       createdAt: new Date().toISOString(),
       isActive: true,
