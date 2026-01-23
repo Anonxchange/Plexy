@@ -76,6 +76,27 @@ function generateFallbackPrices(symbols: string[]): Record<string, CryptoPrice> 
   return pricesMap;
 }
 
+// Add React Query support for prices
+import { useQuery } from '@tanstack/react-query';
+
+export function useCryptoPrices(symbols: string[]) {
+  return useQuery({
+    queryKey: ['crypto-prices', symbols.sort()],
+    queryFn: () => getCryptoPrices(symbols),
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 60000, // 1 minute
+  });
+}
+
+export function useRealtimeCryptoPrices(symbols: string[]) {
+  return useQuery({
+    queryKey: ['realtime-prices', symbols.sort()],
+    queryFn: () => getRealtimeCryptoPrices(symbols),
+    staleTime: 3000, // 3 seconds
+    refetchInterval: 5000, // 5 seconds
+  });
+}
+
 export async function getCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
   const now = Date.now();
   
