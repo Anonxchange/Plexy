@@ -715,7 +715,11 @@ class NonCustodialWalletManager {
 
       // Sync loaded wallets to localStorage so they're recognized by the app
       this.saveWalletsToStorage(wallets, userId);
+    if (import.meta.env.DEV) {
+      // Silenced in DEV to avoid console spam
+    } else {
       console.log("[WalletManager] Synced wallets from Supabase to localStorage:", wallets.length);
+    }
 
       return wallets;
     } catch (error) {
