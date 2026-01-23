@@ -33,7 +33,9 @@ export interface WalletTransaction {
 }
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  console.log("[getUserWallets] Fetching balances for user:", userId);
+  if (import.meta.env.DEV) {
+    // Silenced in DEV to avoid console spam
+  }
 
   try {
     const { data, error } = await supabase.functions.invoke('monitor-deposits');
