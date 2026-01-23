@@ -68,6 +68,7 @@ export function useWalletData() {
         const prices = await getCryptoPrices(symbols.length > 0 ? symbols : VALID_CRYPTO_SYMBOLS);
         
         const assetMap = new Map();
+        let totalBalance = 0;
         
         // Add real wallets first (with balance)
         wallets.forEach(wallet => {
