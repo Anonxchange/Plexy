@@ -4,7 +4,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";
 import { getUserWallets, type Wallet } from "@/lib/wallet-api";
-import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { useCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { Button } from "@/components/ui/button";
@@ -72,102 +72,43 @@ export const Dashboard = () => {
   const { user } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("Hot");
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [cryptoPrices, setCryptoPrices] = useState<Record<string, CryptoPrice>>({});
-  const [markets, setMarkets] = useState(defaultMarkets);
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
   const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { balances: monitoredBalances, fetchBalances } = useWalletBalances();
+  
+  const { balances: monitoredBalances, loading: walletsLoading } = useWalletBalances();
+  
+  const symbols = useMemo(() => ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"], []);
+  const { data: cryptoPricesMap, isLoading: pricesLoading } = useCryptoPrices(symbols);
+  
+  const isLoading = walletsLoading || pricesLoading;
+  const cryptoPrices = cryptoPricesMap || {};
+
+  const totalBalance = useMemo(() => {
+    if (!monitoredBalances || monitoredBalances.length === 0) return 0;
+    
+    return monitoredBalances.reduce((total, monitored) => {
+      const price = cryptoPrices[monitored.symbol]?.current_price || 0;
+      const balance = parseFloat(monitored.balanceFormatted) || 0;
+      return total + (balance * price);
+    }, 0);
+  }, [monitoredBalances, cryptoPrices]);
+
+  const markets = useMemo(() => {
+    return defaultMarkets.map(market => {
+      const priceData = cryptoPrices[market.symbol];
+      return {
+        ...market,
+        price: priceData ? priceData.current_price.toFixed(market.symbol === "USDT" || market.symbol === "USDC" ? 4 : 2) : market.price,
+        change: priceData?.price_change_percentage_24h || 0
+      };
+    });
+  }, [cryptoPrices]);
 
   useEffect(() => {
     if (user) {
-      fetchBalances();
-      const interval = setInterval(fetchBalances, 30000);
-      return () => clearInterval(interval);
+      const existingWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      setWalletBackupProcessed(existingWallets.length > 0);
     }
-  }, [user, fetchBalances]);
-
-  const [cachedTotalBalance, setCachedTotalBalance] = useState<number | null>(() => {
-    if (typeof window !== 'undefined' && user?.id) {
-      // Check both dashboard-specific and global header cache
-      const dashboardStored = localStorage.getItem(`pexly_dashboard_balance_${user.id}`);
-      const globalStored = localStorage.getItem(`pexly_balance_${user.id}`);
-      return dashboardStored ? parseFloat(dashboardStored) : (globalStored ? parseFloat(globalStored) : null);
-    }
-    return null;
-  });
-
-  const totalBalance = useMemo(() => {
-    let total = 0;
-    
-    // First, use userWallets (local/database)
-    wallets.forEach(wallet => {
-      const price = cryptoPrices[wallet.crypto_symbol]?.current_price || 0;
-      total += (wallet.balance || 0) * price;
-    });
-
-    // Then, add/update with monitoredBalances (real-time from Supabase)
-    monitoredBalances.forEach(monitored => {
-      const price = cryptoPrices[monitored.symbol]?.current_price || 0;
-      const balance = parseFloat(monitored.balanceFormatted) || 0;
-      
-      const existing = wallets.find(w => w.crypto_symbol === monitored.symbol);
-      if (existing) {
-        total -= (existing.balance || 0) * price;
-      }
-      total += balance * price;
-    });
-
-    if (total > 0 && user?.id) {
-      localStorage.setItem(`pexly_dashboard_balance_${user.id}`, total.toString());
-    }
-
-    return total > 0 ? total : (cachedTotalBalance || 0);
-  }, [wallets, monitoredBalances, cryptoPrices, user, cachedTotalBalance]);
-
-  const equivalentBtc = useMemo(() => {
-    if (cryptoPrices.BTC?.current_price) {
-      return totalBalance / cryptoPrices.BTC.current_price;
-    }
-    return 0;
-  }, [totalBalance, cryptoPrices]);
-
-  useEffect(() => {
-    if (!user) return;
-    
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Check if user has existing wallets
-        const existingWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-        setWalletBackupProcessed(existingWallets.length > 0);
-
-        const userWallets = await getUserWallets(user.id);
-        setWallets(userWallets);
-        
-        const symbols = userWallets.map(w => w.crypto_symbol);
-        const prices = await getCryptoPrices(symbols.length > 0 ? symbols : ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"]);
-        setCryptoPrices(prices);
-
-        // Update markets with real prices
-        const updatedMarkets = defaultMarkets.map(market => {
-          const priceData = prices[market.symbol];
-          return {
-            ...market,
-            price: priceData ? priceData.current_price.toFixed(market.symbol === "USDT" || market.symbol === "USDC" ? 4 : 2) : market.price,
-            change: priceData?.price_change_percentage_24h || 0
-          };
-        });
-        setMarkets(updatedMarkets);
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
   }, [user]);
 
   return (
@@ -215,7 +156,7 @@ export const Dashboard = () => {
                     <div className="h-4 w-24 bg-muted/30 animate-pulse rounded mt-2" />
                   ) : (
                     <p className="text-muted-foreground text-sm mt-1">
-                      ≈ {showBalance ? equivalentBtc.toFixed(5) : "••••••"} BTC
+                      ≈ {showBalance ? (totalBalance / (cryptoPrices.BTC?.current_price || 1)).toFixed(5) : "••••••"} BTC
                     </p>
                   )}
                   <div className="flex items-center gap-2 mt-3">
