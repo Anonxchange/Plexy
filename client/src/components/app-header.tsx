@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Banknote, Smartphone, HelpCircle, MessageSquare } from "lucide-react";
@@ -18,7 +18,8 @@ import { AppSidebar } from "./app-sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
-import { getCryptoPrices } from "@/lib/crypto-prices";
+import { useCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { 
   getNotifications, 
   markAsRead, 
@@ -65,13 +66,17 @@ export function AppHeader() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { toast } = useToast();
   const [userName, setUserName] = useState<string>('');
-  const [balance, setBalance] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem(`pexly_balance_${user?.id}`);
-      return cached ? parseFloat(cached) : 0;
-    }
-    return 0;
-  });
+  
+  const { balances: userWallets, loading: walletsLoading } = useWalletBalances();
+  
+  // Get all unique symbols from wallets
+  const allSymbols = useMemo(() => {
+    if (!userWallets || userWallets.length === 0) return ["BTC", "ETH", "USDT", "USDC"];
+    return Array.from(new Set(userWallets.map(w => w.symbol)));
+  }, [userWallets]);
+
+  const { data: prices, isLoading: pricesLoading } = useCryptoPrices(allSymbols);
+
   const [preferredCurrency, setPreferredCurrency] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem(`pexly_currency_${user?.id}`) || 'USD';
@@ -79,6 +84,42 @@ export function AppHeader() {
     return 'USD';
   });
   const [lastBalanceUpdate, setLastBalanceUpdate] = useState<number>(0);
+
+  // Derived balance calculation
+  const [balance, setBalance] = useState<number>(0);
+  const [isConverting, setIsConverting] = useState(false);
+
+  useEffect(() => {
+    const calculateBalance = async () => {
+      if (!userWallets || userWallets.length === 0 || !prices) {
+        setBalance(0);
+        return;
+      }
+
+      const totalUSD = userWallets.reduce((sum, wallet) => {
+        const priceData = prices[wallet.symbol];
+        const currentPrice = priceData?.current_price || 0;
+        const bal = parseFloat(wallet.balanceFormatted) || 0;
+        return sum + (bal * currentPrice);
+      }, 0);
+
+      if (preferredCurrency === 'USD') {
+        setBalance(totalUSD);
+      } else {
+        setIsConverting(true);
+        try {
+          const finalBalance = await convertCurrency(totalUSD, preferredCurrency);
+          setBalance(finalBalance);
+        } catch (e) {
+          setBalance(totalUSD);
+        } finally {
+          setIsConverting(false);
+        }
+      }
+    };
+
+    calculateBalance();
+  }, [userWallets, prices, preferredCurrency]);
 
   useEffect(() => {
     if (!user) return;
@@ -118,110 +159,21 @@ export function AppHeader() {
   useEffect(() => {
     if (user) {
       fetchProfileAvatar();
-      // fetchUserData() is already called here on mount
-      fetchUserData();
-
-      // Subscribe to wallet changes for real-time balance updates
-      const channel = supabase
-        .channel('wallet-changes-header')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'wallets',
-            filter: `user_id=eq.${user.id}`
-          },
-          () => {
-            console.log('Wallet changed in header, updating balance...');
-            setLastBalanceUpdate(Date.now());
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user]);
-
-  // Separate effect to fetch balance only when wallet actually changes
-  useEffect(() => {
-    if (lastBalanceUpdate > 0) {
-      fetchUserData();
-    }
-  }, [lastBalanceUpdate]);
-
-  const fetchUserData = async () => {
-    try {
-      // Import wallet API
-      const { getUserWallets } = await import('@/lib/wallet-api');
-
-      // Fetch profile and wallets in parallel
-      const [profileResult, userWallets] = await Promise.all([
-        supabase
+      
+      const fetchProfile = async () => {
+        const { data: profile } = await supabase
           .from('user_profiles')
           .select('username, preferred_currency')
           .eq('id', user?.id)
-          .single(),
-        getUserWallets(user?.id || '')
-      ]);
-
-      // Set username
-      if (!profileResult.error && profileResult.data?.username) {
-        setUserName(profileResult.data.username);
-      } else {
-        setUserName(user?.email?.split('@')[0] || 'User');
-      }
-
-      // Set preferred currency
-      const currency = profileResult.data?.preferred_currency?.toUpperCase() || 'USD';
-      setPreferredCurrency(currency);
-      if (user?.id) localStorage.setItem(`pexly_currency_${user.id}`, currency);
-
-      // Calculate balance from non-custodial wallets
-      if (userWallets && userWallets.length > 0) {
-        // Filter wallets with balance > 0 (even if currently 0 for mockup)
-        const walletsWithAddress = userWallets.filter(w => w.deposit_address);
-
-        if (walletsWithAddress.length === 0) {
-          setBalance(0);
-          if (user?.id) localStorage.setItem(`pexly_balance_${user.id}`, "0");
-          return;
-        }
-
-        // Get unique crypto symbols
-        const allSymbols = walletsWithAddress.map(w => w.crypto_symbol);
-
-        // Fetch prices
-        const { getCryptoPrices } = await import('@/lib/crypto-prices');
-        const prices = await getCryptoPrices(allSymbols);
-
-        // Calculate total in USD
-        const totalUSD = walletsWithAddress.reduce((sum, wallet) => {
-          const priceData = prices[wallet.crypto_symbol];
-          const currentPrice = priceData?.current_price || 0;
-          return sum + (wallet.balance * currentPrice);
-        }, 0);
-
-        // Convert to preferred currency if needed
-        let finalBalance = totalUSD;
-        if (currency !== 'USD') {
-          const { convertCurrency } = await import('@/lib/crypto-prices');
-          finalBalance = await convertCurrency(totalUSD, currency);
-        }
+          .single();
         
-        setBalance(finalBalance);
-        if (user?.id) localStorage.setItem(`pexly_balance_${user.id}`, finalBalance.toString());
-      } else {
-        setBalance(0);
-        if (user?.id) localStorage.setItem(`pexly_balance_${user.id}`, "0");
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      setBalance(0);
+        if (profile?.username) setUserName(profile.username);
+        if (profile?.preferred_currency) setPreferredCurrency(profile.preferred_currency.toUpperCase());
+      };
+      
+      fetchProfile();
     }
-  };
+  }, [user]);
 
   const fetchProfileAvatar = async () => {
     try {
