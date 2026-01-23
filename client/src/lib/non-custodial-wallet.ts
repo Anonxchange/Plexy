@@ -678,7 +678,7 @@ class NonCustodialWalletManager {
         });
       
       if (error) throw error;
-      console.log("Wallet saved to Supabase:", wallet.id);
+      // console.log("Wallet saved to Supabase:", wallet.id);
     } catch (error) {
       console.error("Failed to save wallet to Supabase:", error);
       throw error;
