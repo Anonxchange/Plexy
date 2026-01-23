@@ -238,8 +238,10 @@ export function AssetList({
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
-                        <div className="font-bold text-foreground">{asset.balance || 0}</div>
-                        <div className="text-[10px] text-muted-foreground font-medium">{(balanceValue || 0).toLocaleString()} {currency}</div>
+                        <div className="font-bold text-foreground">
+                          {asset.balance ? (typeof asset.balance === 'number' ? asset.balance.toLocaleString(undefined, { maximumFractionDigits: 8 }) : asset.balance) : '0'}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-medium">{(balanceValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</div>
                       </TableCell>
                       <TableCell className="text-right py-4">
                         <ActionMenu 
