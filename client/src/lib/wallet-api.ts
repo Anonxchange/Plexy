@@ -138,7 +138,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       }
     });
 
-    console.log("[getUserWallets] Final synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
+    // console.log("[getUserWallets] Final synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
     return wallets;
   } catch (e) {
     console.warn(`[getUserWallets] Remote sync failed, using local non-custodial data:`, e);
