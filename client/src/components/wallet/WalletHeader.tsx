@@ -33,10 +33,14 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             
             <div className="space-y-1">
               <div className="text-4xl font-bold tracking-tight text-foreground">
-                {showBalance ? `0 ${preferredCurrency}` : "****"}
+                {showBalance ? `${(wallet?.totalBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"}
               </div>
               <div className="text-sm text-muted-foreground">
-                There are no assets in your account <button onClick={onReceive} className="text-primary font-medium hover:underline">Deposit</button>
+                {(wallet?.totalBalance || 0) > 0 ? (
+                  <span>Portfolio value across all assets</span>
+                ) : (
+                  <>There are no assets in your account <button onClick={onReceive} className="text-primary font-medium hover:underline">Deposit</button></>
+                )}
               </div>
             </div>
           </div>
