@@ -165,7 +165,11 @@ export default function WalletPage() {
                       <WalletIcon className="h-4 w-4 mr-2" />
                       Wallet
                     </TabsTrigger>
-                    <TabsTrigger value="visa" className="rounded-lg px-6 py-2 font-semibold border bg-white dark:bg-card text-foreground opacity-60 transition-colors">
+                    <TabsTrigger 
+                      value="visa" 
+                      onClick={() => setLocation("/wallet/visa-card")}
+                      className="rounded-lg px-6 py-2 font-semibold border bg-white dark:bg-card text-foreground opacity-60 transition-colors"
+                    >
                       <Landmark className="h-4 w-4 mr-2" />
                       Visa card
                     </TabsTrigger>
