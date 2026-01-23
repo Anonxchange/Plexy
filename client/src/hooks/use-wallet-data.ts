@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { getUserWallets } from "@/lib/wallet-api";
 import { getCryptoPrices } from "@/lib/crypto-prices";
+import { useWalletBalances } from "./use-wallet-balances";
 
 export interface WalletData {
   totalBalance: number;
@@ -34,6 +35,7 @@ const VALID_CRYPTO_SYMBOLS = Object.keys(ASSET_NAMES);
 
 export function useWalletData() {
   const { user } = useAuth();
+  const { balances: monitoredBalances } = useWalletBalances();
   
   // Initial placeholder data based on supported assets
   const initialData: WalletData = {
@@ -49,34 +51,38 @@ export function useWalletData() {
   };
 
   return useQuery<WalletData>({
-    queryKey: ["/api/wallet", user?.id],
+    queryKey: ["/api/wallet-data-synced", user?.id, monitoredBalances?.length],
     enabled: !!user?.id,
     placeholderData: initialData,
     queryFn: async () => {
       try {
-        const rawWallets = await getUserWallets(user!.id);
+        // Use monitored balances from the dashboard hook if available, otherwise fetch
+        const wallets = monitoredBalances && monitoredBalances.length > 0 
+          ? monitoredBalances.map(mb => ({
+              crypto_symbol: mb.symbol,
+              balance: parseFloat(mb.balanceFormatted) || 0
+            }))
+          : await getUserWallets(user!.id);
         
         // Filter out junk data immediately
-        const wallets = rawWallets.filter(w => {
+        const filteredWallets = wallets.filter(w => {
           const symbol = (w.crypto_symbol || "").toUpperCase();
-          // Filter out technical fields like "success", "message", "timestamp"
           return VALID_CRYPTO_SYMBOLS.includes(symbol) || 
                  VALID_CRYPTO_SYMBOLS.some(s => symbol.startsWith(s + "-"));
         });
 
-        const symbols = wallets.map(w => w.crypto_symbol).filter(Boolean);
+        const symbols = filteredWallets.map(w => w.crypto_symbol).filter(Boolean);
         const prices = await getCryptoPrices(symbols.length > 0 ? symbols : VALID_CRYPTO_SYMBOLS);
         
         const assetMap = new Map();
-        let totalBalance = 0;
         
         // Add real wallets first (with balance)
-        wallets.forEach(wallet => {
+        filteredWallets.forEach(wallet => {
           try {
             const rawSymbol = wallet?.crypto_symbol || '';
             if (!rawSymbol) return;
             const baseSymbol = rawSymbol.includes('-') ? rawSymbol.split('-')[0].toUpperCase() : rawSymbol.toUpperCase();
-            const normalizedKey = baseSymbol; // Deduplicate by base symbol (e.g., USDT-ERC20 and USDT-TRC20 become USDT)
+            const normalizedKey = baseSymbol; 
             
             let priceData = { current_price: 0, price_change_percentage_24h: 0 };
             if (prices) {
@@ -97,7 +103,6 @@ export function useWalletData() {
             
             const existing = assetMap.get(normalizedKey);
             if (existing) {
-              // Combine balances for same asset on different chains
               existing.balance += balance;
               existing.value += value;
             } else {
@@ -129,11 +134,8 @@ export function useWalletData() {
         });
 
         const assets = Array.from(assetMap.values());
-        
-        // Recalculate total balance from final asset list to ensure consistency
-        totalBalance = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
+        const totalBalance = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
 
-        // Defined custom order for a professional look
         const SORT_ORDER: Record<string, number> = {
           BTC: 1, ETH: 2, SOL: 3, TRX: 4, USDT: 5, USDC: 6, BNB: 7, XRP: 8, MATIC: 9, ARB: 10, OP: 11
         };
@@ -150,19 +152,9 @@ export function useWalletData() {
         };
       } catch (error) {
         console.error("Failed to fetch real wallet data:", error);
-        return {
-          totalBalance: 0,
-          userId: user?.id,
-          assets: Object.entries(ASSET_NAMES).map(([symbol, name]) => ({
-            symbol,
-            name,
-            balance: 0,
-            value: 0,
-            change24h: 0
-          }))
-        };
+        return initialData;
       }
     },
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 }
