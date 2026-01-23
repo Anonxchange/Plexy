@@ -18,10 +18,10 @@ let cryptoPricesCache: Record<string, CryptoPrice> | null = null;
 let lastPricesFetchTime = 0;
 const PRICES_CACHE_DURATION = 30000; // 30 seconds for general use
 
-// Real-time price cache (3 seconds like Bybit)
+// Real-time price cache (5 seconds for trading)
 let realtimePricesCache: Record<string, CryptoPrice> | null = null;
 let lastRealtimeFetchTime = 0;
-const REALTIME_CACHE_DURATION = 3000; // 3 seconds for real-time pricing
+const REALTIME_CACHE_DURATION = 5000; // 5 seconds for real-time pricing
 
 export interface HistoricalPrice {
   timestamp: number;
@@ -83,8 +83,9 @@ export function useCryptoPrices(symbols: string[]) {
   return useQuery({
     queryKey: ['crypto-prices', symbols.sort()],
     queryFn: () => getCryptoPrices(symbols),
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // 1 minute
+    staleTime: 60000, // 60 seconds stale time for general prices
+    refetchInterval: 120000, // 2 minutes background refresh
+    gcTime: 600000, // 10 minutes cache retention
   });
 }
 
@@ -92,8 +93,9 @@ export function useRealtimeCryptoPrices(symbols: string[]) {
   return useQuery({
     queryKey: ['realtime-prices', symbols.sort()],
     queryFn: () => getRealtimeCryptoPrices(symbols),
-    staleTime: 3000, // 3 seconds
-    refetchInterval: 5000, // 5 seconds
+    staleTime: 15000, // 15 seconds stale time (Bybit/Standard REST polling)
+    refetchInterval: 30000, // 30 seconds background refresh
+    gcTime: 300000, // 5 minutes cache retention
   });
 }
 
@@ -121,6 +123,45 @@ export async function getCryptoPrices(symbols: string[]): Promise<Record<string,
     return pricesMap;
   } catch (error) {
     console.error('Error fetching crypto prices from Supabase:', error);
+    
+    // Try public API fallback (CoinGecko)
+    try {
+      const ids = symbols.map(s => {
+        const mapping: Record<string, string> = {
+          BTC: 'bitcoin', ETH: 'ethereum', USDT: 'tether', USDC: 'usd-coin', 
+          SOL: 'solana', TON: 'the-open-network', XMR: 'monero', LTC: 'litecoin',
+          XRP: 'ripple', BNB: 'binancecoin', TRX: 'tron'
+        };
+        return mapping[s] || s.toLowerCase();
+      }).join(',');
+      
+      const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`);
+      if (response.ok) {
+        const data = await response.json();
+        const fallbackMap: Record<string, CryptoPrice> = {};
+        
+        symbols.forEach(s => {
+          const id = Object.keys(data).find(key => key.toLowerCase() === s.toLowerCase() || (s === 'BTC' && key === 'bitcoin') || (s === 'ETH' && key === 'ethereum'));
+          if (id && data[id]) {
+            fallbackMap[s] = {
+              symbol: s,
+              name: s,
+              current_price: data[id].usd,
+              price_change_percentage_24h: data[id].usd_24h_change || 0,
+              market_cap: data[id].usd_market_cap || 0,
+              total_volume: data[id].usd_24h_vol || 0
+            };
+          }
+        });
+        
+        if (Object.keys(fallbackMap).length > 0) {
+          return fallbackMap;
+        }
+      }
+    } catch (e) {
+      console.error('Secondary fallback failed:', e);
+    }
+
     return cryptoPricesCache || generateFallbackPrices(symbols);
   }
 }
@@ -149,6 +190,48 @@ export async function getRealtimeCryptoPrices(symbols: string[]): Promise<Record
     return pricesMap;
   } catch (error) {
     console.error('Error fetching realtime crypto prices from Supabase:', error);
+    
+    // Try public API fallback (Binance Public API)
+    try {
+      const results = await Promise.all(symbols.map(async s => {
+        try {
+          // Binance uses SYMBOL+USDT format for most pairs
+          const pair = s === 'USDT' ? 'USDCUSDT' : `${s}USDT`;
+          const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`);
+          if (res.ok) {
+            const data = await res.json();
+            return {
+              symbol: s,
+              price: parseFloat(data.lastPrice),
+              change: parseFloat(data.priceChangePercent),
+              vol: parseFloat(data.quoteVolume)
+            };
+          }
+        } catch (e) { return null; }
+        return null;
+      }));
+      
+      const fallbackMap: Record<string, CryptoPrice> = {};
+      results.forEach(r => {
+        if (r) {
+          fallbackMap[r.symbol] = {
+            symbol: r.symbol,
+            name: r.symbol,
+            current_price: r.price,
+            price_change_percentage_24h: r.change,
+            market_cap: 0,
+            total_volume: r.vol
+          };
+        }
+      });
+      
+      if (Object.keys(fallbackMap).length > 0) {
+        return fallbackMap;
+      }
+    } catch (e) {
+      console.error('Realtime secondary fallback failed:', e);
+    }
+
     return realtimePricesCache || cryptoPricesCache || generateFallbackPrices(symbols);
   }
 }
