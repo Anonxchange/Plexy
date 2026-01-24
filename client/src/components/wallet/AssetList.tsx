@@ -1,20 +1,32 @@
-import { useState, useMemo } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useWalletData } from "@/hooks/use-wallet-data";
-import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { MoreHorizontal, ArrowDownToLine, Send, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import {
+  Drawer,
+  DrawerTrigger,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { RecentActivity } from "./RecentActivity";
@@ -27,67 +39,36 @@ interface ActionMenuProps {
   isMobile?: boolean;
 }
 
-const ActionMenu = ({ symbol, onSend, onReceive, onSwap, isMobile }: ActionMenuProps) => {
-  const handleSend = (e: React.MouseEvent) => {
-    if (!e) return;
-    e.stopPropagation();
-    onSend?.(symbol);
-  };
-
-  const handleReceive = (e: React.MouseEvent) => {
-    if (!e) return;
-    e.stopPropagation();
-    onReceive?.(symbol);
-  };
-
-  const handleSwap = (e: React.MouseEvent) => {
-    if (!e) return;
-    e.stopPropagation();
-    onSwap?.(symbol);
-  };
+const ActionMenu = ({
+  symbol,
+  onSend,
+  onReceive,
+  onSwap,
+  isMobile,
+}: ActionMenuProps) => {
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   if (isMobile) {
     return (
       <Drawer>
-        <DrawerTrigger asChild onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground bg-muted/20">
+        <DrawerTrigger asChild onClick={stop}>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DrawerTrigger>
         <DrawerContent className="pb-8">
           <DrawerHeader className="border-b">
-            <DrawerTitle className="text-left font-bold">Select an action</DrawerTitle>
+            <DrawerTitle>Select an action</DrawerTitle>
           </DrawerHeader>
           <div className="p-4 space-y-3">
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
-              onClick={handleReceive}
-            >
-              <div className="bg-muted/10 p-2 rounded-lg">
-                <ArrowDownToLine className="h-5 w-5" />
-              </div>
-              Deposit
+            <Button variant="outline" className="h-14" onClick={() => onReceive?.(symbol)}>
+              <ArrowDownToLine className="mr-3 h-5 w-5" /> Deposit
             </Button>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
-              onClick={handleSend}
-            >
-              <div className="bg-muted/10 p-2 rounded-lg">
-                <Send className="h-5 w-5" />
-              </div>
-              Send
+            <Button variant="outline" className="h-14" onClick={() => onSend?.(symbol)}>
+              <Send className="mr-3 h-5 w-5" /> Send
             </Button>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-4 h-14 text-base font-bold rounded-xl border-muted/50"
-              onClick={handleSwap}
-            >
-              <div className="bg-muted/10 p-2 rounded-lg">
-                <RefreshCw className="h-5 w-5" />
-              </div>
-              Swap
+            <Button variant="outline" className="h-14" onClick={() => onSwap?.(symbol)}>
+              <RefreshCw className="mr-3 h-5 w-5" /> Swap
             </Button>
           </div>
         </DrawerContent>
@@ -97,168 +78,144 @@ const ActionMenu = ({ symbol, onSend, onReceive, onSwap, isMobile }: ActionMenuP
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+      <DropdownMenuTrigger asChild onClick={stop}>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleReceive}>Deposit</DropdownMenuItem>
-        <DropdownMenuItem onClick={handleSend}>Send</DropdownMenuItem>
-        <DropdownMenuItem onClick={handleSwap}>Swap</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onReceive?.(symbol)}>Deposit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onSend?.(symbol)}>Send</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onSwap?.(symbol)}>Swap</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 };
 
-export function AssetList({ 
-  onSend, 
-  onReceive, 
-  onSwap 
-}: { 
+export function AssetList({
+  onSend,
+  onReceive,
+  onSwap,
+}: {
   onSend?: (symbol: string) => void;
   onReceive?: (symbol: string) => void;
   onSwap?: (symbol: string) => void;
 }) {
-  const { data: wallet, isLoading } = useWalletData();
-  const { data: prices, isLoading: pricesLoading } = useCryptoPrices();
+  const { data: wallet, isLoading, isFetching } = useWalletData();
   const [hideZero, setHideZero] = useState(false);
   const [activeTab, setActiveTab] = useState("assets");
+  const [currency, setCurrency] = useState("USD");
 
-  const getAssetPrice = (symbol: string) => {
-    if (!symbol || !prices || !Array.isArray(prices)) return { price: 0, change24h: 0 };
-    const upperSymbol = symbol.toUpperCase();
-    const priceData = (prices as any[]).find(p => p && p.symbol === upperSymbol);
-    return priceData ? { price: priceData.price || (priceData as any).current_price || 0, change24h: priceData.change24h || (priceData as any).price_change_percentage_24h || 0 } : { price: 0, change24h: 0 };
-  };
+  const loading = isLoading || isFetching;
+
+  useEffect(() => {
+    if (!wallet?.userId) return;
+    const stored = localStorage.getItem(`pexly_currency_${wallet.userId}`);
+    if (stored) setCurrency(stored);
+  }, [wallet?.userId]);
 
   const assets = useMemo(() => {
-    const assets = (wallet as any)?.assets;
-    if (!assets) return [];
-    const seen = new Set();
-    return assets.filter((asset: any) => {
-      const symbol = asset?.symbol?.toUpperCase();
-      if (!symbol || seen.has(symbol)) return false;
-      seen.add(symbol);
-      return true;
-    });
-  }, [wallet]);
-
-  const isDataLoading = isLoading || pricesLoading || !wallet;
+    if (!wallet?.assets) return [];
+    return hideZero
+      ? wallet.assets.filter(a => a.balance > 0)
+      : wallet.assets;
+  }, [wallet?.assets, hideZero]);
 
   return (
     <div className="space-y-6">
-      <div className="border-b pb-1 overflow-x-auto no-scrollbar">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-transparent h-auto p-0 gap-8 min-w-max flex justify-start items-end">
-            <TabsTrigger 
-              value="assets" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold whitespace-nowrap"
-            >
-              Wallet assets
-            </TabsTrigger>
-            <TabsTrigger 
-              value="activity" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold whitespace-nowrap"
-            >
-              Recent activity
-            </TabsTrigger>
-            <TabsTrigger 
-              value="operations" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-base font-semibold text-muted-foreground whitespace-nowrap"
-            >
-              All operations
-            </TabsTrigger>
-            <div className="flex-1" />
-            <Button variant="ghost" className="text-muted-foreground font-semibold px-0 pb-3 h-auto hidden sm:flex hover:bg-transparent">
-              See full operations
-            </Button>
-          </TabsList>
-        </Tabs>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="gap-8">
+          <TabsTrigger value="assets">Wallet assets</TabsTrigger>
+          <TabsTrigger value="activity">Recent activity</TabsTrigger>
+          <TabsTrigger value="operations">All operations</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {activeTab === "assets" && (
         <>
-          <div className="flex items-center space-x-2">
-            <Checkbox id="hide-zero" checked={hideZero} onCheckedChange={(checked) => setHideZero(!!checked)} className="dark:border-muted-foreground" />
-            <Label htmlFor="hide-zero" className="text-sm font-medium text-muted-foreground cursor-pointer">
-              Hide 0 balance
-            </Label>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="hide-zero"
+              checked={hideZero}
+              onCheckedChange={v => setHideZero(!!v)}
+            />
+            <Label htmlFor="hide-zero">Hide 0 balance</Label>
           </div>
 
-          <div className="rounded-lg border bg-card dark:bg-card/50 overflow-x-auto no-scrollbar transition-colors">
-            <Table className="min-w-full">
-              <TableHeader className="bg-muted/30 dark:bg-muted/10">
-                <TableRow className="hover:bg-transparent border-none">
-                  <TableHead className="w-[100px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-muted-foreground">Asset</TableHead>
-                  <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider hidden sm:table-cell text-muted-foreground">Current price</TableHead>
-                  <TableHead className="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-muted-foreground">Balance</TableHead>
-                  <TableHead className="w-[50px] text-[10px] sm:text-xs uppercase font-bold tracking-wider text-right text-muted-foreground">Action</TableHead>
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asset</TableHead>
+                  <TableHead className="hidden sm:table-cell">Price</TableHead>
+                  <TableHead>Balance</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {isDataLoading ? (
+                {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-6 ml-auto" /></TableCell>
                     </TableRow>
                   ))
-                ) : assets.length > 0 ? (
-                  assets.map((asset: any) => {
-                    const { price, change24h } = getAssetPrice(asset.symbol);
-                    const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
-                    const balanceValue = (asset.balance || 0) * (price || 0);
-                    
-                    if (hideZero && asset.balance <= 0) return null;
-                    
+                ) : assets.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      No assets found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  assets.map(asset => {
+                    const value = asset.balance * (asset.value / (asset.balance || 1));
+
                     return (
-                      <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
-                        <TableCell className="py-4">
+                      <TableRow key={asset.symbol}>
+                        <TableCell>
                           <div className="flex items-center gap-3">
-                            <img 
-                              src={cryptoIconUrls[asset.symbol] || 
-                                   (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
-                                    asset.symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
-                                    `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`)} 
+                            <img
+                              src={cryptoIconUrls[asset.symbol]}
                               alt={asset.symbol}
-                              className="w-8 h-8 rounded-full object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
-                              }}
+                              className="h-8 w-8"
                             />
-                            <div className="font-bold text-foreground">
-                              {asset.symbol === "ETH" ? "Ethereum" : 
-                               asset.symbol === "BTC" ? "Bitcoin" : 
-                               asset.symbol === "SOL" ? "Solana" : 
-                               asset.symbol === "USDT" ? "Tether" : 
-                               asset.symbol === "USDC" ? "USD Coin" : 
-                               asset.symbol === "BNB" ? "BNB" :
-                               asset.symbol === "XRP" ? "XRP" :
-                               asset.symbol === "MATIC" ? "Polygon" :
-                               asset.symbol === "ARB" ? "Arbitrum" :
-                               asset.symbol === "OP" ? "Optimism" :
-                               asset.symbol === "TRX" ? "Tron" : asset.name || asset.symbol}
-                            </div>
+                            <span className="font-semibold">{asset.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="py-4 hidden sm:table-cell">
-                          <div className="font-semibold text-foreground">{(price || 0).toLocaleString()} {currency}</div>
-                          <div className={`text-[10px] font-bold ${(change24h || 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
-                            {(change24h || 0) >= 0 ? "+" : ""}{(change24h || 0).toFixed(2)}%
+
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="font-semibold">
+                            {(asset.value / (asset.balance || 1)).toLocaleString()} {currency}
+                          </div>
+                          <div
+                            className={`text-xs font-bold ${
+                              asset.change24h >= 0 ? "text-green-500" : "text-red-500"
+                            }`}
+                          >
+                            {asset.change24h >= 0 ? "+" : ""}
+                            {asset.change24h.toFixed(2)}%
                           </div>
                         </TableCell>
-                        <TableCell className="py-4">
-                          <div className="font-bold text-foreground">
-                            {asset.balance ? (typeof asset.balance === 'number' ? asset.balance.toLocaleString(undefined, { maximumFractionDigits: 8 }) : asset.balance) : '0'}
+
+                        <TableCell>
+                          <div className="font-bold">
+                            {asset.balance.toLocaleString(undefined, { maximumFractionDigits: 8 })}
                           </div>
-                          <div className="text-[10px] text-muted-foreground font-medium">{(balanceValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {asset.value.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            {currency}
+                          </div>
                         </TableCell>
-                        <TableCell className="text-right py-4">
-                          <ActionMenu 
-                            symbol={asset.symbol} 
+
+                        <TableCell className="text-right">
+                          <ActionMenu
+                            symbol={asset.symbol}
                             onSend={onSend}
                             onReceive={onReceive}
                             onSwap={onSwap}
@@ -267,12 +224,6 @@ export function AssetList({
                       </TableRow>
                     );
                   })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      No assets found
-                    </TableCell>
-                  </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -281,10 +232,7 @@ export function AssetList({
       )}
 
       {(activeTab === "activity" || activeTab === "operations") && (
-        <RecentActivity 
-          type={activeTab as any} 
-          onDeposit={onReceive} 
-        />
+        <RecentActivity type={activeTab as any} onDeposit={onReceive} />
       )}
     </div>
   );
