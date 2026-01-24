@@ -27,20 +27,9 @@ export default function WalletPage() {
   const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
   const { data: wallet, isLoading: isWalletLoading, isError: isWalletError, isRefetching } = useWalletData();
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  useEffect(() => {
-    // Reset initial loading on unmount so it shows skeleton when coming back
-    return () => setIsInitialLoading(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isWalletLoading) {
-      setIsInitialLoading(false);
-    }
-  }, [isWalletLoading]);
-
-  const showSkeleton = (isInitialLoading || isWalletError) && (!wallet || wallet.isConverting);
+  // showSkeleton should be true whenever we are loading the first time OR refreshing/fetching without data
+  const showSkeleton = isWalletLoading || (isRefetching && !wallet) || isWalletError;
 
   useEffect(() => {
     if (!loading && !user) {
