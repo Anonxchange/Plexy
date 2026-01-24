@@ -50,7 +50,7 @@ export function useWalletData() {
     }))
   };
 
-  const { data: wallet, isLoading, isPlaceholderData } = useQuery<WalletData>({
+  const query = useQuery<WalletData>({
     queryKey: ["/api/wallet-data-synced", user?.id, monitoredBalances?.length],
     enabled: !!user?.id,
     placeholderData: initialData,
@@ -157,4 +157,6 @@ export function useWalletData() {
     },
     refetchInterval: 15000,
   });
+
+  return query;
 }
