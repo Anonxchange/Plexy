@@ -7,6 +7,7 @@ import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
 import { ReceiveMethodDialog } from "@/components/receive-method-dialog";
 import { type Wallet, getUserWallets } from "@/lib/wallet-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { useWalletData } from "@/hooks/use-wallet-data";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
 import { WalletSetupDialog } from "@/components/wallet/WalletSetupDialog";
