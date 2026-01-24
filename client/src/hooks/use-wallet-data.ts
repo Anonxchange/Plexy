@@ -93,12 +93,12 @@ export function useWalletData() {
     enabled: !!user?.id,
 
     staleTime: 0,
-    gcTime: 1000 * 60 * 60,
+    gcTime: 0, // Disable garbage collection to ensure it's removed when not used
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true,
 
-    placeholderData: undefined, // Don't use previous data as placeholder during initial mount/refresh
+    placeholderData: undefined,
 
     queryFn: async () => {
       if (!user?.id) {
