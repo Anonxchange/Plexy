@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useWalletData } from "@/hooks/use-wallet-data";
 import { Eye, EyeOff, Smartphone, RefreshCw, Send, ArrowDownToLine, Landmark, Zap } from "lucide-react";
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface WalletHeaderProps {
   onSend: () => void;
@@ -12,7 +13,7 @@ interface WalletHeaderProps {
 }
 
 export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeaderProps) {
-  const { data: wallet } = useWalletData();
+  const { data: wallet, isLoading } = useWalletData();
   const [showBalance, setShowBalance] = useState(true);
   const preferredCurrency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
   
@@ -33,10 +34,16 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             
             <div className="space-y-1">
               <div className="text-4xl font-bold tracking-tight text-foreground">
-                {showBalance ? `${(wallet?.totalBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"}
+                {isLoading ? (
+                  <Skeleton className="h-10 w-48" />
+                ) : (
+                  showBalance ? `${(wallet?.totalBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"
+                )}
               </div>
               <div className="text-sm text-muted-foreground">
-                {(wallet?.totalBalance || 0) > 0 ? (
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32" />
+                ) : (wallet?.totalBalance || 0) > 0 ? (
                   <span>Portfolio value across all assets</span>
                 ) : (
                   <>There are no assets in your account <button onClick={onReceive} className="text-primary font-medium hover:underline">Deposit</button></>
