@@ -167,7 +167,7 @@ export default function WalletPage() {
               <CardContent className="p-0">
                 <div className="p-4 flex items-center justify-between border-b cursor-pointer hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm">Withdraw limits</span>
+                    <span className="font-bold text-sm">Trading limits</span>
                     <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-100 border-none text-[10px] font-bold px-1.5 h-5 uppercase">Level 3</Badge>
                     <span className="text-primary text-[10px] font-bold hover:underline ml-1">Learn more</span>
                   </div>
