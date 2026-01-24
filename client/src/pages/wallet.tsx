@@ -25,8 +25,15 @@ export default function WalletPage() {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
-  const { data: wallet, isLoading: isWalletLoading } = useWalletData();
+  const { data: wallet, isLoading: isWalletLoading, isError: isWalletError } = useWalletData();
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isWalletLoading) {
+      setIsInitialLoading(false);
+    }
+  }, [isWalletLoading]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -126,7 +133,7 @@ export default function WalletPage() {
                     />
                     
                     <div className="p-6">
-                      {isWalletLoading && (!wallet || wallet.assets.length === 0) ? (
+                      {(isInitialLoading || isWalletError) && (!wallet || wallet.assets.length === 0) ? (
                         <div className="space-y-4">
                           {[1, 2, 3, 4].map((i) => (
                             <div key={i} className="flex items-center justify-between py-4">
