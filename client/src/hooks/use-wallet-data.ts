@@ -92,13 +92,13 @@ export function useWalletData() {
 
     enabled: !!user?.id,
 
-    staleTime: 30000, // Consider data fresh for 30s
-    gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+    staleTime: 0,
+    gcTime: 1000 * 60 * 60,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true,
 
-    placeholderData: (prev) => prev,
+    placeholderData: undefined, // Don't use previous data as placeholder during initial mount/refresh
 
     queryFn: async () => {
       if (!user?.id) {
