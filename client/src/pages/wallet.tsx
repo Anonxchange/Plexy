@@ -24,8 +24,7 @@ export default function WalletPage() {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [isWalletLoading, setIsWalletLoading] = useState(true);
+  const { data: wallet, isLoading: isWalletLoading } = useWalletData();
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -34,89 +33,27 @@ export default function WalletPage() {
     }
   }, [user, loading, setLocation]);
 
-  const loadWalletData = async (useCache = true) => {
-    if (!user) return;
-
-    // Check if user has non-custodial wallets
-    const localWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-    if (localWallets.length === 0) {
-      setSetupDialogOpen(true);
-      setIsWalletLoading(false);
-      return;
-    }
-
-    // 1. Try to load from cache first for "instant" feel
-    if (useCache) {
-      const cached = localStorage.getItem(`pexly_wallet_cache_${user.id}`);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          setWallets(parsed);
-          // If the cache is very old (e.g. > 5 mins), keep loading state true
-          // so the user sees a "background" loading shimmer or just keeps the cache visible
-          setIsWalletLoading(false); 
-        } catch (e) {
-          console.error("Cache parse error", e);
-        }
-      }
-    }
-
-    // 2. Fetch fresh data in the background
-    try {
-      const userWallets = await getUserWallets(user.id);
-      if (userWallets && Array.isArray(userWallets)) {
-        setWallets(userWallets);
-        // Save to cache for next time
-        localStorage.setItem(`pexly_wallet_cache_${user.id}`, JSON.stringify(userWallets));
-      }
-    } catch (error) {
-      console.error("Wallet Page: Sync failed:", error);
-      // Only clear if we have absolutely nothing
-      if (!localStorage.getItem(`pexly_wallet_cache_${user.id}`)) {
-        setWallets([]);
-      }
-    } finally {
-      setIsWalletLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (user) {
-      loadWalletData(true); // Enable cache on initial load
-    } else {
-      setWallets([]);
+    if (user && !isWalletLoading && wallet?.assets.length === 0) {
+      // Check if user has non-custodial wallets locally
+      nonCustodialWalletManager.getNonCustodialWallets(user.id).then(localWallets => {
+        if (localWallets.length === 0) {
+          setSetupDialogOpen(true);
+        }
+      });
     }
-  }, [user]);
+  }, [user, isWalletLoading, wallet?.assets.length]);
 
   if (!loading && !user) {
     return null;
   }
 
-  const walletsForDialog = (wallets || []).map(wallet => {
-    if (!wallet) return null;
-    try {
-      const symbol = wallet.crypto_symbol || "";
-      return {
-        symbol: symbol,
-        balance: wallet.balance || 0,
-        name: symbol === "BTC" ? "Bitcoin" : 
-              symbol === "ETH" ? "Ethereum" :
-              symbol === "SOL" ? "Solana" :
-              symbol === "USDT" ? "Tether" :
-              symbol === "USDC" ? "USD Coin" : 
-              symbol === "BNB" ? "BNB" :
-              symbol === "XRP" ? "XRP" :
-              symbol === "MATIC" ? "Polygon" :
-              symbol === "ARB" ? "Arbitrum" :
-              symbol === "OP" ? "Optimism" :
-              symbol,
-        icon: symbol
-      };
-    } catch (e) {
-      console.error("Wallet Page: Error mapping wallet for dialog:", e);
-      return null;
-    }
-  }).filter((w): w is NonNullable<typeof w> => w !== null);
+  const walletsForDialog = (wallet?.assets || []).map(asset => ({
+    symbol: asset.symbol,
+    balance: asset.balance,
+    name: asset.name,
+    icon: asset.symbol
+  }));
 
   const [selectedAsset, setSelectedAsset] = useState<string | undefined>();
 
@@ -188,7 +125,7 @@ export default function WalletPage() {
                     />
                     
                     <div className="p-6">
-                      {isWalletLoading && wallets.length === 0 ? (
+                      {isWalletLoading && (!wallet || wallet.assets.length === 0) ? (
                         <div className="space-y-4">
                           {[1, 2, 3, 4].map((i) => (
                             <div key={i} className="flex items-center justify-between py-4">
@@ -274,7 +211,7 @@ export default function WalletPage() {
         onOpenChange={setSendDialogOpen}
         wallets={walletsForDialog}
         initialSymbol={selectedAsset}
-        onSuccess={loadWalletData}
+        onSuccess={() => {}}
       />
 
       <ReceiveCryptoDialog
@@ -295,7 +232,7 @@ export default function WalletPage() {
           open={setupDialogOpen}
           onOpenChange={setSetupDialogOpen}
           userId={user.id}
-          onSuccess={() => loadWalletData(false)}
+          onSuccess={() => {}}
         />
       )}
     </div>
