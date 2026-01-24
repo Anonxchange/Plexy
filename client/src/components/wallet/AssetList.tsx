@@ -101,10 +101,15 @@ export function AssetList({
   onReceive?: (symbol: string) => void;
   onSwap?: (symbol: string) => void;
 }) {
-  const { data: wallet, isLoading, isFetching, isError } = useWalletData();
+  const { data: wallet, isLoading, isFetching, isError, isRefetching } = useWalletData();
   const [hideZero, setHideZero] = useState(false);
   const [activeTab, setActiveTab] = useState("assets");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  useEffect(() => {
+    // Reset on unmount
+    return () => setIsInitialLoading(true);
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {
