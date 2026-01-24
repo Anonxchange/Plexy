@@ -26,17 +26,9 @@ export function WalletHeader({
 }: WalletHeaderProps) {
   const { data: wallet, isLoading, isFetching } = useWalletData();
   const [showBalance, setShowBalance] = useState(true);
-  const [preferredCurrency, setPreferredCurrency] = useState("USD");
 
-  const loading = isLoading || isFetching;
-
-  useEffect(() => {
-    if (!wallet?.userId) return;
-    const stored = localStorage.getItem(
-      `pexly_currency_${wallet.userId}`
-    );
-    if (stored) setPreferredCurrency(stored);
-  }, [wallet?.userId]);
+  const loading = isLoading || isFetching || wallet?.isConverting;
+  const preferredCurrency = wallet?.preferredCurrency || "USD";
 
   const hasAssets =
     wallet?.assets?.some(asset => asset.balance > 0) ?? false;
