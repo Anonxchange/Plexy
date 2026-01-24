@@ -101,12 +101,19 @@ export function AssetList({
   onReceive?: (symbol: string) => void;
   onSwap?: (symbol: string) => void;
 }) {
-  const { data: wallet, isLoading, isFetching } = useWalletData();
+  const { data: wallet, isLoading, isFetching, isError } = useWalletData();
   const [hideZero, setHideZero] = useState(false);
   const [activeTab, setActiveTab] = useState("assets");
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsInitialLoading(false);
+    }
+  }, [isLoading]);
 
   const preferredCurrency = wallet?.preferredCurrency || "USD";
-  const loading = isLoading || isFetching || wallet?.isConverting;
+  const loading = (isInitialLoading || isError) && (!wallet || wallet?.isConverting);
 
   const assets = useMemo(() => {
     if (!wallet?.assets) return [];
