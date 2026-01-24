@@ -227,7 +227,6 @@ function AppContent() {
   );
 }
 
-import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { base } from 'viem/chains';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { coinbaseWallet } from 'wagmi/connectors';
@@ -253,19 +252,13 @@ function App() {
     return (
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
-          <OnchainKitProvider
-            apiKey={(import.meta as any).env.VITE_ONCHAINKIT_API_KEY}
-            projectId={(import.meta as any).env.VITE_CDP_PROJECT_ID}
-            chain={base}
-          >
-            <ThemeProvider>
-              <AuthProvider>
-                <TooltipProvider>
-                  <Support />
-                </TooltipProvider>
-              </AuthProvider>
-            </ThemeProvider>
-          </OnchainKitProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <TooltipProvider>
+                <Support />
+              </TooltipProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </QueryClientProvider>
       </WagmiProvider>
     );
@@ -274,20 +267,14 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          apiKey={(import.meta as any).env.VITE_ONCHAINKIT_API_KEY}
-          projectId={(import.meta as any).env.VITE_CDP_PROJECT_ID}
-          chain={base}
-        >
-          <ThemeProvider>
-            <AuthProvider>
-              <TooltipProvider>
-                <GlobalNotificationListener />
-                <AppContent />
-              </TooltipProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </OnchainKitProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <GlobalNotificationListener />
+              <AppContent />
+            </TooltipProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
