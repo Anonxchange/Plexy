@@ -14,9 +14,16 @@
     <meta property="og:description" content="The largest P2P marketplace to buy, sell, send, and receive crypto and local currencies. Trade with 500+ payment methods across 140 markets." />
     <meta property="og:type" content="website" />
     
+    <link rel="preload" as="image" href="/src/assets/generated_images/Crypto_P2P_trading_hero_641f4218.png">
+    <link rel="preload" as="script" href="/src/main.tsx">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+    </noscript>
     
     <!-- Global JSON-LD Schema -->
     <script type="application/ld+json">
@@ -112,7 +119,15 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static Skeleton for FCP/LCP -->
+      <div style="background: #000; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif; color: #fff;">
+        <div style="text-align: center;">
+          <h1 style="font-size: 3rem; margin-bottom: 1rem; background: linear-gradient(to right, #B4F22E, #8BC34A); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Pexly</h1>
+          <p style="color: #888;">The People-Powered Way to Move Money</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
