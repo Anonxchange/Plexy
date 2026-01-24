@@ -13,7 +13,6 @@ import { CookieConsent } from "@/components/cookie-consent";
 
 // Import pages directly
 import Home from "@/pages/home";
-import Buy from "@/pages/buy";
 import Wallet from "@/pages/wallet";
 import { SignUp } from "@/pages/signup";
 import { SignIn } from "@/pages/signin";
@@ -45,9 +44,6 @@ import AdminPage from "@/pages/admin";
 import AdminVerificationsPage from "@/pages/admin-verifications";
 import AdminBlog from "@/pages/admin-blog";
 import AdminGiftCards from "@/pages/admin-gift-cards";
-import AssetDetail from "@/pages/asset-detail";
-import AssetHistory from "@/pages/asset-history";
-import MedalsPage from "@/pages/medals";
 import { Fees } from "@/pages/fees";
 import Affiliate from "@/pages/affiliate";
 import RewardsPage from "@/pages/rewards";
@@ -56,12 +52,6 @@ import MerchantApplicationPage from "@/pages/merchant-application";
 import MerchantDowngradePage from "@/pages/merchant-downgrade";
 import AdminMerchantsPage from "@/pages/admin-merchants";
 import AdminTransferPage from "@/pages/admin-transfer";
-import PexlyPay from "@/pages/pexly-pay";
-import PexlyPayHistory from "@/pages/pexly-pay-history";
-import PexlyPaySettings from "@/pages/pexly-pay-settings";
-import PexlyPayPaymentLimits from "@/pages/pexly-pay-payment-limits";
-import PexlyPayPasswordFree from "@/pages/pexly-pay-password-free";
-import PexlyPayHelp from "@/pages/pexly-pay-help";
 import NotificationsPage from "@/pages/notifications";
 import NotificationSettings from "@/pages/notification-settings";
 import { BitcoinCalculator } from "@/pages/bitcoin-calculator";
@@ -117,7 +107,6 @@ function Router() {
       <Route path="/explorer/asset/:symbol" component={ExplorerAsset} />
       <Route path="/markets" component={MarketsPage} />
       <Route path="/submit-idea" component={SubmitIdea} />
-      <Route path="/buy" component={Buy} />
       <Route path="/p2p" component={P2P} />
       <Route path="/spot" component={Spot} />
       <Route path="/swap" component={Swap} />
@@ -125,18 +114,10 @@ function Router() {
       <Route path="/analysis" component={Analysis} />
       <Route path="/wallet/visa-card" component={VisaCard} />
       <Route path="/wallet/visa-card/details" component={VisaCardDetails} />
-      <Route path="/wallet/asset/:symbol" component={AssetDetail} />
-      <Route path="/wallet/history/:symbol" component={AssetHistory} />
       <Route path="/wallet/mobile-topup" component={MobileTopup} />
       <Route path="/wallet/crypto-to-bank" component={CryptoToBank} />
       <Route path="/wallet/lightning" component={Lightning} />
       <Route path="/wallet/buy-crypto" component={BuyCrypto} />
-      <Route path="/wallet/pexly-pay" component={PexlyPay} />
-      <Route path="/wallet/pexly-pay/history" component={PexlyPayHistory} />
-      <Route path="/wallet/pexly-pay/settings" component={PexlyPaySettings} />
-      <Route path="/wallet/pexly-pay/payment-limits" component={PexlyPayPaymentLimits} />
-      <Route path="/wallet/pexly-pay/password-free" component={PexlyPayPasswordFree} />
-      <Route path="/wallet/pexly-pay/help" component={PexlyPayHelp} />
       <Route path="/gift-cards" component={GiftCards} />
       <Route path="/gift-cards/:id" component={GiftCardDetail} />
       <Route path="/trade-history" component={TradeHistory} />
@@ -201,7 +182,7 @@ function Router() {
 
 function AppContent() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
+  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
   const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
