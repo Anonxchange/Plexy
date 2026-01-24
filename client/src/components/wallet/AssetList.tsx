@@ -61,25 +61,13 @@ const ActionMenu = ({
             <DrawerTitle>Select an action</DrawerTitle>
           </DrawerHeader>
           <div className="p-4 space-y-3">
-            <Button
-              variant="outline"
-              className="h-14"
-              onClick={() => onReceive?.(symbol)}
-            >
+            <Button variant="outline" className="h-14" onClick={() => onReceive?.(symbol)}>
               <ArrowDownToLine className="mr-3 h-5 w-5" /> Deposit
             </Button>
-            <Button
-              variant="outline"
-              className="h-14"
-              onClick={() => onSend?.(symbol)}
-            >
+            <Button variant="outline" className="h-14" onClick={() => onSend?.(symbol)}>
               <Send className="mr-3 h-5 w-5" /> Send
             </Button>
-            <Button
-              variant="outline"
-              className="h-14"
-              onClick={() => onSwap?.(symbol)}
-            >
+            <Button variant="outline" className="h-14" onClick={() => onSwap?.(symbol)}>
               <RefreshCw className="mr-3 h-5 w-5" /> Swap
             </Button>
           </div>
@@ -96,15 +84,9 @@ const ActionMenu = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onReceive?.(symbol)}>
-          Deposit
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onSend?.(symbol)}>
-          Send
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onSwap?.(symbol)}>
-          Swap
-        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onReceive?.(symbol)}>Deposit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onSend?.(symbol)}>Send</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onSwap?.(symbol)}>Swap</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -124,8 +106,7 @@ export function AssetList({
   const [activeTab, setActiveTab] = useState("assets");
   const [currency, setCurrency] = useState("USD");
 
-  // ✅ Skeleton ONLY on first load
-  const showSkeleton = isLoading;
+  const loading = isLoading || isFetching;
 
   useEffect(() => {
     if (!wallet?.userId) return;
@@ -159,13 +140,6 @@ export function AssetList({
               onCheckedChange={v => setHideZero(!!v)}
             />
             <Label htmlFor="hide-zero">Hide 0 balance</Label>
-
-            {/* ✅ subtle background refresh indicator */}
-            {isFetching && !isLoading && (
-              <span className="text-xs text-muted-foreground ml-2">
-                Updating…
-              </span>
-            )}
           </div>
 
           <div className="rounded-lg border overflow-hidden">
@@ -173,30 +147,20 @@ export function AssetList({
               <TableHeader>
                 <TableRow>
                   <TableHead>Asset</TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    Price
-                  </TableHead>
+                  <TableHead className="hidden sm:table-cell">Price</TableHead>
                   <TableHead>Balance</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
-                {showSkeleton ? (
+                {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell>
-                        <Skeleton className="h-6 w-24" />
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Skeleton className="h-6 w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-6 w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-6 w-6 ml-auto" />
-                      </TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-6 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : assets.length === 0 ? (
@@ -206,65 +170,60 @@ export function AssetList({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  assets.map(asset => (
-                    <TableRow key={asset.symbol}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={cryptoIconUrls[asset.symbol]}
-                            alt={asset.symbol}
-                            className="h-8 w-8"
+                  assets.map(asset => {
+                    const value = asset.balance * (asset.value / (asset.balance || 1));
+
+                    return (
+                      <TableRow key={asset.symbol}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={cryptoIconUrls[asset.symbol]}
+                              alt={asset.symbol}
+                              className="h-8 w-8"
+                            />
+                            <span className="font-semibold">{asset.name}</span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="font-semibold">
+                            {(asset.value / (asset.balance || 1)).toLocaleString()} {currency}
+                          </div>
+                          <div
+                            className={`text-xs font-bold ${
+                              asset.change24h >= 0 ? "text-green-500" : "text-red-500"
+                            }`}
+                          >
+                            {asset.change24h >= 0 ? "+" : ""}
+                            {asset.change24h.toFixed(2)}%
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="font-bold">
+                            {asset.balance.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {asset.value.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            {currency}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <ActionMenu
+                            symbol={asset.symbol}
+                            onSend={onSend}
+                            onReceive={onReceive}
+                            onSwap={onSwap}
                           />
-                          <span className="font-semibold">
-                            {asset.name}
-                          </span>
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="hidden sm:table-cell">
-                        <div className="font-semibold">
-                          {(asset.value /
-                            (asset.balance || 1)
-                          ).toLocaleString()}{" "}
-                          {currency}
-                        </div>
-                        <div
-                          className={`text-xs font-bold ${
-                            asset.change24h >= 0
-                              ? "text-green-500"
-                              : "text-red-500"
-                          }`}
-                        >
-                          {asset.change24h >= 0 ? "+" : ""}
-                          {asset.change24h.toFixed(2)}%
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="font-bold">
-                          {asset.balance.toLocaleString(undefined, {
-                            maximumFractionDigits: 8,
-                          })}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {asset.value.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{" "}
-                          {currency}
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        <ActionMenu
-                          symbol={asset.symbol}
-                          onSend={onSend}
-                          onReceive={onReceive}
-                          onSwap={onSwap}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
