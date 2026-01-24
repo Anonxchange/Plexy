@@ -3,8 +3,5 @@ export default {
     'postcss-import': {},
     tailwindcss: {},
     autoprefixer: {},
-    cssnano: {
-      preset: 'default',
-    },
   },
 }
