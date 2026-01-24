@@ -12,7 +12,34 @@ import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
 import { CookieConsent } from "@/components/cookie-consent";
 
-// Lazy load pages
+import { OnchainKitProvider } from "@coinbase/onchainkit";
+import { base } from "viem/chains";
+import { WagmiProvider, createConfig, http } from "wagmi";
+import { coinbaseWallet } from "wagmi/connectors";
+
+/* -------------------- WAGMI CONFIG -------------------- */
+
+const wagmiConfig = createConfig({
+  chains: [base],
+  connectors: [
+    coinbaseWallet({
+      appName: "Pexly",
+      preference: "smartWalletOnly",
+    }),
+  ],
+  transports: {
+    [base.id]: http(),
+  },
+});
+
+/* -------------------- ENV GUARD -------------------- */
+
+const hasOnchainConfig =
+  Boolean(import.meta.env.VITE_ONCHAINKIT_API_KEY) &&
+  Boolean(import.meta.env.VITE_CDP_PROJECT_ID);
+
+/* -------------------- LAZY PAGES -------------------- */
+
 const Home = lazy(() => import("@/pages/home"));
 const Buy = lazy(() => import("@/pages/buy"));
 const Wallet = lazy(() => import("@/pages/wallet"));
@@ -57,14 +84,7 @@ const MerchantApplicationPage = lazy(() => import("@/pages/merchant-application"
 const MerchantDowngradePage = lazy(() => import("@/pages/merchant-downgrade"));
 const AdminMerchantsPage = lazy(() => import("@/pages/admin-merchants"));
 const AdminTransferPage = lazy(() => import("@/pages/admin-transfer"));
-const PexlyPay = lazy(() => import("@/pages/pexly-pay"));
-const PexlyPayHistory = lazy(() => import("@/pages/pexly-pay-history"));
-const PexlyPaySettings = lazy(() => import("@/pages/pexly-pay-settings"));
-const PexlyPayPaymentLimits = lazy(() => import("@/pages/pexly-pay-payment-limits"));
-const PexlyPayPasswordFree = lazy(() => import("@/pages/pexly-pay-password-free"));
-const PexlyPayHelp = lazy(() => import("@/pages/pexly-pay-help"));
 const NotificationsPage = lazy(() => import("@/pages/notifications"));
-const NotificationSettings = lazy(() => import("@/pages/notification-settings"));
 const BitcoinCalculator = lazy(() => import("@/pages/bitcoin-calculator").then(m => ({ default: m.BitcoinCalculator })));
 const VerifyEmail = lazy(() => import("@/pages/verify-email").then(m => ({ default: m.VerifyEmail })));
 const PexlyAcademy = lazy(() => import("@/pages/pexly-academy"));
@@ -89,9 +109,6 @@ const FavoriteOffers = lazy(() => import("@/pages/favorite-offers").then(m => ({
 const TrustedUsers = lazy(() => import("@/pages/trusted-users").then(m => ({ default: m.TrustedUsers })));
 const BlockedUsers = lazy(() => import("@/pages/blocked-users").then(m => ({ default: m.BlockedUsers })));
 const TradeStatistics = lazy(() => import("@/pages/trade-statistics").then(m => ({ default: m.TradeStatistics })));
-const Developer = lazy(() => import("./pages/developer").then(m => ({ default: m.Developer })));
-const FundStaging = lazy(() => import("@/components/fund-staging").then(m => ({ default: m.FundStaging })));
-const KYCCallback = lazy(() => import("@/pages/kyc-callback"));
 const Analysis = lazy(() => import("@/pages/analysis"));
 const OfferDetail = lazy(() => import("@/pages/offer-detail").then(m => ({ default: m.OfferDetail })));
 const Explorer = lazy(() => import("@/pages/explorer"));
@@ -103,194 +120,77 @@ const TransactionDetail = lazy(() => import("@/pages/transaction-detail"));
 const BlockDetail = lazy(() => import("@/pages/block-detail"));
 const ExplorerAsset = lazy(() => import("@/pages/explorer-asset"));
 
+/* -------------------- ROUTER -------------------- */
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/about" component={About} />
-      <Route path="/explorer" component={Explorer} />
-      <Route path="/explorer/prices" component={Prices} />
-      <Route path="/explorer/blocks" component={Blocks} />
-      <Route path="/explorer/transactions" component={Transactions} />
-      <Route path="/explorer/address/:address" component={AddressDetail} />
-      <Route path="/explorer/transaction/:hash" component={TransactionDetail} />
-      <Route path="/explorer/block/:hash" component={BlockDetail} />
-      <Route path="/explorer/asset/:symbol" component={ExplorerAsset} />
-      <Route path="/markets" component={MarketsPage} />
-      <Route path="/submit-idea" component={SubmitIdea} />
-      <Route path="/buy" component={Buy} />
-      <Route path="/p2p" component={P2P} />
-      <Route path="/spot" component={Spot} />
-      <Route path="/swap" component={Swap} />
-      <Route path="/wallet" component={Wallet} />
-      <Route path="/analysis" component={Analysis} />
-      <Route path="/wallet/visa-card" component={VisaCard} />
-      <Route path="/wallet/visa-card/details" component={VisaCardDetails} />
-      <Route path="/wallet/asset/:symbol" component={AssetDetail} />
-      <Route path="/wallet/history/:symbol" component={AssetHistory} />
-      <Route path="/wallet/mobile-topup" component={MobileTopup} />
-      <Route path="/wallet/crypto-to-bank" component={CryptoToBank} />
-      <Route path="/wallet/lightning" component={Lightning} />
-      <Route path="/wallet/buy-crypto" component={BuyCrypto} />
-      <Route path="/wallet/pexly-pay" component={PexlyPay} />
-          <Route path="/wallet/pexly-pay/history" component={PexlyPayHistory} />
-          <Route path="/wallet/pexly-pay/settings" component={PexlyPaySettings} />
-          <Route path="/wallet/pexly-pay/payment-limits" component={PexlyPayPaymentLimits} />
-          <Route path="/wallet/pexly-pay/password-free" component={PexlyPayPasswordFree} />
-          <Route path="/wallet/pexly-pay/help" component={PexlyPayHelp} />
-      <Route path="/gift-cards" component={GiftCards} />
-      <Route path="/gift-cards/:id" component={GiftCardDetail} />
-      <Route path="/trade-history" component={TradeHistory} />
-      <Route path="/account-settings" component={AccountSettings} />
-      <Route path="/devices" component={DevicesPage} />
-      <Route path="/notification-settings" component={NotificationSettings} />
-      <Route path="/developer" component={Developer} />
-      <Route path="/fund-staging" component={FundStaging} />
-      <Route path="/verification" component={VerificationPage} />
-      <Route path="/kyc/callback" component={KYCCallback} />
-      <Route path="/merchant-application" component={MerchantApplicationPage} />
-      <Route path="/merchant-downgrade" component={MerchantDowngradePage} />
-      <Route path="/admin" component={AdminPage} />
-      <Route path="/admin/verifications" component={AdminVerificationsPage} />
-      <Route path="/admin/merchants" component={AdminMerchantsPage} />
-      <Route path="/admin/transfer" component={AdminTransferPage} />
-      <Route path="/admin/blog" component={AdminBlog} />
-      <Route path="/admin/gift-cards" component={AdminGiftCards} />
-      <Route path="/notifications" component={NotificationsPage} />
-      <Route path="/signup" component={SignUp} />
-      <Route path="/signin" component={SignIn} />
-      <Route path="/verify-email" component={VerifyEmail} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/profile/:userId?" component={Profile} />
-      <Route path="/shop" component={Shop} />
-      <Route path="/shop/post" component={ShopPost} />
-      <Route path="/create-offer" component={CreateOffer} />
-      <Route path="/edit-offer/:offerId" component={CreateOffer} />
-      <Route path="/create-offer-advanced" component={CreateOfferAdvanced} />
-      <Route path="/my-offers" component={MyOffers} />
-      <Route path="/favorite-offers" component={FavoriteOffers} />
-      <Route path="/trusted-users" component={TrustedUsers} />
-      <Route path="/blocked-users" component={BlockedUsers} />
-      <Route path="/trade-statistics" component={TradeStatistics} />
-      <Route path="/trade/:tradeId" component={ActiveTrade} />
-
-              <Route path="/offers/:offerId" component={OfferDetail} />
-      <Route path="/medals" component={MedalsPage} />
-      <Route path="/fees" component={Fees} />
-      <Route path="/affiliate" component={Affiliate} />
-      <Route path="/rewards" component={RewardsPage} />
-      <Route path="/referral" component={ReferralPage} />
-      <Route path="/bitcoin-calculator" component={BitcoinCalculator} />
-      <Route path="/academy" component={PexlyAcademy} />
-      <Route path="/academy/:articleId" component={AcademyArticle} />
-      <Route path="/careers" component={Careers} />
-      <Route path="/blog" component={Blog} />
-      <Route path="/blog/:postId" component={BlogPost} />
-      <Route path="/reviews" component={Reviews} />
       <Route path="/support" component={Support} />
-      <Route path="/contact" component={Contact} />
-      <Route path="/terms" component={Terms} />
-      <Route path="/privacy" component={Privacy} />
-      <Route path="/cookie-policy" component={CookiePolicy} />
-      <Route path="/aml-policy" component={AMLPolicy} />
-      <Route path="/restricted-countries" component={RestrictedCountries} />
-      <Route path="/vip-terms" component={VIPTerms} />
-      <Route path="/vendor-reminder" component={VendorReminder} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-function AppContent() {
-  const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
-  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
-  const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
+/* -------------------- APP CONTENT -------------------- */
 
+function AppContent() {
   return (
-    <div className={`flex min-h-screen w-full flex-col ${!hideHeaderAndNav ? 'pt-16' : ''}`}>
-      {!hideHeaderAndNav && <AppHeader />}
-      {!hideHeaderAndNav && !hidePageNav && <PageNavigation />}
+    <div className="flex min-h-screen w-full flex-col">
+      <AppHeader />
       <main className="flex-1">
-        <Suspense fallback={
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        }>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          }
+        >
           <Router />
         </Suspense>
       </main>
-      {!hideAppFooter && <AppFooter />}
+      <AppFooter />
       <Toaster />
       <CookieConsent />
     </div>
   );
 }
 
-import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { base } from 'viem/chains';
-import { WagmiProvider, createConfig, http } from 'wagmi';
-import { coinbaseWallet } from 'wagmi/connectors';
+/* -------------------- APP ROOT -------------------- */
 
-const wagmiConfig = createConfig({
-  chains: [base],
-  connectors: [
-    coinbaseWallet({
-      appName: 'Pexly',
-      preference: 'smartWalletOnly',
-    }),
-  ],
-  transports: {
-    [base.id]: http(),
-  },
-});
+function AppProviders({ children }: { children: React.ReactNode }) {
+  const content = (
+    <ThemeProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <GlobalNotificationListener />
+          {children}
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
 
-function App() {
-  // Check if on help subdomain - show only support page
-  const isHelpSubdomain = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
-  
-  if (isHelpSubdomain) {
-    return (
-      <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <OnchainKitProvider
-            apiKey={(import.meta as any).env.VITE_ONCHAINKIT_API_KEY}
-            projectId={(import.meta as any).env.VITE_CDP_PROJECT_ID}
-            chain={base}
-          >
-            <ThemeProvider>
-              <AuthProvider>
-                <TooltipProvider>
-                  <Support />
-                </TooltipProvider>
-              </AuthProvider>
-            </ThemeProvider>
-          </OnchainKitProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
-    );
-  }
+  return hasOnchainConfig ? (
+    <OnchainKitProvider
+      apiKey={import.meta.env.VITE_ONCHAINKIT_API_KEY}
+      projectId={import.meta.env.VITE_CDP_PROJECT_ID}
+      chain={base}
+    >
+      {content}
+    </OnchainKitProvider>
+  ) : (
+    content
+  );
+}
 
+export default function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          apiKey={(import.meta as any).env.VITE_ONCHAINKIT_API_KEY}
-          projectId={(import.meta as any).env.VITE_CDP_PROJECT_ID}
-          chain={base}
-        >
-          <ThemeProvider>
-            <AuthProvider>
-              <TooltipProvider>
-                <GlobalNotificationListener />
-                <AppContent />
-              </TooltipProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </OnchainKitProvider>
+        <AppProviders>
+          <AppContent />
+        </AppProviders>
       </QueryClientProvider>
     </WagmiProvider>
   );
 }
-
-export default App;
