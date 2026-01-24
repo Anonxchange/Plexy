@@ -34,14 +34,14 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
             
             <div className="space-y-1">
               <div className="text-4xl font-bold tracking-tight text-foreground">
-                {isLoading ? (
+                {(isLoading || !wallet) ? (
                   <Skeleton className="h-10 w-48" />
                 ) : (
                   showBalance ? `${(wallet?.totalBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"
                 )}
               </div>
               <div className="text-sm text-muted-foreground">
-                {isLoading ? (
+                {(isLoading || !wallet) ? (
                   <Skeleton className="h-4 w-32" />
                 ) : (wallet?.totalBalance || 0) > 0 ? (
                   <span>Portfolio value across all assets</span>
