@@ -61,14 +61,21 @@ export function WalletHeader({
             </div>
 
             <div className="space-y-1">
-              <div className="text-4xl font-bold tracking-tight text-foreground">
+              <div className="text-4xl font-bold tracking-tight text-foreground flex flex-wrap items-baseline gap-x-2">
                 {loading ? (
                   <Skeleton className="h-10 w-48" />
                 ) : showBalance ? (
-                  `${wallet?.totalBalance.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })} ${preferredCurrency}`
+                  <>
+                    <span>
+                      {wallet?.totalBalance.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                    <span className="text-2xl font-semibold text-muted-foreground whitespace-nowrap">
+                      {preferredCurrency}
+                    </span>
+                  </>
                 ) : (
                   <span className="tracking-widest">••••</span>
                 )}
