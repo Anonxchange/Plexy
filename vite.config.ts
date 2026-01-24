@@ -36,7 +36,19 @@ export default defineConfig(() => {
     build: {
       outDir: "../dist",
       emptyOutDir: true,
-      assetsInlineLimit: 0,
+      assetsInlineLimit: 4096,
+      sourcemap: false,
+      minify: "esbuild",
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom", "wouter"],
+            "vendor-utils": ["lucide-react", "date-fns", "clsx", "tailwind-merge"],
+            "vendor-crypto": ["ethers", "viem", "bitcoinjs-lib"],
+            "vendor-ui": ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu", "@radix-ui/react-select"]
+          }
+        }
+      }
     },
     server: {
       host: "0.0.0.0",
