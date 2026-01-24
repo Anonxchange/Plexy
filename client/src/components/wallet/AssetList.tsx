@@ -106,7 +106,8 @@ export function AssetList({
   const [activeTab, setActiveTab] = useState("assets");
   const [currency, setCurrency] = useState("USD");
 
-  const loading = isLoading || isFetching;
+  // ✅ Skeleton ONLY if no cached data
+  const showSkeleton = isLoading && !wallet;
 
   useEffect(() => {
     if (!wallet?.userId) return;
@@ -128,6 +129,13 @@ export function AssetList({
           <TabsTrigger value="assets">Wallet assets</TabsTrigger>
           <TabsTrigger value="activity">Recent activity</TabsTrigger>
           <TabsTrigger value="operations">All operations</TabsTrigger>
+
+          {/* subtle background refresh hint */}
+          {isFetching && wallet && (
+            <span className="text-xs text-muted-foreground ml-2">
+              Updating…
+            </span>
+          )}
         </TabsList>
       </Tabs>
 
@@ -154,7 +162,7 @@ export function AssetList({
               </TableHeader>
 
               <TableBody>
-                {loading ? (
+                {showSkeleton ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell><Skeleton className="h-6 w-24" /></TableCell>
@@ -170,60 +178,56 @@ export function AssetList({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  assets.map(asset => {
-                    const value = asset.balance * (asset.value / (asset.balance || 1));
-
-                    return (
-                      <TableRow key={asset.symbol}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={cryptoIconUrls[asset.symbol]}
-                              alt={asset.symbol}
-                              className="h-8 w-8"
-                            />
-                            <span className="font-semibold">{asset.name}</span>
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="hidden sm:table-cell">
-                          <div className="font-semibold">
-                            {(asset.value / (asset.balance || 1)).toLocaleString()} {currency}
-                          </div>
-                          <div
-                            className={`text-xs font-bold ${
-                              asset.change24h >= 0 ? "text-green-500" : "text-red-500"
-                            }`}
-                          >
-                            {asset.change24h >= 0 ? "+" : ""}
-                            {asset.change24h.toFixed(2)}%
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="font-bold">
-                            {asset.balance.toLocaleString(undefined, { maximumFractionDigits: 8 })}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {asset.value.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}{" "}
-                            {currency}
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          <ActionMenu
-                            symbol={asset.symbol}
-                            onSend={onSend}
-                            onReceive={onReceive}
-                            onSwap={onSwap}
+                  assets.map(asset => (
+                    <TableRow key={asset.symbol}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={cryptoIconUrls[asset.symbol]}
+                            alt={asset.symbol}
+                            className="h-8 w-8"
                           />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+                          <span className="font-semibold">{asset.name}</span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="hidden sm:table-cell">
+                        <div className="font-semibold">
+                          {(asset.value / (asset.balance || 1)).toLocaleString()} {currency}
+                        </div>
+                        <div
+                          className={`text-xs font-bold ${
+                            asset.change24h >= 0 ? "text-green-500" : "text-red-500"
+                          }`}
+                        >
+                          {asset.change24h >= 0 ? "+" : ""}
+                          {asset.change24h.toFixed(2)}%
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="font-bold">
+                          {asset.balance.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {asset.value.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}{" "}
+                          {currency}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <ActionMenu
+                          symbol={asset.symbol}
+                          onSend={onSend}
+                          onReceive={onReceive}
+                          onSwap={onSwap}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
