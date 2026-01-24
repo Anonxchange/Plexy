@@ -28,8 +28,7 @@ export function WalletHeader({
   const [showBalance, setShowBalance] = useState(true);
   const [preferredCurrency, setPreferredCurrency] = useState("USD");
 
-  // ✅ Skeleton ONLY on first load
-  const showSkeleton = isLoading;
+  const loading = isLoading || isFetching;
 
   useEffect(() => {
     if (!wallet?.userId) return;
@@ -59,19 +58,14 @@ export function WalletHeader({
                   <EyeOff className="h-4 w-4" />
                 )}
               </button>
-
-              {/* ✅ subtle background refresh indicator */}
-              {isFetching && !isLoading && (
-                <span className="text-xs ml-2">Updating…</span>
-              )}
             </div>
 
             <div className="space-y-1">
               <div className="text-4xl font-bold tracking-tight text-foreground">
-                {showSkeleton ? (
+                {loading ? (
                   <Skeleton className="h-10 w-48" />
                 ) : showBalance ? (
-                  `${(wallet?.totalBalance ?? 0).toLocaleString(undefined, {
+                  `${wallet?.totalBalance.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })} ${preferredCurrency}`
@@ -81,7 +75,7 @@ export function WalletHeader({
               </div>
 
               <div className="text-sm text-muted-foreground">
-                {showSkeleton ? (
+                {loading ? (
                   <Skeleton className="h-4 w-32" />
                 ) : hasAssets ? (
                   <span>Portfolio value across all assets</span>
@@ -100,30 +94,28 @@ export function WalletHeader({
             </div>
           </div>
 
-          {/* ACTIONS */}
+          {/* ACTIONS — unchanged */}
           <div className="w-full flex justify-end">
-            {/* Mobile */}
             <div className="grid grid-cols-4 bg-background dark:bg-card rounded-lg border p-1 w-full md:hidden transition-colors">
-              <Button variant="ghost" size="sm" className="h-9 flex-col px-1" onClick={onTopup}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span className="text-[10px] font-semibold mt-0.5">Top-up</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 flex-col px-1" onClick={onSwap}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onSwap}>
                 <RefreshCw className="h-4 w-4" />
                 <span className="text-[10px] font-semibold mt-0.5">Swap</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 flex-col px-1" onClick={onSend}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onSend}>
                 <Send className="h-4 w-4" />
                 <span className="text-[10px] font-semibold mt-0.5">Send</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 flex-col px-1 text-primary" onClick={onReceive}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 text-primary" onClick={onReceive}>
                 <ArrowDownToLine className="h-4 w-4" />
                 <span className="text-[10px] font-semibold mt-0.5">Deposit</span>
               </Button>
             </div>
 
-            {/* Desktop */}
-            <div className="hidden md:flex items-center gap-2 bg-background dark:bg-card rounded-lg border p-1">
+            <div className="hidden md:flex flex-row items-center gap-2 bg-background dark:bg-card rounded-lg border p-1">
               <Button variant="ghost" size="sm" className="h-9 gap-2 px-4" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span>Mobile top up</span>
