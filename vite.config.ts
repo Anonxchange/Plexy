@@ -36,9 +36,11 @@ export default defineConfig(() => {
     build: {
       outDir: "../dist",
       emptyOutDir: true,
-      assetsInlineLimit: 4096,
+      assetsInlineLimit: 10000,
       sourcemap: false,
       minify: "esbuild",
+      cssMinify: true,
+      target: "esnext",
       rollupOptions: {
         output: {
           manualChunks: {
