@@ -50,7 +50,7 @@ export function useWalletData() {
     }))
   };
 
-  return useQuery<WalletData>({
+  const { data: wallet, isLoading, isPlaceholderData } = useQuery<WalletData>({
     queryKey: ["/api/wallet-data-synced", user?.id, monitoredBalances?.length],
     enabled: !!user?.id,
     placeholderData: initialData,
