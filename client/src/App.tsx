@@ -1,4 +1,3 @@
-import React, { Suspense, lazy } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -12,96 +11,96 @@ import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
 import { CookieConsent } from "@/components/cookie-consent";
 
-// Lazy load pages
-const Home = lazy(() => import("@/pages/home"));
-const Buy = lazy(() => import("@/pages/buy"));
-const Wallet = lazy(() => import("@/pages/wallet"));
-const SignUp = lazy(() => import("@/pages/signup").then(m => ({ default: m.SignUp })));
-const SignIn = lazy(() => import("@/pages/signin").then(m => ({ default: m.SignIn })));
-const Dashboard = lazy(() => import("@/pages/dashboard").then(m => ({ default: m.Dashboard })));
-const P2P = lazy(() => import("@/pages/p2p").then(m => ({ default: m.P2P })));
-const Swap = lazy(() => import("@/pages/swap").then(m => ({ default: m.Swap })));
-const Profile = lazy(() => import("@/pages/profile").then(m => ({ default: m.Profile })));
-const Shop = lazy(() => import("@/pages/shop").then(m => ({ default: m.Shop })));
-const ShopPost = lazy(() => import("@/pages/shop-post").then(m => ({ default: m.ShopPost })));
-const CreateOffer = lazy(() => import("@/pages/create-offer").then(m => ({ default: m.CreateOffer })));
-const CreateOfferAdvanced = lazy(() => import("@/pages/create-offer-advanced").then(m => ({ default: m.CreateOfferAdvanced })));
-const MyOffers = lazy(() => import("@/pages/my-offers").then(m => ({ default: m.MyOffers })));
-const Spot = lazy(() => import("@/pages/spot").then(m => ({ default: m.Spot })));
-const NotFound = lazy(() => import("@/pages/not-found"));
-const GiftCards = lazy(() => import("@/pages/gift-cards").then(m => ({ default: m.GiftCards })));
-const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => ({ default: m.GiftCardDetail })));
-const TradeHistory = lazy(() => import("@/pages/trade-history").then(m => ({ default: m.TradeHistory })));
-const AccountSettings = lazy(() => import("@/pages/account-settings"));
-const DevicesPage = lazy(() => import("@/pages/devices"));
-const VisaCard = lazy(() => import("@/pages/visa-card"));
-const VisaCardDetails = lazy(() => import("@/pages/visa-card-details"));
-const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
-const CryptoToBank = lazy(() => import("@/pages/crypto-to-bank"));
-const Lightning = lazy(() => import("@/pages/lightning"));
-const BuyCrypto = lazy(() => import("@/pages/buy-crypto"));
-const ActiveTrade = lazy(() => import("@/pages/active-trade"));
-const VerificationPage = lazy(() => import("@/pages/verification"));
-const AdminPage = lazy(() => import("@/pages/admin"));
-const AdminVerificationsPage = lazy(() => import("@/pages/admin-verifications"));
-const AdminBlog = lazy(() => import("@/pages/admin-blog"));
-const AdminGiftCards = lazy(() => import("@/pages/admin-gift-cards"));
-const AssetDetail = lazy(() => import("@/pages/asset-detail"));
-const AssetHistory = lazy(() => import("@/pages/asset-history"));
-const MedalsPage = lazy(() => import("@/pages/medals"));
-const Fees = lazy(() => import("@/pages/fees").then(m => ({ default: m.Fees })));
-const Affiliate = lazy(() => import("@/pages/affiliate"));
-const RewardsPage = lazy(() => import("@/pages/rewards"));
-const ReferralPage = lazy(() => import("@/pages/referral"));
-const MerchantApplicationPage = lazy(() => import("@/pages/merchant-application"));
-const MerchantDowngradePage = lazy(() => import("@/pages/merchant-downgrade"));
-const AdminMerchantsPage = lazy(() => import("@/pages/admin-merchants"));
-const AdminTransferPage = lazy(() => import("@/pages/admin-transfer"));
-const PexlyPay = lazy(() => import("@/pages/pexly-pay"));
-const PexlyPayHistory = lazy(() => import("@/pages/pexly-pay-history"));
-const PexlyPaySettings = lazy(() => import("@/pages/pexly-pay-settings"));
-const PexlyPayPaymentLimits = lazy(() => import("@/pages/pexly-pay-payment-limits"));
-const PexlyPayPasswordFree = lazy(() => import("@/pages/pexly-pay-password-free"));
-const PexlyPayHelp = lazy(() => import("@/pages/pexly-pay-help"));
-const NotificationsPage = lazy(() => import("@/pages/notifications"));
-const NotificationSettings = lazy(() => import("@/pages/notification-settings"));
-const BitcoinCalculator = lazy(() => import("@/pages/bitcoin-calculator").then(m => ({ default: m.BitcoinCalculator })));
-const VerifyEmail = lazy(() => import("@/pages/verify-email").then(m => ({ default: m.VerifyEmail })));
-const PexlyAcademy = lazy(() => import("@/pages/pexly-academy"));
-const AcademyArticle = lazy(() => import("@/pages/academy-article").then(m => ({ default: m.AcademyArticle })));
-const About = lazy(() => import("@/pages/about"));
-const MarketsPage = lazy(() => import("@/pages/markets"));
-const Careers = lazy(() => import("@/pages/careers"));
-const Blog = lazy(() => import("@/pages/blog"));
-const BlogPost = lazy(() => import("@/pages/blog-post"));
-const Reviews = lazy(() => import("@/pages/reviews"));
-const Support = lazy(() => import("@/pages/support"));
-const Contact = lazy(() => import("@/pages/contact"));
-const Terms = lazy(() => import("@/pages/terms"));
-const Privacy = lazy(() => import("@/pages/privacy"));
-const CookiePolicy = lazy(() => import("@/pages/cookie-policy"));
-const AMLPolicy = lazy(() => import("@/pages/aml-policy"));
-const RestrictedCountries = lazy(() => import("@/pages/restricted-countries"));
-const VIPTerms = lazy(() => import("@/pages/vip-terms"));
-const VendorReminder = lazy(() => import("@/pages/vendor-reminder"));
-const SubmitIdea = lazy(() => import("@/pages/submit-idea"));
-const FavoriteOffers = lazy(() => import("@/pages/favorite-offers").then(m => ({ default: m.FavoriteOffers })));
-const TrustedUsers = lazy(() => import("@/pages/trusted-users").then(m => ({ default: m.TrustedUsers })));
-const BlockedUsers = lazy(() => import("@/pages/blocked-users").then(m => ({ default: m.BlockedUsers })));
-const TradeStatistics = lazy(() => import("@/pages/trade-statistics").then(m => ({ default: m.TradeStatistics })));
-const Developer = lazy(() => import("./pages/developer").then(m => ({ default: m.Developer })));
-const FundStaging = lazy(() => import("@/components/fund-staging").then(m => ({ default: m.FundStaging })));
-const KYCCallback = lazy(() => import("@/pages/kyc-callback"));
-const Analysis = lazy(() => import("@/pages/analysis"));
-const OfferDetail = lazy(() => import("@/pages/offer-detail").then(m => ({ default: m.OfferDetail })));
-const Explorer = lazy(() => import("@/pages/explorer"));
-const Prices = lazy(() => import("@/pages/prices"));
-const Blocks = lazy(() => import("@/pages/blocks"));
-const Transactions = lazy(() => import("@/pages/transactions"));
-const AddressDetail = lazy(() => import("@/pages/address-detail"));
-const TransactionDetail = lazy(() => import("@/pages/transaction-detail"));
-const BlockDetail = lazy(() => import("@/pages/block-detail"));
-const ExplorerAsset = lazy(() => import("@/pages/explorer-asset"));
+// Import pages directly
+import Home from "@/pages/home";
+import Buy from "@/pages/buy";
+import Wallet from "@/pages/wallet";
+import { SignUp } from "@/pages/signup";
+import { SignIn } from "@/pages/signin";
+import { Dashboard } from "@/pages/dashboard";
+import { P2P } from "@/pages/p2p";
+import { Swap } from "@/pages/swap";
+import { Profile } from "@/pages/profile";
+import { Shop } from "@/pages/shop";
+import { ShopPost } from "@/pages/shop-post";
+import { CreateOffer } from "@/pages/create-offer";
+import { CreateOfferAdvanced } from "@/pages/create-offer-advanced";
+import { MyOffers } from "@/pages/my-offers";
+import { Spot } from "@/pages/spot";
+import NotFound from "@/pages/not-found";
+import { GiftCards } from "@/pages/gift-cards";
+import { GiftCardDetail } from "@/pages/gift-card-detail";
+import { TradeHistory } from "@/pages/trade-history";
+import AccountSettings from "@/pages/account-settings";
+import DevicesPage from "@/pages/devices";
+import VisaCard from "@/pages/visa-card";
+import VisaCardDetails from "@/pages/visa-card-details";
+import MobileTopup from "@/pages/mobile-topup";
+import CryptoToBank from "@/pages/crypto-to-bank";
+import Lightning from "@/pages/lightning";
+import BuyCrypto from "@/pages/buy-crypto";
+import ActiveTrade from "@/pages/active-trade";
+import VerificationPage from "@/pages/verification";
+import AdminPage from "@/pages/admin";
+import AdminVerificationsPage from "@/pages/admin-verifications";
+import AdminBlog from "@/pages/admin-blog";
+import AdminGiftCards from "@/pages/admin-gift-cards";
+import AssetDetail from "@/pages/asset-detail";
+import AssetHistory from "@/pages/asset-history";
+import MedalsPage from "@/pages/medals";
+import { Fees } from "@/pages/fees";
+import Affiliate from "@/pages/affiliate";
+import RewardsPage from "@/pages/rewards";
+import ReferralPage from "@/pages/referral";
+import MerchantApplicationPage from "@/pages/merchant-application";
+import MerchantDowngradePage from "@/pages/merchant-downgrade";
+import AdminMerchantsPage from "@/pages/admin-merchants";
+import AdminTransferPage from "@/pages/admin-transfer";
+import PexlyPay from "@/pages/pexly-pay";
+import PexlyPayHistory from "@/pages/pexly-pay-history";
+import PexlyPaySettings from "@/pages/pexly-pay-settings";
+import PexlyPayPaymentLimits from "@/pages/pexly-pay-payment-limits";
+import PexlyPayPasswordFree from "@/pages/pexly-pay-password-free";
+import PexlyPayHelp from "@/pages/pexly-pay-help";
+import NotificationsPage from "@/pages/notifications";
+import NotificationSettings from "@/pages/notification-settings";
+import { BitcoinCalculator } from "@/pages/bitcoin-calculator";
+import { VerifyEmail } from "@/pages/verify-email";
+import PexlyAcademy from "@/pages/pexly-academy";
+import { AcademyArticle } from "@/pages/academy-article";
+import About from "@/pages/about";
+import MarketsPage from "@/pages/markets";
+import Careers from "@/pages/careers";
+import Blog from "@/pages/blog";
+import BlogPost from "@/pages/blog-post";
+import Reviews from "@/pages/reviews";
+import Support from "@/pages/support";
+import Contact from "@/pages/contact";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
+import CookiePolicy from "@/pages/cookie-policy";
+import AMLPolicy from "@/pages/aml-policy";
+import RestrictedCountries from "@/pages/restricted-countries";
+import VIPTerms from "@/pages/vip-terms";
+import VendorReminder from "@/pages/vendor-reminder";
+import SubmitIdea from "@/pages/submit-idea";
+import { FavoriteOffers } from "@/pages/favorite-offers";
+import { TrustedUsers } from "@/pages/trusted-users";
+import { BlockedUsers } from "@/pages/blocked-users";
+import { TradeStatistics } from "@/pages/trade-statistics";
+import { Developer } from "./pages/developer";
+import { FundStaging } from "@/components/fund-staging";
+import KYCCallback from "@/pages/kyc-callback";
+import Analysis from "@/pages/analysis";
+import { OfferDetail } from "@/pages/offer-detail";
+import Explorer from "@/pages/explorer";
+import Prices from "@/pages/prices";
+import Blocks from "@/pages/blocks";
+import Transactions from "@/pages/transactions";
+import AddressDetail from "@/pages/address-detail";
+import TransactionDetail from "@/pages/transaction-detail";
+import BlockDetail from "@/pages/block-detail";
+import ExplorerAsset from "@/pages/explorer-asset";
 
 function Router() {
   return (
@@ -133,11 +132,11 @@ function Router() {
       <Route path="/wallet/lightning" component={Lightning} />
       <Route path="/wallet/buy-crypto" component={BuyCrypto} />
       <Route path="/wallet/pexly-pay" component={PexlyPay} />
-          <Route path="/wallet/pexly-pay/history" component={PexlyPayHistory} />
-          <Route path="/wallet/pexly-pay/settings" component={PexlyPaySettings} />
-          <Route path="/wallet/pexly-pay/payment-limits" component={PexlyPayPaymentLimits} />
-          <Route path="/wallet/pexly-pay/password-free" component={PexlyPayPasswordFree} />
-          <Route path="/wallet/pexly-pay/help" component={PexlyPayHelp} />
+      <Route path="/wallet/pexly-pay/history" component={PexlyPayHistory} />
+      <Route path="/wallet/pexly-pay/settings" component={PexlyPaySettings} />
+      <Route path="/wallet/pexly-pay/payment-limits" component={PexlyPayPaymentLimits} />
+      <Route path="/wallet/pexly-pay/password-free" component={PexlyPayPasswordFree} />
+      <Route path="/wallet/pexly-pay/help" component={PexlyPayHelp} />
       <Route path="/gift-cards" component={GiftCards} />
       <Route path="/gift-cards/:id" component={GiftCardDetail} />
       <Route path="/trade-history" component={TradeHistory} />
@@ -173,8 +172,7 @@ function Router() {
       <Route path="/blocked-users" component={BlockedUsers} />
       <Route path="/trade-statistics" component={TradeStatistics} />
       <Route path="/trade/:tradeId" component={ActiveTrade} />
-
-              <Route path="/offers/:offerId" component={OfferDetail} />
+      <Route path="/offers/:offerId" component={OfferDetail} />
       <Route path="/medals" component={MedalsPage} />
       <Route path="/fees" component={Fees} />
       <Route path="/affiliate" component={Affiliate} />
@@ -212,13 +210,7 @@ function AppContent() {
       {!hideHeaderAndNav && <AppHeader />}
       {!hideHeaderAndNav && !hidePageNav && <PageNavigation />}
       <main className="flex-1">
-        <Suspense fallback={
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        }>
-          <Router />
-        </Suspense>
+        <Router />
       </main>
       {!hideAppFooter && <AppFooter />}
       <Toaster />
