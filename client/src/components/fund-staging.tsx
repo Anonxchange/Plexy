@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { FundCard } from '@coinbase/onchainkit/fund';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
 import { useWalletData } from "@/hooks/use-wallet-data";
@@ -122,11 +121,11 @@ export function FundStaging() {
             </Alert>
           ) : sessionToken ? (
             <div className="flex justify-center border rounded-lg p-6 bg-slate-50">
-              <FundCard 
-                sessionToken={sessionToken} 
-                assetSymbol="USDC"
-                country="US"
-              />
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">
+                  Fund card integration is not available. Session token generated successfully.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="text-center py-10 border-2 border-dashed rounded-lg">
