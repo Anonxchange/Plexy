@@ -153,17 +153,17 @@ export function HeroSection() {
               Connect with traders worldwide. 500+ payment methods. Zero hassle.
             </p>
 
-            {/* Stats */}
-            <div className="flex flex-wrap justify-center gap-8 pt-4">
-              <div className="text-center">
+            {/* Stats - Fixed dimensions to prevent layout shift */}
+            <div className="flex flex-wrap justify-center gap-8 pt-4 h-[80px]">
+              <div className="text-center w-[100px]">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">140+</div>
                 <div className="text-sm text-muted-foreground">Countries</div>
               </div>
-              <div className="text-center">
+              <div className="text-center w-[160px]">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">500+</div>
                 <div className="text-sm text-muted-foreground">Payment methods</div>
               </div>
-              <div className="text-center">
+              <div className="text-center w-[100px]">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">14M+</div>
                 <div className="text-sm text-muted-foreground">Users</div>
               </div>
@@ -380,17 +380,17 @@ export function HeroSection() {
               Connect with traders worldwide. 500+ payment methods. Zero hassle.
             </p>
 
-            {/* Stats */}
-            <div className="flex gap-12 pt-4">
-              <div>
+            {/* Stats - Fixed dimensions for stability */}
+            <div className="flex gap-12 pt-4 h-[90px]">
+              <div className="w-[120px]">
                 <div className="text-4xl xl:text-5xl font-bold text-foreground">140+</div>
                 <div className="text-sm text-muted-foreground mt-1">Countries</div>
               </div>
-              <div>
+              <div className="w-[180px]">
                 <div className="text-4xl xl:text-5xl font-bold text-foreground">500+</div>
                 <div className="text-sm text-muted-foreground mt-1">Payment methods</div>
               </div>
-              <div>
+              <div className="w-[120px]">
                 <div className="text-4xl xl:text-5xl font-bold text-foreground">14M+</div>
                 <div className="text-sm text-muted-foreground mt-1">Users</div>
               </div>
