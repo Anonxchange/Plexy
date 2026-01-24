@@ -24,10 +24,17 @@ export function WalletHeader({
   onSwap,
   onTopup,
 }: WalletHeaderProps) {
-  const { data: wallet, isLoading, isFetching } = useWalletData();
+  const { data: wallet, isLoading, isFetching, isError } = useWalletData();
   const [showBalance, setShowBalance] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  const loading = isLoading || isFetching || wallet?.isConverting;
+  useEffect(() => {
+    if (!isLoading) {
+      setIsInitialLoading(false);
+    }
+  }, [isLoading]);
+
+  const loading = (isInitialLoading || isError) && (!wallet || wallet.isConverting);
   const preferredCurrency = wallet?.preferredCurrency || "USD";
 
   const hasAssets =
