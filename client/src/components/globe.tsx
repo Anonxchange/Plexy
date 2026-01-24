@@ -24,7 +24,7 @@ export const Globe = () => {
     renderer.setClearColor(0x000000, 0);
     containerRef.current.appendChild(renderer.domElement);
 
-    const globeGeometry = new THREE.SphereGeometry(0.8, 40, 40);
+    const globeGeometry = new THREE.SphereGeometry(0.8, 24, 24);
     const globeMaterial = new THREE.MeshBasicMaterial({
       color: 0x2a2a2a,
       wireframe: true,
