@@ -67,7 +67,10 @@ export function WalletHeader({
             <div className="space-y-1">
               <div className="text-4xl font-bold tracking-tight text-foreground flex flex-wrap items-baseline gap-x-2">
                 {loading ? (
-                  <Skeleton className="h-10 w-48" />
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-9 w-32" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
                 ) : showBalance ? (
                   <>
                     <span>
@@ -87,7 +90,7 @@ export function WalletHeader({
 
               <div className="text-sm text-muted-foreground">
                 {loading ? (
-                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-40" />
                 ) : hasAssets ? (
                   <span>Portfolio value across all assets</span>
                 ) : (
