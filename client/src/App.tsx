@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { Switch, Route, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -103,6 +103,30 @@ const TransactionDetail = lazy(() => import("@/pages/transaction-detail"));
 const BlockDetail = lazy(() => import("@/pages/block-detail"));
 const ExplorerAsset = lazy(() => import("@/pages/explorer-asset"));
 
+// Error Boundary for lazy pages
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("ErrorBoundary caught:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="text-center p-8">Something went wrong. Please try again.</div>;
+    }
+    return this.props.children;
+  }
+}
+
+// Routing component
 function Router() {
   return (
     <Switch>
@@ -133,11 +157,11 @@ function Router() {
       <Route path="/wallet/lightning" component={Lightning} />
       <Route path="/wallet/buy-crypto" component={BuyCrypto} />
       <Route path="/wallet/pexly-pay" component={PexlyPay} />
-          <Route path="/wallet/pexly-pay/history" component={PexlyPayHistory} />
-          <Route path="/wallet/pexly-pay/settings" component={PexlyPaySettings} />
-          <Route path="/wallet/pexly-pay/payment-limits" component={PexlyPayPaymentLimits} />
-          <Route path="/wallet/pexly-pay/password-free" component={PexlyPayPasswordFree} />
-          <Route path="/wallet/pexly-pay/help" component={PexlyPayHelp} />
+      <Route path="/wallet/pexly-pay/history" component={PexlyPayHistory} />
+      <Route path="/wallet/pexly-pay/settings" component={PexlyPaySettings} />
+      <Route path="/wallet/pexly-pay/payment-limits" component={PexlyPayPaymentLimits} />
+      <Route path="/wallet/pexly-pay/password-free" component={PexlyPayPasswordFree} />
+      <Route path="/wallet/pexly-pay/help" component={PexlyPayHelp} />
       <Route path="/gift-cards" component={GiftCards} />
       <Route path="/gift-cards/:id" component={GiftCardDetail} />
       <Route path="/trade-history" component={TradeHistory} />
@@ -173,8 +197,7 @@ function Router() {
       <Route path="/blocked-users" component={BlockedUsers} />
       <Route path="/trade-statistics" component={TradeStatistics} />
       <Route path="/trade/:tradeId" component={ActiveTrade} />
-
-              <Route path="/offers/:offerId" component={OfferDetail} />
+      <Route path="/offers/:offerId" component={OfferDetail} />
       <Route path="/medals" component={MedalsPage} />
       <Route path="/fees" component={Fees} />
       <Route path="/affiliate" component={Affiliate} />
@@ -201,11 +224,18 @@ function Router() {
   );
 }
 
+// AppContent with simplified footer/header logic
 function AppContent() {
   const [location] = useLocation();
-  const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/wallet/pexly-pay", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
-  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
-  const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
+
+  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact"].some(path => location.startsWith(path));
+  const hidePageNav = ["/terms"].some(path => location.startsWith(path));
+  const hideAppFooter = hideHeaderAndNav || [
+    "/p2p","/spot","/swap","/wallet","/analysis","/gift-cards","/dashboard","/profile","/shop",
+    "/shop/post","/create-offer","/my-offers","/favorite-offers","/trusted-users","/blocked-users",
+    "/trade-statistics","/trade-history","/account-settings","/verification","/admin",
+    "/notifications"
+  ].some(path => location.startsWith(path));
 
   return (
     <div className={`flex min-h-screen w-full flex-col ${!hideHeaderAndNav ? 'pt-16' : ''}`}>
@@ -217,7 +247,9 @@ function AppContent() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         }>
-          <Router />
+          <ErrorBoundary>
+            <Router />
+          </ErrorBoundary>
         </Suspense>
       </main>
       {!hideAppFooter && <AppFooter />}
@@ -227,6 +259,7 @@ function AppContent() {
   );
 }
 
+// Wagmi + OnchainKit
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { base } from 'viem/chains';
 import { WagmiProvider, createConfig, http } from 'wagmi';
@@ -234,19 +267,11 @@ import { coinbaseWallet } from 'wagmi/connectors';
 
 const wagmiConfig = createConfig({
   chains: [base],
-  connectors: [
-    coinbaseWallet({
-      appName: 'Pexly',
-      preference: 'smartWalletOnly',
-    }),
-  ],
-  transports: {
-    [base.id]: http(),
-  },
+  connectors: [coinbaseWallet({ appName: 'Pexly', preference: 'smartWalletOnly' })],
+  transports: { [base.id]: http() },
 });
 
 function App() {
-  // Check if on help subdomain - show only support page
   const isHelpSubdomain = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
   
   if (isHelpSubdomain) {
