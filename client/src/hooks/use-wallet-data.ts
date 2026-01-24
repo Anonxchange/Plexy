@@ -92,19 +92,13 @@ export function useWalletData() {
 
     enabled: !!user?.id,
 
-    placeholderData: (prev) => prev || ({
-      totalBalance: 0,
-      userId: user?.id,
-      preferredCurrency,
-      isConverting: false,
-      assets: Object.entries(ASSET_NAMES).map(([symbol, name]) => ({
-        symbol,
-        name,
-        balance: 0,
-        value: 0,
-        change24h: 0,
-      })),
-    }),
+    staleTime: 30000, // Consider data fresh for 30s
+    gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+
+    placeholderData: (prev) => prev,
 
     queryFn: async () => {
       if (!user?.id) {
