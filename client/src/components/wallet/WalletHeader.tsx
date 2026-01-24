@@ -24,9 +24,14 @@ export function WalletHeader({
   onSwap,
   onTopup,
 }: WalletHeaderProps) {
-  const { data: wallet, isLoading, isFetching, isError } = useWalletData();
+  const { data: wallet, isLoading, isFetching, isError, isRefetching } = useWalletData();
   const [showBalance, setShowBalance] = useState(true);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  useEffect(() => {
+    // Reset on unmount
+    return () => setIsInitialLoading(true);
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {
