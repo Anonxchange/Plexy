@@ -104,15 +104,9 @@ export function AssetList({
   const { data: wallet, isLoading, isFetching } = useWalletData();
   const [hideZero, setHideZero] = useState(false);
   const [activeTab, setActiveTab] = useState("assets");
-  const [currency, setCurrency] = useState("USD");
 
-  const loading = isLoading || isFetching;
-
-  useEffect(() => {
-    if (!wallet?.userId) return;
-    const stored = localStorage.getItem(`pexly_currency_${wallet.userId}`);
-    if (stored) setCurrency(stored);
-  }, [wallet?.userId]);
+  const preferredCurrency = wallet?.preferredCurrency || "USD";
+  const loading = isLoading || isFetching || wallet?.isConverting;
 
   const assets = useMemo(() => {
     if (!wallet?.assets) return [];
@@ -188,7 +182,7 @@ export function AssetList({
 
                         <TableCell className="hidden sm:table-cell">
                           <div className="font-semibold">
-                            {(asset.value / (asset.balance || 1)).toLocaleString()} {currency}
+                            {(asset.value / (asset.balance || 1)).toLocaleString()} {preferredCurrency}
                           </div>
                           <div
                             className={`text-xs font-bold ${
@@ -209,7 +203,7 @@ export function AssetList({
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}{" "}
-                            {currency}
+                            {preferredCurrency}
                           </div>
                         </TableCell>
 
