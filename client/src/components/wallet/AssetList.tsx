@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { MoreHorizontal, ArrowDownToLine, Send, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -119,8 +120,8 @@ export function AssetList({
   onReceive?: (symbol: string) => void;
   onSwap?: (symbol: string) => void;
 }) {
-  const { data: wallet } = useWalletData();
-  const { data: prices } = useCryptoPrices();
+  const { data: wallet, isLoading } = useWalletData();
+  const { data: prices, isLoading: pricesLoading } = useCryptoPrices();
   const [hideZero, setHideZero] = useState(false);
   const [activeTab, setActiveTab] = useState("assets");
 
@@ -142,6 +143,8 @@ export function AssetList({
       return true;
     });
   }, [wallet]);
+
+  const isDataLoading = isLoading || pricesLoading;
 
   return (
     <div className="space-y-6">
@@ -194,67 +197,77 @@ export function AssetList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assets.map((asset: any) => {
-                  const { price, change24h } = getAssetPrice(asset.symbol);
-                  const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
-                  const balanceValue = (asset.balance || 0) * (price || 0);
-                  
-                  if (hideZero && asset.balance <= 0) return null;
-                  
-                  return (
-                    <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
-                      <TableCell className="py-4">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={cryptoIconUrls[asset.symbol] || 
-                                 (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
-                                  asset.symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
-                                  `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`)} 
-                            alt={asset.symbol}
-                            className="w-8 h-8 rounded-full object-contain"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
-                            }}
-                          />
-                          <div className="font-bold text-foreground">
-                            {asset.symbol === "ETH" ? "Ethereum" : 
-                             asset.symbol === "BTC" ? "Bitcoin" : 
-                             asset.symbol === "SOL" ? "Solana" : 
-                             asset.symbol === "USDT" ? "Tether" : 
-                             asset.symbol === "USDC" ? "USD Coin" : 
-                             asset.symbol === "BNB" ? "BNB" :
-                             asset.symbol === "XRP" ? "XRP" :
-                             asset.symbol === "MATIC" ? "Polygon" :
-                             asset.symbol === "ARB" ? "Arbitrum" :
-                             asset.symbol === "OP" ? "Optimism" :
-                             asset.symbol === "TRX" ? "Tron" : asset.name || asset.symbol}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4 hidden sm:table-cell">
-                        <div className="font-semibold text-foreground">{(price || 0).toLocaleString()} {currency}</div>
-                        <div className={`text-[10px] font-bold ${(change24h || 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
-                          {(change24h || 0) >= 0 ? "+" : ""}{(change24h || 0).toFixed(2)}%
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="font-bold text-foreground">
-                          {asset.balance ? (typeof asset.balance === 'number' ? asset.balance.toLocaleString(undefined, { maximumFractionDigits: 8 }) : asset.balance) : '0'}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground font-medium">{(balanceValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</div>
-                      </TableCell>
-                      <TableCell className="text-right py-4">
-                        <ActionMenu 
-                          symbol={asset.symbol} 
-                          onSend={onSend}
-                          onReceive={onReceive}
-                          onSwap={onSwap}
-                        />
-                      </TableCell>
+                {isDataLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                     </TableRow>
-                  );
-                })}
-                {(!wallet || !assets || assets.length === 0) && (
+                  ))
+                ) : assets.length > 0 ? (
+                  assets.map((asset: any) => {
+                    const { price, change24h } = getAssetPrice(asset.symbol);
+                    const currency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
+                    const balanceValue = (asset.balance || 0) * (price || 0);
+                    
+                    if (hideZero && asset.balance <= 0) return null;
+                    
+                    return (
+                      <TableRow key={asset.symbol} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors border-border">
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-3">
+                            <img 
+                              src={cryptoIconUrls[asset.symbol] || 
+                                   (asset.symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
+                                    asset.symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
+                                    `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${asset.symbol.toLowerCase()}.png`)} 
+                              alt={asset.symbol}
+                              className="w-8 h-8 rounded-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
+                              }}
+                            />
+                            <div className="font-bold text-foreground">
+                              {asset.symbol === "ETH" ? "Ethereum" : 
+                               asset.symbol === "BTC" ? "Bitcoin" : 
+                               asset.symbol === "SOL" ? "Solana" : 
+                               asset.symbol === "USDT" ? "Tether" : 
+                               asset.symbol === "USDC" ? "USD Coin" : 
+                               asset.symbol === "BNB" ? "BNB" :
+                               asset.symbol === "XRP" ? "XRP" :
+                               asset.symbol === "MATIC" ? "Polygon" :
+                               asset.symbol === "ARB" ? "Arbitrum" :
+                               asset.symbol === "OP" ? "Optimism" :
+                               asset.symbol === "TRX" ? "Tron" : asset.name || asset.symbol}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4 hidden sm:table-cell">
+                          <div className="font-semibold text-foreground">{(price || 0).toLocaleString()} {currency}</div>
+                          <div className={`text-[10px] font-bold ${(change24h || 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                            {(change24h || 0) >= 0 ? "+" : ""}{(change24h || 0).toFixed(2)}%
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="font-bold text-foreground">
+                            {asset.balance ? (typeof asset.balance === 'number' ? asset.balance.toLocaleString(undefined, { maximumFractionDigits: 8 }) : asset.balance) : '0'}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium">{(balanceValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</div>
+                        </TableCell>
+                        <TableCell className="text-right py-4">
+                          <ActionMenu 
+                            symbol={asset.symbol} 
+                            onSend={onSend}
+                            onReceive={onReceive}
+                            onSwap={onSwap}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                       No assets found
