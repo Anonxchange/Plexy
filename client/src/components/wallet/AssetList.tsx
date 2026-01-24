@@ -144,7 +144,7 @@ export function AssetList({
     });
   }, [wallet]);
 
-  const isDataLoading = isLoading || pricesLoading;
+  const isDataLoading = isLoading || pricesLoading || !wallet;
 
   return (
     <div className="space-y-6">
