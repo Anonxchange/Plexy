@@ -1,8 +1,14 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWalletData } from "@/hooks/use-wallet-data";
-import { Eye, EyeOff, Smartphone, RefreshCw, Send, ArrowDownToLine, Landmark, Zap } from "lucide-react";
-import { useState } from "react";
+import {
+  Eye,
+  EyeOff,
+  Smartphone,
+  RefreshCw,
+  Send,
+  ArrowDownToLine,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface WalletHeaderProps {
@@ -12,11 +18,29 @@ interface WalletHeaderProps {
   onTopup: () => void;
 }
 
-export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeaderProps) {
-  const { data: wallet, isLoading } = useWalletData();
+export function WalletHeader({
+  onSend,
+  onReceive,
+  onSwap,
+  onTopup,
+}: WalletHeaderProps) {
+  const { data: wallet, isLoading, isFetching } = useWalletData();
   const [showBalance, setShowBalance] = useState(true);
-  const preferredCurrency = localStorage.getItem(`pexly_currency_${wallet?.userId || ""}`) || "USD";
-  
+  const [preferredCurrency, setPreferredCurrency] = useState("USD");
+
+  const loading = isLoading || isFetching;
+
+  useEffect(() => {
+    if (!wallet?.userId) return;
+    const stored = localStorage.getItem(
+      `pexly_currency_${wallet.userId}`
+    );
+    if (stored) setPreferredCurrency(stored);
+  }, [wallet?.userId]);
+
+  const hasAssets =
+    wallet?.assets?.some(asset => asset.balance > 0) ?? false;
+
   return (
     <div className="bg-[#EBF7F2]/40 dark:bg-[#EBF7F2]/10 overflow-hidden transition-colors">
       <div className="p-6">
@@ -24,70 +48,87 @@ export function WalletHeader({ onSend, onReceive, onSwap, onTopup }: WalletHeade
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <span className="text-sm font-medium">Wallet balance</span>
-              <button 
-                onClick={() => setShowBalance(!showBalance)}
+              <button
+                onClick={() => setShowBalance(v => !v)}
                 className="hover:text-foreground transition-colors"
               >
-                {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showBalance ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
               </button>
             </div>
-            
+
             <div className="space-y-1">
               <div className="text-4xl font-bold tracking-tight text-foreground">
-                {(isLoading || !wallet) ? (
+                {loading ? (
                   <Skeleton className="h-10 w-48" />
+                ) : showBalance ? (
+                  `${wallet?.totalBalance.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })} ${preferredCurrency}`
                 ) : (
-                  showBalance ? `${(wallet?.totalBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"
+                  <span className="tracking-widest">••••</span>
                 )}
               </div>
+
               <div className="text-sm text-muted-foreground">
-                {(isLoading || !wallet) ? (
+                {loading ? (
                   <Skeleton className="h-4 w-32" />
-                ) : (wallet?.totalBalance || 0) > 0 ? (
+                ) : hasAssets ? (
                   <span>Portfolio value across all assets</span>
                 ) : (
-                  <>There are no assets in your account <button onClick={onReceive} className="text-primary font-medium hover:underline">Deposit</button></>
+                  <>
+                    There are no assets in your account{" "}
+                    <button
+                      onClick={onReceive}
+                      className="text-primary font-medium hover:underline"
+                    >
+                      Deposit
+                    </button>
+                  </>
                 )}
               </div>
             </div>
           </div>
 
+          {/* ACTIONS — unchanged */}
           <div className="w-full flex justify-end">
-            {/* Mobile View: 4-column grid as requested */}
             <div className="grid grid-cols-4 bg-background dark:bg-card rounded-lg border p-1 w-full md:hidden transition-colors">
-              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50 text-foreground" onClick={onTopup}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
-                <span className="text-[10px] font-semibold leading-tight mt-0.5">Top-up</span>
+                <span className="text-[10px] font-semibold mt-0.5">Top-up</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50 text-foreground" onClick={onSwap}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onSwap}>
                 <RefreshCw className="h-4 w-4" />
-                <span className="text-[10px] font-semibold leading-tight mt-0.5">Swap</span>
+                <span className="text-[10px] font-semibold mt-0.5">Swap</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 hover:bg-muted/50 text-foreground" onClick={onSend}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onSend}>
                 <Send className="h-4 w-4" />
-                <span className="text-[10px] font-semibold leading-tight mt-0.5">Send</span>
+                <span className="text-[10px] font-semibold mt-0.5">Send</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 text-primary hover:bg-muted/50" onClick={onReceive}>
+              <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 text-primary" onClick={onReceive}>
                 <ArrowDownToLine className="h-4 w-4" />
-                <span className="text-[10px] font-semibold leading-tight mt-0.5">Deposit</span>
+                <span className="text-[10px] font-semibold mt-0.5">Deposit</span>
               </Button>
             </div>
 
-            {/* Desktop View: Long white container (same as mobile) containing horizontal actions */}
-            <div className="hidden md:flex flex-row items-center gap-2 bg-background dark:bg-card rounded-lg border p-1 w-fit transition-colors">
-              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50 text-foreground" onClick={onTopup}>
+            <div className="hidden md:flex flex-row items-center gap-2 bg-background dark:bg-card rounded-lg border p-1">
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4" onClick={onTopup}>
                 <Smartphone className="h-4 w-4" />
                 <span>Mobile top up</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50 text-foreground" onClick={onSend}>
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4" onClick={onSend}>
                 <Send className="h-4 w-4" />
                 <span>Send</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold text-primary hover:bg-muted/50" onClick={onReceive}>
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 text-primary" onClick={onReceive}>
                 <ArrowDownToLine className="h-4 w-4" />
                 <span>Deposit</span>
               </Button>
-              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 font-semibold hover:bg-muted/50 text-foreground" onClick={onSwap}>
+              <Button variant="ghost" size="sm" className="h-9 gap-2 px-4" onClick={onSwap}>
                 <RefreshCw className="h-4 w-4" />
                 <span>Swap</span>
               </Button>
