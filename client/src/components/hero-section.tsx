@@ -47,7 +47,7 @@ export function HeroSection() {
   const [crypto, setCrypto] = useState("BTC");
   const [currency, setCurrency] = useState("USD");
   const [paymentMethod, setPaymentMethod] = useState("All Payment Methods");
-  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number> | null>(null);
   const [openCurrency, setOpenCurrency] = useState(false);
   const [openPayment, setOpenPayment] = useState(false);
   const [openCrypto, setOpenCrypto] = useState(false);
@@ -101,7 +101,7 @@ export function HeroSection() {
     return () => clearInterval(interval);
   }, []);
 
-  const currentPrice = cryptoPrices[crypto] || 0;
+  const currentPrice = cryptoPrices ? cryptoPrices[crypto] || 0 : null;
 
   const [, setLocation] = useLocation();
 
@@ -291,11 +291,17 @@ export function HeroSection() {
                 </div>
               </div>
 
-              {/* Price Display */}
               <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
                 <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
                 <div className="text-2xl sm:text-3xl font-bold tabular-nums text-foreground">
-                  1 {crypto} ≈ ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currentPrice !== null ? (
+                    `1 ${crypto} ≈ $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  ) : (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="opacity-70">1 {crypto} ≈ </span>
+                      <div className="h-8 w-32 bg-primary/20 animate-pulse rounded" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -397,7 +403,7 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Right Column - Trade Form Card */}
+          {/* Trade Form Card */}
           <div>
             <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-8 space-y-6">
               {/* Trade Type Tabs */}
@@ -517,6 +523,21 @@ export function HeroSection() {
                       </Command>
                     </PopoverContent>
                   </Popover>
+                </div>
+              </div>
+
+              {/* Price Display */}
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+                <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
+                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-foreground">
+                  {currentPrice !== null ? (
+                    `1 ${crypto} ≈ $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  ) : (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="opacity-70">1 {crypto} ≈ </span>
+                      <div className="h-8 w-32 bg-primary/20 animate-pulse rounded" />
+                    </div>
+                  )}
                 </div>
               </div>
 
