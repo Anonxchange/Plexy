@@ -4,10 +4,10 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Quote, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import testimonial1 from "@assets/generated_images/IMG_3799.jpeg";
-import testimonial2 from "@assets/generated_images/IMG_3800.jpeg";
-import testimonial3 from "@assets/generated_images/IMG_3801.jpeg";
-import testimonial4 from "@assets/generated_images/IMG_3803.jpeg";
+import testimonial1 from "@assets/generated_images/IMG_3814.webp";
+import testimonial2 from "@assets/generated_images/IMG_3815.webp";
+import testimonial3 from "@assets/generated_images/IMG_3816.webp";
+import testimonial4 from "@assets/generated_images/IMG_3810.webp";
 
 const testimonials = [
   {
