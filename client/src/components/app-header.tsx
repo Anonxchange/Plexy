@@ -125,6 +125,23 @@ export function AppHeader() {
   useEffect(() => {
     if (!user) return;
 
+    const checkCurrency = () => {
+      const stored = localStorage.getItem(`pexly_currency_${user.id}`);
+      if (stored) {
+        const upper = stored.toUpperCase();
+        if (upper !== preferredCurrency) {
+          setPreferredCurrency(upper);
+        }
+      }
+    };
+
+    const interval = setInterval(checkCurrency, 1000);
+    return () => clearInterval(interval);
+  }, [user, preferredCurrency]);
+
+  useEffect(() => {
+    if (!user) return;
+
     // Load initial notifications
     getNotifications().then(setNotifications);
 
