@@ -1,12 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { getUserWallets } from "@/lib/wallet-api";
-import { getCryptoPrices } from "@/lib/crypto-prices";
+import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 import { useWalletBalances } from "./use-wallet-balances";
+import { useState, useEffect } from "react";
 
 export interface WalletData {
   totalBalance: number;
   userId?: string;
+  preferredCurrency: string;
+  isConverting: boolean;
   assets: {
     symbol: string;
     name: string;
@@ -49,6 +52,14 @@ const SORT_ORDER: Record<string, number> = {
 export function useWalletData() {
   const { user } = useAuth();
   const { balances: monitoredBalances } = useWalletBalances();
+  const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
+
+  useEffect(() => {
+    if (user?.id) {
+      const stored = localStorage.getItem(`pexly_currency_${user.id}`);
+      if (stored) setPreferredCurrency(stored.toUpperCase());
+    }
+  }, [user?.id]);
 
   const query = useQuery<WalletData>({
     queryKey: [
@@ -57,13 +68,16 @@ export function useWalletData() {
       monitoredBalances?.map(
         b => `${b.symbol}:${b.balanceFormatted}`
       ),
+      preferredCurrency,
     ],
 
     enabled: !!user?.id,
 
-    placeholderData: () => ({
+    placeholderData: (prev) => prev || ({
       totalBalance: 0,
       userId: user?.id,
+      preferredCurrency,
+      isConverting: false,
       assets: Object.entries(ASSET_NAMES).map(([symbol, name]) => ({
         symbol,
         name,
@@ -172,10 +186,24 @@ export function useWalletData() {
 
       const assets = Array.from(assetMap.values());
 
-      const totalBalance = assets.reduce(
+      let totalBalanceUSD = assets.reduce(
         (sum, asset) => sum + asset.value,
         0
       );
+
+      let finalTotalBalance = totalBalanceUSD;
+      let isConverting = false;
+
+      if (preferredCurrency !== "USD") {
+        isConverting = true;
+        try {
+          finalTotalBalance = await convertCurrency(totalBalanceUSD, preferredCurrency);
+        } catch (e) {
+          console.error("useWalletData: Currency conversion failed", e);
+        } finally {
+          isConverting = false;
+        }
+      }
 
       // 8️⃣ Sort assets
       assets.sort((a, b) => {
@@ -186,8 +214,10 @@ export function useWalletData() {
       });
 
       return {
-        totalBalance,
+        totalBalance: finalTotalBalance,
         userId: user.id,
+        preferredCurrency,
+        isConverting,
         assets,
       };
     },
