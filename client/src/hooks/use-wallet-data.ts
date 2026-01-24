@@ -52,14 +52,33 @@ const SORT_ORDER: Record<string, number> = {
 export function useWalletData() {
   const { user } = useAuth();
   const { balances: monitoredBalances } = useWalletBalances();
-  const [preferredCurrency, setPreferredCurrency] = useState<string>("USD");
+  const [preferredCurrency, setPreferredCurrency] = useState<string>(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      return (localStorage.getItem(`pexly_currency_${user.id}`) || 'USD').toUpperCase();
+    }
+    return 'USD';
+  });
 
   useEffect(() => {
-    if (user?.id) {
+    if (!user?.id) return;
+
+    // Polling or listener for localStorage changes
+    const updateCurrency = () => {
       const stored = localStorage.getItem(`pexly_currency_${user.id}`);
-      if (stored) setPreferredCurrency(stored.toUpperCase());
-    }
-  }, [user?.id]);
+      if (stored) {
+        const upper = stored.toUpperCase();
+        if (upper !== preferredCurrency) setPreferredCurrency(upper);
+      }
+    };
+
+    const interval = setInterval(updateCurrency, 1000);
+    window.addEventListener('storage', updateCurrency);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', updateCurrency);
+    };
+  }, [user?.id, preferredCurrency]);
 
   const query = useQuery<WalletData>({
     queryKey: [
