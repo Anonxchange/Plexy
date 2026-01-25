@@ -119,11 +119,9 @@ export function HeroSection() {
     <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
-      {/* Animated Globe Background */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] opacity-15 pointer-events-none">
-        <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
-          <Globe />
-        </ErrorBoundary>
+      {/* Animated Globe Background - Re-added and stabilized */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] opacity-40 pointer-events-none z-0">
+        <Globe />
       </div>
 
       {/* Gradient Orbs */}
