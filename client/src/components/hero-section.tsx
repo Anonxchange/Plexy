@@ -291,19 +291,6 @@ export function HeroSection() {
                 </div>
               </div>
 
-            <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
-              <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
-              <div className="text-2xl sm:text-3xl font-bold tabular-nums text-foreground">
-                {currentPrice > 0 ? (
-                  `1 ${crypto} ≈ $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <span>1 {crypto} ≈ </span>
-                    <div className="h-8 w-32 bg-primary/20 animate-pulse rounded" />
-                  </div>
-                )}
-              </div>
-            </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground">Payment Method</label>
