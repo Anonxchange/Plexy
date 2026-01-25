@@ -1,20 +1,19 @@
-import { UserPlus, CreditCard, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const steps = [
   {
-    icon: UserPlus,
+    iconSrc: "https://your-cdn.com/images/signup.png",
     title: "Create Your Account",
     description: "Sign up in seconds and get instant access to the global crypto marketplace.",
   },
   {
-    icon: CreditCard,
+    iconSrc: "https://your-cdn.com/images/payment.png",
     title: "Choose Payment Method",
     description: "Select from 500+ payment options including bank transfers, cards, and e-wallets.",
   },
   {
-    icon: Shield,
+    iconSrc: "https://your-cdn.com/images/security.png",
     title: "Trade with Smart Contract Protection",
     description: "Your transaction is secured by automated smart contracts until both parties complete the trade.",
   },
@@ -27,7 +26,9 @@ export function HowItWorks() {
       <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
         <div className="text-center space-y-6 mb-12">
           <Badge className="text-sm px-4 py-2">Simple & Secure</Badge>
-          <h2 className="text-4xl lg:text-5xl font-bold text-foreground">How It Works</h2>
+          <h2 className="text-4xl lg:text-5xl font-bold text-foreground">
+            How It Works
+          </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Start trading cryptocurrency in three simple steps
           </p>
@@ -39,14 +40,25 @@ export function HowItWorks() {
               <CardContent className="pt-16 pb-10 text-center space-y-6">
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-                    <step.icon className="h-8 w-8 text-primary-foreground" />
+                    <img
+                      src={step.iconSrc}
+                      alt={step.title}
+                      className="h-8 w-8 object-contain"
+                      loading="lazy"
+                    />
                   </div>
                 </div>
+
                 <div className="absolute top-4 right-4 text-6xl font-bold text-muted/10">
                   {index + 1}
                 </div>
-                <h3 className="text-2xl font-bold text-foreground">{step.title}</h3>
-                <p className="text-muted-foreground text-lg leading-relaxed">{step.description}</p>
+
+                <h3 className="text-2xl font-bold text-foreground">
+                  {step.title}
+                </h3>
+                <p className="text-muted-foreground text-lg leading-relaxed">
+                  {step.description}
+                </p>
               </CardContent>
             </Card>
           ))}
