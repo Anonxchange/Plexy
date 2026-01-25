@@ -154,18 +154,18 @@ export function HeroSection() {
             </p>
 
             {/* Stats - Arranged horizontally on mobile like in the reference image */}
-            <div className="flex justify-center items-center gap-4 sm:gap-8 pt-4">
-              <div className="text-center">
+            <div className="flex justify-between items-center pt-4 max-w-[340px] mx-auto gap-4">
+              <div className="text-center flex-1">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">140+</div>
-                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider">Countries</div>
+                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider whitespace-nowrap">Countries</div>
               </div>
-              <div className="text-center">
+              <div className="text-center flex-1">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">500+</div>
-                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider">Payment methods</div>
+                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider whitespace-nowrap">Payment methods</div>
               </div>
-              <div className="text-center">
+              <div className="text-center flex-1">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">14M+</div>
-                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider">Users</div>
+                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider whitespace-nowrap">Users</div>
               </div>
             </div>
           </div>
