@@ -62,6 +62,7 @@ export function HeroSection() {
         const symbols = ['BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'SHIB', 'LTC', 'TRX', 'LINK'];
         const prices = await getCryptoPrices(symbols);
 
+        // Convert to the format needed for display
         const pricesMap: Record<string, number> = {};
         Object.values(prices).forEach((crypto) => {
           pricesMap[crypto.symbol] = crypto.current_price;
@@ -72,6 +73,7 @@ export function HeroSection() {
         }
       } catch (error) {
         console.error("Failed to fetch crypto prices:", error);
+        // Fallback to mock prices on error
         const mockPrices = {
           BTC: 98750.50,
           ETH: 3420.75,
@@ -94,7 +96,7 @@ export function HeroSection() {
     };
 
     fetchPrices();
-    const interval = setInterval(fetchPrices, 30000);
+    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -114,63 +116,65 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background pt-16">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center">
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
       {/* Animated Globe Background */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-        <ErrorBoundary fallback={<div className="w-[800px] h-[800px] rounded-full bg-primary/5" />}>
-          <Globe className="w-[800px] h-[800px]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] opacity-15 pointer-events-none">
+        <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
+          <Globe />
         </ErrorBoundary>
       </div>
 
       {/* Gradient Orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/15 rounded-full blur-3xl animate-pulse delay-1000" />
+      <div className="absolute top-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
 
-      <div className="container relative z-10 px-4 py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 relative z-10 w-full">
         {/* Mobile & Tablet - Original Centered Layout */}
-        <div className="lg:hidden flex flex-col items-center">
-          <div className="text-center mb-8">
+        <div className="lg:hidden">
+          <div className="text-center space-y-6 max-w-4xl mx-auto mb-8">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm font-medium text-foreground">Trusted by 14M+ users worldwide</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 backdrop-blur-xl shadow-lg">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+              <span className="text-sm font-semibold">Trusted by 14M+ users worldwide</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 leading-tight">
-              Trade crypto
-              <span className="block text-primary">your way</span>
+            <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tight">
+              <span className="block text-foreground">Trade crypto</span>
+              <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
+                your way
+              </span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
               Connect with traders worldwide. 500+ payment methods. Zero hassle.
             </p>
 
-            {/* Stats */}
-            <div className="flex justify-center gap-8 mb-8">
-              <div className="text-center min-w-[80px]">
-                <p className="text-2xl font-bold text-foreground">140+</p>
-                <p className="text-sm text-muted-foreground">Countries</p>
+            {/* Stats - Fixed dimensions to prevent layout shift */}
+            <div className="flex flex-wrap justify-center gap-8 pt-4 h-[80px]">
+              <div className="text-center w-[100px]">
+                <div className="text-3xl sm:text-4xl font-bold text-foreground">140+</div>
+                <div className="text-sm text-muted-foreground">Countries</div>
               </div>
-              <div className="text-center min-w-[80px]">
-                <p className="text-2xl font-bold text-foreground">500+</p>
-                <p className="text-sm text-muted-foreground">Payment methods</p>
+              <div className="text-center w-[160px]">
+                <div className="text-3xl sm:text-4xl font-bold text-foreground">500+</div>
+                <div className="text-sm text-muted-foreground">Payment methods</div>
               </div>
-              <div className="text-center min-w-[80px]">
-                <p className="text-2xl font-bold text-foreground">14M+</p>
-                <p className="text-sm text-muted-foreground">Users</p>
+              <div className="text-center w-[100px]">
+                <div className="text-3xl sm:text-4xl font-bold text-foreground">14M+</div>
+                <div className="text-sm text-muted-foreground">Users</div>
               </div>
             </div>
           </div>
 
           {/* Trade Form Card */}
-          <div className="w-full max-w-md">
-            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-2xl">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
               {/* Trade Type Tabs */}
-              <div className="flex bg-muted/50 rounded-lg p-1 mb-6">
+              <div className="flex gap-2 p-1 bg-muted rounded-xl">
                 <button
                   onClick={() => setTradeType("buy")}
                   className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
@@ -193,24 +197,30 @@ export function HeroSection() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Cryptocurrency</label>
+                  <label className="text-sm font-semibold text-foreground">Cryptocurrency</label>
                   <Popover open={openCrypto} onOpenChange={setOpenCrypto}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" aria-expanded={openCrypto} className="w-full justify-between bg-background/50 border-border/50">
-                        <span className="flex items-center gap-2">
-                          {crypto && <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-5 h-5" />}
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCrypto}
+                        className="h-14 w-full justify-between text-base"
+                        data-testid="select-crypto"
+                      >
+                        <div className="flex items-center">
+                          {crypto && <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-5 h-5 mr-2" />}
                           {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
-                        </span>
+                        </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0 bg-popover border border-border z-50">
+                    <PopoverContent className="w-[280px] p-0">
                       <Command>
                         <CommandInput placeholder="Search crypto..." />
                         <CommandEmpty>No crypto found.</CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup className="max-h-64 overflow-auto">
                           {cryptoCurrencies.map((c) => (
                             <CommandItem
                               key={c.code}
@@ -220,8 +230,13 @@ export function HeroSection() {
                                 setOpenCrypto(false);
                               }}
                             >
-                              <Check className={cn("mr-2 h-4 w-4", crypto === c.code ? "opacity-100" : "opacity-0")} />
-                              <img src={cryptoIconUrls[c.code]} alt={c.code} className="w-5 h-5 mr-2" />
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  crypto === c.code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <img src={cryptoIconUrls[c.code]} alt={c.name} className="w-5 h-5 mr-2" />
                               {c.name} ({c.code})
                             </CommandItem>
                           ))}
@@ -232,19 +247,25 @@ export function HeroSection() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Currency</label>
+                  <label className="text-sm font-semibold text-foreground">Currency</label>
                   <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" aria-expanded={openCurrency} className="w-full justify-between bg-background/50 border-border/50">
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCurrency}
+                        className="h-14 w-full justify-between text-base"
+                        data-testid="select-currency"
+                      >
                         {currency ? currencies.find((c) => c.code === currency)?.flag + " " + currency : "Select currency..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0 bg-popover border border-border z-50">
+                    <PopoverContent className="w-[280px] p-0">
                       <Command>
                         <CommandInput placeholder="Search currency..." />
                         <CommandEmpty>No currency found.</CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup className="max-h-64 overflow-auto">
                           {currencies.map((c) => (
                             <CommandItem
                               key={c.code}
@@ -254,7 +275,12 @@ export function HeroSection() {
                                 setOpenCurrency(false);
                               }}
                             >
-                              <Check className={cn("mr-2 h-4 w-4", currency === c.code ? "opacity-100" : "opacity-0")} />
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  currency === c.code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
                               {c.flag} {c.name} ({c.code})
                             </CommandItem>
                           ))}
@@ -265,41 +291,58 @@ export function HeroSection() {
                 </div>
               </div>
 
-              <div className="space-y-2 mb-6">
-                <label className="text-sm font-medium text-foreground">Payment Method</label>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Payment Method</label>
                 <Popover open={openPayment} onOpenChange={setOpenPayment}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={openPayment} className="w-full justify-between bg-background/50 border-border/50">
-                      {paymentMethod || "Select method..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openPayment}
+                        className="h-14 w-full justify-between text-base"
+                        data-testid="select-payment-method"
+                      >
+                        {paymentMethod || "Select method..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0 bg-popover border border-border z-50">
-                    <Command>
-                      <CommandInput placeholder="Search payment method..." />
-                      <CommandEmpty>No payment method found.</CommandEmpty>
-                      <CommandGroup>
-                        {popularPaymentMethods.map((p) => (
-                          <CommandItem
-                            key={p.id}
-                            value={p.name}
-                            onSelect={() => {
-                              setPaymentMethod(p.name);
-                              setOpenPayment(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", paymentMethod === p.name ? "opacity-100" : "opacity-0")} />
-                            {p.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                    <PopoverContent className="w-[280px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search payment method..." />
+                        <CommandEmpty>No payment method found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {popularPaymentMethods.map((p) => (
+                            <CommandItem
+                              key={p.id}
+                              value={p.id}
+                              onSelect={() => {
+                                setPaymentMethod(p.name);
+                                setOpenPayment(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  paymentMethod === p.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {p.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
               </div>
 
               {/* CTA Button */}
-              <Button onClick={handleFindOffers} className="w-full h-12 text-base font-semibold" size="lg">
+              <Button 
+                className="w-full h-16 text-lg font-bold shadow-xl hover:shadow-2xl transition-all" 
+                size="lg"
+                onClick={handleFindOffers}
+                data-testid="button-find-offers"
+              >
                 Find offers
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -308,48 +351,50 @@ export function HeroSection() {
         </div>
 
         {/* Desktop - Two Column Layout */}
-        <div className="hidden lg:grid lg:grid-cols-2 gap-12 items-center">
+        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
           {/* Left Column - Content */}
-          <div className="text-left">
+          <div className="space-y-8">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm font-medium text-foreground">Trusted by 14M+ users worldwide</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 backdrop-blur-xl shadow-lg">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+              <span className="text-sm font-semibold">Trusted by 14M+ users worldwide</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-5xl xl:text-6xl font-bold text-foreground mb-6 leading-tight">
-              Trade crypto
-              <span className="block text-primary">your way</span>
+            <h1 className="text-6xl xl:text-7xl 2xl:text-8xl font-bold leading-[1.05] tracking-tight">
+              <span className="block text-foreground">Trade crypto</span>
+              <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
+                your way
+              </span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-xl text-muted-foreground max-w-lg mb-8">
+            <p className="text-xl xl:text-2xl text-muted-foreground max-w-xl">
               Connect with traders worldwide. 500+ payment methods. Zero hassle.
             </p>
 
-            {/* Stats */}
-            <div className="flex gap-8">
-              <div className="text-left min-w-[100px]">
-                <p className="text-3xl font-bold text-foreground">140+</p>
-                <p className="text-sm text-muted-foreground">Countries</p>
+            {/* Stats - Fixed dimensions for stability */}
+            <div className="flex gap-12 pt-4 h-[90px]">
+              <div className="w-[120px]">
+                <div className="text-4xl xl:text-5xl font-bold text-foreground">140+</div>
+                <div className="text-sm text-muted-foreground mt-1">Countries</div>
               </div>
-              <div className="text-left min-w-[100px]">
-                <p className="text-3xl font-bold text-foreground">500+</p>
-                <p className="text-sm text-muted-foreground">Payment methods</p>
+              <div className="w-[180px]">
+                <div className="text-4xl xl:text-5xl font-bold text-foreground">500+</div>
+                <div className="text-sm text-muted-foreground mt-1">Payment methods</div>
               </div>
-              <div className="text-left min-w-[100px]">
-                <p className="text-3xl font-bold text-foreground">14M+</p>
-                <p className="text-sm text-muted-foreground">Users</p>
+              <div className="w-[120px]">
+                <div className="text-4xl xl:text-5xl font-bold text-foreground">14M+</div>
+                <div className="text-sm text-muted-foreground mt-1">Users</div>
               </div>
             </div>
           </div>
 
           {/* Trade Form Card */}
-          <div className="w-full max-w-md ml-auto">
-            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-2xl">
+          <div>
+            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-8 space-y-6">
               {/* Trade Type Tabs */}
-              <div className="flex bg-muted/50 rounded-lg p-1 mb-6">
+              <div className="flex gap-2 p-1 bg-muted rounded-xl">
                 <button
                   onClick={() => setTradeType("buy")}
                   className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
@@ -372,24 +417,31 @@ export function HeroSection() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Cryptocurrency</label>
+                  <label className="text-sm font-semibold text-foreground">Cryptocurrency</label>
                   <Popover open={openCryptoDesktop} onOpenChange={setOpenCryptoDesktop}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" aria-expanded={openCryptoDesktop} className="w-full justify-between bg-background/50 border-border/50">
-                        <span className="flex items-center gap-2">
-                          {crypto && <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-5 h-5" />}
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCryptoDesktop}
+                        className="h-14 w-full justify-between text-base"
+                        data-testid="select-crypto-desktop"
+                        type="button"
+                      >
+                        <div className="flex items-center">
+                          {crypto && <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-5 h-5 mr-2" />}
                           {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
-                        </span>
+                        </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0 bg-popover border border-border z-50">
+                    <PopoverContent className="w-[280px] p-0">
                       <Command>
                         <CommandInput placeholder="Search crypto..." />
                         <CommandEmpty>No crypto found.</CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup className="max-h-64 overflow-auto">
                           {cryptoCurrencies.map((c) => (
                             <CommandItem
                               key={c.code}
@@ -399,8 +451,13 @@ export function HeroSection() {
                                 setOpenCryptoDesktop(false);
                               }}
                             >
-                              <Check className={cn("mr-2 h-4 w-4", crypto === c.code ? "opacity-100" : "opacity-0")} />
-                              <img src={cryptoIconUrls[c.code]} alt={c.code} className="w-5 h-5 mr-2" />
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  crypto === c.code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <img src={cryptoIconUrls[c.code]} alt={c.name} className="w-5 h-5 mr-2" />
                               {c.name} ({c.code})
                             </CommandItem>
                           ))}
@@ -411,19 +468,26 @@ export function HeroSection() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Currency</label>
+                  <label className="text-sm font-semibold text-foreground">Currency</label>
                   <Popover open={openCurrencyDesktop} onOpenChange={setOpenCurrencyDesktop}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" aria-expanded={openCurrencyDesktop} className="w-full justify-between bg-background/50 border-border/50">
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCurrencyDesktop}
+                        className="h-14 w-full justify-between text-base"
+                        data-testid="select-currency-desktop"
+                        type="button"
+                      >
                         {currency ? currencies.find((c) => c.code === currency)?.flag + " " + currency : "Select currency..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0 bg-popover border border-border z-50">
+                    <PopoverContent className="w-[280px] p-0">
                       <Command>
                         <CommandInput placeholder="Search currency..." />
                         <CommandEmpty>No currency found.</CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup className="max-h-64 overflow-auto">
                           {currencies.map((c) => (
                             <CommandItem
                               key={c.code}
@@ -433,7 +497,12 @@ export function HeroSection() {
                                 setOpenCurrencyDesktop(false);
                               }}
                             >
-                              <Check className={cn("mr-2 h-4 w-4", currency === c.code ? "opacity-100" : "opacity-0")} />
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  currency === c.code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
                               {c.flag} {c.name} ({c.code})
                             </CommandItem>
                           ))}
@@ -444,56 +513,81 @@ export function HeroSection() {
                 </div>
               </div>
 
-              {/* Price Display - FIXED: Single instance with skeleton loading */}
-              <div className="pt-2 border-t border-border/50 mb-4">
-                <p className="text-xs text-muted-foreground mb-1">Current Market Price</p>
-                <p className="text-lg font-semibold text-foreground">
+              {/* Price Display */}
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+                <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
+                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-foreground">
                   {currentPrice > 0 ? (
                     `1 ${crypto} ≈ $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   ) : (
-                    <span className="flex items-center gap-1">
-                      1 {crypto} ≈ 
-                      <span className="inline-block w-24 h-5 bg-muted animate-pulse rounded" />
-                    </span>
+                    <div className="flex items-center justify-center gap-2">
+                      <span>1 {crypto} ≈ </span>
+                      <div className="h-8 w-32 bg-primary/20 animate-pulse rounded" />
+                    </div>
                   )}
-                </p>
+                </div>
               </div>
 
-              <div className="space-y-2 mb-6">
-                <label className="text-sm font-medium text-foreground">Payment Method</label>
+              {/* Price Display */}
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+                <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
+                <div className="text-2xl xl:text-3xl font-bold tabular-nums text-foreground">
+                  1 {crypto} ≈ ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Payment Method</label>
                 <Popover open={openPaymentDesktop} onOpenChange={setOpenPaymentDesktop}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={openPaymentDesktop} className="w-full justify-between bg-background/50 border-border/50">
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openPaymentDesktop}
+                      className="h-14 w-full justify-between text-base"
+                      data-testid="select-payment-method-desktop"
+                      type="button"
+                    >
                       {paymentMethod || "Select method..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0 bg-popover border border-border z-50">
-                    <Command>
-                      <CommandInput placeholder="Search payment method..." />
-                      <CommandEmpty>No payment method found.</CommandEmpty>
-                      <CommandGroup>
-                        {popularPaymentMethods.map((p) => (
-                          <CommandItem
-                            key={p.id}
-                            value={p.name}
-                            onSelect={() => {
-                              setPaymentMethod(p.name);
-                              setOpenPaymentDesktop(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", paymentMethod === p.name ? "opacity-100" : "opacity-0")} />
-                            {p.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                    <PopoverContent className="w-[280px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search payment method..." />
+                        <CommandEmpty>No payment method found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {popularPaymentMethods.map((p) => (
+                            <CommandItem
+                              key={p.id}
+                              value={p.id}
+                              onSelect={() => {
+                                setPaymentMethod(p.name);
+                                setOpenPaymentDesktop(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  paymentMethod === p.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {p.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
               </div>
 
               {/* CTA Button */}
-              <Button onClick={handleFindOffers} className="w-full h-12 text-base font-semibold" size="lg">
+              <Button 
+                className="w-full h-16 text-lg font-bold shadow-xl hover:shadow-2xl transition-all" 
+                size="lg"
+                onClick={handleFindOffers}
+                data-testid="button-find-offers"
+              >
                 Find offers
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
