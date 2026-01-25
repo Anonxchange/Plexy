@@ -153,7 +153,7 @@ export function HeroSection() {
               Connect with traders worldwide. 500+ payment methods. Zero hassle.
             </p>
 
-            {/* Current Market Price for Mobile */}
+            {/* Current Market Price for Mobile - Matches desktop position */}
             <div className="flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 border border-white/10">
                 <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-4 h-4" />
