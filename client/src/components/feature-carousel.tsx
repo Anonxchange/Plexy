@@ -14,7 +14,7 @@ export function FeatureCarousel() {
           </div>
 
           {/* RIGHT — TEXT */}
-          <div className="text-left space-y-6">
+          <div className="text-left space-y-6 lg:pl-16">
             <div className="space-y-4">
               <h2 className="text-3xl lg:text-5xl font-bold tracking-tight text-foreground leading-tight">
                 Live Crypto. <br />
