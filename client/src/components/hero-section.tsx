@@ -153,17 +153,6 @@ export function HeroSection() {
               Connect with traders worldwide. 500+ payment methods. Zero hassle.
             </p>
 
-            {/* Current Market Price for Mobile - Matches desktop position */}
-            <div className="flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 border border-white/10">
-                <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-4 h-4" />
-                {crypto} Price: 
-                <span className="text-foreground font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(currentPrice)}
-                </span>
-              </span>
-            </div>
-
             {/* Stats - Fixed dimensions to prevent layout shift */}
             <div className="flex flex-wrap justify-center gap-8 pt-4 h-[80px]">
               <div className="text-center w-[100px]">
@@ -302,6 +291,20 @@ export function HeroSection() {
                 </div>
               </div>
 
+              {/* Price Display for Mobile */}
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+                <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
+                <div className="text-2xl font-bold tabular-nums text-foreground">
+                  {currentPrice > 0 ? (
+                    `1 ${crypto} ≈ $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  ) : (
+                    <div className="flex items-center justify-center gap-2">
+                      <span>1 {crypto} ≈ </span>
+                      <div className="h-8 w-32 bg-primary/20 animate-pulse rounded" />
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground">Payment Method</label>
