@@ -36,17 +36,14 @@ export function HowItWorks() {
 
         <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
           {steps.map((step, index) => (
-            <Card
-              key={index}
-              className="relative hover-elevate border-2 shadow-xl"
-            >
+            <Card key={index} className="relative hover-elevate border-2 shadow-xl">
               <CardContent className="pt-16 pb-10 text-center space-y-6">
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
                     <img
                       src={step.iconSrc}
                       alt={step.title}
-                      className="h-10 w-10 object-contain"
+                      className="h-8 w-8 object-contain"
                       loading="lazy"
                     />
                   </div>
@@ -69,4 +66,4 @@ export function HowItWorks() {
       </div>
     </section>
   );
-}
+} 
