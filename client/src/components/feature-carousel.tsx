@@ -1,8 +1,7 @@
-export default function CareersSections() {
+export function FeatureCarousel() {
   return (
     <>
       {/* ================= FEATURE SECTION ================= */}
-      {/* Visible on ALL screens */}
       <section className="w-full py-16 lg:py-24 bg-black overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-12">
@@ -42,7 +41,7 @@ export default function CareersSections() {
       <section className="hidden lg:block w-full py-24 bg-neutral-950 text-white">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 gap-16 items-center">
 
-          {/* LEFT — SAME SVG REUSED */}
+          {/* SAME SVG REUSED */}
           <div className="relative rounded-2xl overflow-hidden shadow-xl">
             <img
               src="/assets/svg-image-1%2023.svg"
@@ -51,7 +50,7 @@ export default function CareersSections() {
             />
           </div>
 
-          {/* RIGHT — TEXT */}
+          {/* TEXT */}
           <div>
             <h2 className="text-4xl font-bold mb-6">
               Our culture.
