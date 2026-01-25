@@ -1,7 +1,7 @@
 export function FeatureCarousel() {
   return (
     <section className="w-full py-12 lg:py-20 bg-background overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-10 lg:gap-16">
           
           {/* LEFT — IMAGE */}
