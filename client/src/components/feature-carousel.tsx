@@ -7,7 +7,7 @@ export function FeatureCarousel() {
           {/* LEFT — IMAGE */}
           <div className="relative rounded-2xl overflow-hidden shadow-xl max-w-xl">
             <img
-              src="/assets/svg-image-1%2023.svg"
+              src="/assets/svg-image-1-2.svg"
               alt="Crypto feature illustration"
               className="w-full h-auto object-cover"
             />
