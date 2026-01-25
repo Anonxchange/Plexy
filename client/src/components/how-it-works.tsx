@@ -3,12 +3,12 @@ import { Badge } from "@/components/ui/badge";
 
 const steps = [
   {
-    iconSrc: "https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/svg-image-1%205.svg",
+    iconSrc: "https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/svg-image-1%206.svg",
     title: "Create Your Account",
     description: "Sign up in seconds and get instant access to the global crypto marketplace.",
   },
   {
-    iconSrc: "https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/svg-image-1%206.svg",
+    iconSrc: "https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/svg-image-1%205.svg",
     title: "Choose Payment Method",
     description: "Select from 500+ payment options including bank transfers, cards, and e-wallets.",
   },
