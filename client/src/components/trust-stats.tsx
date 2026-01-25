@@ -1,5 +1,5 @@
 import securityLock from "@/assets/svg-image-1 2.svg";
-import cloudBackup from "@/assets/IMG_3373.webp";
+import cloudBackup from "@/assets/svg-image-1 16.svg";
 import privacyShield from "@/assets/IMG_3374.webp";
 import alertHorn from "@/assets/IMG_3375.webp";
 import trueOwnership from "@/assets/svg-image-1 2.svg";
