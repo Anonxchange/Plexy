@@ -9,17 +9,11 @@ export function FeatureCarousel() {
 
       <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-8">
         <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
+          <img
+            src="/assets/svg-image-1%2023.svg"
+            alt="Crypto feature illustration"
             className="w-full h-auto object-cover"
-            poster="/assets/person_trading_crypto_at_desk.jpg"
-          >
-            <source src="/assets/person_trading_crypto_at_desk.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
         </div>
       </div>
