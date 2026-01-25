@@ -153,19 +153,19 @@ export function HeroSection() {
               Connect with traders worldwide. 500+ payment methods. Zero hassle.
             </p>
 
-            {/* Stats - Fixed dimensions to prevent layout shift */}
-            <div className="flex flex-wrap justify-center gap-8 pt-4 h-[80px]">
-              <div className="text-center w-[100px]">
+            {/* Stats - Arranged horizontally on mobile like in the reference image */}
+            <div className="flex justify-center items-center gap-4 sm:gap-8 pt-4">
+              <div className="text-center">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">140+</div>
-                <div className="text-sm text-muted-foreground">Countries</div>
+                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider">Countries</div>
               </div>
-              <div className="text-center w-[160px]">
+              <div className="text-center">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">500+</div>
-                <div className="text-sm text-muted-foreground">Payment methods</div>
+                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider">Payment methods</div>
               </div>
-              <div className="text-center w-[100px]">
+              <div className="text-center">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">14M+</div>
-                <div className="text-sm text-muted-foreground">Users</div>
+                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider">Users</div>
               </div>
             </div>
           </div>
