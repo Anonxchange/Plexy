@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Smartphone } from "lucide-react";
 import { SiApple, SiGoogleplay } from "react-icons/si";
-import mobileAppImage from "@assets/IMG_1541.png";
+import mobileAppImage from "@assets/svg-image-1-3.svg";
 
 export function CTASection() {
   return (
