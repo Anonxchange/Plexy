@@ -44,7 +44,6 @@ import AdminPage from "@/pages/admin";
 import AdminVerificationsPage from "@/pages/admin-verifications";
 import AdminBlog from "@/pages/admin-blog";
 import AdminGiftCards from "@/pages/admin-gift-cards";
-import { Fees } from "@/pages/fees";
 import Affiliate from "@/pages/affiliate";
 import RewardsPage from "@/pages/rewards";
 import ReferralPage from "@/pages/referral";
@@ -91,6 +90,7 @@ import AddressDetail from "@/pages/address-detail";
 import TransactionDetail from "@/pages/transaction-detail";
 import BlockDetail from "@/pages/block-detail";
 import ExplorerAsset from "@/pages/explorer-asset";
+import MedalsPage from "@/pages/medals";
 
 function Router() {
   return (
@@ -155,7 +155,6 @@ function Router() {
       <Route path="/trade/:tradeId" component={ActiveTrade} />
       <Route path="/offers/:offerId" component={OfferDetail} />
       <Route path="/medals" component={MedalsPage} />
-      <Route path="/fees" component={Fees} />
       <Route path="/affiliate" component={Affiliate} />
       <Route path="/rewards" component={RewardsPage} />
       <Route path="/referral" component={ReferralPage} />
