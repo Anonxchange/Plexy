@@ -1,13 +1,8 @@
 import securityLock from "@/assets/IMG_3490.webp";
-import cloudBackup from "@/assets/IMG_3373.jpeg";
-import privacyShield from "@/assets/IMG_3374.jpeg";
-import alertHorn from "@/assets/IMG_3375.jpeg";
+import cloudBackup from "@/assets/IMG_3373.webp";
+import privacyShield from "@/assets/IMG_3374.webp";
+import alertHorn from "@/assets/IMG_3375.webp";
 import trueOwnership from "@/assets/IMG_3490.webp";
-import avatar1 from "@/assets/IMG_3383.jpeg";
-import avatar2 from "@/assets/IMG_3384.jpeg";
-import avatar3 from "@/assets/IMG_3382.jpeg";
-import avatar4 from "@/assets/IMG_3385.png";
-import awardLogo from "@/assets/IMG_3385.png";
 import { Star } from "lucide-react";
 
 export const TrustStats = () => {
