@@ -20,8 +20,7 @@ export const TrustStats = () => {
             Zero personal tracking
           </h2>
           <p className="text-primary-foreground/90 text-xl md:text-2xl max-w-3xl mx-auto">
-            We secure your wallet, but don't control or have access to your private keys or secret phrase — only you do.
-          </p>
+            Pexly lets you trade directly with other users while keeping full control of your funds we never hold your money. Trades happen wallet-to-wallet, so your assets stay private.    </p>
         </div>
 
         {/* HERO CARD */}
@@ -46,7 +45,7 @@ export const TrustStats = () => {
 
               {/* Text */}
               <p className="text-black/70 text-lg md:text-xl mb-8 max-w-xl mx-auto lg:mx-0 order-3">
-                We secure your wallet, but don't control or have access to your private keys or secret phrase — only you do.
+                We secure your wallet, but don't control or have access to your private keys or secret phrase only you do.
               </p>
 
               {/* Button */}
