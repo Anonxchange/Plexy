@@ -224,8 +224,32 @@ export function Swap() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-1">
+      <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
+        {/* Background Decorative Shapes */}
+        <div className="absolute inset-0 pointer-events-none opacity-10">
+          <div className="absolute top-[10%] left-[5%] rotate-12">
+            <div className="h-24 w-24 rounded-full border-4 border-primary/20" />
+          </div>
+          <div className="absolute top-[20%] right-[10%] -rotate-12">
+            <div className="h-32 w-32 border-2 border-primary/30 rotate-45" />
+          </div>
+          <div className="absolute bottom-[30%] left-[15%] rotate-45">
+            <div className="h-16 w-16 bg-primary/10 rounded-lg" />
+          </div>
+          <div className="absolute bottom-[10%] right-[20%] -rotate-6">
+            <div className="h-40 w-40 rounded-full border border-primary/20 flex items-center justify-center">
+              <div className="h-20 w-20 rounded-full border border-primary/10" />
+            </div>
+          </div>
+          <div className="absolute top-[50%] left-[2%] -rotate-12">
+            <div className="h-12 w-48 bg-primary/5 rounded-full rotate-45" />
+          </div>
+          <div className="absolute top-[40%] right-[5%] rotate-12">
+            <div className="h-20 w-20 border-t-4 border-l-4 border-primary/20 rounded-tl-3xl" />
+          </div>
+        </div>
+
+        <div className="flex-1 relative z-10">
           {/* Hero Section */}
           <section className="relative py-20 px-4 overflow-hidden">
             <div className="max-w-4xl mx-auto text-center relative z-10">
