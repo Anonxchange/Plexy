@@ -493,7 +493,7 @@ export function SignIn() {
         {/* Left Column: Image (Desktop only) */}
         <div className="hidden lg:flex lg:items-center lg:justify-center lg:p-12 bg-gradient-to-br from-primary/10 to-primary/5">
           <img 
-            src="@/assets/63b772f751c786e9fabe60f6_mockup-sign-up-finantech-webflow-template.png"
+            src="https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/63b772f751c786e9fabe60f6_mockup-sign-up-finantech-webflow-template.png"
             alt="Secure Crypto Trading"
             className="max-w-full max-h-[80vh] object-contain rounded-2xl"
           />
