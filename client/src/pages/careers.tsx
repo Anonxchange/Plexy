@@ -140,13 +140,13 @@ const Careers = () => {
           </div>
 
           {/* SVG Illustration */}
-          <div className="relative md:absolute md:right-[-140px] md:top-1/2 md:-translate-y-[30%] md:w-[600px] mt-16 md:mt-0">
-            <img
-              src={heroIllustration}
-              alt="Hero illustration"
-              className="w-full h-auto pointer-events-none select-none"
-            />
-          </div>
+          <div className="relative md:absolute md:right-[-140px] md:top-1/2 md:-translate-y-[30%] md:w-[600px] mt-6 md:mt-0 w-full max-w-[300px] md:max-w-[600px] mx-auto">
+     <img
+    src={heroIllustration}
+    alt="Hero illustration"
+    className="w-full h-auto pointer-events-none select-none"
+  />
+</div>
 
         </div>
       </section>
