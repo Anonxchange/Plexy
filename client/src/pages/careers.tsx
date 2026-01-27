@@ -140,7 +140,7 @@ const Careers = () => {
           </div>
 
           {/* SVG Illustration */}
-          <div className="relative md:absolute md:right-[-140px] md:top-1/2 md:-translate-y-[30%] md:w-[720px] mt-16 md:mt-0">
+          <div className="relative md:absolute md:right-[-140px] md:top-1/2 md:-translate-y-[30%] md:w-[520px] mt-16 md:mt-0">
             <img
               src={heroIllustration}
               alt="Hero illustration"
