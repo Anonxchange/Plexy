@@ -79,21 +79,41 @@ const testimonials = [
 ];
 
 const positions = [
-  { title: "Junior Frontend Developer", location: "San Francisco, CA", type: "Part time" },
-  { title: "UI/UX and Product Designer", location: "London, UK", type: "Full time" },
-  { title: "Head of Branding", location: "Remote", type: "Full time" },
-  { title: "Senior Backend Developer", location: "San Francisco, CA", type: "Full time" },
-  { title: "Customer Support Agent", location: "Remote", type: "Part time" },
+  {
+    title: "Junior Frontend Developer",
+    location: "San Francisco, CA",
+    type: "Part time",
+  },
+  {
+    title: "UI/UX and Product Designer",
+    location: "London, UK",
+    type: "Full time",
+  },
+  {
+    title: "Head of Branding",
+    location: "Remote",
+    type: "Full time",
+  },
+  {
+    title: "Senior Backend Developer",
+    location: "San Francisco, CA",
+    type: "Full time",
+  },
+  {
+    title: "Customer Support Agent",
+    location: "Remote",
+    type: "Part time",
+  },
 ];
 
 const Careers = () => {
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
-      
+
       {/* Hero Section */}
       <section className="relative overflow-hidden px-6 md:px-20 pt-32 pb-20 max-w-7xl mx-auto">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between">
-          
+
           {/* Text */}
           <div className="md:w-1/2 text-left">
             <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">
@@ -120,13 +140,14 @@ const Careers = () => {
           </div>
 
           {/* SVG Illustration */}
-          <div className="relative md:absolute md:right-[-120px] md:top-1/2 md:-translate-y-1/2 md:w-[700px] mt-16 md:mt-0">
+          <div className="relative md:absolute md:right-[-140px] md:top-1/2 md:-translate-y-1/2 md:w-[720px] mt-16 md:mt-0">
             <img
               src={heroIllustration}
               alt="Hero illustration"
               className="w-full h-auto pointer-events-none select-none"
             />
           </div>
+
         </div>
       </section>
 
@@ -170,9 +191,90 @@ const Careers = () => {
         </div>
       </section>
 
-      {/* Testimonials + Positions sections unchanged */}
-      {/* (Left exactly as you had them) */}
-      
+      {/* Testimonials Section */}
+      <section className="px-6 md:px-20 py-24 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row gap-20">
+          <div className="md:w-1/3">
+            <h2 className="text-5xl md:text-6xl font-bold mb-8 leading-tight">
+              What <span className="text-primary">our team</span> says about us.
+            </h2>
+            <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
+              Don't just take our word for it. Here's what our team members have
+              to say about the culture and opportunities at Pexly.
+            </p>
+            <Button className="rounded-full px-10 py-6 text-lg font-semibold">
+              Join our team
+            </Button>
+          </div>
+
+          <div className="md:w-2/3 grid md:grid-cols-2 gap-6">
+            {testimonials.map((t, i) => (
+              <div
+                key={i}
+                className="bg-card border border-border rounded-[32px] p-8 hover:border-primary/50 transition-colors"
+              >
+                <p className="text-card-foreground/80 text-lg mb-8 leading-relaxed italic">
+                  "{t.quote}"
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-primary font-bold">
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-lg">{t.name}</h4>
+                    <p className="text-primary text-sm font-medium">{t.handle}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Open Positions Section */}
+      <section className="px-6 md:px-20 py-24 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row gap-20">
+          <div className="md:w-1/3">
+            <h2 className="text-5xl md:text-6xl font-bold mb-8 leading-tight">
+              Open <span className="text-primary">positions.</span>
+            </h2>
+            <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
+              Ready to make an impact? Explore our current openings and find your
+              next challenge in the world of crypto and fintech.
+            </p>
+            <Button className="rounded-full px-10 py-6 text-lg font-semibold">
+              Contact us
+            </Button>
+          </div>
+
+          <div className="md:w-2/3">
+            <div className="bg-card border border-border rounded-[40px] overflow-hidden">
+              <div className="divide-y divide-border">
+                {positions.map((position, index) => (
+                  <a
+                    key={index}
+                    href="#"
+                    className="flex items-center justify-between p-10 group hover:bg-muted/50 transition-all"
+                  >
+                    <div>
+                      <h4 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">
+                        {position.title}
+                      </h4>
+                      <p className="text-muted-foreground text-lg flex items-center gap-3">
+                        {position.location}
+                        <span className="w-10 h-[1px] bg-border"></span>
+                        <span className="text-primary">{position.type}</span>
+                      </p>
+                    </div>
+                    <ArrowRight className="w-8 h-8 text-muted-foreground group-hover:text-primary group-hover:translate-x-2 transition-all" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
   );
 };
