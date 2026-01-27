@@ -1,6 +1,6 @@
 import securityLock from "@/assets/svg-image-1 2.svg";
 import cloudBackup from "@/assets/svg-image-1 20.svg";
-import privacyShield from "@/assets/IMG_3374.webp";
+import privacyShield from "@/assets/safety (1).svg";
 import alertHorn from "@/assets/svg-image-1 4.svg";
 import trueOwnership from "@/assets/svg-image-1 2.svg";
 import { Star } from "lucide-react";
