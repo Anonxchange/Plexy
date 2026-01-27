@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
-import heroIllustration from "@/assets/svg-image-1 13.svg";
-import perksIllustration from "@/assets/svg-image-1 14.svg";
-import iconRemote from "@/assets/svg-image-1 15.svg";
-import iconFlexible from "@/assets/svg-image-1 16.svg";
-import iconPto from "@/assets/svg-image-1 17.svg";
-import iconInsurance from "@/assets/svg-image-1 18.svg";
-import iconGrowth from "@/assets/svg-image-1 19.svg";
+import heroIllustration from "@/assets/svg-image-1 19.svg";
+import perksIllustration from "@/assets/svg-image-1 13.svg";
+import iconRemote from "@/assets/svg-image-1 14.svg";
+import iconFlexible from "@/assets/svg-image-1 15.svg";
+import iconPto from "@/assets/svg-image-1 16.svg";
+import iconInsurance from "@/assets/svg-image-1 17.svg";
+import iconGrowth from "@/assets/svg-image-1 18.svg";
 import { ArrowRight } from "lucide-react";
 
 const perks = [
