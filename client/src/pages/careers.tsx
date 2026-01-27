@@ -1,321 +1,257 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { 
-  Search, 
-  MapPin, 
-  Clock, 
-  Users, 
-  TrendingUp, 
-  Heart, 
-  Globe, 
-  Zap,
-  ArrowRight,
-  Briefcase,
-  Code,
-  DollarSign,
-  Target
-} from "lucide-react";
-import { Link } from "wouter";
-import { PexlyFooter } from "@/components/pexly-footer";
+import heroIllustration from "@/assets/svg-image-1 4.svg";
+import perksIllustration from "@/assets/svg-image-1 8.svg";
+import iconRemote from "@/assets/svg-image-1 16.svg";
+import iconFlexible from "@/assets/svg-image-1 5.svg";
+import iconPto from "@/assets/svg-image-1 2.svg";
+import iconInsurance from "@/assets/svg-image-1 6.svg";
+import iconGrowth from "@/assets/svg-image-1 4.svg";
+import { ArrowRight } from "lucide-react";
 
-const jobCategories = ["All Positions", "Engineering", "Product", "Design", "Marketing", "Operations", "Customer Support"];
-
-const jobs = [
+const perks = [
   {
-    id: 1,
-    title: "Senior Frontend Engineer",
-    department: "Engineering",
-    location: "Remote / San Francisco",
-    type: "Full-time",
-    description: "Build beautiful, performant user interfaces for our cryptocurrency platform using React and TypeScript.",
-    requirements: ["5+ years React experience", "TypeScript expertise", "Web3 knowledge preferred"]
+    title: "100% remote work",
+    description: "Work from anywhere in the world. We believe great talent isn't limited by geography.",
+    icon: iconRemote,
   },
   {
-    id: 2,
-    title: "Product Manager - P2P Trading",
-    department: "Product",
-    location: "Remote / New York",
-    type: "Full-time",
-    description: "Lead the strategy and execution for our peer-to-peer trading platform, working with cross-functional teams.",
-    requirements: ["3+ years PM experience", "Fintech background", "Data-driven mindset"]
+    title: "Flexible hours",
+    description: "Design your own schedule. We focus on results, not when you clock in or out.",
+    icon: iconFlexible,
   },
   {
-    id: 3,
-    title: "Senior Product Designer",
-    department: "Design",
-    location: "Remote",
-    type: "Full-time",
-    description: "Design intuitive and delightful experiences for our global cryptocurrency marketplace.",
-    requirements: ["4+ years product design", "Figma mastery", "Financial products experience"]
+    title: "Unlimited PTO",
+    description: "Take the time you need to recharge. Your well-being matters as much as your work.",
+    icon: iconPto,
   },
   {
-    id: 4,
-    title: "Marketing Lead",
-    department: "Marketing",
-    location: "Remote / London",
-    type: "Full-time",
-    description: "Drive growth and brand awareness for Pexly across global markets.",
-    requirements: ["5+ years marketing", "Crypto industry experience", "Growth hacking skills"]
+    title: "Medical insurance",
+    description: "Comprehensive health coverage for you and your family, because health comes first.",
+    icon: iconInsurance,
   },
   {
-    id: 5,
-    title: "Blockchain Engineer",
-    department: "Engineering",
-    location: "Remote",
-    type: "Full-time",
-    description: "Develop and maintain our blockchain infrastructure and smart contracts.",
-    requirements: ["Solidity expertise", "DeFi experience", "Security-first mindset"]
+    title: "Career growth",
+    description: "Clear paths for advancement with mentorship, learning budgets, and growth opportunities.",
+    icon: iconGrowth,
   },
   {
-    id: 6,
-    title: "Customer Success Manager",
-    department: "Customer Support",
-    location: "Remote",
-    type: "Full-time",
-    description: "Ensure our users have exceptional experiences and resolve complex issues.",
-    requirements: ["3+ years customer support", "Crypto knowledge", "Multilingual preferred"]
-  }
+    title: "Great culture",
+    description: "Join a diverse, inclusive team that celebrates wins together and supports each other.",
+    icon: iconFlexible,
+  },
 ];
 
-const benefits = [
-  { icon: DollarSign, title: "Competitive Salary", description: "Top-tier compensation packages with equity" },
-  { icon: Globe, title: "Remote First", description: "Work from anywhere in the world" },
-  { icon: Heart, title: "Health & Wellness", description: "Comprehensive health, dental, and vision coverage" },
-  { icon: TrendingUp, title: "Growth & Learning", description: "$2,000 annual learning budget" },
-  { icon: Users, title: "Amazing Team", description: "Work with talented people from 40+ countries" },
-  { icon: Zap, title: "Crypto Benefits", description: "Crypto bonuses and early access to features" }
+const testimonials = [
+  {
+    name: "Sarah Chen",
+    role: "Senior Developer",
+    quote: "Joining Pexly.app was the best career decision I've made. The remote-first culture and supportive team have helped me grow both professionally and personally.",
+  },
+  {
+    name: "Marcus Johnson",
+    role: "Product Designer",
+    quote: "The creative freedom here is unmatched. I'm able to explore new ideas and see them come to life in products that impact millions of users.",
+  },
+  {
+    name: "Elena Rodriguez",
+    role: "Engineering Manager",
+    quote: "What sets Pexly.app apart is the genuine care for employee well-being. The flexible hours let me be present for my family while doing meaningful work.",
+  },
 ];
 
-const values = [
-  { icon: Target, title: "Mission Driven", description: "We're building the future of finance" },
-  { icon: Users, title: "Customer First", description: "Every decision starts with our users" },
-  { icon: Code, title: "Innovation", description: "We embrace new ideas and technologies" },
-  { icon: Globe, title: "Global Impact", description: "Financial freedom for everyone, everywhere" }
+const positions = [
+  {
+    title: "Frontend Developer",
+    location: "San Francisco, CA",
+    type: "Part time",
+  },
+  {
+    title: "UI/UX and Product Designer",
+    location: "London, UK",
+    type: "Full time",
+  },
+  {
+    title: "Head of Branding",
+    location: "Remote",
+    type: "Full time",
+  },
+  {
+    title: "Senior Backend Developer",
+    location: "San Francisco, CA",
+    type: "Full time",
+  },
+  {
+    title: "Marketing Manager",
+    location: "Remote",
+    type: "Part time",
+  },
 ];
 
-export default function Careers() {
-  const [selectedCategory, setSelectedCategory] = useState("All Positions");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredJobs = jobs.filter(job => {
-    const matchesCategory = selectedCategory === "All Positions" || job.department === selectedCategory;
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         job.department.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
+const Careers = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary/10 via-background to-background border-b">
-        <div className="container mx-auto px-4 lg:px-8 py-16 lg:py-24 max-w-6xl">
-          <div className="text-center space-y-6">
-            <Badge className="mb-4" variant="secondary">
-              <Briefcase className="h-3 w-3 mr-1" />
-              We're Hiring
-            </Badge>
-            <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-              Join the Future of <span className="text-primary">Crypto Trading</span>
-            </h1>
-            <p className="text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Help us build the world's most trusted peer-to-peer cryptocurrency marketplace. 
-              Work with a talented team making financial freedom accessible to everyone.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" className="text-base" asChild>
-                <a href="#positions">
-                  View Open Positions
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" className="text-base" asChild>
-                <Link to="/about">Learn About Us</Link>
-              </Button>
-            </div>
-          </div>
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 py-20 text-center">
+        <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6 max-w-4xl">
+          Come and join our{" "}
+          <span className="text-primary">fast growing team.</span>
+        </h1>
+
+        <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
+          At Pexly.app, we're building the future of digital experiences. Join a passionate team of innovators, creators, and problem-solvers who are redefining what's possible in tech.
+        </p>
+
+        <div className="flex flex-col w-full max-w-md gap-4">
+          <Button size="lg" className="w-full">
+            Browse positions
+          </Button>
+          <Button variant="outline" size="lg" className="w-full">
+            Our company story
+          </Button>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-12 lg:py-16 border-b">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-bold text-primary">150+</div>
-              <div className="text-sm lg:text-base text-muted-foreground mt-2">Team Members</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-bold text-primary">40+</div>
-              <div className="text-sm lg:text-base text-muted-foreground mt-2">Countries</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-bold text-primary">$2B+</div>
-              <div className="text-sm lg:text-base text-muted-foreground mt-2">Volume Traded</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-bold text-primary">5M+</div>
-              <div className="text-sm lg:text-base text-muted-foreground mt-2">Users Worldwide</div>
-            </div>
+      {/* Perks Section */}
+      <section className="px-6 py-20">
+        <div className="flex flex-col items-center text-center mb-16">
+          <div className="w-72 md:w-96 -mt-16 mb-4">
+            <img 
+              src={perksIllustration} 
+              alt="Company perks" 
+              className="w-full h-auto"
+            />
           </div>
+
+          <h2 className="text-3xl md:text-5xl font-bold mb-6">
+            Company <span className="text-primary">perks.</span>
+          </h2>
+
+          <p className="text-muted-foreground text-lg max-w-xl mb-10">
+            We invest in our people. At Pexly.app, you'll find benefits designed to support your life, not just your work.
+          </p>
+
+          <div className="flex flex-col w-full max-w-md gap-4">
+            <Button size="lg" className="w-full">
+              Join our team
+            </Button>
+            <Button variant="outline" size="lg" className="w-full">
+              More about us
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+          {perks.map((perk, index) => (
+            <div
+              key={index}
+              className="bg-card border border-border rounded-2xl p-8 flex flex-col items-center text-center"
+            >
+              <div className="w-24 h-24 mb-6">
+                <img 
+                  src={perk.icon} 
+                  alt={perk.title} 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <h3 className="text-xl font-bold mb-3">{perk.title}</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                {perk.description}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Values Section */}
-      <section className="py-12 lg:py-20 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Our Values</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              The principles that guide everything we do
+      {/* Testimonials Section */}
+      <section className="px-6 py-20 bg-muted/50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              What our team <span className="text-primary">says.</span>
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              Don't just take our word for it. Here's what our team members have to say about working at Pexly.app.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((value, index) => (
-              <Card key={index} className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <value.icon className="h-6 w-6 text-primary" />
+
+          <div className="grid gap-6">
+            {testimonials.map((testimonial, index) => (
+              <div
+                key={index}
+                className="bg-card border border-border rounded-2xl p-8"
+              >
+                <p className="text-lg mb-6 leading-relaxed italic">
+                  "{testimonial.quote}"
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
+                    <span className="text-primary font-bold">
+                      {testimonial.name.charAt(0)}
+                    </span>
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">{value.title}</h3>
-                  <p className="text-sm text-muted-foreground">{value.description}</p>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="font-bold">{testimonial.name}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {testimonial.role}
+                    </p>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-12 lg:py-20">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Why Join Pexly?</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              We take care of our team so they can do their best work
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {benefits.map((benefit, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <benefit.icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg mb-2">{benefit.title}</h3>
-                      <p className="text-sm text-muted-foreground">{benefit.description}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Culture Section */}
+      <section className="px-6 py-20">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6">Our culture.</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+            At Pexly.app, we believe in transparency, creativity, and continuous learning. We're not just building products—we're building a community where everyone can thrive and do their best work.
+          </p>
+          
+          <Button size="lg" className="mb-16">
+            Join our team
+          </Button>
 
-      {/* Open Positions Section */}
-      <section id="positions" className="py-12 lg:py-20 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Open Positions</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Find your perfect role and join our mission
-            </p>
+          <div className="w-full mb-16">
+            <img 
+              src={heroIllustration}
+              alt="Our culture at Pexly" 
+              className="w-full h-auto rounded-2xl"
+            />
           </div>
 
-          {/* Search and Filter */}
-          <div className="mb-8 space-y-4">
-            <div className="relative max-w-xl mx-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search positions..."
-                className="pl-10 h-12"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {jobCategories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                  className="rounded-full"
+          {/* Open Positions */}
+          <div className="text-left">
+            <h3 className="text-2xl md:text-3xl font-bold mb-8 text-center">
+              Open <span className="text-primary">positions.</span>
+            </h3>
+            <div className="divide-y divide-border border-t border-b border-border">
+              {positions.map((position, index) => (
+                <a
+                  key={index}
+                  href="#"
+                  className="flex items-center justify-between py-8 group hover:bg-muted/30 transition-colors px-4 -mx-4"
                 >
-                  {category}
-                </Button>
+                  <div>
+                    <h4 className="text-xl md:text-2xl font-bold mb-2 group-hover:text-primary transition-colors">
+                      {position.title}
+                    </h4>
+                    <p className="text-muted-foreground">
+                      {position.location} <span className="mx-2">——</span>{" "}
+                      <span className="text-primary">{position.type}</span>
+                    </p>
+                  </div>
+                  <ArrowRight className="w-6 h-6 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                </a>
               ))}
             </div>
           </div>
-
-          {/* Job Listings */}
-          <div className="space-y-4">
-            {filteredJobs.length === 0 ? (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <p className="text-muted-foreground">No positions found. Try adjusting your search.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredJobs.map((job) => (
-                <Card key={job.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          <h3 className="text-xl font-semibold">{job.title}</h3>
-                          <Badge variant="secondary">{job.department}</Badge>
-                        </div>
-                        <p className="text-muted-foreground mb-4">{job.description}</p>
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            <span>{job.location}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{job.type}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button className="lg:w-auto w-full">
-                        Apply Now
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
         </div>
       </section>
-
-      {/* CTA Section */}
-      <section className="py-12 lg:py-20">
-        <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="p-8 lg:p-12 text-center">
-              <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-                Don't see the right role?
-              </h2>
-              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                We're always looking for talented people. Send us your resume and tell us how you'd like to contribute.
-              </p>
-              <Button size="lg" variant="outline">
-                Send General Application
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      <PexlyFooter />
-    </div>
+    </main>
   );
-}
+};
+
+export default Careers;
