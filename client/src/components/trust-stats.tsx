@@ -81,14 +81,8 @@ export const TrustStats = () => {
             <h3 className="text-2xl font-bold text-black mb-6">
               Zero personal tracking
             </h3>
-        <div className="w-40 h-40 mx-auto flex items-center justify-center">
-  <img
-    src={privacyShield}
-    className="h-36 object-contain scale-125"
-  />
-</div>
-
-            <p className="text-black/70 text-lg">
+     <img src={privacyShield} className="w-52 h-52 mx-auto mb-2 object-contain scale-110" />
+          <p className="text-black/70 text-lg">
               We don't track any personal information, including IP or balances.
             </p>
           </div>
