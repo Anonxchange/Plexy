@@ -91,7 +91,7 @@ const Careers = () => {
   return (
     <main className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 py-20 text-center">
+      <section className="relative flex flex-col items-center justify-start px-6 pt-32 pb-20 text-center">
         <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6 max-w-4xl">
           Come and join our{" "}
           <span className="text-primary">fast growing team.</span>
@@ -247,6 +247,26 @@ const Careers = () => {
                 </a>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="px-6 py-20 bg-primary/5">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6">
+            Ready to build the <span className="text-primary">future?</span>
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+            If you're passionate about technology and want to make a real impact, we want to hear from you. Join us on our mission to redefine digital experiences.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Button size="lg">
+              View all openings
+            </Button>
+            <Button variant="outline" size="lg">
+              Contact recruiting
+            </Button>
           </div>
         </div>
       </section>
