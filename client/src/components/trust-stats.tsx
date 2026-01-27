@@ -1,6 +1,6 @@
 import securityLock from "@/assets/svg-image-1 2.svg";
 import cloudBackup from "@/assets/svg-image-1 20.svg";
-import privacyShield from "@/assets/IMG_3374.webp";
+import privacyShield from "@/assets/safety (1).svg";
 import alertHorn from "@/assets/svg-image-1 4.svg";
 import trueOwnership from "@/assets/svg-image-1 2.svg";
 import { Star } from "lucide-react";
@@ -81,7 +81,7 @@ export const TrustStats = () => {
             <h3 className="text-2xl font-bold text-black mb-6">
               Zero personal tracking
             </h3>
-            <img src={privacyShield} className="w-40 h-40 mx-auto mb-6 object-contain" />
+            <img src={privacyShield} className="w-48 h-48 mx-auto mb-2 object-contain scale-110" />
             <p className="text-black/70 text-lg">
               We don't track any personal information, including IP or balances.
             </p>
