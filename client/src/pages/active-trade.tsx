@@ -240,8 +240,10 @@ export default function ActiveTrade() {
           const updatedTrade = payload.new as Partial<Trade>;
           const oldTrade = payload.old as Partial<Trade>;
 
+          console.log('Trade update received:', updatedTrade);
+
           setTrade((prev) => prev ? { ...prev, ...updatedTrade } : null);
-          setIsPaid(!!updatedTrade.buyer_paid_at);
+          setIsPaid(!!updatedTrade.buyer_paid_at || updatedTrade.status?.toUpperCase() === 'PAYMENT_MARKED' || updatedTrade.status?.toLowerCase() === 'payment_sent');
 
           if (updatedTrade.status === 'completed' || updatedTrade.status === 'released') {
             notificationSounds.play('trade_completed');
