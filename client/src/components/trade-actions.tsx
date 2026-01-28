@@ -58,6 +58,44 @@ export function TradeActions({
   const supabase = createClient();
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const handleApproveTrade = async () => {
+    if (!trade.id || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from("p2p_trades")
+        .update({ status: "APPROVED_AWAITING_PAYMENT" })
+        .eq("id", trade.id);
+      if (error) throw error;
+      toast({ title: "Success", description: "Trade approved. Waiting for buyer payment." });
+      onTradeUpdate?.();
+    } catch (error) {
+      console.error("Error approving trade:", error);
+      toast({ title: "Error", description: "Failed to approve trade", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRejectTrade = async () => {
+    if (!trade.id || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from("p2p_trades")
+        .update({ status: "REJECTED" })
+        .eq("id", trade.id);
+      if (error) throw error;
+      toast({ title: "Trade Rejected", description: "You have rejected this trade." });
+      onTradeUpdate?.();
+    } catch (error) {
+      console.error("Error rejecting trade:", error);
+      toast({ title: "Error", description: "Failed to reject trade", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleMarkAsPaid = async () => {
     if (!trade.id || isProcessing) return;
 
@@ -67,7 +105,7 @@ export function TradeActions({
         .from("p2p_trades")
         .update({
           buyer_paid_at: new Date().toISOString(),
-          status: "payment_sent",
+          status: "PAYMENT_MARKED",
         })
         .eq("id", trade.id);
 
@@ -198,30 +236,19 @@ export function TradeActions({
     );
   }
 
-  if (trade.status === "cancelled") {
+  if (trade.status === "cancelled" || trade.status === "REJECTED") {
     return (
       <div className="space-y-4">
         <div className="bg-destructive/10 border border-destructive/20 p-4 sm:p-5 rounded-lg text-center">
           <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-destructive mx-auto mb-3" />
-          <div className="text-destructive font-bold text-lg sm:text-xl mb-2">Trade Cancelled</div>
+          <div className="text-destructive font-bold text-lg sm:text-xl mb-2">
+            {trade.status === "REJECTED" ? "Trade Rejected" : "Trade Cancelled"}
+          </div>
           <div className="text-sm text-muted-foreground mb-2">
-            {getCancelReasonText(trade.cancel_reason)}
+            {trade.status === "REJECTED" ? "The seller has rejected this trade." : getCancelReasonText(trade.cancel_reason)}
           </div>
           <div className="text-xs text-muted-foreground">
             {trade.crypto_symbol} funds have been released back to the seller's wallet.
-          </div>
-          {trade.cancelled_at && (
-            <div className="text-xs text-muted-foreground mt-2">
-              Cancelled on {new Date(trade.cancelled_at).toLocaleString()}
-            </div>
-          )}
-        </div>
-        <div className="bg-muted/50 p-3 rounded-lg border">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-            <div className="text-xs text-muted-foreground">
-              If you believe this cancellation was made in error or need assistance, please contact support.
-            </div>
           </div>
         </div>
         <Button 
@@ -237,82 +264,94 @@ export function TradeActions({
   }
 
   return (
-    <>
+    <div className="space-y-4">
       {isUserBuyer ? (
         <>
-          <div className="bg-muted p-3 sm:p-4 rounded-lg border">
-            <div className="mb-3 sm:mb-4 text-xs sm:text-sm">
-              <span className="font-semibold">Once you have made the payment</span>, click "Mark as Paid" below. This will notify the seller that you've completed the payment.
-            </div>
-
-            <Button 
-              className="w-full p-3 sm:p-4 h-auto bg-primary hover:bg-primary/90"
-              onClick={handleMarkAsPaid}
-              disabled={isPaid || isProcessing}
-            >
-              <div className="text-left w-full">
-                <div className="font-bold text-base sm:text-lg">
-                  {isProcessing ? "Processing..." : "Mark as Paid"}
+          {/* BUYER VIEW */}
+          <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
+            {(trade.status === "PENDING_SELLER_APPROVAL" || trade.status === "pending") ? (
+              <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
+                ⏳ Waiting for Seller Approval
+              </Button>
+            ) : trade.status === "APPROVED_AWAITING_PAYMENT" ? (
+              <>
+                <div className="text-xs sm:text-sm text-muted-foreground italic mb-2">
+                  Make payment only after seller approval.
                 </div>
-                <div className="text-xs sm:text-sm">
-                  {isPaid ? 'Already marked as paid' : 'Click after sending payment'}
-                </div>
-              </div>
-            </Button>
+                <Button 
+                  className="w-full h-12 bg-primary hover:bg-primary/90"
+                  onClick={handleMarkAsPaid}
+                  disabled={isProcessing}
+                >
+                  💰 Mark as Paid
+                </Button>
+              </>
+            ) : (trade.status === "PAYMENT_MARKED" || trade.status === "payment_sent") ? (
+              <Button disabled className="w-full bg-blue-500/50 cursor-not-allowed h-12">
+                ⏳ Waiting for Seller to Confirm
+              </Button>
+            ) : null}
           </div>
 
           <Button 
             variant="outline" 
             className="w-full text-xs sm:text-sm h-9 sm:h-10"
             onClick={onShowCancelModal}
-            disabled={isPaid || isProcessing}
+            disabled={trade.status === "PAYMENT_MARKED" || trade.status === "payment_sent" || isProcessing}
           >
             Cancel Trade
           </Button>
-
-          <div className="border-2 border-primary rounded-lg p-3 sm:p-4 text-xs sm:text-sm bg-primary/5">
-            Keep trades within {import.meta.env.VITE_APP_NAME || "Pexly"}. Some users may ask you to trade outside the platform. This is against our Terms of Service and likely a scam attempt.
-          </div>
         </>
       ) : (
         <>
-          <div className="bg-muted p-3 sm:p-4 rounded-lg border">
-            <div className="mb-3 sm:mb-4 text-xs sm:text-sm">
-              <span className="font-semibold">Wait for the buyer to mark the payment as sent.</span> Once they do, verify that you have received the payment before releasing the crypto.
-            </div>
-
-            <Button 
-              className="w-full p-3 sm:p-4 h-auto bg-green-500 hover:bg-green-600"
-              onClick={handleReleaseCrypto}
-              disabled={!isPaid || isProcessing}
-            >
-              <div className="text-left w-full">
-                <div className="font-bold text-base sm:text-lg">
-                  {isProcessing ? "Processing..." : "Release Crypto"}
-                </div>
-                <div className="text-xs sm:text-sm">
-                  {isPaid ? 'Buyer has marked as paid' : 'Waiting for buyer payment'}
-                </div>
+          {/* SELLER VIEW */}
+          <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
+            {(trade.status === "PENDING_SELLER_APPROVAL" || trade.status === "pending") ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  className="bg-green-500 hover:bg-green-600"
+                  onClick={handleApproveTrade}
+                  disabled={isProcessing}
+                >
+                  ✅ Approve Trade
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={handleRejectTrade}
+                  disabled={isProcessing}
+                >
+                  ❌ Reject Trade
+                </Button>
               </div>
-            </Button>
+            ) : trade.status === "APPROVED_AWAITING_PAYMENT" ? (
+              <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
+                ⏳ Waiting for Buyer Payment
+              </Button>
+            ) : (trade.status === "PAYMENT_MARKED" || trade.status === "payment_sent") ? (
+              <>
+                <div className="text-xs sm:text-sm text-muted-foreground italic mb-2">
+                  Release funds only after confirming payment.
+                </div>
+                <Button 
+                  className="w-full h-12 bg-green-500 hover:bg-green-600"
+                  onClick={handleReleaseCrypto}
+                  disabled={isProcessing}
+                >
+                  🔓 Release Funds
+                </Button>
+              </>
+            ) : null}
           </div>
 
           <Button variant="outline" className="w-full text-xs sm:text-sm h-9 sm:h-10">
             Raise Dispute
           </Button>
-
-          <div className="border-2 border-primary rounded-lg p-3 sm:p-4 text-xs sm:text-sm bg-primary/5">
-            Keep trades within {import.meta.env.VITE_APP_NAME || "Pexly"}. Some users may ask you to trade outside the platform. This is against our Terms of Service and likely a scam attempt.
-          </div>
         </>
       )}
 
-      {!isPaid && (
-        <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-muted-foreground">
-          <Info className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span>Payment not yet marked</span>
-        </div>
-      )}
-    </>
+      <div className="border-2 border-primary rounded-lg p-3 sm:p-4 text-xs sm:text-sm bg-primary/5">
+        Keep trades within {import.meta.env.VITE_APP_NAME || "Pexly"}. Some users may ask you to trade outside the platform. This is against our Terms of Service and likely a scam attempt.
+      </div>
+    </div>
   );
 }
