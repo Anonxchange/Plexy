@@ -33,7 +33,7 @@ interface Trade {
   fiat_amount: number;
   price: number;
   payment_method: string;
-  status: "pending" | "payment_sent" | "completed" | "released" | "disputed" | "cancelled" | "expired";
+  status: "pending" | "PENDING_SELLER_APPROVAL" | "APPROVED_AWAITING_PAYMENT" | "PAYMENT_MARKED" | "REJECTED" | "payment_sent" | "completed" | "released" | "disputed" | "cancelled" | "expired";
   escrow_id: string | null;
   payment_deadline: string | null;
   buyer_paid_at: string | null;
