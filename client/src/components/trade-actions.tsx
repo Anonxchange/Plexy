@@ -58,6 +58,15 @@ export function TradeActions({
   const supabase = createClient();
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Status mapping for legacy support and new flow
+  // Use case-insensitive matching for robustness
+  const status = trade.status?.toUpperCase() || "";
+  const isPending = status === "PENDING" || status === "PENDING_SELLER_APPROVAL";
+  const isApproved = status === "APPROVED_AWAITING_PAYMENT";
+  const isPaymentMarked = status === "PAYMENT_MARKED" || status === "PAYMENT_SENT";
+  const isCompleted = status === "COMPLETED" || status === "RELEASED";
+  const isCancelled = status === "CANCELLED" || status === "REJECTED";
+
   const handleApproveTrade = async () => {
     if (!trade.id || isProcessing) return;
     setIsProcessing(true);
@@ -144,6 +153,7 @@ export function TradeActions({
       if (fetchError) throw fetchError;
 
       if (tradeData?.escrow_id) {
+        // Simple wallet update logic
         const { data: wallet } = await supabase
           .from("wallets")
           .select("balance")
@@ -214,7 +224,7 @@ export function TradeActions({
     }
   };
 
-  if (trade.status === "completed") {
+  if (isCompleted) {
     return (
       <div className="space-y-4">
         <div className="bg-green-500/10 border border-green-500/20 p-4 sm:p-5 rounded-lg text-center">
@@ -236,16 +246,16 @@ export function TradeActions({
     );
   }
 
-  if (trade.status === "cancelled" || trade.status === "REJECTED") {
+  if (isCancelled) {
     return (
       <div className="space-y-4">
         <div className="bg-destructive/10 border border-destructive/20 p-4 sm:p-5 rounded-lg text-center">
           <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-destructive mx-auto mb-3" />
           <div className="text-destructive font-bold text-lg sm:text-xl mb-2">
-            {trade.status === "REJECTED" ? "Trade Rejected" : "Trade Cancelled"}
+            {status === "rejected" ? "Trade Rejected" : "Trade Cancelled"}
           </div>
           <div className="text-sm text-muted-foreground mb-2">
-            {trade.status === "REJECTED" ? "The seller has rejected this trade." : getCancelReasonText(trade.cancel_reason)}
+            {status === "rejected" ? "The seller has rejected this trade." : getCancelReasonText(trade.cancel_reason)}
           </div>
           <div className="text-xs text-muted-foreground">
             {trade.crypto_symbol} funds have been released back to the seller's wallet.
@@ -269,11 +279,11 @@ export function TradeActions({
         <>
           {/* BUYER VIEW */}
           <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
-            {(trade.status === "PENDING_SELLER_APPROVAL" || trade.status === "pending") ? (
+            {isPending ? (
               <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
                 ⏳ Waiting for Seller Approval
               </Button>
-            ) : trade.status === "APPROVED_AWAITING_PAYMENT" ? (
+            ) : isApproved ? (
               <>
                 <div className="text-xs sm:text-sm text-muted-foreground italic mb-2">
                   Make payment only after seller approval.
@@ -286,7 +296,7 @@ export function TradeActions({
                   💰 Mark as Paid
                 </Button>
               </>
-            ) : (trade.status === "PAYMENT_MARKED" || trade.status === "payment_sent") ? (
+            ) : isPaymentMarked ? (
               <Button disabled className="w-full bg-blue-500/50 cursor-not-allowed h-12">
                 ⏳ Waiting for Seller to Confirm
               </Button>
@@ -297,7 +307,7 @@ export function TradeActions({
             variant="outline" 
             className="w-full text-xs sm:text-sm h-9 sm:h-10"
             onClick={onShowCancelModal}
-            disabled={trade.status === "PAYMENT_MARKED" || trade.status === "payment_sent" || isProcessing}
+            disabled={isPaymentMarked || isProcessing}
           >
             Cancel Trade
           </Button>
@@ -306,7 +316,7 @@ export function TradeActions({
         <>
           {/* SELLER VIEW */}
           <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
-            {(trade.status === "PENDING_SELLER_APPROVAL" || trade.status === "pending") ? (
+            {isPending ? (
               <div className="grid grid-cols-2 gap-2">
                 <Button 
                   className="bg-green-500 hover:bg-green-600"
@@ -323,11 +333,11 @@ export function TradeActions({
                   ❌ Reject Trade
                 </Button>
               </div>
-            ) : trade.status === "APPROVED_AWAITING_PAYMENT" ? (
+            ) : isApproved ? (
               <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
                 ⏳ Waiting for Buyer Payment
               </Button>
-            ) : (trade.status === "PAYMENT_MARKED" || trade.status === "payment_sent") ? (
+            ) : isPaymentMarked ? (
               <>
                 <div className="text-xs sm:text-sm text-muted-foreground italic mb-2">
                   Release funds only after confirming payment.
