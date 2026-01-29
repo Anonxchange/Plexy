@@ -16,29 +16,21 @@ export async function uploadToR2(
     console.log(`[R2] Starting upload via Edge Function - File: ${file.name}, Size: ${file.size} bytes, Type: ${file.type}`);
     
     const fileExtension = file.name.split('.').pop() || 'jpg';
-    
-    const arrayBuffer = await file.arrayBuffer();
-    const base64Data = btoa(
-      new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-    );
+    const timestamp = Date.now();
+    const key = `${folder}/${userId}/${timestamp}.${fileExtension}`;
 
-    console.log(`[R2] Sending to Edge Function...`);
+    console.log(`[R2] Sending to Edge Function with direct-upload...`);
     const startTime = Date.now();
     
-    const response = await fetch(EDGE_FUNCTION_URL, {
-      method: 'POST',
+    const uploadUrl = `${EDGE_FUNCTION_URL}?action=direct-upload&key=${encodeURIComponent(key)}`;
+    
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': file.type,
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({
-        action: 'upload',
-        folder,
-        userId,
-        fileExtension,
-        contentType: file.type,
-        base64Data,
-      }),
+      body: file,
     });
 
     const result = await response.json();
@@ -92,23 +84,24 @@ export async function uploadBase64ToR2(
       ? 'image/png' 
       : 'application/octet-stream';
 
-    console.log(`[R2] Starting base64 upload via Edge Function...`);
+    const timestamp = Date.now();
+    const key = `${folder}/${userId}/${timestamp}.${fileExtension}`;
+
+    console.log(`[R2] Starting base64 upload via Edge Function with direct-upload...`);
     const startTime = Date.now();
     
-    const response = await fetch(EDGE_FUNCTION_URL, {
-      method: 'POST',
+    const binaryData = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
+    const blob = new Blob([binaryData], { type: contentType });
+    
+    const uploadUrl = `${EDGE_FUNCTION_URL}?action=direct-upload&key=${encodeURIComponent(key)}`;
+    
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': contentType,
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({
-        action: 'upload',
-        folder,
-        userId,
-        fileExtension,
-        contentType,
-        base64Data: base64Content,
-      }),
+      body: blob,
     });
 
     const result = await response.json();
