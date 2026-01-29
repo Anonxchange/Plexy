@@ -1,5 +1,5 @@
 import { HeroSection } from "@/components/hero-section";
-import { CryptoTicker } from "@/components/crypto-ticker";
+import { PartnerCarousel } from "@/components/partner-carousel";
 import { FeatureCarousel } from "@/components/feature-carousel";
 import { HowItWorks } from "@/components/how-it-works";
 import { PaymentMethods } from "@/components/payment-methods";
@@ -14,7 +14,7 @@ export default function Home() {
   return (
     <div className="min-h-screen relative">
       <HeroSection />
-      <CryptoTicker />
+      <PartnerCarousel />
       <HowItWorks />
       <FeatureCarousel />
       <PaymentMethods />
