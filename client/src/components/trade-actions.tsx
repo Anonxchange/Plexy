@@ -375,26 +375,26 @@ export function TradeActions({
               </div>
             </div>
 
-            {isPending ? (
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
-                  onClick={handleApproveTrade}
-                  disabled={isProcessing}
-                  data-approve-trade
-                >
-                  ✅ Approve Contract
-                </Button>
-                <Button 
-                  variant="destructive"
-                  className="h-12 font-bold"
-                  onClick={onShowCancelModal}
-                  disabled={isProcessing}
-                >
-                  ❌ Cancel Contract
-                </Button>
-              </div>
-            ) : (
+          {isPending ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
+                onClick={handleApproveTrade}
+                disabled={isProcessing}
+                data-approve-trade
+              >
+                ✅ Approve Contract
+              </Button>
+              <Button 
+                variant="destructive"
+                className="h-12 font-bold"
+                onClick={onShowCancelModal}
+                disabled={isProcessing}
+              >
+                ❌ Cancel Contract
+              </Button>
+            </div>
+          ) : (
               <div className="space-y-3">
                 <Button 
                   disabled={!isPaymentMarked || isProcessing}
