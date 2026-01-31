@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Info, XCircle, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/";
 import { useToast } from "@/hooks/use-toast";
 import { notificationSounds } from "@/lib/notification-sounds";
 
@@ -59,8 +59,8 @@ export function TradeActions({
   // Status mapping for legacy support and new flow
   // Use case-insensitive matching for robustness
   const status = trade.status?.toLowerCase() || "";
-  const isPending = status === "pending" || status === "pending_seller_approval";
-  const isApproved = status === "approved" || status === "approved_awaiting_payment";
+  const isPending = status === "pending" || status === "pending_seller_approval" || status === "pending_approval";
+  const isApproved = status === "approved" || status === "approved_awaiting_payment" || status === "awaiting_payment";
   const isPaymentMarked = status === "payment_marked" || status === "payment_sent";
   const isCompleted = status === "completed" || status === "released";
   const isCancelled = status === "cancelled" || status === "rejected";
@@ -350,7 +350,7 @@ export function TradeActions({
             {isPending ? (
               <div className="grid grid-cols-2 gap-2">
                 <Button 
-                  className="bg-green-500 hover:bg-green-600"
+                  className="bg-green-500 hover:bg-green-600 h-12"
                   onClick={handleApproveTrade}
                   disabled={isProcessing}
                 >
@@ -358,16 +358,25 @@ export function TradeActions({
                 </Button>
                 <Button 
                   variant="destructive"
-                  onClick={handleRejectTrade}
+                  className="h-12"
+                  onClick={onShowCancelModal}
                   disabled={isProcessing}
                 >
                   ❌ Cancel Contract
                 </Button>
               </div>
             ) : isApproved ? (
-              <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
-                ⏳ Waiting for Buyer Payment
-              </Button>
+              <div className="space-y-3">
+                <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
+                  ⏳ Waiting for Buyer Payment
+                </Button>
+                <Button 
+                  disabled 
+                  className="w-full h-12 bg-green-500/30 cursor-not-allowed border border-green-500/20"
+                >
+                  🔓 Release BTC (Locked)
+                </Button>
+              </div>
             ) : isPaymentMarked ? (
               <>
                 <div className="text-xs sm:text-sm text-muted-foreground italic mb-2">
