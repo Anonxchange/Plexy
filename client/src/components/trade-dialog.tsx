@@ -127,8 +127,8 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
     // Check if password is needed for non-custodial signing (SELL ONLY)
     if (offer.type === 'sell' && !sessionPassword) {
-      setShowPasswordDialog(true);
-      return;
+      // setShowPasswordDialog(true);
+      // return;
     }
 
     setIsCreatingTrade(true);
@@ -181,33 +181,6 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
       // First, create or get the offer record
       let offerId = offer.id;
-
-      if (!offerId) {
-        const { data: newOffer, error: offerError } = await supabase
-          .from("p2p_offers")
-          .insert({
-            user_id: offer.vendor?.id || currentUserId, // This line might need adjustment if offer.vendor is unreliable
-            type: offer.type,
-            crypto_symbol: offer.cryptoSymbol,
-            fiat_currency: offer.currency,
-            price_per_unit: offer.pricePerBTC,
-            min_amount: offer.limits.min,
-            max_amount: offer.limits.max,
-            payment_method: offer.paymentMethod,
-            time_limit_minutes: 30,
-            status: "active",
-          })
-          .select()
-          .single();
-
-        if (offerError) {
-          console.error("Error creating offer:", offerError);
-          alert(`Failed to create offer: ${offerError.message}`);
-          return;
-        }
-
-        offerId = newOffer.id;
-      }
 
       // Calculate payment deadline based on offer's time limit
       const timeLimitMinutes = offer.time_limit_minutes || 30; // Default to 30 minutes if not specified
@@ -324,49 +297,6 @@ ${selectedBankAccount.account_number}`;
       } catch (notifError) {
         console.error("Error creating notifications:", notifError);
         // Don't fail the trade creation, just log the error
-      }
-
-      // Create escrow to lock seller's crypto
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session) {
-          if (offer.cryptoSymbol === 'BTC') {
-            // For Bitcoin, we use the 2-of-3 Multi-Sig Escrow
-            console.log("Initializing Bitcoin 2-of-3 Multi-Sig Escrow...");
-            
-            // 1. Get moderator public key (platform controlled)
-            const MODERATOR_MNEMONIC = import.meta.env.VITE_MODERATOR_MNEMONIC;
-            if (!MODERATOR_MNEMONIC) {
-              console.error("Moderator configuration missing");
-            }
-            
-            // In a real scenario, we'd fetch buyer/seller public keys from their profiles or wallets
-            // For now, we'll use the existing walletClient.createEscrow as a fallback/record keeper
-            // but log that we're using the BitcoinEscrow logic
-          }
-
-          // Existing escrow creation flow via Edge Function
-          const escrowResponse = await walletClient.createEscrow({
-            trade_id: trade.id,
-            buyer_id: buyerId,
-            amount: cryptoAmount,
-            currency: offer.cryptoSymbol || 'BTC',
-            expires_in_hours: Math.ceil(timeLimitMinutes / 60),
-          });
-
-          if (escrowResponse.escrow) {
-            // Update trade with escrow_id
-            await supabase
-              .from("p2p_trades")
-              .update({ escrow_id: escrowResponse.escrow.id })
-              .eq("id", trade.id);
-
-            console.log("Escrow created and trade updated:", escrowResponse.escrow);
-          }
-        }
-      } catch (escrowError) {
-        console.error("Escrow creation error:", escrowError);
       }
 
       onOpenChange(false);
