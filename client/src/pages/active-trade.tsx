@@ -577,14 +577,14 @@ export default function ActiveTrade() {
     }
 
     // Updated cancellation logic:
-    // 1. If buyer, they can ONLY cancel in 'pending' state.
-    // 2. If seller, they can cancel in 'pending' or 'approved' (before payment).
+    // 1. If seller, they can ONLY cancel in 'pending' state.
+    // 2. If buyer, they can cancel in 'pending' or 'approved' (before payment).
     
-    if (isUserBuyer) {
+    if (!isUserBuyer) {
       if (tradeData.status !== 'pending' && tradeData.status?.toLowerCase() !== 'pending_seller_approval') {
         toast({
           title: "Cannot Cancel",
-          description: "Buyers cannot cancel the trade once the contract is approved.",
+          description: "Sellers cannot cancel the trade once the contract is approved.",
           variant: "destructive",
         });
         setShowCancelWarning(false);
@@ -593,11 +593,11 @@ export default function ActiveTrade() {
         return;
       }
     } else {
-      // Seller logic
+      // Buyer logic
       if (tradeData.buyer_paid_at) {
         toast({
           title: "Cannot Cancel",
-          description: "You cannot cancel after buyer marks payment as sent.",
+          description: "You cannot cancel after marking payment as sent.",
           variant: "destructive",
         });
         setShowCancelWarning(false);
