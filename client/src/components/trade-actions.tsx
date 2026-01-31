@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Info, XCircle, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { notificationSounds } from "@/lib/notification-sounds";
@@ -52,7 +52,9 @@ export function TradeActions({
   onTradeUpdate,
   onShowCancelModal,
 }: TradeActionsProps) {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
+  const supabase = createClient();
+  const navigate = (path: string) => setLocation(path);
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
 
