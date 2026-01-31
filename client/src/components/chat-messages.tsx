@@ -1,4 +1,4 @@
-import { File, Download } from "lucide-react";
+import { File, Download, XCircle } from "lucide-react";
 
 interface TradeMessage {
   id: string;
@@ -15,9 +15,10 @@ interface TradeMessage {
 interface ChatMessagesProps {
   messages: TradeMessage[];
   currentUserProfileId: string | null;
+  trade?: any;
 }
 
-export function ChatMessages({ messages, currentUserProfileId }: ChatMessagesProps) {
+export function ChatMessages({ messages, currentUserProfileId, trade }: ChatMessagesProps) {
   return (
     <div className="space-y-3 mb-4">
       {messages.map((message) => {
@@ -97,6 +98,31 @@ export function ChatMessages({ messages, currentUserProfileId }: ChatMessagesPro
           </div>
         );
       })}
+
+      {trade && trade.status === "cancelled" && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3 mt-4">
+          <div className="flex items-center justify-center mb-2">
+            <XCircle className="w-8 h-8 text-destructive" />
+          </div>
+          <div className="text-sm text-muted-foreground text-center font-semibold">
+            TRADE CANCELLED
+          </div>
+          <p className="text-sm text-destructive leading-relaxed text-center">
+            This trade was cancelled and {trade.crypto_symbol} funds have been released back to the seller's wallet.
+          </p>
+        </div>
+      )}
+
+      {trade && (trade.status === "completed" || trade.status === "released") && (
+        <div className="bg-black/80 border border-green-500 rounded-lg p-4 space-y-3 mt-4">
+          <div className="text-sm text-muted-foreground text-center">
+            TRADE COMPLETED - {new Date(trade.completed_at || trade.created_at).toLocaleString().toUpperCase()}
+          </div>
+          <p className="text-sm text-green-500 leading-relaxed text-center">
+            This trade has been successfully completed. The {trade.crypto_symbol} has been transferred to the buyer.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
