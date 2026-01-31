@@ -564,25 +564,15 @@ export default function ActiveTrade() {
       return;
     }
 
-    // Seller cannot cancel after buyer has marked payment as sent
-    if (tradeData.buyer_paid_at) {
-      toast({
-        title: "Cannot Cancel",
-        description: "You cannot cancel after buyer has marked payment as sent.",
-        variant: "destructive",
-      });
-      setShowCancelWarning(false);
-      setCancelReason("");
-      setConfirmNotPaid(false);
-      return;
-    }
-
-    try {
-      // If trade status is not pending, cannot cancel
-      if (tradeData.status !== 'pending') {
+    // Updated cancellation logic:
+    // 1. If seller, they can ONLY cancel in 'pending' state.
+    // 2. If buyer, they can cancel in 'pending' or 'approved' (before payment).
+    
+    if (!isUserBuyer) {
+      if (tradeData.status !== 'pending' && tradeData.status?.toLowerCase() !== 'pending_seller_approval') {
         toast({
           title: "Cannot Cancel",
-          description: "This trade cannot be cancelled because it's no longer pending.",
+          description: "Sellers cannot cancel the trade once the contract is approved.",
           variant: "destructive",
         });
         setShowCancelWarning(false);
@@ -590,8 +580,8 @@ export default function ActiveTrade() {
         setConfirmNotPaid(false);
         return;
       }
-
-      // If buyer already marked payment as sent, cannot cancel
+    } else {
+      // Buyer logic
       if (tradeData.buyer_paid_at) {
         toast({
           title: "Cannot Cancel",
@@ -603,6 +593,24 @@ export default function ActiveTrade() {
         setConfirmNotPaid(false);
         return;
       }
+    }
+
+    const isCancellable = tradeData.status === 'pending' || tradeData.status === 'approved' || 
+                         tradeData.status === 'APPROVED_AWAITING_PAYMENT' || tradeData.status?.toLowerCase() === 'pending_seller_approval';
+    
+    if (!isCancellable) {
+      toast({
+        title: "Cannot Cancel",
+        description: "This trade cannot be cancelled in its current state.",
+        variant: "destructive",
+      });
+      setShowCancelWarning(false);
+      setCancelReason("");
+      setConfirmNotPaid(false);
+      return;
+    }
+
+    try {
 
       // Get trade details again for escrow and wallet operations
       const { data: fullTradeDetails, error: fetchDetailsError } = await supabase
