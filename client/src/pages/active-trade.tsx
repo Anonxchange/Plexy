@@ -34,7 +34,7 @@ interface Trade {
   fiat_amount: number;
   price: number;
   payment_method: string;
-  status: "pending" | "PENDING_SELLER_APPROVAL" | "APPROVED_AWAITING_PAYMENT" | "PAYMENT_MARKED" | "REJECTED" | "payment_sent" | "completed" | "released" | "disputed" | "cancelled" | "expired";
+  status: "pending" | "approved" | "completed" | "cancelled" | "expired" | "released" | "disputed" | "payment_sent" | "PAYMENT_MARKED" | "APPROVED_AWAITING_PAYMENT" | "PENDING_SELLER_APPROVAL";
   escrow_id: string | null;
   payment_deadline: string | null;
   buyer_paid_at: string | null;
@@ -376,11 +376,11 @@ export default function ActiveTrade() {
 
       setTimer(remainingSeconds);
 
-      if (remainingSeconds === 0 && trade.status === "pending" && !isPaid) {
+      if (remainingSeconds === 0 && (trade.status === "pending" || trade.status === "approved") && !isPaid) {
         handleAutoCancelTrade();
       }
 
-      if (remainingSeconds === 120 && trade.status === "pending" && !isPaid) {
+      if (remainingSeconds === 120 && (trade.status === "pending" || trade.status === "approved") && !isPaid) {
         notificationSounds.play('time_warning');
       }
     };
@@ -447,6 +447,24 @@ export default function ActiveTrade() {
         .select("time_limit_minutes, offer_terms, counterparty_requirements")
         .eq("id", tradeData.offer_id)
         .single();
+
+      // Check escrow status if it exists
+      if (tradeData.escrow_id) {
+        try {
+          const escrowResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-status`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({ tradeId: tradeId })
+          });
+          const escrowStatus = await escrowResponse.json();
+          console.log("Escrow status:", escrowStatus);
+        } catch (e) {
+          console.error("Failed to fetch escrow status", e);
+        }
+      }
 
       const { data: buyerProfile } = await supabase
         .from("user_profiles")
