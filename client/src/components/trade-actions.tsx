@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Info, XCircle, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase/";
+import { useNavigate } from "wouter";
+import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { notificationSounds } from "@/lib/notification-sounds";
 
@@ -59,7 +59,7 @@ export function TradeActions({
   // Status mapping for legacy support and new flow
   // Use case-insensitive matching for robustness
   const status = trade.status?.toLowerCase() || "";
-  const isPending = status === "pending" || status === "pending_seller_approval" || status === "pending_approval";
+  const isPending = status === "pending" || status === "pending_seller_approval" || status === "pending_approval" || status === "pending_escrow";
   const isApproved = status === "approved" || status === "approved_awaiting_payment" || status === "awaiting_payment";
   const isPaymentMarked = status === "payment_marked" || status === "payment_sent" || status === "paid";
   const isCompleted = status === "completed" || status === "released" || status === "done";
@@ -366,6 +366,7 @@ export function TradeActions({
                   className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
                   onClick={handleApproveTrade}
                   disabled={isProcessing}
+                  data-approve-trade
                 >
                   ✅ Approve Contract
                 </Button>
