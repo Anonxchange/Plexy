@@ -113,7 +113,19 @@ export default function ActiveTrade() {
   const supabase = createClient();
 
   const effectiveUserId = currentUserProfileId || user?.id;
-  const isUserBuyer = !!(effectiveUserId && trade?.buyer_id === effectiveUserId);
+  
+  // The logic was reversed. 
+  // In a P2P trade:
+  // - If I created a BUY offer, I am the Buyer.
+  // - If I created a SELL offer, I am the Seller.
+  // - If someone ELSE created a BUY offer and I am trading with them, I am the Seller.
+  // - If someone ELSE created a SELL offer and I am trading with them, I am the Buyer.
+  //
+  // However, the database 'p2p_trades' table already has 'buyer_id' and 'seller_id' 
+  // assigned correctly during trade creation in TradeDialog.
+  // So we just need to check if the current user is the one assigned as 'buyer_id'.
+  const isUserBuyer = !!(effectiveUserId && trade && trade.buyer_id === effectiveUserId);
+  
   const counterparty = isUserBuyer ? trade?.seller_profile : trade?.buyer_profile;
   const counterpartyId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
 
