@@ -64,6 +64,16 @@ export function SellerReleaseActions({
   const handleReleaseCrypto = async () => {
     if (!trade.id || isProcessing) return;
 
+    // Additional safeguard: only allow release if payment is marked
+    if (trade.status?.toLowerCase() !== "payment_marked" && trade.status?.toLowerCase() !== "paid") {
+      toast({
+        title: "Wait for payment",
+        description: "Please wait for the buyer to mark the trade as paid before releasing crypto.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       // Simulate a small delay
@@ -117,7 +127,7 @@ export function SellerReleaseActions({
     <div className="space-y-4">
       <Button
         onClick={handleReleaseCrypto}
-        disabled={isProcessing || trade.status !== 'payment_marked' && trade.status !== 'PAYMENT_MARKED'}
+        disabled={isProcessing || (trade.status?.toLowerCase() !== 'payment_marked' && trade.status?.toLowerCase() !== 'paid')}
         className="w-full bg-green-600 hover:bg-green-700 text-white p-4 h-auto rounded-lg shadow-md"
       >
         <div className="flex items-center justify-between w-full">
