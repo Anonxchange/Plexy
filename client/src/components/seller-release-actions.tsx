@@ -117,7 +117,7 @@ export function SellerReleaseActions({
     <div className="space-y-4">
       <Button
         onClick={handleReleaseCrypto}
-        disabled={isProcessing || trade.status === 'completed' || trade.status === 'cancelled'}
+        disabled={isProcessing || trade.status !== 'payment_marked' && trade.status !== 'PAYMENT_MARKED'}
         className="w-full bg-green-600 hover:bg-green-700 text-white p-4 h-auto rounded-lg shadow-md"
       >
         <div className="flex items-center justify-between w-full">
