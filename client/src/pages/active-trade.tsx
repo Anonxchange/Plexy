@@ -576,35 +576,38 @@ export default function ActiveTrade() {
       return;
     }
 
-    // Updated cancellation logic:
-    // 1. If seller, they can ONLY cancel in 'pending' state.
-    // 2. If buyer, they can cancel in 'pending' or 'approved' (before payment).
+    // Corrected cancellation logic:
+    // Both parties can cancel if the trade is not yet approved.
+    // If approved: 
+    // - Seller can no longer cancel.
+    // - Buyer can cancel as long as they haven't marked as paid.
     
-    if (!isUserBuyer) {
-      if (tradeData.status !== 'pending' && tradeData.status?.toLowerCase() !== 'pending_seller_approval') {
-        toast({
-          title: "Cannot Cancel",
-          description: "Sellers cannot cancel the trade once the contract is approved.",
-          variant: "destructive",
-        });
-        setShowCancelWarning(false);
-        setCancelReason("");
-        setConfirmNotPaid(false);
-        return;
-      }
+    const isApproved = tradeData.status?.toLowerCase() === 'approved' || 
+                      tradeData.status?.toUpperCase() === 'APPROVED_AWAITING_PAYMENT';
+    
+    let canCancel = false;
+    if (!isApproved) {
+      // Not approved yet - both can cancel
+      canCancel = true;
     } else {
-      // Buyer logic
-      if (tradeData.buyer_paid_at) {
-        toast({
-          title: "Cannot Cancel",
-          description: "You cannot cancel after marking payment as sent.",
-          variant: "destructive",
-        });
-        setShowCancelWarning(false);
-        setCancelReason("");
-        setConfirmNotPaid(false);
-        return;
+      // Approved - check roles
+      if (isUserBuyer) {
+        // Buyer can cancel if not paid
+        canCancel = !tradeData.buyer_paid_at;
+      } else {
+        // Seller cannot cancel after approval
+        canCancel = false;
       }
+    }
+
+    if (!canCancel) {
+      toast({
+        title: "Cannot Cancel",
+        description: isUserBuyer ? "You cannot cancel after marking payment as sent." : "Sellers cannot cancel after approving the contract.",
+        variant: "destructive",
+      });
+      setShowCancelWarning(false);
+      return;
     }
 
     const isCancellable = tradeData.status === 'pending' || tradeData.status === 'approved' || 
