@@ -35,6 +35,15 @@ export function BuyerPaymentActions({
   const handleMarkAsPaid = async () => {
     if (!trade.id || isProcessing) return;
 
+    if (trade.status !== 'approved' && trade.status !== 'APPROVED_AWAITING_PAYMENT') {
+      toast({
+        title: "Waiting for approval",
+        description: "You can only mark as paid after the seller approves the contract.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const { error } = await supabase
@@ -105,7 +114,7 @@ export function BuyerPaymentActions({
       {!isPaid && (
         <Button
           onClick={handleMarkAsPaid}
-          disabled={isProcessing || trade.status !== 'pending'}
+          disabled={isProcessing || (trade.status !== 'approved' && trade.status !== 'APPROVED_AWAITING_PAYMENT')}
           className="w-full bg-green-600 hover:bg-green-700 text-white p-4 h-auto rounded-lg shadow-md"
         >
           <div className="flex items-center justify-between w-full">
