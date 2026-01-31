@@ -71,6 +71,8 @@ export function TradeActions({
     if (!trade.id || isProcessing) return;
     setIsProcessing(true);
     try {
+      // 1. Verify caller is seller and trade.status is pending (Backend handles this, but we call the function)
+      // 2. Call btc-escrow-create
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-create`, {
         method: 'POST',
         headers: {
@@ -116,6 +118,7 @@ export function TradeActions({
 
     setIsProcessing(true);
     try {
+      // Database-first validation
       const { data: freshTrade, error: fetchError } = await supabase
         .from("p2p_trades")
         .select("id, status")
@@ -125,7 +128,7 @@ export function TradeActions({
       if (fetchError) throw fetchError;
 
       const freshStatus = freshTrade.status?.toUpperCase() || "";
-      if (freshStatus !== "APPROVED_AWAITING_PAYMENT" && freshStatus !== "APPROVED") {
+      if (freshStatus !== "APPROVED_AWAITING_PAYMENT") {
         toast({ title: "Error", description: "Trade is no longer awaiting payment.", variant: "destructive" });
         onTradeUpdate?.();
         return;
@@ -165,6 +168,7 @@ export function TradeActions({
 
     setIsProcessing(true);
     try {
+      // Database-first validation
       const { data: freshTrade, error: fetchError } = await supabase
         .from("p2p_trades")
         .select("id, status, escrow_id, buyer_id, crypto_amount, crypto_symbol, seller_id")
@@ -174,13 +178,6 @@ export function TradeActions({
       if (fetchError) throw fetchError;
 
       const freshStatus = freshTrade.status?.toUpperCase() || "";
-      
-      // If pending, approve first
-      if (isPending) {
-        await handleApproveTrade();
-        return;
-      }
-
       if (freshStatus !== "PAYMENT_MARKED" && freshStatus !== "PAYMENT_SENT") {
         toast({ title: "Error", description: "Trade is not ready for release.", variant: "destructive" });
         onTradeUpdate?.();
@@ -188,6 +185,7 @@ export function TradeActions({
       }
 
       if (freshTrade?.escrow_id) {
+        // Simple wallet update logic
         const { data: wallet } = await supabase
           .from("wallets")
           .select("balance")
@@ -222,6 +220,7 @@ export function TradeActions({
           .eq("user_id", freshTrade.seller_id)
           .eq("crypto_symbol", freshTrade.crypto_symbol);
 
+        // Fixed: table name is 'escrow' not 'escrows'
         await supabase
           .from("escrow")
           .update({ status: "released" })
@@ -307,18 +306,18 @@ export function TradeActions({
 
   return (
     <div className="space-y-4">
-      {!isUserBuyer ? (
+      {isUserBuyer ? (
         <>
-          {/* SELLER VIEW (NOW HAS PAID/CANCEL) */}
+          {/* BUYER VIEW */}
           <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
             {isPending ? (
               <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12 text-white">
-                ⏳ Waiting for buyer to approve contract
+                ⏳ Waiting for seller to approve contract
               </Button>
             ) : isApproved ? (
               <>
                 <div className="text-xs sm:text-sm text-muted-foreground italic mb-2">
-                  Mark as paid once you have sent the funds.
+                  Make payment only after seller approval.
                 </div>
                 <Button 
                   className="w-full h-12 bg-primary hover:bg-primary/90"
@@ -330,7 +329,7 @@ export function TradeActions({
               </>
             ) : isPaymentMarked ? (
               <Button disabled className="w-full bg-blue-500/50 cursor-not-allowed h-12 text-white">
-                ⏳ Waiting for Buyer to Release
+                ⏳ Waiting for Seller to Confirm
               </Button>
             ) : null}
           </div>
@@ -339,68 +338,78 @@ export function TradeActions({
             variant="outline" 
             className="w-full text-xs sm:text-sm h-12"
             onClick={onShowCancelModal}
-            disabled={isPaymentMarked || isProcessing}
+            disabled={!isApproved || isProcessing}
           >
             Cancel Trade
           </Button>
         </>
       ) : (
         <>
-          {/* BUYER VIEW (NOW HAS APPROVE/RELEASE) */}
+          {/* SELLER VIEW */}
           <div className="space-y-4">
             <div className="bg-[#1A1C1E] p-4 rounded-lg border border-white/5 space-y-1">
               <div className="text-lg font-medium text-white">
-                Waiting for {counterpartyUsername || "seller"} to send payment
+                Waiting for {counterpartyUsername || "buyer"} to send {trade.fiat_amount?.toLocaleString()} {trade.fiat_currency}
               </div>
               <div className="text-sm text-muted-foreground">
-                You are buying {trade.crypto_amount?.toFixed(8)} {trade.crypto_symbol}
+                You are selling {trade.crypto_amount?.toFixed(8)} {trade.crypto_symbol}
               </div>
             </div>
 
             <div className="bg-[#1A1C1E] p-4 rounded-lg border border-white/5">
               <div className="text-sm text-white leading-relaxed">
-                <strong>Wait for the seller to mark payment as sent.</strong> Once they confirm, verify receipt before releasing the {trade.crypto_symbol}.
+                <strong>Wait for the buyer to mark payment as sent.</strong> Once they confirm payment, verify you have received the {trade.fiat_currency} before releasing the {trade.crypto_symbol}.
               </div>
             </div>
 
-            <div className="space-y-3">
-              <Button 
-                disabled={(isApproved && !isPaymentMarked) || isProcessing}
-                className={`w-full h-14 flex items-center justify-center gap-2 text-lg font-bold transition-all ${
-                  isPending || isPaymentMarked
-                    ? "bg-[#1E5F36] hover:bg-[#257242] text-white" 
-                    : "bg-[#1E5F36]/50 text-white/40 cursor-not-allowed"
-                }`}
-                onClick={handleReleaseCrypto}
-              >
-                {isPending ? "Approve Contract" : "Release Crypto"}
-                <CheckCircle className={`w-5 h-5 ${isPending || isPaymentMarked ? "text-white" : "text-white/40"}`} />
-                {isApproved && !isPaymentMarked && <span className="text-xs font-normal ml-2 text-white/30">Waiting for seller payment</span>}
-              </Button>
-              
-              <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                <Info className="w-4 h-4" />
-                <span className="text-sm">
-                  {isPending ? "Contract needs approval" : isPaymentMarked ? "Payment marked as sent" : "Payment not yet marked"}
-                </span>
+            {isPending ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
+                  onClick={handleApproveTrade}
+                  disabled={isProcessing}
+                  data-approve-trade
+                >
+                  ✅ Approve Contract
+                </Button>
+                <Button 
+                  variant="destructive"
+                  className="h-12 font-bold"
+                  onClick={onShowCancelModal}
+                  disabled={isProcessing}
+                >
+                  ❌ Cancel Contract
+                </Button>
               </div>
+            ) : (
+              <div className="space-y-3">
+                <Button 
+                  disabled={!isPaymentMarked || isProcessing}
+                  className={`w-full h-14 flex items-center justify-center gap-2 text-lg font-bold transition-all ${
+                    isPaymentMarked 
+                      ? "bg-[#1E5F36] hover:bg-[#257242] text-white" 
+                      : "bg-[#1E5F36]/50 text-white/40 cursor-not-allowed"
+                  }`}
+                  onClick={handleReleaseCrypto}
+                >
+                  Release Crypto
+                  <CheckCircle className={`w-5 h-5 ${isPaymentMarked ? "text-white" : "text-white/40"}`} />
+                  {!isPaymentMarked && <span className="text-xs font-normal ml-2 text-white/30">Waiting for buyer payment</span>}
+                </Button>
+                
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Info className="w-4 h-4" />
+                  <span className="text-sm">Payment not yet marked</span>
+                </div>
 
-              <Button 
-                variant="destructive"
-                className="w-full h-12 font-bold"
-                onClick={onShowCancelModal}
-                disabled={isPaymentMarked || isProcessing}
-              >
-                ❌ Cancel Trade
-              </Button>
-
-              <Button 
-                variant="ghost" 
-                className="w-full text-white hover:bg-white/5 border border-white/10 h-12"
-              >
-                Report Bad Behaviour
-              </Button>
-            </div>
+                <Button 
+                  variant="ghost" 
+                  className="w-full text-white hover:bg-white/5 border border-white/10 h-12"
+                >
+                  Report Bad Behaviour
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}
