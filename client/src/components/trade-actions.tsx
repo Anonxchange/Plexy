@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Info, XCircle, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
-import { createClient } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { notificationSounds } from "@/lib/notification-sounds";
 
@@ -53,9 +52,8 @@ export function TradeActions({
   onTradeUpdate,
   onShowCancelModal,
 }: TradeActionsProps) {
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const supabase = createClient();
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Status mapping for legacy support and new flow
@@ -71,6 +69,22 @@ export function TradeActions({
     if (!trade.id || isProcessing) return;
     setIsProcessing(true);
     try {
+      // Database-first validation
+      const { data: freshTrade, error: fetchError } = await supabase
+        .from("p2p_trades")
+        .select("id, status")
+        .eq("id", trade.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const freshStatus = freshTrade.status?.toUpperCase() || "";
+      if (freshStatus !== "PENDING" && freshStatus !== "PENDING_SELLER_APPROVAL") {
+        toast({ title: "Error", description: "Trade is no longer pending approval.", variant: "destructive" });
+        onTradeUpdate?.();
+        return;
+      }
+
       const { error } = await supabase
         .from("p2p_trades")
         .update({ status: "APPROVED_AWAITING_PAYMENT" })
@@ -90,6 +104,22 @@ export function TradeActions({
     if (!trade.id || isProcessing) return;
     setIsProcessing(true);
     try {
+      // Database-first validation
+      const { data: freshTrade, error: fetchError } = await supabase
+        .from("p2p_trades")
+        .select("id, status")
+        .eq("id", trade.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const freshStatus = freshTrade.status?.toUpperCase() || "";
+      if (freshStatus !== "PENDING" && freshStatus !== "PENDING_SELLER_APPROVAL") {
+        toast({ title: "Error", description: "Trade is no longer pending.", variant: "destructive" });
+        onTradeUpdate?.();
+        return;
+      }
+
       const { error } = await supabase
         .from("p2p_trades")
         .update({ status: "REJECTED" })
@@ -110,6 +140,22 @@ export function TradeActions({
 
     setIsProcessing(true);
     try {
+      // Database-first validation
+      const { data: freshTrade, error: fetchError } = await supabase
+        .from("p2p_trades")
+        .select("id, status")
+        .eq("id", trade.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const freshStatus = freshTrade.status?.toUpperCase() || "";
+      if (freshStatus !== "APPROVED_AWAITING_PAYMENT") {
+        toast({ title: "Error", description: "Trade is no longer awaiting payment.", variant: "destructive" });
+        onTradeUpdate?.();
+        return;
+      }
+
       const { error } = await supabase
         .from("p2p_trades")
         .update({
@@ -144,39 +190,47 @@ export function TradeActions({
 
     setIsProcessing(true);
     try {
-      const { data: tradeData, error: fetchError } = await supabase
+      // Database-first validation
+      const { data: freshTrade, error: fetchError } = await supabase
         .from("p2p_trades")
-        .select("escrow_id, buyer_id, crypto_amount, crypto_symbol, seller_id")
+        .select("id, status, escrow_id, buyer_id, crypto_amount, crypto_symbol, seller_id")
         .eq("id", trade.id)
         .single();
 
       if (fetchError) throw fetchError;
 
-      if (tradeData?.escrow_id) {
+      const freshStatus = freshTrade.status?.toUpperCase() || "";
+      if (freshStatus !== "PAYMENT_MARKED" && freshStatus !== "PAYMENT_SENT") {
+        toast({ title: "Error", description: "Trade is not ready for release.", variant: "destructive" });
+        onTradeUpdate?.();
+        return;
+      }
+
+      if (freshTrade?.escrow_id) {
         // Simple wallet update logic
         const { data: wallet } = await supabase
           .from("wallets")
           .select("balance")
-          .eq("user_id", tradeData.buyer_id)
-          .eq("crypto_symbol", tradeData.crypto_symbol)
+          .eq("user_id", freshTrade.buyer_id)
+          .eq("crypto_symbol", freshTrade.crypto_symbol)
           .single();
 
         const currentBalance = Number(wallet?.balance) || 0;
-        const releaseAmount = Number(tradeData.crypto_amount) || 0;
+        const releaseAmount = Number(freshTrade.crypto_amount) || 0;
 
         await supabase
           .from("wallets")
           .upsert({
-            user_id: tradeData.buyer_id,
-            crypto_symbol: tradeData.crypto_symbol,
+            user_id: freshTrade.buyer_id,
+            crypto_symbol: freshTrade.crypto_symbol,
             balance: currentBalance + releaseAmount,
           }, { onConflict: 'user_id,crypto_symbol' });
 
         const { data: sellerWallet } = await supabase
           .from("wallets")
           .select("locked_balance")
-          .eq("user_id", tradeData.seller_id)
-          .eq("crypto_symbol", tradeData.crypto_symbol)
+          .eq("user_id", freshTrade.seller_id)
+          .eq("crypto_symbol", freshTrade.crypto_symbol)
           .single();
 
         const currentLocked = Number(sellerWallet?.locked_balance) || 0;
@@ -185,13 +239,14 @@ export function TradeActions({
           .update({
             locked_balance: Math.max(0, currentLocked - releaseAmount),
           })
-          .eq("user_id", tradeData.seller_id)
-          .eq("crypto_symbol", tradeData.crypto_symbol);
+          .eq("user_id", freshTrade.seller_id)
+          .eq("crypto_symbol", freshTrade.crypto_symbol);
 
+        // Fixed: table name is 'escrow' not 'escrows'
         await supabase
-          .from("escrows")
+          .from("escrow")
           .update({ status: "released" })
-          .eq("id", tradeData.escrow_id);
+          .eq("id", freshTrade.escrow_id);
       }
 
       const { error } = await supabase
@@ -237,7 +292,7 @@ export function TradeActions({
         <Button 
           variant="outline" 
           className="w-full"
-          onClick={() => setLocation("/p2p")}
+          onClick={() => navigate("/p2p")}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Marketplace
@@ -252,10 +307,10 @@ export function TradeActions({
         <div className="bg-destructive/10 border border-destructive/20 p-4 sm:p-5 rounded-lg text-center">
           <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-destructive mx-auto mb-3" />
           <div className="text-destructive font-bold text-lg sm:text-xl mb-2">
-            {status === "rejected" ? "Trade Rejected" : "Trade Cancelled"}
+            {status === "REJECTED" ? "Trade Rejected" : "Trade Cancelled"}
           </div>
           <div className="text-sm text-muted-foreground mb-2">
-            {status === "rejected" ? "The seller has rejected this trade." : getCancelReasonText(trade.cancel_reason)}
+            {status === "REJECTED" ? "The seller has rejected this trade." : getCancelReasonText(trade.cancel_reason)}
           </div>
           <div className="text-xs text-muted-foreground">
             {trade.crypto_symbol} funds have been released back to the seller's wallet.
@@ -264,7 +319,7 @@ export function TradeActions({
         <Button 
           variant="outline" 
           className="w-full"
-          onClick={() => setLocation("/p2p")}
+          onClick={() => navigate("/p2p")}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Marketplace
