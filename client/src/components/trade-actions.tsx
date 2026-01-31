@@ -58,43 +58,35 @@ export function TradeActions({
 
   // Status mapping for legacy support and new flow
   // Use case-insensitive matching for robustness
-  const status = trade.status?.toUpperCase() || "";
-  const isPending = status === "PENDING" || status === "PENDING_SELLER_APPROVAL";
-  const isApproved = status === "APPROVED_AWAITING_PAYMENT";
-  const isPaymentMarked = status === "PAYMENT_MARKED" || status === "PAYMENT_SENT";
-  const isCompleted = status === "COMPLETED" || status === "RELEASED";
-  const isCancelled = status === "CANCELLED" || status === "REJECTED";
+  const status = trade.status?.toLowerCase() || "";
+  const isPending = status === "pending" || status === "pending_seller_approval";
+  const isApproved = status === "approved" || status === "approved_awaiting_payment";
+  const isPaymentMarked = status === "payment_marked" || status === "payment_sent";
+  const isCompleted = status === "completed" || status === "released";
+  const isCancelled = status === "cancelled" || status === "rejected";
 
   const handleApproveTrade = async () => {
     if (!trade.id || isProcessing) return;
     setIsProcessing(true);
     try {
-      // Database-first validation
-      const { data: freshTrade, error: fetchError } = await supabase
-        .from("p2p_trades")
-        .select("id, status")
-        .eq("id", trade.id)
-        .single();
+      // 1. Verify caller is seller and trade.status is pending (Backend handles this, but we call the function)
+      // 2. Call btc-escrow-create
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ tradeId: trade.id })
+      });
 
-      if (fetchError) throw fetchError;
+      if (!response.ok) throw new Error('Failed to create escrow');
 
-      const freshStatus = freshTrade.status?.toUpperCase() || "";
-      if (freshStatus !== "PENDING" && freshStatus !== "PENDING_SELLER_APPROVAL") {
-        toast({ title: "Error", description: "Trade is no longer pending approval.", variant: "destructive" });
-        onTradeUpdate?.();
-        return;
-      }
-
-      const { error } = await supabase
-        .from("p2p_trades")
-        .update({ status: "APPROVED_AWAITING_PAYMENT" })
-        .eq("id", trade.id);
-      if (error) throw error;
-      toast({ title: "Success", description: "Trade approved. Waiting for buyer payment." });
+      toast({ title: "Success", description: "Contract approved and escrow created." });
       onTradeUpdate?.();
     } catch (error) {
       console.error("Error approving trade:", error);
-      toast({ title: "Error", description: "Failed to approve trade", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to approve contract", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -104,32 +96,16 @@ export function TradeActions({
     if (!trade.id || isProcessing) return;
     setIsProcessing(true);
     try {
-      // Database-first validation
-      const { data: freshTrade, error: fetchError } = await supabase
-        .from("p2p_trades")
-        .select("id, status")
-        .eq("id", trade.id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const freshStatus = freshTrade.status?.toUpperCase() || "";
-      if (freshStatus !== "PENDING" && freshStatus !== "PENDING_SELLER_APPROVAL") {
-        toast({ title: "Error", description: "Trade is no longer pending.", variant: "destructive" });
-        onTradeUpdate?.();
-        return;
-      }
-
       const { error } = await supabase
         .from("p2p_trades")
-        .update({ status: "REJECTED" })
+        .update({ status: "cancelled" })
         .eq("id", trade.id);
       if (error) throw error;
-      toast({ title: "Trade Rejected", description: "You have rejected this trade." });
+      toast({ title: "Contract Cancelled", description: "You have cancelled this contract." });
       onTradeUpdate?.();
     } catch (error) {
-      console.error("Error rejecting trade:", error);
-      toast({ title: "Error", description: "Failed to reject trade", variant: "destructive" });
+      console.error("Error cancelling contract:", error);
+      toast({ title: "Error", description: "Failed to cancel contract", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -336,7 +312,7 @@ export function TradeActions({
           <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
             {isPending ? (
               <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
-                ⏳ Waiting for Seller Approval
+                ⏳ Waiting for seller to approve contract
               </Button>
             ) : isApproved ? (
               <>
@@ -362,7 +338,7 @@ export function TradeActions({
             variant="outline" 
             className="w-full text-xs sm:text-sm h-9 sm:h-10"
             onClick={onShowCancelModal}
-            disabled={isPaymentMarked || isProcessing}
+            disabled={!isApproved || isProcessing}
           >
             Cancel Trade
           </Button>
@@ -378,14 +354,14 @@ export function TradeActions({
                   onClick={handleApproveTrade}
                   disabled={isProcessing}
                 >
-                  ✅ Approve Trade
+                  ✅ Approve Contract
                 </Button>
                 <Button 
                   variant="destructive"
                   onClick={handleRejectTrade}
                   disabled={isProcessing}
                 >
-                  ❌ Reject Trade
+                  ❌ Cancel Contract
                 </Button>
               </div>
             ) : isApproved ? (
@@ -402,15 +378,11 @@ export function TradeActions({
                   onClick={handleReleaseCrypto}
                   disabled={isProcessing}
                 >
-                  🔓 Release Funds
+                  🔓 Release BTC
                 </Button>
               </>
             ) : null}
           </div>
-
-          <Button variant="outline" className="w-full text-xs sm:text-sm h-9 sm:h-10">
-            Raise Dispute
-          </Button>
         </>
       )}
 
