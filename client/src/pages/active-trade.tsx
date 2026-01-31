@@ -1,4 +1,5 @@
-  Find the bug in this codec import { useState, useEffect, useRef } from "react";
+import { TradeSkeleton } from "@/components/trade-page/trade-skeleton";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRoute, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -173,22 +174,21 @@ export default function ActiveTrade() {
   }, [activeTab, messages, currentUserProfileId]);
 
   useEffect(() => {
+    let channel: any;
+    
     const fetchPresence = async () => {
       if (counterpartyId) {
         const { presenceTracker } = await import('@/lib/presence');
         const presence = await presenceTracker.getUserPresence(counterpartyId);
         setCounterpartyPresence(presence);
 
-        const channel = presenceTracker.subscribeToUserPresence(counterpartyId, (updatedPresence) => {
+        channel = presenceTracker.subscribeToUserPresence(counterpartyId, (updatedPresence) => {
           setCounterpartyPresence(updatedPresence);
         });
-
-        return channel;
       }
     };
 
-    let channel: any;
-    fetchPresence().then(ch => { channel = ch; });
+    fetchPresence();
 
     return () => {
       if (channel) {
@@ -212,8 +212,11 @@ export default function ActiveTrade() {
             return [...prev, newMessage];
           });
 
-          if (newMessage.sender_id !== currentUserProfileId) {
+          // Check if this message was already played in GlobalNotificationListener
+          const soundKey = `msg-sound-${newMessage.id}`;
+          if (newMessage.sender_id !== currentUserProfileId && !window.sessionStorage.getItem(soundKey)) {
             notificationSounds.play('message_received');
+            window.sessionStorage.setItem(soundKey, 'played');
           }
 
           // Auto-scroll to bottom
@@ -309,7 +312,11 @@ export default function ActiveTrade() {
               // Play notification sound for new messages from counterparty
               newMessages.forEach(msg => {
                 if (msg.sender_id !== currentUserProfileId) {
-                  notificationSounds.play('message_received');
+                  const soundKey = `msg-sound-${msg.id}`;
+                  if (!window.sessionStorage.getItem(soundKey)) {
+                    notificationSounds.play('message_received');
+                    window.sessionStorage.setItem(soundKey, 'played');
+                  }
                 }
               });
 
@@ -424,7 +431,9 @@ export default function ActiveTrade() {
   };
 
   const fetchTradeData = async () => {
+    if (!tradeId) return;
     try {
+      setLoading(true);
       const { data: tradeData, error: tradeError } = await supabase
         .from("p2p_trades")
         .select("id, offer_id, buyer_id, seller_id, crypto_symbol, crypto_amount, fiat_currency, fiat_amount, price, payment_method, status, escrow_id, payment_deadline, buyer_paid_at, seller_released_at, created_at, expires_at, completed_at")
@@ -1019,35 +1028,8 @@ export default function ActiveTrade() {
                 <ChatMessages
                   messages={messages}
                   currentUserProfileId={currentUserProfileId}
+                  trade={trade}
                 />
-
-                {trade.status === "cancelled" && (
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-center mb-2">
-                      <XCircle className="w-8 h-8 text-destructive" />
-                    </div>
-                    <div className="text-sm text-muted-foreground text-center font-semibold">
-                      TRADE CANCELLED
-                    </div>
-                    <p className="text-sm text-destructive leading-relaxed text-center">
-                      This trade was cancelled and {trade.crypto_symbol} funds have been released back to the seller's wallet.
-                    </p>
-                    <p className="text-xs text-muted-foreground text-center">
-                      To trade again, please create a new trade from the marketplace.
-                    </p>
-                  </div>
-                )}
-
-                {(trade.status === "completed" || trade.status === "released") && (
-                  <div className="bg-black/80 border border-green-500 rounded-lg p-4 space-y-3">
-                    <div className="text-sm text-muted-foreground text-center">
-                      TRADE COMPLETED - {new Date(trade.completed_at || trade.created_at).toLocaleString().toUpperCase()}
-                    </div>
-                    <p className="text-sm text-green-500 leading-relaxed text-center">
-                      This trade has been successfully completed. The {trade.crypto_symbol} has been transferred to the buyer.
-                    </p>
-                  </div>
-                )}
 
                 <div className="lg:block hidden">
                   <MessageInput
