@@ -542,7 +542,7 @@ export default function ActiveTrade() {
     if (isUserBuyer) {
       toast({
         title: "Permission Denied",
-        description: "Only the seller can cancel this trade",
+        description: "Only the seller can cancel this trade in its initial state",
         variant: "destructive",
       });
       return;
@@ -992,6 +992,16 @@ export default function ActiveTrade() {
               onShowCancelModal={() => setShowCancelWarning(true)}
               formatTime={formatTime}
             />
+            <div className="hidden">
+              <TradeActions
+                isUserBuyer={isUserBuyer}
+                isPaid={isPaid}
+                counterpartyUsername={counterparty?.username}
+                trade={trade}
+                onTradeUpdate={fetchTradeData}
+                onShowCancelModal={() => setShowCancelWarning(true)}
+              />
+            </div>
           </div>
 
           {/* Trade Terms */}
