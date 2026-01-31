@@ -540,39 +540,11 @@ export default function ActiveTrade() {
 
     // Only seller can cancel the trade
     if (isUserBuyer) {
-      toast({
-        title: "Permission Denied",
-        description: "Only the seller can cancel this trade in its initial state",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Get trade details to verify status
-    const { data: tradeData, error: tradeError } = await supabase
-      .from("p2p_trades")
-      .select("buyer_id, seller_id, status, buyer_paid_at")
-      .eq("id", tradeId)
-      .single();
-
-    if (tradeError || !tradeData) {
-      toast({
-        title: "Error",
-        description: "Could not verify trade details",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Updated cancellation logic:
-    // 1. If seller, they can ONLY cancel in 'pending' state.
-    // 2. If buyer, they can cancel in 'pending' or 'approved' (before payment).
-    
-    if (!isUserBuyer) {
-      if (tradeData.status !== 'pending' && tradeData.status?.toLowerCase() !== 'pending_seller_approval') {
+      // Buyer can cancel if not paid
+      if (tradeData.buyer_paid_at) {
         toast({
           title: "Cannot Cancel",
-          description: "Sellers cannot cancel the trade once the contract is approved.",
+          description: "You cannot cancel after marking payment as sent.",
           variant: "destructive",
         });
         setShowCancelWarning(false);
@@ -581,11 +553,11 @@ export default function ActiveTrade() {
         return;
       }
     } else {
-      // Buyer logic
-      if (tradeData.buyer_paid_at) {
+      // Seller can cancel if buyer hasn't paid
+      if (tradeData.buyer_paid_at || tradeData.status === 'PAYMENT_MARKED') {
         toast({
           title: "Cannot Cancel",
-          description: "You cannot cancel after marking payment as sent.",
+          description: "You cannot cancel after buyer has marked as paid.",
           variant: "destructive",
         });
         setShowCancelWarning(false);
