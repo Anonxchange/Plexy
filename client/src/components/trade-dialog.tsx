@@ -163,20 +163,20 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       }
 
       // Determine buyer and seller based on offer type
-      // The current user is ALWAYS the one initiating the trade
-      // If vendor posted a "buy" offer, they want to buy, so current user is seller
-      // If vendor posted a "sell" offer, they want to sell, so current user is buyer
-      const isBuyOffer = offer.type === "buy";
-      const buyerId = isBuyOffer ? vendorId : currentUserId;  // vendor buys OR user buys
-      const sellerId = isBuyOffer ? currentUserId : vendorId;  // user sells OR vendor sells
-
-      console.log("Trade creation:", {
+      // offer.type is the type of AD the vendor posted.
+      // If vendor posted a "buy" ad: Vendor wants to BUY crypto. User is SELLING to them.
+      // If vendor posted a "sell" ad: Vendor wants to SELL crypto. User is BUYING from them.
+      
+      const isVendorBuying = offer.type === "buy";
+      const buyerId = isVendorBuying ? vendorId : currentUserId; // vendor buys OR user buys
+      const sellerId = isVendorBuying ? currentUserId : vendorId; // user sells OR vendor sells
+      
+      console.log("Creating trade with roles:", {
         offerType: offer.type,
-        currentUserId,
-        vendorId,
-        buyerId,
-        sellerId,
-        offerVendor: offer.vendor
+        initiatorId: currentUserId,
+        vendorId: vendorId,
+        assignedBuyerId: buyerId,
+        assignedSellerId: sellerId
       });
 
       // First, create or get the offer record
