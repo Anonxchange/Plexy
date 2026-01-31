@@ -311,9 +311,9 @@ export function TradeActions({
 
   return (
     <div className="space-y-4">
-      {!isUserBuyer ? (
+      {isUserBuyer ? (
         <>
-          {/* BUYER VIEW: Sees "Mark as Paid" and "Cancel Trade" */}
+          {/* BUYER VIEW: Sees "Approve Contract", "Mark as Paid" and "Cancel Trade" */}
           <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
             {isPending ? (
               <Button 
