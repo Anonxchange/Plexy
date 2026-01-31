@@ -3,24 +3,9 @@ import { useRoute, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { Info, CheckCircle, XCircle } from "lucide-react";
-import { uploadToR2 } from "@/lib/r2-storage";
-import { createMessageNotification } from "@/lib/notifications-api";
 import { notificationSounds } from "@/lib/notification-sounds";
-import { TradeHeader } from "@/components/trade-header";
-import { TradeTimer } from "@/components/trade-timer";
-import { ChatMessages } from "@/components/chat-messages";
-import { TradeInstructions } from "@/components/trade-instructions";
-import { TradeActions } from "@/components/trade-actions";
-import { TradeInfo } from "@/components/trade-info";
-import { CancelTradeModal } from "@/components/cancel-trade-modal";
-import { MessageInput } from "@/components/message-input";
-import { TabNavigation } from "@/components/tab-navigation";
-import { TradeStartedSection } from "@/components/trade-started-section";
-import { TradeTerms } from "@/components/trade-terms";
-import { TradeCompletedSection } from "@/components/trade-completed-section";
 
 interface Trade {
   id: string;
@@ -77,12 +62,16 @@ interface TradeMessage {
   read_at?: string | null;
 }
 
+// Placeholder components - these should be imported from their actual locations
+const LoadingSpinner = ({ size }: { size?: string }) => (
+  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+);
+
 export default function ActiveTrade() {
-  const [, params] = useRoute("/trade/:tradeId");
-  const [, setLocation] = useLocation();
+  const { tradeId } = useParams<{ tradeId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const tradeId = params?.tradeId;
 
   const [trade, setTrade] = useState<Trade | null>(null);
   const [activeTab, setActiveTab] = useState<"chat" | "actions">("chat");
@@ -108,8 +97,6 @@ export default function ActiveTrade() {
   ]);
   const [counterpartyPresence, setCounterpartyPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({ isOnline: false, lastSeen: null });
   const lastMessageTimestampRef = useRef<string | null>(null);
-
-  const supabase = createClient();
 
   const effectiveUserId = currentUserProfileId || user?.id;
   const isUserBuyer = !!(effectiveUserId && trade?.buyer_id === effectiveUserId);
@@ -598,7 +585,7 @@ export default function ActiveTrade() {
       let walletUpdated = false;
       if (fullTradeDetails.escrow_id) {
         const { data: escrowData } = await supabase
-          .from("escrows")
+          .from("escrow")
           .select("status")
           .eq("id", fullTradeDetails.escrow_id)
           .single();
@@ -641,7 +628,7 @@ export default function ActiveTrade() {
 
           // Only update escrow status after wallet is successfully updated
           await supabase
-            .from("escrows")
+            .from("escrow")
             .update({ status: "cancelled" })
             .eq("id", fullTradeDetails.escrow_id);
         }
@@ -716,7 +703,7 @@ export default function ActiveTrade() {
       // Release escrow if exists
       if (tradeData?.escrow_id) {
         const { data: escrowData } = await supabase
-          .from("escrows")
+          .from("escrow")
           .select("status")
           .eq("id", tradeData.escrow_id)
           .single();
@@ -745,7 +732,7 @@ export default function ActiveTrade() {
           }
 
           await supabase
-            .from("escrows")
+            .from("escrow")
             .update({ status: "cancelled" })
             .eq("id", tradeData.escrow_id);
         }
@@ -780,6 +767,7 @@ export default function ActiveTrade() {
     setIsUploading(true);
 
     try {
+      const { uploadToR2 } = await import('@/lib/r2-storage');
       const uploadResult = await uploadToR2(file, 'trade-attachments', user?.id || '');
 
       if (!uploadResult.success || !uploadResult.url) {
@@ -886,6 +874,7 @@ export default function ActiveTrade() {
       }
 
       if (recipientId) {
+        const { createMessageNotification } = await import('@/lib/notifications-api');
         await createMessageNotification(
           recipientId,
           currentUserProfileId,
@@ -926,7 +915,7 @@ export default function ActiveTrade() {
   const handleCounterpartyClick = () => {
     const counterpartyId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
     if (counterpartyId) {
-      setLocation(`/profile/${counterpartyId}`);
+      navigate(`/profile/${counterpartyId}`);
     }
   };
 
@@ -947,79 +936,147 @@ export default function ActiveTrade() {
         <div className="hidden lg:block bg-card rounded-lg p-6 overflow-y-auto lg:order-1">
           {/* Trade Started Card */}
           <div className="mb-6">
-            <TradeStartedSection
-              isUserBuyer={isUserBuyer}
-              trade={trade}
-              counterpartyUsername={counterparty?.username}
-              isPaid={isPaid}
-              timer={timer}
-              onTradeUpdate={fetchTradeData}
-              onShowCancelModal={() => setShowCancelWarning(true)}
-              formatTime={formatTime}
-            />
+            <div className="bg-card rounded-lg p-4 border">
+              <h3 className="font-semibold mb-2">Trade Started</h3>
+              <p className="text-sm text-muted-foreground">
+                {isUserBuyer 
+                  ? `You are buying ${trade.crypto_amount} ${trade.crypto_symbol} from ${counterparty?.username}`
+                  : `You are selling ${trade.crypto_amount} ${trade.crypto_symbol} to ${counterparty?.username}`
+                }
+              </p>
+              <p className="text-sm mt-2">
+                Amount: {trade.fiat_amount?.toLocaleString()} {trade.fiat_currency}
+              </p>
+              <p className="text-sm">
+                Time remaining: {formatTime(timer)}
+              </p>
+            </div>
           </div>
 
           {/* Trade Terms */}
-          <TradeTerms
-            offerTerms={trade.offer_terms}
-            counterpartyUsername={counterparty?.username}
-            counterpartyRequirements={trade.counterparty_requirements}
-          />
+          {trade.offer_terms && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Trade Terms</h3>
+              <p className="text-sm text-muted-foreground">{trade.offer_terms}</p>
+            </div>
+          )}
 
           {/* Trade Information */}
-          <TradeInfo
-            trade={trade}
-            counterpartyUsername={counterparty?.username}
-          />
+          <div>
+            <h3 className="font-semibold mb-2">Trade Information</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Rate</span>
+                <span>{trade.price.toLocaleString()} {trade.fiat_currency}/{trade.crypto_symbol}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Trade ID</span>
+                <span>{trade.id.substring(0, 11)}...</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payment Method</span>
+                <span>{trade.payment_method}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Left Column: Chat Section (Mobile: Full width, Desktop: Right side) */}
         <div className="lg:bg-card lg:rounded-lg lg:order-2">
           <div className="max-w-md mx-auto lg:max-w-full">
-            {/* Hide trade header on mobile when in actions tab */}
+            {/* Trade Header */}
             <div className={activeTab === "actions" ? "hidden lg:block" : ""}>
-              <TradeHeader
-                counterparty={counterparty}
-                isUserBuyer={isUserBuyer}
-                trade={trade}
-                timer={timer}
-                isPaid={isPaid}
-                formatTime={formatTime}
-                formatTradeTime={formatTradeTime}
-                onCounterpartyClick={handleCounterpartyClick}
-                counterpartyPresence={counterpartyPresence}
-              />
+              <div className="p-4 border-b flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    {counterparty?.avatar_url ? (
+                      <img src={counterparty.avatar_url} alt="" className="w-full h-full rounded-full" />
+                    ) : (
+                      <span className="text-lg">{counterparty?.username?.[0]?.toUpperCase() || '?'}</span>
+                    )}
+                  </div>
+                  <div>
+                    <button 
+                      onClick={handleCounterpartyClick}
+                      className="font-semibold hover:underline"
+                    >
+                      {counterparty?.username || 'Unknown'}
+                    </button>
+                    <div className="text-xs text-muted-foreground">
+                      {counterpartyPresence.isOnline ? (
+                        <span className="text-green-500">● Online</span>
+                      ) : (
+                        <span>Last seen: {counterpartyPresence.lastSeen || 'Unknown'}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium">{formatTradeTime()}</div>
+                  <div className="text-xs text-muted-foreground capitalize">{trade.status}</div>
+                </div>
+              </div>
             </div>
 
-            {/* Hide trade timer on mobile when in actions tab */}
+            {/* Timer and Status */}
             <div className={activeTab === "actions" ? "hidden lg:block" : ""}>
-              <TradeTimer isUserBuyer={isUserBuyer} trade={trade} />
-
               <div className="bg-muted p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
-              {isPaid ? (
-                <span>Payment marked as sent. Waiting for seller to release crypto.</span>
-              ) : (
-                <span>Follow the instructions to complete your trade safely.</span>
-              )}
+                {isPaid ? (
+                  <span>Payment marked as sent. Waiting for seller to release crypto.</span>
+                ) : (
+                  <span>Follow the instructions to complete your trade safely.</span>
+                )}
               </div>
             </div>
 
             {activeTab === "chat" && (
               <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 overflow-y-auto">
-                <TradeInstructions
-                  isUserBuyer={isUserBuyer}
-                  counterpartyUsername={counterparty?.username}
-                  trade={trade}
-                />
+                {/* Instructions */}
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <h4 className="font-medium text-sm mb-2">Instructions</h4>
+                  <p className="text-xs text-muted-foreground">
+                    {isUserBuyer 
+                      ? `Send ${trade.fiat_amount?.toLocaleString()} ${trade.fiat_currency} to ${counterparty?.username} using ${trade.payment_method}`
+                      : `Wait for ${counterparty?.username} to send payment, then release ${trade.crypto_symbol}`
+                    }
+                  </p>
+                </div>
 
                 <div className="text-xs text-muted-foreground text-center">
                   {new Date(trade.created_at).toLocaleString().toUpperCase()}
                 </div>
 
-                <ChatMessages
-                  messages={messages}
-                  currentUserProfileId={currentUserProfileId}
-                />
+                {/* Chat Messages */}
+                <div data-chat-messages className="space-y-3 max-h-96 overflow-y-auto">
+                  {messages.map((msg) => (
+                    <div 
+                      key={msg.id}
+                      className={`flex ${msg.sender_id === currentUserProfileId ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`max-w-[80%] rounded-lg p-3 ${
+                        msg.sender_id === currentUserProfileId 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'bg-muted'
+                      }`}>
+                        <p className="text-sm">{msg.content}</p>
+                        {msg.attachment_url && (
+                          <a 
+                            href={msg.attachment_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs underline mt-1 block"
+                          >
+                            View attachment
+                          </a>
+                        )}
+                        <div className="text-xs opacity-70 mt-1">
+                          {new Date(msg.created_at).toLocaleTimeString()}
+                          {msg.sender_id === currentUserProfileId && msg.read_at && ' ✓✓'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {trade.status === "cancelled" && (
                   <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3">
@@ -1032,14 +1089,14 @@ export default function ActiveTrade() {
                     <p className="text-sm text-destructive leading-relaxed text-center">
                       This trade was cancelled and {trade.crypto_symbol} funds have been released back to the seller's wallet.
                     </p>
-                    <p className="text-xs text-muted-foreground text-center">
-                      To trade again, please create a new trade from the marketplace.
-                    </p>
                   </div>
                 )}
 
                 {(trade.status === "completed" || trade.status === "released") && (
-                  <div className="bg-black/80 border border-green-500 rounded-lg p-4 space-y-3">
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-center mb-2">
+                      <CheckCircle className="w-8 h-8 text-green-500" />
+                    </div>
                     <div className="text-sm text-muted-foreground text-center">
                       TRADE COMPLETED - {new Date(trade.completed_at || trade.created_at).toLocaleString().toUpperCase()}
                     </div>
@@ -1049,26 +1106,29 @@ export default function ActiveTrade() {
                   </div>
                 )}
 
+                {/* Desktop Message Input */}
                 <div className="lg:block hidden">
-                  <MessageInput
-                    newMessage={newMessage}
-                    isSendingMessage={isSendingMessage}
-                    showQuickMessages={showQuickMessages}
-                    quickMessages={quickMessages}
-                    onMessageChange={setNewMessage}
-                    onSend={sendMessage}
-                    onKeyPress={handleKeyPress}
-                    onFileSelect={handleFileUpload}
-                    onToggleQuickMessages={() => setShowQuickMessages(!showQuickMessages)}
-                    onQuickMessageSelect={(msg) => setNewMessage(msg)}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type a message..."
+                      className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                      disabled={isSendingMessage}
+                    />
+                    <Button onClick={sendMessage} disabled={isSendingMessage || !newMessage.trim()}>
+                      Send
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeTab === "actions" && (
               <div className="p-3 sm:p-4 pb-24 lg:pb-4 space-y-4 overflow-y-auto">
-                {/* Trade Status Display for Cancelled/Completed */}
+                {/* Trade Status Display */}
                 {trade.status === "cancelled" && (
                   <div className="bg-card rounded-lg overflow-hidden border shadow-xs">
                     <div className="bg-destructive p-3 flex items-center gap-2">
@@ -1084,7 +1144,7 @@ export default function ActiveTrade() {
                       <Button 
                         variant="outline" 
                         className="w-full"
-                        onClick={() => setLocation("/p2p")}
+                        onClick={() => navigate("/p2p")}
                       >
                         Back to Marketplace
                       </Button>
@@ -1093,34 +1153,133 @@ export default function ActiveTrade() {
                 )}
 
                 {(trade.status === "completed" || trade.status === "released") && (
-                  <TradeCompletedSection
-                    trade={trade}
-                    isUserBuyer={isUserBuyer}
-                    sellerProfile={trade.seller_profile}
-                    buyerProfile={trade.buyer_profile}
-                  />
+                  <div className="bg-card rounded-lg overflow-hidden border shadow-xs">
+                    <div className="bg-green-500 p-3 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                      <span className="font-semibold text-sm text-white">Trade Completed</span>
+                    </div>
+                    <div className="p-5 space-y-4 text-center">
+                      <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
+                      <div className="text-green-500 font-bold text-lg">Trade Successful!</div>
+                      <p className="text-sm text-muted-foreground">
+                        {trade.crypto_amount} {trade.crypto_symbol} has been transferred.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => navigate("/p2p")}
+                      >
+                        Back to Marketplace
+                      </Button>
+                    </div>
+                  </div>
                 )}
 
-                {/* Trade Started Card - Only show for active trades */}
+                {/* Trade Actions for Active Trades */}
                 {trade.status !== "cancelled" && trade.status !== "completed" && trade.status !== "released" && (
-                  <TradeStartedSection
-                    isUserBuyer={isUserBuyer}
-                    trade={trade}
-                    counterpartyUsername={counterparty?.username}
-                    isPaid={isPaid}
-                    timer={timer}
-                    onTradeUpdate={fetchTradeData}
-                    onShowCancelModal={() => setShowCancelWarning(true)}
-                    formatTime={formatTime}
-                  />
-                )}
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg p-4 border">
+                      <h3 className="font-semibold mb-2">Trade Started</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {isUserBuyer 
+                          ? `You are buying ${trade.crypto_amount} ${trade.crypto_symbol}`
+                          : `You are selling ${trade.crypto_amount} ${trade.crypto_symbol}`
+                        }
+                      </p>
+                      <p className="text-sm mt-2">
+                        Amount: {trade.fiat_amount?.toLocaleString()} {trade.fiat_currency}
+                      </p>
+                      <p className="text-sm">
+                        Time remaining: {formatTime(timer)}
+                      </p>
+                    </div>
 
-                {/* Trade Terms */}
-                <TradeTerms
-                  offerTerms={trade.offer_terms}
-                  counterpartyUsername={counterparty?.username}
-                  counterpartyRequirements={trade.counterparty_requirements}
-                />
+                    {/* Action Buttons */}
+                    <div className="space-y-2">
+                      {isUserBuyer && !isPaid && (
+                        <Button 
+                          className="w-full"
+                          onClick={async () => {
+                            try {
+                              const { error } = await supabase
+                                .from("p2p_trades")
+                                .update({
+                                  buyer_paid_at: new Date().toISOString(),
+                                  status: "PAYMENT_MARKED",
+                                })
+                                .eq("id", trade.id);
+
+                              if (error) throw error;
+
+                              notificationSounds.play('message_received');
+                              toast({
+                                title: "Success",
+                                description: "Payment marked as sent.",
+                              });
+                              fetchTradeData();
+                            } catch (error) {
+                              console.error("Error marking as paid:", error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to update trade status",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          Mark as Paid
+                        </Button>
+                      )}
+
+                      {!isUserBuyer && isPaid && (
+                        <Button 
+                          className="w-full bg-green-500 hover:bg-green-600"
+                          onClick={async () => {
+                            try {
+                              // Simple release logic
+                              const { error } = await supabase
+                                .from("p2p_trades")
+                                .update({
+                                  seller_released_at: new Date().toISOString(),
+                                  status: "completed",
+                                  completed_at: new Date().toISOString(),
+                                })
+                                .eq("id", trade.id);
+
+                              if (error) throw error;
+
+                              notificationSounds.play('trade_completed');
+                              toast({
+                                title: "Success",
+                                description: "Crypto released to buyer",
+                              });
+                              fetchTradeData();
+                            } catch (error) {
+                              console.error("Error releasing crypto:", error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to release crypto",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          Release Crypto
+                        </Button>
+                      )}
+
+                      {!isUserBuyer && !isPaid && (
+                        <Button 
+                          variant="destructive"
+                          className="w-full"
+                          onClick={() => setShowCancelWarning(true)}
+                        >
+                          Cancel Trade
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Trade Information */}
                 <div className="mt-6">
@@ -1178,17 +1337,9 @@ export default function ActiveTrade() {
                   <Button 
                     variant="outline" 
                     className="w-full mb-2 sm:mb-3"
-                    onClick={() => window.location.href = `/offers/${trade.offer_id}`}
+                    onClick={() => navigate(`/offers/${trade.offer_id}`)}
                   >
                     View Offer
-                  </Button>
-
-                  <Button 
-                    variant="outline" 
-                    className="w-full mb-3 flex items-center justify-center gap-2 border shadow-xs hover-elevate active-elevate-2 transition-all"
-                  >
-                    <Info className="w-4 h-4 sm:w-5 sm:h-5" />
-                    Tutor
                   </Button>
                 </div>
               </div>
@@ -1198,47 +1349,109 @@ export default function ActiveTrade() {
             {activeTab === "chat" && (
               <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-background p-2 sm:p-3">
                 <div className="max-w-md mx-auto">
-                  <MessageInput
-                    newMessage={newMessage}
-                    isSendingMessage={isSendingMessage}
-                    showQuickMessages={showQuickMessages}
-                    quickMessages={quickMessages}
-                    onMessageChange={setNewMessage}
-                    onSend={sendMessage}
-                    onKeyPress={handleKeyPress}
-                    onFileSelect={handleFileUpload}
-                    onToggleQuickMessages={() => setShowQuickMessages(!showQuickMessages)}
-                    onQuickMessageSelect={(msg) => setNewMessage(msg)}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type a message..."
+                      className="flex-1 px-3 py-2 border rounded-lg text-sm bg-background"
+                      disabled={isSendingMessage}
+                    />
+                    <Button onClick={sendMessage} disabled={isSendingMessage || !newMessage.trim()}>
+                      Send
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Mobile Tab Navigation */}
-            <div className="lg:hidden">
-              <TabNavigation
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-              />
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t">
+              <div className="flex">
+                <button
+                  onClick={() => setActiveTab("chat")}
+                  className={`flex-1 py-3 text-sm font-medium ${
+                    activeTab === "chat" ? "text-primary border-t-2 border-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => setActiveTab("actions")}
+                  className={`flex-1 py-3 text-sm font-medium ${
+                    activeTab === "actions" ? "text-primary border-t-2 border-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  Actions
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        </div>
+      </div>
 
-      <CancelTradeModal
-        isOpen={showCancelWarning}
-        cancelReason={cancelReason}
-        confirmNotPaid={confirmNotPaid}
-        onClose={() => {
-          setShowCancelWarning(false);
-          setCancelReason("");
-          setConfirmNotPaid(false);
-        }}
-        onReasonSelect={setCancelReason}
-        onConfirmNotPaidToggle={() => setConfirmNotPaid(!confirmNotPaid)}
-        onConfirmCancel={cancelTrade}
-      />
+      {/* Cancel Trade Modal */}
+      {showCancelWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Cancel Trade</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Please select a reason for cancellation:
+            </p>
+            <div className="space-y-2 mb-4">
+              {['unresponsive', 'asked_to_cancel', 'payment_not_accepted', 'other'].map((reason) => (
+                <button
+                  key={reason}
+                  onClick={() => setCancelReason(reason)}
+                  className={`w-full p-3 text-left rounded-lg border ${
+                    cancelReason === reason ? 'border-primary bg-primary/10' : 'border-muted'
+                  }`}
+                >
+                  {reason === 'unresponsive' && 'Other party unresponsive'}
+                  {reason === 'asked_to_cancel' && 'Asked to cancel'}
+                  {reason === 'payment_not_accepted' && 'Payment not accepted'}
+                  {reason === 'other' && 'Other reason'}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="checkbox"
+                id="confirmNotPaid"
+                checked={confirmNotPaid}
+                onChange={() => setConfirmNotPaid(!confirmNotPaid)}
+              />
+              <label htmlFor="confirmNotPaid" className="text-sm">
+                I confirm I have not received payment
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowCancelWarning(false);
+                  setCancelReason("");
+                  setConfirmNotPaid(false);
+                }}
+              >
+                Go Back
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={cancelTrade}
+                disabled={!cancelReason || !confirmNotPaid}
+              >
+                Cancel Trade
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
