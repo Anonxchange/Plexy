@@ -65,7 +65,7 @@ export function TradeActions({
   const isApproved = status === "approved" || status === "approved_awaiting_payment" || status === "awaiting_payment";
   const isPaymentMarked = status === "payment_marked" || status === "payment_sent" || status === "paid";
   const isCompleted = status === "completed" || status === "released" || status === "done";
-  const isCancelled = status === "cancelled" || status === "rejected" || status === "void";
+  const isCancelled = status === "cancelled" || status === "rejected" || status === "void" || status === "REJECTED";
 
   const handleApproveTrade = async () => {
     if (!trade.id || isProcessing) return;
