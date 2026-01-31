@@ -61,9 +61,9 @@ export function TradeActions({
   const status = trade.status?.toLowerCase() || "";
   const isPending = status === "pending" || status === "pending_seller_approval" || status === "pending_approval";
   const isApproved = status === "approved" || status === "approved_awaiting_payment" || status === "awaiting_payment";
-  const isPaymentMarked = status === "payment_marked" || status === "payment_sent";
-  const isCompleted = status === "completed" || status === "released";
-  const isCancelled = status === "cancelled" || status === "rejected";
+  const isPaymentMarked = status === "payment_marked" || status === "payment_sent" || status === "paid";
+  const isCompleted = status === "completed" || status === "released" || status === "done";
+  const isCancelled = status === "cancelled" || status === "rejected" || status === "void";
 
   const handleApproveTrade = async () => {
     if (!trade.id || isProcessing) return;
@@ -278,23 +278,21 @@ export function TradeActions({
   }
 
   if (isCancelled) {
+    const isRejected = status === "rejected" || status === "REJECTED";
     return (
       <div className="space-y-4">
         <div className="bg-destructive/10 border border-destructive/20 p-4 sm:p-5 rounded-lg text-center">
           <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-destructive mx-auto mb-3" />
           <div className="text-destructive font-bold text-lg sm:text-xl mb-2">
-            {status === "REJECTED" ? "Trade Rejected" : "Trade Cancelled"}
+            {isRejected ? "Trade Rejected" : "Trade Cancelled"}
           </div>
           <div className="text-sm text-muted-foreground mb-2">
-            {status === "REJECTED" ? "The seller has rejected this trade." : getCancelReasonText(trade.cancel_reason)}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {trade.crypto_symbol} funds have been released back to the seller's wallet.
+            {isRejected ? "The seller has rejected this trade." : getCancelReasonText(trade.cancel_reason)}
           </div>
         </div>
         <Button 
           variant="outline" 
-          className="w-full"
+          className="w-full h-12"
           onClick={() => navigate("/p2p")}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -311,7 +309,7 @@ export function TradeActions({
           {/* BUYER VIEW */}
           <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
             {isPending ? (
-              <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
+              <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12 text-white">
                 ⏳ Waiting for seller to approve contract
               </Button>
             ) : isApproved ? (
@@ -328,7 +326,7 @@ export function TradeActions({
                 </Button>
               </>
             ) : isPaymentMarked ? (
-              <Button disabled className="w-full bg-blue-500/50 cursor-not-allowed h-12">
+              <Button disabled className="w-full bg-blue-500/50 cursor-not-allowed h-12 text-white">
                 ⏳ Waiting for Seller to Confirm
               </Button>
             ) : null}
@@ -336,7 +334,7 @@ export function TradeActions({
 
           <Button 
             variant="outline" 
-            className="w-full text-xs sm:text-sm h-9 sm:h-10"
+            className="w-full text-xs sm:text-sm h-12"
             onClick={onShowCancelModal}
             disabled={!isApproved || isProcessing}
           >
@@ -346,11 +344,26 @@ export function TradeActions({
       ) : (
         <>
           {/* SELLER VIEW */}
-          <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
+          <div className="space-y-4">
+            <div className="bg-[#1A1C1E] p-4 rounded-lg border border-white/5 space-y-1">
+              <div className="text-lg font-medium text-white">
+                Waiting for {counterpartyUsername || "buyer"} to send {trade.fiat_amount?.toLocaleString()} {trade.fiat_currency}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                You are selling {trade.crypto_amount?.toFixed(8)} {trade.crypto_symbol}
+              </div>
+            </div>
+
+            <div className="bg-[#1A1C1E] p-4 rounded-lg border border-white/5">
+              <div className="text-sm text-white leading-relaxed">
+                <strong>Wait for the buyer to mark payment as sent.</strong> Once they confirm payment, verify you have received the {trade.fiat_currency} before releasing the {trade.crypto_symbol}.
+              </div>
+            </div>
+
             {isPending ? (
               <div className="grid grid-cols-2 gap-2">
                 <Button 
-                  className="bg-green-500 hover:bg-green-600 h-12"
+                  className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
                   onClick={handleApproveTrade}
                   disabled={isProcessing}
                 >
@@ -358,45 +371,48 @@ export function TradeActions({
                 </Button>
                 <Button 
                   variant="destructive"
-                  className="h-12"
+                  className="h-12 font-bold"
                   onClick={onShowCancelModal}
                   disabled={isProcessing}
                 >
                   ❌ Cancel Contract
                 </Button>
               </div>
-            ) : isApproved ? (
+            ) : (
               <div className="space-y-3">
-                <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12">
-                  ⏳ Waiting for Buyer Payment
-                </Button>
                 <Button 
-                  disabled 
-                  className="w-full h-12 bg-green-500/30 cursor-not-allowed border border-green-500/20"
+                  disabled={!isPaymentMarked || isProcessing}
+                  className={`w-full h-14 flex items-center justify-center gap-2 text-lg font-bold transition-all ${
+                    isPaymentMarked 
+                      ? "bg-[#1E5F36] hover:bg-[#257242] text-white" 
+                      : "bg-[#1E5F36]/50 text-white/40 cursor-not-allowed"
+                  }`}
+                  onClick={handleReleaseCrypto}
                 >
-                  🔓 Release BTC (Locked)
+                  Release Crypto
+                  <CheckCircle className={`w-5 h-5 ${isPaymentMarked ? "text-white" : "text-white/40"}`} />
+                  {!isPaymentMarked && <span className="text-xs font-normal ml-2 text-white/30">Waiting for buyer payment</span>}
+                </Button>
+                
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Info className="w-4 h-4" />
+                  <span className="text-sm">Payment not yet marked</span>
+                </div>
+
+                <Button 
+                  variant="ghost" 
+                  className="w-full text-white hover:bg-white/5 border border-white/10 h-12"
+                >
+                  Report Bad Behaviour
                 </Button>
               </div>
-            ) : isPaymentMarked ? (
-              <>
-                <div className="text-xs sm:text-sm text-muted-foreground italic mb-2">
-                  Release funds only after confirming payment.
-                </div>
-                <Button 
-                  className="w-full h-12 bg-green-500 hover:bg-green-600"
-                  onClick={handleReleaseCrypto}
-                  disabled={isProcessing}
-                >
-                  🔓 Release BTC
-                </Button>
-              </>
-            ) : null}
+            )}
           </div>
         </>
       )}
 
-      <div className="border-2 border-primary rounded-lg p-3 sm:p-4 text-xs sm:text-sm bg-primary/5">
-        Keep trades within {import.meta.env.VITE_APP_NAME || "Pexly"}. Some users may ask you to trade outside the platform. This is against our Terms of Service and likely a scam attempt.
+      <div className="border-2 border-[#B4F22E] rounded-lg p-4 text-xs sm:text-sm bg-[#B4F22E]/5 leading-relaxed">
+        Keep trades within Pexly. Some users may ask you to trade outside the Pexly platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within Pexly. If you choose to proceed outside Pexly, note that we cannot help or support you if you are scammed during such trades.
       </div>
     </div>
   );
