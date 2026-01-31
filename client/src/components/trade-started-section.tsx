@@ -43,7 +43,7 @@ export function TradeStartedSection({
       </div>
 
       <div className="p-4 space-y-4">
-        {!isUserBuyer ? (
+        {isUserBuyer ? (
           <>
             <div className="bg-black/50 p-4 rounded">
               <div className="text-base sm:text-lg mb-2 text-white">
@@ -125,7 +125,7 @@ export function TradeStartedSection({
               onMockComplete={onMockComplete}
             />
 
-            {!isPaid && (trade.status === 'pending' || trade.status?.toLowerCase() === 'pending_seller_approval' || trade.status === 'PENDING_SELLER_APPROVAL') && (
+            {isPending ? (
               <div className="grid grid-cols-2 gap-2 mt-4">
                 <Button 
                   className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
@@ -159,7 +159,7 @@ export function TradeStartedSection({
                   ❌ Cancel Contract
                 </Button>
               </div>
-            )}
+            ) : null}
 
             {!isPaid && (
               <Button
