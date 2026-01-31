@@ -313,15 +313,11 @@ export function TradeActions({
     <div className="space-y-4">
       {isUserBuyer ? (
         <>
-          {/* BUYER VIEW: Sees "Approve Contract", "Mark as Paid" and "Cancel Trade" */}
+          {/* BUYER VIEW: Sees "Mark as Paid" and "Cancel Trade" */}
           <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
             {isPending ? (
-              <Button 
-                className="w-full h-12 bg-primary hover:bg-primary/90"
-                onClick={handleApproveTrade}
-                disabled={isProcessing}
-              >
-                ✅ Approve Contract
+              <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12 text-white">
+                ⏳ Waiting for seller to approve contract
               </Button>
             ) : isApproved ? (
               <>
@@ -356,7 +352,7 @@ export function TradeActions({
         </>
       ) : (
         <>
-          {/* SELLER VIEW: Sees "Release Crypto" and "Cancel Contract" */}
+          {/* SELLER VIEW: Sees "Approve Contract" and "Release Crypto" */}
           <div className="space-y-4">
             <div className="bg-[#1A1C1E] p-4 rounded-lg border border-white/5 space-y-1">
               <div className="text-lg font-medium text-white">
@@ -370,7 +366,7 @@ export function TradeActions({
             <div className="bg-[#1A1C1E] p-4 rounded-lg border border-white/5">
               <div className="text-sm text-white leading-relaxed">
                 {isPending ? (
-                  <strong>Wait for the buyer to approve the contract.</strong>
+                  <strong>Approve the contract to lock the crypto in escrow.</strong>
                 ) : isPaymentMarked ? (
                   <strong>Verify you have received the {trade.fiat_currency} before releasing the {trade.crypto_symbol}.</strong>
                 ) : (
@@ -380,7 +376,15 @@ export function TradeActions({
             </div>
 
             {isPending ? (
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
+                  onClick={handleApproveTrade}
+                  disabled={isProcessing}
+                  data-approve-trade
+                >
+                  ✅ Approve Contract
+                </Button>
                 <Button 
                   variant="destructive"
                   className="h-12 font-bold"
