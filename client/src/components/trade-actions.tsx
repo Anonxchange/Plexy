@@ -67,6 +67,11 @@ export function TradeActions({
   const isCompleted = status === "completed" || status === "released" || status === "done";
   const isCancelled = status === "cancelled" || status === "rejected" || status === "void" || status === "REJECTED";
 
+  // Double check role logic: If I am the buyer, I should see "Paid" button. If I am the seller, I should see "Approve" and "Release".
+  // The user says when they click a "Sell" ad (which means they are BUYING crypto), they see the wrong buttons.
+  // In a "Sell" ad (P2P tab: Buy), the AD OWNER is the Seller. The PERSON CLICKING is the Buyer.
+  // In a "Buy" ad (P2P tab: Sell), the AD OWNER is the Buyer. The PERSON CLICKING is the Seller.
+  
   const handleApproveTrade = async () => {
     if (!trade.id || isProcessing) return;
     setIsProcessing(true);
@@ -308,7 +313,7 @@ export function TradeActions({
     <div className="space-y-4">
       {isUserBuyer ? (
         <>
-          {/* BUYER VIEW */}
+          {/* BUYER VIEW: Sees "Mark as Paid" and "Cancel Trade" */}
           <div className="bg-muted p-3 sm:p-4 rounded-lg border space-y-3">
             {isPending ? (
               <Button disabled className="w-full bg-amber-500/50 cursor-not-allowed h-12 text-white">
@@ -334,22 +339,24 @@ export function TradeActions({
             ) : null}
           </div>
 
-          <Button 
-            variant="outline" 
-            className="w-full text-xs sm:text-sm h-12"
-            onClick={onShowCancelModal}
-            disabled={!isApproved || isProcessing}
-          >
-            Cancel Trade
-          </Button>
+          {!isPaymentMarked && (
+            <Button 
+              variant="outline" 
+              className="w-full text-xs sm:text-sm h-12"
+              onClick={onShowCancelModal}
+              disabled={isProcessing}
+            >
+              Cancel Trade
+            </Button>
+          )}
         </>
       ) : (
         <>
-          {/* SELLER VIEW */}
+          {/* SELLER VIEW: Sees "Approve Contract" and "Release Crypto" */}
           <div className="space-y-4">
             <div className="bg-[#1A1C1E] p-4 rounded-lg border border-white/5 space-y-1">
               <div className="text-lg font-medium text-white">
-                Waiting for {counterpartyUsername || "buyer"} to send {trade.fiat_amount?.toLocaleString()} {trade.fiat_currency}
+                {isPaymentMarked ? "Verify Payment" : `Waiting for ${counterpartyUsername || "buyer"} to send ${trade.fiat_amount?.toLocaleString()} ${trade.fiat_currency}`}
               </div>
               <div className="text-sm text-muted-foreground">
                 You are selling {trade.crypto_amount?.toFixed(8)} {trade.crypto_symbol}
@@ -358,7 +365,13 @@ export function TradeActions({
 
             <div className="bg-[#1A1C1E] p-4 rounded-lg border border-white/5">
               <div className="text-sm text-white leading-relaxed">
-                <strong>Wait for the buyer to mark payment as sent.</strong> Once they confirm payment, verify you have received the {trade.fiat_currency} before releasing the {trade.crypto_symbol}.
+                {isPending ? (
+                  <strong>Approve the contract to lock the crypto in escrow.</strong>
+                ) : isPaymentMarked ? (
+                  <strong>Verify you have received the {trade.fiat_currency} before releasing the {trade.crypto_symbol}.</strong>
+                ) : (
+                  <strong>Wait for the buyer to mark payment as sent.</strong>
+                )}
               </div>
             </div>
 
@@ -397,10 +410,12 @@ export function TradeActions({
                   {!isPaymentMarked && <span className="text-xs font-normal ml-2 text-white/30">Waiting for buyer payment</span>}
                 </Button>
                 
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <Info className="w-4 h-4" />
-                  <span className="text-sm">Payment not yet marked</span>
-                </div>
+                {!isPaymentMarked && (
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <Info className="w-4 h-4" />
+                    <span className="text-sm">Payment not yet marked</span>
+                  </div>
+                )}
 
                 <Button 
                   variant="ghost" 
