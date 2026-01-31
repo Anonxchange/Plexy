@@ -43,10 +43,10 @@ export function TradeStartedSection({
       </div>
 
       <div className="p-4 space-y-4">
-        {!isUserBuyer ? (
+        {isUserBuyer ? (
           <>
             <div className="bg-black/50 p-4 rounded">
-              <div className="text-base sm:text-lg mb-2">
+              <div className="text-base sm:text-lg mb-2 text-white">
                 Please make a payment of {trade.fiat_amount.toLocaleString()} {trade.fiat_currency} using {trade.payment_method}.
               </div>
               <div className="text-xs sm:text-sm text-muted-foreground">
@@ -55,7 +55,7 @@ export function TradeStartedSection({
             </div>
 
             <div className="bg-muted/50 p-4 rounded border border-primary/30">
-              <div className="text-sm sm:text-base">
+              <div className="text-sm sm:text-base text-white">
                 <span className="font-semibold">Once you've made the payment,</span> be sure to click{' '}
                 <span className="font-bold text-primary">Paid</span> within the given time limit. Otherwise the trade will be automatically canceled and the {trade.crypto_symbol} will be returned to the seller's wallet.
               </div>
@@ -65,6 +65,7 @@ export function TradeStartedSection({
               isPaid={isPaid}
               trade={trade}
               onTradeUpdate={onTradeUpdate}
+              onShowCancelModal={onShowCancelModal}
             />
 
             {/* Report Bad Behaviour - after paid button */}
@@ -72,19 +73,19 @@ export function TradeStartedSection({
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full text-sm"
+                className="w-full text-sm text-white border-white/20 hover:bg-white/5"
               >
                 Report Bad Behaviour
               </Button>
             )}
 
-            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
+            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm text-white/80">
               Keep trades within Pexly. Some users may ask you to trade outside the Pexly platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within Pexly. If you choose to proceed outside Pexly, note that we cannot help or support you if you are scammed during such trades.
             </div>
 
             <Button
               variant="destructive"
-              className="w-full"
+              className="w-full h-12 font-bold"
               onClick={onShowCancelModal}
               disabled={isPaid}
             >
@@ -102,7 +103,7 @@ export function TradeStartedSection({
         ) : (
           <>
             <div className="bg-black/50 p-4 rounded">
-              <div className="text-base sm:text-lg mb-2">
+              <div className="text-base sm:text-lg mb-2 text-white">
                 Waiting for {counterpartyUsername} to send {trade.fiat_amount.toLocaleString()} {trade.fiat_currency}
               </div>
               <div className="text-xs sm:text-sm text-muted-foreground">
@@ -111,29 +112,66 @@ export function TradeStartedSection({
             </div>
 
             <div className="bg-muted/50 p-4 rounded border border-primary/30">
-              <div className="text-sm sm:text-base">
+              <div className="text-sm sm:text-base text-white">
                 <span className="font-semibold">Wait for the buyer to mark payment as sent.</span> Once they confirm payment, verify you have received the {trade.fiat_currency} before releasing the {trade.crypto_symbol}.
               </div>
             </div>
 
             <SellerReleaseActions
+              isPaid={isPaid}
               trade={trade}
               counterpartyUsername={counterpartyUsername}
               onTradeUpdate={onTradeUpdate}
               onMockComplete={onMockComplete}
             />
 
+            {!isPaid && (trade.status === 'pending' || trade.status?.toLowerCase() === 'pending_seller_approval' || trade.status === 'PENDING_SELLER_APPROVAL') && (
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
+                  onClick={async () => {
+                    const approveBtn = document.querySelector('button[data-approve-trade]') as HTMLButtonElement;
+                    if (approveBtn) {
+                      approveBtn.click();
+                    } else {
+                      // Fallback logic if for some reason the hidden button isn't there
+                      const { createClient } = await import("@/lib/supabase");
+                      const supabase = createClient();
+                      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-create`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify({ tradeId: trade.id })
+                      });
+                      if (response.ok) onTradeUpdate?.();
+                    }
+                  }}
+                >
+                  ✅ Approve Contract
+                </Button>
+                <Button 
+                  variant="destructive"
+                  className="h-12 font-bold"
+                  onClick={onShowCancelModal}
+                >
+                  ❌ Cancel Contract
+                </Button>
+              </div>
+            )}
+
             {!isPaid && (
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full text-sm"
+                className="w-full text-sm mt-2 text-white border-white/20 hover:bg-white/5"
               >
                 Report Bad Behaviour
               </Button>
             )}
 
-            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm">
+            <div className="border-2 border-primary rounded p-4 text-xs sm:text-sm mt-4 text-white/80">
               Keep trades within Pexly. Some users may ask you to trade outside the Pexly platform. This is against our Terms of Service and likely a scam attempt. You must insist on keeping all trade conversations within Pexly. If you choose to proceed outside Pexly, note that we cannot help or support you if you are scammed during such trades.
             </div>
           </>
