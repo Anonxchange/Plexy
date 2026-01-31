@@ -35,10 +35,10 @@ export function BuyerPaymentActions({
   const handleMarkAsPaid = async () => {
     if (!trade.id || isProcessing) return;
 
-    if (trade.status !== 'approved' && trade.status !== 'APPROVED_AWAITING_PAYMENT') {
+    if (trade.status !== 'approved' && trade.status !== 'APPROVED_AWAITING_PAYMENT' && trade.status !== 'pending') {
       toast({
         title: "Waiting for approval",
-        description: "You can only mark as paid after the seller approves the contract.",
+        description: "You can only mark as paid after the seller approves the contract or the trade is active.",
         variant: "destructive",
       });
       return;
