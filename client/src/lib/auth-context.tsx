@@ -683,6 +683,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     pendingOTPVerification,
     walletImportState,
     setWalletImportState,
+    isWalletUnlocked,
+    unlockWallet,
+    lockWallet,
     sessionPassword,
     setSessionPassword,
   };
