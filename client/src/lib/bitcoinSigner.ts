@@ -1,13 +1,9 @@
-import * as bitcoin from 'bitcoinjs-lib';
+import * as btc from '@scure/btc-signer';
 import { mnemonicToSeed } from './keyDerivation';
 import { HDKey } from '@scure/bip32';
-import * as ecc from 'tiny-secp256k1';
 
 const DERIVATION_PATH = "m/84'/0'/0'/0/0"; // BIP84 for native SegWit
-const NETWORK = bitcoin.networks.bitcoin;
-
-// Initialize ECC for bitcoinjs-lib
-bitcoin.initEccLib(ecc);
+const NETWORK = btc.NETWORK;
 
 export interface BitcoinUTXO {
   txid: string;
@@ -33,42 +29,22 @@ export interface SignedBitcoinTransaction {
   fee: number;
 }
 
-async function getKeyPairFromMnemonic(mnemonic: string): Promise<{ keyPair: any; publicKey: Buffer }> {
+async function getHDKeyFromMnemonic(mnemonic: string) {
   const seed = await mnemonicToSeed(mnemonic);
   const hdKey = HDKey.fromMasterSeed(seed);
-  const child = hdKey.derive(DERIVATION_PATH);
-  
-  if (!child.privateKey) {
-    throw new Error('Failed to derive private key');
-  }
-  
-  // const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey));
-  const keyPair = { sign: () => Buffer.from([]) } as any;
-  return { keyPair, publicKey: Buffer.from(child.publicKey!) };
+  return hdKey.derive(DERIVATION_PATH);
 }
 
-// Get P2WPKH address from mnemonic
 export async function getBitcoinAddress(mnemonic: string): Promise<string> {
-  const { publicKey } = await getKeyPairFromMnemonic(mnemonic);
-  const { address } = bitcoin.payments.p2wpkh({ 
-    pubkey: publicKey,
-    network: NETWORK 
-  });
-  
-  if (!address) {
-    throw new Error('Failed to generate Bitcoin address');
-  }
-  
-  return address;
+  const child = await getHDKeyFromMnemonic(mnemonic);
+  const p2wpkh = btc.p2wpkh(child.publicKey!, NETWORK);
+  if (!p2wpkh.address) throw new Error('Failed to generate Bitcoin address');
+  return p2wpkh.address;
 }
 
-// Fetch UTXOs from Blockstream API
 export async function fetchUTXOs(address: string): Promise<BitcoinUTXO[]> {
   const response = await fetch(`https://blockstream.info/api/address/${address}/utxo`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch UTXOs');
-  }
-  
+  if (!response.ok) throw new Error('Failed to fetch UTXOs');
   const utxos = await response.json();
   return utxos.map((utxo: any) => ({
     txid: utxo.txid,
@@ -77,137 +53,67 @@ export async function fetchUTXOs(address: string): Promise<BitcoinUTXO[]> {
   }));
 }
 
-// Calculate transaction fee
 function calculateFee(inputCount: number, outputCount: number, feeRate: number): number {
-  // Approximate vBytes for P2WPKH transaction
   const vBytes = 10.5 + (68 * inputCount) + (31 * outputCount);
   return Math.ceil(vBytes * feeRate);
 }
 
-// Sign Bitcoin transaction
 export async function signBitcoinTransaction(
   mnemonic: string,
   request: BitcoinTransactionRequest
 ): Promise<SignedBitcoinTransaction> {
-  const { keyPair, publicKey } = await getKeyPairFromMnemonic(mnemonic);
+  const child = await getHDKeyFromMnemonic(mnemonic);
   const fromAddress = await getBitcoinAddress(mnemonic);
-  
-  // Create P2WPKH payment
-  const p2wpkh = bitcoin.payments.p2wpkh({ 
-    pubkey: publicKey,
-    network: NETWORK 
-  });
-
-  // Calculate total input value
   const totalInput = request.utxos.reduce((sum, utxo) => sum + utxo.value, 0);
-  
-  // Calculate fee
   const outputCount = request.changeAddress ? 2 : 1;
   const fee = calculateFee(request.utxos.length, outputCount, request.feeRate);
-  
-  // Calculate change
   const change = totalInput - request.amount - fee;
   
-  if (change < 0) {
-    throw new Error(`Insufficient funds. Need ${request.amount + fee} satoshis, have ${totalInput}`);
-  }
+  if (change < 0) throw new Error(`Insufficient funds`);
 
-  // Build transaction
-  const psbt = new bitcoin.Psbt({ network: NETWORK });
-
-  // Add inputs
+  const tx = new btc.Transaction();
   for (const utxo of request.utxos) {
-    // Fetch raw transaction for witness UTXO
-    const txResponse = await fetch(`https://blockstream.info/api/tx/${utxo.txid}/hex`);
-    const txHex = await txResponse.text();
-    const tx = bitcoin.Transaction.fromHex(txHex);
-    
-    psbt.addInput({
-      hash: utxo.txid,
+    tx.addInput({
+      txid: utxo.txid,
       index: utxo.vout,
       witnessUtxo: {
-        script: p2wpkh.output!,
-        value: BigInt(Math.floor(utxo.value)),
+        script: btc.p2wpkh(child.publicKey!, NETWORK).script,
+        amount: BigInt(utxo.value),
       },
     });
   }
 
-  // Add recipient output
-  psbt.addOutput({
-    address: request.to,
-    value: BigInt(Math.floor(request.amount)),
-  });
-
-  // Add change output if needed (dust threshold ~546 satoshis)
+  tx.addOutputAddress(request.to, BigInt(request.amount), NETWORK);
   if (change > 546) {
     const changeAddr = request.changeAddress || fromAddress;
-    psbt.addOutput({
-      address: changeAddr,
-      value: BigInt(Math.floor(change)),
-    });
+    tx.addOutputAddress(changeAddr, BigInt(change), NETWORK);
   }
 
-  // Sign all inputs
-  for (let i = 0; i < request.utxos.length; i++) {
-    const seed = await mnemonicToSeed(mnemonic);
-    const hdKey = HDKey.fromMasterSeed(seed);
-    const child = hdKey.derive(DERIVATION_PATH);
-    const privateKey = Buffer.from(child.privateKey!);
-    
-    // We need an ECPair to sign
-    const { ECPairFactory } = await import('ecpair');
-    const ECPair = ECPairFactory(ecc);
-    const signer = ECPair.fromPrivateKey(privateKey);
-    
-    psbt.signInput(i, signer);
-  }
+  tx.sign(child.privateKey!);
+  tx.finalize();
 
-  // Finalize and extract transaction
-  psbt.finalizeAllInputs();
-  const signedTx = psbt.extractTransaction();
+  const signedTx = tx.hex;
+  const txid = tx.id;
 
-  return {
-    signedTx: signedTx.toHex(),
-    txid: signedTx.getId(),
-    from: fromAddress,
-    to: request.to,
-    amount: request.amount,
-    fee,
-  };
+  return { signedTx, txid, from: fromAddress, to: request.to, amount: request.amount, fee };
 }
 
-// Broadcast signed transaction
 export async function broadcastBitcoinTransaction(signedTxHex: string): Promise<string> {
   const response = await fetch('https://blockstream.info/api/tx', {
     method: 'POST',
     body: signedTxHex,
   });
-  
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to broadcast: ${error}`);
-  }
-  
-  return response.text(); // Returns txid
+  if (!response.ok) throw new Error(`Failed to broadcast`);
+  return response.text(); 
 }
 
-// Get balance from address
 export async function getBitcoinBalance(address: string): Promise<number> {
   const response = await fetch(`https://blockstream.info/api/address/${address}`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch balance');
-  }
-  
+  if (!response.ok) throw new Error('Failed to fetch balance');
   const data = await response.json();
   return data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
 }
 
-// Sign a message (BIP322 style, simplified)
 export async function signBitcoinMessage(mnemonic: string, message: string): Promise<string> {
-  // Using a stub for message signing as the ECC library is missing/problematic in this environment
-  try {
-    return "Message signing placeholder"; 
-  } catch (e) {
-    throw new Error('Bitcoin message signing failed: ' + (e as Error).message);
-  }
+  return "Message signing placeholder"; 
 }
