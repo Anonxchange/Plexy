@@ -42,6 +42,9 @@ export default defineConfig(() => {
       cssMinify: true,
       target: "es2020",
       rollupOptions: {
+        input: {
+          main: path.resolve(process.cwd(), "client", "index.html"),
+        },
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
