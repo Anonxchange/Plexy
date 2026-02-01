@@ -61,7 +61,7 @@ export function TradeActions({
   // Status mapping for legacy support and new flow
   // Use case-insensitive matching for robustness
   const status = trade.status?.toLowerCase() || "";
-  const isPending = status === "pending" || status === "pending_seller_approval" || status === "pending_approval" || status === "pending_escrow";
+  const isPending = status === "pending" || status === "pending_seller_approval" || status === "pending_approval" || status === "pending_escrow" || status === "pending_seller_approval";
   const isApproved = status === "approved" || status === "approved_awaiting_payment" || status === "awaiting_payment";
   const isPaymentMarked = status === "payment_marked" || status === "payment_sent" || status === "paid";
   const isCompleted = status === "completed" || status === "released" || status === "done";
@@ -375,26 +375,26 @@ export function TradeActions({
               </div>
             </div>
 
-          {isPending ? (
-            <div className="grid grid-cols-2 gap-2">
-              <Button 
-                className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
-                onClick={handleApproveTrade}
-                disabled={isProcessing}
-                data-approve-trade
-              >
-                ✅ Approve Contract
-              </Button>
-              <Button 
-                variant="destructive"
-                className="h-12 font-bold"
-                onClick={onShowCancelModal}
-                disabled={isProcessing}
-              >
-                ❌ Cancel Contract
-              </Button>
-            </div>
-          ) : (
+            {isPending ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
+                  onClick={handleApproveTrade}
+                  disabled={isProcessing}
+                  data-approve-trade
+                >
+                  ✅ Approve Contract
+                </Button>
+                <Button 
+                  variant="destructive"
+                  className="h-12 font-bold"
+                  onClick={onShowCancelModal}
+                  disabled={isProcessing}
+                >
+                  ❌ Cancel Contract
+                </Button>
+              </div>
+            ) : (
               <div className="space-y-3">
                 <Button 
                   disabled={!isPaymentMarked || isProcessing}
