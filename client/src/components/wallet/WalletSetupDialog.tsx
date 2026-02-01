@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 
 interface WalletSetupDialogProps {
   open: boolean;
@@ -47,16 +47,13 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
     setIsGenerating(true);
 
     try {
-      // Generate the master wallet (Ethereum) which auto-generates sidechains (Optimism, Polygon, etc.)
-      // and stablecoin entries (USDT, USDC).
       const { mnemonicPhrase } = await nonCustodialWalletManager.generateNonCustodialWallet(
         "ethereum",
         password,
-        null, // Supabase client could be passed here if needed for cloud sync
+        null,
         userId
       );
 
-      // Also generate Bitcoin as it's a different derivation path
       await nonCustodialWalletManager.generateNonCustodialWallet(
         "Bitcoin (SegWit)",
         password,
@@ -65,7 +62,6 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
         mnemonicPhrase
       );
 
-      // Generate Solana
       await nonCustodialWalletManager.generateNonCustodialWallet(
         "Solana",
         password,
@@ -74,7 +70,6 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
         mnemonicPhrase
       );
 
-      // Generate Tron
       await nonCustodialWalletManager.generateNonCustodialWallet(
         "Tron (TRC-20)",
         password,
@@ -83,7 +78,6 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
         mnemonicPhrase
       );
 
-      // Generate XRP
       await nonCustodialWalletManager.generateNonCustodialWallet(
         "XRP",
         password,
@@ -111,118 +105,137 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
   };
 
   return (
-    <Dialog open={open} onOpenChange={isGenerating ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-[440px] p-6">
-        {step === "intro" && (
-          <div className="space-y-6 text-center py-4">
-            <div className="flex justify-center">
-              <div className="bg-primary/10 p-4 rounded-full">
-                <ShieldCheck className="w-12 h-12 text-primary" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Secure Your Wallet</h2>
-              <p className="text-muted-foreground text-sm">
-                Pexly is a non-custodial wallet. This means you are in full control of your funds.
-              </p>
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-200 dark:border-amber-900 text-left space-y-3">
-              <div className="flex gap-3 text-amber-800 dark:text-amber-200">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <p className="text-xs font-medium leading-relaxed">
-                  We do not have access to your password. If you lose it, we cannot reset it for you.
-                </p>
-              </div>
-            </div>
-            <Button className="w-full h-12 font-bold text-base" onClick={() => setStep("password")}>
-              Get Started
-            </Button>
+    <Dialog open={open} onOpenChange={isGenerating ? undefined : (open) => {
+      // Make it compulsory by not allowing close unless success
+      if (step === "success") {
+        onOpenChange(open);
+      }
+    }}>
+      <DialogContent className="max-w-[95vw] sm:max-w-[800px] p-0 overflow-hidden bg-[#0A0A0A] border-none shadow-2xl rounded-2xl">
+        <div className="flex flex-col md:flex-row min-h-[500px]">
+          {/* SVG Illustration Section - Top on mobile, Right on desktop */}
+          <div className="w-full md:w-1/2 order-1 md:order-2 bg-gradient-to-br from-[#B4F22E]/20 to-transparent flex items-center justify-center p-8 md:p-12">
+            <img 
+              src="/src/assets/svg-image-16.svg" 
+              alt="Security Illustration" 
+              className="w-full max-w-[280px] md:max-w-full drop-shadow-[0_0_30px_rgba(180,242,46,0.3)]"
+            />
           </div>
-        )}
 
-        {step === "password" && (
-          <div className="space-y-6">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-center">Create Password</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">New Password (min. 8 chars)</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    placeholder="Enter password"
-                    className="pl-10 h-12"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+          {/* Form Content Section - Bottom on mobile, Left on desktop */}
+          <div className="w-full md:w-1/2 order-2 md:order-1 p-8 md:p-12 flex flex-col justify-center bg-[#0A0A0A]">
+            {step === "intro" && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-4">
+                  <h2 className="text-4xl font-bold tracking-tight text-white">Password Protected</h2>
+                  <p className="text-gray-400 text-lg leading-relaxed">
+                    Secure your digital assets with Pexly's non-custodial wallet. You are in full control of your private keys and funds.
+                  </p>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    placeholder="Confirm password"
-                    className="pl-10 h-12"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
+                <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex gap-4">
+                  <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
+                  <p className="text-xs text-amber-200/80 leading-relaxed">
+                    Important: Pexly does not store your password. If lost, your funds cannot be recovered.
+                  </p>
                 </div>
-              </div>
-              <div className="pt-2">
-                <Button className="w-full h-12 font-bold text-base" onClick={handleCreatePassword}>
-                  Create Wallet
+                <Button 
+                  className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02]" 
+                  onClick={() => setStep("password")}
+                >
+                  Enter Now
                 </Button>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {step === "generating" && (
-          <div className="py-12 flex flex-col items-center justify-center space-y-6">
-            <div className="relative">
-              <Loader2 className="w-16 h-16 text-primary animate-spin" />
-            </div>
-            <div className="text-center space-y-2">
-              <h2 className="text-xl font-bold">Generating Your Wallet</h2>
-              <p className="text-sm text-muted-foreground">
-                We are creating your unique addresses for Bitcoin, Ethereum, Polygon, and more...
-              </p>
-            </div>
-          </div>
-        )}
+            {step === "password" && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-bold text-white">Security Credentials</h2>
+                  <p className="text-gray-400">Establish your master access password.</p>
+                </div>
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-[#B4F22E] transition-colors" />
+                      <Input
+                        type="password"
+                        placeholder="Enter your password."
+                        className="bg-transparent border-gray-800 focus:border-[#B4F22E] h-14 pl-12 rounded-full text-white placeholder:text-gray-600 transition-all"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-[#B4F22E] transition-colors" />
+                      <Input
+                        type="password"
+                        placeholder="Confirm password."
+                        className="bg-transparent border-gray-800 focus:border-[#B4F22E] h-14 pl-12 rounded-full text-white placeholder:text-gray-600 transition-all"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full mt-4 transition-all hover:scale-[1.02]" 
+                    onClick={handleCreatePassword}
+                  >
+                    Confirm & Secure
+                  </Button>
+                </div>
+              </div>
+            )}
 
-        {step === "success" && (
-          <div className="space-y-6 text-center py-4">
-            <div className="flex justify-center">
-              <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-full">
-                <CheckCircle2 className="w-12 h-12 text-green-600 dark:text-green-400" />
+            {step === "generating" && (
+              <div className="flex flex-col items-center justify-center space-y-8 animate-in zoom-in-95 duration-500">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-[#B4F22E]/20 blur-2xl rounded-full"></div>
+                  <Loader2 className="w-20 h-20 text-[#B4F22E] animate-spin relative" />
+                </div>
+                <div className="text-center space-y-3">
+                  <h2 className="text-2xl font-bold text-white uppercase tracking-widest">Encrypting</h2>
+                  <p className="text-gray-400 max-w-xs">
+                    Initializing multi-chain security protocols and generating your unique vault keys...
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Success!</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed px-4">
-                Your secure wallet has been generated. All addresses for supported chains are now ready for use.
-              </p>
-            </div>
-            <div className="bg-muted/30 p-4 rounded-xl text-left border border-border/50">
-              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-2">READY NETWORKS</p>
-              <div className="flex flex-wrap gap-2">
-                {["BTC", "ETH", "BNB", "TRX", "SOL", "XRP", "USDT", "USDC"].map((s) => (
-                  <span key={s} className="px-2 py-1 bg-background border rounded text-[10px] font-bold">
-                    {s}
-                  </span>
-                ))}
+            )}
+
+            {step === "success" && (
+              <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500 text-center md:text-left">
+                <div className="flex justify-center md:justify-start">
+                  <div className="bg-[#B4F22E]/10 p-5 rounded-full border border-[#B4F22E]/20">
+                    <CheckCircle2 className="w-12 h-12 text-[#B4F22E]" />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h2 className="text-4xl font-bold text-white leading-tight">Vault Secured</h2>
+                  <p className="text-gray-400 text-lg leading-relaxed">
+                    Your non-custodial wallet is now synchronized across all supported networks.
+                  </p>
+                </div>
+                <div className="bg-white/5 p-5 rounded-2xl border border-white/10">
+                  <p className="text-[10px] text-[#B4F22E] font-bold uppercase tracking-[0.2em] mb-4">Supported Networks</p>
+                  <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                    {["BTC", "ETH", "BNB", "TRX", "SOL", "USDT", "USDC"].map((s) => (
+                      <span key={s} className="px-3 py-1.5 bg-black/40 border border-white/10 rounded-lg text-[10px] font-bold text-white hover:border-[#B4F22E]/50 transition-colors">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <Button 
+                  className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02]" 
+                  onClick={handleFinish}
+                >
+                  Enter Dashboard
+                </Button>
               </div>
-            </div>
-            <Button className="w-full h-12 font-bold text-base" onClick={handleFinish}>
-              Go to Wallet
-            </Button>
+            )}
           </div>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   );
