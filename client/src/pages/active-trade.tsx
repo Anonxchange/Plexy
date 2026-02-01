@@ -114,17 +114,15 @@ export default function ActiveTrade() {
 
   const effectiveUserId = currentUserProfileId || user?.id;
   
-  // The logic was reversed. 
-  // In a P2P trade:
-  // - If I created a BUY offer, I am the Buyer.
-  // - If I created a SELL offer, I am the Seller.
-  // - If someone ELSE created a BUY offer and I am trading with them, I am the Seller.
-  // - If someone ELSE created a SELL offer and I am trading with them, I am the Buyer.
-  //
-  // However, the database 'p2p_trades' table already has 'buyer_id' and 'seller_id' 
-  // assigned correctly during trade creation in TradeDialog.
-  // So we just need to check if the current user is the one assigned as 'buyer_id'.
-  const isUserBuyer = !!(effectiveUserId && trade && trade.buyer_id === effectiveUserId);
+  // Final role check logic
+  const isUserBuyer = trade ? trade.buyer_id === effectiveUserId : false;
+  
+  console.log("ROLE DEBUG:", {
+    effectiveUserId,
+    tradeBuyerId: trade?.buyer_id,
+    tradeSellerId: trade?.seller_id,
+    isUserBuyer
+  });
   
   const counterparty = isUserBuyer ? trade?.seller_profile : trade?.buyer_profile;
   const counterpartyId = isUserBuyer ? trade?.seller_id : trade?.buyer_id;
@@ -576,38 +574,35 @@ export default function ActiveTrade() {
       return;
     }
 
-    // Corrected cancellation logic:
-    // Both parties can cancel if the trade is not yet approved.
-    // If approved: 
-    // - Seller can no longer cancel.
-    // - Buyer can cancel as long as they haven't marked as paid.
+    // Updated cancellation logic:
+    // 1. If seller, they can ONLY cancel in 'pending' state.
+    // 2. If buyer, they can cancel in 'pending' or 'approved' (before payment).
     
-    const isApproved = tradeData.status?.toLowerCase() === 'approved' || 
-                      tradeData.status?.toUpperCase() === 'APPROVED_AWAITING_PAYMENT';
-    
-    let canCancel = false;
-    if (!isApproved) {
-      // Not approved yet - both can cancel
-      canCancel = true;
-    } else {
-      // Approved - check roles
-      if (isUserBuyer) {
-        // Buyer can cancel if not paid
-        canCancel = !tradeData.buyer_paid_at;
-      } else {
-        // Seller cannot cancel after approval
-        canCancel = false;
+    if (!isUserBuyer) {
+      if (tradeData.status !== 'pending' && tradeData.status?.toLowerCase() !== 'pending_seller_approval') {
+        toast({
+          title: "Cannot Cancel",
+          description: "Sellers cannot cancel the trade once the contract is approved.",
+          variant: "destructive",
+        });
+        setShowCancelWarning(false);
+        setCancelReason("");
+        setConfirmNotPaid(false);
+        return;
       }
-    }
-
-    if (!canCancel) {
-      toast({
-        title: "Cannot Cancel",
-        description: isUserBuyer ? "You cannot cancel after marking payment as sent." : "Sellers cannot cancel after approving the contract.",
-        variant: "destructive",
-      });
-      setShowCancelWarning(false);
-      return;
+    } else {
+      // Buyer logic
+      if (tradeData.buyer_paid_at) {
+        toast({
+          title: "Cannot Cancel",
+          description: "You cannot cancel after marking payment as sent.",
+          variant: "destructive",
+        });
+        setShowCancelWarning(false);
+        setCancelReason("");
+        setConfirmNotPaid(false);
+        return;
+      }
     }
 
     const isCancellable = tradeData.status === 'pending' || tradeData.status === 'approved' || 
