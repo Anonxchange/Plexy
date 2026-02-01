@@ -305,9 +305,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       checkedUsersRef.current.add(userId);
       
+      // Check if wallets exist in Cloud Sync (Supabase) - this is the encrypted blob
       const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
       
       if (persistedWallets.length > 0) {
+        // User has an encrypted wallet blob in the database.
+        // This is still non-custodial because the blob is encrypted with their password,
+        // which we never store. They just need to enter their password to decrypt it locally.
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
@@ -326,13 +330,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (walletAddress) {
-        const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress, userId);
+        // If they have an address in DB, they already HAVE a wallet.
         setWalletImportState({ 
-          required: true, // Make it compulsory
-          expectedAddress: !hasLocal ? walletAddress : null 
+          required: false, 
+          expectedAddress: null 
         });
       } else {
-        // If no wallet address exists yet, also make setup compulsory
+        // Only COMPULSORY if they literally don't have a wallet yet anywhere (DB or Profile)
         setWalletImportState({ 
           required: true, 
           expectedAddress: null 
