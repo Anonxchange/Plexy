@@ -125,7 +125,7 @@ export function TradeStartedSection({
               onMockComplete={onMockComplete}
             />
 
-            {isPending ? (
+            {!isPaid && (trade.status === 'pending' || trade.status === 'pending_seller_approval' || trade.status === 'PENDING_SELLER_APPROVAL') && (
               <div className="grid grid-cols-2 gap-2 mt-4">
                 <Button 
                   className="bg-green-600 hover:bg-green-700 h-12 text-white font-bold"
@@ -159,7 +159,7 @@ export function TradeStartedSection({
                   ❌ Cancel Contract
                 </Button>
               </div>
-            ) : null}
+            )}
 
             {!isPaid && (
               <Button
