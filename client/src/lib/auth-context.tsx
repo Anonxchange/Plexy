@@ -364,17 +364,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // 3. Check Cloud Blobs (Supabase)
+      // 3. Check Cloud Blobs (Supabase) FIRST before deciding on setup
       try {
         const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
         if (persistedWallets && persistedWallets.length > 0) {
-          // RESTORE REQUIRED: Silent sync to local storage
+          // RESTORE SUCCESSFUL: Local storage is now synced with backend blob
           setWalletImportState({ required: false, expectedAddress: null });
           localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
           return;
         }
       } catch (err) {
         console.error("Cloud check failed:", err);
+      }
+
+      // Re-check local wallets to ensure state is updated after cloud sync attempt
+      const syncedWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
+      if (syncedWallets.length > 0) {
+        setWalletImportState({ required: false, expectedAddress: null });
+        return; 
       }
 
       // 4. Check Wallet Address (Ownership check)
