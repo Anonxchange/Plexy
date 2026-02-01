@@ -4,12 +4,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@/lib/auth-context";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { GlobalNotificationListener } from "@/components/global-notification-listener";
 import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
 import { CookieConsent } from "@/components/cookie-consent";
+import { WalletSetupDialog } from "@/components/wallet/WalletSetupDialog";
 
 // Import pages directly
 import Home from "@/pages/home";
@@ -180,6 +181,7 @@ function Router() {
 }
 
 function AppContent() {
+  const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
   const hideAppFooter = ["/p2p", "/spot", "/swap", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/crypto-to-bank", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/create-offer", "/my-offers", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/affiliate", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
@@ -193,6 +195,16 @@ function AppContent() {
         <Router />
       </main>
       {!hideAppFooter && <AppFooter />}
+      
+      {user && (
+        <WalletSetupDialog 
+          open={walletImportState.required} 
+          onOpenChange={(open) => setWalletImportState({ ...walletImportState, required: open })}
+          userId={user.id}
+          onSuccess={() => setWalletImportState({ required: false, expectedAddress: null })}
+        />
+      )}
+
       <Toaster />
       <CookieConsent />
     </div>
