@@ -3,17 +3,17 @@ import { Badge } from "@/components/ui/badge";
 
 const steps = [
   {
-    iconSrc: "https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/svg-image-1%206.svg",
+    iconSrc: "/icons/step1.svg",
     title: "Create Your Account",
     description: "Sign up in seconds and get instant access to the global crypto marketplace.",
   },
   {
-    iconSrc: "https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/svg-image-1%205.svg",
+    iconSrc: "/icons/step2.svg",
     title: "Choose Payment Method",
     description: "Select from 500+ payment options including bank transfers, cards, and e-wallets.",
   },
   {
-    iconSrc: "https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/svg-image-1%208.svg",
+    iconSrc: "/icons/step3.svg",
     title: "Trade with Smart Contract Protection",
     description: "Your transaction is secured by automated smart contracts until both parties complete the trade.",
   },
