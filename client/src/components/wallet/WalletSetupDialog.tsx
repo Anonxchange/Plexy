@@ -110,39 +110,39 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
         onOpenChange(open);
       }
     }}>
-      <DialogContent className="max-w-[400px] w-[90vw] p-0 overflow-visible bg-[#0A0A0A] border-none shadow-2xl rounded-[32px]">
-        <div className="relative flex flex-col items-center pt-12 pb-8 px-8">
+      <DialogContent className="max-w-[380px] w-[90vw] p-0 overflow-visible bg-white border-none shadow-2xl rounded-[32px]">
+        <div className="relative flex flex-col items-center pt-10 pb-7 px-7">
           {/* Floating SVG Illustration */}
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 pointer-events-none z-50">
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-44 h-44 pointer-events-none z-50">
             <img 
               src="/src/assets/svg-image-1 16.svg" 
               alt="Security Illustration" 
-              className="w-full h-full object-contain drop-shadow-[0_20px_40px_rgba(180,242,46,0.3)]"
+              className="w-full h-full object-contain drop-shadow-[0_15px_30px_rgba(180,242,46,0.4)]"
             />
           </div>
 
-          <div className="w-full space-y-6 mt-16 max-h-[70vh] overflow-y-auto no-scrollbar">
+          <div className="w-full space-y-5 mt-14 max-h-[70vh] overflow-y-auto no-scrollbar">
             {step === "intro" && (
-              <div className="space-y-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-4">
-                  <h2 className="text-4xl font-bold tracking-tight text-white">Password Protected</h2>
-                  <p className="text-gray-400 text-lg leading-relaxed">
+              <div className="space-y-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-3">
+                  <h2 className="text-3xl font-bold tracking-tight text-black">Password Protected</h2>
+                  <p className="text-gray-500 text-base leading-relaxed">
                     Secure your digital assets with Pexly's non-custodial wallet. You are in full control of your private keys and funds.
                   </p>
                 </div>
                 
-                <div className="space-y-4 pt-4">
+                <div className="space-y-3 pt-2">
                   <div className="relative group">
                     <Input
                       type="password"
                       placeholder="Enter your password."
                       disabled
-                      className="bg-transparent border-[#B4F22E] border-2 h-16 px-8 rounded-full text-white placeholder:text-gray-500 text-lg text-center cursor-not-allowed opacity-50"
+                      className="bg-gray-50 border-gray-200 border h-14 px-6 rounded-full text-black placeholder:text-gray-400 text-base text-center cursor-not-allowed opacity-60"
                     />
                   </div>
                   
                   <Button 
-                    className="w-full h-16 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-xl rounded-full transition-all hover:scale-[1.02] shadow-[0_0_20px_rgba(180,242,46,0.2)]" 
+                    className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.3)]" 
                     onClick={() => setStep("password")}
                   >
                     Enter now
@@ -152,17 +152,17 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
             )}
 
             {step === "password" && (
-              <div className="space-y-8 text-center animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold text-white">Security Credentials</h2>
-                  <p className="text-gray-400">Establish your master access password.</p>
+              <div className="space-y-6 text-center animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-bold text-black">Security Credentials</h2>
+                  <p className="text-gray-500 text-sm">Establish your master access password.</p>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="relative group">
                     <Input
                       type="password"
                       placeholder="New password"
-                      className="bg-transparent border-gray-800 focus:border-[#B4F22E] h-16 px-8 rounded-full text-white placeholder:text-gray-600 text-lg text-center transition-all"
+                      className="bg-gray-50 border-gray-100 focus:border-[#B4F22E] h-14 px-6 rounded-full text-black placeholder:text-gray-400 text-base text-center transition-all"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
@@ -171,13 +171,13 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
                     <Input
                       type="password"
                       placeholder="Confirm password"
-                      className="bg-transparent border-gray-800 focus:border-[#B4F22E] h-16 px-8 rounded-full text-white placeholder:text-gray-600 text-lg text-center transition-all"
+                      className="bg-gray-50 border-gray-100 focus:border-[#B4F22E] h-14 px-6 rounded-full text-black placeholder:text-gray-400 text-base text-center transition-all"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                   </div>
                   <Button 
-                    className="w-full h-16 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-xl rounded-full mt-4 transition-all hover:scale-[1.02]" 
+                    className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full mt-2 transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.2)]" 
                     onClick={handleCreatePassword}
                   >
                     Confirm & Secure
@@ -187,14 +187,14 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
             )}
 
             {step === "generating" && (
-              <div className="flex flex-col items-center justify-center py-12 space-y-8 animate-in zoom-in-95 duration-500">
+              <div className="flex flex-col items-center justify-center py-10 space-y-6 animate-in zoom-in-95 duration-500">
                 <div className="relative">
                   <div className="absolute inset-0 bg-[#B4F22E]/20 blur-2xl rounded-full"></div>
-                  <Loader2 className="w-20 h-20 text-[#B4F22E] animate-spin relative" />
+                  <Loader2 className="w-16 h-16 text-[#B4F22E] animate-spin relative" />
                 </div>
-                <div className="text-center space-y-3">
-                  <h2 className="text-2xl font-bold text-white uppercase tracking-widest">Encrypting</h2>
-                  <p className="text-gray-400 max-w-xs">
+                <div className="text-center space-y-2">
+                  <h2 className="text-xl font-bold text-black uppercase tracking-widest">Encrypting</h2>
+                  <p className="text-gray-500 text-sm max-w-xs">
                     Initializing multi-chain security protocols...
                   </p>
                 </div>
@@ -202,25 +202,25 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
             )}
 
             {step === "success" && (
-              <div className="space-y-8 text-center animate-in fade-in zoom-in-95 duration-500">
-                <div className="space-y-4">
-                  <h2 className="text-4xl font-bold text-white leading-tight">Vault Secured</h2>
-                  <p className="text-gray-400 text-lg leading-relaxed">
+              <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
+                <div className="space-y-3">
+                  <h2 className="text-3xl font-bold text-black leading-tight">Vault Secured</h2>
+                  <p className="text-gray-500 text-base leading-relaxed">
                     Your non-custodial wallet is now synchronized.
                   </p>
                 </div>
-                <div className="bg-white/5 p-6 rounded-[24px] border border-white/10">
-                  <p className="text-[10px] text-[#B4F22E] font-bold uppercase tracking-[0.2em] mb-4">Supported Networks</p>
+                <div className="bg-gray-50 p-5 rounded-[24px] border border-gray-100">
+                  <p className="text-[10px] text-[#8BB424] font-bold uppercase tracking-[0.2em] mb-3">Supported Networks</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {["BTC", "ETH", "BNB", "TRX", "SOL", "USDT", "USDC"].map((s) => (
-                      <span key={s} className="px-3 py-1.5 bg-black/40 border border-white/10 rounded-lg text-[10px] font-bold text-white">
+                      <span key={s} className="px-2.5 py-1 bg-white border border-gray-100 rounded-lg text-[10px] font-bold text-black shadow-sm">
                         {s}
                       </span>
                     ))}
                   </div>
                 </div>
                 <Button 
-                  className="w-full h-16 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-xl rounded-full transition-all hover:scale-[1.02]" 
+                  className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.3)]" 
                   onClick={handleFinish}
                 >
                   Enter Dashboard
