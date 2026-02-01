@@ -319,25 +319,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (persistedWallets.length > 0) {
         // User has an encrypted wallet blob in the database.
-        // This is still non-custodial because the blob is encrypted with their password,
-        // which we never store. They just need to enter their password to decrypt it locally.
-        
-        // Check if we already have the session password to attempt auto-decryption/verification
-        const storedPassword = sessionStorage.getItem('walletPassword');
-        if (storedPassword) {
-          try {
-            // Verify we can decrypt at least one wallet with the stored password
-            await nonCustodialWalletManager.getWalletMnemonic(persistedWallets[0].id, storedPassword, userId);
-            setWalletImportState({ required: false, expectedAddress: null });
-            localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
-            return;
-          } catch (e) {
-            // Password might be wrong or stale, fall through to check address
-          }
-        }
-
+        // We restore it to local storage automatically.
         setWalletImportState({ required: false, expectedAddress: null });
-        // Set a flag in localStorage to avoid repeated DB checks for this session/device
         localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
         return;
       }
