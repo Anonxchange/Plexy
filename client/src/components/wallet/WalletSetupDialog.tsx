@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
+import securityIllustration from "@/assets/svg-image-1 16.svg";
 
 interface WalletSetupDialogProps {
   open: boolean;
@@ -115,7 +116,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
           {/* Floating SVG Illustration */}
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-44 h-44 pointer-events-none z-50">
             <img 
-              src="/src/assets/svg-image-1 16.svg" 
+              src={securityIllustration} 
               alt="Security Illustration" 
               className="w-full h-full object-contain drop-shadow-[0_15px_30px_rgba(180,242,46,0.4)]"
             />
@@ -128,6 +129,14 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
                   <h2 className="text-3xl font-bold tracking-tight text-black">Password Protected</h2>
                   <p className="text-gray-500 text-base leading-relaxed">
                     Secure your digital assets with Pexly's non-custodial wallet. You are in full control of your private keys and funds.
+                  </p>
+                </div>
+
+                <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex gap-3 text-left">
+                  <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-800 leading-relaxed font-medium">
+                    <span className="font-bold text-red-700 block mb-1 uppercase tracking-wider">Crucial Security Notice:</span>
+                    We cannot recover your password. If lost, your wallet and all funds will be permanently inaccessible. You are the sole person in charge of your security.
                   </p>
                 </div>
                 
