@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
+import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X, RefreshCw } from "lucide-react";
 import securityIllustration from "@/assets/svg-image-1 20.svg";
 
 interface WalletSetupDialogProps {
@@ -17,14 +17,17 @@ interface WalletSetupDialogProps {
   onOpenChange: (open: boolean) => void;
   userId: string;
   onSuccess: () => void;
+  expectedAddress?: string | null;
 }
 
-export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: WalletSetupDialogProps) {
+export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expectedAddress }: WalletSetupDialogProps) {
   const [step, setStep] = useState<"intro" | "password" | "generating" | "success">("intro");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+
+  const isImporting = !!expectedAddress;
 
   const handleCreatePassword = async () => {
     if (password.length < 8) {
@@ -35,7 +38,8 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
       });
       return;
     }
-    if (password !== confirmPassword) {
+    
+    if (!isImporting && password !== confirmPassword) {
       toast({
         title: "Passwords mismatch",
         description: "Please make sure both passwords match.",
@@ -48,51 +52,42 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
     setIsGenerating(true);
 
     try {
-      const { mnemonicPhrase } = await nonCustodialWalletManager.generateNonCustodialWallet(
-        "ethereum",
-        password,
-        null,
-        userId
-      );
+      if (isImporting) {
+        // Recovery flow: Attempt to load from Supabase and verify with password
+        const wallets = await nonCustodialWalletManager.loadWalletsFromSupabase(null, userId);
+        const ethWallet = wallets.find(w => w.chainId === "ethereum");
+        
+        if (!ethWallet) throw new Error("Could not find wallet data to sync.");
 
-      await nonCustodialWalletManager.generateNonCustodialWallet(
-        "Bitcoin (SegWit)",
-        password,
-        null,
-        userId,
-        mnemonicPhrase
-      );
+        // Attempt to decrypt to verify password
+        await nonCustodialWalletManager.getWalletMnemonic(ethWallet.id, password, userId);
+      } else {
+        // Creation flow: Generate brand new wallets
+        const { mnemonicPhrase } = await nonCustodialWalletManager.generateNonCustodialWallet(
+          "ethereum",
+          password,
+          null,
+          userId
+        );
 
-      await nonCustodialWalletManager.generateNonCustodialWallet(
-        "Solana",
-        password,
-        null,
-        userId,
-        mnemonicPhrase
-      );
-
-      await nonCustodialWalletManager.generateNonCustodialWallet(
-        "Tron (TRC-20)",
-        password,
-        null,
-        userId,
-        mnemonicPhrase
-      );
-
-      await nonCustodialWalletManager.generateNonCustodialWallet(
-        "XRP",
-        password,
-        null,
-        userId,
-        mnemonicPhrase
-      );
+        const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP"];
+        for (const chain of chains) {
+          await nonCustodialWalletManager.generateNonCustodialWallet(
+            chain,
+            password,
+            null,
+            userId,
+            mnemonicPhrase
+          );
+        }
+      }
 
       setStep("success");
     } catch (error: any) {
       setStep("password");
       toast({
-        title: "Generation failed",
-        description: error.message || "Failed to generate your wallet.",
+        title: isImporting ? "Verification failed" : "Generation failed",
+        description: error.message || "Failed to secure your wallet.",
         variant: "destructive",
       });
     } finally {
@@ -127,35 +122,37 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
             {step === "intro" && (
               <div className="space-y-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="space-y-3">
-                  <h2 className="text-3xl font-bold tracking-tight text-black">Password Protected</h2>
+                  <h2 className="text-3xl font-bold tracking-tight text-black">
+                    {isImporting ? "Sync Wallet" : "Password Protected"}
+                  </h2>
                   <p className="text-gray-500 text-base leading-relaxed">
-                    Secure your digital assets with Pexly's non-custodial wallet. You are in full control of your private keys and funds.
+                    {isImporting 
+                      ? "A wallet is already associated with your account. Enter your wallet password to synchronize it with this device."
+                      : "Secure your digital assets with Pexly's non-custodial wallet. You are in full control of your private keys and funds."}
                   </p>
                 </div>
+
+                {isImporting && expectedAddress && (
+                  <div className="bg-blue-50 border border-blue-100 p-3 rounded-2xl">
+                    <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-1">Detected Wallet Address</p>
+                    <p className="text-xs font-mono text-blue-900 truncate px-2">{expectedAddress}</p>
+                  </div>
+                )}
 
                 <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex gap-3 text-left">
                   <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                   <p className="text-xs text-red-800 leading-relaxed font-medium">
                     <span className="font-bold text-red-700 block mb-1 uppercase tracking-wider">Crucial Security Notice:</span>
-                    We cannot recover your password. If lost, your wallet and all funds will be permanently inaccessible. You are the sole person in charge of your security.
+                    We cannot recover your password. If lost, your wallet and all funds will be permanently inaccessible.
                   </p>
                 </div>
                 
                 <div className="space-y-3 pt-2">
-                  <div className="relative group">
-                    <Input
-                      type="password"
-                      placeholder="Enter your password."
-                      disabled
-                      className="bg-gray-50 border-gray-200 border h-14 px-6 rounded-full text-black placeholder:text-gray-400 text-base text-center cursor-not-allowed opacity-60"
-                    />
-                  </div>
-                  
                   <Button 
                     className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.3)]" 
                     onClick={() => setStep("password")}
                   >
-                    Enter now
+                    {isImporting ? "Start Sync" : "Enter now"}
                   </Button>
                 </div>
               </div>
@@ -164,33 +161,42 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
             {step === "password" && (
               <div className="space-y-6 text-center animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="space-y-1">
-                  <h2 className="text-2xl font-bold text-black">Security Credentials</h2>
-                  <p className="text-gray-500 text-sm">Establish your master access password.</p>
+                  <h2 className="text-2xl font-bold text-black">
+                    {isImporting ? "Enter Password" : "Security Credentials"}
+                  </h2>
+                  <p className="text-gray-500 text-sm">
+                    {isImporting 
+                      ? "Enter the password you used when creating the wallet."
+                      : "Establish your master access password."}
+                  </p>
                 </div>
                 <div className="space-y-3">
                   <div className="relative group">
                     <Input
                       type="password"
-                      placeholder="New password"
+                      placeholder={isImporting ? "Wallet Password" : "New password"}
                       className="bg-gray-50 border-gray-100 focus:border-[#B4F22E] h-14 px-6 rounded-full text-black placeholder:text-gray-400 text-base text-center transition-all"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
-                  <div className="relative group">
-                    <Input
-                      type="password"
-                      placeholder="Confirm password"
-                      className="bg-gray-50 border-gray-100 focus:border-[#B4F22E] h-14 px-6 rounded-full text-black placeholder:text-gray-400 text-base text-center transition-all"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                  </div>
+                  {!isImporting && (
+                    <div className="relative group">
+                      <Input
+                        type="password"
+                        placeholder="Confirm password"
+                        className="bg-gray-50 border-gray-100 focus:border-[#B4F22E] h-14 px-6 rounded-full text-black placeholder:text-gray-400 text-base text-center transition-all"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                  )}
                   <Button 
                     className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full mt-2 transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.2)]" 
                     onClick={handleCreatePassword}
+                    disabled={isGenerating}
                   >
-                    Confirm & Secure
+                    {isImporting ? "Verify & Unlock" : "Confirm & Secure"}
                   </Button>
                 </div>
               </div>
@@ -203,9 +209,13 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
                   <Loader2 className="w-16 h-16 text-[#B4F22E] animate-spin relative" />
                 </div>
                 <div className="text-center space-y-2">
-                  <h2 className="text-xl font-bold text-black uppercase tracking-widest">Encrypting</h2>
+                  <h2 className="text-xl font-bold text-black uppercase tracking-widest">
+                    {isImporting ? "Synchronizing" : "Encrypting"}
+                  </h2>
                   <p className="text-gray-500 text-sm max-w-xs">
-                    Initializing multi-chain security protocols...
+                    {isImporting 
+                      ? "Verifying credentials and syncing assets..."
+                      : "Initializing multi-chain security protocols..."}
                   </p>
                 </div>
               </div>
@@ -214,9 +224,13 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
             {step === "success" && (
               <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-3">
-                  <h2 className="text-3xl font-bold text-black leading-tight">Vault Secured</h2>
+                  <h2 className="text-3xl font-bold text-black leading-tight">
+                    {isImporting ? "Sync Complete" : "Vault Secured"}
+                  </h2>
                   <p className="text-gray-500 text-base leading-relaxed">
-                    Your non-custodial wallet is now synchronized.
+                    {isImporting
+                      ? "Your wallet has been successfully restored on this device."
+                      : "Your non-custodial wallet is now synchronized."}
                   </p>
                 </div>
                 <div className="bg-gray-50 p-5 rounded-[24px] border border-gray-100">
