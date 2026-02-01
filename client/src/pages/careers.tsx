@@ -7,6 +7,7 @@ import iconInsurance from "@/assets/svg-image-1 17.svg";
 import iconGrowth from "@/assets/svg-image-1 18.svg";
 import iconTime from "@/assets/svg-image-1 19.svg";
 import { ArrowRight } from "lucide-react";
+import { AppFooter } from "@/components/app-footer";
 
 const perks = [
   {
@@ -108,7 +109,7 @@ const positions = [
 
 const Careers = () => {
   return (
-    <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
+    <main className="min-h-screen bg-gray-100 text-foreground selection:bg-primary selection:text-primary-foreground">
 
       {/* Hero Section */}
       <section className="relative overflow-hidden px-6 md:px-20 pt-32 pb-20 max-w-7xl mx-auto">
@@ -126,13 +127,13 @@ const Careers = () => {
               are redefining how the world trades.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="rounded-full px-8 py-6 text-lg font-semibold">
+              <Button size="lg" className="rounded-full px-6 font-semibold">
                 Browse positions
               </Button>
               <Button
                 variant="outline"
                 size="lg"
-                className="rounded-full px-8 py-6 text-lg font-semibold"
+                className="rounded-full px-6 font-semibold"
               >
                 Our company story
               </Button>
@@ -164,10 +165,10 @@ const Careers = () => {
             </p>
           </div>
           <div className="flex gap-4">
-            <Button className="rounded-full px-8 py-4 font-semibold">
+            <Button className="rounded-full px-6 font-semibold">
               Join our team
             </Button>
-            <Button variant="outline" className="rounded-full px-8 py-4 font-semibold">
+            <Button variant="outline" className="rounded-full px-6 font-semibold">
               More about us
             </Button>
           </div>
@@ -177,7 +178,7 @@ const Careers = () => {
           {perks.map((perk, index) => (
             <div
               key={index}
-              className="bg-card border border-border rounded-[32px] p-10 flex flex-col items-center text-center hover:border-primary/50 transition-colors"
+              className="bg-white border border-border rounded-[32px] p-10 flex flex-col items-center text-center hover:border-primary/50 transition-colors"
             >
               <div className="w-24 h-24 mb-8 bg-muted rounded-full flex items-center justify-center p-4">
                 <img src={perk.icon} alt={perk.title} className="w-full h-full object-contain" />
@@ -202,7 +203,7 @@ const Careers = () => {
               Don't just take our word for it. Here's what our team members have
               to say about the culture and opportunities at Pexly.
             </p>
-            <Button className="rounded-full px-10 py-6 text-lg font-semibold">
+            <Button size="lg" className="rounded-full px-6 font-semibold">
               Join our team
             </Button>
           </div>
@@ -211,7 +212,7 @@ const Careers = () => {
             {testimonials.map((t, i) => (
               <div
                 key={i}
-                className="bg-card border border-border rounded-[32px] p-8 hover:border-primary/50 transition-colors"
+                className="bg-white border border-border rounded-[32px] p-8 hover:border-primary/50 transition-colors"
               >
                 <p className="text-card-foreground/80 text-lg mb-8 leading-relaxed italic">
                   "{t.quote}"
@@ -242,13 +243,13 @@ const Careers = () => {
               Ready to make an impact? Explore our current openings and find your
               next challenge in the world of crypto and fintech.
             </p>
-            <Button className="rounded-full px-10 py-6 text-lg font-semibold">
+            <Button size="lg" className="rounded-full px-6 font-semibold">
               Contact us
             </Button>
           </div>
 
           <div className="md:w-2/3">
-            <div className="bg-card border border-border rounded-[40px] overflow-hidden">
+            <div className="bg-white border border-border rounded-[40px] overflow-hidden">
               <div className="divide-y divide-border">
                 {positions.map((position, index) => (
                   <a
@@ -275,6 +276,7 @@ const Careers = () => {
         </div>
       </section>
 
+      <AppFooter />
     </main>
   );
 };
