@@ -106,80 +106,78 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
 
   return (
     <Dialog open={open} onOpenChange={isGenerating ? undefined : (open) => {
-      // Make it compulsory by not allowing close unless success
       if (step === "success") {
         onOpenChange(open);
       }
     }}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[800px] p-0 overflow-hidden bg-[#0A0A0A] border-none shadow-2xl rounded-2xl">
-        <div className="flex flex-col md:flex-row min-h-[500px]">
-          {/* SVG Illustration Section - Top on mobile, Right on desktop */}
-          <div className="w-full md:w-1/2 order-1 md:order-2 bg-gradient-to-br from-[#B4F22E]/20 to-transparent flex items-center justify-center p-8 md:p-12">
+      <DialogContent className="max-w-[400px] w-[90vw] p-0 overflow-visible bg-[#0A0A0A] border-none shadow-2xl rounded-[32px]">
+        <div className="relative flex flex-col items-center pt-12 pb-8 px-8">
+          {/* Floating SVG Illustration */}
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 pointer-events-none z-50">
             <img 
-              src="/src/assets/svg-image-16.svg" 
+              src="/src/assets/svg-image-1 16.svg" 
               alt="Security Illustration" 
-              className="w-full max-w-[280px] md:max-w-full drop-shadow-[0_0_30px_rgba(180,242,46,0.3)]"
+              className="w-full h-full object-contain drop-shadow-[0_20px_40px_rgba(180,242,46,0.3)]"
             />
           </div>
 
-          {/* Form Content Section - Bottom on mobile, Left on desktop */}
-          <div className="w-full md:w-1/2 order-2 md:order-1 p-8 md:p-12 flex flex-col justify-center bg-[#0A0A0A]">
+          <div className="w-full space-y-6 mt-16 max-h-[70vh] overflow-y-auto no-scrollbar">
             {step === "intro" && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="space-y-4">
                   <h2 className="text-4xl font-bold tracking-tight text-white">Password Protected</h2>
                   <p className="text-gray-400 text-lg leading-relaxed">
                     Secure your digital assets with Pexly's non-custodial wallet. You are in full control of your private keys and funds.
                   </p>
                 </div>
-                <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex gap-4">
-                  <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
-                  <p className="text-xs text-amber-200/80 leading-relaxed">
-                    Important: Pexly does not store your password. If lost, your funds cannot be recovered.
-                  </p>
+                
+                <div className="space-y-4 pt-4">
+                  <div className="relative group">
+                    <Input
+                      type="password"
+                      placeholder="Enter your password."
+                      disabled
+                      className="bg-transparent border-[#B4F22E] border-2 h-16 px-8 rounded-full text-white placeholder:text-gray-500 text-lg text-center cursor-not-allowed opacity-50"
+                    />
+                  </div>
+                  
+                  <Button 
+                    className="w-full h-16 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-xl rounded-full transition-all hover:scale-[1.02] shadow-[0_0_20px_rgba(180,242,46,0.2)]" 
+                    onClick={() => setStep("password")}
+                  >
+                    Enter now
+                  </Button>
                 </div>
-                <Button 
-                  className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02]" 
-                  onClick={() => setStep("password")}
-                >
-                  Enter Now
-                </Button>
               </div>
             )}
 
             {step === "password" && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="space-y-8 text-center animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="space-y-2">
                   <h2 className="text-3xl font-bold text-white">Security Credentials</h2>
                   <p className="text-gray-400">Establish your master access password.</p>
                 </div>
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-[#B4F22E] transition-colors" />
-                      <Input
-                        type="password"
-                        placeholder="Enter your password."
-                        className="bg-transparent border-gray-800 focus:border-[#B4F22E] h-14 pl-12 rounded-full text-white placeholder:text-gray-600 transition-all"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                    </div>
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <Input
+                      type="password"
+                      placeholder="New password"
+                      className="bg-transparent border-gray-800 focus:border-[#B4F22E] h-16 px-8 rounded-full text-white placeholder:text-gray-600 text-lg text-center transition-all"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-[#B4F22E] transition-colors" />
-                      <Input
-                        type="password"
-                        placeholder="Confirm password."
-                        className="bg-transparent border-gray-800 focus:border-[#B4F22E] h-14 pl-12 rounded-full text-white placeholder:text-gray-600 transition-all"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                      />
-                    </div>
+                  <div className="relative group">
+                    <Input
+                      type="password"
+                      placeholder="Confirm password"
+                      className="bg-transparent border-gray-800 focus:border-[#B4F22E] h-16 px-8 rounded-full text-white placeholder:text-gray-600 text-lg text-center transition-all"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
                   </div>
                   <Button 
-                    className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full mt-4 transition-all hover:scale-[1.02]" 
+                    className="w-full h-16 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-xl rounded-full mt-4 transition-all hover:scale-[1.02]" 
                     onClick={handleCreatePassword}
                   >
                     Confirm & Secure
@@ -189,7 +187,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
             )}
 
             {step === "generating" && (
-              <div className="flex flex-col items-center justify-center space-y-8 animate-in zoom-in-95 duration-500">
+              <div className="flex flex-col items-center justify-center py-12 space-y-8 animate-in zoom-in-95 duration-500">
                 <div className="relative">
                   <div className="absolute inset-0 bg-[#B4F22E]/20 blur-2xl rounded-full"></div>
                   <Loader2 className="w-20 h-20 text-[#B4F22E] animate-spin relative" />
@@ -197,37 +195,32 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
                 <div className="text-center space-y-3">
                   <h2 className="text-2xl font-bold text-white uppercase tracking-widest">Encrypting</h2>
                   <p className="text-gray-400 max-w-xs">
-                    Initializing multi-chain security protocols and generating your unique vault keys...
+                    Initializing multi-chain security protocols...
                   </p>
                 </div>
               </div>
             )}
 
             {step === "success" && (
-              <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500 text-center md:text-left">
-                <div className="flex justify-center md:justify-start">
-                  <div className="bg-[#B4F22E]/10 p-5 rounded-full border border-[#B4F22E]/20">
-                    <CheckCircle2 className="w-12 h-12 text-[#B4F22E]" />
-                  </div>
-                </div>
+              <div className="space-y-8 text-center animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-4">
                   <h2 className="text-4xl font-bold text-white leading-tight">Vault Secured</h2>
                   <p className="text-gray-400 text-lg leading-relaxed">
-                    Your non-custodial wallet is now synchronized across all supported networks.
+                    Your non-custodial wallet is now synchronized.
                   </p>
                 </div>
-                <div className="bg-white/5 p-5 rounded-2xl border border-white/10">
+                <div className="bg-white/5 p-6 rounded-[24px] border border-white/10">
                   <p className="text-[10px] text-[#B4F22E] font-bold uppercase tracking-[0.2em] mb-4">Supported Networks</p>
-                  <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  <div className="flex flex-wrap gap-2 justify-center">
                     {["BTC", "ETH", "BNB", "TRX", "SOL", "USDT", "USDC"].map((s) => (
-                      <span key={s} className="px-3 py-1.5 bg-black/40 border border-white/10 rounded-lg text-[10px] font-bold text-white hover:border-[#B4F22E]/50 transition-colors">
+                      <span key={s} className="px-3 py-1.5 bg-black/40 border border-white/10 rounded-lg text-[10px] font-bold text-white">
                         {s}
                       </span>
                     ))}
                   </div>
                 </div>
                 <Button 
-                  className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02]" 
+                  className="w-full h-16 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-xl rounded-full transition-all hover:scale-[1.02]" 
                   onClick={handleFinish}
                 >
                   Enter Dashboard
