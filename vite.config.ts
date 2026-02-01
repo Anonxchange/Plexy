@@ -38,22 +38,9 @@ export default defineConfig(() => {
       emptyOutDir: true,
       assetsInlineLimit: 2048,
       sourcemap: false,
-      minify: "terser",
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ["console.log", "console.info", "console.debug", "console.trace"],
-        },
-        mangle: {
-          safari10: true,
-        },
-        format: {
-          comments: false,
-        },
-      },
+      minify: "esbuild",
       cssMinify: true,
-      target: "esnext",
+      target: "es2020",
       rollupOptions: {
         output: {
           manualChunks: (id) => {
