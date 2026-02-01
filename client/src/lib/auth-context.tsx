@@ -305,65 +305,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       checkedUsersRef.current.add(userId);
       
-      // FIRST: Check if wallets already exist in local storage for this user
-      // This handles the case where the user is already set up on this device
+      // DECISION FLOW:
+      // 1. Is there a decrypted key in memory? -> Wallet Ready
+      // 2. Is there an encrypted blob in localStorage? -> Password Required (to decrypt)
+      // 3. Is there an encrypted blob in Cloud? -> Restore Required (Sync to local)
+      // 4. Is there a wallet address in Profile/Metadata? -> Import Required (Missing blob)
+      // 5. No address at all? -> Create Required
+
+      // 1. Check Memory (via sessionPassword existence + local wallets)
       const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
-      if (localWallets.length > 0) {
+      const hasPassword = !!sessionPassword;
+
+      if (localWallets.length > 0 && hasPassword) {
+        // WALLET READY: Private keys can be derived in memory when needed
         setWalletImportState({ required: false, expectedAddress: null });
-        localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
         return;
       }
-      
-      // SECOND: Check if wallets exist in Cloud Sync (Supabase)
+
+      // 2. Check Local Storage Blobs
+      if (localWallets.length > 0) {
+        // PASSWORD REQUIRED: Wallet exists locally but we don't have the password to use it
+        // We don't pop up the setup dialog here, we just wait for a transaction to ask for password
+        setWalletImportState({ required: false, expectedAddress: null });
+        return;
+      }
+
+      // 3. Check Cloud Blobs (Supabase)
       try {
         const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
-        
         if (persistedWallets && persistedWallets.length > 0) {
-          // User has an encrypted wallet blob in the database.
-          // We restore it to local storage automatically.
+          // RESTORE REQUIRED: Silent sync to local storage
           setWalletImportState({ required: false, expectedAddress: null });
           localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
           return;
         }
       } catch (err) {
-        console.error("Silent wallet restore failed:", err);
+        console.error("Cloud check failed:", err);
       }
-      
-      // Check local flag as fallback
-      if (localStorage.getItem(`wallet_setup_done_${userId}`) === 'true') {
-        setWalletImportState({ required: false, expectedAddress: null });
-        return;
-      }
-      
+
+      // 4. Check Wallet Address (Ownership check)
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('wallet_address')
         .eq('id', userId)
         .maybeSingle();
         
-      let walletAddress = profile?.wallet_address;
-
-      if (!walletAddress) {
-        const { data: { user } } = await supabase.auth.getUser();
-        walletAddress = user?.user_metadata?.wallet_address;
-      }
+      const walletAddress = profile?.wallet_address || user?.user_metadata?.wallet_address;
 
       if (walletAddress) {
-        // If they have an address in DB, they already HAVE a wallet.
-        setWalletImportState({ 
-          required: false, 
-          expectedAddress: null 
-        });
-      } else {
-        // Only COMPULSORY if they literally don't have a wallet yet anywhere (DB or Profile)
+        // IMPORT REQUIRED: User owns a wallet (address exists) but we have no encrypted blob.
+        // This is a security gap or device loss scenario.
         setWalletImportState({ 
           required: true, 
-          expectedAddress: null 
+          expectedAddress: walletAddress 
         });
+        return;
       }
-    } catch {
+
+      // 5. CREATE REQUIRED: No trace of a wallet anywhere
+      setWalletImportState({ 
+        required: true, 
+        expectedAddress: null 
+      });
+
+    } catch (error) {
+      console.error("Wallet detection error:", error);
       checkedUsersRef.current.delete(userId);
-      setWalletImportState({ required: false, expectedAddress: null });
     }
   }, []);
 
