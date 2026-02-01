@@ -3,20 +3,12 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig(() => {
   const plugins: PluginOption[] = [
     react(),
     wasm(),
     topLevelAwait(),
-    nodePolyfills({
-      globals: {
-        Buffer: true,
-        process: true,
-      },
-      protocolImports: true,
-    }),
   ];
 
   return {
@@ -29,8 +21,6 @@ export default defineConfig(() => {
         "@": path.resolve(process.cwd(), "client", "src"),
         "@shared": path.resolve(process.cwd(), "shared"),
         "@assets": path.resolve(process.cwd(), "attached_assets"),
-        "stream": "stream-browserify",
-        "buffer": "buffer",
       },
     },
     build: {
@@ -47,22 +37,19 @@ export default defineConfig(() => {
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
-              if (id.includes("react") || id.includes("react-dom") || id.includes("wouter")) {
+              if (id.includes("react") || id.includes("react-dom") || id.includes("wouter") || id.includes("@tanstack/react-query")) {
                 return "vendor-react";
               }
-              if (id.includes("ethers") || id.includes("viem") || id.includes("bitcoinjs-lib")) {
+              if (id.includes("ethers") || id.includes("viem") || id.includes("bitcoinjs-lib") || id.includes("ox") || id.includes("@coinbase/wallet-sdk") || id.includes("@base-org/account") || id.includes("@walletconnect")) {
                 return "vendor-crypto";
               }
-              if (id.includes("@radix-ui")) {
+              if (id.includes("@radix-ui") || id.includes("lucide-react") || id.includes("framer-motion")) {
                 return "vendor-ui";
               }
-              if (id.includes("lucide-react") || id.includes("date-fns") || id.includes("recharts") || id.includes("framer-motion")) {
-                return "vendor-utils";
-              }
-              if (id.includes("@aws-sdk") || id.includes("@supabase")) {
+              if (id.includes("@aws-sdk") || id.includes("@supabase") || id.includes("@neondatabase")) {
                 return "vendor-cloud";
               }
-              if (id.includes("face-api.js") || id.includes("canvas")) {
+              if (id.includes("face-api.js") || id.includes("canvas") || id.includes("html2canvas")) {
                 return "vendor-media";
               }
               return "vendor";
