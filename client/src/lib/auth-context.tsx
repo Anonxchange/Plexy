@@ -36,6 +36,9 @@ interface AuthContextType {
   pendingOTPVerification: PendingAuth | null;
   walletImportState: WalletImportState;
   setWalletImportState: (state: WalletImportState) => void;
+  isWalletUnlocked: boolean;
+  unlockWallet: (password: string) => void;
+  lockWallet: () => void;
   sessionPassword: string | null;
   setSessionPassword: (password: string | null) => void;
 }
@@ -282,13 +285,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     expectedAddress: null 
   });
   
-  const [sessionPassword, setSessionPasswordState] = useState<string | null>(() => {
-    try {
-      return sessionStorage.getItem('walletPassword');
-    } catch {
-      return null;
+  const [sessionPassword, setSessionPasswordState] = useState<string | null>(null);
+  const [isWalletUnlocked, setIsWalletUnlocked] = useState(false);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const lockWallet = useCallback(() => {
+    setSessionPasswordState(null);
+    setIsWalletUnlocked(false);
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
     }
-  });
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    // 30 minutes of inactivity
+    inactivityTimerRef.current = setTimeout(lockWallet, 30 * 60 * 1000);
+  }, [lockWallet]);
+
+  const unlockWallet = useCallback((password: string) => {
+    setSessionPasswordState(password);
+    setIsWalletUnlocked(true);
+    resetInactivityTimer();
+  }, [resetInactivityTimer]);
+
+  useEffect(() => {
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'mousemove'];
+    const handleActivity = () => {
+      if (isWalletUnlocked) resetInactivityTimer();
+    };
+
+    activityEvents.forEach(event => window.addEventListener(event, handleActivity));
+    return () => {
+      activityEvents.forEach(event => window.removeEventListener(event, handleActivity));
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    };
+  }, [isWalletUnlocked, resetInactivityTimer]);
   
   const checkedUsersRef = useRef<Set<string>>(new Set());
   const isTrackingRef = useRef<boolean>(false);
@@ -312,11 +346,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 4. Is there a wallet address in Profile/Metadata? -> Import Required (Missing blob)
       // 5. No address at all? -> Create Required
 
-      // 1. Check Memory (via sessionPassword existence + local wallets)
+      // 1. Is there a decrypted key in memory? -> Wallet Ready
       const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
-      const hasPassword = !!sessionPassword;
+      const isUnlocked = isWalletUnlocked;
 
-      if (localWallets.length > 0 && hasPassword) {
+      if (localWallets.length > 0 && isUnlocked) {
         // WALLET READY: Private keys can be derived in memory when needed
         setWalletImportState({ required: false, expectedAddress: null });
         return;
@@ -420,14 +454,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setSessionPassword = useCallback((password: string | null) => {
     setSessionPasswordState(password);
-    try {
-      if (password === null) {
-        sessionStorage.removeItem('walletPassword');
-      } else {
-        sessionStorage.setItem('walletPassword', password);
-      }
-    } catch { /* silent */ }
-  }, []);
+    if (password) {
+      setIsWalletUnlocked(true);
+      resetInactivityTimer();
+    } else {
+      setIsWalletUnlocked(false);
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    }
+  }, [resetInactivityTimer]);
 
   // Main auth effect
   useEffect(() => {
