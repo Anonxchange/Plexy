@@ -202,6 +202,7 @@ function AppContent() {
           onOpenChange={(open) => setWalletImportState({ ...walletImportState, required: open })}
           userId={user.id}
           onSuccess={() => setWalletImportState({ required: false, expectedAddress: null })}
+          expectedAddress={walletImportState.expectedAddress}
         />
       )}
 
