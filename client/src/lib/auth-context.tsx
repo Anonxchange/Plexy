@@ -315,14 +315,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // SECOND: Check if wallets exist in Cloud Sync (Supabase)
-      const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
-      
-      if (persistedWallets.length > 0) {
-        // User has an encrypted wallet blob in the database.
-        // We restore it to local storage automatically.
-        setWalletImportState({ required: false, expectedAddress: null });
-        localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
-        return;
+      try {
+        const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+        
+        if (persistedWallets && persistedWallets.length > 0) {
+          // User has an encrypted wallet blob in the database.
+          // We restore it to local storage automatically.
+          setWalletImportState({ required: false, expectedAddress: null });
+          localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
+          return;
+        }
+      } catch (err) {
+        console.error("Silent wallet restore failed:", err);
       }
       
       // Check local flag as fallback
