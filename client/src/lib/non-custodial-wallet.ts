@@ -689,6 +689,10 @@ class NonCustodialWalletManager {
    * Load wallets from Supabase database and sync to localStorage
    */
   async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
+    if (!supabase) {
+      const { supabase: globalSupabase } = await import("./supabase");
+      supabase = globalSupabase;
+    }
     try {
       const { data, error } = await supabase
         .from('user_wallets')
@@ -709,20 +713,15 @@ class NonCustodialWalletManager {
         encryptedPrivateKey: row.encrypted_private_key,
         encryptedMnemonic: row.encrypted_mnemonic || undefined,
         createdAt: row.created_at,
-        isActive: row.is_active === 'true',
-        isBackedUp: row.is_backed_up === 'true',
+        isActive: row.is_active === 'true' || row.is_active === true,
+        isBackedUp: row.is_backed_up === 'true' || row.is_backed_up === true,
       }));
 
       // Sync loaded wallets to localStorage so they're recognized by the app
       this.saveWalletsToStorage(wallets, userId);
-    if (import.meta.env.DEV) {
-      // Silenced in DEV to avoid console spam
-    } else {
-    }
-
       return wallets;
-    } catch (error) {
-      console.error("Failed to load wallets from Supabase:", error);
+    } catch (err) {
+      console.error("Error loading wallets from Supabase:", err);
       return [];
     }
   }
