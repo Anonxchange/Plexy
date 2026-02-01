@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
-import securityIllustration from "@/assets/svg-image-1 16.svg";
+import securityIllustration from "@/assets/svg-image-1 20.svg";
 
 interface WalletSetupDialogProps {
   open: boolean;
