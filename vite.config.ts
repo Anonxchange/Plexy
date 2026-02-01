@@ -40,11 +40,10 @@ export default defineConfig(() => {
       sourcemap: false,
       minify: "esbuild",
       cssMinify: true,
+      cssCodeSplit: true,
       target: "es2020",
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
-        input: {
-          main: path.resolve(process.cwd(), "client", "index.html"),
-        },
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
@@ -75,7 +74,7 @@ export default defineConfig(() => {
     server: {
       host: "0.0.0.0",
       port: 5000,
-      allowedHosts: true as const,
+      allowedHosts: true,
       hmr: {
         overlay: false,
         clientPort: 443,
@@ -90,7 +89,7 @@ export default defineConfig(() => {
     preview: {
       host: "0.0.0.0",
       port: 5000,
-      allowedHosts: true as const,
+      allowedHosts: true,
     },
   };
 });
