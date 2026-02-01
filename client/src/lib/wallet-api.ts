@@ -59,14 +59,14 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
         if (typeof value === 'object' && value !== null) {
           return {
             symbol: value.symbol || value.currency || value.chainId || key,
-            balance: typeof value.balance === 'number' ? value.balance : 0,
-            locked_balance: typeof value.locked_balance === 'number' ? value.locked_balance : 0,
+            balance: typeof value.balance === 'number' ? value.balance : (typeof value.balance === 'string' ? parseFloat(value.balance) || 0 : 0),
+            locked_balance: typeof value.locked_balance === 'number' ? value.locked_balance : (typeof value.locked_balance === 'string' ? parseFloat(value.locked_balance) || 0 : 0),
             address: value.address || value.deposit_address
           };
         }
         return {
           symbol: key,
-          balance: typeof value === 'number' ? value : 0
+          balance: typeof value === 'number' ? value : (typeof value === 'string' ? parseFloat(value) || 0 : 0)
         };
       }).filter(Boolean);
     }
@@ -97,8 +97,8 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
             id: b.wallet_id || b.address || b.id || `wallet-${symbol}`,
             user_id: userId,
             crypto_symbol: symbol,
-            balance: typeof b.balance === 'number' ? b.balance : 0,
-            locked_balance: typeof b.locked_balance === 'number' ? b.locked_balance : 0,
+            balance: typeof b.balance === 'number' ? b.balance : (typeof b.balance === 'string' ? parseFloat(b.balance) || 0 : 0),
+            locked_balance: typeof b.locked_balance === 'number' ? b.locked_balance : (typeof b.locked_balance === 'string' ? parseFloat(b.locked_balance) || 0 : 0),
             deposit_address: b.address || b.deposit_address,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -127,7 +127,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
           id: local.id,
           user_id: userId,
           crypto_symbol: localSymbol,
-          balance: local.balance || 0,
+          balance: typeof local.balance === 'number' ? local.balance : (typeof local.balance === 'string' ? parseFloat(local.balance) || 0 : 0),
           locked_balance: 0,
           deposit_address: local.address,
           created_at: local.createdAt,
@@ -157,7 +157,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
         id: w.id,
         user_id: userId,
         crypto_symbol: symbol,
-        balance: typeof w.balance === 'number' ? w.balance : 0,
+        balance: typeof w.balance === 'number' ? w.balance : (typeof w.balance === 'string' ? parseFloat(w.balance) || 0 : 0),
         locked_balance: 0,
         deposit_address: w.address,
         created_at: w.createdAt,
