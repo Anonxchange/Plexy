@@ -1,18 +1,18 @@
 import { useMemo } from "react";
 
 const partners = [
-  { name: "Binance", logo: "https://cryptologos.cc/logos/binance-coin-bnb-logo.svg" },
-  { name: "Coinbase", logo: "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg" },
-  { name: "Ethereum", logo: "https://cryptologos.cc/logos/ethereum-eth-logo.svg" },
-  { name: "Bitcoin", logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg" },
-  { name: "Polygon", logo: "https://cryptologos.cc/logos/polygon-matic-logo.svg" },
-  { name: "Avalanche", logo: "https://cryptologos.cc/logos/avalanche-avax-logo.svg" },
-  { name: "Chainlink", logo: "https://cryptologos.cc/logos/chainlink-link-logo.svg" },
-  { name: "Solana", logo: "https://cryptologos.cc/logos/solana-sol-logo.svg" },
-  { name: "Tether", logo: "https://cryptologos.cc/logos/tether-usdt-logo.svg" },
-  { name: "Arbitrum", logo: "https://cryptologos.cc/logos/arbitrum-arb-logo.svg" },
-  { name: "Optimism", logo: "https://cryptologos.cc/logos/optimism-ethereum-op-logo.svg" },
-  { name: "Uniswap", logo: "https://cryptologos.cc/logos/uniswap-uni-logo.svg" },
+  { name: "Binance", logo: "/logos/binance-coin-bnb-logo.svg" },
+  { name: "Coinbase", logo: "/logos/usd-coin-usdc-logo.svg" },
+  { name: "Ethereum", logo: "/logos/ethereum-eth-logo.svg" },
+  { name: "Bitcoin", logo: "/logos/bitcoin-btc-logo.svg" },
+  { name: "Polygon", logo: "/logos/polygon-matic-logo.svg" },
+  { name: "Avalanche", logo: "/logos/avalanche-avax-logo.svg" },
+  { name: "Chainlink", logo: "/logos/chainlink-link-logo.svg" },
+  { name: "Solana", logo: "/logos/solana-sol-logo.svg" },
+  { name: "Tether", logo: "/logos/tether-usdt-logo.svg" },
+  { name: "Arbitrum", logo: "/logos/arbitrum-arb-logo.svg" },
+  { name: "Optimism", logo: "/logos/optimism-ethereum-op-logo.svg" },
+  { name: "Uniswap", logo: "/logos/uniswap-uni-logo.svg" },
 ];
 
 export function PartnerCarousel() {
