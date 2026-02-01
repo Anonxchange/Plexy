@@ -313,6 +313,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // This is still non-custodial because the blob is encrypted with their password,
         // which we never store. They just need to enter their password to decrypt it locally.
         setWalletImportState({ required: false, expectedAddress: null });
+        // Set a flag in localStorage to avoid repeated DB checks for this session/device
+        localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
+        return;
+      }
+      
+      // Check local flag as fallback
+      if (localStorage.getItem(`wallet_setup_done_${userId}`) === 'true') {
+        setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
       
