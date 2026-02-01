@@ -328,8 +328,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (walletAddress) {
         const hasLocal = nonCustodialWalletManager.hasLocalWallet(walletAddress, userId);
         setWalletImportState({ 
-          required: !hasLocal, 
+          required: true, // Make it compulsory
           expectedAddress: !hasLocal ? walletAddress : null 
+        });
+      } else {
+        // If no wallet address exists yet, also make setup compulsory
+        setWalletImportState({ 
+          required: true, 
+          expectedAddress: null 
         });
       }
     } catch {
