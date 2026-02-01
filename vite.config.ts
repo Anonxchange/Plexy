@@ -36,26 +36,56 @@ export default defineConfig(() => {
     build: {
       outDir: "../dist",
       emptyOutDir: true,
-      assetsInlineLimit: 10000,
+      assetsInlineLimit: 2048,
       sourcemap: false,
-      minify: "esbuild",
+      minify: "terser",
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+          pure_funcs: ["console.log", "console.info", "console.debug", "console.trace"],
+        },
+        mangle: {
+          safari10: true,
+        },
+        format: {
+          comments: false,
+        },
+      },
       cssMinify: true,
       target: "esnext",
       rollupOptions: {
         output: {
-          manualChunks: {
-            "vendor-react": ["react", "react-dom", "wouter"],
-            "vendor-utils": ["lucide-react", "date-fns", "clsx", "tailwind-merge"],
-            "vendor-crypto": ["ethers", "viem", "bitcoinjs-lib"],
-            "vendor-ui": ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu", "@radix-ui/react-select"]
-          }
-        }
-      }
+          manualChunks: (id) => {
+            if (id.includes("node_modules")) {
+              if (id.includes("react") || id.includes("react-dom") || id.includes("wouter")) {
+                return "vendor-react";
+              }
+              if (id.includes("ethers") || id.includes("viem") || id.includes("bitcoinjs-lib")) {
+                return "vendor-crypto";
+              }
+              if (id.includes("@radix-ui")) {
+                return "vendor-ui";
+              }
+              if (id.includes("lucide-react") || id.includes("date-fns") || id.includes("recharts") || id.includes("framer-motion")) {
+                return "vendor-utils";
+              }
+              if (id.includes("@aws-sdk") || id.includes("@supabase")) {
+                return "vendor-cloud";
+              }
+              if (id.includes("face-api.js") || id.includes("canvas")) {
+                return "vendor-media";
+              }
+              return "vendor";
+            }
+          },
+        },
+      },
     },
     server: {
       host: "0.0.0.0",
       port: 5000,
-      allowedHosts: true,
+      allowedHosts: true as const,
       hmr: {
         overlay: false,
         clientPort: 443,
@@ -70,7 +100,7 @@ export default defineConfig(() => {
     preview: {
       host: "0.0.0.0",
       port: 5000,
-      allowedHosts: true,
+      allowedHosts: true as const,
     },
   };
 });
