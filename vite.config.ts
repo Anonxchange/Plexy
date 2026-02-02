@@ -44,15 +44,17 @@ export default defineConfig(() => {
       assetsInlineLimit: 2048,
       sourcemap: false,
       minify: "esbuild",
-      cssMinify: "lightningcss",
       cssCodeSplit: true,
       target: "es2020",
-      chunkSizeWarningLimit: 500,
+      chunkSizeWarningLimit: 1000,
+      reportCompressedSize: false,
+      modulePreload: {
+        polyfill: true
+      },
       rollupOptions: {
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
-              // Crypto libraries - using lightweight @scure libraries
               if (
                 id.includes("@noble") || 
                 id.includes("@scure") ||
@@ -61,32 +63,9 @@ export default defineConfig(() => {
               ) {
                 return "crypto-core";
               }
-              // React core - check before generic react match
-              if (id.includes("react-dom") || id.includes("/react/") || id.includes("wouter") || id.includes("@tanstack/react-query")) {
-                return "vendor-react";
-              }
-              // UI components
-              if (id.includes("@radix-ui") || id.includes("lucide-react")) {
-                return "vendor-ui";
-              }
-              // Animation
-              if (id.includes("framer-motion")) {
-                return "vendor-motion";
-              }
-              // Supabase
-              if (id.includes("@supabase")) {
-                return "vendor-supabase";
-              }
-              // Media processing
-              if (id.includes("face-api.js") || id.includes("html2canvas")) {
-                return "vendor-media";
-              }
-              // Charts
-              if (id.includes("recharts") || id.includes("d3-")) {
-                return "vendor-charts";
-              }
+              // Consolidate all other vendors into one chunk to reduce request chains
+              return "vendor";
             }
-            // Don't return anything for unmatched - let Vite decide
           },
         },
       },
