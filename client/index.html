@@ -1,15 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Pexly - Buy & Sell Bitcoin, Ethereum & Crypto P2P</title>
     <meta name="description" content="Trade cryptocurrency peer-to-peer with 500+ payment methods. Buy and sell Bitcoin, Ethereum, USDT instantly with escrow protection. Join millions of users trading crypto worldwide." />
     
-    <link rel="preconnect" href="https://assets.coingecko.com">
     <link rel="preconnect" href="https://hvpeycnedmzrjshmvgri.supabase.co">
-    <link rel="dns-prefetch" href="https://assets.coingecko.com">
     <link rel="dns-prefetch" href="https://hvpeycnedmzrjshmvgri.supabase.co">
+    
+    <!-- Critical path CSS optimization -->
+    <style>
+      :root { --background: 0 0% 100%; --foreground: 240 10% 3.9%; }
+      .dark { --background: 240 10% 3.9%; --foreground: 0 0% 98%; }
+      body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); font-family: 'Inter', sans-serif; margin: 0; }
+      #root { min-height: 100vh; display: flex; flex-direction: column; }
+      .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -29,7 +37,7 @@
     </noscript>
     
     <!-- Global JSON-LD Schema -->
-    <script type="application/ld+json">
+    <script type="application/ld+json" defer>
     {
       "@context": "https://schema.org",
       "@graph": [
