@@ -23,6 +23,29 @@ export default defineConfig(() => {
         "@assets": path.resolve(process.cwd(), "attached_assets"),
       },
     },
+    define: {
+      global: 'globalThis',
+    },
+    optimizeDeps: {
+      include: [
+        '@noble/curves',
+        '@noble/hashes',
+        '@scure/bip32',
+        '@scure/bip39',
+        '@scure/btc-signer',
+        'viem',
+        'wagmi',
+      ],
+      exclude: [
+        '@walletconnect/sign-client',
+        '@walletconnect/ethereum-provider',
+        '@walletconnect/universal-provider',
+        '@reown/appkit',
+      ],
+      esbuildOptions: {
+        target: 'es2020',
+      },
+    },
     build: {
       outDir: "../dist",
       emptyOutDir: true,
@@ -32,25 +55,41 @@ export default defineConfig(() => {
       cssMinify: true,
       cssCodeSplit: true,
       target: "es2020",
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 500,
       rollupOptions: {
+        external: [
+          /^@walletconnect\/.*/,
+          /^@reown\/.*/,
+        ],
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
+              if (id.includes("@noble") || id.includes("@scure") || id.includes("bitcoinjs-lib") || id.includes("tiny-secp256k1") || id.includes("ecpair") || id.includes("bip32") || id.includes("bip39")) {
+                return "crypto-core";
+              }
+              if (id.includes("viem") || id.includes("wagmi") || id.includes("@coinbase/wallet-sdk")) {
+                return "wallet";
+              }
+              if (id.includes("ethers")) {
+                return "ethers";
+              }
               if (id.includes("react") || id.includes("react-dom") || id.includes("wouter") || id.includes("@tanstack/react-query")) {
                 return "vendor-react";
               }
-              if (id.includes("ethers") || id.includes("viem") || id.includes("bitcoinjs-lib") || id.includes("ox") || id.includes("@coinbase/wallet-sdk") || id.includes("@base-org/account") || id.includes("@walletconnect")) {
-                return "vendor-crypto";
-              }
-              if (id.includes("@radix-ui") || id.includes("lucide-react") || id.includes("framer-motion")) {
+              if (id.includes("@radix-ui") || id.includes("lucide-react")) {
                 return "vendor-ui";
               }
-              if (id.includes("@aws-sdk") || id.includes("@supabase") || id.includes("@neondatabase")) {
-                return "vendor-cloud";
+              if (id.includes("framer-motion")) {
+                return "vendor-motion";
               }
-              if (id.includes("face-api.js") || id.includes("canvas") || id.includes("html2canvas")) {
+              if (id.includes("@supabase")) {
+                return "vendor-supabase";
+              }
+              if (id.includes("face-api.js") || id.includes("html2canvas")) {
                 return "vendor-media";
+              }
+              if (id.includes("recharts")) {
+                return "vendor-charts";
               }
               return "vendor";
             }
