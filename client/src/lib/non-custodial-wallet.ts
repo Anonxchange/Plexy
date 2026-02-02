@@ -99,14 +99,19 @@ class NonCustodialWalletManager {
       address = "r" + base58Encode(account.publicKey!).slice(0, 33);
       privateKey = Array.from(account.privateKey!).map(b => b.toString(16).padStart(2, '0')).join('');
       walletType = "xrp";
-    } else {
-      // EVM wallet derivation - using @scure/bip32
+    } else if (chainId === "ethereum" || chainId === "ETH" || chainId === "Ethereum") {
       const root = HDKey.fromMasterSeed(seed);
       const account = root.derive("m/44'/60'/0'/0/0");
       privateKey = Array.from(account.privateKey!).map(b => b.toString(16).padStart(2, '0')).join('');
-      // Derive address from public key (simplified - for full EVM address use keccak256)
       address = "0x" + Array.from(account.publicKey!.slice(1, 21)).map(b => b.toString(16).padStart(2, '0')).join('');
       walletType = "ethereum";
+    } else {
+      // Default to Ethereum derivation for others if not specified
+      const root = HDKey.fromMasterSeed(seed);
+      const account = root.derive("m/44'/60'/0'/0/0");
+      privateKey = Array.from(account.privateKey!).map(b => b.toString(16).padStart(2, '0')).join('');
+      address = "0x" + Array.from(account.publicKey!.slice(1, 21)).map(b => b.toString(16).padStart(2, '0')).join('');
+      walletType = chainId.toLowerCase();
     }
     
     const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, userId);
@@ -125,14 +130,69 @@ class NonCustodialWalletManager {
     };
     
     const wallets = this.getWalletsFromStorage(userId);
-    this.saveWalletsToStorage([...wallets, newWallet], userId);
+    const updatedWallets = [...wallets, newWallet];
+    this.saveWalletsToStorage(updatedWallets, userId);
+
+    if (supabase) {
+      await this.saveWalletToSupabase(supabase, newWallet, userId);
+    }
     
     return { wallet: newWallet, mnemonicPhrase: mnemonic };
   }
 
-  private getWalletsFromStorage(userId: string): NonCustodialWallet[] {
+  public getWalletsFromStorage(userId: string): NonCustodialWallet[] {
     const data = localStorage.getItem(this.getStorageKey(userId));
     return data ? JSON.parse(data) : [];
+  }
+
+  public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
+    const { data, error } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error("Error loading wallets from Supabase:", error);
+      return [];
+    }
+
+    if (data && data.length > 0) {
+      const wallets: NonCustodialWallet[] = data.map((w: any) => ({
+        id: w.id,
+        chainId: w.chain_id,
+        address: w.address,
+        walletType: w.wallet_type,
+        encryptedPrivateKey: w.encrypted_private_key,
+        encryptedMnemonic: w.encrypted_mnemonic,
+        isActive: w.is_active === 'true',
+        isBackedUp: w.is_backed_up === 'true',
+        createdAt: w.created_at,
+      }));
+      this.saveWalletsToStorage(wallets, userId);
+      return wallets;
+    }
+
+    return [];
+  }
+
+  public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('user_wallets')
+      .upsert({
+        id: wallet.id,
+        user_id: userId,
+        chain_id: wallet.chainId,
+        address: wallet.address,
+        wallet_type: wallet.walletType,
+        encrypted_private_key: wallet.encryptedPrivateKey,
+        encrypted_mnemonic: wallet.encryptedMnemonic,
+        is_active: wallet.isActive ? 'true' : 'false',
+        is_backed_up: wallet.isBackedUp ? 'true' : 'false',
+      });
+
+    if (error) {
+      console.error("Error saving wallet to Supabase:", error);
+    }
   }
 
   private saveWalletsToStorage(wallets: NonCustodialWallet[], userId: string): void {
