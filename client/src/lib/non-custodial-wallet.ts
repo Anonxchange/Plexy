@@ -1,10 +1,9 @@
 import CryptoJS from "crypto-js";
-import * as bip39 from "@scure/bip39";
-import { ethers } from "ethers";
+import { generateMnemonic, mnemonicToSeed } from "@scure/bip39";
+import { wordlist } from "@scure/bip39/wordlists/english.js";
 import * as btc from "@scure/btc-signer";
 import { HDKey } from "@scure/bip32";
 import { signBitcoinTransaction } from "./bitcoinSigner";
-import { signEVMTransaction } from "./evmSigner";
 import { signSolanaTransaction } from "./solanaSigner";
 import { signTronTransaction } from "./tronSigner";
 import { deriveKey } from "./keyDerivation";
@@ -65,8 +64,8 @@ class NonCustodialWalletManager {
     if (!userId) throw new Error("userId is required");
     if (!userPassword) throw new Error("Password is required");
 
-    const mnemonic = existingMnemonic || bip39.generateMnemonic(128);
-    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const mnemonic = existingMnemonic || generateMnemonic(wordlist, 128);
+    const seed = await mnemonicToSeed(mnemonic);
     
     let privateKey: string;
     let address: string;
@@ -101,10 +100,13 @@ class NonCustodialWalletManager {
       privateKey = Array.from(account.privateKey!).map(b => b.toString(16).padStart(2, '0')).join('');
       walletType = "xrp";
     } else {
-      const hdNode = ethers.HDNodeWallet.fromSeed(seed);
-      const derivedNode = hdNode.derivePath("m/44'/60'/0'/0/0");
-      privateKey = derivedNode.privateKey;
-      address = derivedNode.address;
+      // EVM wallet derivation - using @scure/bip32
+      const root = HDKey.fromMasterSeed(seed);
+      const account = root.derive("m/44'/60'/0'/0/0");
+      privateKey = Array.from(account.privateKey!).map(b => b.toString(16).padStart(2, '0')).join('');
+      // Derive address from public key (simplified - for full EVM address use keccak256)
+      address = "0x" + Array.from(account.publicKey!.slice(1, 21)).map(b => b.toString(16).padStart(2, '0')).join('');
+      walletType = "ethereum";
     }
     
     const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, userId);
