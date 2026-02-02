@@ -19,7 +19,7 @@ interface WalletImportState {
   expectedAddress: string | null;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   session: Session | null;
   signUp: (email: string, password: string, captchaToken?: string) => Promise<{ error: any }>;
@@ -33,6 +33,7 @@ interface AuthContextType {
   completeOTPVerification: () => Promise<void>;
   cancelOTPVerification: () => Promise<void>;
   loading: boolean;
+  isLoading: boolean;
   pendingOTPVerification: PendingAuth | null;
   walletImportState: WalletImportState;
   setWalletImportState: (state: WalletImportState) => void;
@@ -347,7 +348,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 5. No address at all? -> Create Required
 
       // 1. Is there a decrypted key in memory? -> Wallet Ready
-      const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
+      const localWallets = nonCustodialWalletManager.getWalletsFromStorage(userId);
       const isUnlocked = isWalletUnlocked;
 
       if (localWallets.length > 0 && isUnlocked) {
@@ -378,7 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Re-check local wallets to ensure state is updated after cloud sync attempt
-      const syncedWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
+      const syncedWallets = nonCustodialWalletManager.getWalletsFromStorage(userId);
       if (syncedWallets.length > 0) {
         setWalletImportState({ required: false, expectedAddress: null });
         return; 
@@ -687,6 +688,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     completeOTPVerification,
     cancelOTPVerification,
     loading,
+    isLoading: loading,
     pendingOTPVerification,
     walletImportState,
     setWalletImportState,
