@@ -111,8 +111,8 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       .filter((w: Wallet | null): w is Wallet => w !== null);
 
     // Sync with local non-custodial wallets to ensure we have all addresses
-    const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
-    localWallets.forEach(local => {
+    const localWallets = (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
+    localWallets.forEach((local: any) => {
       // Normalize local chainId to symbol for comparison
       let localSymbol = local.chainId;
       if (local.chainId === 'Ethereum (ERC-20)' || local.chainId === 'ethereum') localSymbol = 'ETH';
@@ -144,8 +144,8 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     return wallets;
   } catch (e) {
     console.warn(`[getUserWallets] Remote sync failed, using local non-custodial data:`, e);
-    const localWallets = nonCustodialWalletManager.getNonCustodialWallets(userId);
-    return localWallets.map((w) => {
+    const localWallets = (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
+    return localWallets.map((w: any) => {
       let symbol = w.chainId;
       if (w.chainId === 'Ethereum (ERC-20)' || w.chainId === 'ethereum') symbol = 'ETH';
       else if (w.chainId === 'Bitcoin (SegWit)' || w.chainId === 'bitcoin') symbol = 'BTC';
