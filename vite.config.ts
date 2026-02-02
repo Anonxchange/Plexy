@@ -33,14 +33,6 @@ export default defineConfig(() => {
         '@scure/bip32',
         '@scure/bip39',
         '@scure/btc-signer',
-        'viem',
-        'wagmi',
-      ],
-      exclude: [
-        '@walletconnect/sign-client',
-        '@walletconnect/ethereum-provider',
-        '@walletconnect/universal-provider',
-        '@reown/appkit',
       ],
       esbuildOptions: {
         target: 'es2020',
@@ -57,21 +49,11 @@ export default defineConfig(() => {
       target: "es2020",
       chunkSizeWarningLimit: 500,
       rollupOptions: {
-        external: [
-          /^@walletconnect\/.*/,
-          /^@reown\/.*/,
-        ],
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
               if (id.includes("@noble") || id.includes("@scure") || id.includes("bitcoinjs-lib") || id.includes("tiny-secp256k1") || id.includes("ecpair") || id.includes("bip32") || id.includes("bip39")) {
                 return "crypto-core";
-              }
-              if (id.includes("viem") || id.includes("wagmi") || id.includes("@coinbase/wallet-sdk")) {
-                return "wallet";
-              }
-              if (id.includes("ethers")) {
-                return "ethers";
               }
               if (id.includes("react") || id.includes("react-dom") || id.includes("wouter") || id.includes("@tanstack/react-query")) {
                 return "vendor-react";
