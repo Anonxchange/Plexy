@@ -9,6 +9,7 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { Button } from "@/components/ui/button";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
+import { PageSkeleton } from "@/components/page-skeleton";
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
 // ... rest of imports and helpers
@@ -69,7 +70,7 @@ const rewards = [
 ];
 
 export const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("Hot");
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
@@ -80,7 +81,7 @@ export const Dashboard = () => {
   const symbols = useMemo(() => ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"], []);
   const { data: cryptoPricesMap, isLoading: pricesLoading } = useCryptoPrices(symbols);
   
-  const isLoading = walletsLoading || pricesLoading;
+  const isLoading = walletsLoading || pricesLoading || authLoading;
   const cryptoPrices = cryptoPricesMap || {};
 
   const totalBalance = useMemo(() => {
@@ -106,10 +107,19 @@ export const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      const existingWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      // Use getWalletsFromStorage which is now public
+      const existingWallets = nonCustodialWalletManager.getWalletsFromStorage(user.id);
       setWalletBackupProcessed(existingWallets.length > 0);
     }
   }, [user]);
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <PageSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-8">
