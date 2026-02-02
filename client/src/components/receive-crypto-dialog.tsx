@@ -96,15 +96,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
     const userWallets = (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
     
-    console.log("[ReceiveCryptoDialog] Debug search:", {
-      selectedCrypto,
-      selectedNetwork,
-      symbolToUse,
-      availableWallets: userWallets.map(w => ({ chainId: w.chainId, address: w.address }))
-    });
+    // console.log("[ReceiveCryptoDialog] Debug search:", {
+    //   selectedCrypto,
+    //   selectedNetwork,
+    //   symbolToUse,
+    //   availableWallets: userWallets.map((w: any) => ({ chainId: w.chainId, address: w.address }))
+    // });
 
     // Look for a wallet matching the specific symbol or base symbol
-    const targetWallet = userWallets.find(w => {
+    const targetWallet = userWallets.find((w: any) => {
       const normalizedChainId = w.chainId.toUpperCase();
       const normalizedSymbolToUse = symbolToUse.toUpperCase();
       const normalizedSelectedCrypto = selectedCrypto.toUpperCase();
