@@ -1,5 +1,3 @@
-import CryptoJS from 'crypto-js';
-
 const BASE_URL = 'https://fapi.asterdex.com';
 
 interface TickerData {
