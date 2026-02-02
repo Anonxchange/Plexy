@@ -1,16 +1,9 @@
 // Mempool.space API integration
 // Free, open-source Bitcoin blockchain API with no rate limits
 // Documentation: https://mempool.space/api/v1/docs
-// Using official mempool.js SDK
-
-import mempoolJS from '@mempool/mempool.js';
+// Using pure REST API for browser compatibility (no Node.js dependencies)
 
 const MEMPOOL_API = 'https://mempool.space/api/v1';
-
-// Initialize mempool.js SDK
-const mempool = mempoolJS({
-  hostname: 'mempool.space'
-});
 
 export interface MempoolBlock {
   id: string;
@@ -115,30 +108,16 @@ export interface MempoolStats {
 
 export async function getLatestBlocks(limit: number = 5): Promise<MempoolBlock[]> {
   try {
-    const { bitcoin } = mempool;
-    const { blocks } = bitcoin;
+    const response = await fetch(`${MEMPOOL_API}/blocks`, {
+      headers: { 'Accept': 'application/json' }
+    });
     
-    // Get the latest blocks using mempool.js SDK
-    const latestBlocks = await blocks.getBlocks();
-    console.log('getLatestBlocks called with limit:', limit);
-    console.log('Latest blocks received:', latestBlocks);
-    
-    return latestBlocks.slice(0, limit);
+    if (!response.ok) throw new Error('Failed to fetch latest blocks');
+    const blocks: MempoolBlock[] = await response.json();
+    return blocks.slice(0, limit);
   } catch (error) {
     console.error('Error fetching latest blocks from mempool.space:', error);
-    // Fallback to REST API
-    try {
-      const response = await fetch(`${MEMPOOL_API}/blocks`, {
-        headers: { 'Accept': 'application/json' }
-      });
-      
-      if (!response.ok) throw new Error('Failed to fetch latest blocks');
-      const blocks: MempoolBlock[] = await response.json();
-      return blocks.slice(0, limit);
-    } catch (fallbackError) {
-      console.error('Fallback REST API also failed:', fallbackError);
-      return [];
-    }
+    return [];
   }
 }
 
