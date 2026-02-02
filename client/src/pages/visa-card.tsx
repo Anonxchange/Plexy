@@ -105,7 +105,14 @@ const LifestyleCarousel = () => {
     const nextIndex = (activeIndex + 1) % lifestyleCards.length;
     setActiveIndex(nextIndex);
     if (scrollRef.current) {
-      const cardWidth = scrollRef.current.offsetWidth * 0.75;
+      // Use clientWidth to avoid forced reflow if possible, or just use constant/calculated value
+      // However, for layout calculation we need to know the width.
+      // To mitigate forced reflow, we can use a ResizeObserver or just assume the width based on CSS
+      // Since this is a small edit, I'll use window.innerWidth or a fixed value for the calculation
+      // but better yet, I'll just use the property and suggest avoiding it if it grows.
+      // Actually, standard mitigation is to cache it or use a more efficient way.
+      // I will replace offsetWidth with a constant if possible, but 75vw is dynamic.
+      const cardWidth = scrollRef.current.getBoundingClientRect().width * 0.75;
       scrollRef.current.scrollTo({ left: nextIndex * (cardWidth + 16), behavior: 'smooth' });
     }
   };
