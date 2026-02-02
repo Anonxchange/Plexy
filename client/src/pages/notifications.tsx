@@ -73,13 +73,6 @@ export default function NotificationsPage() {
     localStorage.setItem('readAnnouncementIds', JSON.stringify(Array.from(newReadIds)));
   };
 
-  useEffect(() => {
-    const unreadCount = notifications.filter(n => !n.read).length;
-    if (unreadCount > 0) {
-      notificationSounds.play('message_received');
-    }
-  }, [notifications.length]);
-
   const loadNotifications = async () => {
     const data = await getNotifications();
     setNotifications(data);
