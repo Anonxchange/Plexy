@@ -40,11 +40,10 @@ export default function WalletPage() {
   useEffect(() => {
     if (user && !isWalletLoading && wallet?.assets.length === 0) {
       // Check if user has non-custodial wallets locally
-      nonCustodialWalletManager.getNonCustodialWallets(user.id).then(localWallets => {
-        if (localWallets.length === 0) {
-          setSetupDialogOpen(true);
-        }
-      });
+      const localWallets = (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
+      if (localWallets.length === 0) {
+        setSetupDialogOpen(true);
+      }
     }
   }, [user, isWalletLoading, wallet?.assets.length]);
 
