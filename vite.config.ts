@@ -48,6 +48,39 @@ export default defineConfig(() => {
       target: "es2020",
       chunkSizeWarningLimit: 1000,
       reportCompressedSize: false,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-query': ['@tanstack/react-query'],
+            'vendor-ui': [
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-popover',
+              '@radix-ui/react-select',
+              '@radix-ui/react-tabs',
+              '@radix-ui/react-tooltip',
+              '@radix-ui/react-toast',
+              'class-variance-authority',
+              'clsx',
+              'tailwind-merge',
+            ],
+            'vendor-crypto': [
+              '@noble/curves',
+              '@noble/hashes',
+              '@scure/bip32',
+              '@scure/bip39',
+              '@scure/btc-signer',
+            ],
+            'vendor-supabase': [
+              '@supabase/supabase-js',
+              '@supabase/ssr',
+            ],
+            'vendor-charts': ['recharts'],
+            'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          },
+        },
+      },
     },
     server: {
       host: "0.0.0.0",
