@@ -48,27 +48,6 @@ export default defineConfig(() => {
       target: "es2020",
       chunkSizeWarningLimit: 1000,
       reportCompressedSize: false,
-      modulePreload: {
-        polyfill: true
-      },
-      rollupOptions: {
-        output: {
-          manualChunks: (id) => {
-            if (id.includes("node_modules")) {
-              if (
-                id.includes("@noble") || 
-                id.includes("@scure") ||
-                id.includes("base-x") ||
-                id.includes("bs58")
-              ) {
-                return "crypto-core";
-              }
-              // Consolidate all other vendors into one chunk to reduce request chains
-              return "vendor";
-            }
-          },
-        },
-      },
     },
     server: {
       host: "0.0.0.0",
