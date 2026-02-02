@@ -212,56 +212,35 @@ function AppContent() {
   );
 }
 
-import { base } from 'viem/chains';
-import { WagmiProvider, createConfig, http } from 'wagmi';
-import { coinbaseWallet } from 'wagmi/connectors';
-
-const wagmiConfig = createConfig({
-  chains: [base],
-  connectors: [
-    coinbaseWallet({
-      appName: 'Pexly',
-      preference: 'smartWalletOnly',
-    }),
-  ],
-  transports: {
-    [base.id]: http(),
-  },
-});
-
 function App() {
   // Check if on help subdomain - show only support page
   const isHelpSubdomain = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
   
   if (isHelpSubdomain) {
     return (
-      <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <AuthProvider>
-              <TooltipProvider>
-                <Support />
-              </TooltipProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
-    );
-  }
-
-  return (
-    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
             <TooltipProvider>
-              <GlobalNotificationListener />
-              <AppContent />
+              <Support />
             </TooltipProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <GlobalNotificationListener />
+            <AppContent />
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 
