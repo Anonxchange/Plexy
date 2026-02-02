@@ -10,6 +10,8 @@ export function FeatureCarousel() {
               src="/assets/svg-image-1-2.svg"
               alt="Crypto feature illustration"
               className="w-full h-auto"
+              width="600"
+              height="450"
             />
           </div>
 
