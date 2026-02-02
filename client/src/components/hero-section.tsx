@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,7 +27,24 @@ const popularPaymentMethods = [
   { id: "zelle", name: "Zelle" },
 ];
 import { Globe } from "@/components/globe";
-import { getCryptoPrices } from "@/lib/crypto-prices";
+
+const FALLBACK_PRICES: Record<string, number> = {
+  BTC: 98750.50,
+  ETH: 3420.75,
+  USDT: 1.00,
+  BNB: 680.25,
+  SOL: 245.80,
+  XRP: 2.45,
+  ADA: 1.05,
+  DOGE: 0.38,
+  AVAX: 89.50,
+  DOT: 18.75,
+  MATIC: 2.15,
+  SHIB: 0.00003,
+  LTC: 165.40,
+  TRX: 0.25,
+  LINK: 28.90
+};
 
 // Simple ErrorBoundary for the Globe component
 class ErrorBoundary extends React.Component<{ children: React.ReactNode, fallback: React.ReactNode }, { hasError: boolean }> {
@@ -56,50 +73,51 @@ export function HeroSection() {
   const [openPaymentDesktop, setOpenPaymentDesktop] = useState(false);
   const [openCryptoDesktop, setOpenCryptoDesktop] = useState(false);
 
+  const hasFetchedRef = useRef(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchPricesDeferred = useCallback(async () => {
+    try {
+      const { getCryptoPrices } = await import("@/lib/crypto-prices");
+      const symbols = ['BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'SHIB', 'LTC', 'TRX', 'LINK'];
+      const prices = await getCryptoPrices(symbols);
+
+      const pricesMap: Record<string, number> = {};
+      Object.values(prices).forEach((crypto) => {
+        pricesMap[crypto.symbol] = crypto.current_price;
+      });
+
+      if (Object.keys(pricesMap).length > 0) {
+        setCryptoPrices(pricesMap);
+      }
+    } catch (error) {
+      console.error("Failed to fetch crypto prices:", error);
+      setCryptoPrices(FALLBACK_PRICES);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        const symbols = ['BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'SHIB', 'LTC', 'TRX', 'LINK'];
-        const prices = await getCryptoPrices(symbols);
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
 
-        // Convert to the format needed for display
-        const pricesMap: Record<string, number> = {};
-        Object.values(prices).forEach((crypto) => {
-          pricesMap[crypto.symbol] = crypto.current_price;
-        });
-
-        if (Object.keys(pricesMap).length > 0) {
-          setCryptoPrices(pricesMap);
-        }
-      } catch (error) {
-        console.error("Failed to fetch crypto prices:", error);
-        // Fallback to mock prices on error
-        const mockPrices = {
-          BTC: 98750.50,
-          ETH: 3420.75,
-          USDT: 1.00,
-          BNB: 680.25,
-          SOL: 245.80,
-          XRP: 2.45,
-          ADA: 1.05,
-          DOGE: 0.38,
-          AVAX: 89.50,
-          DOT: 18.75,
-          MATIC: 2.15,
-          SHIB: 0.00003,
-          LTC: 165.40,
-          TRX: 0.25,
-          LINK: 28.90
-        };
-        setCryptoPrices(mockPrices);
+    const scheduleIdleFetch = () => {
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => {
+          fetchPricesDeferred();
+        }, { timeout: 3000 });
+      } else {
+        setTimeout(fetchPricesDeferred, 100);
       }
     };
 
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
+    scheduleIdleFetch();
 
-    return () => clearInterval(interval);
-  }, []);
+    intervalRef.current = setInterval(fetchPricesDeferred, 60000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchPricesDeferred]);
 
   const currentPrice = cryptoPrices[crypto] || 0;
 
