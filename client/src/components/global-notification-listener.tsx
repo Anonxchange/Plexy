@@ -26,8 +26,7 @@ export function GlobalNotificationListener() {
         .limit(1);
 
       if (unreadNotifications && unreadNotifications.length > 0) {
-        // Play sound for unread notifications
-        notificationSounds.play('message_received');
+        // Sound removed as per user request
         hasPlayedLoginSound.current = true;
       }
     };
@@ -44,7 +43,7 @@ export function GlobalNotificationListener() {
         .limit(1);
 
       if (unreadNotifications && unreadNotifications.length > 0) {
-        notificationSounds.play('message_received');
+        // Sound removed as per user request
       }
     }, 5 * 60 * 1000); // 5 minutes
 
