@@ -1,4 +1,3 @@
-import CryptoJS from "crypto-js";
 import { generateMnemonic, mnemonicToSeed } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 import * as btc from "@scure/btc-signer";
@@ -7,6 +6,7 @@ import { signBitcoinTransaction } from "./bitcoinSigner";
 import { signSolanaTransaction } from "./solanaSigner";
 import { signTronTransaction } from "./tronSigner";
 import { deriveKey } from "./keyDerivation";
+import { encryptAES, decryptAES } from "./webCrypto";
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
@@ -141,13 +141,12 @@ class NonCustodialWalletManager {
 
   private async encryptPrivateKey(data: string, password: string, userId: string): Promise<string> {
     const key = await deriveKey(password, userId);
-    return CryptoJS.AES.encrypt(data, key).toString();
+    return encryptAES(data, key);
   }
 
   async decryptPrivateKey(encrypted: string, password: string, userId: string): Promise<string> {
     const key = await deriveKey(password, userId);
-    const bytes = CryptoJS.AES.decrypt(encrypted, key);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    return decryptAES(encrypted, key);
   }
 }
 
