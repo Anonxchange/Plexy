@@ -52,22 +52,12 @@ export default defineConfig(() => {
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
-              // Crypto libraries and their dependencies (includes buffer, base-x, etc.)
+              // Crypto libraries - using lightweight @scure libraries
               if (
                 id.includes("@noble") || 
-                id.includes("@scure") || 
-                id.includes("bitcoinjs-lib") || 
-                id.includes("tiny-secp256k1") || 
-                id.includes("ecpair") || 
-                id.includes("bip32") || 
-                id.includes("bip39") ||
+                id.includes("@scure") ||
                 id.includes("base-x") ||
-                id.includes("bs58") ||
-                id.includes("typeforce") ||
-                id.includes("varuint-bitcoin") ||
-                id.includes("wif") ||
-                id.includes("pushdata-bitcoin") ||
-                id.includes("uint8array-tools")
+                id.includes("bs58")
               ) {
                 return "crypto-core";
               }
