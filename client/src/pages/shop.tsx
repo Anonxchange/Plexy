@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,9 @@ import {
 import { Search, ShoppingCart, Star, Filter, Package, Plus, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
+
+const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m => ({ default: m.ShopItemCard })));
 
 interface Listing {
   id: string;
@@ -204,63 +207,29 @@ export function Shop() {
         </div>
 
         {/* Products Grid */}
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading listings...</p>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">No products found</h3>
-            <p className="text-muted-foreground">Try adjusting your search or filters</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-            {filteredProducts.map((product) => (
-              <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-[4/3] bg-muted relative">
-                  {product.images && product.images.length > 0 ? (
-                    <img
-                      src={product.images[0]}
-                      alt={product.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Package className="h-12 w-12 text-muted-foreground/20" />
-                    </div>
-                  )}
-                </div>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg line-clamp-1">{product.title}</CardTitle>
-                    <Badge variant="outline" className="shrink-0">{product.category}</Badge>
-                  </div>
-                  <CardDescription className="line-clamp-2">
-                    {product.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-muted-foreground">
-                      Location: {product.location}
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold">{product.price} {product.currency}</p>
-                </CardContent>
-                <CardFooter className="pt-0">
-                  <Button
-                    className="w-full"
-                    onClick={() => setSelectedProduct(product)}
-                  >
-                    View Details
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        )}
+        <div className="min-h-[600px]">
+          {isLoading ? (
+            <ShopSkeleton />
+          ) : filteredProducts.length === 0 ? (
+            <div className="text-center py-24 bg-card/30 rounded-3xl border border-dashed border-border/60">
+              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground/40" />
+              <h3 className="text-xl font-semibold mb-2">No products found</h3>
+              <p className="text-muted-foreground">Try adjusting your search or filters</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              <Suspense fallback={<ShopSkeleton />}>
+                {filteredProducts.map((product) => (
+                  <ShopItemCard 
+                    key={product.id} 
+                    product={product} 
+                    onViewDetails={setSelectedProduct} 
+                  />
+                ))}
+              </Suspense>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Product Details Dialog */}
