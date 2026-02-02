@@ -52,29 +52,51 @@ export default defineConfig(() => {
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
-              if (id.includes("@noble") || id.includes("@scure") || id.includes("bitcoinjs-lib") || id.includes("tiny-secp256k1") || id.includes("ecpair") || id.includes("bip32") || id.includes("bip39")) {
+              // Crypto libraries and their dependencies (includes buffer, base-x, etc.)
+              if (
+                id.includes("@noble") || 
+                id.includes("@scure") || 
+                id.includes("bitcoinjs-lib") || 
+                id.includes("tiny-secp256k1") || 
+                id.includes("ecpair") || 
+                id.includes("bip32") || 
+                id.includes("bip39") ||
+                id.includes("base-x") ||
+                id.includes("bs58") ||
+                id.includes("typeforce") ||
+                id.includes("varuint-bitcoin") ||
+                id.includes("wif") ||
+                id.includes("pushdata-bitcoin") ||
+                id.includes("uint8array-tools")
+              ) {
                 return "crypto-core";
               }
-              if (id.includes("react") || id.includes("react-dom") || id.includes("wouter") || id.includes("@tanstack/react-query")) {
+              // React core - check before generic react match
+              if (id.includes("react-dom") || id.includes("/react/") || id.includes("wouter") || id.includes("@tanstack/react-query")) {
                 return "vendor-react";
               }
+              // UI components
               if (id.includes("@radix-ui") || id.includes("lucide-react")) {
                 return "vendor-ui";
               }
+              // Animation
               if (id.includes("framer-motion")) {
                 return "vendor-motion";
               }
+              // Supabase
               if (id.includes("@supabase")) {
                 return "vendor-supabase";
               }
+              // Media processing
               if (id.includes("face-api.js") || id.includes("html2canvas")) {
                 return "vendor-media";
               }
-              if (id.includes("recharts")) {
+              // Charts
+              if (id.includes("recharts") || id.includes("d3-")) {
                 return "vendor-charts";
               }
-              return "vendor";
             }
+            // Don't return anything for unmatched - let Vite decide
           },
         },
       },
