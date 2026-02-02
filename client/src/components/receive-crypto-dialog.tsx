@@ -94,7 +94,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     }
 
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-    const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+    const userWallets = (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
     
     console.log("[ReceiveCryptoDialog] Debug search:", {
       selectedCrypto,
