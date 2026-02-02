@@ -252,3 +252,10 @@ function App() {
 }
 
 export default App;
+
+/**
+ * PERFORMANCE GUARDS (Do not modify without auditing LCP)
+ * 1. Initial LCP target (HeroSection headline) must remain synchronous.
+ * 2. No blocking API calls or crypto libraries in the entry chunk.
+ * 3. Layout-shifting animations must use 'contain: layout paint'.
+ */
