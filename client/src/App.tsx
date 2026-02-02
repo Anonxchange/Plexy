@@ -30,7 +30,6 @@ import NotFound from "@/pages/not-found";
 import { GiftCards } from "@/pages/gift-cards";
 import { GiftCardDetail } from "@/pages/gift-card-detail";
 import { TradeHistory } from "@/pages/trade-history";
-import AccountSettings from "@/pages/account-settings";
 import DevicesPage from "@/pages/devices";
 import VisaCard from "@/pages/visa-card";
 import VisaCardDetails from "@/pages/visa-card-details";
@@ -39,13 +38,11 @@ import CryptoToBank from "@/pages/crypto-to-bank";
 import Lightning from "@/pages/lightning";
 import BuyCrypto from "@/pages/buy-crypto";
 import ActiveTrade from "@/pages/active-trade";
-import AdminBlog from "@/pages/admin-blog";
 import Affiliate from "@/pages/affiliate";
 import RewardsPage from "@/pages/rewards";
 import ReferralPage from "@/pages/referral";
 import MerchantApplicationPage from "@/pages/merchant-application";
 import MerchantDowngradePage from "@/pages/merchant-downgrade";
-import AdminTransferPage from "@/pages/admin-transfer";
 import NotificationsPage from "@/pages/notifications";
 import NotificationSettings from "@/pages/notification-settings";
 import { VerifyEmail } from "@/pages/verify-email";
@@ -71,11 +68,12 @@ import { FundStaging } from "@/components/fund-staging";
 import KYCCallback from "@/pages/kyc-callback";
 import { OfferDetail } from "@/pages/offer-detail";
 import AddressDetail from "@/pages/address-detail";
-import TransactionDetail from "@/pages/transaction-detail";
 import BlockDetail from "@/pages/block-detail";
 import MedalsPage from "@/pages/medals";
 
 // Heavy pages - lazy loaded (charts: ~432KB, media: ~203KB)
+const AccountSettings = lazy(() => import("@/pages/account-settings"));
+const TransactionDetail = lazy(() => import("@/pages/transaction-detail"));
 const Analysis = lazy(() => import("@/pages/analysis"));
 const Explorer = lazy(() => import("@/pages/explorer"));
 const Prices = lazy(() => import("@/pages/prices"));
@@ -97,6 +95,8 @@ const adminVerificationsPage = lazy(() => import("@/pages/admin-verifications"))
 const adminMerchantsPage = lazy(() => import("@/pages/admin-merchants"));
 const adminGiftCards = lazy(() => import("@/pages/admin-gift-cards"));
 const createOfferAdvanced = lazy(() => import("@/pages/create-offer-advanced").then(m => ({ default: m.CreateOfferAdvanced })));
+const AdminTransferPageLazy = lazy(() => import("@/pages/admin-transfer"));
+const AdminBlogLazy = lazy(() => import("@/pages/admin-blog"));
 
 const Blog = lazy(() => import("@/pages/blog"));
 
@@ -118,7 +118,7 @@ function Router() {
       <Route path="/explorer/blocks">{() => <LazyRoute component={Blocks} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/transactions">{() => <LazyRoute component={Transactions} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/address/:address" component={AddressDetail} />
-      <Route path="/explorer/transaction/:hash" component={TransactionDetail} />
+      <Route path="/explorer/transaction/:hash">{() => <LazyRoute component={TransactionDetail} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/explorer/block/:hash" component={BlockDetail} />
       <Route path="/explorer/asset/:symbol">{() => <LazyRoute component={ExplorerAsset} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/markets">{() => <LazyRoute component={marketsPage} />}</Route>
@@ -137,7 +137,7 @@ function Router() {
       <Route path="/gift-cards" component={GiftCards} />
       <Route path="/gift-cards/:id" component={GiftCardDetail} />
       <Route path="/trade-history" component={TradeHistory} />
-      <Route path="/account-settings" component={AccountSettings} />
+      <Route path="/account-settings">{() => <LazyRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/devices" component={DevicesPage} />
       <Route path="/notification-settings" component={NotificationSettings} />
       <Route path="/developer" component={Developer} />
@@ -146,12 +146,12 @@ function Router() {
       <Route path="/kyc/callback" component={KYCCallback} />
       <Route path="/merchant-application" component={MerchantApplicationPage} />
       <Route path="/merchant-downgrade" component={MerchantDowngradePage} />
-      <Route path="/admin">{() => <LazyRoute component={adminPage} />}</Route>
-      <Route path="/admin/verifications">{() => <LazyRoute component={adminVerificationsPage} />}</Route>
-      <Route path="/admin/merchants">{() => <LazyRoute component={adminMerchantsPage} />}</Route>
-      <Route path="/admin/transfer" component={AdminTransferPage} />
-      <Route path="/admin/blog" component={AdminBlog} />
-      <Route path="/admin/gift-cards">{() => <LazyRoute component={adminGiftCards} />}</Route>
+      <Route path="/admin">{() => <LazyRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/admin/verifications">{() => <LazyRoute component={adminVerificationsPage} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/admin/merchants">{() => <LazyRoute component={adminMerchantsPage} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/admin/transfer">{() => <LazyRoute component={AdminTransferPageLazy} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/admin/blog">{() => <LazyRoute component={AdminBlogLazy} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/admin/gift-cards">{() => <LazyRoute component={adminGiftCards} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/signup" component={SignUp} />
       <Route path="/signin" component={SignIn} />
