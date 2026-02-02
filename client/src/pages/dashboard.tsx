@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift, ShieldAlert } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
@@ -10,6 +10,11 @@ import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { Button } from "@/components/ui/button";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { PageSkeleton } from "@/components/page-skeleton";
+import { AssetCardSkeleton } from "@/components/dashboard/AssetCard";
+import { MarketsSectionSkeleton } from "@/components/dashboard/MarketsSection";
+
+const AssetCard = lazy(() => import("@/components/dashboard/AssetCard").then(m => ({ default: m.AssetCard })));
+const MarketsSection = lazy(() => import("@/components/dashboard/MarketsSection").then(m => ({ default: m.MarketsSection })));
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
 // ... rest of imports and helpers
@@ -113,14 +118,6 @@ export const Dashboard = () => {
     }
   }, [user]);
 
-  if (authLoading || isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <PageSkeleton />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background pb-8">
       <div className="max-w-7xl mx-auto">
@@ -130,68 +127,15 @@ export const Dashboard = () => {
           {/* Left Column - Main Content */}
           <div className="lg:col-span-7 xl:col-span-8">
             {/* Asset Card */}
-            <div className="bg-card rounded-2xl p-5 mx-4 mt-4 lg:mx-0 lg:mt-0 shadow-sm border border-border animate-fade-in">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-sm font-medium">Total Assets</span>
-                  <button 
-                    onClick={() => setShowBalance(!showBalance)}
-                    className="p-1 hover:bg-muted rounded transition-colors"
-                  >
-                    {showBalance ? (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-end justify-between">
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    {isLoading ? (
-                      <div className="h-10 w-40 bg-muted/50 animate-pulse rounded-lg mt-1" />
-                    ) : (
-                      <span className="text-4xl font-bold text-foreground">
-                        {showBalance ? totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "••••••"}
-                      </span>
-                    )}
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <span className="text-lg font-medium">USD</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                  </div>
-                  {isLoading ? (
-                    <div className="h-4 w-24 bg-muted/30 animate-pulse rounded mt-2" />
-                  ) : (
-                    <p className="text-muted-foreground text-sm mt-1">
-                      ≈ {showBalance ? (totalBalance / (cryptoPrices.BTC?.current_price || 1)).toFixed(5) : "••••••"} BTC
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 mt-3">
-                    <span className="text-sm text-muted-foreground">Today's P&L</span>
-                    <div className="flex items-center gap-1 text-destructive">
-                      <TrendingDown className="h-3 w-3" />
-                      <span className="text-sm font-medium">-12.87 USD (-0.33%)</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mini Chart */}
-                <div className="w-24 h-12">
-                  <svg viewBox="0 0 100 40" className="w-full h-full">
-                    <path
-                      d="M0,30 Q10,25 20,28 T40,22 T60,25 T80,20 T100,15"
-                      fill="none"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
+            <Suspense fallback={<AssetCardSkeleton />}>
+              <AssetCard 
+                showBalance={showBalance}
+                setShowBalance={setShowBalance}
+                totalBalance={totalBalance}
+                isLoading={isLoading}
+                cryptoPrices={cryptoPrices}
+              />
+            </Suspense>
 
             {/* Quick Actions */}
             <div className="px-4 lg:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
@@ -258,88 +202,15 @@ export const Dashboard = () => {
 
             {/* Markets Section - Shows on mobile, hidden on desktop (will be in right column) */}
             <div className="mt-6 animate-fade-in lg:hidden" style={{ animationDelay: "0.2s" }}>
-              {/* Header with Spot dropdown */}
-              <div className="px-4 flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-foreground">Markets</h2>
-                <button className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg text-sm font-medium text-foreground">
-                  Spot
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-
-              {/* Tabs with underline */}
-              <div className="px-4 overflow-x-auto scrollbar-hide">
-                <div className="flex gap-6">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`pb-2 text-sm font-medium transition-colors whitespace-nowrap relative ${
-                        activeTab === tab
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {tab}
-                      {activeTab === tab && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Column Headers */}
-              <div className="mt-4 px-4">
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 py-2">
-                  <span>Trading Pairs</span>
-                  <div className="flex">
-                    <span className="w-24 text-center">Price</span>
-                    <span className="w-20 text-right">24H Change</span>
-                  </div>
-                </div>
-
-                {/* Market Rows */}
-                <div className="divide-y divide-border">
-                  {markets.map((market) => (
-                    <button
-                      key={market.symbol}
-                      className="w-full flex items-center justify-between py-4 hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={cryptoIconUrls[market.symbol] || `https://ui-avatars.com/api/?name=${market.symbol}&background=random`}
-                          alt={market.name}
-                          className="w-9 h-9 rounded-full"
-                        />
-                        <div className="text-left">
-                          <span className="font-semibold text-foreground">{market.symbol}</span>
-                          <span className="text-muted-foreground">/USDT</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center">
-                        <span className="w-24 text-center font-medium text-foreground">${market.price}</span>
-                        <div className={`w-20 text-right flex items-center justify-end gap-0.5 font-medium ${
-                          market.change >= 0 ? "text-primary" : "text-destructive"
-                        }`}>
-                          {market.change >= 0 ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          {Math.abs(market.change).toFixed(2)}%
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <button className="flex items-center gap-1 text-primary font-medium text-sm mt-4 hover:gap-2 transition-all">
-                  Market Overview
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
+              <Suspense fallback={<MarketsSectionSkeleton />}>
+                <MarketsSection 
+                  markets={markets}
+                  tabs={tabs}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  className="px-4"
+                />
+              </Suspense>
             </div>
 
             {/* Divider - mobile only */}
@@ -382,88 +253,14 @@ export const Dashboard = () => {
           {/* Right Column - Markets (Desktop only) */}
           <div className="hidden lg:block lg:col-span-5 xl:col-span-4">
             <div className="bg-card rounded-2xl border border-border p-5 sticky top-6 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-              {/* Header with Spot dropdown */}
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-foreground">Markets</h2>
-                <button className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg text-sm font-medium text-foreground">
-                  Spot
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-
-              {/* Tabs with underline */}
-              <div className="overflow-x-auto scrollbar-hide">
-                <div className="flex gap-6">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`pb-2 text-sm font-medium transition-colors whitespace-nowrap relative ${
-                        activeTab === tab
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {tab}
-                      {activeTab === tab && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Column Headers */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 py-2">
-                  <span>Trading Pairs</span>
-                  <div className="flex">
-                    <span className="w-24 text-center">Price</span>
-                    <span className="w-20 text-right">24H Change</span>
-                  </div>
-                </div>
-
-                {/* Market Rows */}
-                <div className="divide-y divide-border">
-                  {markets.map((market) => (
-                    <button
-                      key={market.symbol}
-                      className="w-full flex items-center justify-between py-4 hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={cryptoIconUrls[market.symbol] || `https://ui-avatars.com/api/?name=${market.symbol}&background=random`}
-                          alt={market.name}
-                          className="w-9 h-9 rounded-full"
-                        />
-                        <div className="text-left">
-                          <span className="font-semibold text-foreground">{market.symbol}</span>
-                          <span className="text-muted-foreground">/USDT</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center">
-                        <span className="w-24 text-center font-medium text-foreground">${market.price}</span>
-                        <div className={`w-20 text-right flex items-center justify-end gap-0.5 font-medium ${
-                          market.change >= 0 ? "text-primary" : "text-destructive"
-                        }`}>
-                          {market.change >= 0 ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          {Math.abs(market.change).toFixed(2)}%
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <button className="flex items-center gap-1 text-primary font-medium text-sm mt-4 hover:gap-2 transition-all">
-                  Market Overview
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
+              <Suspense fallback={<MarketsSectionSkeleton />}>
+                <MarketsSection 
+                  markets={markets}
+                  tabs={tabs}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                />
+              </Suspense>
             </div>
           </div>
         </div>
