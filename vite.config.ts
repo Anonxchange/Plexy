@@ -44,7 +44,7 @@ export default defineConfig(() => {
       assetsInlineLimit: 2048,
       sourcemap: false,
       minify: "esbuild",
-      cssMinify: true,
+      cssMinify: "lightningcss",
       cssCodeSplit: true,
       target: "es2020",
       chunkSizeWarningLimit: 500,
