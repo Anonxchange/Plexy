@@ -16,8 +16,16 @@ import { PageSkeleton, ChartPageSkeleton } from "@/components/page-skeleton";
 
 // Core pages - loaded eagerly
 import Home from "@/pages/home";
+import Wallet from "@/pages/wallet";
 import { SignUp } from "@/pages/signup";
 import { SignIn } from "@/pages/signin";
+import { Dashboard } from "@/pages/dashboard";
+import { P2P } from "@/pages/p2p";
+import { Swap } from "@/pages/swap";
+import { Profile } from "@/pages/profile";
+import { Shop } from "@/pages/shop";
+import { ShopPost } from "@/pages/shop-post";
+import { CreateOffer } from "@/pages/create-offer";
 import NotFound from "@/pages/not-found";
 import { GiftCards } from "@/pages/gift-cards";
 import { GiftCardDetail } from "@/pages/gift-card-detail";
@@ -31,25 +39,18 @@ import CryptoToBank from "@/pages/crypto-to-bank";
 import Lightning from "@/pages/lightning";
 import BuyCrypto from "@/pages/buy-crypto";
 import ActiveTrade from "@/pages/active-trade";
-import AdminVerificationsPage from "@/pages/admin-verifications";
 import AdminBlog from "@/pages/admin-blog";
-import AdminGiftCards from "@/pages/admin-gift-cards";
 import Affiliate from "@/pages/affiliate";
 import RewardsPage from "@/pages/rewards";
 import ReferralPage from "@/pages/referral";
 import MerchantApplicationPage from "@/pages/merchant-application";
 import MerchantDowngradePage from "@/pages/merchant-downgrade";
-import AdminMerchantsPage from "@/pages/admin-merchants";
 import AdminTransferPage from "@/pages/admin-transfer";
 import NotificationsPage from "@/pages/notifications";
 import NotificationSettings from "@/pages/notification-settings";
 import { VerifyEmail } from "@/pages/verify-email";
 import PexlyAcademy from "@/pages/pexly-academy";
 import About from "@/pages/about";
-import MarketsPage from "@/pages/markets";
-import Careers from "@/pages/careers";
-import Blog from "@/pages/blog";
-import BlogPost from "@/pages/blog-post";
 import Reviews from "@/pages/reviews";
 import Support from "@/pages/support";
 import Contact from "@/pages/contact";
@@ -73,9 +74,6 @@ import AddressDetail from "@/pages/address-detail";
 import TransactionDetail from "@/pages/transaction-detail";
 import BlockDetail from "@/pages/block-detail";
 import MedalsPage from "@/pages/medals";
-import { CreateOffer } from "@/pages/create-offer";
-import { Spot } from "@/pages/spot";
-import { ShopPost } from "@/pages/shop-post";
 
 // Heavy pages - lazy loaded (charts: ~432KB, media: ~203KB)
 const Analysis = lazy(() => import("@/pages/analysis"));
@@ -87,15 +85,20 @@ const ExplorerAsset = lazy(() => import("@/pages/explorer-asset"));
 const BitcoinCalculator = lazy(() => import("@/pages/bitcoin-calculator").then(m => ({ default: m.BitcoinCalculator })));
 const VerificationPage = lazy(() => import("@/pages/verification"));
 const MyOffers = lazy(() => import("@/pages/my-offers").then(m => ({ default: m.MyOffers })));
-const Wallet = lazy(() => import("@/pages/wallet"));
-const Dashboard = lazy(() => import("@/pages/dashboard").then(m => ({ default: m.Dashboard })));
-const P2P = lazy(() => import("@/pages/p2p").then(m => ({ default: m.P2P })));
-const Swap = lazy(() => import("@/pages/swap").then(m => ({ default: m.Swap })));
-const Profile = lazy(() => import("@/pages/profile").then(m => ({ default: m.Profile })));
-const Shop = lazy(() => import("@/pages/shop").then(m => ({ default: m.Shop })));
-const CreateOfferAdvanced = lazy(() => import("@/pages/create-offer-advanced").then(m => ({ default: m.CreateOfferAdvanced })));
+
+// More pages to lazy load
 const AcademyArticle = lazy(() => import("@/pages/academy-article").then(m => ({ default: m.AcademyArticle })));
-const AdminPage = lazy(() => import("@/pages/admin"));
+const BlogPost = lazy(() => import("@/pages/blog-post"));
+const careers = lazy(() => import("@/pages/careers"));
+const spot = lazy(() => import("@/pages/spot").then(m => ({ default: m.Spot })));
+const marketsPage = lazy(() => import("@/pages/markets"));
+const adminPage = lazy(() => import("@/pages/admin"));
+const adminVerificationsPage = lazy(() => import("@/pages/admin-verifications"));
+const adminMerchantsPage = lazy(() => import("@/pages/admin-merchants"));
+const adminGiftCards = lazy(() => import("@/pages/admin-gift-cards"));
+const createOfferAdvanced = lazy(() => import("@/pages/create-offer-advanced").then(m => ({ default: m.CreateOfferAdvanced })));
+
+const Blog = lazy(() => import("@/pages/blog"));
 
 function LazyRoute({ component: Component, skeleton = <PageSkeleton /> }: { component: React.LazyExoticComponent<React.ComponentType<any>>, skeleton?: React.ReactNode }) {
   return (
@@ -118,12 +121,12 @@ function Router() {
       <Route path="/explorer/transaction/:hash" component={TransactionDetail} />
       <Route path="/explorer/block/:hash" component={BlockDetail} />
       <Route path="/explorer/asset/:symbol">{() => <LazyRoute component={ExplorerAsset} skeleton={<ChartPageSkeleton />} />}</Route>
-      <Route path="/markets" component={MarketsPage} />
+      <Route path="/markets">{() => <LazyRoute component={marketsPage} />}</Route>
       <Route path="/submit-idea" component={SubmitIdea} />
-      <Route path="/p2p">{() => <LazyRoute component={P2P} />}</Route>
-      <Route path="/spot" component={Spot} />
-      <Route path="/swap">{() => <LazyRoute component={Swap} />}</Route>
-      <Route path="/wallet">{() => <LazyRoute component={Wallet} />}</Route>
+      <Route path="/p2p" component={P2P} />
+      <Route path="/spot">{() => <LazyRoute component={spot} skeleton={<ChartPageSkeleton />} />}</Route>
+      <Route path="/swap" component={Swap} />
+      <Route path="/wallet" component={Wallet} />
       <Route path="/analysis">{() => <LazyRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/wallet/visa-card" component={VisaCard} />
       <Route path="/wallet/visa-card/details" component={VisaCardDetails} />
@@ -143,23 +146,23 @@ function Router() {
       <Route path="/kyc/callback" component={KYCCallback} />
       <Route path="/merchant-application" component={MerchantApplicationPage} />
       <Route path="/merchant-downgrade" component={MerchantDowngradePage} />
-      <Route path="/admin">{() => <LazyRoute component={AdminPage} />}</Route>
-      <Route path="/admin/verifications" component={AdminVerificationsPage} />
-      <Route path="/admin/merchants" component={AdminMerchantsPage} />
+      <Route path="/admin">{() => <LazyRoute component={adminPage} />}</Route>
+      <Route path="/admin/verifications">{() => <LazyRoute component={adminVerificationsPage} />}</Route>
+      <Route path="/admin/merchants">{() => <LazyRoute component={adminMerchantsPage} />}</Route>
       <Route path="/admin/transfer" component={AdminTransferPage} />
       <Route path="/admin/blog" component={AdminBlog} />
-      <Route path="/admin/gift-cards" component={AdminGiftCards} />
+      <Route path="/admin/gift-cards">{() => <LazyRoute component={adminGiftCards} />}</Route>
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/signup" component={SignUp} />
       <Route path="/signin" component={SignIn} />
       <Route path="/verify-email" component={VerifyEmail} />
-      <Route path="/dashboard">{() => <LazyRoute component={Dashboard} />}</Route>
-      <Route path="/profile/:userId?">{() => <LazyRoute component={Profile} />}</Route>
-      <Route path="/shop">{() => <LazyRoute component={Shop} />}</Route>
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/profile/:userId?" component={Profile} />
+      <Route path="/shop" component={Shop} />
       <Route path="/shop/post" component={ShopPost} />
       <Route path="/create-offer" component={CreateOffer} />
       <Route path="/edit-offer/:offerId" component={CreateOffer} />
-      <Route path="/create-offer-advanced">{() => <LazyRoute component={CreateOfferAdvanced} />}</Route>
+      <Route path="/create-offer-advanced">{() => <LazyRoute component={createOfferAdvanced} />}</Route>
       <Route path="/my-offers">{() => <LazyRoute component={MyOffers} />}</Route>
       <Route path="/favorite-offers" component={FavoriteOffers} />
       <Route path="/trusted-users" component={TrustedUsers} />
@@ -174,9 +177,9 @@ function Router() {
       <Route path="/bitcoin-calculator">{() => <LazyRoute component={BitcoinCalculator} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/academy" component={PexlyAcademy} />
       <Route path="/academy/:articleId">{() => <LazyRoute component={AcademyArticle} />}</Route>
-      <Route path="/careers" component={Careers} />
-      <Route path="/blog" component={Blog} />
-      <Route path="/blog/:postId" component={BlogPost} />
+      <Route path="/careers">{() => <LazyRoute component={careers} />}</Route>
+      <Route path="/blog">{() => <LazyRoute component={Blog} />}</Route>
+      <Route path="/blog/:postId">{() => <LazyRoute component={BlogPost} />}</Route>
       <Route path="/reviews" component={Reviews} />
       <Route path="/support" component={Support} />
       <Route path="/contact" component={Contact} />
@@ -228,27 +231,19 @@ function App() {
   // Check if on help subdomain - show only support page
   const isHelpSubdomain = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
   
-  if (isHelpSubdomain) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <Support />
-            </TooltipProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    );
-  }
+  const content = isHelpSubdomain ? <Support /> : (
+    <>
+      <GlobalNotificationListener />
+      <AppContent />
+    </>
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
           <TooltipProvider>
-            <GlobalNotificationListener />
-            <AppContent />
+            {content}
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>
