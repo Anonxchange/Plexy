@@ -50,34 +50,31 @@ export default defineConfig(() => {
       reportCompressedSize: false,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-query': ['@tanstack/react-query'],
-            'vendor-ui': [
-              '@radix-ui/react-dialog',
-              '@radix-ui/react-dropdown-menu',
-              '@radix-ui/react-popover',
-              '@radix-ui/react-select',
-              '@radix-ui/react-tabs',
-              '@radix-ui/react-tooltip',
-              '@radix-ui/react-toast',
-              'class-variance-authority',
-              'clsx',
-              'tailwind-merge',
-            ],
-            'vendor-crypto': [
-              '@noble/curves',
-              '@noble/hashes',
-              '@scure/bip32',
-              '@scure/bip39',
-              '@scure/btc-signer',
-            ],
-            'vendor-supabase': [
-              '@supabase/supabase-js',
-              '@supabase/ssr',
-            ],
-            'vendor-charts': ['recharts'],
-            'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom') || id.includes('wouter')) {
+                return 'vendor-core';
+              }
+              if (id.includes('@tanstack') || id.includes('react-query')) {
+                return 'vendor-query';
+              }
+              if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('class-variance-authority') || id.includes('clsx') || id.includes('tailwind-merge')) {
+                return 'vendor-ui';
+              }
+              if (id.includes('@noble') || id.includes('@scure')) {
+                return 'vendor-crypto';
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+              if (id.includes('recharts') || id.includes('d3')) {
+                return 'vendor-charts';
+              }
+              if (id.includes('react-hook-form') || id.includes('zod')) {
+                return 'vendor-forms';
+              }
+              return 'vendor';
+            }
           },
         },
       },
