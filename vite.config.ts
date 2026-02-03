@@ -52,50 +52,39 @@ export default defineConfig(() => {
       reportCompressedSize: false,
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            if (!id.includes('node_modules')) return;
-
-            // Core framework (must stay isolated)
-            if (
-              id.includes('react') ||
-              id.includes('react-dom') ||
-              id.includes('wouter')
-            ) {
-              return 'vendor-core';
-            }
-
-            // UI libs (safe to isolate)
-            if (
-              id.includes('@radix-ui') ||
-              id.includes('lucide-react') ||
-              id.includes('class-variance-authority') ||
-              id.includes('clsx') ||
-              id.includes('tailwind-merge')
-            ) {
-              return 'vendor-ui';
-            }
-
-            // Data / backend
-            if (id.includes('@supabase')) {
-              return 'vendor-supabase';
-            }
-
-            if (id.includes('@tanstack') || id.includes('react-query')) {
-              return 'vendor-query';
-            }
-
-            // Charts
-            if (id.includes('recharts') || id.includes('d3')) {
-              return 'vendor-charts';
-            }
-
-            // Forms
-            if (id.includes('react-hook-form') || id.includes('zod')) {
-              return 'vendor-forms';
-            }
-
-            // Everything else (including crypto)
-            return 'vendor';
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-ui': [
+              '@radix-ui/react-accordion',
+              '@radix-ui/react-alert-dialog',
+              '@radix-ui/react-aspect-ratio',
+              '@radix-ui/react-avatar',
+              '@radix-ui/react-checkbox',
+              '@radix-ui/react-collapsible',
+              '@radix-ui/react-context-menu',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-hover-card',
+              '@radix-ui/react-label',
+              '@radix-ui/react-menubar',
+              '@radix-ui/react-navigation-menu',
+              '@radix-ui/react-popover',
+              '@radix-ui/react-progress',
+              '@radix-ui/react-radio-group',
+              '@radix-ui/react-scroll-area',
+              '@radix-ui/react-select',
+              '@radix-ui/react-separator',
+              '@radix-ui/react-slider',
+              '@radix-ui/react-slot',
+              '@radix-ui/react-switch',
+              '@radix-ui/react-tabs',
+              '@radix-ui/react-toast',
+              '@radix-ui/react-toggle',
+              '@radix-ui/react-toggle-group',
+              '@radix-ui/react-tooltip',
+              'lucide-react',
+            ],
+            'vendor-utils': ['@tanstack/react-query', '@supabase/supabase-js', 'wouter', 'zod'],
           },
         },
       },
