@@ -179,13 +179,13 @@ export function P2P() {
       symbol: "USDC", 
       name: "USD Coin", 
       iconUrl: cryptoIconUrls.USDC, 
-      price: cryptoPrices['USDC']?.current_price || 1.00 
+      price: cryptoPrices['USDC']?.current_price || 0 
     },
     { 
       symbol: "USDT", 
       name: "Tether", 
       iconUrl: cryptoIconUrls.USDT, 
-      price: cryptoPrices['USDT']?.current_price || 1.00 
+      price: cryptoPrices['USDT']?.current_price || 0 
     },
     { 
       symbol: "LTC", 
@@ -716,8 +716,12 @@ export function P2P() {
 
             {/* Price Display */}
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">
-                1 {selectedCrypto} = {selectedCryptoData.price.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
+              <span className="text-muted-foreground flex items-center gap-1">
+                1 {selectedCrypto} = {selectedCryptoData.price === 0 ? (
+                  <Skeleton className="h-3 w-16" />
+                ) : (
+                  selectedCryptoData.price.toLocaleString('en-US', { minimumFractionDigits: 2 })
+                )} USD
               </span>
               <TrendingUp className="h-4 w-4 text-green-500" />
             </div>
@@ -1679,7 +1683,13 @@ export function P2P() {
                         </SelectContent>
                       </Select>
                       <div className="text-xs text-muted-foreground">
-                        1 {selectedCrypto} ≈ ${selectedCryptoData.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {selectedCryptoData.price === 0 ? (
+                          <div className="flex items-center gap-1">
+                            1 {selectedCrypto} ≈ <Skeleton className="h-3 w-16" />
+                          </div>
+                        ) : (
+                          `1 ${selectedCrypto} ≈ $${selectedCryptoData.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                        )}
                       </div>
                     </div>
 
