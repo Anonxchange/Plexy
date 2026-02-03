@@ -16,30 +16,28 @@ const partners = [
 ];
 
 export function PartnerCarousel() {
-  const duplicatedPartners = useMemo(() => [...partners, ...partners], []);
-
   return (
     <div className="bg-zinc-100 py-4 overflow-hidden border-y border-zinc-200">
-      <div className="relative">
-        <div className="flex gap-16 items-center animate-scroll">
-          {duplicatedPartners.map((partner, index) => (
-            <div 
-              key={`${partner.name}-${index}`} 
-              className="flex items-center gap-3 min-w-fit whitespace-nowrap opacity-80 hover:opacity-100 transition-opacity"
-            >
-              {partner.logo && (
-                <img 
-                  src={partner.logo} 
-                  alt={partner.name} 
-                  className="w-8 h-8 object-contain"
-                />
-              )}
-              <span className="font-bold text-zinc-800 text-base tracking-tight">
-                {partner.name}
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="flex gap-16 items-center animate-scroll [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]">
+        {[...partners, ...partners].map((partner, index) => (
+          <div 
+            key={`${partner.name}-${index}`} 
+            className="flex items-center gap-3 min-w-fit whitespace-nowrap opacity-80 hover:opacity-100 transition-opacity"
+          >
+            {partner.logo && (
+              <img 
+                src={partner.logo} 
+                alt=""
+                role="presentation"
+                className="w-8 h-8 object-contain"
+                loading="lazy"
+              />
+            )}
+            <span className="font-bold text-zinc-800 text-base tracking-tight">
+              {partner.name}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
