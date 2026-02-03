@@ -75,7 +75,7 @@ export function Testimonials() {
         {/* Desktop: Horizontal Scroll */}
         <div className="hidden md:block relative">
           <div className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 snap-x snap-mandatory">
-            {testimonials.map((testimonial, index) => (
+            {testimonials.slice(0, 3).map((testimonial, index) => (
               <div
                 key={index}
                 className="flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] snap-center"
