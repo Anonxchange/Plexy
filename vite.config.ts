@@ -18,6 +18,8 @@ export default defineConfig(() => {
     base: "/",
     resolve: {
       alias: {
+        "react": path.resolve(__dirname, "node_modules/react"),
+        "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
         "@": path.resolve(__dirname, "client", "src"),
         "@shared": path.resolve(__dirname, "shared"),
         "@assets": path.resolve(__dirname, "attached_assets"),
@@ -103,7 +105,7 @@ export default defineConfig(() => {
       port: 5000,
       allowedHosts: true,
       hmr: {
-        overlay: true,
+        clientPort: 443,
       },
       proxy: {
         "/api": {
