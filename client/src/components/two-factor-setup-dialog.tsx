@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check } from "lucide-react";p
 import { createClient } from "@/lib/supabase";
 
 interface TwoFactorSetupDialogProps {
@@ -49,10 +49,19 @@ export function TwoFactorSetupDialog({
     const storedData = sessionStorage.getItem(sessionKey);
     
     if (storedData) {
-      const { secret: storedSecret, qrCodeUrl: storedQr, backupCodes: storedCodes } = JSON.parse(storedData);
-      setSecret(storedSecret);
-      setQrCodeUrl(storedQr);
-      setBackupCodes(storedCodes);
+      try {
+        const { secret: storedSecret, qrCodeUrl: storedQr, backupCodes: storedCodes } = JSON.parse(storedData);
+        // Only restore if it's a data URL (safe for images)
+        if (storedQr && storedQr.startsWith('data:image/')) {
+          setSecret(storedSecret);
+          setQrCodeUrl(storedQr);
+          setBackupCodes(storedCodes);
+        } else {
+          generateSecret();
+        }
+      } catch (e) {
+        generateSecret();
+      }
     } else {
       generateSecret();
     }
