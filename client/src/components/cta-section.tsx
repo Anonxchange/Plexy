@@ -59,6 +59,8 @@ export function CTASection() {
             <img
               src={mobileAppImage}
               alt="Pexly Mobile App Screens"
+              width={615}
+              height={550}
               className="max-w-full h-auto max-h-[550px] object-contain scale-110"
             />
           </div>
