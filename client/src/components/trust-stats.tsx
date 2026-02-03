@@ -39,6 +39,8 @@ export const TrustStats = () => {
                 <img
                   src={trueOwnership}
                   alt="True ownership of crypto assets"
+                  width={384}
+                  height={384}
                   className="w-full max-w-sm lg:max-w-none mx-auto lg:mx-0 object-contain"
                 />
               </div>
@@ -59,6 +61,8 @@ export const TrustStats = () => {
               <img
                 src={trueOwnership}
                 alt="True ownership"
+                width={672}
+                height={400}
                 className="w-full max-w-2xl object-contain"
               />
             </div>
