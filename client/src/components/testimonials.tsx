@@ -73,15 +73,51 @@ export function Testimonials() {
         </div>
 
         {/* Desktop: Horizontal Scroll */}
-        <div className="hidden md:block relative">
-          <div className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 snap-x snap-mandatory">
-            {testimonials.slice(0, 3).map((testimonial, index) => (
-              <div
-                key={index}
-                className="flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] snap-center"
-              >
-                <Card className="h-full bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 hover:bg-white/15 dark:hover:bg-white/10 transition-all duration-300">
-                  <CardContent className="pt-6 space-y-6 h-full flex flex-col">
+        <div className="hidden md:flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 snap-x snap-mandatory">
+          {testimonials.slice(0, 3).map((testimonial, index) => (
+            <div
+              key={index}
+              className="flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] snap-center p-6 rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 hover:bg-white/15 dark:hover:bg-white/10 transition-all duration-300 flex flex-col gap-6"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 ring-2 ring-white/20">
+                  <AvatarImage
+                    src={testimonial.image}
+                    srcSet={getResponsiveSrcSet(testimonial.image)}
+                    sizes="(max-width: 600px) 276px, 553px"
+                    alt={testimonial.name}
+                    loading="lazy"
+                  />
+                  <AvatarFallback>
+                    {testimonial.name.split(" ").map((n) => n[0]).join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-semibold text-foreground">{testimonial.name}</div>
+                  <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <Quote className="h-8 w-8 text-primary/40 mb-3" />
+                <p className="text-muted-foreground italic leading-relaxed">
+                  "{testimonial.content}"
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile: Carousel with Navigation */}
+        <div className="md:hidden">
+          <div className="overflow-hidden">
+            <div
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            >
+              {testimonials.map((testimonial, index) => (
+                <div key={index} className="w-full flex-shrink-0 px-2">
+                  <div className="p-6 rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 flex flex-col gap-6">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12 ring-2 ring-white/20">
                         <AvatarImage
@@ -89,6 +125,7 @@ export function Testimonials() {
                           srcSet={getResponsiveSrcSet(testimonial.image)}
                           sizes="(max-width: 600px) 276px, 553px"
                           alt={testimonial.name}
+                          loading="lazy"
                         />
                         <AvatarFallback>
                           {testimonial.name.split(" ").map((n) => n[0]).join("")}
@@ -100,56 +137,13 @@ export function Testimonials() {
                       </div>
                     </div>
 
-                    <div className="flex-1">
+                    <div>
                       <Quote className="h-8 w-8 text-primary/40 mb-3" />
                       <p className="text-muted-foreground italic leading-relaxed">
                         "{testimonial.content}"
                       </p>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Mobile: Carousel with Navigation */}
-        <div className="md:hidden relative">
-          <div className="overflow-hidden">
-            <div
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-            >
-              {testimonials.map((testimonial, index) => (
-                <div key={index} className="w-full flex-shrink-0 px-2">
-                  <Card className="bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20">
-                    <CardContent className="pt-6 space-y-6">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12 ring-2 ring-white/20">
-                          <AvatarImage
-                            src={testimonial.image}
-                            srcSet={getResponsiveSrcSet(testimonial.image)}
-                            sizes="(max-width: 600px) 276px, 553px"
-                            alt={testimonial.name}
-                          />
-                          <AvatarFallback>
-                            {testimonial.name.split(" ").map((n) => n[0]).join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-semibold text-foreground">{testimonial.name}</div>
-                          <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <Quote className="h-8 w-8 text-primary/40 mb-3" />
-                        <p className="text-muted-foreground italic leading-relaxed">
-                          "{testimonial.content}"
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  </div>
                 </div>
               ))}
             </div>
