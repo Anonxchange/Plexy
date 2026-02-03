@@ -24,7 +24,8 @@ export default defineConfig(() => {
       },
     },
     define: {
-      global: 'globalThis',
+      // ensure the key is a string so Vite replaces occurrences correctly
+      'global': 'globalThis',
     },
     optimizeDeps: {
       include: [
@@ -83,9 +84,9 @@ export default defineConfig(() => {
       host: "0.0.0.0",
       port: 5000,
       allowedHosts: true,
+      // safer HMR defaults — show overlay so runtime errors are visible in the browser
       hmr: {
-        overlay: false,
-        clientPort: 443,
+        overlay: true,
       },
       proxy: {
         "/api": {
