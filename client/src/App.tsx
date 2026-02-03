@@ -229,9 +229,19 @@ function AppContent() {
 
 function App() {
   // Check if on help subdomain - show only support page
-  const isHelpSubdomain = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
+  const [isHelpSubdomain, setIsHelpSubdomain] = lazy(() => {
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    return Promise.resolve({ default: () => hostname === 'help.pexly.app' });
+  }) as any;
+
+  // Simplified subdomain check to avoid potential issues with window access during early hydration
+  const isHelp = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
   
-  const content = isHelpSubdomain ? <Support /> : (
+  const content = isHelp ? (
+    <Suspense fallback={<PageSkeleton />}>
+      <Support />
+    </Suspense>
+  ) : (
     <>
       <GlobalNotificationListener />
       <AppContent />
