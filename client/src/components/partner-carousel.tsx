@@ -16,7 +16,7 @@ const partners = [
 ];
 
 export function PartnerCarousel() {
-  const duplicatedPartners = useMemo(() => [...partners, ...partners, ...partners], []);
+  const duplicatedPartners = useMemo(() => [...partners, ...partners], []);
 
   return (
     <div className="bg-zinc-100 py-4 overflow-hidden border-y border-zinc-200">
