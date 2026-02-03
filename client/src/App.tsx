@@ -39,26 +39,26 @@ import Lightning from "@/pages/lightning";
 import BuyCrypto from "@/pages/buy-crypto";
 import ActiveTrade from "@/pages/active-trade";
 import Affiliate from "@/pages/affiliate";
-import RewardsPage from "@/pages/rewards";
-import ReferralPage from "@/pages/referral";
+const RewardsPage = lazy(() => import("@/pages/rewards"));
+const ReferralPage = lazy(() => import("@/pages/referral"));
 import MerchantApplicationPage from "@/pages/merchant-application";
 import MerchantDowngradePage from "@/pages/merchant-downgrade";
 import NotificationsPage from "@/pages/notifications";
 import NotificationSettings from "@/pages/notification-settings";
 import { VerifyEmail } from "@/pages/verify-email";
 import PexlyAcademy from "@/pages/pexly-academy";
-import About from "@/pages/about";
-import Reviews from "@/pages/reviews";
-import Support from "@/pages/support";
-import Contact from "@/pages/contact";
-import Terms from "@/pages/terms";
-import Privacy from "@/pages/privacy";
-import CookiePolicy from "@/pages/cookie-policy";
-import AMLPolicy from "@/pages/aml-policy";
-import RestrictedCountries from "@/pages/restricted-countries";
-import VIPTerms from "@/pages/vip-terms";
-import VendorReminder from "@/pages/vendor-reminder";
-import SubmitIdea from "@/pages/submit-idea";
+const About = lazy(() => import("@/pages/about"));
+const Reviews = lazy(() => import("@/pages/reviews"));
+const Support = lazy(() => import("@/pages/support"));
+const Contact = lazy(() => import("@/pages/contact"));
+const Terms = lazy(() => import("@/pages/terms"));
+const Privacy = lazy(() => import("@/pages/privacy"));
+const CookiePolicy = lazy(() => import("@/pages/cookie-policy"));
+const AMLPolicy = lazy(() => import("@/pages/aml-policy"));
+const RestrictedCountries = lazy(() => import("@/pages/restricted-countries"));
+const VIPTerms = lazy(() => import("@/pages/vip-terms"));
+const VendorReminder = lazy(() => import("@/pages/vendor-reminder"));
+const SubmitIdea = lazy(() => import("@/pages/submit-idea"));
 import { FavoriteOffers } from "@/pages/favorite-offers";
 import { TrustedUsers } from "@/pages/trusted-users";
 import { BlockedUsers } from "@/pages/blocked-users";
@@ -112,7 +112,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/about" component={About} />
+      <Route path="/about">{() => <LazyRoute component={About} />}</Route>
       <Route path="/explorer">{() => <LazyRoute component={Explorer} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/prices">{() => <LazyRoute component={Prices} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/blocks">{() => <LazyRoute component={Blocks} skeleton={<ChartPageSkeleton />} />}</Route>
@@ -122,7 +122,7 @@ function Router() {
       <Route path="/explorer/block/:hash" component={BlockDetail} />
       <Route path="/explorer/asset/:symbol">{() => <LazyRoute component={ExplorerAsset} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/markets">{() => <LazyRoute component={marketsPage} />}</Route>
-      <Route path="/submit-idea" component={SubmitIdea} />
+      <Route path="/submit-idea">{() => <LazyRoute component={SubmitIdea} />}</Route>
       <Route path="/p2p" component={P2P} />
       <Route path="/spot">{() => <LazyRoute component={spot} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/swap" component={Swap} />
@@ -172,24 +172,24 @@ function Router() {
       <Route path="/offers/:offerId" component={OfferDetail} />
       <Route path="/medals" component={MedalsPage} />
       <Route path="/affiliate" component={Affiliate} />
-      <Route path="/rewards" component={RewardsPage} />
-      <Route path="/referral" component={ReferralPage} />
+      <Route path="/rewards">{() => <LazyRoute component={RewardsPage} />}</Route>
+      <Route path="/referral">{() => <LazyRoute component={ReferralPage} />}</Route>
       <Route path="/bitcoin-calculator">{() => <LazyRoute component={BitcoinCalculator} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/academy" component={PexlyAcademy} />
       <Route path="/academy/:articleId">{() => <LazyRoute component={AcademyArticle} />}</Route>
       <Route path="/careers">{() => <LazyRoute component={careers} />}</Route>
       <Route path="/blog">{() => <LazyRoute component={Blog} />}</Route>
       <Route path="/blog/:postId">{() => <LazyRoute component={BlogPost} />}</Route>
-      <Route path="/reviews" component={Reviews} />
-      <Route path="/support" component={Support} />
-      <Route path="/contact" component={Contact} />
-      <Route path="/terms" component={Terms} />
-      <Route path="/privacy" component={Privacy} />
-      <Route path="/cookie-policy" component={CookiePolicy} />
-      <Route path="/aml-policy" component={AMLPolicy} />
-      <Route path="/restricted-countries" component={RestrictedCountries} />
-      <Route path="/vip-terms" component={VIPTerms} />
-      <Route path="/vendor-reminder" component={VendorReminder} />
+      <Route path="/reviews">{() => <LazyRoute component={Reviews} />}</Route>
+      <Route path="/support">{() => <LazyRoute component={Support} />}</Route>
+      <Route path="/contact">{() => <LazyRoute component={Contact} />}</Route>
+      <Route path="/terms">{() => <LazyRoute component={Terms} />}</Route>
+      <Route path="/privacy">{() => <LazyRoute component={Privacy} />}</Route>
+      <Route path="/cookie-policy">{() => <LazyRoute component={CookiePolicy} />}</Route>
+      <Route path="/aml-policy">{() => <LazyRoute component={AMLPolicy} />}</Route>
+      <Route path="/restricted-countries">{() => <LazyRoute component={RestrictedCountries} />}</Route>
+      <Route path="/vip-terms">{() => <LazyRoute component={VIPTerms} />}</Route>
+      <Route path="/vendor-reminder">{() => <LazyRoute component={VendorReminder} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
