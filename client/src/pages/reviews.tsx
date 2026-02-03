@@ -140,70 +140,64 @@ export default function Reviews() {
 
       {/* Overall Rating Section */}
       <section className="py-12 lg:py-16 border-b">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-            {/* Rating Summary */}
-            <div className="text-center lg:text-left">
-              <div className="inline-flex items-end gap-4 mb-6">
-                <div className="text-6xl lg:text-7xl font-bold">{averageRating}</div>
-                <div className="text-left pb-2">
-                  <div className="flex gap-1 mb-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-primary text-primary" />
-                    ))}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Based on {totalReviews.toLocaleString()} reviews
-                  </div>
+        <div className="container mx-auto px-4 lg:px-8 max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-12">
+          {/* Rating Summary */}
+          <div className="text-center lg:text-left">
+            <div className="inline-flex items-end gap-4 mb-6">
+              <div className="text-6xl lg:text-7xl font-bold">{averageRating}</div>
+              <div className="text-left pb-2">
+                <div className="flex gap-1 mb-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-primary text-primary" />
+                  ))}
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 max-w-md mx-auto lg:mx-0">
-                <div className="p-4 rounded-lg bg-muted/50 text-center">
-                  <div className="text-2xl font-bold text-primary">98%</div>
-                  <div className="text-sm text-muted-foreground">Recommend Us</div>
-                </div>
-                <div className="p-4 rounded-lg bg-muted/50 text-center">
-                  <div className="text-2xl font-bold text-primary">4.8/5</div>
-                  <div className="text-sm text-muted-foreground">Avg. Rating</div>
+                <div className="text-sm text-muted-foreground">
+                  Based on {totalReviews.toLocaleString()} reviews
                 </div>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto lg:mx-0">
+              <div className="p-4 rounded-lg bg-muted/50 text-center">
+                <div className="text-2xl font-bold text-primary">98%</div>
+                <div className="text-sm text-muted-foreground">Recommend Us</div>
+              </div>
+              <div className="p-4 rounded-lg bg-muted/50 text-center">
+                <div className="text-2xl font-bold text-primary">4.8/5</div>
+                <div className="text-sm text-muted-foreground">Avg. Rating</div>
+              </div>
+            </div>
+          </div>
 
-            {/* Rating Breakdown */}
-            <div className="space-y-3">
-              {ratingBreakdown.map((item) => (
-                <div key={item.stars} className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 w-20">
-                    <span className="text-sm font-medium">{item.stars}</span>
-                    <Star className="h-4 w-4 fill-primary text-primary" />
-                  </div>
-                  <Progress value={item.percentage} className="flex-1 h-3" />
-                  <div className="text-sm text-muted-foreground w-16 text-right">
-                    {item.count}
-                  </div>
+          {/* Rating Breakdown */}
+          <div className="flex flex-col gap-3">
+            {ratingBreakdown.map((item) => (
+              <div key={item.stars} className="flex items-center gap-3">
+                <div className="flex items-center gap-1 w-20">
+                  <span className="text-sm font-medium">{item.stars}</span>
+                  <Star className="h-4 w-4 fill-primary text-primary" />
                 </div>
-              ))}
-            </div>
+                <Progress value={item.percentage} className="flex-1 h-3" />
+                <div className="text-sm text-muted-foreground w-16 text-right">
+                  {item.count}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Trust Badges */}
       <section className="py-12 lg:py-16 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {trustBadges.map((badge, index) => (
-              <Card key={index} className="text-center">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                    <badge.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="font-semibold mb-1">{badge.title}</h3>
-                  <p className="text-sm text-muted-foreground">{badge.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className="container mx-auto px-4 lg:px-8 max-w-6xl grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {trustBadges.map((badge, index) => (
+            <div key={index} className="text-center p-6 bg-background rounded-xl border shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <badge.icon className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-1">{badge.title}</h3>
+              <p className="text-sm text-muted-foreground">{badge.description}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -212,62 +206,60 @@ export default function Reviews() {
         <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
           <h2 className="text-3xl font-bold mb-8 text-center">What Our Users Say</h2>
           
-          <div className="space-y-6">
+          <div className="flex flex-col gap-6">
             {displayedReviews.map((review) => (
-              <Card key={review.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6 lg:p-8">
-                  <div className="flex items-start gap-4 mb-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                        {review.author.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">{review.author}</h3>
-                        {review.verified && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Check className="h-3 w-3 mr-1" />
-                            Verified
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{review.location}</span>
-                        <span>•</span>
-                        <span>{review.trades} trades</span>
-                      </div>
+              <div key={review.id} className="p-6 lg:p-8 bg-background rounded-xl border hover:shadow-lg transition-shadow">
+                <div className="flex items-start gap-4 mb-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                      {review.author.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold">{review.author}</h3>
+                      {review.verified && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Check className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <div className="flex gap-0.5 mb-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            className={`h-4 w-4 ${i < review.rating ? 'fill-primary text-primary' : 'text-muted'}`}
-                          />
-                        ))}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(review.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{review.location}</span>
+                      <span>•</span>
+                      <span>{review.trades} trades</span>
                     </div>
                   </div>
-                  
-                  <h4 className="font-semibold mb-2">{review.title}</h4>
-                  <p className="text-muted-foreground mb-4">{review.content}</p>
-                  
-                  <div className="flex items-center gap-4 text-sm">
-                    <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-                      <ThumbsUp className="h-4 w-4" />
-                      <span>Helpful ({review.helpful})</span>
-                    </button>
-                    <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-                      <MessageCircle className="h-4 w-4" />
-                      <span>Reply</span>
-                    </button>
+                  <div className="text-right">
+                    <div className="flex gap-0.5 mb-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star 
+                          key={i} 
+                          className={`h-4 w-4 ${i < review.rating ? 'fill-primary text-primary' : 'text-muted'}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(review.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                
+                <h4 className="font-semibold mb-2">{review.title}</h4>
+                <p className="text-muted-foreground mb-4">{review.content}</p>
+                
+                <div className="flex items-center gap-4 text-sm">
+                  <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+                    <ThumbsUp className="h-4 w-4" />
+                    <span>Helpful ({review.helpful})</span>
+                  </button>
+                  <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+                    <MessageCircle className="h-4 w-4" />
+                    <span>Reply</span>
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
 
