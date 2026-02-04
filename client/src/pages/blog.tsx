@@ -18,16 +18,22 @@ function calculateReadTime(content: string): string {
 
 function validateImageUrl(url: string): string {
   if (!url) return "";
+  
+  // Basic sanity check to prevent obvious script injections
+  if (url.toLowerCase().includes("javascript:") || url.toLowerCase().includes("data:")) {
+    return "";
+  }
+
   try {
     const parsed = new URL(url, window.location.origin);
-    // Only allow http, https and relative paths
-    if (parsed.protocol === "http:" || parsed.protocol === "https:" || url.startsWith('/')) {
+    // Strict protocol check
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
       return url;
     }
     return "";
   } catch {
-    // If not a valid URL, check if it's a relative path
-    if (url.startsWith('/')) return url;
+    // If not a valid absolute URL, check if it's a relative path starting with /
+    if (url.startsWith('/') && !url.startsWith('//')) return url;
     return "";
   }
 }
