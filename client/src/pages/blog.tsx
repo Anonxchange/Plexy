@@ -288,27 +288,29 @@ export default function Blog() {
                 onClick={() => setLocation(`/blog/${post.id}`)}
               >
                 {/* Cover Image or Gradient Banner */}
-                <div className="relative h-48 md:h-56 overflow-hidden">
-                  {post.image_url ? (
-                    <>
-                      <img
-                        src={post.image_url}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                    </>
-                  ) : (
-                    <div className={`w-full h-full bg-gradient-to-br ${post.gradient}`}>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center text-white">
-                          <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
-                            <span className="text-2xl">📰</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+               <div className="relative h-48 md:h-56 overflow-hidden">
+  {safeImageSrc ? (
+    <>
+      <img
+        src={safeImageSrc}
+        alt={post.title}
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+    </>
+  ) : (
+    <div className={`w-full h-full bg-gradient-to-br ${post.gradient}`}>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+            <span className="text-2xl">📰</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+
                   
                   {/* Pexly Logo */}
                   <div className="absolute top-4 left-4">
