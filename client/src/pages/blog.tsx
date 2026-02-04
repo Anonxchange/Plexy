@@ -309,8 +309,6 @@ export default function Blog() {
       </div>
     </div>
   )}
-</div>
-
                   
                   {/* Pexly Logo */}
                   <div className="absolute top-4 left-4">
