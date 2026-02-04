@@ -24,27 +24,34 @@ function validateImageUrl(url: string | null | undefined): string {
 
   // Prevent protocol-based XSS (javascript:, data:, vbscript:, etc.)
   const lowerUrl = trimmedUrl.toLowerCase();
-  if (
-    lowerUrl.startsWith("javascript:") || 
-    lowerUrl.startsWith("data:") || 
-    lowerUrl.startsWith("vbscript:") ||
-    lowerUrl.startsWith("file:")
-  ) {
+  
+  // Strict check for suspicious protocols
+  const suspiciousProtocols = ["javascript:", "data:", "vbscript:", "file:", "blob:"];
+  if (suspiciousProtocols.some(proto => lowerUrl.startsWith(proto))) {
     return "";
   }
 
   try {
     // Try parsing as absolute URL
-    const parsed = new URL(trimmedUrl);
-    // Only allow standard web protocols
+    const parsed = new URL(trimmedUrl, window.location.origin);
+    // Only allow standard web protocols for external images
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
       return parsed.href;
     }
+    
+    // If it's the same origin, allow it (relative paths that resolved)
+    if (parsed.origin === window.location.origin) {
+      return parsed.pathname + parsed.search + parsed.hash;
+    }
+    
     return "";
   } catch {
     // Handle relative paths - must start with / but not // (protocol-relative)
     if (trimmedUrl.startsWith("/") && !trimmedUrl.startsWith("//")) {
-      return trimmedUrl;
+      // Basic character validation for relative paths
+      if (/^[a-zA-Z0-0\/\.\-\_\?\&\=\#\+]+$/.test(trimmedUrl)) {
+        return trimmedUrl;
+      }
     }
     return "";
   }
