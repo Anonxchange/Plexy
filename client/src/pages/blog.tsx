@@ -16,24 +16,36 @@ function calculateReadTime(content: string): string {
   return `${readTime} min read`;
 }
 
-function validateImageUrl(url: string): string {
-  if (!url) return "";
+function validateImageUrl(url: string | null | undefined): string {
+  if (!url || typeof url !== 'string') return "";
   
-  // Basic sanity check to prevent obvious script injections
-  if (url.toLowerCase().includes("javascript:") || url.toLowerCase().includes("data:")) {
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) return "";
+
+  // Prevent protocol-based XSS (javascript:, data:, vbscript:, etc.)
+  const lowerUrl = trimmedUrl.toLowerCase();
+  if (
+    lowerUrl.startsWith("javascript:") || 
+    lowerUrl.startsWith("data:") || 
+    lowerUrl.startsWith("vbscript:") ||
+    lowerUrl.startsWith("file:")
+  ) {
     return "";
   }
 
   try {
-    const parsed = new URL(url, window.location.origin);
-    // Strict protocol check
+    // Try parsing as absolute URL
+    const parsed = new URL(trimmedUrl);
+    // Only allow standard web protocols
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return url;
+      return parsed.href;
     }
     return "";
   } catch {
-    // If not a valid absolute URL, check if it's a relative path starting with /
-    if (url.startsWith('/') && !url.startsWith('//')) return url;
+    // Handle relative paths - must start with / but not // (protocol-relative)
+    if (trimmedUrl.startsWith("/") && !trimmedUrl.startsWith("//")) {
+      return trimmedUrl;
+    }
     return "";
   }
 }
