@@ -16,6 +16,22 @@ function calculateReadTime(content: string): string {
   return `${readTime} min read`;
 }
 
+function validateImageUrl(url: string): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url, window.location.origin);
+    // Only allow http, https and relative paths
+    if (parsed.protocol === "http:" || parsed.protocol === "https:" || url.startsWith('/')) {
+      return url;
+    }
+    return "";
+  } catch {
+    // If not a valid URL, check if it's a relative path
+    if (url.startsWith('/')) return url;
+    return "";
+  }
+}
+
 const categories = [
   "Latest news",
   "Announcement",
@@ -292,7 +308,7 @@ export default function Blog() {
                   {post.image_url ? (
                     <>
                       <img
-                        src={post.image_url}
+                        src={validateImageUrl(post.image_url)}
                         alt={post.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
