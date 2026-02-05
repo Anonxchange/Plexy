@@ -45,7 +45,7 @@ import { useWallets, useWalletBalance } from "@/hooks/use-wallets";
 import { feeCalculator } from "@/lib/fee-calculator";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 import {
   Drawer,
@@ -113,7 +113,6 @@ export function Spot() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const supabase = createClient();
   
   const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
   const [selectedPair, setSelectedPair] = useState(initialTradingPairs[0]);
@@ -165,19 +164,26 @@ export function Spot() {
   const { data: quoteWallet } = useWalletBalance(quoteCrypto);
   const { data: userWallets = [] } = useWallets();
 
-  // Fetch real-time prices from Asterdex
+  // Fetch real-time prices from Supabase Edge Function
   useEffect(() => {
     const fetchPrices = async () => {
       try {
         const symbols = tradingPairs.map(p => p.symbol);
-        const asterdexSymbols = symbols.map(s => `${s}USDT`);
+        const { data, error } = await supabase.functions.invoke('asterdex', {
+          body: { 
+            symbols, 
+            type: 'tickers' 
+          }
+        });
         
-        const tickers = await asterdexService.getTickers(asterdexSymbols);
+        if (error) throw error;
+        
+        const tickers = data?.data || data;
         
         if (tickers && tickers.length > 0) {
           setTradingPairs(prevPairs => 
             prevPairs.map(pair => {
-              const ticker = tickers.find(t => t.symbol === `${pair.symbol}USDT`);
+              const ticker = tickers.find((t: any) => t.symbol === `${pair.symbol}USDT`);
                 
               if (ticker) {
                 const price = parseFloat(ticker.lastPrice);
@@ -198,7 +204,7 @@ export function Spot() {
           );
         }
       } catch (error) {
-        console.error('Error fetching crypto prices from Asterdex:', error);
+        console.error('Error fetching crypto prices from Asterdex Edge Function:', error);
       }
     };
 
@@ -206,7 +212,7 @@ export function Spot() {
     const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [supabase]);
 
   // Update selected pair when trading pairs change
   useEffect(() => {
@@ -221,12 +227,18 @@ export function Spot() {
     const fetchOrderBookAndTrades = async () => {
       try {
         const symbol = `${selectedPair.symbol}USDT`;
-        const [orderBookData, tradesData] = await Promise.all([
-          asterdexService.getOrderBook(symbol, 20),
-          asterdexService.getRecentTrades(symbol, 20),
+        
+        const [orderBookRes, tradesRes] = await Promise.all([
+          supabase.functions.invoke('asterdex', {
+            body: { symbol, limit: 20, type: 'orderbook' }
+          }),
+          supabase.functions.invoke('asterdex', {
+            body: { symbol, limit: 20, type: 'trades' }
+          })
         ]);
         
-        if (orderBookData) {
+        if (orderBookRes.data) {
+          const orderBookData = orderBookRes.data.data || orderBookRes.data;
           setLiveOrderBook(orderBookData);
           
           // Auto-fill price box under Limit order type only if it's currently empty
@@ -240,11 +252,12 @@ export function Spot() {
             }
           }
         }
-        if (tradesData) {
+        if (tradesRes.data) {
+          const tradesData = tradesRes.data.data || tradesRes.data;
           setLiveTrades(tradesData);
         }
       } catch (error) {
-        console.error('Error fetching order book/trades:', error);
+        console.error('Error fetching order book/trades from Asterdex Edge Function:', error);
       }
     };
 
@@ -252,7 +265,7 @@ export function Spot() {
     const interval = setInterval(fetchOrderBookAndTrades, 5000); // Update every 5 seconds
     
     return () => clearInterval(interval);
-  }, [selectedPair, orderType]);
+  }, [selectedPair, orderType, supabase]);
 
   const SlippageSelector = () => (
     <div className="flex items-center gap-1.5 mb-2">
@@ -496,16 +509,22 @@ export function Spot() {
       }
 
       // Execute swap with provided password
-      // Use RocketX via swapExecutionService which now handles token normalization
-      const result = await swapExecutionService.executeSwap(
-        activeWallet,
-        fromToken,
-        toToken,
-        amountStr,
-        password,
-        user.id,
-        isSlippageEnabled ? parseFloat(maxSlippage) : 100 // Use 100% if disabled
-      );
+      // Use Asterdex Edge Function for swap execution
+      const { data: result, error: swapError } = await supabase.functions.invoke('asterdex', {
+        body: {
+          type: 'execute_swap',
+          wallet: activeWallet,
+          fromToken,
+          toToken,
+          amount: amountStr,
+          password,
+          userId: user.id,
+          slippage: isSlippageEnabled ? parseFloat(maxSlippage) : 100
+        }
+      });
+
+      if (swapError) throw swapError;
+      if (!result || result.error) throw new Error(result?.error || "Failed to execute trade via AsterDEX Edge Function");
 
       toast({
         title: "Order Submitted",
