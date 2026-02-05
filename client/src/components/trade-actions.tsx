@@ -76,21 +76,22 @@ export function TradeActions({
     if (!trade.id || isProcessing) return;
     setIsProcessing(true);
     try {
-      // 1. Verify caller is seller and trade.status is pending (Backend handles this, but we call the function)
-      // 2. Call btc-escrow-create
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-create`, {
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-psbt`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
-        body: JSON.stringify({ trade_id: trade.id })
+        body: JSON.stringify({ 
+          trade_id: trade.id
+        })
       });
 
-      if (!response.ok) throw new Error('Failed to create escrow');
+      if (!response.ok) throw new Error('Failed to approve contract');
 
-      toast({ title: "Success", description: "Contract approved and escrow created." });
+      toast({ title: "Success", description: "Contract approved and PSBT generated." });
       onTradeUpdate?.();
     } catch (error) {
       console.error("Error approving trade:", error);
