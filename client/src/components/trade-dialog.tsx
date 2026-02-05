@@ -169,9 +169,16 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
                 currentUserId
               );
 
-              const { getEscrowPublicKey } = await import("@/lib/bitcoinEscrow");
-              const { publicKey } = getEscrowPublicKey(mnemonic);
-              const pubKeyHex = publicKey.toString('hex');
+              // Get BTC wallet from storage
+const wallets = nonCustodialWalletManager.getWalletsFromStorage(currentUserId);
+const btcWallet = wallets.find(w => w.chainId.toLowerCase() === 'bitcoin');
+
+if (!btcWallet?.publicKey) {
+  throw new Error("BTC public key not found");
+}
+
+// Use stored public key directly
+const pubKeyHex = btcWallet.publicKey;
 
               if (offer.type === 'buy') {
                 sellerPubKey = pubKeyHex;
