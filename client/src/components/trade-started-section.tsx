@@ -137,11 +137,12 @@ export function TradeStartedSection({
                       // Fallback logic if for some reason the hidden button isn't there
                       const { createClient } = await import("@/lib/supabase");
                       const supabase = createClient();
+                      const { data: { session } } = await supabase.auth.getSession();
                       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-create`, {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+                          'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`
                         },
                         body: JSON.stringify({ tradeId: trade.id })
                       });
