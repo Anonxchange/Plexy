@@ -20,7 +20,7 @@ import Wallet from "@/pages/wallet";
 import { SignUp } from "@/pages/signup";
 import { SignIn } from "@/pages/signin";
 import { Dashboard } from "@/pages/dashboard";
-import { P2P } from "@/pages/p2p";
+const P2P = lazy(() => import("@/pages/p2p").then(m => ({ default: m.P2P })));
 import { Swap } from "@/pages/swap";
 import { Profile } from "@/pages/profile";
 import { Shop } from "@/pages/shop";
@@ -123,7 +123,7 @@ function Router() {
       <Route path="/explorer/asset/:symbol">{() => <LazyRoute component={ExplorerAsset} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/markets">{() => <LazyRoute component={marketsPage} />}</Route>
       <Route path="/submit-idea">{() => <LazyRoute component={SubmitIdea} />}</Route>
-      <Route path="/p2p" component={P2P} />
+      <Route path="/p2p">{() => <LazyRoute component={P2P} />}</Route>
       <Route path="/spot">{() => <LazyRoute component={spot} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/swap" component={Swap} />
       <Route path="/wallet" component={Wallet} />
