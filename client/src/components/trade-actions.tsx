@@ -85,7 +85,7 @@ export function TradeActions({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
-        body: JSON.stringify({ tradeId: trade.id })
+        body: JSON.stringify({ trade_id: trade.id })
       });
 
       if (!response.ok) throw new Error('Failed to create escrow');
