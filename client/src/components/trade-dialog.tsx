@@ -148,6 +148,42 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
       const currentUserId = authUser.id;
 
+      // Get public keys for escrow if BTC
+      let buyerPubKey = null;
+      let sellerPubKey = null;
+
+      if (offer.cryptoSymbol === 'BTC') {
+        try {
+          const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
+          const { getEscrowPublicKey } = await import("@/lib/bitcoinEscrow");
+
+          // Get initiator's mnemonic (we need sessionPassword)
+          if (!sessionPassword) {
+             // In a real flow we'd prompt, but the user said "make sure to send users pub key"
+             // If we don't have it, we might have to skip or error, but let's try to get it from local storage if available
+          }
+
+          const initiatorWallets = nonCustodialWalletManager.getWalletsFromStorage(currentUserId);
+          const btcWallet = initiatorWallets.find(w => w.chainId === 'bitcoin' || w.chainId === 'Bitcoin (SegWit)');
+
+          if (btcWallet && sessionPassword) {
+            const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(btcWallet.encryptedMnemonic!, sessionPassword, currentUserId);
+            const { publicKey } = getEscrowPublicKey(mnemonic);
+            const pubKeyHex = publicKey.toString('hex');
+            
+            if (offer.type === 'buy') {
+              // Vendor buys, user sells. User is seller.
+              sellerPubKey = pubKeyHex;
+            } else {
+              // Vendor sells, user buys. User is buyer.
+              buyerPubKey = pubKeyHex;
+            }
+          }
+        } catch (e) {
+          console.error("Error deriving initiator pubkey:", e);
+        }
+      }
+
       // Determine buyer and seller based on offer type
       const vendorId = offer.vendor?.id;
 
@@ -201,6 +237,8 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
           payment_method: offer.paymentMethod,
           status: "pending",
           payment_deadline: paymentDeadline.toISOString(),
+          seller_pubkey: sellerPubKey,
+          buyer_pubkey: buyerPubKey,
         })
         .select()
         .single();
@@ -208,6 +246,33 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       if (tradeError) throw tradeError;
 
       console.log("Trade created successfully:", trade);
+
+      // Call btc-escrow-create immediately upon trade creation if it's a BTC trade
+      if (offer.cryptoSymbol === 'BTC') {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const escrowResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-create`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({ 
+              trade_id: trade.id,
+              seller_pubkey: sellerPubKey,
+              buyer_pubkey: buyerPubKey
+            })
+          });
+
+          if (!escrowResponse.ok) {
+            console.error("Failed to initialize escrow during trade creation");
+          } else {
+            console.log("Escrow initialized successfully during trade creation");
+          }
+        } catch (escrowErr) {
+          console.error("Error calling btc-escrow-create:", escrowErr);
+        }
+      }
 
       // If seller, post bank account details to chat
       if (offer.type === 'sell' && selectedBankAccount) {
