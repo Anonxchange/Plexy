@@ -17,7 +17,6 @@ import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { walletClient } from "@/lib/wallet-client";
-import { createEscrowAddress, getEscrowPublicKey } from "@/lib/bitcoinEscrow";
 import { DialogFooter } from "@/components/ui/dialog";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 
@@ -155,32 +154,40 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       if (offer.cryptoSymbol === 'BTC') {
         try {
           const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-          const { getEscrowPublicKey } = await import("@/lib/bitcoinEscrow");
+          
+          // Get user wallets from local storage
+          const wallets = nonCustodialWalletManager.getWalletsFromStorage(currentUserId);
+          const btcWallet = wallets.find(w => w.chainId.toLowerCase() === 'bitcoin');
 
-          // Get initiator's mnemonic (we need sessionPassword)
-          if (!sessionPassword) {
-             // In a real flow we'd prompt, but the user said "make sure to send users pub key"
-             // If we don't have it, we might have to skip or error, but let's try to get it from local storage if available
-          }
+          if (btcWallet) {
+            // We'll use the derived public key if the user is authenticated (sessionPassword exists).
+            // This public key is used for creating a multisig escrow address.
+            if (sessionPassword) {
+              const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(
+                btcWallet.encryptedMnemonic!,
+                sessionPassword,
+                currentUserId
+              );
 
-          const initiatorWallets = nonCustodialWalletManager.getWalletsFromStorage(currentUserId);
-          const btcWallet = initiatorWallets.find(w => w.chainId === 'bitcoin' || w.chainId === 'Bitcoin (SegWit)');
+              const { getEscrowPublicKey } = await import("@/lib/bitcoinEscrow");
+              const { publicKey } = getEscrowPublicKey(mnemonic);
+              const pubKeyHex = publicKey.toString('hex');
 
-          if (btcWallet && sessionPassword) {
-            const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(btcWallet.encryptedMnemonic!, sessionPassword, currentUserId);
-            const { publicKey } = getEscrowPublicKey(mnemonic);
-            const pubKeyHex = publicKey.toString('hex');
-            
-            if (offer.type === 'buy') {
-              // Vendor buys, user sells. User is seller.
-              sellerPubKey = pubKeyHex;
+              if (offer.type === 'buy') {
+                sellerPubKey = pubKeyHex;
+              } else {
+                buyerPubKey = pubKeyHex;
+              }
+
+              console.log("Derived BTC escrow pubkey using session password:", pubKeyHex);
             } else {
-              // Vendor sells, user buys. User is buyer.
-              buyerPubKey = pubKeyHex;
+              // If no password, we try to use the wallet's address as a fallback if the backend supports it,
+              // but typically the escrow function requires the actual hex public key.
+              console.warn("No session password available; cannot derive BTC public key for escrow.");
             }
           }
         } catch (e) {
-          console.error("Error deriving initiator pubkey:", e);
+          console.error("Error deriving BTC pubkey:", e);
         }
       }
 
