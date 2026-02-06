@@ -168,7 +168,7 @@ export function HeroSection() {
 
             {/* Subheadline */}
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Connect with traders worldwide. 500+ payment methods. Zero hassle.
+              Connect with traders worldwide. 500+ payment methods. Non-custodial by design . your funds, your control.
             </p>
 
             {/* Stats - Arranged horizontally on mobile like in the reference image */}
