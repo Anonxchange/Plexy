@@ -24,7 +24,7 @@ export const TrustStats = () => {
         </div>
 
         {/* HERO CARD */}
-        <div className="bg-[#f2f2f2] dark:bg-card rounded-[40px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm mb-14">
+        <div className="bg-[#fcfcfc] dark:bg-card rounded-[40px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm mb-14">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
             {/* LEFT CONTENT */}
@@ -71,7 +71,7 @@ export const TrustStats = () => {
 
         {/* FEATURE CARDS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-[#f2f2f2] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
+          <div className="bg-[#fcfcfc] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Added security with encryption
             </h3>
@@ -81,7 +81,7 @@ export const TrustStats = () => {
             </p>
           </div>
 
-          <div className="bg-[#f2f2f2] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
+          <div className="bg-[#fcfcfc] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Zero personal tracking
             </h3>
@@ -91,7 +91,7 @@ export const TrustStats = () => {
             </p>
           </div>
 
-          <div className="bg-[#f2f2f2] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
+          <div className="bg-[#fcfcfc] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Proactive alerts
             </h3>
