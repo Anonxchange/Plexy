@@ -58,23 +58,23 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 0 0% 100%;
+  --background: 210 20% 96%;
 
-  --foreground: 0 0% 0%;
+  --foreground: 222 47% 11%;
 
-  --border: 0 0% 90%;
+  --border: 214 32% 91%;
 
-  --card: 0 0% 97%;
+  --card: 0 0% 100%;
 
-  --card-foreground: 0 0% 0%;
+  --card-foreground: 222 47% 11%;
 
-  --card-border: 0 0% 93%;
+  --card-border: 214 32% 91%;
 
-  --sidebar: 0 0% 98%;
+  --sidebar: 0 0% 100%;
 
-  --sidebar-foreground: 0 0% 0%;
+  --sidebar-foreground: 222 47% 11%;
 
-  --sidebar-border: 0 0% 90%;
+  --sidebar-border: 214 32% 91%;
 
   --sidebar-primary: 75 85% 65%;
 
@@ -307,7 +307,7 @@
     font-feature-settings: 'cv11' on, 'salt' on;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-weight: 300;
+    font-weight: 400;
   }
 
   h1, h2, h3, h4, h5, h6 {
