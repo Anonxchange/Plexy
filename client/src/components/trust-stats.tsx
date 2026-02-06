@@ -24,13 +24,13 @@ export const TrustStats = () => {
         </div>
 
         {/* HERO CARD */}
-        <div className="bg-white rounded-[40px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm mb-14">
+        <div className="bg-[#fcfcfc] dark:bg-card rounded-[40px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm mb-14">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
             {/* LEFT CONTENT */}
             <div className="flex flex-col text-center lg:text-left">
               {/* Heading */}
-              <h3 className="text-3xl md:text-4xl font-bold text-black mb-6 order-1">
+              <h3 className="text-3xl md:text-4xl font-bold text-black dark:text-card-foreground mb-6 order-1">
                 True ownership of your crypto assets
               </h3>
 
@@ -46,7 +46,7 @@ export const TrustStats = () => {
               </div>
 
               {/* Text */}
-              <p className="text-black/70 text-lg md:text-xl mb-8 max-w-xl mx-auto lg:mx-0 order-3">
+              <p className="text-black/70 dark:text-muted-foreground text-lg md:text-xl mb-8 max-w-xl mx-auto lg:mx-0 order-3">
                 We secure your wallet, but don't control or have access to your private keys or secret phrase only you do.
               </p>
 
@@ -71,32 +71,32 @@ export const TrustStats = () => {
 
         {/* FEATURE CARDS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-[32px] p-8 shadow-sm text-center">
-            <h3 className="text-2xl font-bold text-black mb-6">
+          <div className="bg-[#fcfcfc] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
+            <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Added security with encryption
             </h3>
             <img src={cloudBackup} className="w-40 h-40 mx-auto mb-6 object-contain" />
-            <p className="text-black/70 text-lg">
+            <p className="text-black/70 dark:text-muted-foreground text-lg">
               Use our Encrypted Cloud Backup for increased wallet security.
             </p>
           </div>
 
-          <div className="bg-white rounded-[32px] p-8 shadow-sm text-center">
-            <h3 className="text-2xl font-bold text-black mb-6">
+          <div className="bg-[#fcfcfc] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
+            <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Zero personal tracking
             </h3>
      <img src={privacyShield} className="w-52 h-52 mx-auto mb-2 object-contain scale-110" />
-          <p className="text-black/70 text-lg">
+          <p className="text-black/70 dark:text-muted-foreground text-lg">
               We don't track any personal information, including IP or balances.
             </p>
           </div>
 
-          <div className="bg-white rounded-[32px] p-8 shadow-sm text-center">
-            <h3 className="text-2xl font-bold text-black mb-6">
+          <div className="bg-[#fcfcfc] dark:bg-card rounded-[32px] p-8 shadow-sm text-center">
+            <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Proactive alerts
             </h3>
             <img src={alertHorn} className="w-40 h-40 mx-auto mb-6 object-contain" />
-            <p className="text-black/70 text-lg">
+            <p className="text-black/70 dark:text-muted-foreground text-lg">
               Stay safe with alerts for risky address and dApp connections.
             </p>
           </div>
