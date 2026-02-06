@@ -230,7 +230,7 @@ export function AppHeader() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-white supports-[backdrop-filter]:bg-white">
       <div className="flex h-16 items-center justify-between px-4">
         {/* Left side - Menu button (mobile only) and Logo */}
         <div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/p2p") || location === "/spot" || location === "/swap" || location === "/my-offers" || location === "/create-offer" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group"
+                  className="gap-2 group text-base font-bold"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   Trade
@@ -309,7 +309,7 @@ export function AppHeader() {
             <Button
               variant={location === "/gift-cards" ? "secondary" : "ghost"}
               size="sm"
-              className="gap-2"
+              className="gap-2 text-base font-bold"
             >
               <Gift className="h-4 w-4" />
               Gift Cards
@@ -321,7 +321,7 @@ export function AppHeader() {
             <Button
               variant={location.startsWith("/explorer") ? "secondary" : "ghost"}
               size="sm"
-              className="gap-2"
+              className="gap-2 text-base font-bold"
             >
               <Lightbulb className="h-4 w-4" />
               Pexly Explorer
@@ -339,7 +339,7 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/wallet") ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group"
+                  className="gap-2 group text-base font-bold"
                 >
                   <Wallet className="h-4 w-4" />
                   Wallet
@@ -415,7 +415,7 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/shop") ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group"
+                  className="gap-2 group text-base font-bold"
                 >
                   <Store className="h-4 w-4" />
                   Shop
@@ -456,7 +456,7 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/support") || location === "/faq" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group"
+                  className="gap-2 group text-base font-bold"
                 >
                   <HelpCircle className="h-4 w-4" />
                   Support
