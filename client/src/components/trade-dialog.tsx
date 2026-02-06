@@ -136,15 +136,15 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       const { createClient } = await import("@/lib/supabase");
       const supabase = createClient();
 
-      // Get current user
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        console.error("User not authenticated");
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         alert("Please sign in to create a trade");
         setIsCreatingTrade(false);
         return;
       }
 
+      const authUser = session.user;
       const currentUserId = authUser.id;
 
       // Get public keys for escrow if BTC
@@ -154,43 +154,17 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
       if (offer.cryptoSymbol === 'BTC') {
         try {
           const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-          
-          // Get user wallets from local storage
           const wallets = nonCustodialWalletManager.getWalletsFromStorage(currentUserId);
           const btcWallet = wallets.find(w => w.chainId.toLowerCase() === 'bitcoin');
 
           if (btcWallet) {
-            // We'll use the derived public key if the user is authenticated (sessionPassword exists).
-            // This public key is used for creating a multisig escrow address.
-            if (sessionPassword) {
-              const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(
-                btcWallet.encryptedMnemonic!,
-                sessionPassword,
-                currentUserId
-              );
-
-              // Get BTC wallet from storage
-const wallets = nonCustodialWalletManager.getWalletsFromStorage(currentUserId);
-const btcWallet = wallets.find(w => w.chainId.toLowerCase() === 'bitcoin');
-
-if (!btcWallet?.publicKey) {
-  throw new Error("BTC public key not found");
-}
-
-// Use stored public key directly
-const pubKeyHex = btcWallet.publicKey;
-
+            const pubKeyHex = (btcWallet as any).publicKey || (btcWallet as any).pubkey;
+            if (pubKeyHex) {
               if (offer.type === 'buy') {
                 sellerPubKey = pubKeyHex;
               } else {
                 buyerPubKey = pubKeyHex;
               }
-
-              console.log("Derived BTC escrow pubkey using session password:", pubKeyHex);
-            } else {
-              // If no password, we try to use the wallet's address as a fallback if the backend supports it,
-              // but typically the escrow function requires the actual hex public key.
-              console.warn("No session password available; cannot derive BTC public key for escrow.");
             }
           }
         } catch (e) {
@@ -198,49 +172,31 @@ const pubKeyHex = btcWallet.publicKey;
         }
       }
 
-      // Determine buyer and seller based on offer type
       const vendorId = offer.vendor?.id;
-
       if (!vendorId) {
-        console.error("No vendor ID found in offer:", offer);
         alert("Could not find the offer vendor");
+        setIsCreatingTrade(false);
         return;
       }
 
-      if (vendorId === user.id) {
+      if (vendorId === currentUserId) {
         alert("Cannot trade with yourself");
+        setIsCreatingTrade(false);
         return;
       }
 
-      // Determine buyer and seller based on offer type
-      // offer.type is the type of AD the vendor posted.
-      // If vendor posted a "buy" ad: Vendor wants to BUY crypto. User is SELLING to them.
-      // If vendor posted a "sell" ad: Vendor wants to SELL crypto. User is BUYING from them.
-      
       const isVendorBuying = offer.type === "buy";
-      const buyerId = isVendorBuying ? vendorId : currentUserId; // vendor buys OR user buys
-      const sellerId = isVendorBuying ? currentUserId : vendorId; // user sells OR vendor sells
+      const buyerId = isVendorBuying ? vendorId : currentUserId;
+      const sellerId = isVendorBuying ? currentUserId : vendorId;
       
-      console.log("Creating trade with roles:", {
-        offerType: offer.type,
-        initiatorId: currentUserId,
-        vendorId: vendorId,
-        assignedBuyerId: buyerId,
-        assignedSellerId: sellerId
-      });
-
-      // First, create or get the offer record
-      let offerId = offer.id;
-
-      // Calculate payment deadline based on offer's time limit
-      const timeLimitMinutes = offer.time_limit_minutes || 30; // Default to 30 minutes if not specified
+      const timeLimitMinutes = offer.time_limit_minutes || 30;
       const paymentDeadline = new Date(Date.now() + timeLimitMinutes * 60000);
 
-      // Now create the trade with the valid offer_id
+      // DIRECT DATABASE INSERT
       const { data: trade, error: tradeError } = await supabase
         .from("p2p_trades")
         .insert({
-          offer_id: offerId,
+          offer_id: offer.id,
           buyer_id: buyerId,
           seller_id: sellerId,
           crypto_symbol: offer.cryptoSymbol,
@@ -264,12 +220,11 @@ const pubKeyHex = btcWallet.publicKey;
       // Call btc-escrow-create immediately upon trade creation if it's a BTC trade
       if (offer.cryptoSymbol === 'BTC') {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
           const escrowResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-create`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer ${session.access_token}`
             },
             body: JSON.stringify({ 
               trade_id: trade.id,
@@ -324,7 +279,6 @@ ${selectedBankAccount.account_number}`;
 
       // Create notifications for both parties
       try {
-        // Get user profiles for avatar and name
         const { data: currentUserProfile } = await supabase
           .from('user_profiles')
           .select('username, avatar_url')
@@ -342,7 +296,6 @@ ${selectedBankAccount.account_number}`;
         const counterpartName = counterpartProfile?.username || offer.vendor?.name || 'User';
         const counterpartAvatar = counterpartProfile?.avatar_url || offer.vendor?.avatar || null;
 
-        // Notification for the current user (trade initiator)
         await createNotification(
           currentUserId,
           'New Trade Started',
@@ -357,7 +310,6 @@ ${selectedBankAccount.account_number}`;
           }
         );
 
-        // Notification for the counterpart (vendor)
         await createNotification(
           vendorId,
           'New Trade Request',
@@ -371,11 +323,8 @@ ${selectedBankAccount.account_number}`;
             url: `/trade/${trade.id}`
           }
         );
-
-        console.log("Notifications created for trade:", trade.id);
       } catch (notifError) {
         console.error("Error creating notifications:", notifError);
-        // Don't fail the trade creation, just log the error
       }
 
       onOpenChange(false);
