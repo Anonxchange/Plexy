@@ -172,7 +172,7 @@ export function Spot() {
         const { data, error } = await supabase.functions.invoke('asterdex', {
           body: { 
             symbols, 
-            type: 'tickers' 
+            action: 'tickers' 
           }
         });
         
@@ -230,10 +230,10 @@ export function Spot() {
         
         const [orderBookRes, tradesRes] = await Promise.all([
           supabase.functions.invoke('asterdex', {
-            body: { symbol, limit: 20, type: 'orderbook' }
+            body: { symbol, limit: 20, action: 'orderbook' }
           }),
           supabase.functions.invoke('asterdex', {
-            body: { symbol, limit: 20, type: 'trades' }
+            body: { symbol, limit: 20, action: 'trades' }
           })
         ]);
         
@@ -519,7 +519,8 @@ export function Spot() {
           amount: parseFloat(amountStr),
           password,
           userId: user.id,
-          slippage: isSlippageEnabled ? parseFloat(maxSlippage) : 100
+          slippage: isSlippageEnabled ? parseFloat(maxSlippage) : 100,
+          tradeType: type // Added tradeType as the log mentioned it was undefined
         }
       });
 
