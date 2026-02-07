@@ -536,17 +536,25 @@ export function Spot() {
 
       // Execute swap with provided password
       // Use Asterdex Edge Function for swap execution
+      const amountValue = parseFloat(amountStr);
+      if (isNaN(amountValue) || amountValue <= 0) {
+        throw new Error("Invalid trade amount. Please enter a positive number.");
+      }
+
       const { data: result, error: swapError } = await supabase.functions.invoke('asterdex', {
         body: {
           action: 'execute',
+          type: 'execute',
           wallet: activeWallet,
           fromSymbol: fromToken,
           toSymbol: toToken,
-          amount: parseFloat(amountStr),
+          fromToken: fromToken,
+          toToken: toToken,
+          amount: amountValue,
           password,
           userId: user.id,
           slippage: isSlippageEnabled ? parseFloat(maxSlippage) : 100,
-          tradeType: type // Added tradeType as the log mentioned it was undefined
+          tradeType: type
         }
       });
 
