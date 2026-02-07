@@ -158,20 +158,19 @@ export const asterdexService = {
 
   // Get a swap quote (read-only, no execution)
   async getQuote(
-    fromToken: string,
-    toToken: string,
-    amount: number,
-    slippage: number = 0.005
-  ): Promise<TradeQuote> {
-    return invokeAsterdex<TradeQuote>({
-      action: 'quote',
-      fromSymbol: fromToken,
-      toSymbol: toToken,
-      amount,
-      slippage,
-    });
-  },
-
+  fromToken: string,
+  toToken: string,
+  amount: number,
+  slippage: number = 0.005
+): Promise<TradeQuote> {
+  return invokeAsterdex<TradeQuote>({
+    action: 'quote',
+    fromSymbol: fromToken,
+    toSymbol: toToken,
+    amount,
+    slippage,
+  });
+},
   // ---- Non-Custodial Trade Flow ----
   // Step 1: Backend validates price + builds unsigned order payload
   // Step 2: Frontend signs messageToSign with user's ECDSA key
