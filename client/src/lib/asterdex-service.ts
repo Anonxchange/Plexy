@@ -92,18 +92,30 @@ async function invokeAsterdex<T>(body: Record<string, unknown>): Promise<T> {
 export const asterdexService = {
   // Get ticker data for a single symbol (e.g. "BTCUSDT")
   async getTicker(symbol: string): Promise<TickerData> {
-    return invokeAsterdex<TickerData>({ type: 'ticker', symbol });
+    return invokeAsterdex<TickerData>({ 
+      action: 'ticker', 
+      symbol: symbol.endsWith('USDT') ? symbol : `${symbol}USDT` 
+    });
   },
 
   // Get multiple tickers (optionally filter by symbols array)
   async getTickers(symbols?: string[]): Promise<TickerData[]> {
-    return invokeAsterdex<TickerData[]>({ type: 'tickers', symbols });
+    const formattedSymbols = symbols?.map(s => s.endsWith('USDT') ? s : `${s}USDT`);
+    return invokeAsterdex<TickerData[]>({ 
+      action: 'tickers', 
+      symbols: formattedSymbols 
+    });
   },
 
   // Get order book for a symbol
   async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBook> {
     try {
-      return await invokeAsterdex<OrderBook>({ type: 'orderbook', symbol, limit });
+      const formattedSymbol = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
+      return await invokeAsterdex<OrderBook>({ 
+        action: 'orderbook', 
+        symbol: formattedSymbol, 
+        limit 
+      });
     } catch (error) {
       console.error(`Failed to fetch order book for ${symbol}:`, error);
       return { bids: [], asks: [] };
@@ -113,7 +125,12 @@ export const asterdexService = {
   // Get recent trades for a symbol
   async getRecentTrades(symbol: string, limit: number = 50): Promise<RecentTrade[]> {
     try {
-      return await invokeAsterdex<RecentTrade[]>({ type: 'trades', symbol, limit });
+      const formattedSymbol = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
+      return await invokeAsterdex<RecentTrade[]>({ 
+        action: 'trades', 
+        symbol: formattedSymbol, 
+        limit 
+      });
     } catch (error) {
       console.error(`Failed to fetch trades for ${symbol}:`, error);
       return [];
@@ -122,12 +139,20 @@ export const asterdexService = {
 
   // Get klines (candlestick) data
   async getKlines(symbol: string, interval: string = '1h', limit: number = 100): Promise<any[]> {
-    return invokeAsterdex<any[]>({ type: 'klines', symbol, interval, limit });
+    const formattedSymbol = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
+    return invokeAsterdex<any[]>({ 
+      action: 'klines', 
+      symbol: formattedSymbol, 
+      interval, 
+      limit 
+    });
   },
 
   // Get all supported trading pairs with current prices
   async getTradingPairs(): Promise<{ pairs: TradePair[]; pricesUpdatedAt: number }> {
-    return invokeAsterdex<{ pairs: TradePair[]; pricesUpdatedAt: number }>({ type: 'pairs' });
+    return invokeAsterdex<{ pairs: TradePair[]; pricesUpdatedAt: number }>({ 
+      action: 'pairs' 
+    });
   },
 
   // Get a swap quote (read-only, no execution)
@@ -138,7 +163,7 @@ export const asterdexService = {
     slippage: number = 0.005
   ): Promise<TradeQuote> {
     return invokeAsterdex<TradeQuote>({
-      type: 'quote',
+      action: 'quote',
       fromToken,
       toToken,
       amount,
@@ -152,9 +177,10 @@ export const asterdexService = {
   // Step 3: Frontend submits { ...orderParams, signature } to submitEndpoint
 
   async buildTransaction(request: BuildTransactionRequest): Promise<BuildTransactionResponse> {
+    const formattedSymbol = request.symbol.endsWith('USDT') ? request.symbol : `${request.symbol}USDT`;
     return invokeAsterdex<BuildTransactionResponse>({
-      type: 'build-transaction',
-      symbol: request.symbol,
+      action: 'build-transaction',
+      symbol: formattedSymbol,
       side: request.side,
       quantity: request.quantity,
       orderType: request.orderType || 'MARKET',
