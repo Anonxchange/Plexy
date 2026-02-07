@@ -92,9 +92,10 @@ async function invokeAsterdex<T>(body: Record<string, unknown>): Promise<T> {
 export const asterdexService = {
   // Get ticker data for a single symbol (e.g. "BTCUSDT")
   async getTicker(symbol: string): Promise<TickerData> {
+    const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
     return invokeAsterdex<TickerData>({ 
       action: 'ticker', 
-      symbol
+      symbol: formattedSymbol
     });
   },
 
@@ -110,7 +111,6 @@ export const asterdexService = {
   // Get order book for a symbol
   async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBook> {
     try {
-      // Handle both "BTC" and "BTCUSDT"
       const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
       return await invokeAsterdex<OrderBook>({ 
         action: 'orderbook', 
