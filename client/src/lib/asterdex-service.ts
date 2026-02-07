@@ -100,9 +100,10 @@ export const asterdexService = {
 
   // Get multiple tickers (optionally filter by symbols array)
   async getTickers(symbols?: string[]): Promise<TickerData[]> {
+    const formattedSymbols = symbols?.map(s => s.includes("USDT") ? s : `${s}USDT`);
     return invokeAsterdex<TickerData[]>({ 
       action: 'tickers', 
-      symbols
+      symbols: formattedSymbols
     });
   },
 
@@ -133,7 +134,7 @@ export const asterdexService = {
       });
     } catch (error) {
       console.error(`Failed to fetch trades for ${symbol}:`, error);
-      return { bids: [], asks: [] };
+      return [];
     }
   },
 
