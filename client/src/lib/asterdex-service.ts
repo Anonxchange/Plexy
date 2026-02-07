@@ -163,14 +163,41 @@ export const asterdexService = {
     amount: number,
     slippage: number = 0.005
   ): Promise<TradeQuote> {
-    return invokeAsterdex<TradeQuote>({
-      action: 'quote',
-      fromSymbol: fromToken,
-      toSymbol: toToken,
-      amount,
-      tradeType: 'spot',
-      slippage,
-    });
+    console.log(`[AsterDEX] Requesting quote: ${fromToken} -> ${toToken}, amount: ${amount}`);
+    try {
+      const result = await invokeAsterdex<any>({
+        action: 'quote',
+        fromSymbol: fromToken,
+        toSymbol: toToken,
+        amount,
+        tradeType: 'spot', // Ensure spot trade type
+        slippage,
+      });
+      // Handle various response structures from Supabase Functions
+      const quote = result?.data ?? result;
+      console.log(`[AsterDEX] Quote response:`, quote);
+      
+      // Ensure it matches the expected TradeQuote interface
+      if (quote && typeof quote === 'object') {
+        return {
+          fromSymbol: quote.fromSymbol || fromToken,
+          toSymbol: quote.toSymbol || toToken,
+          fromAmount: Number(quote.fromAmount) || amount,
+          toAmount: Number(quote.toAmount) || 0,
+          price: Number(quote.price) || 0,
+          priceImpact: Number(quote.priceImpact) || 0,
+          fee: Number(quote.fee) || 0,
+          feeRate: Number(quote.feeRate) || 0,
+          expiresAt: Number(quote.expiresAt) || Date.now() + 60000,
+          minReceived: Number(quote.minReceived) || 0,
+          route: quote.route || [fromToken, toToken],
+        };
+      }
+      throw new Error("Invalid quote response format");
+    } catch (error) {
+      console.error(`[AsterDEX] Quote error for ${fromToken}->${toToken}:`, error);
+      throw error;
+    }
   },
   // ---- Non-Custodial Trade Flow ----
   // Step 1: Backend validates price + builds unsigned order payload
