@@ -213,14 +213,51 @@ export function Spot() {
     }
   }, [tradingPairs]);
 
+  // Handle price/quote updates when amounts change
+  const [tradeQuote, setTradeQuote] = useState<any>(null);
+
+  useEffect(() => {
+    const updateQuote = async () => {
+      const amountStr = buyAmount || sellAmount;
+      const amount = parseFloat(amountStr);
+      
+      if (!amount || amount <= 0) {
+        setTradeQuote(null);
+        return;
+      }
+
+      try {
+        const fromToken = buyAmount ? "USDT" : selectedPair.symbol;
+        const toToken = buyAmount ? selectedPair.symbol : "USDT";
+        
+        console.log(`[Spot] Fetching quote: ${fromToken} -> ${toToken}, amount: ${amount}`);
+        
+        const quote = await asterdexService.getQuote(
+          fromToken,
+          toToken,
+          amount,
+          parseFloat(maxSlippage) / 100
+        );
+        
+        console.log("[Spot] Quote received successfully:", quote);
+        setTradeQuote(quote);
+      } catch (err) {
+        console.error("[Spot] Failed to fetch trade quote:", err);
+      }
+    };
+
+    const timer = setTimeout(updateQuote, 100);
+    return () => clearTimeout(timer);
+  }, [buyAmount, sellAmount, selectedPair.symbol, maxSlippage]);
+
   // Fetch order book and recent trades when pair changes
   useEffect(() => {
     const fetchOrderBookAndTrades = async () => {
       try {
-        const symbol = selectedPair.symbol; // Base symbol like "BTC"
+        const symbol = selectedPair.symbol;
         const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
         
-        // Use standard service methods for orderbook and trades
+        console.log(`[Spot] Fetching market data for ${formattedSymbol}`);
         const [orderBookData, tradesData] = await Promise.all([
           asterdexService.getOrderBook(formattedSymbol, 20),
           asterdexService.getRecentTrades(formattedSymbol, 20)
@@ -253,40 +290,14 @@ export function Spot() {
           setLiveTrades(tradesData);
         }
       } catch (error) {
-        console.error('Error fetching order book/trades:', error);
+        console.error('[Spot] Error fetching market data:', error);
       }
     };
 
     fetchOrderBookAndTrades();
     const interval = setInterval(fetchOrderBookAndTrades, 5000);
     return () => clearInterval(interval);
-  }, [selectedPair, orderType]);
-
-  // Handle price/quote updates when amounts change
-  const [tradeQuote, setTradeQuote] = useState<any>(null);
-
-  useEffect(() => {
-    const updateQuote = async () => {
-      const amountStr = buyAmount || sellAmount;
-      const amount = parseFloat(amountStr);
-      if (!amount || amount <= 0) return;
-
-      try {
-        const quote = await asterdexService.getQuote(
-          buyAmount ? "USDT" : selectedPair.symbol,
-          buyAmount ? selectedPair.symbol : "USDT",
-          amount,
-          parseFloat(maxSlippage) / 100
-        );
-        setTradeQuote(quote);
-      } catch (err) {
-        console.error("Quote fetch error:", err);
-      }
-    };
-
-    const timer = setTimeout(updateQuote, 500);
-    return () => clearTimeout(timer);
-  }, [buyAmount, sellAmount, selectedPair, maxSlippage]);
+  }, [selectedPair.symbol, orderType]);
 
   const SlippageSelector = () => (
     <div className="flex items-center gap-1.5 mb-2">
