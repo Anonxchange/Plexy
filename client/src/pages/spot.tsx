@@ -1,714 +1,1350 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useSchema, spotPageSchema } from "@/hooks/use-schema";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2, Lock, BarChart3 } from "lucide-react";
-import { PexlyFooter } from "@/components/pexly-footer";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Star,
+  TrendingUp,
+  TrendingDown,
+  ChevronDown,
+  Search,
+  ArrowUpDown,
+  BookOpen,
+  Clock,
+  BarChart3,
+  Flame,
+  Sparkles,
+  DollarSign,
+  Activity,
+} from "lucide-react";
+import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
+import { asterdexService } from "@/lib/asterdex-service";
+import { swapExecutionService } from "@/lib/swap-execution";
+import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { useAuth } from "@/lib/auth-context";
-import { useLocation } from "wouter";
-import { useSchema, swapPageSchema } from "@/hooks/use-schema";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
-import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
-import { getCryptoPrices } from "@/lib/crypto-prices";
+import { useWallets, useWalletBalance } from "@/hooks/use-wallets";
+import { feeCalculator } from "@/lib/fee-calculator";
 import { useToast } from "@/hooks/use-toast";
-import { executeSwap } from "@/lib/swap-api";
-import { swapExecutionService, type ExecutionOrder } from "@/lib/swap-execution";
-import { formatDistanceToNow } from "date-fns";
+import { useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
 
-const currencies = [
-  { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC, chain: "BTC", identifier: "BTC.BTC" },
-  { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT, chain: "ETH", identifier: "ETH.USDT-0xdac17f958d2ee523a2206206994597C13D831ec7" },
-  { symbol: "ETH", name: "Ethereum", iconUrl: cryptoIconUrls.ETH, chain: "ETH", identifier: "ETH.ETH" },
-  { symbol: "USDC", name: "USD Coin", iconUrl: cryptoIconUrls.USDC, chain: "ETH", identifier: "ETH.USDC-0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48" },
-  { symbol: "SOL", name: "Solana", iconUrl: cryptoIconUrls.SOL, chain: "SOL", identifier: "SOL.SOL" },
-  { symbol: "TRX", name: "Tron", iconUrl: cryptoIconUrls.TRX, chain: "TRX", identifier: "TRX.TRX" },
-  { symbol: "BNB", name: "BNB", iconUrl: cryptoIconUrls.BNB, chain: "BSC", identifier: "BSC.BNB" },
-  { symbol: "XRP", name: "XRP", iconUrl: cryptoIconUrls.XRP, chain: "XRP", identifier: "XRP.XRP" },
-  { symbol: "MATIC", name: "Polygon", iconUrl: cryptoIconUrls.MATIC, chain: "POLYGON", identifier: "POLYGON.MATIC" },
-  { symbol: "ARB", name: "Arbitrum", iconUrl: cryptoIconUrls.ARB, chain: "ARBITRUM", identifier: "ARBITRUM.ARB" },
-  { symbol: "OP", name: "Optimism", iconUrl: cryptoIconUrls.OP, chain: "OPTIMISM", identifier: "OPTIMISM.OP" },
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Check, X } from "lucide-react";
+
+interface TradingPair {
+  pair: string;
+  price: number;
+  change: number;
+  volume: string;
+  high: number;
+  low: number;
+  favorite: boolean;
+  leverage: string;
+  symbol: string;
+}
+
+const initialTradingPairs: TradingPair[] = [
+  { pair: "BTC/USDT", symbol: "BTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "ETH/USDT", symbol: "ETH", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "SOL/USDT", symbol: "SOL", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "BNB/USDT", symbol: "BNB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "XRP/USDT", symbol: "XRP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "TON/USDT", symbol: "TON", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "TRX/USDT", symbol: "TRX", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "LTC/USDT", symbol: "LTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "ADA/USDT", symbol: "ADA", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
 ];
 
-export function Swap() {
-  useSchema(swapPageSchema, "swap-page-schema");
-  const { user, sessionPassword, setSessionPassword } = useAuth();
+const orderBook = {
+  asks: [
+    { price: 122260.50, amount: 0.524, total: 64064.54 },
+    { price: 122259.00, amount: 1.243, total: 151964.00 },
+    { price: 122258.50, amount: 0.892, total: 109054.58 },
+    { price: 122257.00, amount: 2.156, total: 263578.09 },
+    { price: 122256.50, amount: 0.673, total: 82258.62 },
+  ],
+  bids: [
+    { price: 122255.50, amount: 1.234, total: 150863.49 },
+    { price: 122254.00, amount: 0.756, total: 92424.02 },
+    { price: 122253.50, amount: 2.145, total: 262234.01 },
+    { price: 122252.00, amount: 0.892, total: 109048.78 },
+    { price: 122251.50, amount: 1.567, total: 191570.11 },
+  ],
+};
+
+const recentTrades = [
+  { price: 122256.50, amount: 0.0234, time: "18:42:15", type: "sell" },
+  { price: 122257.00, amount: 0.1543, time: "18:42:14", type: "buy" },
+  { price: 122256.00, amount: 0.0892, time: "18:42:13", type: "sell" },
+  { price: 122258.50, amount: 0.2156, time: "18:42:12", type: "buy" },
+  { price: 122255.50, amount: 0.0673, time: "18:42:11", type: "sell" },
+];
+
+export function Spot() {
+  useSchema(spotPageSchema, "spot-page-schema");
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [fromAmount, setFromAmount] = useState("0.00001");
-  const [toAmount, setToAmount] = useState("");
-  const [fromCurrency, setFromCurrency] = useState("BTC");
-  const [toCurrency, setToCurrency] = useState("USDT");
-  const [isUpdatingFromInput, setIsUpdatingFromInput] = useState(true);
+  
+  const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
+  const [selectedPair, setSelectedPair] = useState(initialTradingPairs[0]);
+  const [searchPair, setSearchPair] = useState("");
+  const [showMarketList, setShowMarketList] = useState(false);
+  const [activeMarketTab, setActiveMarketTab] = useState("hot");
+  const [chartInterval, setChartInterval] = useState("60");
+  const [liveOrderBook, setLiveOrderBook] = useState({ bids: [] as Array<[string, string]>, asks: [] as Array<[string, string]> });
+  const [liveTrades, setLiveTrades] = useState<Array<{ id: number; price: string; qty: string; quoteQty: string; time: number; isBuyerMaker: boolean }>>([]);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  // Track desktop/mobile for order book display
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Trading Panel State
+  const [orderType, setOrderType] = useState<"limit" | "market">("market");
+  const [buyAmount, setBuyAmount] = useState("");
+  const [buyPrice, setBuyPrice] = useState("");
+  const [sellAmount, setSellAmount] = useState("");
+  const [sellPrice, setSellPrice] = useState("");
+  const [buyPercentage, setBuyPercentage] = useState([0]);
+  const [sellPercentage, setSellPercentage] = useState([0]);
+  const [maxSlippage, setMaxSlippage] = useState("0.02");
+  const [isSlippageEnabled, setIsSlippageEnabled] = useState(true);
+  const [isSlippageDrawerOpen, setIsSlippageDrawerOpen] = useState(false);
+  const [isTPEnabled, setIsTPEnabled] = useState(false);
+  const [isPostOnlyEnabled, setIsPostOnlyEnabled] = useState(false);
+  const [tpPrice, setTpPrice] = useState("");
+  const [slPrice, setSlPrice] = useState("");
+  const [gtcType, setGtcType] = useState("GTC");
+  const [buyFee, setBuyFee] = useState(0);
+  const [sellFee, setSellFee] = useState(0);
+  const [isExecuting, setIsExecuting] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
+  const [pendingTrade, setPendingTrade] = useState<{ type: "buy" | "sell" } | null>(null);
+  const { sessionPassword, setSessionPassword } = useAuth();
 
-  // Fetch live swap prices
-  const { marketRate, swapRate, percentageDiff, isLoading } = useSwapPrice(
-    fromCurrency,
-    toCurrency
-  );
+  // Get wallet balances and list for the trading pair
+  const baseCrypto = selectedPair.symbol;
+  const quoteCrypto = "USDT";
+  const { data: baseWallet } = useWalletBalance(baseCrypto);
+  const { data: quoteWallet } = useWalletBalance(quoteCrypto);
+  const { data: userWallets = [] } = useWallets();
 
-  const [isSwapping, setIsSwapping] = useState(false);
-  const [history, setHistory] = useState<ExecutionOrder[]>([]);
-  const [estFees, setEstFees] = useState<Record<string, string>>({
-    BTC: "0.0001 BTC",
-    ETH: "0.002 ETH",
-    BSC: "0.001 BNB",
-    SOL: "0.000005 SOL",
-    TRX: "15 TRX"
-  });
-
+  // Fetch real-time prices from Supabase Edge Function
   useEffect(() => {
-    const fetchFees = async () => {
+    const fetchPrices = async () => {
       try {
-        // Fetch Bitcoin fees
-        const btcRes = await fetch('https://mempool.space/api/v1/fees/recommended');
-        if (btcRes.ok) {
-          const btcData = await btcRes.json();
-          // Average tx is ~140 vBytes, convert sat/vB to BTC
-          const btcFee = (btcData.hourFee * 140) / 1e8;
-          setEstFees(prev => ({ ...prev, BTC: `${btcFee.toFixed(6)} BTC` }));
+        const symbols = tradingPairs.map(p => p.symbol);
+        const { data, error } = await supabase.functions.invoke('asterdex', {
+          body: { 
+            symbols, 
+            action: 'tickers',
+            fromSymbol: 'BTC',
+            toSymbol: 'USDT',
+            amount: 1,
+            tradeType: 'buy'
+          }
+        });
+        
+        if (error) throw error;
+        
+        // Handle both { data: [...] } and direct array responses
+        const tickers = Array.isArray(data) ? data : data?.data;
+        
+        if (Array.isArray(tickers) && tickers.length > 0) {
+          setTradingPairs(prevPairs => 
+            prevPairs.map(pair => {
+              const ticker = tickers.find((t: any) => t.symbol === `${pair.symbol}USDT`);
+                
+              if (ticker) {
+                const price = parseFloat(ticker.lastPrice) || 0;
+                const change = parseFloat(ticker.priceChangePercent) || 0;
+                const quoteVolume = parseFloat(ticker.quoteVolume) || 0;
+                
+                return {
+                  ...pair,
+                  price,
+                  change,
+                  volume: quoteVolume > 1e9 ? `${(quoteVolume / 1e9).toFixed(2)}B` : `${(quoteVolume / 1e6).toFixed(2)}M`,
+                  high: parseFloat(ticker.highPrice) || 0,
+                  low: parseFloat(ticker.lowPrice) || 0,
+                };
+              }
+              return pair;
+            })
+          );
         }
-
-        // Fetch Ethereum Gas Price
-        const ethRes = await fetch('https://api.etherscan.io/api?module=proxy&action=eth_gasPrice');
-        if (ethRes.ok) {
-          const ethData = await ethRes.json();
-          const gasPrice = parseInt(ethData.result, 16);
-          // Typical swap is ~150k gas
-          const ethFee = (gasPrice * 150000) / 1e18;
-          setEstFees(prev => ({ ...prev, ETH: `${ethFee.toFixed(5)} ETH` }));
-        }
-      } catch (e) {
-        console.error("Failed to fetch live fees", e);
+      } catch (error) {
+        console.error('Error fetching crypto prices from Asterdex Edge Function:', error);
       }
     };
 
-    fetchFees();
-    setHistory(swapExecutionService.getOrderHistory());
-  }, []);
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
 
-  // Auto-update toAmount when prices change or fromAmount changes
+    return () => clearInterval(interval);
+  }, [supabase]);
+
+  // Update selected pair when trading pairs change
   useEffect(() => {
-    if (isUpdatingFromInput && swapRate > 0) {
-      const amount = parseFloat(fromAmount) || 0;
-      const calculated = calculateSwapAmount(amount, swapRate);
-      // Round to 8 decimal places for better precision, especially for BTC
-      setToAmount(calculated.toLocaleString('en-US', { 
-        useGrouping: false, 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 8 
-      }));
+    const updatedPair = tradingPairs.find(p => p.pair === selectedPair.pair);
+    if (updatedPair) {
+      setSelectedPair(updatedPair);
     }
-  }, [fromAmount, swapRate, isUpdatingFromInput]);
+  }, [tradingPairs]);
 
-  // Auto-update fromAmount when toAmount is manually changed
+  // Fetch order book and recent trades when pair changes
   useEffect(() => {
-    if (!isUpdatingFromInput && swapRate > 0) {
-      const amount = parseFloat(toAmount) || 0;
-      const calculated = amount / swapRate;
-      setFromAmount(calculated.toLocaleString('en-US', { 
-        useGrouping: false, 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 8 
-      }));
+    const fetchOrderBookAndTrades = async () => {
+      try {
+        const symbol = `${selectedPair.symbol}USDT`;
+        
+        const [orderBookRes, tradesRes] = await Promise.all([
+          supabase.functions.invoke('asterdex', {
+            body: { 
+              symbol, 
+              limit: 20, 
+              action: 'orderbook',
+              fromSymbol: selectedPair.symbol,
+              toSymbol: 'USDT',
+              amount: 1,
+              tradeType: 'buy'
+            }
+          }),
+          supabase.functions.invoke('asterdex', {
+            body: { 
+              symbol, 
+              limit: 20, 
+              action: 'trades',
+              fromSymbol: selectedPair.symbol,
+              toSymbol: 'USDT',
+              amount: 1,
+              tradeType: 'buy'
+            }
+          })
+        ]);
+        
+        if (orderBookRes.data) {
+          const orderBookData = orderBookRes.data.data || orderBookRes.data;
+          // Ensure bids/asks are arrays before setting state
+          if (orderBookData && Array.isArray(orderBookData.bids) && Array.isArray(orderBookData.asks)) {
+            setLiveOrderBook(orderBookData);
+            
+            // Auto-fill price box under Limit order type only if it's currently empty
+            if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
+              const bestBid = orderBookData.bids[0];
+              const bestAsk = orderBookData.asks[0];
+              if (bestBid && bestAsk) {
+                const middlePrice = ((parseFloat(bestBid[0]) + parseFloat(bestAsk[0])) / 2).toString();
+                setBuyPrice(middlePrice);
+                setSellPrice(middlePrice);
+              }
+            }
+          }
+        }
+        if (tradesRes.data) {
+          const tradesData = tradesRes.data.data || tradesRes.data;
+          if (Array.isArray(tradesData)) {
+            setLiveTrades(tradesData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching order book/trades from Asterdex Edge Function:', error);
+      }
+    };
+
+    fetchOrderBookAndTrades();
+    const interval = setInterval(fetchOrderBookAndTrades, 5000); // Update every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [selectedPair, orderType, supabase]);
+
+  const SlippageSelector = () => (
+    <div className="flex items-center gap-1.5 mb-2">
+      <div className="flex items-center gap-1.5 cursor-pointer">
+        <input
+          type="checkbox"
+          id="slippage-checkbox"
+          checked={isSlippageEnabled}
+          onChange={(e) => setIsSlippageEnabled(e.target.checked)}
+          className="w-3 h-3 rounded border-gray-300 text-primary focus:ring-primary"
+        />
+        <label htmlFor="slippage-checkbox" className="text-[10px] font-medium text-muted-foreground cursor-pointer">Max. Slippage</label>
+      </div>
+      
+      <Drawer open={isSlippageDrawerOpen} onOpenChange={setIsSlippageDrawerOpen}>
+        <DrawerTrigger asChild>
+          <div className="ml-auto flex items-center gap-1 cursor-pointer hover:opacity-80 group">
+            <span className={`text-[10px] font-semibold ${!isSlippageEnabled ? 'opacity-40' : ''}`}>{maxSlippage}%</span>
+            <ChevronDown className={`w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors ${!isSlippageEnabled ? 'opacity-40' : ''}`} />
+          </div>
+        </DrawerTrigger>
+        <DrawerContent className="bg-background border-t">
+          <div className="mx-auto w-full max-w-sm">
+            <DrawerHeader className="flex flex-row items-center justify-between border-b pb-4">
+              <DrawerTitle className="text-lg font-bold">Slippage Tolerance</DrawerTitle>
+              <DrawerClose asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </DrawerHeader>
+            <div className="p-4 space-y-6">
+              <div className="flex gap-6 border-b">
+                <button className="pb-2 text-sm font-semibold border-b-2 border-primary">By Percent</button>
+                <button className="pb-2 text-sm font-medium text-muted-foreground">By Price</button>
+              </div>
+              <div className="space-y-1">
+                {["0.01", "0.02", "0.05", "0.1"].map((val) => (
+                  <button
+                    key={val}
+                    onClick={() => {
+                      setMaxSlippage(val);
+                      setIsSlippageDrawerOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between p-4 rounded-lg transition-colors ${
+                      maxSlippage === val ? "bg-muted/50" : "hover:bg-muted/30"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">{val}%</span>
+                    {maxSlippage === val && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                ))}
+                <button className="w-full text-left p-4 text-sm font-medium text-muted-foreground hover:bg-muted/30 rounded-lg transition-colors">
+                  Customize
+                </button>
+              </div>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </div>
+  );
+
+  // Calculate buy fee
+  useEffect(() => {
+    const calculateBuyFee = async () => {
+      if (!buyAmount || parseFloat(buyAmount) <= 0) {
+        setBuyFee(0);
+        return;
+      }
+
+      try {
+        const amount = parseFloat(buyAmount);
+        const price = orderType === 'limit' ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price;
+        const totalUSDT = amount * price;
+
+        // Spot trading fee: 0.16% as average for taker
+        const feePercentage = 0.16;
+        const fee = totalUSDT * (feePercentage / 100);
+        setBuyFee(fee);
+      } catch (error) {
+        console.error('Error calculating buy fee:', error);
+        setBuyFee(0);
+      }
+    };
+
+    calculateBuyFee();
+  }, [buyAmount, buyPrice, orderType, selectedPair.price]);
+
+  // Calculate sell fee
+  useEffect(() => {
+    const calculateSellFee = async () => {
+      if (!sellAmount || parseFloat(sellAmount) <= 0) {
+        setSellFee(0);
+        return;
+      }
+
+      try {
+        const amount = parseFloat(sellAmount);
+        const price = orderType === 'limit' ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price;
+        const totalUSDT = amount * price;
+
+        // Spot trading fee: 0.16% as average for taker
+        const feePercentage = 0.16;
+        const fee = totalUSDT * (feePercentage / 100);
+        setSellFee(fee);
+      } catch (error) {
+        console.error('Error calculating sell fee:', error);
+        setSellFee(0);
+      }
+    };
+
+    calculateSellFee();
+  }, [sellAmount, sellPrice, orderType, selectedPair.price]);
+
+  const getFilteredPairs = (type: string) => {
+    let filtered = tradingPairs.filter(pair =>
+      pair.pair.toLowerCase().includes(searchPair.toLowerCase())
+    );
+
+    switch (type) {
+      case "favorites":
+        return filtered.filter(p => p.favorite);
+      case "hot":
+        return filtered.slice(0, 5);
+      case "new":
+        return filtered.filter(p => ["ZORA/USDT", "ASTER/USDT", "APT/USDT", "ARB/USDT", "OP/USDT"].includes(p.pair));
+      case "gainers":
+        return filtered.filter(p => p.change > 0).sort((a, b) => b.change - a.change).slice(0, 5);
+      case "losers":
+        return filtered.filter(p => p.change < 0).sort((a, b) => a.change - b.change).slice(0, 5);
+      case "turnover":
+        return filtered.sort((a, b) => parseFloat(b.volume) - parseFloat(a.volume)).slice(0, 5);
+      case "opportunities":
+        return filtered.filter(p => Math.abs(p.change) > 3).slice(0, 5);
+      default:
+        return filtered;
     }
-  }, [toAmount, swapRate, isUpdatingFromInput]);
-
-  const handleSwapCurrencies = () => {
-    const tempCurrency = fromCurrency;
-    const tempAmount = fromAmount;
-    setFromCurrency(toCurrency);
-    setToCurrency(tempCurrency);
-    setFromAmount(toAmount);
-    setToAmount(tempAmount);
   };
 
-  const handleFromAmountChange = (value: string) => {
-    setIsUpdatingFromInput(true);
-    setFromAmount(value);
-  };
+  const filteredPairs = getFilteredPairs(activeMarketTab);
 
-  const handleToAmountChange = (value: string) => {
-    setIsUpdatingFromInput(false);
-    setToAmount(value);
-  };
-
-  const formatRate = (rate: number) => {
-    if (rate >= 1000) {
-      return rate.toLocaleString('en-US', { 
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 5 
-      });
-    } else if (rate >= 1) {
-      return rate.toFixed(2);
-    } else {
-      return rate.toFixed(6);
-    }
-  };
-
-  const handleSwap = async () => {
+  // Execute buy order with AsterDEX
+  const handleBuy = async () => {
     if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to trade",
+        variant: "destructive",
+      });
       setLocation("/signin");
       return;
     }
 
-    const fromAmountNum = parseFloat(fromAmount);
-    const toAmountNum = parseFloat(toAmount);
+    // Check if user has a wallet
+    if (!userWallets || userWallets.length === 0) {
+      toast({
+        title: "No Wallet Connected",
+        description: "Please create or connect a wallet to trade",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (fromAmountNum <= 0 || toAmountNum <= 0) {
+    const amount = parseFloat(buyAmount);
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
       return;
     }
 
     // If we have a cached session password, execute directly
     if (sessionPassword) {
-      await performSwap(sessionPassword);
+      await executeTrade("buy", sessionPassword);
     } else {
       // Otherwise prompt for password (will be cached for session)
+      setPendingTrade({ type: "buy" });
       setShowPasswordDialog(true);
     }
   };
 
-  const performSwap = async (password: string) => {
-    const fromAmountNum = parseFloat(fromAmount);
-    const toAmountNum = parseFloat(toAmount);
-    const feeAmount = 0;
-
-    setIsSwapping(true);
+  // Execute the actual trade with cached or provided password
+  const executeTrade = async (type: "buy" | "sell", password: string) => {
+    if (!user) return;
+    
+    setIsExecuting(true);
     try {
-      const result = await executeSwap({
-        userId: user!.id,
-        fromCrypto: fromCurrency,
-        toCrypto: toCurrency,
-        fromAmount: fromAmountNum,
-        toAmount: toAmountNum,
-        swapRate,
-        marketRate,
-        fee: feeAmount,
-        userPassword: password
-      });
+      const fromToken = type === "buy" ? "USDT" : selectedPair.symbol;
+      const toToken = type === "buy" ? selectedPair.symbol : "USDT";
+      const amountStr = type === "buy" ? buyAmount : sellAmount;
+
+      // For 'Buy', amountStr is USDT. For 'Sell', amountStr is Coin.
+      // This matches Bybit logic where Buy uses Quote asset and Sell uses Base asset.
+
+      const quote = await swapExecutionService.getSwapQuote(
+        fromToken,
+        toToken,
+        amountStr,
+        parseFloat(maxSlippage)
+      );
 
       toast({
-        title: "Swap Successful!",
-        description: `Swapped ${fromAmountNum} ${fromCurrency} to ${result.to_amount.toFixed(6)} ${toCurrency}`,
+        title: "Quote Fetched",
+        description: `Price: ${quote.price} | Slippage: ${quote.slippage}% | Fee: ${quote.fee.toFixed(2)} USDT`,
       });
 
-      setHistory(swapExecutionService.getOrderHistory());
-      setFromAmount("0.00001");
-      setToAmount("");
-      setShowPasswordDialog(false);
+      const order = swapExecutionService.createExecutionOrder(
+        type,
+        fromToken,
+        toToken,
+        amountStr,
+        quote
+      );
+
+      toast({
+        title: "Confirm Transaction",
+        description: `You will ${type === "buy" ? "receive" : "pay"} ~${type === "buy" ? quote.toAmount : quote.fromAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
+      });
+
+      // Find the correct wallet for the network or default to first
+      const nonCustodialWallets = nonCustodialWalletManager.getWalletsFromStorage(user.id);
+      const activeWallet = nonCustodialWallets.find((w: any) => {
+        const walletType = (w.walletType || "").toLowerCase();
+        const chainId = (w.chainId || "").toLowerCase();
+        
+        // Match by wallet type or chain ID
+        if (fromToken === "BTC" && (walletType === "bitcoin" || chainId.includes("bitcoin"))) return true;
+        if (fromToken === "SOL" && (walletType === "solana" || chainId.includes("solana"))) return true;
+        if (fromToken === "TRX" && (walletType === "tron" || chainId.includes("tron"))) return true;
+        // Default to EVM for others (USDT, ETH, BNB, etc)
+        if (["ETH", "BNB", "USDT", "USDC"].includes(fromToken) && (walletType === "ethereum" || walletType === "evm")) return true;
+        
+        return false;
+      }) || nonCustodialWallets[0];
+
+      if (!activeWallet) {
+        throw new Error("No non-custodial wallet found. Please create a wallet first.");
+      }
+
+      // Use Asterdex Edge Function for swap execution
+      const amountValue = parseFloat(amountStr);
+      if (isNaN(amountValue) || amountValue <= 0) {
+        throw new Error("Invalid trade amount. Please enter a positive number.");
+      }
+
+      // Format payload according to AsterDEX Edge Function requirements
+      const payload = {
+        action: 'build-transaction', // Using build-transaction as indicated by AsterDEX service
+        type: 'build-transaction',
+        symbol: `${selectedPair.symbol}USDT`,
+        fromSymbol: fromToken,
+        toSymbol: toToken,
+        amount: amountValue,
+        side: type.toUpperCase(), // BUY or SELL
+        quantity: amountValue,
+        orderType: orderType.toUpperCase(), // LIMIT or MARKET
+        price: orderType === 'limit' ? (type === 'buy' ? parseFloat(buyPrice) : parseFloat(sellPrice)) : undefined,
+        walletAddress: activeWallet.address || (activeWallet as any).publicKey,
+        slippage: isSlippageEnabled ? parseFloat(maxSlippage) : 1,
+        tradeType: type
+      };
+
+      const { data: result, error: swapError } = await supabase.functions.invoke('asterdex', {
+        body: payload
+      });
+
+      if (swapError) throw swapError;
+      if (!result || result.error) throw new Error(result?.error || "Failed to execute trade via AsterDEX Edge Function");
+
+      toast({
+        title: "Order Submitted",
+        description: `${type === "buy" ? "Buy" : "Sell"} order submitted. TX: ${result.txHash?.slice(0, 10)}... Waiting for on-chain confirmation...`,
+      });
+
+      if (type === "buy") {
+        setBuyAmount("");
+        setBuyPrice("");
+        setBuyPercentage([0]);
+      } else {
+        setSellAmount("");
+        setSellPrice("");
+        setSellPercentage([0]);
+      }
     } catch (error: any) {
-      console.error('Swap error:', error);
+      console.error('Trade execution error:', error);
       toast({
-        title: "Swap Failed",
-        description: error.message || "Failed to execute swap. Please try again.",
+        title: "Trade Failed",
+        description: error.message || "Failed to execute trade via AsterDEX",
         variant: "destructive",
       });
     } finally {
-      setIsSwapping(false);
+      setIsExecuting(false);
+      setShowPasswordDialog(false);
+      setWalletPassword("");
+      setPendingTrade(null);
     }
   };
 
-  const handlePasswordSubmit = () => {
-    if (walletPassword.length > 0) {
-      setSessionPassword(walletPassword);
-      performSwap(walletPassword);
+  // Execute sell order with AsterDEX
+  const handleSell = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to trade",
+        variant: "destructive",
+      });
+      setLocation("/signin");
+      return;
+    }
+
+    // Check if user has a wallet
+    if (!userWallets || userWallets.length === 0) {
+      toast({
+        title: "No Wallet Connected",
+        description: "Please create or connect a wallet to trade",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const amount = parseFloat(sellAmount);
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If we have a cached session password, execute directly
+    if (sessionPassword) {
+      await executeTrade("sell", sessionPassword);
+    } else {
+      // Otherwise prompt for password (will be cached for session)
+      setPendingTrade({ type: "sell" });
+      setShowPasswordDialog(true);
     }
   };
 
-  if (!user) {
+
+  if (showMarketList) {
     return (
-      <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
-        {/* Background Decorative Shapes */}
-        <div className="absolute inset-0 pointer-events-none opacity-10">
-          <div className="absolute top-[10%] left-[5%] rotate-12">
-            <div className="h-24 w-24 rounded-full border-4 border-primary/20" />
-          </div>
-          <div className="absolute top-[20%] right-[10%] -rotate-12">
-            <div className="h-32 w-32 border-2 border-primary/30 rotate-45" />
-          </div>
-          <div className="absolute bottom-[30%] left-[15%] rotate-45">
-            <div className="h-16 w-16 bg-primary/10 rounded-lg" />
-          </div>
-          <div className="absolute bottom-[10%] right-[20%] -rotate-6">
-            <div className="h-40 w-40 rounded-full border border-primary/20 flex items-center justify-center">
-              <div className="h-20 w-20 rounded-full border border-primary/10" />
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-10 bg-background border-b border-border">
+          <div className="p-4">
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="🔥 2Z/USDT"
+                className="pl-9"
+                value={searchPair}
+                onChange={(e) => setSearchPair(e.target.value)}
+              />
             </div>
-          </div>
-          <div className="absolute top-[50%] left-[2%] -rotate-12">
-            <div className="h-12 w-48 bg-primary/5 rounded-full rotate-45" />
-          </div>
-          <div className="absolute top-[40%] right-[5%] rotate-12">
-            <div className="h-20 w-20 border-t-4 border-l-4 border-primary/20 rounded-tl-3xl" />
+
+            <Tabs value={activeMarketTab} onValueChange={setActiveMarketTab} className="w-full">
+              <div className="overflow-x-auto scrollbar-hide">
+                <TabsList className="inline-flex min-w-full w-auto rounded-none border-b h-auto p-0">
+                  <TabsTrigger value="favorites" className="text-xs flex-shrink-0">Favorites</TabsTrigger>
+                  <TabsTrigger value="hot" className="text-xs flex-shrink-0">Hot</TabsTrigger>
+                  <TabsTrigger value="new" className="text-xs flex-shrink-0">New</TabsTrigger>
+                  <TabsTrigger value="gainers" className="text-xs flex-shrink-0">Gainers</TabsTrigger>
+                  <TabsTrigger value="losers" className="text-xs flex-shrink-0">Losers</TabsTrigger>
+                  <TabsTrigger value="turnover" className="text-xs flex-shrink-0">Turnover</TabsTrigger>
+                  <TabsTrigger value="opportunities" className="text-xs flex-shrink-0">Opportunities</TabsTrigger>
+                </TabsList>
+              </div>
+            </Tabs>
+
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={() => setShowMarketList(false)}>
+                Spot
+              </Button>
+              <Button variant="ghost" size="sm">Derivatives</Button>
+              <div className="ml-auto flex gap-2">
+                <Select defaultValue="usdt">
+                  <SelectTrigger className="w-24 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="usdt">USDT</SelectItem>
+                    <SelectItem value="btc">BTC</SelectItem>
+                    <SelectItem value="eth">ETH</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select defaultValue="all">
+                  <SelectTrigger className="w-20 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="5x">5x</SelectItem>
+                    <SelectItem value="10x">10x</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 relative z-10">
-          {/* Hero Section */}
-          <section className="relative py-20 px-4 overflow-hidden">
-            <div className="max-w-4xl mx-auto text-center relative z-10">
-              <h1 className="text-4xl md:text-6xl font-black text-foreground mb-6 leading-tight">
-                Exchange cryptocurrencies<br />seamlessly
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
-                Instantly convert digital assets with competitive rates and high-speed execution
-              </p>
+        <div className="p-4">
+          <div className="bg-muted/50 rounded-lg p-3 mb-4">
+            <p className="text-sm">📢 Pexly Spot Trading - Trade with confidence</p>
+          </div>
 
-              <Card className="max-w-lg mx-auto bg-card border-none shadow-2xl overflow-hidden rounded-2xl">
-                <CardContent className="p-6 space-y-4">
-                  {/* From Box */}
-                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-foreground font-bold text-sm">From</Label>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-3xl font-bold text-muted-foreground/30">0</span>
-                      <div className="ml-auto flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
-                        <img src={currencies.find(c => c.symbol === fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
-                        <span className="font-bold">{fromCurrency}</span>
-                      </div>
+          <div className="space-y-1">
+            <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-3 py-2">
+              <div className="col-span-1"></div>
+              <div className="col-span-5">Trading Pairs / Vol</div>
+              <div className="col-span-3 text-right">Price</div>
+              <div className="col-span-3 text-right">24H Change</div>
+            </div>
+
+            {filteredPairs.map((pair, index) => (
+              <div
+                key={pair.pair}
+                className="grid grid-cols-12 gap-2 items-center px-3 py-3 hover:bg-muted/50 cursor-pointer rounded-lg transition-colors"
+                onClick={() => {
+                  setSelectedPair(pair);
+                  setShowMarketList(false);
+                }}
+              >
+                <div className="col-span-1 text-muted-foreground text-sm">{index + 1}</div>
+                <div className="col-span-5">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold flex items-center gap-1">
+                      {pair.pair.split('/')[0]}
+                      <span className="text-muted-foreground">/ {pair.pair.split('/')[1]}</span>
+                      {pair.favorite && <Flame className="h-3 w-3 text-orange-500" />}
                     </div>
                   </div>
-
-                  {/* Swap Button Middle */}
-                  <div className="flex justify-center -my-6 relative z-10">
-                    <div className="rounded-full bg-[#B4F22E] text-black h-10 w-10 flex items-center justify-center border-4 border-card shadow-lg">
-                      <ArrowUpDown className="h-5 w-5" />
-                    </div>
-                  </div>
-
-                  {/* To Box */}
-                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-foreground font-bold text-sm">To</Label>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-3xl font-bold text-muted-foreground/30">0</span>
-                      <div className="ml-auto flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
-                        <img src={currencies.find(c => c.symbol === toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
-                        <span className="font-bold">{toCurrency}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-left pt-2">
-                    <span className="text-xs text-muted-foreground block mb-1 text-[10px] uppercase font-bold tracking-wider">Market rate</span>
-                    <div className="flex items-center gap-1 min-h-[16px] overflow-hidden">
-                      {isLoading ? (
-                        <Skeleton className="h-3 w-32" />
-                      ) : (
-                        <span className="text-xs font-bold truncate">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <Button 
-                    className="w-full h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-xl shadow-sm transition-all" 
-                    onClick={() => setLocation("/signin")}
+                  <div className="text-xs text-muted-foreground">{pair.volume} USDT</div>
+                </div>
+                <div className="col-span-3 text-right">
+                  <div className="font-semibold">{pair.price.toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">{pair.price.toLocaleString()} USD</div>
+                </div>
+                <div className="col-span-3 text-right">
+                  <Badge
+                    variant={pair.change >= 0 ? "default" : "destructive"}
+                    className={pair.change >= 0 ? "bg-green-600 hover:bg-green-700" : ""}
                   >
-                    Log in/Join us
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
-          {/* Why Exchange Section */}
-          <section className="py-20 bg-background">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-black mb-4">Why use Pexly</h2>
-                <p className="text-muted-foreground">Easily trade digital assets with Pexly in just a few clicks</p>
+                    {pair.change >= 0 ? '+' : ''}{pair.change}%
+                  </Badge>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {[
-                  { title: "Best rates", desc: "Exchange assets at the most competitive market rates", icon: <TrendingDown className="h-6 w-6 text-primary" /> },
-                  { title: "Privacy first", desc: "Secure and confidential transactions for all users", icon: <Shield className="h-6 w-6 text-primary" /> },
-                  { title: "Fast execution", desc: "Benefit from rapid processing and instant settlements", icon: <Gift className="h-6 w-6 text-primary" /> }
-                ].map((item, i) => (
-                  <Card key={i} className="bg-card/50 border-none shadow-sm hover:shadow-md transition-shadow p-8 text-center flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-full bg-accent/5 flex items-center justify-center mb-6">
-                      {item.icon}
-                    </div>
-                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                    <p className="text-muted-foreground text-sm">{item.desc}</p>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Asset Pairs Section */}
-          <section className="py-20 bg-accent/5">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-black mb-4">Wide range of trading pairs</h2>
-                <p className="text-muted-foreground">Easily trade between a variety of digital assets</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { pair: "BTC/USDT", color: "from-orange-500/10 to-transparent", icon: cryptoIconUrls.BTC },
-                  { pair: "XMR/USDT", color: "from-orange-600/10 to-transparent", icon: cryptoIconUrls.BTC }, // Placeholder for XMR
-                  { pair: "SOL/USDT", color: "from-purple-500/10 to-transparent", icon: cryptoIconUrls.SOL },
-                  { pair: "ETH/USDT", color: "from-blue-500/10 to-transparent", icon: cryptoIconUrls.ETH }
-                ].map((item, i) => (
-                  <Card key={i} className="bg-card border-none shadow-sm overflow-hidden p-4 group cursor-pointer hover:shadow-md transition-all">
-                    <div className="flex items-center gap-3 mb-4">
-                      <img src={item.icon} className="w-8 h-8 rounded-full" alt="" />
-                      <span className="font-bold text-sm uppercase">{item.pair} ↑</span>
-                    </div>
-                    <div className={`h-24 w-full rounded-lg bg-gradient-to-t ${item.color} relative overflow-hidden`}>
-                      <div className="absolute inset-0 flex items-end">
-                        <div className="w-full h-1/2 bg-gradient-to-t from-background/20 to-transparent" />
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* How It Works Section */}
-          <section className="py-20 bg-background border-t">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-black mb-4">How it works</h2>
-                <p className="text-muted-foreground">Log in to your Pexly account and select Swap from the Trade menu in the header</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                {[
-                  { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "/assets/IMG_3627.jpeg" },
-                  { step: "2. Open Trade page", desc: "From the Trade menu in the header, select Exchange", img: "/assets/IMG_3628.jpeg" },
-                  { step: "3. Choose a pair and execute", desc: "Enter the amount, select your assets, and proceed with the transaction", img: "/assets/IMG_3629.jpeg" }
-                ].map((item, i) => (
-                  <div key={i} className="space-y-6">
-                    <h3 className="text-xl font-bold">{item.step}</h3>
-                    <p className="text-muted-foreground text-sm">{item.desc}</p>
-                    <div className="rounded-xl overflow-hidden border border-border/40 shadow-sm bg-accent/5 p-4">
-                      <img src={item.img} className="w-full rounded-lg" alt="" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="text-center mt-20">
-                <Button 
-                  className="px-12 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-full shadow-lg transition-all"
-                  onClick={() => setLocation("/signin")}
-                >
-                  Start now
-                </Button>
-              </div>
-            </div>
-          </section>
-
-          {/* FAQ Section */}
-          <section className="py-20 bg-background border-t">
-            <div className="max-w-3xl mx-auto px-4">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-6xl font-black mb-4 leading-tight">Frequently asked questions</h2>
-                <p className="text-muted-foreground">Find answers to the most popular questions asked by our users</p>
-              </div>
-              <Accordion type="single" collapsible className="w-full space-y-4">
-                {[
-                  "Are there any fees for transactions on Pexly?",
-                  "My transaction failed. What should I do next?",
-                  "My transaction failed, and my funds are either reserved or missing. What should I do?",
-                  "What are the minimum transaction amounts?"
-                ].map((q, i) => (
-                  <AccordionItem key={i} value={`item-${i}`} className="border rounded-xl px-4 bg-card shadow-sm border-border/40 overflow-hidden">
-                    <AccordionTrigger className="text-left font-bold py-6 hover:no-underline">{q}</AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground pb-6">
-                      Detailed information about this topic will be provided here for users to understand the process.
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          </section>
+            ))}
+          </div>
         </div>
-        <PexlyFooter />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start mb-8">
-          {/* Left Column: Swap Card */}
-          <div className="space-y-6">
-            <Card className="bg-card border-none shadow-sm">
-              <CardContent className="p-6 space-y-4">
-                {/* From Box */}
-                <div className="bg-accent/5 p-6 rounded-xl border border-border/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-foreground font-bold text-sm">From</Label>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      type="number"
-                      value={fromAmount}
-                      onChange={(e) => handleFromAmountChange(e.target.value)}
-                      className="flex-1 h-12 text-2xl font-semibold bg-transparent border-none p-0 focus-visible:ring-0 shadow-none"
-                      placeholder="0.00"
-                    />
-                    <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                      <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currencies.map((curr) => (
-                          <SelectItem key={curr.symbol} value={curr.symbol}>
-                            <div className="flex items-center gap-2">
-                              <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
-                              <span className="font-bold">{curr.symbol}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+    <div className="min-h-screen bg-background">
+      <div className="flex flex-col h-auto">
+        {/* Main Content Area */}
+        <div className="flex flex-col">
+          {/* Price Header */}
+          <div className="p-4 border-b border-border flex-shrink-0">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl md:text-2xl font-bold">{selectedPair.pair}</h2>
+                <Select value={selectedPair.pair} onValueChange={(value) => {
+                  const pair = tradingPairs.find(p => p.pair === value);
+                  if (pair) setSelectedPair(pair);
+                }}>
+                  <SelectTrigger className="w-32 h-8 hidden lg:flex">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tradingPairs.map((pair) => (
+                      <SelectItem key={pair.pair} value={pair.pair}>
+                        {pair.pair}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Badge variant={selectedPair.change >= 0 ? "default" : "destructive"} className={selectedPair.change >= 0 ? "bg-green-600" : ""}>
+                {selectedPair.change >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                {selectedPair.change >= 0 ? '+' : ''}{selectedPair.change}%
+              </Badge>
+              {selectedPair.leverage && <Badge variant="outline" className="hidden sm:inline-flex">{selectedPair.leverage}</Badge>}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-auto lg:hidden"
+                onClick={() => setShowMarketList(true)}
+              >
+                <ArrowUpDown className="h-4 w-4 mr-2" />
+                Pairs
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-sm">
+              <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
+                <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">Last Price</p>
+                <p className="text-base md:text-lg font-bold">${selectedPair.price.toLocaleString()}</p>
+              </div>
+              <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
+                <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">24h High</p>
+                <p className="text-base md:text-lg font-bold text-green-600">${selectedPair.high.toLocaleString()}</p>
+              </div>
+              <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
+                <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">24h Low</p>
+                <p className="text-base md:text-lg font-bold text-red-600">${selectedPair.low.toLocaleString()}</p>
+              </div>
+              <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
+                <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">24h Volume</p>
+                <p className="text-base md:text-lg font-bold">{selectedPair.volume}</p>
+              </div>
+            </div>
+          </div>
 
-                {/* Swap Button Middle */}
-                <div className="flex justify-center -my-6 relative z-10">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 border-4 border-card shadow-lg"
-                    onClick={handleSwapCurrencies}
+          <div className="flex flex-col lg:flex-row gap-0">
+            {/* Chart Area */}
+            <div className="p-2 md:p-4 border-b lg:border-b-0 lg:border-r border-border flex flex-col w-full lg:flex-[3] h-[500px]">
+              <div className="flex items-center justify-between mb-2 md:mb-4 flex-shrink-0 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1 md:gap-2">
+                  <Button 
+                    variant={chartInterval === "1" ? "default" : "outline"} 
+                    size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
+                    onClick={() => setChartInterval("1")}
                   >
-                    <ArrowUpDown className="h-5 w-5" />
+                    1m
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "5" ? "default" : "outline"} 
+                    size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
+                    onClick={() => setChartInterval("5")}
+                  >
+                    5m
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "15" ? "default" : "outline"} 
+                    size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
+                    onClick={() => setChartInterval("15")}
+                  >
+                    15m
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "60" ? "default" : "outline"} 
+                    size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
+                    onClick={() => setChartInterval("60")}
+                  >
+                    1H
+                  </Button>
+                  <Button 
+                    variant={chartInterval === "D" ? "default" : "outline"} 
+                    size="sm"
+                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
+                    onClick={() => setChartInterval("D")}
+                  >
+                    1D
                   </Button>
                 </div>
+              </div>
+              <div className="flex-1 min-h-0 bg-background rounded-lg overflow-hidden relative lg:flex-1">
+                <iframe
+                  key={`${selectedPair.pair}-${chartInterval}`}
+                  src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${selectedPair.pair.replace('/', '')}&interval=${chartInterval}&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${selectedPair.pair.replace('/', '')}`}
+                  className="absolute inset-0 w-full h-full"
+                  title="TradingView Chart"
+                ></iframe>
+              </div>
+            </div>
 
-                {/* To Box */}
-                <div className="bg-accent/5 p-6 rounded-xl border border-border/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-foreground font-bold text-sm">To</Label>
+            {/* Combined Sidebar: Order Book and Trade Panel */}
+            <div className="w-full lg:w-[480px] lg:flex-[1.5] flex flex-row border-t lg:border-t-0 h-auto lg:h-[500px] overflow-hidden">
+              {/* Column 1: Order Book */}
+              <div className="flex-[0.8] border-r border-border flex flex-col overflow-hidden h-full">
+                <div className="p-2 border-b border-border text-xs font-semibold flex items-center flex-shrink-0">
+                  <BookOpen className="h-3 w-3 mr-1" /> Order Book
+                </div>
+                <div className="flex-1 overflow-y-auto no-scrollbar p-1">
+                  <div className="grid grid-cols-2 text-[10px] text-muted-foreground mb-1 px-1">
+                    <div>Price</div>
+                    <div className="text-right">Size</div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      type="number"
-                      value={toAmount}
-                      onChange={(e) => handleToAmountChange(e.target.value)}
-                      className="flex-1 h-12 text-2xl font-semibold bg-transparent border-none p-0 focus-visible:ring-0 shadow-none"
-                      placeholder="0.00"
-                    />
-                    <Select value={toCurrency} onValueChange={setToCurrency}>
-                      <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currencies.map((curr) => (
-                          <SelectItem key={curr.symbol} value={curr.symbol}>
-                            <div className="flex items-center gap-2">
-                              <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
-                              <span className="font-bold">{curr.symbol}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                  {/* Asks */}
+                  <div className="space-y-0.5 mb-2">
+                    {(liveOrderBook.asks || []).slice(-(isDesktop ? 10 : 7)).reverse().map((ask, i) => {
+                      const price = parseFloat(ask[0]);
+                      const amount = parseFloat(ask[1]);
+                      if (isNaN(price) || isNaN(amount)) return null;
+                      const maxAmount = Math.max(...(liveOrderBook.asks || []).map(a => parseFloat(a[1]) || 0), 1);
+                      return (
+                        <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-red-500/10 cursor-pointer relative">
+                          <div className="absolute inset-y-0 right-0 bg-red-500/10" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
+                          <div className="text-red-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
+                          <div className="text-right relative z-10">{amount.toFixed(3)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Spread/Mid Price */}
+                  <div className="text-center py-1 my-1 bg-muted/30 rounded border-y border-border/50">
+                    <span className={`text-xs font-bold ${(selectedPair.change || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {(selectedPair.price || 0).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* Bids */}
+                  <div className="space-y-0.5">
+                    {(liveOrderBook.bids || []).slice(0, isDesktop ? 10 : 8).map((bid, i) => {
+                      const price = parseFloat(bid[0]);
+                      const amount = parseFloat(bid[1]);
+                      if (isNaN(price) || isNaN(amount)) return null;
+                      const maxAmount = Math.max(...(liveOrderBook.bids || []).map(b => parseFloat(b[1]) || 0), 1);
+                      return (
+                        <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-green-500/10 cursor-pointer relative">
+                          <div className="absolute inset-y-0 right-0 bg-green-500/10" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
+                          <div className="text-green-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
+                          <div className="text-right relative z-10">{amount.toFixed(3)}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
+              </div>
 
-                {/* Rates Info */}
-                <div className="flex flex-col sm:grid sm:grid-cols-3 gap-4 pt-2">
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Swap rate</span>
-                    <div className="flex items-center flex-wrap gap-1 min-h-[16px] overflow-hidden">
-                      {isLoading ? (
-                        <Skeleton className="h-3 w-32" />
-                      ) : (
-                        <>
-                          <span className="text-xs font-bold truncate">1 {fromCurrency} = {formatRate(swapRate)} {toCurrency}</span>
-                          {percentageDiff > 0 && (
-                            <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 px-1 py-0 h-4 text-[10px] flex-shrink-0">
-                              {percentageDiff.toFixed(2)}%
-                            </Badge>
+              {/* Column 2: Trade Panel */}
+              <div className="flex-[1.2] flex flex-col overflow-hidden h-full">
+                    <Tabs defaultValue="buy" className="flex-1 flex flex-col">
+                      <TabsList className="w-full grid grid-cols-2 rounded-none h-9 border-b border-border bg-transparent">
+                        <TabsTrigger value="buy" className="text-xs data-[state=active]:text-green-500 data-[state=active]:bg-green-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-green-500">Buy</TabsTrigger>
+                        <TabsTrigger value="sell" className="text-xs data-[state=active]:text-red-500 data-[state=active]:bg-red-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-red-500">Sell</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="buy" className="m-0 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
+                          <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Order Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="limit">Limit</SelectItem>
+                              <SelectItem value="market">Market</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {orderType === "limit" ? (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
+                                <span>USDT</span>
+                              </div>
+                              <Input 
+                                className="h-8 text-xs bg-muted/20" 
+                                value={buyPrice}
+                                onChange={(e) => setBuyPrice(e.target.value)}
+                              />
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
+                                <span>USDT</span>
+                              </div>
+                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                                Market Price
+                              </div>
+                            </div>
                           )}
-                        </>
-                      )}
-                    </div>
+
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>{orderType === "market" ? "Total (approx)" : "Total"}</span>
+                              <span>USDT</span>
+                            </div>
+                            <Input 
+                              className="h-8 text-xs bg-muted/20" 
+                              value={buyAmount}
+                              onChange={(e) => setBuyAmount(e.target.value)}
+                              placeholder="0.00"
+                            />
+                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
+                              <span>Est. Receive:</span>
+                              <span className="text-green-500">
+                                {buyAmount && !isNaN(parseFloat(buyAmount)) 
+                                  ? (parseFloat(buyAmount) / (orderType === "limit" ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price)).toFixed(6)
+                                  : "0.00"} {selectedPair.symbol}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="pt-1">
+                            <Slider
+                              value={buyPercentage}
+                              onValueChange={setBuyPercentage}
+                              max={100}
+                              step={25}
+                              className="py-2"
+                            />
+                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
+                              <span>0%</span>
+                              <span>25%</span>
+                              <span>50%</span>
+                              <span>75%</span>
+                              <span>100%</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 pt-2 border-t border-border/50">
+                            {orderType === "market" && <SlippageSelector />}
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-muted-foreground">Avbl</span>
+                              <span>{quoteWallet?.balance.toFixed(2) || "0.00"} USDT</span>
+                            </div>
+                          </div>
+
+                          {orderType === "limit" && (
+                            <div className="space-y-2 py-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="buy-tp-sl"
+                                    checked={isTPEnabled}
+                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="buy-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
+                                </div>
+                                {isTPEnabled && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
+                                    <span>Basic</span>
+                                    <ArrowUpDown className="w-3 h-3" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {isTPEnabled && (
+                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <div className="relative">
+                                    <Input
+                                      value={tpPrice}
+                                      onChange={(e) => setTpPrice(e.target.value)}
+                                      placeholder="Take Profit"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
+                                  </div>
+                                  <div className="relative">
+                                    <Input
+                                      value={slPrice}
+                                      onChange={(e) => setSlPrice(e.target.value)}
+                                      placeholder="Stop Loss"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="buy-post-only"
+                                    checked={isPostOnlyEnabled}
+                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="buy-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
+                                </div>
+                                <div className="ml-auto">
+                                  <Select value={gtcType} onValueChange={setGtcType}>
+                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
+                                      <SelectValue placeholder="GTC" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="GTC">GTC</SelectItem>
+                                      <SelectItem value="IOC">IOC</SelectItem>
+                                      <SelectItem value="FOK">FOK</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <Button 
+                            className="w-full h-9 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
+                            onClick={handleBuy}
+                            disabled={isExecuting}
+                          >
+                            {isExecuting ? "Processing..." : "Buy"}
+                          </Button>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="sell" className="m-0 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
+                          <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Order Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="limit">Limit</SelectItem>
+                              <SelectItem value="market">Market</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {orderType === "limit" ? (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
+                                <span>USDT</span>
+                              </div>
+                              <Input 
+                                className="h-8 text-xs bg-muted/20" 
+                                value={sellPrice}
+                                onChange={(e) => setSellPrice(e.target.value)}
+                              />
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
+                                <span>USDT</span>
+                              </div>
+                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                                Market Price
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>Amount</span>
+                              <span>{selectedPair.symbol}</span>
+                            </div>
+                            <Input 
+                              className="h-8 text-xs bg-muted/20" 
+                              value={sellAmount}
+                              onChange={(e) => setSellAmount(e.target.value)}
+                              placeholder="0.00"
+                            />
+                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
+                              <span>Est. Receive:</span>
+                              <span className="text-red-500">
+                                {sellAmount && !isNaN(parseFloat(sellAmount)) 
+                                  ? (parseFloat(sellAmount) * (orderType === "limit" ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price)).toFixed(2)
+                                  : "0.00"} USDT
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="pt-1">
+                            <Slider
+                              value={sellPercentage}
+                              onValueChange={setSellPercentage}
+                              max={100}
+                              step={25}
+                              className="py-2"
+                            />
+                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
+                              <span>0%</span>
+                              <span>25%</span>
+                              <span>50%</span>
+                              <span>75%</span>
+                              <span>100%</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 pt-2 border-t border-border/50">
+                            {orderType === "market" && <SlippageSelector />}
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-muted-foreground">Avbl</span>
+                              <span>{baseWallet?.balance.toFixed(4) || "0.00"} {selectedPair.symbol}</span>
+                            </div>
+                          </div>
+
+                          {orderType === "limit" && (
+                            <div className="space-y-2 py-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="sell-tp-sl"
+                                    checked={isTPEnabled}
+                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="sell-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
+                                </div>
+                                {isTPEnabled && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
+                                    <span>Basic</span>
+                                    <ArrowUpDown className="w-3 h-3" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {isTPEnabled && (
+                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <div className="relative">
+                                    <Input
+                                      value={tpPrice}
+                                      onChange={(e) => setTpPrice(e.target.value)}
+                                      placeholder="Take Profit"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
+                                  </div>
+                                  <div className="relative">
+                                    <Input
+                                      value={slPrice}
+                                      onChange={(e) => setSlPrice(e.target.value)}
+                                      placeholder="Stop Loss"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="sell-post-only"
+                                    checked={isPostOnlyEnabled}
+                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="sell-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
+                                </div>
+                                <div className="ml-auto">
+                                  <Select value={gtcType} onValueChange={setGtcType}>
+                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
+                                      <SelectValue placeholder="GTC" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="GTC">GTC</SelectItem>
+                                      <SelectItem value="IOC">IOC</SelectItem>
+                                      <SelectItem value="FOK">FOK</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <Button 
+                            className="w-full h-9 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider"
+                            onClick={handleSell}
+                            disabled={isExecuting}
+                          >
+                            {isExecuting ? "Processing..." : "Sell"}
+                          </Button>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Section: Open Orders / Assets */}
+          <div className="border-t border-border p-4 bg-background">
+            <Tabs defaultValue="orders">
+              <div className="flex items-center justify-between mb-4">
+                <TabsList className="bg-transparent h-auto p-0 gap-4">
+                  <TabsTrigger value="orders" className="text-sm p-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Open Orders</TabsTrigger>
+                  <TabsTrigger value="assets" className="text-sm p-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Assets</TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="hide-low-top" className="rounded border-border bg-muted h-3 w-3" />
+                    <label htmlFor="hide-low-top" className="text-[10px] text-muted-foreground whitespace-nowrap">Hide low balance assets</label>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Market rate</span>
-                    <div className="min-h-[16px] flex items-center overflow-hidden">
-                      {isLoading ? (
-                        <Skeleton className="h-3 w-32" />
-                      ) : (
-                        <span className="text-xs font-bold block truncate">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-right">
-                    <span className="text-xs text-muted-foreground block">Rate will refresh in</span>
-                    <span className="text-xs font-bold">Updating</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <BookOpen className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <TabsContent value="orders">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <BookOpen className="h-8 w-8 mb-2 opacity-20" />
+                  <p className="text-sm">No open orders found</p>
+                </div>
+              </TabsContent>
+              <TabsContent value="assets">
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <p className="text-sm">No assets found</p>
                   </div>
                 </div>
-
-                <Button 
-                  className="w-full h-14 text-lg font-bold bg-[#58B383] hover:bg-[#4da175] text-white rounded-xl shadow-sm transition-all" 
-                  onClick={handleSwap}
-                  disabled={isSwapping || isLoading || parseFloat(fromAmount) <= 0}
-                >
-                  {isSwapping ? <Loader2 className="animate-spin h-6 w-6" /> : "Swap"}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column: Chart Section */}
-          <div className="space-y-4">
-            <Card className="bg-card border-none shadow-sm overflow-hidden h-[450px] relative rounded-xl">
-              <div className="p-4 border-b border-border/40 flex items-center justify-between">
-                <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
-                  <img src={currencies.find(c => c.symbol === fromCurrency)?.iconUrl} className="w-4 h-4 rounded-full" alt="" />
-                  {fromCurrency} / {toCurrency}
-                </h2>
-              </div>
-              <iframe
-                key={`${fromCurrency}-${toCurrency}`}
-                src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency}&interval=60&hidesidetoolbar=1&symboledit=0&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=light&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=pexly.com&utm_medium=widget&utm_campaign=chart`}
-                className="absolute top-12 bottom-0 left-0 right-0 w-full h-[calc(100%-48px)]"
-                title="TradingView Chart"
-              ></iframe>
-            </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
-
-        {/* Recent Activity Section */}
-        <div className="space-y-6 pt-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Recent activity</h2>
-          </div>
-          
-          <div className="flex items-center gap-4 mb-6 overflow-x-auto pb-2">
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="text-sm font-medium text-muted-foreground">Filters</span>
-            </div>
-            <Select defaultValue="all">
-              <SelectTrigger className="h-8 w-[120px] bg-accent/5 text-xs">
-                <span className="text-muted-foreground mr-1">Asset</span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {currencies.map(c => (
-                  <SelectItem key={c.symbol} value={c.symbol}>{c.symbol}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select defaultValue="all">
-              <SelectTrigger className="h-8 w-[120px] bg-accent/5 text-xs">
-                <span className="text-muted-foreground mr-1">Status</span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select defaultValue="beginning">
-              <SelectTrigger className="h-8 w-[180px] bg-accent/5 text-xs">
-                <span className="text-muted-foreground mr-1">Date:</span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="beginning">From the beginning</SelectItem>
-                <SelectItem value="week">Last 7 days</SelectItem>
-                <SelectItem value="month">Last 30 days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="bg-card border-none rounded-xl shadow-sm overflow-hidden">
-            <div className="min-w-full inline-block align-middle">
-              <div className="overflow-hidden">
-                <table className="min-w-full divide-y divide-border/40">
-                  <thead className="bg-accent/5">
-                    <tr>
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Date</th>
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-transparent divide-y divide-border/40">
-                    {history.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                          No recent swap activity found
-                        </td>
-                      </tr>
-                    ) : (
-                      history.map((order) => (
-                        <tr key={order.id} className="hover:bg-accent/5 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold">{order.amount} {order.fromToken}</span>
-                              <span className="text-muted-foreground">→</span>
-                              <span className="font-bold">{order.quote.toAmount} {order.toToken}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {formatDistanceToNow(order.createdAt)} ago
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge variant={order.status === 'submitted' ? 'default' : 'secondary'} className="bg-[#58B383]/10 text-[#58B383] border-none text-[10px] px-2 py-0.5 uppercase font-bold">
-                              {order.status === 'submitted' ? 'Pending' : order.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5 text-primary" />
-                Wallet Password Required
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <p className="text-sm text-muted-foreground">
-                Enter your non-custodial wallet password to authorize this swap. Your password is only stored for this session.
-              </p>
-              <Input
-                type="password"
-                placeholder="Enter wallet password"
-                value={walletPassword}
-                onChange={(e) => setWalletPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
-                autoFocus
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>Cancel</Button>
-              <Button onClick={handlePasswordSubmit} disabled={isSwapping || walletPassword.length === 0}>
-                {isSwapping ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Confirm Swap"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
-      <PexlyFooter />
+
+      {/* Password Dialog - for first-time password entry in session */}
+      {showPasswordDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-96">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Enter Wallet Password</h3>
+                <p className="text-sm text-muted-foreground">Password will be cached for this session (until logout)</p>
+                <Input
+                  type="password"
+                  placeholder="Wallet Password"
+                  value={walletPassword}
+                  onChange={(e) => setWalletPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && walletPassword) {
+                      setSessionPassword(walletPassword);
+                      executeTrade(pendingTrade!.type, walletPassword);
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowPasswordDialog(false);
+                      setWalletPassword("");
+                      setPendingTrade(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setSessionPassword(walletPassword);
+                      executeTrade(pendingTrade!.type, walletPassword);
+                    }}
+                    disabled={!walletPassword || isExecuting}
+                  >
+                    {isExecuting ? "Processing..." : "Confirm"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
