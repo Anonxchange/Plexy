@@ -173,7 +173,7 @@ export function Spot() {
           body: { 
             symbols, 
             action: 'tickers',
-            fromSymbol: 'BTC', // Provide defaults if necessary to avoid undefined
+            fromSymbol: 'BTC',
             toSymbol: 'USDT',
             amount: 1,
             tradeType: 'buy'
@@ -182,25 +182,26 @@ export function Spot() {
         
         if (error) throw error;
         
-        const tickers = data?.data || data;
+        // Handle both { data: [...] } and direct array responses
+        const tickers = Array.isArray(data) ? data : data?.data;
         
-        if (tickers && tickers.length > 0) {
+        if (Array.isArray(tickers) && tickers.length > 0) {
           setTradingPairs(prevPairs => 
             prevPairs.map(pair => {
               const ticker = tickers.find((t: any) => t.symbol === `${pair.symbol}USDT`);
                 
               if (ticker) {
-                const price = parseFloat(ticker.lastPrice);
-                const change = parseFloat(ticker.priceChangePercent);
-                const quoteVolume = parseFloat(ticker.quoteVolume);
+                const price = parseFloat(ticker.lastPrice) || 0;
+                const change = parseFloat(ticker.priceChangePercent) || 0;
+                const quoteVolume = parseFloat(ticker.quoteVolume) || 0;
                 
                 return {
                   ...pair,
                   price,
                   change,
-                  volume: `${(quoteVolume / 1e9).toFixed(2)}B`,
-                  high: parseFloat(ticker.highPrice),
-                  low: parseFloat(ticker.lowPrice),
+                  volume: quoteVolume > 1e9 ? `${(quoteVolume / 1e9).toFixed(2)}B` : `${(quoteVolume / 1e6).toFixed(2)}M`,
+                  high: parseFloat(ticker.highPrice) || 0,
+                  low: parseFloat(ticker.lowPrice) || 0,
                 };
               }
               return pair;
@@ -259,22 +260,27 @@ export function Spot() {
         
         if (orderBookRes.data) {
           const orderBookData = orderBookRes.data.data || orderBookRes.data;
-          setLiveOrderBook(orderBookData);
-          
-          // Auto-fill price box under Limit order type only if it's currently empty
-          if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
-            const bestBid = orderBookData.bids[0];
-            const bestAsk = orderBookData.asks[0];
-            if (bestBid && bestAsk) {
-              const middlePrice = ((parseFloat(bestBid[0]) + parseFloat(bestAsk[0])) / 2).toString();
-              setBuyPrice(middlePrice);
-              setSellPrice(middlePrice);
+          // Ensure bids/asks are arrays before setting state
+          if (orderBookData && Array.isArray(orderBookData.bids) && Array.isArray(orderBookData.asks)) {
+            setLiveOrderBook(orderBookData);
+            
+            // Auto-fill price box under Limit order type only if it's currently empty
+            if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
+              const bestBid = orderBookData.bids[0];
+              const bestAsk = orderBookData.asks[0];
+              if (bestBid && bestAsk) {
+                const middlePrice = ((parseFloat(bestBid[0]) + parseFloat(bestAsk[0])) / 2).toString();
+                setBuyPrice(middlePrice);
+                setSellPrice(middlePrice);
+              }
             }
           }
         }
         if (tradesRes.data) {
           const tradesData = tradesRes.data.data || tradesRes.data;
-          setLiveTrades(tradesData);
+          if (Array.isArray(tradesData)) {
+            setLiveTrades(tradesData);
+          }
         }
       } catch (error) {
         console.error('Error fetching order book/trades from Asterdex Edge Function:', error);
@@ -509,7 +515,7 @@ export function Spot() {
       });
 
       // Find the correct wallet for the network or default to first
-      const nonCustodialWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      const nonCustodialWallets = nonCustodialWalletManager.getWalletsFromStorage(user.id);
       const activeWallet = nonCustodialWallets.find((w: any) => {
         const walletType = (w.walletType || "").toLowerCase();
         const chainId = (w.chainId || "").toLowerCase();
