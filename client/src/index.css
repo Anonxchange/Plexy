@@ -58,7 +58,7 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 210 20% 96%;
+  --background: 0 0% 95%; /* #f2f2f2 */
 
   --foreground: 222 47% 11%;
 
