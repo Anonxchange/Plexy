@@ -173,7 +173,8 @@ export function Spot() {
         if (Array.isArray(tickers) && tickers.length > 0) {
           setTradingPairs(prevPairs => 
             prevPairs.map(pair => {
-              const ticker = tickers.find((t: any) => t.symbol === `${pair.symbol}USDT`);
+              const pairSymbol = pair.symbol.endsWith('USDT') ? pair.symbol : `${pair.symbol}USDT`;
+              const ticker = tickers.find((t: any) => t.symbol === pairSymbol);
                 
               if (ticker) {
                 const price = parseFloat(ticker.lastPrice) || 0;
