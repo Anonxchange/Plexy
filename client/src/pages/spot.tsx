@@ -263,6 +263,8 @@ export function Spot() {
           asterdexService.getRecentTrades(formattedSymbol, 20)
         ]);
         
+        console.log(`[Spot] Market data results for ${formattedSymbol}:`, { orderBookData, tradesData });
+        
         if (orderBookData) {
           if (orderBookData.bids && orderBookData.asks) {
             setLiveOrderBook({
