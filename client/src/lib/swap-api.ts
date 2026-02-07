@@ -1,6 +1,7 @@
 import { asterdexService } from "./asterdex-service";
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
 import { swapExecutionService } from "./swap-execution";
+import { supabase } from "./supabase";
 
 export interface SwapTransaction {
   id: string;
@@ -56,31 +57,39 @@ export async function executeSwap(params: {
     const userPassword = params.userPassword || localStorage.getItem("pexly_wallet_password") || "password123"; 
 
     // Execute swap through AsterDEX integrated execution service
-    const executionOrder = await swapExecutionService.executeSwap(
-      fromWallet,
-      params.fromCrypto,
-      params.toCrypto,
-      params.fromAmount.toString(),
-      userPassword,
-      params.userId,
-      parseFloat(params.slippage || "0.5")
-    );
+    // Use Asterdex Edge Function for swap execution to match spot page logic
+    const { data: result, error: swapError } = await supabase.functions.invoke('asterdex', {
+      body: {
+        action: 'execute',
+        wallet: fromWallet,
+        fromSymbol: params.fromCrypto,
+        toSymbol: params.toCrypto,
+        amount: params.fromAmount,
+        password: userPassword,
+        userId: params.userId,
+        slippage: parseFloat(params.slippage || "0.5"),
+        tradeType: 'execute' // Added tradeType as it might be required
+      }
+    });
+
+    if (swapError) throw swapError;
+    if (!result || result.error) throw new Error(result?.error || "Failed to execute swap via AsterDEX Edge Function");
 
     // Create swap transaction record
     const swapTransaction: SwapTransaction = {
-      id: executionOrder.id,
+      id: result.id || `swap_${Date.now()}`,
       user_id: params.userId,
       from_crypto: params.fromCrypto,
       to_crypto: params.toCrypto,
       from_amount: params.fromAmount,
-      to_amount: parseFloat(executionOrder.quote.toAmount),
+      to_amount: result.toAmount || params.toAmount,
       swap_rate: params.swapRate,
       market_rate: params.marketRate,
       fee: params.fee,
-      status: executionOrder.status === 'submitted' ? 'completed' : 'pending' as any,
-      created_at: new Date(executionOrder.createdAt).toISOString(),
-      completed_at: executionOrder.executedAt ? new Date(executionOrder.executedAt).toISOString() : null,
-      txHash: executionOrder.txHash
+      status: 'completed',
+      created_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      txHash: result.txHash
     };
 
     return swapTransaction;
