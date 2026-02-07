@@ -218,18 +218,22 @@ export function Spot() {
     const fetchOrderBookAndTrades = async () => {
       try {
         const symbol = selectedPair.symbol; // Base symbol like "BTC"
+        // Ensure symbol is formatted correctly for the edge function
+        // The edge function expects "BTCUSDT", not "BTC"
+        const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
         
         const [orderBookData, tradesData] = await Promise.all([
-          asterdexService.getOrderBook(symbol, 20),
-          asterdexService.getRecentTrades(symbol, 20)
+          asterdexService.getOrderBook(formattedSymbol, 20),
+          asterdexService.getRecentTrades(formattedSymbol, 20)
         ]);
         
         if (orderBookData) {
           // The service returns a standardized object with bids/asks
-          if (Array.isArray(orderBookData.bids) && Array.isArray(orderBookData.asks)) {
+          // The edge function returns bids/asks as objects or arrays
+          if (orderBookData.bids && orderBookData.asks) {
             setLiveOrderBook({
-              bids: orderBookData.bids as [string, string][],
-              asks: orderBookData.asks as [string, string][]
+              bids: Array.isArray(orderBookData.bids) ? orderBookData.bids : [],
+              asks: Array.isArray(orderBookData.asks) ? orderBookData.asks : []
             });
             
             // Auto-fill price box under Limit order type only if it's currently empty
