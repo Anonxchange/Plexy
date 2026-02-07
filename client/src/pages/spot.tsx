@@ -172,7 +172,11 @@ export function Spot() {
         const { data, error } = await supabase.functions.invoke('asterdex', {
           body: { 
             symbols, 
-            action: 'tickers' 
+            action: 'tickers',
+            fromSymbol: 'BTC', // Provide defaults if necessary to avoid undefined
+            toSymbol: 'USDT',
+            amount: 1,
+            tradeType: 'buy'
           }
         });
         
@@ -230,10 +234,26 @@ export function Spot() {
         
         const [orderBookRes, tradesRes] = await Promise.all([
           supabase.functions.invoke('asterdex', {
-            body: { symbol, limit: 20, action: 'orderbook' }
+            body: { 
+              symbol, 
+              limit: 20, 
+              action: 'orderbook',
+              fromSymbol: selectedPair.symbol,
+              toSymbol: 'USDT',
+              amount: 1,
+              tradeType: 'buy'
+            }
           }),
           supabase.functions.invoke('asterdex', {
-            body: { symbol, limit: 20, action: 'trades' }
+            body: { 
+              symbol, 
+              limit: 20, 
+              action: 'trades',
+              fromSymbol: selectedPair.symbol,
+              toSymbol: 'USDT',
+              amount: 1,
+              tradeType: 'buy'
+            }
           })
         ]);
         
