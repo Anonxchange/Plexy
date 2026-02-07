@@ -92,33 +92,28 @@ async function invokeAsterdex<T>(body: Record<string, unknown>): Promise<T> {
 export const asterdexService = {
   // Get ticker data for a single symbol (e.g. "BTCUSDT")
   async getTicker(symbol: string): Promise<TickerData> {
-    const symbolClean = symbol.replace("USDT", "");
     return invokeAsterdex<TickerData>({ 
       action: 'ticker', 
-      fromSymbol: symbolClean,
-      toSymbol: 'USDT'
+      symbol
     });
   },
 
   // Get multiple tickers (optionally filter by symbols array)
   async getTickers(symbols?: string[]): Promise<TickerData[]> {
-    // Edge function seems to expect a single call or handles all pairs if symbols empty
-    // But based on the logs, we need to provide fromSymbol/toSymbol. 
-    // If getting multiple, the backend might handle it differently, but let's standardize.
     return invokeAsterdex<TickerData[]>({ 
       action: 'tickers', 
-      toSymbol: 'USDT'
+      symbols
     });
   },
 
   // Get order book for a symbol
   async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBook> {
     try {
-      const symbolClean = symbol.replace("USDT", "");
+      // Handle both "BTC" and "BTCUSDT"
+      const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
       return await invokeAsterdex<OrderBook>({ 
         action: 'orderbook', 
-        fromSymbol: symbolClean,
-        toSymbol: 'USDT',
+        symbol: formattedSymbol,
         limit 
       });
     } catch (error) {
@@ -130,26 +125,24 @@ export const asterdexService = {
   // Get recent trades for a symbol
   async getRecentTrades(symbol: string, limit: number = 50): Promise<RecentTrade[]> {
     try {
-      const symbolClean = symbol.replace("USDT", "");
+      const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
       return await invokeAsterdex<RecentTrade[]>({ 
         action: 'trades', 
-        fromSymbol: symbolClean,
-        toSymbol: 'USDT',
+        symbol: formattedSymbol,
         limit 
       });
     } catch (error) {
       console.error(`Failed to fetch trades for ${symbol}:`, error);
-      return [];
+      return { bids: [], asks: [] };
     }
   },
 
   // Get klines (candlestick) data
   async getKlines(symbol: string, interval: string = '1h', limit: number = 100): Promise<any[]> {
-    const symbolClean = symbol.replace("USDT", "");
+    const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
     return invokeAsterdex<any[]>({ 
       action: 'klines', 
-      fromSymbol: symbolClean,
-      toSymbol: 'USDT',
+      symbol: formattedSymbol,
       interval, 
       limit 
     });
@@ -184,12 +177,12 @@ export const asterdexService = {
   // Step 3: Frontend submits { ...orderParams, signature } to submitEndpoint
 
   async buildTransaction(request: BuildTransactionRequest): Promise<BuildTransactionResponse> {
-    const symbolClean = request.symbol.replace("USDT", "");
+    const formattedSymbol = request.symbol.includes("USDT") ? request.symbol : `${request.symbol}USDT`;
     return invokeAsterdex<BuildTransactionResponse>({
       action: 'build-transaction',
-      fromSymbol: request.side === 'BUY' ? 'USDT' : symbolClean,
-      toSymbol: request.side === 'BUY' ? symbolClean : 'USDT',
-      amount: request.quantity,
+      symbol: formattedSymbol,
+      side: request.side,
+      quantity: request.quantity,
       orderType: request.orderType || 'MARKET',
       price: request.price,
       timeInForce: request.timeInForce,
