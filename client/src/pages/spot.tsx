@@ -490,7 +490,7 @@ export function Spot() {
       }
 
       const result = await asterdexService.buildTransaction({
-        symbol: selectedPair.symbol,
+        symbol: `${selectedPair.symbol}USDT`,
         side: type.toUpperCase() as 'BUY' | 'SELL',
         quantity: amountValue,
         orderType: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
