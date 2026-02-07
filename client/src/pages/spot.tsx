@@ -512,11 +512,11 @@ export function Spot() {
       // Use Asterdex Edge Function for swap execution
       const { data: result, error: swapError } = await supabase.functions.invoke('asterdex', {
         body: {
-          type: 'execute_swap',
+          action: 'execute',
           wallet: activeWallet,
-          fromToken,
-          toToken,
-          amount: amountStr,
+          fromSymbol: fromToken,
+          toSymbol: toToken,
+          amount: parseFloat(amountStr),
           password,
           userId: user.id,
           slippage: isSlippageEnabled ? parseFloat(maxSlippage) : 100
