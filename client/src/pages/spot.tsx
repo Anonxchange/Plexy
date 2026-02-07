@@ -871,12 +871,14 @@ export function Spot() {
 
                   {/* Asks */}
                   <div className="space-y-0.5 mb-2">
-                    {liveOrderBook.asks.slice(-(isDesktop ? 10 : 7)).reverse().map((ask, i) => {
+                    {(liveOrderBook.asks || []).slice(-(isDesktop ? 10 : 7)).reverse().map((ask, i) => {
                       const price = parseFloat(ask[0]);
                       const amount = parseFloat(ask[1]);
+                      if (isNaN(price) || isNaN(amount)) return null;
+                      const maxAmount = Math.max(...(liveOrderBook.asks || []).map(a => parseFloat(a[1]) || 0), 1);
                       return (
                         <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-red-500/10 cursor-pointer relative">
-                          <div className="absolute inset-y-0 right-0 bg-red-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.asks.map(a => parseFloat(a[1])))) * 100}%` }}></div>
+                          <div className="absolute inset-y-0 right-0 bg-red-500/10" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
                           <div className="text-red-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
                           <div className="text-right relative z-10">{amount.toFixed(3)}</div>
                         </div>
@@ -886,19 +888,21 @@ export function Spot() {
 
                   {/* Spread/Mid Price */}
                   <div className="text-center py-1 my-1 bg-muted/30 rounded border-y border-border/50">
-                    <span className={`text-xs font-bold ${selectedPair.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {selectedPair.price.toLocaleString()}
+                    <span className={`text-xs font-bold ${(selectedPair.change || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {(selectedPair.price || 0).toLocaleString()}
                     </span>
                   </div>
 
                   {/* Bids */}
                   <div className="space-y-0.5">
-                    {liveOrderBook.bids.slice(0, isDesktop ? 10 : 8).map((bid, i) => {
+                    {(liveOrderBook.bids || []).slice(0, isDesktop ? 10 : 8).map((bid, i) => {
                       const price = parseFloat(bid[0]);
                       const amount = parseFloat(bid[1]);
+                      if (isNaN(price) || isNaN(amount)) return null;
+                      const maxAmount = Math.max(...(liveOrderBook.bids || []).map(b => parseFloat(b[1]) || 0), 1);
                       return (
                         <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-green-500/10 cursor-pointer relative">
-                          <div className="absolute inset-y-0 right-0 bg-green-500/10" style={{ width: `${(amount / Math.max(...liveOrderBook.bids.map(b => parseFloat(b[1])))) * 100}%` }}></div>
+                          <div className="absolute inset-y-0 right-0 bg-green-500/10" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
                           <div className="text-green-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
                           <div className="text-right relative z-10">{amount.toFixed(3)}</div>
                         </div>
