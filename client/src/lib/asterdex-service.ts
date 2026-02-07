@@ -82,9 +82,15 @@ export interface BuildTransactionResponse {
 // ==================== HELPER ====================
 
 async function invokeAsterdex<T>(body: Record<string, unknown>): Promise<T> {
+  console.log(`[AsterDEX] Invoking action: ${body.action}`, body);
   const { data, error } = await supabase.functions.invoke('asterdex', { body });
-  if (error) throw error;
-  return data?.data ?? data;
+  if (error) {
+    console.error(`[AsterDEX] Edge function error for ${body.action}:`, error);
+    throw error;
+  }
+  const result = data?.data ?? data;
+  console.log(`[AsterDEX] Response for ${body.action}:`, result);
+  return result;
 }
 
 // ==================== SERVICE ====================
@@ -112,11 +118,12 @@ export const asterdexService = {
   async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBook> {
     try {
       const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-      return await invokeAsterdex<OrderBook>({ 
+      const result = await invokeAsterdex<any>({ 
         action: 'orderbook', 
         symbol: formattedSymbol,
         limit 
       });
+      return result?.data ?? result ?? { bids: [], asks: [] };
     } catch (error) {
       console.error(`Failed to fetch order book for ${symbol}:`, error);
       return { bids: [], asks: [] };
@@ -127,11 +134,15 @@ export const asterdexService = {
   async getRecentTrades(symbol: string, limit: number = 50): Promise<RecentTrade[]> {
     try {
       const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-      return await invokeAsterdex<RecentTrade[]>({ 
+      const result = await invokeAsterdex<any>({ 
         action: 'trades', 
         symbol: formattedSymbol,
         limit 
       });
+      // Handle the case where the function might expect 'fromSymbol' or 'toSymbol' for trades too
+      // or if it needs the base symbol specifically
+      const data = result?.data ?? result ?? [];
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error(`Failed to fetch trades for ${symbol}:`, error);
       return [];
