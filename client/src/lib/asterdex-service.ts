@@ -15,7 +15,7 @@ export const asterdexService = {
   // Get ticker data for a single symbol
   async getTicker(symbol: string): Promise<TickerData> {
     const { data, error } = await supabase.functions.invoke('asterdex', {
-      body: { symbol, type: 'ticker' }
+      body: { symbol, action: 'ticker' }
     });
     if (error) throw error;
     return data?.data || data;
@@ -24,7 +24,7 @@ export const asterdexService = {
   // Get multiple tickers
   async getTickers(symbols: string[]): Promise<TickerData[]> {
     const { data, error } = await supabase.functions.invoke('asterdex', {
-      body: { symbols, type: 'tickers' }
+      body: { symbols, action: 'tickers' }
     });
     if (error) throw error;
     return data?.data || data;
@@ -34,7 +34,7 @@ export const asterdexService = {
   async getOrderBook(symbol: string, limit: number = 20): Promise<{ bids: Array<[string, string]>; asks: Array<[string, string]> }> {
     try {
       const { data, error } = await supabase.functions.invoke('asterdex', {
-        body: { symbol, limit, type: 'orderbook' }
+        body: { symbol, limit, action: 'orderbook' }
       });
       if (error) throw error;
       const orderBookData = data?.data || data;
@@ -52,7 +52,7 @@ export const asterdexService = {
   async getRecentTrades(symbol: string, limit: number = 50): Promise<Array<{ id: number; price: string; qty: string; quoteQty: string; time: number; isBuyerMaker: boolean }>> {
     try {
       const { data, error } = await supabase.functions.invoke('asterdex', {
-        body: { symbol, limit, type: 'trades' }
+        body: { symbol, limit, action: 'trades' }
       });
       if (error) throw error;
       return data?.data || data;
@@ -69,7 +69,7 @@ export const asterdexService = {
     limit: number = 100
   ): Promise<any[]> {
     const { data, error } = await supabase.functions.invoke('asterdex', {
-      body: { symbol, interval, limit, type: 'klines' }
+      body: { symbol, interval, limit, action: 'klines' }
     });
     if (error) throw error;
     return data?.data || data;
