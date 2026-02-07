@@ -217,7 +217,7 @@ export function Spot() {
   useEffect(() => {
     const fetchOrderBookAndTrades = async () => {
       try {
-        const symbol = `${selectedPair.symbol}USDT`;
+        const symbol = selectedPair.symbol; // Base symbol like "BTC"
         
         const [orderBookData, tradesData] = await Promise.all([
           asterdexService.getOrderBook(symbol, 20),
@@ -486,7 +486,7 @@ export function Spot() {
       }
 
       const result = await asterdexService.buildTransaction({
-        symbol: `${selectedPair.symbol}USDT`,
+        symbol: selectedPair.symbol,
         side: type.toUpperCase() as 'BUY' | 'SELL',
         quantity: amountValue,
         orderType: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
