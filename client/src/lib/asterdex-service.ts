@@ -53,6 +53,32 @@ interface RecentTrade {
   isBuyerMaker: boolean;
 }
 
+// ---- Non-Custodial Order Types ----
+
+export interface BuildTransactionRequest {
+  symbol: string;           // e.g. "SOLUSDT"
+  side: 'BUY' | 'SELL';
+  quantity: number;
+  orderType?: 'MARKET' | 'LIMIT';
+  price?: number;           // required for LIMIT
+  timeInForce?: 'GTC' | 'IOC' | 'FOK';
+  walletAddress: string;    // user's wallet address for signing
+}
+
+export interface BuildTransactionResponse {
+  /** The order parameters that were built */
+  orderParams: Record<string, string | number>;
+  /** Deterministic string to sign with ECDSA */
+  messageToSign: string;
+  /** Current market price for user validation */
+  marketPrice: number | null;
+  /** AsterDEX endpoint to submit the signed order */
+  submitEndpoint: string;
+  /** HTTP method for submission */
+  submitMethod: string;
+  timestamp: number;
+}
+
 // ==================== HELPER ====================
 
 async function invokeAsterdex<T>(body: Record<string, unknown>): Promise<T> {
@@ -119,5 +145,47 @@ export const asterdexService = {
       slippage,
     });
   },
-};
 
+  // ---- Non-Custodial Trade Flow ----
+  // Step 1: Backend validates price + builds unsigned order payload
+  // Step 2: Frontend signs messageToSign with user's ECDSA key
+  // Step 3: Frontend submits { ...orderParams, signature } to submitEndpoint
+
+  async buildTransaction(request: BuildTransactionRequest): Promise<BuildTransactionResponse> {
+    return invokeAsterdex<BuildTransactionResponse>({
+      type: 'build-transaction',
+      symbol: request.symbol,
+      side: request.side,
+      quantity: request.quantity,
+      orderType: request.orderType || 'MARKET',
+      price: request.price,
+      timeInForce: request.timeInForce,
+      walletAddress: request.walletAddress,
+    });
+  },
+
+  // Step 3 helper: Submit the signed order directly to AsterDEX
+  async submitSignedOrder(
+    submitEndpoint: string,
+    orderParams: Record<string, string | number>,
+    signature: string
+  ): Promise<unknown> {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(orderParams)) {
+      params.append(key, String(value));
+    }
+    params.append('signature', signature);
+
+    const response = await fetch(`${submitEndpoint}?${params.toString()}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Order submission failed: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  },
+};
