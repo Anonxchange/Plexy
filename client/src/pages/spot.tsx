@@ -232,8 +232,8 @@ export function Spot() {
           // The edge function returns bids/asks as objects or arrays
           if (orderBookData.bids && orderBookData.asks) {
             setLiveOrderBook({
-              bids: Array.isArray(orderBookData.bids) ? orderBookData.bids : [],
-              asks: Array.isArray(orderBookData.asks) ? orderBookData.asks : []
+              bids: Array.isArray(orderBookData.bids) ? orderBookData.bids as any : [],
+              asks: Array.isArray(orderBookData.asks) ? orderBookData.asks as any : []
             });
             
             // Auto-fill price box under Limit order type only if it's currently empty
