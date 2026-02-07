@@ -218,30 +218,25 @@ export function Spot() {
     const fetchOrderBookAndTrades = async () => {
       try {
         const symbol = selectedPair.symbol; // Base symbol like "BTC"
-        // Ensure symbol is formatted correctly for the edge function
-        // The edge function expects "BTCUSDT", not "BTC"
         const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
         
+        // Use standard service methods for orderbook and trades
         const [orderBookData, tradesData] = await Promise.all([
           asterdexService.getOrderBook(formattedSymbol, 20),
           asterdexService.getRecentTrades(formattedSymbol, 20)
         ]);
         
         if (orderBookData) {
-          // The service returns a standardized object with bids/asks
-          // The edge function returns bids/asks as objects or arrays
           if (orderBookData.bids && orderBookData.asks) {
             setLiveOrderBook({
               bids: Array.isArray(orderBookData.bids) ? orderBookData.bids as any : [],
               asks: Array.isArray(orderBookData.asks) ? orderBookData.asks as any : []
             });
             
-            // Auto-fill price box under Limit order type only if it's currently empty
             if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
               const bestBid = orderBookData.bids[0];
               const bestAsk = orderBookData.asks[0];
               if (bestBid && bestAsk) {
-                // Handle both [price, amount] array and object formats
                 const bidPrice = Array.isArray(bestBid) ? parseFloat(bestBid[0]) : (bestBid as any).price;
                 const askPrice = Array.isArray(bestAsk) ? parseFloat(bestAsk[0]) : (bestAsk as any).price;
                 
@@ -254,21 +249,44 @@ export function Spot() {
             }
           }
         }
-        if (tradesData) {
-          if (Array.isArray(tradesData)) {
-            setLiveTrades(tradesData);
-          }
+        if (tradesData && Array.isArray(tradesData)) {
+          setLiveTrades(tradesData);
         }
       } catch (error) {
-        console.error('Error fetching order book/trades from Asterdex service:', error);
+        console.error('Error fetching order book/trades:', error);
       }
     };
 
     fetchOrderBookAndTrades();
-    const interval = setInterval(fetchOrderBookAndTrades, 5000); // Update every 5 seconds
-    
+    const interval = setInterval(fetchOrderBookAndTrades, 5000);
     return () => clearInterval(interval);
-  }, [selectedPair, orderType, supabase]);
+  }, [selectedPair, orderType]);
+
+  // Handle price/quote updates when amounts change
+  const [tradeQuote, setTradeQuote] = useState<any>(null);
+
+  useEffect(() => {
+    const updateQuote = async () => {
+      const amountStr = buyAmount || sellAmount;
+      const amount = parseFloat(amountStr);
+      if (!amount || amount <= 0) return;
+
+      try {
+        const quote = await asterdexService.getQuote(
+          buyAmount ? "USDT" : selectedPair.symbol,
+          buyAmount ? selectedPair.symbol : "USDT",
+          amount,
+          parseFloat(maxSlippage) / 100
+        );
+        setTradeQuote(quote);
+      } catch (err) {
+        console.error("Quote fetch error:", err);
+      }
+    };
+
+    const timer = setTimeout(updateQuote, 500);
+    return () => clearTimeout(timer);
+  }, [buyAmount, sellAmount, selectedPair, maxSlippage]);
 
   const SlippageSelector = () => (
     <div className="flex items-center gap-1.5 mb-2">
@@ -489,12 +507,13 @@ export function Spot() {
         throw new Error("Invalid trade amount. Please enter a positive number.");
       }
 
+      // If we have a quote, we can use it for better execution parameters
       const result = await asterdexService.buildTransaction({
         symbol: `${selectedPair.symbol}USDT`,
         side: type.toUpperCase() as 'BUY' | 'SELL',
         quantity: amountValue,
         orderType: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
-        price: orderType === 'limit' ? (type === 'buy' ? parseFloat(buyPrice) : parseFloat(sellPrice)) : undefined,
+        price: orderType === 'limit' ? (type === 'buy' ? parseFloat(buyPrice) : parseFloat(sellPrice)) : (tradeQuote?.price || undefined),
         walletAddress: activeWallet.address || (activeWallet as any).publicKey,
       });
 
