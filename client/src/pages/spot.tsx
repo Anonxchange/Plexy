@@ -38,7 +38,6 @@ import {
 } from "lucide-react";
 import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { asterdexService } from "@/lib/asterdex-service";
-import { swapExecutionService } from "@/lib/swap-execution";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { useAuth } from "@/lib/auth-context";
 import { useWallets, useWalletBalance } from "@/hooks/use-wallets";
@@ -169,21 +168,7 @@ export function Spot() {
     const fetchPrices = async () => {
       try {
         const symbols = tradingPairs.map(p => p.symbol);
-        const { data, error } = await supabase.functions.invoke('asterdex', {
-          body: { 
-            symbols, 
-            action: 'tickers',
-            fromSymbol: 'BTC',
-            toSymbol: 'USDT',
-            amount: 1,
-            tradeType: 'buy'
-          }
-        });
-        
-        if (error) throw error;
-        
-        // Handle both { data: [...] } and direct array responses
-        const tickers = Array.isArray(data) ? data : data?.data;
+        const tickers = await asterdexService.getTickers(symbols);
         
         if (Array.isArray(tickers) && tickers.length > 0) {
           setTradingPairs(prevPairs => 
@@ -209,7 +194,7 @@ export function Spot() {
           );
         }
       } catch (error) {
-        console.error('Error fetching crypto prices from Asterdex Edge Function:', error);
+        console.error('Error fetching crypto prices from Asterdex service:', error);
       }
     };
 
@@ -233,57 +218,44 @@ export function Spot() {
       try {
         const symbol = `${selectedPair.symbol}USDT`;
         
-        const [orderBookRes, tradesRes] = await Promise.all([
-          supabase.functions.invoke('asterdex', {
-            body: { 
-              symbol, 
-              limit: 20, 
-              action: 'orderbook',
-              fromSymbol: selectedPair.symbol,
-              toSymbol: 'USDT',
-              amount: 1,
-              tradeType: 'buy'
-            }
-          }),
-          supabase.functions.invoke('asterdex', {
-            body: { 
-              symbol, 
-              limit: 20, 
-              action: 'trades',
-              fromSymbol: selectedPair.symbol,
-              toSymbol: 'USDT',
-              amount: 1,
-              tradeType: 'buy'
-            }
-          })
+        const [orderBookData, tradesData] = await Promise.all([
+          asterdexService.getOrderBook(symbol, 20),
+          asterdexService.getRecentTrades(symbol, 20)
         ]);
         
-        if (orderBookRes.data) {
-          const orderBookData = orderBookRes.data.data || orderBookRes.data;
-          // Ensure bids/asks are arrays before setting state
-          if (orderBookData && Array.isArray(orderBookData.bids) && Array.isArray(orderBookData.asks)) {
-            setLiveOrderBook(orderBookData);
+        if (orderBookData) {
+          // The service returns a standardized object with bids/asks
+          if (Array.isArray(orderBookData.bids) && Array.isArray(orderBookData.asks)) {
+            setLiveOrderBook({
+              bids: orderBookData.bids as [string, string][],
+              asks: orderBookData.asks as [string, string][]
+            });
             
             // Auto-fill price box under Limit order type only if it's currently empty
             if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
               const bestBid = orderBookData.bids[0];
               const bestAsk = orderBookData.asks[0];
               if (bestBid && bestAsk) {
-                const middlePrice = ((parseFloat(bestBid[0]) + parseFloat(bestAsk[0])) / 2).toString();
-                setBuyPrice(middlePrice);
-                setSellPrice(middlePrice);
+                // Handle both [price, amount] array and object formats
+                const bidPrice = Array.isArray(bestBid) ? parseFloat(bestBid[0]) : (bestBid as any).price;
+                const askPrice = Array.isArray(bestAsk) ? parseFloat(bestAsk[0]) : (bestAsk as any).price;
+                
+                if (!isNaN(bidPrice) && !isNaN(askPrice)) {
+                  const middlePrice = ((bidPrice + askPrice) / 2).toString();
+                  setBuyPrice(middlePrice);
+                  setSellPrice(middlePrice);
+                }
               }
             }
           }
         }
-        if (tradesRes.data) {
-          const tradesData = tradesRes.data.data || tradesRes.data;
+        if (tradesData) {
           if (Array.isArray(tradesData)) {
             setLiveTrades(tradesData);
           }
         }
       } catch (error) {
-        console.error('Error fetching order book/trades from Asterdex Edge Function:', error);
+        console.error('Error fetching order book/trades from Asterdex service:', error);
       }
     };
 
@@ -486,34 +458,6 @@ export function Spot() {
       const toToken = type === "buy" ? selectedPair.symbol : "USDT";
       const amountStr = type === "buy" ? buyAmount : sellAmount;
 
-      // For 'Buy', amountStr is USDT. For 'Sell', amountStr is Coin.
-      // This matches Bybit logic where Buy uses Quote asset and Sell uses Base asset.
-
-      const quote = await swapExecutionService.getSwapQuote(
-        fromToken,
-        toToken,
-        amountStr,
-        parseFloat(maxSlippage)
-      );
-
-      toast({
-        title: "Quote Fetched",
-        description: `Price: ${quote.price} | Slippage: ${quote.slippage}% | Fee: ${quote.fee.toFixed(2)} USDT`,
-      });
-
-      const order = swapExecutionService.createExecutionOrder(
-        type,
-        fromToken,
-        toToken,
-        amountStr,
-        quote
-      );
-
-      toast({
-        title: "Confirm Transaction",
-        description: `You will ${type === "buy" ? "receive" : "pay"} ~${type === "buy" ? quote.toAmount : quote.fromAmount} ${selectedPair.symbol}. Confirm in your wallet.`,
-      });
-
       // Find the correct wallet for the network or default to first
       const nonCustodialWallets = nonCustodialWalletManager.getWalletsFromStorage(user.id);
       const activeWallet = nonCustodialWallets.find((w: any) => {
@@ -534,39 +478,26 @@ export function Spot() {
         throw new Error("No non-custodial wallet found. Please create a wallet first.");
       }
 
-      // Use Asterdex Edge Function for swap execution
+      // Execution logic with AsterDEX Edge Function
       const amountValue = parseFloat(amountStr);
       if (isNaN(amountValue) || amountValue <= 0) {
         throw new Error("Invalid trade amount. Please enter a positive number.");
       }
 
-      // Format payload according to AsterDEX Edge Function requirements
-      const payload = {
-        action: 'build-transaction', // Using build-transaction as indicated by AsterDEX service
-        type: 'build-transaction',
+      const result = await asterdexService.buildTransaction({
         symbol: `${selectedPair.symbol}USDT`,
-        fromSymbol: fromToken,
-        toSymbol: toToken,
-        amount: amountValue,
-        side: type.toUpperCase(), // BUY or SELL
+        side: type.toUpperCase() as 'BUY' | 'SELL',
         quantity: amountValue,
-        orderType: orderType.toUpperCase(), // LIMIT or MARKET
+        orderType: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
         price: orderType === 'limit' ? (type === 'buy' ? parseFloat(buyPrice) : parseFloat(sellPrice)) : undefined,
         walletAddress: activeWallet.address || (activeWallet as any).publicKey,
-        slippage: isSlippageEnabled ? parseFloat(maxSlippage) : 1,
-        tradeType: type
-      };
-
-      const { data: result, error: swapError } = await supabase.functions.invoke('asterdex', {
-        body: payload
       });
 
-      if (swapError) throw swapError;
-      if (!result || result.error) throw new Error(result?.error || "Failed to execute trade via AsterDEX Edge Function");
+      if (!result) throw new Error("Failed to execute trade via AsterDEX Edge Function");
 
       toast({
         title: "Order Submitted",
-        description: `${type === "buy" ? "Buy" : "Sell"} order submitted. TX: ${result.txHash?.slice(0, 10)}... Waiting for on-chain confirmation...`,
+        description: `${type === "buy" ? "Buy" : "Sell"} order submitted. Message: ${result.messageToSign?.slice(0, 10)}... Waiting for confirmation...`,
       });
 
       if (type === "buy") {
