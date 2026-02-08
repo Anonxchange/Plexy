@@ -168,7 +168,7 @@ export const asterdexService = {
     fromSymbol: fromToken,
     toSymbol: toToken,
     amount,
-    tradeType: 'swap', // ✅ THIS LINE FIXES YOUR ERROR
+    tradeType: 'spot', // ✅ THIS LINE FIXES YOUR ERROR
     slippage,
   });
 },
