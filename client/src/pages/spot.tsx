@@ -232,9 +232,13 @@ export function Spot() {
         
         console.log(`[Spot] Fetching quote: ${fromToken} -> ${toToken}, amount: ${amount}`);
         
+        // Ensure tokens are formatted for AsterDEX
+        const formattedFromToken = fromToken.includes("USDT") ? fromToken : `${fromToken}USDT`;
+        const formattedToToken = toToken.includes("USDT") ? toToken : `${toToken}USDT`;
+
         const quote = await asterdexService.getQuote(
-          fromToken,
-          toToken,
+          formattedFromToken,
+          formattedToToken,
           amount,
           parseFloat(maxSlippage) / 100
         );
@@ -522,7 +526,7 @@ export function Spot() {
 
       // If we have a quote, we can use it for better execution parameters
       const result = await asterdexService.buildTransaction({
-        symbol: `${selectedPair.symbol}USDT`,
+        symbol: selectedPair.symbol, // Service handles USDT formatting
         side: type.toUpperCase() as 'BUY' | 'SELL',
         quantity: amountValue,
         orderType: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
