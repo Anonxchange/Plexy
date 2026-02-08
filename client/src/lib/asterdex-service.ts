@@ -82,15 +82,9 @@ export interface BuildTransactionResponse {
 // ==================== HELPER ====================
 
 async function invokeAsterdex<T>(body: Record<string, unknown>): Promise<T> {
-  console.log(`[AsterDEX] Invoking action: ${body.action}`, body);
   const { data, error } = await supabase.functions.invoke('asterdex', { body });
-  if (error) {
-    console.error(`[AsterDEX] Edge function error for ${body.action}:`, error);
-    throw error;
-  }
-  const result = data?.data ?? data;
-  console.log(`[AsterDEX] Response for ${body.action}:`, result);
-  return result;
+  if (error) throw error;
+  return data?.data ?? data;
 }
 
 // ==================== SERVICE ====================
@@ -118,12 +112,11 @@ export const asterdexService = {
   async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBook> {
     try {
       const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-      const result = await invokeAsterdex<any>({ 
+      return await invokeAsterdex<OrderBook>({ 
         action: 'orderbook', 
         symbol: formattedSymbol,
         limit 
       });
-      return result?.data ?? result ?? { bids: [], asks: [] };
     } catch (error) {
       console.error(`Failed to fetch order book for ${symbol}:`, error);
       return { bids: [], asks: [] };
@@ -134,15 +127,11 @@ export const asterdexService = {
   async getRecentTrades(symbol: string, limit: number = 50): Promise<RecentTrade[]> {
     try {
       const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-      const result = await invokeAsterdex<any>({ 
+      return await invokeAsterdex<RecentTrade[]>({ 
         action: 'trades', 
         symbol: formattedSymbol,
         limit 
       });
-      // Handle the case where the function might expect 'fromSymbol' or 'toSymbol' for trades too
-      // or if it needs the base symbol specifically
-      const data = result?.data ?? result ?? [];
-      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error(`Failed to fetch trades for ${symbol}:`, error);
       return [];
@@ -169,47 +158,20 @@ export const asterdexService = {
 
   // Get a swap quote (read-only, no execution)
   async getQuote(
-    fromToken: string,
-    toToken: string,
-    amount: number,
-    slippage: number = 0.005
-  ): Promise<TradeQuote> {
-    console.log(`[AsterDEX] Requesting quote: ${fromToken} -> ${toToken}, amount: ${amount}`);
-    try {
-      const result = await invokeAsterdex<any>({
-        action: 'quote',
-        fromSymbol: fromToken,
-        toSymbol: toToken,
-        amount,
-        tradeType: 'spot', // Ensure spot trade type
-        slippage,
-      });
-      // Handle various response structures from Supabase Functions
-      const quote = result?.data ?? result;
-      console.log(`[AsterDEX] Quote response:`, quote);
-      
-      // Ensure it matches the expected TradeQuote interface
-      if (quote && typeof quote === 'object') {
-        return {
-          fromSymbol: quote.fromSymbol || fromToken,
-          toSymbol: quote.toSymbol || toToken,
-          fromAmount: Number(quote.fromAmount) || amount,
-          toAmount: Number(quote.toAmount) || 0,
-          price: Number(quote.price) || 0,
-          priceImpact: Number(quote.priceImpact) || 0,
-          fee: Number(quote.fee) || 0,
-          feeRate: Number(quote.feeRate) || 0,
-          expiresAt: Number(quote.expiresAt) || Date.now() + 60000,
-          minReceived: Number(quote.minReceived) || 0,
-          route: quote.route || [fromToken, toToken],
-        };
-      }
-      throw new Error("Invalid quote response format");
-    } catch (error) {
-      console.error(`[AsterDEX] Quote error for ${fromToken}->${toToken}:`, error);
-      throw error;
-    }
-  },
+  fromToken: string,
+  toToken: string,
+  amount: number,
+  slippage: number = 0.005
+): Promise<TradeQuote> {
+  return invokeAsterdex<TradeQuote>({
+    action: 'quote',
+    fromSymbol: fromToken,
+    toSymbol: toToken,
+    amount,
+    tradeType: 'swap', // ✅ THIS LINE FIXES YOUR ERROR
+    slippage,
+  });
+},
   // ---- Non-Custodial Trade Flow ----
   // Step 1: Backend validates price + builds unsigned order payload
   // Step 2: Frontend signs messageToSign with user's ECDSA key
