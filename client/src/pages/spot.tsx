@@ -232,13 +232,9 @@ export function Spot() {
         
         console.log(`[Spot] Fetching quote: ${fromToken} -> ${toToken}, amount: ${amount}`);
         
-        // Ensure tokens are formatted for AsterDEX
-        const formattedFromToken = fromToken.includes("USDT") ? fromToken : `${fromToken}USDT`;
-        const formattedToToken = toToken.includes("USDT") ? toToken : `${toToken}USDT`;
-
         const quote = await asterdexService.getQuote(
-          formattedFromToken,
-          formattedToToken,
+          fromToken,
+          toToken,
           amount,
           parseFloat(maxSlippage) / 100
         );
