@@ -176,10 +176,14 @@ export const asterdexService = {
   ): Promise<TradeQuote> {
     console.log(`[AsterDEX] Requesting quote: ${fromToken} -> ${toToken}, amount: ${amount}`);
     try {
+      // Ensure symbols are formatted correctly for the Edge Function
+      const fromSymbol = fromToken.includes("USDT") || fromToken === "USDT" ? fromToken : `${fromToken}USDT`;
+      const toSymbol = toToken.includes("USDT") || toToken === "USDT" ? toToken : `${toToken}USDT`;
+
       const result = await invokeAsterdex<any>({
         action: 'quote',
-        fromSymbol: fromToken,
-        toSymbol: toToken,
+        fromSymbol: fromSymbol,
+        toSymbol: toSymbol,
         amount,
         tradeType: 'spot', // Ensure spot trade type
         slippage,
