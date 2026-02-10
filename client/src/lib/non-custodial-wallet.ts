@@ -98,11 +98,11 @@ class NonCustodialWalletManager {
       privateKey = Buffer.from(account.privateKey!).toString('hex');
       address = ripple.deriveAddress(ripple.deriveKeypair(privateKey).publicKey);
       walletType = "xrp";
-    } else if (chainId === "ethereum" || chainId === "ETH" || chainId === "Ethereum") {
+    } else if (chainId === "ethereum" || chainId === "ETH" || chainId === "Ethereum" || chainId === "BNB" || chainId === "BSC") {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
       privateKey = Buffer.from(account.privateKey!).toString('hex');
-      walletType = "ethereum";
+      walletType = (chainId === "BNB" || chainId === "BSC") ? "binance" : "ethereum";
     } else {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
