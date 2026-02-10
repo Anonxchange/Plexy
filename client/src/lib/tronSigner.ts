@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 // Tron Transaction Signing
 // import { TronWeb } from 'tronweb';
 const TronWeb = {} as any;
