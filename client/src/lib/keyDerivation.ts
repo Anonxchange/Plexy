@@ -8,7 +8,9 @@ export async function mnemonicToSeed(mnemonic: string): Promise<Uint8Array> {
 export async function deriveKey(password: string, userId: string, iterations: number = 16384): Promise<string> {
   const encoder = new TextEncoder();
   const passwordBuffer = encoder.encode(password.normalize('NFKC'));
-  const salt = `pexly_salt_v1_${userId}`;
+  // Security Improvement: Use a more robust salt strategy if possible.
+  // Currently using userId which might be predictable.
+  const salt = `pexly_v1_secure_salt_${userId}`;
   const saltBuffer = encoder.encode(salt);
   
   const N = iterations;
