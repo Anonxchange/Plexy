@@ -12,6 +12,9 @@ async function getKeyMaterial(password: string): Promise<CryptoKey> {
   );
 }
 
+// Security Note: PBKDF2 iterations are set to 100,000. 
+// Increasing this further would improve security against brute-force
+// but might impact performance on slower mobile devices.
 async function deriveEncryptionKey(keyMaterial: CryptoKey, salt: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.deriveKey(
     {
