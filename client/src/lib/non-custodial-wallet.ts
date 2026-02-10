@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+
 import { generateMnemonic, mnemonicToSeed } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 import * as btc from "@scure/btc-signer";
@@ -29,9 +29,20 @@ function base58Encode(buffer: Uint8Array): string {
     }
   }
   let result = '';
-  for (let i = 0; buffer[i] === 0 && i < buffer.length - 1; i++) result += ALPHABET[0];
+  for (let i = 0; i < buffer.length && buffer[i] === 0; i++) result += ALPHABET[0];
   for (let i = digits.length - 1; i >= 0; i--) result += ALPHABET[digits[i]];
   return result;
+}
+
+function toHex(uint8: Uint8Array): string {
+  return Array.from(uint8)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function fromHex(hex: string): Uint8Array {
+  const match = hex.match(/.{1,2}/g);
+  return new Uint8Array(match ? match.map(byte => parseInt(byte, 16)) : []);
 }
 
 export interface NonCustodialWallet {
@@ -78,7 +89,7 @@ class NonCustodialWalletManager {
     if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
       address = await getBitcoinAddress(mnemonic);
       const account = root.derive("m/84'/0'/0'/0/0");
-      privateKey = Buffer.from(account.privateKey!).toString('hex');
+      privateKey = toHex(account.privateKey!);
       walletType = "bitcoin";
     } else if (chainId === "Solana") {
       address = await getSolanaAddress(mnemonic);
@@ -91,22 +102,22 @@ class NonCustodialWalletManager {
     } else if (chainId === "Tron (TRC-20)") {
       address = await getTronAddress(mnemonic);
       const account = root.derive("m/44'/195'/0'/0/0");
-      privateKey = Buffer.from(account.privateKey!).toString('hex');
+      privateKey = toHex(account.privateKey!);
       walletType = "tron";
     } else if (chainId === "XRP") {
       const account = root.derive("m/44'/144'/0'/0/0");
-      privateKey = Buffer.from(account.privateKey!).toString('hex');
+      privateKey = toHex(account.privateKey!);
       address = ripple.deriveAddress(ripple.deriveKeypair(privateKey).publicKey);
       walletType = "xrp";
     } else if (chainId === "ethereum" || chainId === "ETH" || chainId === "Ethereum" || chainId === "BNB" || chainId === "BSC") {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
-      privateKey = Buffer.from(account.privateKey!).toString('hex');
+      privateKey = toHex(account.privateKey!);
       walletType = (chainId === "BNB" || chainId === "BSC") ? "binance" : "ethereum";
     } else {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
-      privateKey = Buffer.from(account.privateKey!).toString('hex');
+      privateKey = toHex(account.privateKey!);
       walletType = chainId.toLowerCase();
     }
     
