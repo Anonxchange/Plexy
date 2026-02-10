@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+
 // Tron Transaction Signing
 // import { TronWeb } from 'tronweb';
 import TronWeb from 'tronweb';
@@ -32,7 +32,9 @@ async function getPrivateKeyFromMnemonic(mnemonic: string): Promise<string> {
     throw new Error('Failed to derive private key');
   }
   
-  return Buffer.from(child.privateKey).toString('hex');
+  return Array.from(child.privateKey)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 function getTronWeb(privateKey?: string): any {
