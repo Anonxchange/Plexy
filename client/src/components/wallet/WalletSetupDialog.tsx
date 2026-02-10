@@ -73,7 +73,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
           userId
         );
 
-        const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP"];
+        const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP", "BNB"];
         for (const chain of chains) {
           await nonCustodialWalletManager.generateNonCustodialWallet(
             chain,
