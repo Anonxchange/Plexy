@@ -1,5 +1,4 @@
-// EVM Transaction Signing - Stubbed (ethers removed)
-// To re-enable EVM functionality, install ethers: npm install ethers
+import { ethers } from 'ethers';
 
 export const CHAIN_CONFIGS: Record<string, { rpcUrl: string; chainId: number; symbol: string }> = {
   ETH: {
@@ -47,34 +46,83 @@ export interface SignedEVMTransaction {
 }
 
 export async function getEVMBalance(
-  _mnemonic: string,
-  _currency: string
+  mnemonic: string,
+  currency: string
 ): Promise<string> {
-  console.warn('[evmSigner] EVM functionality disabled - ethers package removed');
-  return "0";
+  const wallet = ethers.Wallet.fromPhrase(mnemonic);
+  const config = CHAIN_CONFIGS[currency] || CHAIN_CONFIGS['ETH'];
+  const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+  
+  if (currency.includes('USDT') || currency.includes('USDC')) {
+    const tokenContract = TOKEN_CONTRACTS[currency];
+    if (!tokenContract) return "0";
+    const abi = ["function balanceOf(address) view returns (uint256)"];
+    const contract = new ethers.Contract(tokenContract.address, abi, provider);
+    const balance = await contract.balanceOf(wallet.address);
+    return ethers.formatUnits(balance, tokenContract.decimals);
+  }
+  
+  const balance = await provider.getBalance(wallet.address);
+  return ethers.formatEther(balance);
 }
 
 export async function signEVMTransaction(
-  _mnemonic: string,
-  _request: EVMTransactionRequest
+  mnemonic: string,
+  request: EVMTransactionRequest
 ): Promise<SignedEVMTransaction> {
-  throw new Error('EVM signing disabled - ethers package removed. Install ethers to re-enable.');
+  const wallet = ethers.Wallet.fromPhrase(mnemonic);
+  const config = CHAIN_CONFIGS[request.currency.split('_')[0]] || CHAIN_CONFIGS['ETH'];
+  const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+  const connectedWallet = wallet.connect(provider);
+
+  let tx: ethers.TransactionRequest = {
+    to: request.to,
+    value: ethers.parseEther(request.amount),
+  };
+
+  if (request.currency.includes('USDT') || request.currency.includes('USDC')) {
+    const tokenContract = TOKEN_CONTRACTS[request.currency];
+    const abi = ["function transfer(address, uint256) returns (bool)"];
+    const contract = new ethers.Contract(tokenContract.address, abi, connectedWallet);
+    const amount = ethers.parseUnits(request.amount, tokenContract.decimals);
+    const populatedTx = await contract.transfer.populateTransaction(request.to, amount);
+    tx = { ...populatedTx, value: 0n };
+  }
+
+  const signedTx = await connectedWallet.signTransaction(tx);
+  const txResponse = ethers.Transaction.from(signedTx);
+
+  return {
+    signedTx,
+    txHash: txResponse.hash!,
+    from: wallet.address,
+    to: request.to,
+    value: request.amount,
+    currency: request.currency
+  };
 }
 
 export async function broadcastEVMTransaction(
-  _signedTx: string,
-  _chain: string
+  signedTx: string,
+  chain: string
 ): Promise<string> {
-  throw new Error('EVM broadcast disabled - ethers package removed. Install ethers to re-enable.');
+  const config = CHAIN_CONFIGS[chain] || CHAIN_CONFIGS['ETH'];
+  const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+  const tx = await provider.broadcastTransaction(signedTx);
+  return tx.hash;
 }
 
 export async function signEVMMessage(
-  _mnemonic: string | undefined,
-  _message: string
+  mnemonic: string | undefined,
+  message: string
 ): Promise<string> {
-  throw new Error('EVM message signing disabled - ethers package removed. Install ethers to re-enable.');
+  if (!mnemonic) throw new Error("Mnemonic required");
+  const wallet = ethers.Wallet.fromPhrase(mnemonic);
+  return await wallet.signMessage(message);
 }
 
-export function getEVMAddress(_mnemonic: string | undefined): string {
-  throw new Error('EVM address derivation disabled - ethers package removed. Install ethers to re-enable.');
+export async function getEVMAddress(mnemonic: string | undefined): Promise<string> {
+  if (!mnemonic) throw new Error("Mnemonic required");
+  const wallet = ethers.Wallet.fromPhrase(mnemonic);
+  return wallet.address;
 }
