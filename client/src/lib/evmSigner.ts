@@ -146,12 +146,12 @@ export async function signEVMTransaction(
     value = BigInt(Math.floor(Number(request.amount) * 1e18));
   }
 
-  const tx = [nonce, gasPrice, gasLimit, to, value, data, config.chainId, 0n, 0n];
+  const tx = [nonce, gasPrice, gasLimit, to, value, data, config.chainId, BigInt(0), BigInt(0)];
   const encoded = RLP.encode(tx);
   const hash = keccak_256(encoded);
 
   const signature = await secp.sign(hash, privKey, { recovered: true });
-  const [sig, recovery] = signature;
+  const [sig, recovery] = (signature as any);
   const v = BigInt(config.chainId * 2 + 35 + recovery);
   const r = BigInt("0x" + bytesToHex(sig.slice(0, 32)));
   const s = BigInt("0x" + bytesToHex(sig.slice(32, 64)));
@@ -193,8 +193,8 @@ export async function signEVMMessage(
   const msgHash = keccak_256(
     new TextEncoder().encode(`\x19Ethereum Signed Message:\n${message.length}${message}`)
   );
-  const sig = await secp.sign(msgHash, priv, { recovered: true });
-  return "0x" + bytesToHex(sig[0]);
+  const signature = await secp.sign(msgHash, priv);
+  return "0x" + bytesToHex((signature as any).toCompactRawBytes());
 }
 
 /* -------------------------------------------------------------------------- */
