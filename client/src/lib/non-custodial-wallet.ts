@@ -1,6 +1,5 @@
 import { generateMnemonic, mnemonicToSeed } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
-import * as btc from "@scure/btc-signer";
 import { HDKey } from "@scure/bip32";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
@@ -8,9 +7,6 @@ import { base58 } from "@scure/base";
 import { getValue, setValue } from "./ids";
 
 // Local Signer Imports
-import { signBitcoinTransaction, getBitcoinAddress } from "./bitcoinSigner";
-import { signSolanaTransaction, getSolanaAddress } from "./solanaSigner";
-import { signTronTransaction, getTronAddress } from "./tronSigner";
 import { getEVMAddress } from "./evmSigner";
 import { deriveKey } from "./keyDerivation";
 import { encryptAES, decryptAES } from "./webCrypto";
