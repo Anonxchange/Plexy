@@ -2,8 +2,8 @@ import { generateMnemonic, mnemonicToSeed } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 import * as btc from "@scure/btc-signer";
 import { HDKey } from "@scure/bip32";
-import { sha256 } from "@noble/hashes/sha2";
-import { ripemd160 } from "@noble/hashes/legacy";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { ripemd160 } from "@noble/hashes/legacy.js";
 import { base58 } from "@scure/base";
 
 // Local Signer Imports
