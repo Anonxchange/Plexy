@@ -5,7 +5,6 @@ import { sha256 } from "@noble/hashes/sha256";
 import { ripemd160 } from "@noble/hashes/ripemd160";
 import { base58 } from "@scure/base";
 import { getValue, setValue } from "./ids";
-import * as ed25519 from "ed25519-hd-key";
 
 // Local Signer Imports
 import { getEVMAddress } from "./evmSigner";
@@ -131,14 +130,16 @@ class NonCustodialWalletManager {
     } else if (chainId === "Solana") {
       address = await getSolanaAddress(mnemonic);
       const seed = await mnemonicToSeed(mnemonic);
-      const derived = ed25519.derivePath("m/44'/501'/0'/0'", toHex(seed));
+      // Using @scure/bip32 for derivation
+      const hdKey = HDKey.fromMasterSeed(new Uint8Array(seed));
+      const derived = hdKey.derive("m/44'/501'/0'/0'");
       
-      if (!derived.key) {
+      if (!derived.privateKey) {
         throw new Error("Failed to derive Solana private key");
       }
 
-      // Solana uses 64-byte secretKey (priv + pub)
-      privateKey = toHex(derived.key);
+      // Solana uses 32-byte private key for public key derivation
+      privateKey = toHex(derived.privateKey);
       walletType = "solana";
     } else if (chainId === "Tron (TRC-20)") {
       address = await getTronAddress(mnemonic);
