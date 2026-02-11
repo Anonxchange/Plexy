@@ -38,13 +38,16 @@ export default function WalletPage() {
   }, [user, loading, setLocation]);
 
   useEffect(() => {
-    if (user && !isWalletLoading && wallet?.assets.length === 0) {
-      // Check if user has non-custodial wallets locally
-      const localWallets = (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
-      if (localWallets.length === 0) {
-        setSetupDialogOpen(true);
+    const checkWallets = async () => {
+      if (user && !isWalletLoading && wallet?.assets.length === 0) {
+        // Check if user has non-custodial wallets locally
+        const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
+        if (localWallets.length === 0) {
+          setSetupDialogOpen(true);
+        }
       }
-    }
+    };
+    checkWallets();
   }, [user, isWalletLoading, wallet?.assets.length]);
 
   if (!loading && !user) {
