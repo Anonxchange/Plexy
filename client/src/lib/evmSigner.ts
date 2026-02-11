@@ -1,3 +1,4 @@
+import * as RLP from "@ethereumjs/rlp";
 import { mnemonicToSeed } from "@scure/bip39";
 import { HDKey } from "@scure/bip32";
 import * as secp from "@noble/secp256k1";
