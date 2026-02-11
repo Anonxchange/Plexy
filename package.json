@@ -11,11 +11,13 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@ethereumjs/rlp": "^10.1.1",
     "@hookform/resolvers": "^3.10.0",
     "@marsidev/react-turnstile": "^1.4.0",
     "@neondatabase/serverless": "^0.10.4",
     "@noble/curves": "^2.0.1",
-    "@noble/hashes": "^2.0.1",
+    "@noble/hashes": "^1.7.1",
+    "@noble/secp256k1": "^1.7.1",
     "@radix-ui/react-accordion": "^1.2.4",
     "@radix-ui/react-alert-dialog": "^1.1.7",
     "@radix-ui/react-aspect-ratio": "^1.1.3",
