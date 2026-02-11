@@ -13,7 +13,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, CheckCircle2, Globe, Loader2, AlertCircle, MapPin } from "lucide-react";
 import { ipWhitelist, IPWhitelistEntry } from "@/lib/security/ip-whitelist";
-import { formatDistanceToNow } from "date-fns";
+
+const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
+  const d = typeof date === 'number' || typeof date === 'string' ? new Date(date) : date;
+  const diff = Math.floor((new Date().getTime() - d.getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+};
 
 interface IPWhitelistDialogProps {
   open: boolean;
