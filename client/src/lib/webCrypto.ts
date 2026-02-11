@@ -44,12 +44,17 @@ export async function encryptAES(plaintext: string, password: string): Promise<s
     encoder.encode(plaintext)
   );
   
-  const combined = new Uint8Array(salt.length + iv.length + ciphertext.byteLength);
-  combined.set(salt, 0);
-  combined.set(iv, salt.length);
-  combined.set(new Uint8Array(ciphertext), salt.length + iv.length);
+  const combinedArray = new Uint8Array(salt.length + iv.length + ciphertext.byteLength);
+  combinedArray.set(salt, 0);
+  combinedArray.set(iv, salt.length);
+  combinedArray.set(new Uint8Array(ciphertext), salt.length + iv.length);
   
-  return btoa(String.fromCharCode(...combined));
+  // Use a safer way to convert Uint8Array to base64 without using spread on large arrays
+  let binary = "";
+  for (let i = 0; i < combinedArray.length; i++) {
+    binary += String.fromCharCode(combinedArray[i]);
+  }
+  return btoa(binary);
 }
 
 export async function decryptAES(encryptedBase64: string, password: string): Promise<string> {
