@@ -1,17 +1,23 @@
-
 import { generateMnemonic, mnemonicToSeed } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 import * as btc from "@scure/btc-signer";
 import { HDKey } from "@scure/bip32";
+import { sha256 } from "@noble/hashes/sha256";
+import { ripemd160 } from "@noble/hashes/ripemd160";
+import { base58 } from "@scure/base";
+
+// Local Signer Imports
 import { signBitcoinTransaction, getBitcoinAddress } from "./bitcoinSigner";
 import { signSolanaTransaction, getSolanaAddress } from "./solanaSigner";
 import { signTronTransaction, getTronAddress } from "./tronSigner";
 import { getEVMAddress } from "./evmSigner";
 import { deriveKey } from "./keyDerivation";
 import { encryptAES, decryptAES } from "./webCrypto";
-import * as ripple from "ripple-keypairs";
 
+// Utility Constants & Functions
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const XRP_ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
+const xrpCodec = base58.alphabet(XRP_ALPHABET);
 
 function base58Encode(buffer: Uint8Array): string {
   if (buffer.length === 0) return '';
@@ -43,6 +49,21 @@ function toHex(uint8: Uint8Array): string {
 function fromHex(hex: string): Uint8Array {
   const match = hex.match(/.{1,2}/g);
   return new Uint8Array(match ? match.map(byte => parseInt(byte, 16)) : []);
+}
+
+/**
+ * Native XRP Address derivation (replaces ripple-keypairs)
+ */
+function deriveXrpAddress(publicKey: Uint8Array): string {
+  const accountId = ripemd160(sha256(publicKey));
+  const payload = new Uint8Array(21);
+  payload[0] = 0x00; // Type prefix for XRP
+  payload.set(accountId, 1);
+  const checksum = sha256(sha256(payload)).slice(0, 4);
+  const final = new Uint8Array(25);
+  final.set(payload);
+  final.set(checksum, 21);
+  return xrpCodec.encode(final);
 }
 
 export interface NonCustodialWallet {
@@ -107,7 +128,8 @@ class NonCustodialWalletManager {
     } else if (chainId === "XRP") {
       const account = root.derive("m/44'/144'/0'/0/0");
       privateKey = toHex(account.privateKey!);
-      address = ripple.deriveAddress(ripple.deriveKeypair(privateKey).publicKey);
+      // Replaced ripple-keypairs with native function
+      address = deriveXrpAddress(account.publicKey!);
       walletType = "xrp";
     } else if (chainId === "ethereum" || chainId === "ETH" || chainId === "Ethereum" || chainId === "BNB" || chainId === "BSC") {
       address = await getEVMAddress(mnemonic);
@@ -170,7 +192,7 @@ class NonCustodialWalletManager {
         address: w.address,
         walletType: w.wallet_type,
         encryptedPrivateKey: w.encrypted_private_key,
-        encryptedMnemonic: w.encrypted_mnemonic,
+        encryptedMnemonic: w.encrypted_mnemonic, // Fixed: Matched interface key
         isActive: w.is_active === 'true',
         isBackedUp: w.is_backed_up === 'true',
         createdAt: w.created_at,
