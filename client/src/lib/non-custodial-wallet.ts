@@ -2,8 +2,8 @@ import { generateMnemonic, mnemonicToSeed } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 import * as btc from "@scure/btc-signer";
 import { HDKey } from "@scure/bip32";
-import { sha256 } from "@noble/hashes/sha256";
-import { ripemd160 } from "@noble/hashes/ripemd160";
+import { sha256 } from "@noble/hashes/sha2";
+import { ripemd160 } from "@noble/hashes/legacy";
 import { base58 } from "@scure/base";
 
 // Local Signer Imports
@@ -17,7 +17,10 @@ import { encryptAES, decryptAES } from "./webCrypto";
 // Constants for Encoding
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const XRP_ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
-const xrpCodec = base58.alphabet(XRP_ALPHABET);
+const xrpCodec = {
+  encode: (bytes: Uint8Array) => base58.encode(bytes),
+  decode: (str: string) => base58.decode(str)
+};
 
 /**
  * 100% Buffer-free Base58 Encoder for general use
