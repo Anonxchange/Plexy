@@ -3,7 +3,7 @@ import { mnemonicToSeed } from "@scure/bip39";
 import { HDKey } from "@scure/bip32";
 import * as secp from "@noble/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { bytesToHex } from "@noble/hashes/utils";
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
@@ -58,20 +58,11 @@ function toHex(bytes: Uint8Array): string {
   return "0x" + bytesToHex(bytes);
 }
 
-function stripHex(hex: string) {
-  return hex.startsWith("0x") ? hex.slice(2) : hex;
-}
-
 async function rpcCall(rpcUrl: string, method: string, params: any[]) {
   const res = await fetch(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method,
-      params
-    })
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
   });
   const json = await res.json();
   return json.result;
@@ -111,22 +102,12 @@ export async function getEVMBalance(
 
   if (currency.includes("USDT") || currency.includes("USDC")) {
     const token = TOKEN_CONTRACTS[currency];
-    const data =
-      "0x70a08231" + address.replace("0x", "").padStart(64, "0");
-
-    const result = await rpcCall(config.rpcUrl, "eth_call", [
-      { to: token.address, data },
-      "latest"
-    ]);
-
+    const data = "0x70a08231" + address.replace("0x", "").padStart(64, "0");
+    const result = await rpcCall(config.rpcUrl, "eth_call", [{ to: token.address, data }, "latest"]);
     return (BigInt(result) / BigInt(10 ** token.decimals)).toString();
   }
 
-  const balance = await rpcCall(config.rpcUrl, "eth_getBalance", [
-    address,
-    "latest"
-  ]);
-
+  const balance = await rpcCall(config.rpcUrl, "eth_getBalance", [address, "latest"]);
   return (BigInt(balance) / BigInt(1e18)).toString();
 }
 
@@ -138,22 +119,17 @@ export async function signEVMTransaction(
   mnemonic: string,
   request: EVMTransactionRequest
 ): Promise<SignedEVMTransaction> {
-
   const privKey = await derivePrivateKey(mnemonic);
   const from = await deriveAddress(mnemonic);
-
   const baseChain = request.currency.split("_")[0];
   const config = CHAIN_CONFIGS[baseChain] || CHAIN_CONFIGS["ETH"];
 
-  const nonce =
-    request.nonce ??
-    parseInt(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "latest"]), 16);
+  const nonce = request.nonce ??
+    parseInt(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "pending"]), 16);
 
-  const gasPrice =
-    BigInt(request.gasPrice ??
-      await rpcCall(config.rpcUrl, "eth_gasPrice", []));
+  const gasPrice = BigInt(request.gasPrice ?? await rpcCall(config.rpcUrl, "eth_gasPrice", []));
 
-  const gasLimit = BigInt(request.gasLimit ?? 21000);
+  let gasLimit = request.gasLimit ? BigInt(request.gasLimit) : BigInt(21000);
 
   let to = request.to;
   let value = BigInt(0);
@@ -164,44 +140,23 @@ export async function signEVMTransaction(
     const amount = BigInt(Math.floor(Number(request.amount) * 10 ** token.decimals));
     data = encodeERC20Transfer(request.to, amount);
     to = token.address;
+    gasLimit = BigInt(60000); // Default ERC20 gas
+    value = BigInt(0);
   } else {
     value = BigInt(Math.floor(Number(request.amount) * 1e18));
   }
 
-  const tx = [
-    nonce,
-    gasPrice,
-    gasLimit,
-    to,
-    value,
-    data,
-    config.chainId,
-    0,
-    0
-  ];
-
+  const tx = [nonce, gasPrice, gasLimit, to, value, data, config.chainId, 0n, 0n];
   const encoded = RLP.encode(tx);
   const hash = keccak_256(encoded);
 
   const signature = await secp.sign(hash, privKey, { recovered: true });
   const [sig, recovery] = signature;
-
   const v = BigInt(config.chainId * 2 + 35 + recovery);
   const r = BigInt("0x" + bytesToHex(sig.slice(0, 32)));
   const s = BigInt("0x" + bytesToHex(sig.slice(32, 64)));
 
-  const signedTx = RLP.encode([
-    nonce,
-    gasPrice,
-    gasLimit,
-    to,
-    value,
-    data,
-    v,
-    r,
-    s
-  ]);
-
+  const signedTx = RLP.encode([nonce, gasPrice, gasLimit, to, value, data, v, r, s]);
   const txHash = "0x" + bytesToHex(keccak_256(signedTx));
 
   return {
@@ -236,11 +191,8 @@ export async function signEVMMessage(
 ): Promise<string> {
   const priv = await derivePrivateKey(mnemonic);
   const msgHash = keccak_256(
-    new TextEncoder().encode(
-      `\x19Ethereum Signed Message:\n${message.length}${message}`
-    )
+    new TextEncoder().encode(`\x19Ethereum Signed Message:\n${message.length}${message}`)
   );
-
   const sig = await secp.sign(msgHash, priv, { recovered: true });
   return "0x" + bytesToHex(sig[0]);
 }
