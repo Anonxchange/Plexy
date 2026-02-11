@@ -94,60 +94,58 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     }
 
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-    const userWallets = (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
     
-    // console.log("[ReceiveCryptoDialog] Debug search:", {
-    //   selectedCrypto,
-    //   selectedNetwork,
-    //   symbolToUse,
-    //   availableWallets: userWallets.map((w: any) => ({ chainId: w.chainId, address: w.address }))
-    // });
+    const fetchAddress = async () => {
+      const userWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
+      
+      // Look for a wallet matching the specific symbol or base symbol
+      const targetWallet = userWallets.find((w: any) => {
+        const normalizedChainId = w.chainId.toUpperCase();
+        const normalizedSymbolToUse = symbolToUse.toUpperCase();
+        const normalizedSelectedCrypto = selectedCrypto.toUpperCase();
+        
+      // Strict matching for networks to avoid Tron/ETH address mixup
+      if (selectedNetwork.includes('TRC-20')) {
+        return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
+      }
+      if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM'].includes(selectedNetwork.toUpperCase())) {
+        return normalizedChainId.includes('ERC-20') || 
+               ['ETH', 'MATIC', 'OP', 'ARB'].includes(normalizedChainId) ||
+               normalizedChainId === 'ETHEREUM' || normalizedChainId === normalizedSelectedCrypto;
+      }
+        if (selectedNetwork.includes('BEP-20')) {
+          return normalizedChainId.includes('BEP20') || (normalizedChainId === 'BNB' && normalizedSelectedCrypto === 'BNB') || (normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)');
+        }
+        if (selectedNetwork.includes('SPL') || selectedNetwork === 'Solana') {
+          return normalizedChainId.includes('SOL') || (normalizedChainId === 'SOLANA' && normalizedSelectedCrypto === 'SOL') || (normalizedChainId === 'SOLANA');
+        }
+        if (selectedNetwork.includes('SegWit') || selectedNetwork === 'Bitcoin') {
+          return normalizedChainId.includes('BITCOIN') || (normalizedChainId === 'BTC' && normalizedSelectedCrypto === 'BTC');
+        }
+        if (selectedNetwork.includes('BEP-20') || ['BNB', 'BSC'].includes(normalizedSelectedCrypto)) {
+          return normalizedChainId.includes('BEP20') || 
+                 normalizedChainId === 'BNB' || 
+                 normalizedChainId === 'BSC' ||
+                 normalizedChainId.includes('BINANCE');
+        }
+        if (selectedNetwork === 'Ripple' || selectedCrypto === 'XRP') {
+          return normalizedChainId === 'XRP' || normalizedChainId.includes('RIPPLE');
+        }
+        
+        return normalizedChainId === normalizedSymbolToUse || 
+               normalizedChainId === normalizedSelectedCrypto ||
+               normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`) ||
+               normalizedChainId.includes(normalizedSelectedCrypto);
+      });
+      
+      if (targetWallet) {
+        setWalletAddress(targetWallet.address);
+      } else {
+        setWalletAddress("");
+      }
+    };
 
-    // Look for a wallet matching the specific symbol or base symbol
-    const targetWallet = userWallets.find((w: any) => {
-      const normalizedChainId = w.chainId.toUpperCase();
-      const normalizedSymbolToUse = symbolToUse.toUpperCase();
-      const normalizedSelectedCrypto = selectedCrypto.toUpperCase();
-      
-    // Strict matching for networks to avoid Tron/ETH address mixup
-    if (selectedNetwork.includes('TRC-20')) {
-      return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
-    }
-    if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM'].includes(selectedNetwork.toUpperCase())) {
-      return normalizedChainId.includes('ERC-20') || 
-             ['ETH', 'MATIC', 'OP', 'ARB'].includes(normalizedChainId) ||
-             normalizedChainId === 'ETHEREUM' || normalizedChainId === normalizedSelectedCrypto;
-    }
-      if (selectedNetwork.includes('BEP-20')) {
-        return normalizedChainId.includes('BEP20') || (normalizedChainId === 'BNB' && normalizedSelectedCrypto === 'BNB') || (normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)');
-      }
-      if (selectedNetwork.includes('SPL') || selectedNetwork === 'Solana') {
-        return normalizedChainId.includes('SOL') || (normalizedChainId === 'SOLANA' && normalizedSelectedCrypto === 'SOL') || (normalizedChainId === 'SOLANA');
-      }
-      if (selectedNetwork.includes('SegWit') || selectedNetwork === 'Bitcoin') {
-        return normalizedChainId.includes('BITCOIN') || (normalizedChainId === 'BTC' && normalizedSelectedCrypto === 'BTC');
-      }
-      if (selectedNetwork.includes('BEP-20') || ['BNB', 'BSC'].includes(normalizedSelectedCrypto)) {
-        return normalizedChainId.includes('BEP20') || 
-               normalizedChainId === 'BNB' || 
-               normalizedChainId === 'BSC' ||
-               normalizedChainId.includes('BINANCE');
-      }
-      if (selectedNetwork === 'Ripple' || selectedCrypto === 'XRP') {
-        return normalizedChainId === 'XRP' || normalizedChainId.includes('RIPPLE');
-      }
-      
-      return normalizedChainId === normalizedSymbolToUse || 
-             normalizedChainId === normalizedSelectedCrypto ||
-             normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`) ||
-             normalizedChainId.includes(normalizedSelectedCrypto);
-    });
-    
-    if (targetWallet) {
-      setWalletAddress(targetWallet.address);
-    } else {
-      setWalletAddress("");
-    }
+    fetchAddress();
   }, [selectedCrypto, selectedNetwork, user]);
 
   const handleAssetChange = (value: string) => {
@@ -165,27 +163,27 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[420px] p-0 bg-background border-none gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[420px] p-0 bg-background border border-border shadow-lg gap-0 overflow-hidden">
         <DialogHeader className="p-4 flex flex-row items-center justify-between border-b border-border/50">
-          <DialogTitle className="text-base font-bold">
+          <DialogTitle className="text-base font-bold text-foreground">
             Receive {ASSET_NAMES[selectedCrypto] || selectedCrypto}
           </DialogTitle>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleClose}
-            className="h-7 w-7 rounded-full"
+            className="h-7 w-7 rounded-full text-foreground/50 hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 bg-background">
           {/* Asset Selection */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground/70">Asset</label>
+            <label className="text-xs font-semibold text-muted-foreground">Asset</label>
             <Select value={selectedCrypto} onValueChange={handleAssetChange}>
-              <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
+              <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg text-foreground">
                 <SelectValue>
                   <div className="flex items-center gap-2">
                     <img 
@@ -193,20 +191,20 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                       alt={selectedCrypto}
                       className="w-5 h-5 rounded-full"
                     />
-                    <span className="font-bold text-sm">
+                    <span className="font-bold text-sm text-foreground">
                       {ASSET_NAMES[selectedCrypto] || selectedCrypto}
                     </span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
               <SelectContent 
-                className="rounded-lg max-h-[250px] overflow-y-auto"
+                className="rounded-lg max-h-[250px] overflow-y-auto bg-popover border-border"
                 position="popper"
                 sideOffset={4}
               >
                 <ScrollArea className="h-full w-full">
                   {Object.entries(ASSET_NAMES).map(([symbol, name]) => (
-                    <SelectItem key={symbol} value={symbol} className="rounded-md cursor-pointer">
+                    <SelectItem key={symbol} value={symbol} className="rounded-md cursor-pointer text-foreground hover:bg-accent hover:text-accent-foreground">
                       <div className="flex items-center gap-2 py-1">
                         <img 
                           src={cryptoIconUrls[symbol] || 
@@ -219,7 +217,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                             (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${symbol}&background=random`;
                           }}
                         />
-                        <span className="font-bold text-sm">{name}</span>
+                        <span className="font-bold text-sm text-foreground">{name}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -230,20 +228,20 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
           {/* Network Display */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground/70">Network</label>
+            <label className="text-xs font-semibold text-muted-foreground">Network</label>
             <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-              <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
+              <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg text-foreground">
                 <SelectValue placeholder="Select a network" />
               </SelectTrigger>
               <SelectContent 
-                className="rounded-lg"
+                className="rounded-lg bg-popover border-border"
                 position="popper"
                 sideOffset={4}
               >
                 <ScrollArea className="h-full w-full">
                   {(networkMap[selectedCrypto] || ["Mainnet"]).map((network) => (
-                    <SelectItem key={network} value={network} className="rounded-md">
-                      <span className="font-medium text-sm">{network}</span>
+                    <SelectItem key={network} value={network} className="rounded-md text-foreground hover:bg-accent hover:text-accent-foreground">
+                      <span className="font-medium text-sm text-foreground">{network}</span>
                     </SelectItem>
                   ))}
                 </ScrollArea>
@@ -253,7 +251,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
           {/* Deposit Address Section */}
           <div className="space-y-3">
-            <label className="text-xs font-semibold text-foreground/70">Deposit address</label>
+            <label className="text-xs font-semibold text-muted-foreground">Deposit address</label>
             
             <div className="flex flex-col items-center justify-center space-y-4">
               <div className="bg-white p-3 rounded-xl shadow-sm border border-border/10">
@@ -273,7 +271,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
               <div className="w-full space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold">
+                  <span className="text-xs font-bold text-foreground">
                     {ASSET_NAMES[selectedCrypto] || selectedCrypto} #1 ({selectedNetwork?.split(' ')[0] || selectedCrypto})
                   </span>
                   <Button
@@ -285,7 +283,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                     <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <div className="p-3 bg-muted/10 rounded-lg break-all text-sm font-mono text-foreground/90 leading-relaxed tracking-tight border border-border/50 shadow-inner">
+                <div className="p-3 bg-muted/30 rounded-lg break-all text-sm font-mono text-foreground leading-relaxed tracking-tight border border-border/50 shadow-inner">
                   {walletAddress || "Generating address..."}
                 </div>
               </div>
@@ -294,14 +292,15 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
             <div className="pt-1">
               <Button 
                 variant="outline" 
-                className="w-full h-10 rounded-lg border-border/50 text-foreground/40 font-bold bg-muted/10 text-xs"
+                className="w-full h-10 rounded-lg border-border/50 text-foreground/40 font-bold bg-muted/10 text-xs hover:bg-muted/20"
                 disabled
               >
                 Deposit to your wallet
               </Button>
-              <p className="text-[10px] text-destructive/80 text-center mt-2 leading-tight px-4">
+              <p className="text-[10px] text-destructive/80 text-center mt-2 leading-tight px-4 font-medium">
                 Only send this exact asset to this address.
-Sending any other asset will result in permanent loss.     </p>
+                Sending any other asset will result in permanent loss.
+              </p>
             </div>
           </div>
         </div>
