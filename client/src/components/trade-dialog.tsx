@@ -133,9 +133,6 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
     setIsCreatingTrade(true);
 
     try {
-      const { createClient } = await import("@/lib/supabase");
-      const supabase = createClient();
-
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -153,7 +150,6 @@ export function TradeDialog({ open, onOpenChange, offer }: TradeDialogProps) {
 
       if (offer.cryptoSymbol === 'BTC') {
         try {
-          const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
           const wallets = nonCustodialWalletManager.getWalletsFromStorage(currentUserId);
           const btcWallet = wallets.find(w => w.chainId.toLowerCase() === 'bitcoin');
 
