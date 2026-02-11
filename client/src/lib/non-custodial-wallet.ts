@@ -216,37 +216,39 @@ class NonCustodialWalletManager {
     return this.decryptPrivateKey(wallet.encryptedMnemonic, password, userId);
   }
 
-  public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
-    const { data, error } = await supabase
-      .from('user_wallets')
-      .select('*')
-      .eq('user_id', userId);
+ public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
+  const { data, error } = await supabase
+    .from('user_wallets')
+    .select('*')
+    .eq('user_id', userId);
 
-    if (error) {
-      console.error("Error loading wallets from Supabase:", error);
-      return [];
-    }
-
-    if (data && data.length > 0) {
-      const wallets: NonCustodialWallet[] = data.map((w: any) => ({
-        id: w.id,
-        chainId: w.chain_id,
-        address: w.address,
-        walletType: w.wallet_type,
-        encryptedPrivateKey: w.encrypted_private_key,
-        encryptedMnemonic: w.encrypted_mnemonic, 
-        isActive: w.is_active === 'true',
-        isBacked_up: w.is_backed_up === 'true',
-        createdAt: w.created_at,
-        assetType: w.asset_type,
-        baseChainWalletId: w.base_chain_wallet_id,
-        balance: w.balance
-      }));
-      await this.saveWalletsToStorage(wallets, userId);
-      return wallets;
-    }
+  if (error) {
+    console.error("Error loading wallets from Supabase:", error);
     return [];
   }
+
+  if (data && data.length > 0) {
+    const wallets: NonCustodialWallet[] = data.map((w: any) => ({
+      id: w.id,
+      chainId: w.chain_id,
+      address: w.address,
+      walletType: w.wallet_type,
+      encryptedPrivateKey: w.encrypted_private_key,
+      encryptedMnemonic: w.encrypted_mnemonic,
+      isActive: w.is_active === 'true',
+      isBackedUp: w.is_backed_up === 'true', // ✅ FIXED
+      createdAt: w.created_at,
+      assetType: w.asset_type,
+      baseChainWalletId: w.base_chain_wallet_id,
+      balance: w.balance
+    }));
+
+    await this.saveWalletsToStorage(wallets, userId);
+    return wallets;
+  }
+
+  return [];
+}
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
     const { error } = await supabase
