@@ -135,8 +135,7 @@ export function TradeStartedSection({
                       approveBtn.click();
                     } else {
                       // Fallback logic if for some reason the hidden button isn't there
-                      const { createClient } = await import("@/lib/supabase");
-                      const supabase = createClient();
+                      const { supabase } = await import("@/lib/supabase");
                       const { data: { session } } = await supabase.auth.getSession();
                       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/btc-escrow-create`, {
                         method: 'POST',
