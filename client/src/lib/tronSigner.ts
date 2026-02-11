@@ -6,6 +6,8 @@ import { mnemonicToSeed } from './keyDerivation';
 import { HDKey } from '@scure/bip32';
 import { TOKEN_CONTRACTS } from './evmSigner';
 
+import * as ed25519 from "ed25519-hd-key";
+
 const DERIVATION_PATH = "m/44'/195'/0'/0/0";
 const TRONGRID_API = 'https://api.trongrid.io';
 
@@ -25,7 +27,13 @@ export interface SignedTronTransaction {
 
 async function getPrivateKeyFromMnemonic(mnemonic: string): Promise<string> {
   const seed = await mnemonicToSeed(mnemonic);
-  const hdKey = HDKey.fromMasterSeed(seed);
+  const seedHex = Array.from(new Uint8Array(seed))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+    
+  // Tron uses BIP44 standard derivation on secp256k1 curve
+  // Using HDKey (secp256k1) is correct for Tron m/44'/195'/0'/0/0
+  const hdKey = HDKey.fromMasterSeed(new Uint8Array(seed));
   const child = hdKey.derive(DERIVATION_PATH);
   
   if (!child.privateKey) {
