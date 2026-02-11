@@ -5,6 +5,7 @@ import { HDKey } from "@scure/bip32";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
 import { base58 } from "@scure/base";
+import { getValue, setValue } from "./idb";
 
 // Local Signer Imports
 import { signBitcoinTransaction, getBitcoinAddress } from "./bitcoinSigner";
@@ -173,9 +174,9 @@ class NonCustodialWalletManager {
       isBackedUp: false,
     };
     
-    const wallets = this.getWalletsFromStorage(userId);
+    const wallets = await this.getWalletsFromStorage(userId);
     const updatedWallets = [...wallets, newWallet];
-    this.saveWalletsToStorage(updatedWallets, userId);
+    await this.saveWalletsToStorage(updatedWallets, userId);
 
     if (supabase) {
       await this.saveWalletToSupabase(supabase, newWallet, userId);
@@ -184,12 +185,36 @@ class NonCustodialWalletManager {
     return { wallet: newWallet, mnemonicPhrase: mnemonic };
   }
 
-  public getWalletsFromStorage(userId: string): NonCustodialWallet[] {
-    const data = localStorage.getItem(this.getStorageKey(userId));
-    return data ? JSON.parse(data) : [];
+  public async getWalletsFromStorage(userId: string): Promise<NonCustodialWallet[]> {
+    const data = await getValue('wallets', this.getStorageKey(userId));
+    if (data) return data;
+    
+    // Fallback for migration
+    const legacyData = localStorage.getItem(this.getStorageKey(userId));
+    if (legacyData) {
+      try {
+        const wallets = JSON.parse(legacyData);
+        await this.saveWalletsToStorage(wallets, userId);
+        localStorage.removeItem(this.getStorageKey(userId));
+        return wallets;
+      } catch (e) {
+        console.error("Failed to migrate legacy wallets:", e);
+      }
+    }
+    return [];
   }
 
-  public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
+  // Renamed to match async pattern
+  public async getNonCustodialWallets(userId: string): Promise<NonCustodialWallet[]> {
+    return this.getWalletsFromStorage(userId);
+  }
+
+  public async getWalletMnemonic(walletId: string, password: string, userId: string): Promise<string | null> {
+    const wallets = await this.getWalletsFromStorage(userId);
+    const wallet = wallets.find(w => w.id === walletId);
+    if (!wallet || !wallet.encryptedMnemonic) return null;
+    return this.decryptPrivateKey(wallet.encryptedMnemonic, password, userId);
+  }
     const { data, error } = await supabase
       .from('user_wallets')
       .select('*')
@@ -215,7 +240,7 @@ class NonCustodialWalletManager {
         baseChainWalletId: w.base_chain_wallet_id,
         balance: w.balance
       }));
-      this.saveWalletsToStorage(wallets, userId);
+      await this.saveWalletsToStorage(wallets, userId);
       return wallets;
     }
     return [];
@@ -245,8 +270,8 @@ class NonCustodialWalletManager {
     }
   }
 
-  private saveWalletsToStorage(wallets: NonCustodialWallet[], userId: string): void {
-    localStorage.setItem(this.getStorageKey(userId), JSON.stringify(wallets));
+  private async saveWalletsToStorage(wallets: NonCustodialWallet[], userId: string): Promise<void> {
+    await setValue('wallets', this.getStorageKey(userId), wallets);
   }
 
   private async encryptPrivateKey(data: string, password: string, userId: string): Promise<string> {
