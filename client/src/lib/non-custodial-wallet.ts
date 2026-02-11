@@ -130,30 +130,15 @@ class NonCustodialWalletManager {
       walletType = "bitcoin";
     } else if (chainId === "Solana") {
       address = await getSolanaAddress(mnemonic);
-      const seedHex = toHex(new Uint8Array(seed));
-      const derived = ed25519.derivePath("m/44'/501'/0'/0'", seedHex);
+      const seed = await mnemonicToSeed(mnemonic);
+      const derived = ed25519.derivePath("m/44'/501'/0'/0'", toHex(seed));
       
       if (!derived.key) {
         throw new Error("Failed to derive Solana private key");
       }
 
       // Solana uses 64-byte secretKey (priv + pub)
-      // Note: In ed25519-hd-key, the derived key is the 32-byte seed/private key
-      // The full 64-byte secret key is [privateKey, publicKey]
-      const privateKeyRaw = derived.key;
-      // We'll need the public key to form the 64-byte secret key if the rest of the app expects it
-      // However, the user prompt says "Always validate privateKey exists before use: Do not use HDKey for Solana derivation."
-      // The current code was trying to use HDKey which is secp256k1.
-      
-      // If the app expects a 64-byte hex string or base58 of 64 bytes:
-      // In many Solana libraries, secretKey = privateKey + publicKey
-      // For now, I'll follow the existing logic of trying to build a 64-byte array if possible, 
-      // but ensuring it comes from ed25519.
-      
-      // Since I don't have a library here to easily get the public key from the private key without more imports,
-      // and the prompt focus is on avoiding HDKey/secp256k1, I will derive the key correctly.
-      
-      privateKey = toHex(privateKeyRaw);
+      privateKey = toHex(derived.key);
       walletType = "solana";
     } else if (chainId === "Tron (TRC-20)") {
       address = await getTronAddress(mnemonic);
