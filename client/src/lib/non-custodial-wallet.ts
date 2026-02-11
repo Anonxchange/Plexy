@@ -14,16 +14,19 @@ import { getEVMAddress } from "./evmSigner";
 import { deriveKey } from "./keyDerivation";
 import { encryptAES, decryptAES } from "./webCrypto";
 
-// Utility Constants & Functions
+// Constants for Encoding
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const XRP_ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
 const xrpCodec = base58.alphabet(XRP_ALPHABET);
 
-function base58Encode(buffer: Uint8Array): string {
-  if (buffer.length === 0) return '';
+/**
+ * 100% Buffer-free Base58 Encoder for general use
+ */
+function base58Encode(inputBytes: Uint8Array): string {
+  if (inputBytes.length === 0) return '';
   let digits = [0];
-  for (let i = 0; i < buffer.length; i++) {
-    let carry = buffer[i];
+  for (let i = 0; i < inputBytes.length; i++) {
+    let carry = inputBytes[i];
     for (let j = 0; j < digits.length; j++) {
       carry += digits[j] << 8;
       digits[j] = carry % 58;
@@ -35,7 +38,7 @@ function base58Encode(buffer: Uint8Array): string {
     }
   }
   let result = '';
-  for (let i = 0; i < buffer.length && buffer[i] === 0; i++) result += ALPHABET[0];
+  for (let i = 0; i < inputBytes.length && inputBytes[i] === 0; i++) result += ALPHABET[0];
   for (let i = digits.length - 1; i >= 0; i--) result += ALPHABET[digits[i]];
   return result;
 }
@@ -52,17 +55,26 @@ function fromHex(hex: string): Uint8Array {
 }
 
 /**
- * Native XRP Address derivation (replaces ripple-keypairs)
+ * Custom XRP Address Derivation using Uint8Array & noble-hashes
+ * Replaces 'ripple-keypairs' to avoid Buffer issues.
  */
 function deriveXrpAddress(publicKey: Uint8Array): string {
+  // 1. Account ID = Ripemd160(Sha256(pubKey))
   const accountId = ripemd160(sha256(publicKey));
+  
+  // 2. Payload = Prefix (0x00 for XRP) + Account ID
   const payload = new Uint8Array(21);
-  payload[0] = 0x00; // Type prefix for XRP
+  payload[0] = 0x00; 
   payload.set(accountId, 1);
+  
+  // 3. Checksum = First 4 bytes of Sha256(Sha256(payload))
   const checksum = sha256(sha256(payload)).slice(0, 4);
+  
+  // 4. Final = Payload + Checksum
   const final = new Uint8Array(25);
   final.set(payload);
   final.set(checksum, 21);
+  
   return xrpCodec.encode(final);
 }
 
@@ -115,6 +127,7 @@ class NonCustodialWalletManager {
     } else if (chainId === "Solana") {
       address = await getSolanaAddress(mnemonic);
       const account = root.derive("m/44'/501'/0'/0'");
+      // Solana uses 64-byte secretKey (priv + pub)
       const secretKey = new Uint8Array(64);
       secretKey.set(account.privateKey!);
       secretKey.set(account.publicKey!, 32);
@@ -128,10 +141,9 @@ class NonCustodialWalletManager {
     } else if (chainId === "XRP") {
       const account = root.derive("m/44'/144'/0'/0/0");
       privateKey = toHex(account.privateKey!);
-      // Replaced ripple-keypairs with native function
-      address = deriveXrpAddress(account.publicKey!);
+      address = deriveXrpAddress(account.publicKey!); 
       walletType = "xrp";
-    } else if (chainId === "ethereum" || chainId === "ETH" || chainId === "Ethereum" || chainId === "BNB" || chainId === "BSC") {
+    } else if (["ethereum", "ETH", "Ethereum", "BNB", "BSC"].includes(chainId)) {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
       privateKey = toHex(account.privateKey!);
@@ -192,15 +204,17 @@ class NonCustodialWalletManager {
         address: w.address,
         walletType: w.wallet_type,
         encryptedPrivateKey: w.encrypted_private_key,
-        encryptedMnemonic: w.encrypted_mnemonic, // Fixed: Matched interface key
+        encryptedMnemonic: w.encrypted_mnemonic, 
         isActive: w.is_active === 'true',
         isBackedUp: w.is_backed_up === 'true',
         createdAt: w.created_at,
+        assetType: w.asset_type,
+        baseChainWalletId: w.base_chain_wallet_id,
+        balance: w.balance
       }));
       this.saveWalletsToStorage(wallets, userId);
       return wallets;
     }
-
     return [];
   }
 
@@ -217,6 +231,10 @@ class NonCustodialWalletManager {
         encrypted_mnemonic: wallet.encryptedMnemonic,
         is_active: wallet.isActive ? 'true' : 'false',
         is_backed_up: wallet.isBackedUp ? 'true' : 'false',
+        asset_type: wallet.assetType,
+        base_chain_wallet_id: wallet.baseChainWalletId,
+        balance: wallet.balance,
+        created_at: wallet.createdAt
       });
 
     if (error) {
