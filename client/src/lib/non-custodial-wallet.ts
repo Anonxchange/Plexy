@@ -5,7 +5,7 @@ import { HDKey } from "@scure/bip32";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
 import { base58 } from "@scure/base";
-import { getValue, setValue } from "./idb";
+import { getValue, setValue } from "./ids";
 
 // Local Signer Imports
 import { signBitcoinTransaction, getBitcoinAddress } from "./bitcoinSigner";
@@ -215,6 +215,8 @@ class NonCustodialWalletManager {
     if (!wallet || !wallet.encryptedMnemonic) return null;
     return this.decryptPrivateKey(wallet.encryptedMnemonic, password, userId);
   }
+
+  public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
     const { data, error } = await supabase
       .from('user_wallets')
       .select('*')
@@ -234,7 +236,7 @@ class NonCustodialWalletManager {
         encryptedPrivateKey: w.encrypted_private_key,
         encryptedMnemonic: w.encrypted_mnemonic, 
         isActive: w.is_active === 'true',
-        isBackedUp: w.is_backed_up === 'true',
+        isBacked_up: w.is_backed_up === 'true',
         createdAt: w.created_at,
         assetType: w.asset_type,
         baseChainWalletId: w.base_chain_wallet_id,
