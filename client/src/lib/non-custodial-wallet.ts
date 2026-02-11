@@ -8,6 +8,9 @@ import { getValue, setValue } from "./ids";
 
 // Local Signer Imports
 import { getEVMAddress } from "./evmSigner";
+import { getBitcoinAddress } from "./bitcoinSigner";
+import { getSolanaAddress } from "./solanaSigner";
+import { getTronAddress } from "./tronSigner";
 import { deriveKey } from "./keyDerivation";
 import { encryptAES, decryptAES } from "./webCrypto";
 
