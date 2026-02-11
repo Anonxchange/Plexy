@@ -6,8 +6,6 @@ import { mnemonicToSeed } from './keyDerivation';
 import { HDKey } from '@scure/bip32';
 import { TOKEN_CONTRACTS } from './evmSigner';
 
-import * as ed25519 from "ed25519-hd-key";
-
 const DERIVATION_PATH = "m/44'/195'/0'/0/0";
 const TRONGRID_API = 'https://api.trongrid.io';
 
