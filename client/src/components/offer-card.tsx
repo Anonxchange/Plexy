@@ -113,7 +113,7 @@ export function OfferCard({
 
     return () => {
       if (channel) {
-        const supabase = import('@/lib/supabase').then(({ createClient }) => {
+        import('@/lib/supabase').then(({ createClient }) => {
           const client = createClient();
           client.removeChannel(channel);
         });
