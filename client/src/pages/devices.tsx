@@ -54,7 +54,10 @@ import {
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { deviceFingerprint, DeviceFingerprint } from "@/lib/security/device-fingerprint";
-import { format } from "date-fns";
+
+const format = (date: Date, _formatStr: string) => {
+  return date.toLocaleString();
+};
 
 interface DeviceLocationInfo {
   city?: string;
