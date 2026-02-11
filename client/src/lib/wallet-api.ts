@@ -111,7 +111,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       .filter((w: Wallet | null): w is Wallet => w !== null);
 
     // Sync with local non-custodial wallets to ensure we have all addresses
-    const localWallets = (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
+    const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
     localWallets.forEach((local: any) => {
       // Normalize local chainId to symbol for comparison
       let localSymbol = local.chainId;
