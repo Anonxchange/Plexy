@@ -13,7 +13,15 @@ import { webAuthnService, type WebAuthnCredential } from "@/lib/webauthn";
 import { Fingerprint, Trash2, Plus, Smartphone, Loader2, CheckCircle2, Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
+
+const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
+  const d = typeof date === 'number' || typeof date === 'string' ? new Date(date) : date;
+  const diff = Math.floor((new Date().getTime() - d.getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+};
 
 interface PasskeySetupProps {
   userId: string;
