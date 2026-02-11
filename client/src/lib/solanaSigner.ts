@@ -2,6 +2,7 @@ import * as ed25519 from "ed25519-hd-key";
 import { mnemonicToSeed } from './keyDerivation';
 import { base58 } from '@scure/base';
 import * as nobleEd25519 from "@noble/ed25519";
+import { bytesToHex } from "@noble/hashes/utils";
 
 export interface SolanaTransactionRequest {
   to: string;
@@ -27,9 +28,7 @@ export async function signSolanaTransaction(
 
 export async function getSolanaAddress(mnemonic: string): Promise<string> {
   const seed = await mnemonicToSeed(mnemonic);
-  const seedHex = Array.from(new Uint8Array(seed))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  const seedHex = bytesToHex(seed);
   
   const derived = ed25519.derivePath("m/44'/501'/0'/0'", seedHex);
   
