@@ -1,7 +1,7 @@
-// Solana Transaction Signing
+import * as ed25519 from "ed25519-hd-key";
 import { mnemonicToSeed } from './keyDerivation';
-import { HDKey } from '@scure/bip32';
 import { base58 } from '@scure/base';
+import * as nobleEd25519 from "@noble/ed25519";
 
 export interface SolanaTransactionRequest {
   to: string;
@@ -27,16 +27,19 @@ export async function signSolanaTransaction(
 
 export async function getSolanaAddress(mnemonic: string): Promise<string> {
   const seed = await mnemonicToSeed(mnemonic);
-  const hdKey = HDKey.fromMasterSeed(seed);
-  const child = hdKey.derive("m/44'/501'/0'/0'");
+  const seedHex = Array.from(new Uint8Array(seed))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
   
-  if (!child.privateKey) {
+  const derived = ed25519.derivePath("m/44'/501'/0'/0'", seedHex);
+  
+  if (!derived.key) {
     throw new Error('Failed to derive Solana private key');
   }
 
-  // Solana uses Ed25519, we need the 64-byte secret key (private + public)
-  // For simplicity and to match user expectation of "generating same address" 
-  // we just need a valid base58 address representation.
-  return base58.encode(child.publicKey!);
+  // Solana uses Ed25519
+  // Use @noble/ed25519 to derive public key from the derived private key
+  const publicKey = await nobleEd25519.getPublicKey(derived.key);
+  return base58.encode(publicKey);
 }
 
