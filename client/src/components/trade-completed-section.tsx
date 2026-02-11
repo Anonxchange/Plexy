@@ -97,7 +97,7 @@ export function TradeCompletedSection({
   const loadFeedback = async () => {
     setIsLoading(true);
     try {
-      const supabase = await import("@/lib/supabase").then(m => m.createClient());
+      const { supabase } = await import("@/lib/supabase");
       
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
