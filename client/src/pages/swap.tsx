@@ -19,7 +19,15 @@ import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { executeSwap } from "@/lib/swap-api";
 import { swapExecutionService, type ExecutionOrder } from "@/lib/swap-execution";
-import { formatDistanceToNow } from "date-fns";
+
+const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
+  const d = typeof date === 'number' || typeof date === 'string' ? new Date(date) : date;
+  const diff = Math.floor((new Date().getTime() - d.getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+};
 
 const currencies = [
   { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC, chain: "BTC", identifier: "BTC.BTC" },
