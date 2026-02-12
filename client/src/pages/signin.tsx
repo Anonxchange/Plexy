@@ -9,7 +9,7 @@ import { CountryCodeSelector } from "@/components/country-code-selector";
 import { PhoneVerification } from "@/components/phone-verification";
 import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { createClient } from "@/lib/supabase";
-import * as OTPAuth from "otpauth";
+import * as OTPAuth from "otplib";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
@@ -330,15 +330,7 @@ export function SignIn() {
         throw new Error('Two-factor authentication is not properly configured for this account');
       }
 
-      const totp = new OTPAuth.TOTP({
-        issuer: "Pexly",
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-        secret: OTPAuth.Secret.fromBase32(profileData.two_factor_secret),
-      });
-
-      const isValidToken = totp.validate({ token: twoFactorCode, window: 1 }) !== null;
+      const isValidToken = OTPAuth.authenticator.check(twoFactorCode, profileData.two_factor_secret);
 
       let isBackupCode = false;
       let updatedBackupCodes = profileData.two_factor_backup_codes;
