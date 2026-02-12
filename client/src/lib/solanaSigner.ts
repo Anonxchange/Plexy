@@ -8,10 +8,16 @@ import { sha256 } from '@noble/hashes/sha256';
 
 // noble-ed25519 v3+ requires hashes to be set on the hashes object
 // for synchronous methods to work.
-(nobleEd25519 as any).hashes = {
-  sha512: sha512,
-  sha512Async: (m: Uint8Array) => Promise.resolve(sha512(m))
-};
+// Using Object.assign to ensure compatibility and bypass type checks
+// We set it on both hashes and utils to be safe across different versions
+if (nobleEd25519.hashes) {
+  Object.assign(nobleEd25519.hashes, {
+    sha512: sha512
+  });
+}
+if ((nobleEd25519 as any).utils) {
+  (nobleEd25519 as any).utils.sha512Sync = (...m: any[]) => sha512((nobleEd25519 as any).utils.concatBytes(...m));
+}
 
 export interface SolanaTransactionRequest {
   to: string;
