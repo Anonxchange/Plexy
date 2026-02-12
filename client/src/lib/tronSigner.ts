@@ -47,8 +47,17 @@ export async function getTronAddress(mnemonic: string): Promise<string> {
   address[0] = 0x41; // Mainnet prefix
   address.set(ripe, 1);
 
+  // Double SHA256 for Base58Check checksum
+  const sha256_1 = sha256(address);
+  const sha256_2 = sha256(sha256_1);
+  const checksum = sha256_2.slice(0, 4);
+
+  const finalAddress = new Uint8Array(25);
+  finalAddress.set(address);
+  finalAddress.set(checksum, 21);
+
   // Base58Check encoding
-  return base58.encode(address);
+  return base58.encode(finalAddress);
 }
 
 // ===== AMOUNT CONVERSION =====
