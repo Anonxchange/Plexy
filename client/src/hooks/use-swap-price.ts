@@ -17,8 +17,8 @@ const SWAP_SPREAD_PERCENTAGE = 0.2; // 0.2% spread
 const priceCache: Record<string, { data: SwapPriceData; timestamp: number }> = {};
 const CACHE_TTL = 30000; // 30 seconds cache
 
-export function useSwapPrice(fromCrypto: string, toCrypto: string) {
-  const cacheKey = `${fromCrypto}-${toCrypto}`;
+export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: string, toNetwork: string) {
+  const cacheKey = `${fromCrypto}-${fromNetwork}-${toCrypto}-${toNetwork}`;
   
   const [priceData, setPriceData] = useState<SwapPriceData>(() => {
     // Initialize from cache if available
@@ -65,7 +65,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string) {
         }
 
         // Try to fetch from Rocketx first for real exchange rates
-        const rocketxRate = await getRocketxRate(fromCrypto, toCrypto);
+        const rocketxRate = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork);
         
         let marketRate = rocketxRate;
         
@@ -127,7 +127,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string) {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [fromCrypto, toCrypto, cacheKey]);
+  }, [fromCrypto, toCrypto, fromNetwork, toNetwork, cacheKey]);
 
   return priceData;
 }
