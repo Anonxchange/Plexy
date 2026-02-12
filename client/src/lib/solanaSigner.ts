@@ -38,7 +38,11 @@ export async function getSolanaAddress(mnemonic: string): Promise<string> {
   
   // SLIP-0010 implementation for ed25519
   // Master key derivation
-  const I = hmac(sha512, "ed25519 seed", seed);
+  const I = hmac(
+  sha512,
+  new TextEncoder().encode("ed25519 seed"),
+  seed
+);
   let IL = I.slice(0, 32);
   let IR = I.slice(32);
 
