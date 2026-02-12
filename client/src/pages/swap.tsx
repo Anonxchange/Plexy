@@ -18,7 +18,7 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
-import { swapExecutionService, type ExecutionOrder } from "@/lib/swap-execution";
+
 
 const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
   const d = typeof date === 'number' || typeof date === 'string' ? new Date(date) : date;
