@@ -4,6 +4,11 @@ import * as nobleEd25519 from "@noble/ed25519";
 import { hmac } from "@noble/hashes/hmac";
 import { sha512 } from "@noble/hashes/sha512";
 
+// noble-ed25519 v3+ (and some v2 versions) needs to be told which hash function to use
+// Using type assertion to bypass strict TS checks on the `etc` object if it's not fully typed in the version installed
+(nobleEd25519.etc as any).sha512Sync = (...m: any[]) => (sha512 as any)(...m);
+(nobleEd25519.etc as any).hmacSha512Sync = (k: any, ...m: any[]) => (hmac as any)(sha512, k, ...m);
+
 export interface SolanaTransactionRequest {
   to: string;
   amount: string;
