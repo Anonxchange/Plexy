@@ -355,14 +355,11 @@ export async function getBlockStats(blockHash: string): Promise<any> {
 // ============== FEE ESTIMATES ==============
 
 export interface FeeEstimate {
-  '30min': number;
-  '1h': number;
-  '2h': number;
-  '3h': number;
-  '4h': number;
-  '6h': number;
-  '12h': number;
-  '24h': number;
+  fastestFee: number;
+  halfHourFee: number;
+  hourFee: number;
+  economyFee: number;
+  minimumFee: number;
 }
 
 export async function getFeeEstimates(): Promise<FeeEstimate | null> {
