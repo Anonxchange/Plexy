@@ -18,6 +18,7 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
+import { rocketXApi } from "@/lib/rocketx-api";
 
 
 const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
@@ -63,7 +64,7 @@ export function Swap() {
   );
 
   const [isSwapping, setIsSwapping] = useState(false);
-  const [history, setHistory] = useState<ExecutionOrder[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [estFees, setEstFees] = useState<Record<string, string>>({
     BTC: "0.0001 BTC",
     ETH: "0.002 ETH",
@@ -99,7 +100,7 @@ export function Swap() {
     };
 
     fetchFees();
-    setHistory(swapExecutionService.getOrderHistory());
+    // setHistory(swapExecutionService.getOrderHistory());
   }, []);
 
   // Auto-update toAmount when prices change or fromAmount changes
@@ -190,28 +191,34 @@ export function Swap() {
 
     setIsSwapping(true);
     try {
-      const { data, error } = await supabase.functions.invoke('rocketx-swap', {
-        body: {
-          userId: user!.id,
-          fromCrypto: fromCurrency,
-          toCrypto: toCurrency,
-          fromAmount: fromAmountNum,
-          toAmount: toAmountNum,
-          swapRate,
-          marketRate,
-          fee: feeAmount,
-          userPassword: password
-        }
-      });
+      // Find the selected currency objects to get their identifiers/chains
+      const fromCurrObj = currencies.find(c => c.symbol === fromCurrency);
+      const toCurrObj = currencies.find(c => c.symbol === toCurrency);
 
-      if (error) throw error;
+      const data = await rocketXApi.executeSwap({
+        userId: user!.id,
+        fromCrypto: fromCurrency,
+        toCrypto: toCurrency,
+        fromAmount: fromAmountNum,
+        toAmount: toAmountNum,
+        swapRate,
+        marketRate,
+        fee: feeAmount,
+        userPassword: password,
+        // Adding potential RocketX specific params from the edge function
+        fromToken: fromCurrObj?.identifier || fromCurrency,
+        fromNetwork: fromCurrObj?.chain || 'BTC',
+        toToken: toCurrObj?.identifier || toCurrency,
+        toNetwork: toCurrObj?.chain || 'ETH',
+        slippage: 1 // Default 1%
+      });
 
       toast({
         title: "Swap Successful!",
         description: `Swapped ${fromAmountNum} ${fromCurrency} to ${data.to_amount.toFixed(6)} ${toCurrency}`,
       });
 
-      setHistory(swapExecutionService.getOrderHistory());
+      // setHistory(swapExecutionService.getOrderHistory());
       setFromAmount("0.00001");
       setToAmount("");
       setShowPasswordDialog(false);
