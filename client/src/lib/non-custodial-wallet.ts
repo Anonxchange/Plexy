@@ -108,7 +108,7 @@ class NonCustodialWalletManager {
 
     const mnemonic = existingMnemonic || generateMnemonic(wordlist, 128);
     const seed = await mnemonicToSeed(mnemonic);
-    const root = HDKey.fromMasterSeed(new Uint8Array(seed));
+    const root = HDKey.fromMasterSeed(seed);
     
     let privateKey: string;
     let address: string;
