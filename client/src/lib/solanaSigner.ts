@@ -7,8 +7,13 @@ import { sha512 } from '@noble/hashes/sha512';
 import { sha256 } from '@noble/hashes/sha256';
 
 // noble-ed25519 needs to be configured with a sha512 hash function
-(nobleEd25519.etc as any).sha512Sync = (...m: any[]) => sha512(nobleEd25519.etc.concatBytes(...m));
-(nobleEd25519.etc as any).sha512Async = (...m: any[]) => Promise.resolve(sha512(nobleEd25519.etc.concatBytes(...m)));
+// Fix: Use etc.sha512Sync if etc exists, otherwise try to set it directly
+if (nobleEd25519.etc) {
+  (nobleEd25519.etc as any).sha512Sync = (...m: any[]) => sha512(nobleEd25519.etc.concatBytes(...m));
+  (nobleEd25519.etc as any).sha512Async = (...m: any[]) => Promise.resolve(sha512(nobleEd25519.etc.concatBytes(...m)));
+} else {
+  (nobleEd25519 as any).utils.sha512Sync = (...m: any[]) => sha512((nobleEd25519 as any).utils.concatBytes(...m));
+}
 
 export interface SolanaTransactionRequest {
   to: string;
