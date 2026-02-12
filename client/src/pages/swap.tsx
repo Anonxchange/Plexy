@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +18,6 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
-import { executeSwap } from "@/lib/swap-api";
 import { swapExecutionService, type ExecutionOrder } from "@/lib/swap-execution";
 
 const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
@@ -190,21 +190,25 @@ export function Swap() {
 
     setIsSwapping(true);
     try {
-      const result = await executeSwap({
-        userId: user!.id,
-        fromCrypto: fromCurrency,
-        toCrypto: toCurrency,
-        fromAmount: fromAmountNum,
-        toAmount: toAmountNum,
-        swapRate,
-        marketRate,
-        fee: feeAmount,
-        userPassword: password
+      const { data, error } = await supabase.functions.invoke('rocketx-swap', {
+        body: {
+          userId: user!.id,
+          fromCrypto: fromCurrency,
+          toCrypto: toCurrency,
+          fromAmount: fromAmountNum,
+          toAmount: toAmountNum,
+          swapRate,
+          marketRate,
+          fee: feeAmount,
+          userPassword: password
+        }
       });
+
+      if (error) throw error;
 
       toast({
         title: "Swap Successful!",
-        description: `Swapped ${fromAmountNum} ${fromCurrency} to ${result.to_amount.toFixed(6)} ${toCurrency}`,
+        description: `Swapped ${fromAmountNum} ${fromCurrency} to ${data.to_amount.toFixed(6)} ${toCurrency}`,
       });
 
       setHistory(swapExecutionService.getOrderHistory());
