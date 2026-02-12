@@ -1,5 +1,6 @@
 
 import { createClient } from "./supabase";
+import { getFeeEstimates, satoshiToBTC } from "./mempool-api";
 
 export interface FeeConfiguration {
   id: string;
@@ -50,6 +51,68 @@ export class FeeCalculator {
     const transactionType = isInternal ? 'internal_transfer' : 'withdrawal';
     
     try {
+      // For Bitcoin external transfers, use real-time fees from mempool.space
+      if (cryptoSymbol === 'BTC' && !isInternal) {
+        try {
+          const estimates = await getFeeEstimates();
+          if (estimates) {
+            // Standard Bitcoin transaction is ~225 vBytes
+            const standardTxSize = 225;
+            const satPerByte = estimates['hourFee'] || estimates['halfHourFee'] || 10;
+            const networkFeeSats = standardTxSize * satPerByte;
+            const networkFee = satoshiToBTC(networkFeeSats);
+            
+            // Still call Supabase function for platform fee calculation if needed,
+            // or use a default logic if it fails
+            let platformFee = 0;
+            try {
+              const { data: { session } } = await this.supabase.auth.getSession();
+              const response = await this.supabase.functions.invoke('calculate-fee', {
+                body: {
+                  transaction_type: transactionType,
+                  crypto_symbol: cryptoSymbol,
+                  amount: amount,
+                },
+                headers: session ? {
+                  Authorization: `Bearer ${session.access_token}`
+                } : {}
+              });
+              
+              if (!response.error) {
+                platformFee = response.data.platform_fee;
+              }
+            } catch (e) {
+              console.warn('Could not fetch platform fee, using 0:', e);
+            }
+
+            const totalFee = platformFee + networkFee;
+            const breakdown = [];
+            if (platformFee > 0) {
+              breakdown.push({
+                type: 'platform',
+                amount: platformFee,
+                description: `Pexly ${isInternal ? 'internal transfer' : 'withdrawal'} fee`
+              });
+            }
+            breakdown.push({
+              type: 'network',
+              amount: networkFee,
+              description: `${cryptoSymbol} network fee (Real-time)`
+            });
+
+            return {
+              platformFee,
+              networkFee,
+              totalFee,
+              breakdown,
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching real-time BTC fees:', error);
+          // Fallback to supabase function if real-time fails
+        }
+      }
+
       const { data: { session } } = await this.supabase.auth.getSession();
       
       const response = await this.supabase.functions.invoke('calculate-fee', {
