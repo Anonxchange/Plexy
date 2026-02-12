@@ -170,11 +170,17 @@ class NonCustodialWalletManager {
       // Fix: Derive address from public key properly using ripemd160(sha256(pub))
       address = deriveXrpAddress(account.publicKey!); 
       walletType = "xrp";
-    } else if (["ethereum", "ETH", "Ethereum", "BNB", "BSC", "Binance Coin", "Tether", "Polygon", "Arbitrum", "Optimism", "Base", "Avalanche"].includes(chainId)) {
+    } else if (["ethereum", "ETH", "Ethereum", "BNB", "BSC", "Binance Coin", "Tether", "Polygon", "Arbitrum", "Optimism", "Base", "Avalanche", "USDT", "USDC"].includes(chainId)) {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
       privateKey = toHex(account.privateKey!);
-      walletType = (chainId === "BNB" || chainId === "BSC" || chainId === "Binance Coin") ? "binance" : "ethereum";
+      if (chainId === "BNB" || chainId === "BSC" || chainId === "Binance Coin") {
+        walletType = "binance";
+      } else if (chainId === "USDT" || chainId === "USDC") {
+        walletType = "evm-token";
+      } else {
+        walletType = "ethereum";
+      }
     } else {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
