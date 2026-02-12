@@ -174,6 +174,8 @@ class NonCustodialWalletManager {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
       privateKey = toHex(account.privateKey!);
+      
+      // Determine wallet type for internal tracking
       if (chainId === "BNB" || chainId === "BSC" || chainId === "Binance Coin") {
         walletType = "binance";
       } else if (chainId === "USDT" || chainId === "USDC") {
@@ -181,6 +183,35 @@ class NonCustodialWalletManager {
       } else {
         walletType = "ethereum";
       }
+      
+      // Ensure we explicitly set the assetType for tokens if needed
+      const assetType = (chainId === "USDT" || chainId === "USDC") ? chainId : undefined;
+      
+      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, userId);
+      const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, userId);
+      
+      const newWallet: NonCustodialWallet = {
+        id: Math.random().toString(36).substring(7),
+        chainId,
+        address,
+        walletType,
+        encryptedPrivateKey,
+        encryptedMnemonic,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+        isBackedUp: false,
+        assetType,
+      };
+      
+      const wallets = await this.getWalletsFromStorage(userId);
+      const updatedWallets = [...wallets, newWallet];
+      await this.saveWalletsToStorage(updatedWallets, userId);
+
+      if (supabase) {
+        await this.saveWalletToSupabase(supabase, newWallet, userId);
+      }
+      
+      return { wallet: newWallet, mnemonicPhrase: mnemonic };
     } else {
       address = await getEVMAddress(mnemonic);
       const account = root.derive("m/44'/60'/0'/0/0");
