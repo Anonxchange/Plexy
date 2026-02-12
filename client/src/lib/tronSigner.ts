@@ -1,6 +1,6 @@
 // ===== TRON LIGHTWEIGHT WALLET =====
 import { mnemonicToSeed } from '@scure/bip39';
-import { wordlist } from '@scure/bip39/wordlists/english.js';
+import { HDKey } from '@scure/bip32';
 import { base58 } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
@@ -23,14 +23,15 @@ export interface SignedTronTransaction {
 
 // ===== PRIVATE KEY DERIVATION =====
 export async function deriveTronPrivateKey(mnemonic: string): Promise<Uint8Array> {
-  const seed = await mnemonicToSeed(mnemonic, wordlist as any);
-  const privKey = seed.slice(0, 32);
+  const seed = await mnemonicToSeed(mnemonic);
+  const root = HDKey.fromMasterSeed(seed);
+  const account = root.derive("m/44'/195'/0'/0/0");
 
-  if (!secp256k1.utils.isValidPrivateKey(privKey)) {
+  if (!account.privateKey || !secp256k1.utils.isValidPrivateKey(account.privateKey)) {
     throw new Error('Invalid private key derived');
   }
 
-  return privKey;
+  return account.privateKey;
 }
 
 // ===== ADDRESS DERIVATION =====
