@@ -1,11 +1,14 @@
-import { mnemonicToSeed } from './keyDerivation';
+import { mnemonicToSeed } from "@scure/bip39";
+import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { base58 } from '@scure/base';
 import * as nobleEd25519 from '@noble/ed25519';
 import { hmac } from '@noble/hashes/hmac';
 import { sha512 } from '@noble/hashes/sha512';
 import { sha256 } from '@noble/hashes/sha256';
 
-nobleEd25519.hashes.sha512 = sha512;
+// noble-ed25519 needs to be configured with a sha512 hash function
+(nobleEd25519.etc as any).sha512Sync = (...m: any[]) => sha512(nobleEd25519.etc.concatBytes(...m));
+(nobleEd25519.etc as any).sha512Async = (...m: any[]) => Promise.resolve(sha512(nobleEd25519.etc.concatBytes(...m)));
 
 export interface SolanaTransactionRequest {
   to: string;
@@ -35,7 +38,7 @@ function encodeLength(len: number): number[] {
 
 // Derive Solana private key from mnemonic using ed25519 path
 export async function deriveSolanaPrivateKey(mnemonic: string): Promise<Uint8Array> {
-  const seed = await mnemonicToSeed(mnemonic);
+  const seed = await mnemonicToSeed(mnemonic, wordlist as any);
   let I = hmac(sha512, new TextEncoder().encode('ed25519 seed'), seed);
   let IL = I.slice(0, 32);
   let IR = I.slice(32);
