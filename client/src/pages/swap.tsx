@@ -68,6 +68,8 @@ export function Swap() {
   const [fromNetwork, setFromNetwork] = useState("BTC");
   const [toNetwork, setToNetwork] = useState("ETH");
   const [isUpdatingFromInput, setIsUpdatingFromInput] = useState(true);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [walletPassword, setWalletPassword] = useState("");
 
   // Helper to get currency object
   const getCurrency = (symbol: string) => currencies.find(c => c.symbol === symbol);
