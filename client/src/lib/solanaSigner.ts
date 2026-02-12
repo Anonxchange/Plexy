@@ -5,7 +5,7 @@ import { hmac } from "@noble/hashes/hmac";
 import { sha512 } from "@noble/hashes/sha512";
 
 // noble-ed25519 v3+ requires SHA-512 to be provided manually
-(nobleEd25519 as any).hashes = { sha512 };
+nobleEd25519.hashes.sha512 = sha512;
 
 export interface SolanaTransactionRequest {
   to: string;
