@@ -81,6 +81,7 @@ export default defineConfig({
             "@radix-ui/react-tooltip",
             "lucide-react",
           ],
+          "vendor-charts": ["recharts"],
           "vendor-utils": [
             "@tanstack/react-query",
             "@supabase/supabase-js",
