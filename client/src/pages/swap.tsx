@@ -32,9 +32,21 @@ const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
 
 const currencies = [
   { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC, chain: "BTC", identifier: "BTC.BTC" },
-  { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT, chain: "ETH", identifier: "ETH.USDT-0xdac17f958d2ee523a2206206994597C13D831ec7" },
+  { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT, networks: [
+    { chain: "ETH", identifier: "ETH.USDT-0xdac17f958d2ee523a2206206994597C13D831ec7", name: "Ethereum (ERC20)" },
+    { chain: "BSC", identifier: "BSC.USDT-0x55d398326f99059ff775485246999027b3197955", name: "BNB Smart Chain (BEP20)" },
+    { chain: "TRX", identifier: "TRX.USDT-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", name: "Tron (TRC20)" },
+    { chain: "SOL", identifier: "SOL.USDT-Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8En2vQK", name: "Solana" },
+    { chain: "ARBITRUM", identifier: "ARBITRUM.USDT-0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", name: "Arbitrum One" },
+  ]},
   { symbol: "ETH", name: "Ethereum", iconUrl: cryptoIconUrls.ETH, chain: "ETH", identifier: "ETH.ETH" },
-  { symbol: "USDC", name: "USD Coin", iconUrl: cryptoIconUrls.USDC, chain: "ETH", identifier: "ETH.USDC-0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48" },
+  { symbol: "USDC", name: "USD Coin", iconUrl: cryptoIconUrls.USDC, networks: [
+    { chain: "ETH", identifier: "ETH.USDC-0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48", name: "Ethereum (ERC20)" },
+    { chain: "BSC", identifier: "BSC.USDC-0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", name: "BNB Smart Chain (BEP20)" },
+    { chain: "SOL", identifier: "SOL.USDC-EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", name: "Solana" },
+    { chain: "ARBITRUM", identifier: "ARBITRUM.USDC-0xaf88d065e77c8cc2239327c5edb3a432268e5831", name: "Arbitrum One" },
+    { chain: "BASE", identifier: "BASE.USDC-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", name: "Base" },
+  ]},
   { symbol: "SOL", name: "Solana", iconUrl: cryptoIconUrls.SOL, chain: "SOL", identifier: "SOL.SOL" },
   { symbol: "TRX", name: "Tron", iconUrl: cryptoIconUrls.TRX, chain: "TRX", identifier: "TRX.TRX" },
   { symbol: "BNB", name: "BNB", iconUrl: cryptoIconUrls.BNB, chain: "BSC", identifier: "BSC.BNB" },
@@ -53,14 +65,45 @@ export function Swap() {
   const [toAmount, setToAmount] = useState("");
   const [fromCurrency, setFromCurrency] = useState("BTC");
   const [toCurrency, setToCurrency] = useState("USDT");
+  const [fromNetwork, setFromNetwork] = useState("BTC");
+  const [toNetwork, setToNetwork] = useState("ETH");
   const [isUpdatingFromInput, setIsUpdatingFromInput] = useState(true);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [walletPassword, setWalletPassword] = useState("");
+
+  // Helper to get currency object
+  const getCurrency = (symbol: string) => currencies.find(c => c.symbol === symbol);
+
+  // Sync network when currency changes
+  useEffect(() => {
+    const curr = getCurrency(fromCurrency);
+    if (curr) {
+      if (curr.networks) {
+        // Keep current network if available for new currency, otherwise default to first
+        const hasNetwork = curr.networks.some(n => n.chain === fromNetwork);
+        if (!hasNetwork) setFromNetwork(curr.networks[0].chain);
+      } else {
+        setFromNetwork(curr.chain!);
+      }
+    }
+  }, [fromCurrency]);
+
+  useEffect(() => {
+    const curr = getCurrency(toCurrency);
+    if (curr) {
+      if (curr.networks) {
+        const hasNetwork = curr.networks.some(n => n.chain === toNetwork);
+        if (!hasNetwork) setToNetwork(curr.networks[0].chain);
+      } else {
+        setToNetwork(curr.chain!);
+      }
+    }
+  }, [toCurrency]);
 
   // Fetch live swap prices
   const { marketRate, swapRate, percentageDiff, isLoading } = useSwapPrice(
     fromCurrency,
-    toCurrency
+    toCurrency,
+    fromNetwork,
+    toNetwork
   );
 
   const [isSwapping, setIsSwapping] = useState(false);
@@ -195,6 +238,9 @@ export function Swap() {
       const fromCurrObj = currencies.find(c => c.symbol === fromCurrency);
       const toCurrObj = currencies.find(c => c.symbol === toCurrency);
 
+      const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
+      const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
+
       const data = await rocketXApi.executeSwap({
         userId: user!.id,
         fromCrypto: fromCurrency,
@@ -206,10 +252,10 @@ export function Swap() {
         fee: feeAmount,
         userPassword: password,
         // Adding potential RocketX specific params from the edge function
-        fromToken: fromCurrObj?.identifier || fromCurrency,
-        fromNetwork: fromCurrObj?.chain || 'BTC',
-        toToken: toCurrObj?.identifier || toCurrency,
-        toNetwork: toCurrObj?.chain || 'ETH',
+        fromToken: fromNetObj?.identifier || fromCurrObj?.identifier || fromCurrency,
+        fromNetwork: fromNetwork,
+        toToken: toNetObj?.identifier || toCurrObj?.identifier || toCurrency,
+        toNetwork: toNetwork,
         slippage: 1 // Default 1%
       });
 
@@ -288,9 +334,16 @@ export function Swap() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-3xl font-bold text-muted-foreground/30">0</span>
-                      <div className="ml-auto flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
-                        <img src={currencies.find(c => c.symbol === fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
-                        <span className="font-bold">{fromCurrency}</span>
+                      <div className="ml-auto flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
+                          <img src={getCurrency(fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                          <span className="font-bold">{fromCurrency}</span>
+                        </div>
+                        {getCurrency(fromCurrency)?.networks && (
+                          <span className="text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter">
+                            {getCurrency(fromCurrency)?.networks?.find(n => n.chain === fromNetwork)?.name || fromNetwork}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -309,9 +362,16 @@ export function Swap() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-3xl font-bold text-muted-foreground/30">0</span>
-                      <div className="ml-auto flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
-                        <img src={currencies.find(c => c.symbol === toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
-                        <span className="font-bold">{toCurrency}</span>
+                      <div className="ml-auto flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
+                          <img src={getCurrency(toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                          <span className="font-bold">{toCurrency}</span>
+                        </div>
+                        {getCurrency(toCurrency)?.networks && (
+                          <span className="text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter">
+                            {getCurrency(toCurrency)?.networks?.find(n => n.chain === toNetwork)?.name || toNetwork}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -477,21 +537,40 @@ export function Swap() {
                       className="flex-1 h-12 text-2xl font-semibold bg-transparent border-none p-0 focus-visible:ring-0 shadow-none"
                       placeholder="0.00"
                     />
-                    <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                      <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currencies.map((curr) => (
-                          <SelectItem key={curr.symbol} value={curr.symbol}>
-                            <div className="flex items-center gap-2">
-                              <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
-                              <span className="font-bold">{curr.symbol}</span>
+                    <div className="flex flex-col gap-2 items-end">
+                      <Select value={fromCurrency} onValueChange={setFromCurrency}>
+                        <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencies.map((curr) => (
+                            <SelectItem key={curr.symbol} value={curr.symbol}>
+                              <div className="flex items-center gap-2">
+                                <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
+                                <span className="font-bold">{curr.symbol}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {getCurrency(fromCurrency)?.networks && (
+                        <Select value={fromNetwork} onValueChange={setFromNetwork}>
+                          <SelectTrigger className="h-7 min-w-[100px] bg-transparent border-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground focus:ring-0 shadow-none px-2 py-0">
+                            <div className="flex items-center gap-1 justify-end w-full">
+                              <span>Network: {getCurrency(fromCurrency)?.networks?.find(n => n.chain === fromNetwork)?.name}</span>
                             </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            {getCurrency(fromCurrency)?.networks?.map((net) => (
+                              <SelectItem key={net.chain} value={net.chain} className="text-[10px] font-bold uppercase">
+                                {net.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -520,21 +599,40 @@ export function Swap() {
                       className="flex-1 h-12 text-2xl font-semibold bg-transparent border-none p-0 focus-visible:ring-0 shadow-none"
                       placeholder="0.00"
                     />
-                    <Select value={toCurrency} onValueChange={setToCurrency}>
-                      <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currencies.map((curr) => (
-                          <SelectItem key={curr.symbol} value={curr.symbol}>
-                            <div className="flex items-center gap-2">
-                              <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
-                              <span className="font-bold">{curr.symbol}</span>
+                    <div className="flex flex-col gap-2 items-end">
+                      <Select value={toCurrency} onValueChange={setToCurrency}>
+                        <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencies.map((curr) => (
+                            <SelectItem key={curr.symbol} value={curr.symbol}>
+                              <div className="flex items-center gap-2">
+                                <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
+                                <span className="font-bold">{curr.symbol}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {getCurrency(toCurrency)?.networks && (
+                        <Select value={toNetwork} onValueChange={setToNetwork}>
+                          <SelectTrigger className="h-7 min-w-[100px] bg-transparent border-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground focus:ring-0 shadow-none px-2 py-0">
+                            <div className="flex items-center gap-1 justify-end w-full">
+                              <span>Network: {getCurrency(toCurrency)?.networks?.find(n => n.chain === toNetwork)?.name}</span>
                             </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            {getCurrency(toCurrency)?.networks?.map((net) => (
+                              <SelectItem key={net.chain} value={net.chain} className="text-[10px] font-bold uppercase">
+                                {net.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   </div>
                 </div>
 
