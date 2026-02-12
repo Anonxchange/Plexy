@@ -4,6 +4,11 @@ import { HDKey } from "@scure/bip32";
 import * as secp from "@noble/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "@noble/hashes/utils";
+import { hmac } from "@noble/hashes/hmac";
+import { sha256 } from "@noble/hashes/sha256";
+
+// noble-secp256k1 v2+ needs to be told which hash function to use for HMAC-SHA256
+(secp.etc as any).hmacSha256Sync = (k: any, ...m: any[]) => (hmac as any)(sha256, k, ...m);
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
