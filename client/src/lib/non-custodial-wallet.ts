@@ -9,7 +9,8 @@ import { getValue, setValue } from "./ids";
 // Local Signer Imports
 import { getEVMAddress } from "./evmSigner";
 import { getBitcoinAddress } from "./bitcoinSigner";
-import { getSolanaAddress } from "./solanaSigner";
+// Added deriveSolanaPrivateKey to the import below
+import { getSolanaAddress, deriveSolanaPrivateKey } from "./solanaSigner";
 import { getTronAddress } from "./tronSigner";
 import { deriveKey } from "./keyDerivation";
 import { encryptAES, decryptAES } from "./webCrypto";
@@ -59,25 +60,16 @@ function fromHex(hex: string): Uint8Array {
 
 /**
  * Custom XRP Address Derivation using Uint8Array & noble-hashes
- * Replaces 'ripple-keypairs' to avoid Buffer issues.
  */
 function deriveXrpAddress(publicKey: Uint8Array): string {
-  // 1. Account ID = Ripemd160(Sha256(pubKey))
   const accountId = ripemd160(sha256(publicKey));
-  
-  // 2. Payload = Prefix (0x00 for XRP) + Account ID
   const payload = new Uint8Array(21);
   payload[0] = 0x00; 
   payload.set(accountId, 1);
-  
-  // 3. Checksum = First 4 bytes of Sha256(Sha256(payload))
   const checksum = sha256(sha256(payload)).slice(0, 4);
-  
-  // 4. Final = Payload + Checksum
   const final = new Uint8Array(25);
   final.set(payload);
   final.set(checksum, 21);
-  
   return xrpCodec.encode(final);
 }
 
@@ -128,18 +120,15 @@ class NonCustodialWalletManager {
       privateKey = toHex(account.privateKey!);
       walletType = "bitcoin";
     } else if (chainId === "Solana") {
+      // FIX: Use SLIP-0010 derivation instead of BIP32 HDKey
       address = await getSolanaAddress(mnemonic);
-      const seed = await mnemonicToSeed(mnemonic);
-      // Using @scure/bip32 for derivation
-      const hdKey = HDKey.fromMasterSeed(new Uint8Array(seed));
-      const derived = hdKey.derive("m/44'/501'/0'/0'");
+      const privKeyBytes = await deriveSolanaPrivateKey(mnemonic);
       
-      if (!derived.privateKey) {
+      if (!privKeyBytes) {
         throw new Error("Failed to derive Solana private key");
       }
 
-      // Solana uses 32-byte private key for public key derivation
-      privateKey = toHex(derived.privateKey);
+      privateKey = toHex(privKeyBytes);
       walletType = "solana";
     } else if (chainId === "Tron (TRC-20)") {
       address = await getTronAddress(mnemonic);
@@ -193,7 +182,6 @@ class NonCustodialWalletManager {
     const data = await getValue('wallets', this.getStorageKey(userId));
     if (data) return data;
     
-    // Fallback for migration
     const legacyData = localStorage.getItem(this.getStorageKey(userId));
     if (legacyData) {
       try {
@@ -208,7 +196,6 @@ class NonCustodialWalletManager {
     return [];
   }
 
-  // Renamed to match async pattern
   public async getNonCustodialWallets(userId: string): Promise<NonCustodialWallet[]> {
     return this.getWalletsFromStorage(userId);
   }
@@ -220,39 +207,39 @@ class NonCustodialWalletManager {
     return this.decryptPrivateKey(wallet.encryptedMnemonic, password, userId);
   }
 
- public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
-  const { data, error } = await supabase
-    .from('user_wallets')
-    .select('*')
-    .eq('user_id', userId);
+  public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
+    const { data, error } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('user_id', userId);
 
-  if (error) {
-    console.error("Error loading wallets from Supabase:", error);
+    if (error) {
+      console.error("Error loading wallets from Supabase:", error);
+      return [];
+    }
+
+    if (data && data.length > 0) {
+      const wallets: NonCustodialWallet[] = data.map((w: any) => ({
+        id: w.id,
+        chainId: w.chain_id,
+        address: w.address,
+        walletType: w.wallet_type,
+        encryptedPrivateKey: w.encrypted_private_key,
+        encryptedMnemonic: w.encrypted_mnemonic,
+        isActive: w.is_active === 'true',
+        isBacked_up: w.is_backed_up === 'true',
+        createdAt: w.created_at,
+        assetType: w.asset_type,
+        baseChainWalletId: w.base_chain_wallet_id,
+        balance: w.balance
+      }));
+
+      await this.saveWalletsToStorage(wallets, userId);
+      return wallets;
+    }
+
     return [];
   }
-
-  if (data && data.length > 0) {
-    const wallets: NonCustodialWallet[] = data.map((w: any) => ({
-      id: w.id,
-      chainId: w.chain_id,
-      address: w.address,
-      walletType: w.wallet_type,
-      encryptedPrivateKey: w.encrypted_private_key,
-      encryptedMnemonic: w.encrypted_mnemonic,
-      isActive: w.is_active === 'true',
-      isBackedUp: w.is_backed_up === 'true', // ✅ FIXED
-      createdAt: w.created_at,
-      assetType: w.asset_type,
-      baseChainWalletId: w.base_chain_wallet_id,
-      balance: w.balance
-    }));
-
-    await this.saveWalletsToStorage(wallets, userId);
-    return wallets;
-  }
-
-  return [];
-}
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
     const { error } = await supabase
