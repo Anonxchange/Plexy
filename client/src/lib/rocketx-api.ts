@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 export interface RocketXQuote {
   exchange: string;
@@ -47,6 +47,36 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
   return data.data;
 }
 
+/**
+ * Get the current exchange rate for a crypto pair from RocketX
+ * @param from symbol of from crypto (e.g. 'BTC')
+ * @param to symbol of to crypto (e.g. 'USDT')
+ * @returns market rate as number
+ */
+export async function getRocketxRate(from: string, to: string): Promise<number> {
+  try {
+    const data = await rocketXApi.getQuotation({
+      fromToken: from,
+      fromNetwork: 'BTC', // Default networks, would be better to pass them
+      toToken: to,
+      toNetwork: 'ETH',
+      amount: 1
+    });
+    
+    if (data && data.length > 0) {
+      // Find the best rate (highest toAmount)
+      const bestQuote = data.reduce((prev: RocketXQuote, current: RocketXQuote) => {
+        return (prev.toAmount > current.toAmount) ? prev : current;
+      });
+      return bestQuote.toAmount;
+    }
+    return 0;
+  } catch (error) {
+    console.error('Error fetching RocketX rate:', error);
+    return 0;
+  }
+}
+
 export const rocketXApi = {
   /** Get supported networks and configuration */
   async getConfiguration() {
@@ -76,12 +106,7 @@ export const rocketXApi = {
   },
 
   /** Execute a swap */
-  async executeSwap(params: {
-    quoteId: string;
-    fromAddress: string;
-    toAddress: string;
-    [key: string]: any;
-  }) {
+  async executeSwap(params: Record<string, any>) {
     return callRocketX('swap', params);
   },
 
