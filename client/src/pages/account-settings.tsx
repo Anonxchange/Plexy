@@ -88,7 +88,7 @@ import { PasskeySetup } from "@/components/passkey-setup";
 import { WithdrawalWhitelistDialog } from "@/components/withdrawal-whitelist-dialog";
 import { IPWhitelistDialog } from "@/components/ip-whitelist-dialog";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import * as OTPAuth from "otpauth";
+import * as OTPAuth from "otplib";
 
 const settingsSections = [
   { id: "profile", label: "Profile", icon: User },
@@ -518,7 +518,7 @@ export default function AccountSettings() {
         throw new Error("User not authenticated");
       }
       
-      const wallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
       if (wallets.length === 0) {
         throw new Error("No non-custodial wallet found. Please create a wallet first through the Wallet section.");
       }
@@ -907,15 +907,7 @@ export default function AccountSettings() {
         throw new Error('Failed to verify 2FA settings');
       }
 
-      const totp = new OTPAuth.TOTP({
-        issuer: "Pexly",
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-        secret: OTPAuth.Secret.fromBase32(profileData.two_factor_secret),
-      });
-
-      const isValid = totp.validate({ token: disable2FACode, window: 1 }) !== null;
+      const isValid = OTPAuth.authenticator.check(disable2FACode, profileData.two_factor_secret);
 
       if (!isValid) {
         toast({
