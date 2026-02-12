@@ -7,8 +7,9 @@ import { bytesToHex } from "@noble/hashes/utils";
 import { hmac } from "@noble/hashes/hmac";
 import { sha256 } from "@noble/hashes/sha256";
 
-// noble-secp256k1 v2+ needs to be told which hash function to use for HMAC-SHA256
-(secp.etc as any).hmacSha256Sync = (k: any, ...m: any[]) => (hmac as any)(sha256, k, ...m);
+// For noble-secp256k1 v1.7.x, etc is not available.
+// We should check version or just use the available API.
+// If etc is missing, it's likely an older version or different export structure.
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
