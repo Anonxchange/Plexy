@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -215,7 +215,7 @@ export function Swap() {
 
       toast({
         title: "Swap Successful!",
-        description: `Swapped ${fromAmountNum} ${fromCurrency} to ${data.to_amount.toFixed(6)} ${toCurrency}`,
+        description: `Swapped ${fromAmountNum} ${fromCurrency} to ${(data?.to_amount || toAmountNum).toFixed(6)} ${toCurrency}`,
       });
 
       // setHistory(swapExecutionService.getOrderHistory());
