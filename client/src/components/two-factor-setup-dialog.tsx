@@ -11,9 +11,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import * as OTPAuth from "otpauth";
+import * as OTPAuth from "otplib";
 import QRCode from "qrcode";
-import { Copy, Check } from "lucide-react";p
+import { Copy, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
 interface TwoFactorSetupDialogProps {
@@ -69,18 +69,10 @@ export function TwoFactorSetupDialog({
 
   const generateSecret = async () => {
     // Generate a TOTP instance with a random secret
-    const totp = new OTPAuth.TOTP({
-      issuer: "Pexly",
-      label: userEmail,
-      algorithm: "SHA1",
-      digits: 6,
-      period: 30,
-    });
-    
-    const newSecret = totp.secret.base32;
+    const newSecret = OTPAuth.authenticator.generateSecret();
     setSecret(newSecret);
 
-    const otpauthUrl = totp.toString();
+    const otpauthUrl = OTPAuth.authenticator.keyuri(userEmail, "Pexly", newSecret);
 
     let qrCode = '';
     try {
@@ -107,17 +99,7 @@ export function TwoFactorSetupDialog({
   const handleVerify = async () => {
     setLoading(true);
     try {
-      // Create TOTP instance with the stored secret
-      const totp = new OTPAuth.TOTP({
-        issuer: "Pexly",
-        label: userEmail,
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-        secret: OTPAuth.Secret.fromBase32(secret),
-      });
-      
-      const isValid = totp.validate({ token: verificationCode, window: 1 }) !== null;
+      const isValid = OTPAuth.authenticator.check(verificationCode, secret);
 
       if (!isValid) {
         toast({
@@ -249,17 +231,15 @@ export function TwoFactorSetupDialog({
         </DialogHeader>
 
         {step === 1 && (
-  <div className="space-y-4">
-    <div className="flex justify-center">
-   const safeQrCodeSrc = sanitizeImageSrc(qrCodeUrl);
-
-{safeQrCodeSrc && (
-  <img
-    src={safeQrCodeSrc}
-    alt="QR Code"
-    className="w-48 h-48"
-  />
-)}
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              {qrCodeUrl && (
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code"
+                  className="w-48 h-48"
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label>Or enter this code manually:</Label>
