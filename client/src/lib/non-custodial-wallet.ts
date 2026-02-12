@@ -62,15 +62,44 @@ function fromHex(hex: string): Uint8Array {
  * Custom XRP Address Derivation using Uint8Array & noble-hashes
  */
 function deriveXrpAddress(publicKey: Uint8Array): string {
+  // Use ripemd160(sha256(publicKey)) for XRP account ID
   const accountId = ripemd160(sha256(publicKey));
   const payload = new Uint8Array(21);
-  payload[0] = 0x00; 
+  payload[0] = 0x00; // AccountID prefix
   payload.set(accountId, 1);
+  
+  // Double SHA256 for checksum
   const checksum = sha256(sha256(payload)).slice(0, 4);
   const final = new Uint8Array(25);
   final.set(payload);
   final.set(checksum, 21);
-  return xrpCodec.encode(final);
+  
+  // Use XRP-specific base58 alphabet
+  return base58EncodeWithAlphabet(final, XRP_ALPHABET);
+}
+
+/**
+ * Base58 Encoder with custom alphabet
+ */
+function base58EncodeWithAlphabet(inputBytes: Uint8Array, alphabet: string): string {
+  if (inputBytes.length === 0) return '';
+  let digits = [0];
+  for (let i = 0; i < inputBytes.length; i++) {
+    let carry = inputBytes[i];
+    for (let j = 0; j < digits.length; j++) {
+      carry += digits[j] << 8;
+      digits[j] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  let result = '';
+  for (let i = 0; i < inputBytes.length && inputBytes[i] === 0; i++) result += alphabet[0];
+  for (let i = digits.length - 1; i >= 0; i--) result += alphabet[digits[i]];
+  return result;
 }
 
 export interface NonCustodialWallet {
@@ -138,6 +167,7 @@ class NonCustodialWalletManager {
     } else if (chainId === "XRP") {
       const account = root.derive("m/44'/144'/0'/0/0");
       privateKey = toHex(account.privateKey!);
+      // Fix: Derive address from public key properly using ripemd160(sha256(pub))
       address = deriveXrpAddress(account.publicKey!); 
       walletType = "xrp";
     } else if (["ethereum", "ETH", "Ethereum", "BNB", "BSC", "Binance Coin", "Tether", "Polygon", "Arbitrum", "Optimism", "Base", "Avalanche"].includes(chainId)) {
