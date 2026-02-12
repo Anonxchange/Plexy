@@ -50,16 +50,18 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
 /**
  * Get the current exchange rate for a crypto pair from RocketX
  * @param from symbol of from crypto (e.g. 'BTC')
+ * @param fromNetwork network of from crypto (e.g. 'BTC')
  * @param to symbol of to crypto (e.g. 'USDT')
+ * @param toNetwork network of to crypto (e.g. 'ETH')
  * @returns market rate as number
  */
-export async function getRocketxRate(from: string, to: string): Promise<number> {
+export async function getRocketxRate(from: string, fromNetwork: string, to: string, toNetwork: string): Promise<number> {
   try {
     const data = await rocketXApi.getQuotation({
       fromToken: from,
-      fromNetwork: 'BTC', // Default networks, would be better to pass them
+      fromNetwork: fromNetwork,
       toToken: to,
-      toNetwork: 'ETH',
+      toNetwork: toNetwork,
       amount: 1
     });
     
