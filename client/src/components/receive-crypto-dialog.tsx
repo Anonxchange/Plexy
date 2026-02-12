@@ -115,14 +115,14 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT' || normalizedChainId === 'USDT-ERC20' || normalizedChainId === 'ETH')) ||
                (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC' || normalizedChainId === 'USDC-ERC20' || normalizedChainId === 'ETH'));
       }
-        if (selectedNetwork.includes('BEP-20')) {
-          return normalizedChainId.includes('BEP20') || 
-                 normalizedChainId === 'BNB' || 
-                 normalizedChainId === 'BSC' ||
-                 normalizedChainId.includes('BINANCE') ||
-                 (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC')) ||
-                 (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC'));
-        }
+      if (selectedNetwork.includes('BEP-20')) {
+        return normalizedChainId.includes('BEP20') || 
+               normalizedChainId === 'BNB' || 
+               normalizedChainId === 'BSC' ||
+               normalizedChainId.includes('BINANCE') ||
+               (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC' || normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)')) ||
+               (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC' || normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)'));
+      }
         if (selectedNetwork.includes('SPL') || selectedNetwork === 'Solana') {
           return normalizedChainId.includes('SOL') || (normalizedChainId === 'SOLANA' && normalizedSelectedCrypto === 'SOL') || (normalizedChainId === 'SOLANA');
         }
