@@ -826,24 +826,7 @@ export function Swap() {
                 </div>
 
                 {/* Rates Info */}
-                <div className="flex flex-col sm:grid sm:grid-cols-3 gap-4 pt-2">
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Swap rate</span>
-                    <div className="flex items-center flex-wrap gap-1 min-h-[16px] overflow-hidden">
-                      {isLoading ? (
-                        <Skeleton className="h-3 w-32" />
-                      ) : (
-                        <>
-                          <span className="text-xs font-bold truncate">1 {fromCurrency} = {formatRate(swapRate)} {toCurrency}</span>
-                          {percentageDiff > 0 && (
-                            <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 px-1 py-0 h-4 text-[10px] flex-shrink-0">
-                              {percentageDiff.toFixed(2)}%
-                            </Badge>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
+                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Market rate</span>
                     <div className="min-h-[16px] flex items-center overflow-hidden">
@@ -853,10 +836,6 @@ export function Swap() {
                         <span className="text-xs font-bold block truncate">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
                       )}
                     </div>
-                  </div>
-                  <div className="space-y-1 text-right">
-                    <span className="text-xs text-muted-foreground block">Rate Provider</span>
-                    <span className="text-xs font-bold text-primary">RocketX</span>
                   </div>
                 </div>
 
@@ -875,7 +854,7 @@ export function Swap() {
                     </div>
 
                     <div className="flex items-center justify-between text-sm px-1">
-                      <span className="text-muted-foreground font-medium">Network Fee</span>
+                      <span className="text-muted-foreground font-medium">Swapper Fee</span>
                       <span className="text-foreground font-bold">
                         {activeQuote?.gasFee ? `${activeQuote.gasFee.toFixed(6)} ${fromCurrency}` : estFees[fromNetwork] || "Calculated at swap"}
                       </span>
