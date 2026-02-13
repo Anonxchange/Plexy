@@ -129,7 +129,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [fromCrypto, toCrypto, fromNetwork, toNetwork, cacheKey]);
+  }, [fromCrypto, toCrypto, fromNetwork, toNetwork, amount, cacheKey]);
 
   return priceData;
 }
