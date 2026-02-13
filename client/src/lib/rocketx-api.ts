@@ -37,6 +37,8 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
   });
 
   if (error) {
+    // If we get an error, check if it's because the function isn't deployed or missing CORS
+    console.error('Supabase function error:', error);
     throw new Error(error.message || 'RocketX API call failed');
   }
 
