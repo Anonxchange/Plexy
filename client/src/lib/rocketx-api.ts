@@ -32,21 +32,30 @@ export interface RocketXNetwork {
 }
 
 async function callRocketX(action: string, params: Record<string, any> = {}) {
-  const { data, error } = await supabase.functions.invoke('rocketx-swap', {
-    body: { action, params },
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke('rocketx-swap', {
+      body: { action, params },
+    });
 
-  if (error) {
-    // If we get an error, check if it's because the function isn't deployed or missing CORS
-    console.error('Supabase function error:', error);
-    throw new Error(error.message || 'RocketX API call failed');
+    if (error) {
+      console.error('Supabase function invocation error:', {
+        message: error.message,
+        name: error.name,
+        details: error
+      });
+      throw new Error(`Connection error: ${error.message || 'Could not reach swap service'}`);
+    }
+
+    if (!data?.success) {
+      console.error('RocketX API business logic error:', data?.error);
+      throw new Error(data?.error || 'Exchange service returned an error');
+    }
+
+    return data.data;
+  } catch (err: any) {
+    console.error('Unexpected error in callRocketX:', err);
+    throw err;
   }
-
-  if (!data?.success) {
-    throw new Error(data?.error || 'RocketX API returned an error');
-  }
-
-  return data.data;
 }
 
 /**
