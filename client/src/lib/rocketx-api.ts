@@ -33,17 +33,22 @@ export interface RocketXNetwork {
 
 async function callRocketX(action: string, params: Record<string, any> = {}) {
   try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    console.log('Invoking RocketX Edge Function:', {
+      url: `${supabaseUrl}/functions/v1/rocketx-swap`,
+      action,
+      params
+    });
+
     const { data, error } = await supabase.functions.invoke('rocketx-swap', {
       body: { action, params },
     });
 
     if (error) {
-      console.error('Supabase function invocation error:', {
-        message: error.message,
-        name: error.name,
-        details: error
-      });
-      throw new Error(`Connection error: ${error.message || 'Could not reach swap service'}`);
+      console.error('Supabase function invocation error:', error);
+      // Check if it's a network error vs a function error
+      const errorMsg = error.message || 'Could not reach swap service';
+      throw new Error(`Connection error: ${errorMsg}`);
     }
 
     if (!data?.success) {
@@ -54,6 +59,10 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
     return data.data;
   } catch (err: any) {
     console.error('Unexpected error in callRocketX:', err);
+    // If it's the "Failed to send a request" error, provide more context
+    if (err.message?.includes('Failed to send a request')) {
+      throw new Error('Connection error: The Edge Function "rocketx-swap" could not be reached. Please verify the function is deployed and CORS is enabled.');
+    }
     throw err;
   }
 }
