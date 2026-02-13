@@ -309,7 +309,7 @@ export function Swap() {
 
     toast({
       title: "Swap Failed",
-      description: error.message || "Transaction failed",
+      description: error.message || "Transaction failed. Please ensure Supabase Edge Functions are deployed and configured.",
       variant: "destructive",
     });
 
