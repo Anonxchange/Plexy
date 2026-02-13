@@ -14,6 +14,9 @@ export interface RocketXQuote {
   walletless?: boolean;
   minAmount?: number;
   error?: string;
+  fromAmountInUsd?: number;
+  toAmountInUsd?: number;
+  id?: string;
 }
 
 export interface RocketXToken {
@@ -90,7 +93,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
  * @param toNetwork network of to crypto (e.g. 'ETH')
  * @returns market rate as number
  */
-export async function getRocketxRate(from: string, fromNetwork: string, to: string, toNetwork: string, amount: number = 1): Promise<number> {
+export async function getRocketxRate(from: string, fromNetwork: string, to: string, toNetwork: string, amount: number = 1): Promise<RocketXQuote | null> {
   try {
     const data = await rocketXApi.getQuotation({
       fromToken: from,
@@ -105,12 +108,12 @@ export async function getRocketxRate(from: string, fromNetwork: string, to: stri
       const bestQuote = data.reduce((prev: RocketXQuote, current: RocketXQuote) => {
         return (prev.toAmount > current.toAmount) ? prev : current;
       });
-      return bestQuote.toAmount;
+      return bestQuote;
     }
-    return 0;
+    return null;
   } catch (error) {
     console.error('Error fetching RocketX rate:', error);
-    return 0;
+    return null;
   }
 }
 
