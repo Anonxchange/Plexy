@@ -105,7 +105,8 @@ export function Swap() {
     fromCurrency,
     toCurrency,
     fromNetwork,
-    toNetwork
+    toNetwork,
+    parseFloat(fromAmount) || 1
   );
 
   const [isSwapping, setIsSwapping] = useState(false);
