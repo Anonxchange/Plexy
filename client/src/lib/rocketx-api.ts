@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { walletClient } from './wallet-client';
 
 export interface RocketXQuote {
   exchange: string;
@@ -34,14 +35,27 @@ export interface RocketXNetwork {
 async function callRocketX(action: string, params: Record<string, any> = {}) {
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    // If Supabase is not configured, try to call RocketX directly or show a better error
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn('Supabase not configured, using mock/local mode for RocketX');
+      throw new Error('RocketX service is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    }
+
     console.log('Invoking RocketX Edge Function:', {
       url: `${supabaseUrl}/functions/v1/rocketx-swap`,
       action,
       params
     });
 
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
     const { data, error } = await supabase.functions.invoke('rocketx-swap', {
       body: { action, params },
+      headers
     });
 
     if (error) {
