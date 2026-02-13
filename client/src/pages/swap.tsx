@@ -297,7 +297,7 @@ export function Swap() {
     }
 
     if (!completed) {
-      throw new Error("Swap timeout or not confirmed");
+      throw new Error("Swap timeout: The transaction is taking longer than expected. Please check your wallet history.");
     }
 
     toast({
@@ -306,17 +306,14 @@ export function Swap() {
     });
 
   } catch (error: any) {
-
+    console.error("Swap execution failed:", error);
     toast({
       title: "Swap Failed",
-      description: error.message || "Transaction failed. Please ensure Supabase Edge Functions are deployed and configured.",
+      description: error.message || "Transaction failed. Please ensure your wallet has sufficient balance and the swap service is available.",
       variant: "destructive",
     });
-
   } finally {
-
     setIsSwapping(false);
-
   }
 };
 
