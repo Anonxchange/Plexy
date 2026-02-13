@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { walletClient } from './wallet-client';
+// import { walletClient } from './wallet-client';
 
 export interface RocketXQuote {
   exchange: string;
@@ -51,6 +51,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabaseKey}`,
     };
 
     const { data, error } = await supabase.functions.invoke('rocketx-swap', {
