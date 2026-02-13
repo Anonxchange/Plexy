@@ -17,8 +17,8 @@ const SWAP_SPREAD_PERCENTAGE = 0.2; // 0.2% spread
 const priceCache: Record<string, { data: SwapPriceData; timestamp: number }> = {};
 const CACHE_TTL = 30000; // 30 seconds cache
 
-export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: string, toNetwork: string) {
-  const cacheKey = `${fromCrypto}-${fromNetwork}-${toCrypto}-${toNetwork}`;
+export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: string, toNetwork: string, amount: number = 1) {
+  const cacheKey = `${fromCrypto}-${fromNetwork}-${toCrypto}-${toNetwork}-${amount}`;
   
   const [priceData, setPriceData] = useState<SwapPriceData>(() => {
     // Initialize from cache if available
@@ -65,7 +65,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
         }
 
         // Try to fetch from Rocketx first for real exchange rates
-        const rocketxRate = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork);
+        const rocketxRate = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, amount);
         
         let marketRate = rocketxRate;
         
@@ -80,13 +80,15 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
         if (!isMounted) return;
 
         // Calculate swap rate with spread
+        // If we have a direct rocketxRate, it's already the quote from the exchange
+        // including their best routing, so we use it directly as both market and swap rate
         const isSellingCrypto = toCrypto === 'USDT' || toCrypto === 'USDC';
         const spreadMultiplier = isSellingCrypto 
           ? (1 - SWAP_SPREAD_PERCENTAGE / 100)
           : (1 + SWAP_SPREAD_PERCENTAGE / 100);
-        
-        const swapRate = marketRate * spreadMultiplier;
-        const percentageDiff = Math.abs(((swapRate - marketRate) / marketRate) * 100);
+
+        const swapRate = rocketxRate !== 0 ? rocketxRate : marketRate * spreadMultiplier;
+        const percentageDiff = marketRate !== 0 ? Math.abs(((swapRate - marketRate) / marketRate) * 100) : 0;
 
         const data = {
           marketRate,
