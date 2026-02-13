@@ -261,11 +261,11 @@ export function Swap() {
       slippage: 1
     });
 
-    if (!swapResponse?.data?.id) {
+    if (!swapResponse?.id) {
       throw new Error("Swap creation failed");
     }
 
-    const swapId = swapResponse.data.id;
+    const swapId = swapResponse.id;
 
     toast({
       title: "Swap Initiated",
@@ -277,11 +277,12 @@ export function Swap() {
     let completed = false;
 
     while (attempts < 30) {
+
       await new Promise(r => setTimeout(r, 3000));
 
-      const statusRes = await rocketXApi.getSwapStatus(swapId);
+      const statusRes = await rocketXApi.getStatus(swapId);
 
-      const status = statusRes?.data?.status;
+      const status = statusRes?.status;
 
       if (status === "completed") {
         completed = true;
@@ -289,7 +290,7 @@ export function Swap() {
       }
 
       if (status === "failed") {
-        throw new Error("Swap failed due to insufficient balance or network error");
+        throw new Error("Swap failed (insufficient balance or rejected)");
       }
 
       attempts++;
@@ -299,20 +300,23 @@ export function Swap() {
       throw new Error("Swap timeout or not confirmed");
     }
 
-    // STEP 3: Only now show success
     toast({
       title: "Swap Successful!",
       description: `Successfully swapped ${fromAmountNum} ${fromCurrency} → ${toCurrency}`,
     });
 
   } catch (error: any) {
+
     toast({
       title: "Swap Failed",
       description: error.message || "Transaction failed",
       variant: "destructive",
     });
+
   } finally {
+
     setIsSwapping(false);
+
   }
 };
 
