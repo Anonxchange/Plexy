@@ -111,6 +111,8 @@ export function Swap() {
   );
 
   const [isSwapping, setIsSwapping] = useState(false);
+  const [isFetchingQuote, setIsFetchingQuote] = useState(false);
+  const [activeQuote, setActiveQuote] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [estFees, setEstFees] = useState<Record<string, string>>({
     BTC: "0.0001 BTC",
@@ -209,16 +211,61 @@ export function Swap() {
     }
   };
 
-  const handleSwap = async () => {
+  const handleGetQuote = async () => {
     if (!user) {
       setLocation("/signin");
       return;
     }
 
     const fromAmountNum = parseFloat(fromAmount);
-    const toAmountNum = parseFloat(toAmount);
+    if (fromAmountNum <= 0) return;
 
-    if (fromAmountNum <= 0 || toAmountNum <= 0) {
+    setIsFetchingQuote(true);
+    setActiveQuote(null);
+    try {
+      const fromCurrObj = currencies.find(c => c.symbol === fromCurrency);
+      const toCurrObj = currencies.find(c => c.symbol === toCurrency);
+      const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
+      const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
+
+      const quotes = await rocketXApi.getQuotation({
+        fromToken: fromNetObj?.identifier || fromCurrObj?.identifier || fromCurrency,
+        fromNetwork,
+        toToken: toNetObj?.identifier || toCurrObj?.identifier || toCurrency,
+        toNetwork,
+        amount: fromAmountNum,
+      });
+
+      if (quotes && quotes.length > 0) {
+        // Find the best quote
+        const bestQuote = quotes.reduce((prev: any, current: any) => {
+          return (prev.toAmount > current.toAmount) ? prev : current;
+        });
+        setActiveQuote(bestQuote);
+        
+        // Update toAmount in UI with the exact quote amount
+        setToAmount(bestQuote.toAmount.toLocaleString('en-US', { 
+          useGrouping: false, 
+          minimumFractionDigits: 0, 
+          maximumFractionDigits: 8 
+        }));
+      } else {
+        throw new Error("No quotes available for this pair");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Quote Failed",
+        description: error.message || "Could not fetch swap quote",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetchingQuote(false);
+    }
+  };
+
+  const handleSwap = async () => {
+    if (!activeQuote) {
+      await handleGetQuote();
       return;
     }
 
@@ -226,7 +273,6 @@ export function Swap() {
     if (sessionPassword) {
       await performSwap(sessionPassword);
     } else {
-      // Otherwise prompt for password (will be cached for session)
       setShowPasswordDialog(true);
     }
   };
@@ -339,15 +385,16 @@ export function Swap() {
     // STEP 2: Create swap
     const swapResponse = await rocketXApi.executeSwap({
       userId: user!.id,
-      fromToken: fromNetObj?.identifier || fromCurrObj?.identifier,
+      fromToken: activeQuote?.fromToken,
       fromNetwork,
-      fromAmount: fromAmountNum,
+      fromAmount: activeQuote?.fromAmount || fromAmountNum,
       fromAddress: fromWallet.address,
-      toToken: toNetObj?.identifier || toCurrObj?.identifier,
+      toToken: activeQuote?.toToken,
       toNetwork,
-      toAmount: toAmountNum,
+      toAmount: activeQuote?.toAmount || toAmountNum,
       toAddress: toWallet.address,
-      slippage: 1
+      slippage: 1,
+      quoteId: activeQuote?.id // Pass quote ID if available
     });
 
     if (!swapResponse?.id) {
@@ -797,13 +844,55 @@ export function Swap() {
                   </div>
                 </div>
 
-                <Button 
-                  className="w-full h-14 text-lg font-bold bg-[#58B383] hover:bg-[#4da175] text-white rounded-xl shadow-sm transition-all" 
-                  onClick={handleSwap}
-                  disabled={isSwapping || isLoading || parseFloat(fromAmount) <= 0}
-                >
-                  {isSwapping ? <Loader2 className="animate-spin h-6 w-6" /> : "Swap"}
-                </Button>
+                {activeQuote && (
+                  <div className="bg-accent/5 p-4 rounded-xl border border-primary/20 space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Estimated Fees:</span>
+                      <span className="font-bold">{activeQuote.gasFee} USD</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Estimated Time:</span>
+                      <span className="font-bold">{activeQuote.estimatedTime}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Exchange:</span>
+                      <div className="flex items-center gap-1">
+                        {activeQuote.exchangeIcon && <img src={activeQuote.exchangeIcon} className="w-3 h-3" alt="" />}
+                        <span className="font-bold">{activeQuote.exchange}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  {!activeQuote ? (
+                    <Button 
+                      className="flex-1 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-xl shadow-sm transition-all" 
+                      onClick={handleGetQuote}
+                      disabled={isFetchingQuote || parseFloat(fromAmount) <= 0}
+                    >
+                      {isFetchingQuote ? <Loader2 className="animate-spin h-6 w-6" /> : "Get Quote"}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="outline"
+                        className="h-14 px-4 rounded-xl"
+                        onClick={() => setActiveQuote(null)}
+                        disabled={isSwapping}
+                      >
+                        Reset
+                      </Button>
+                      <Button 
+                        className="flex-1 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-xl shadow-sm transition-all" 
+                        onClick={handleSwap}
+                        disabled={isSwapping}
+                      >
+                        {isSwapping ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirm Swap"}
+                      </Button>
+                    </>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
