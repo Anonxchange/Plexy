@@ -270,7 +270,8 @@ export function Swap() {
       const isXRPMatch = (target: string) => ["xrp", "ripple"].includes(target);
       const isPolygonMatch = (target: string) => ["matic", "polygon"].includes(target);
 
-      const matchesChain = (target: string, value: string) => {
+      const matchesChain = (target: string, value: string | undefined) => {
+        if (!value) return false;
         if (isBTCMatch(target)) return isBTCMatch(value);
         if (isETHMatch(target)) return isETHMatch(value);
         if (isBSCMatch(target)) return isBSCMatch(value);
@@ -304,7 +305,8 @@ export function Swap() {
       const isXRPMatch = (target: string) => ["xrp", "ripple"].includes(target);
       const isPolygonMatch = (target: string) => ["matic", "polygon"].includes(target);
 
-      const matchesChain = (target: string, value: string) => {
+      const matchesChain = (target: string, value: string | undefined) => {
+        if (!value) return false;
         if (isBTCMatch(target)) return isBTCMatch(value);
         if (isETHMatch(target)) return isETHMatch(value);
         if (isBSCMatch(target)) return isBSCMatch(value);
