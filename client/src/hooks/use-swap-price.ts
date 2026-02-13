@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getCryptoPrices } from '@/lib/crypto-prices';
-import { getRocketxRate } from '@/lib/rocketx-api';
+import { getRocketxRate, type RocketXQuote } from '@/lib/rocketx-api';
 
 interface SwapPriceData {
   marketRate: number;
@@ -8,6 +8,7 @@ interface SwapPriceData {
   percentageDiff: number;
   isLoading: boolean;
   error: string | null;
+  bestQuote: RocketXQuote | null;
 }
 
 // Platform spread percentage (how much above/below market rate)
@@ -32,6 +33,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
       percentageDiff: 0,
       isLoading: true,
       error: null,
+      bestQuote: null,
     };
   });
 
@@ -56,6 +58,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
             percentageDiff: 0,
             isLoading: false,
             error: null,
+            bestQuote: null,
           };
           if (isMounted) {
             setPriceData(data);
@@ -65,12 +68,12 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
         }
 
         // Try to fetch from Rocketx first for real exchange rates
-        const rocketxRate = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, amount);
+        const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, amount);
         
-        let marketRate = rocketxRate;
+        let marketRate = rocketxQuote?.toAmount || 0;
         
         // Fallback to CoinGecko if Rocketx fails
-        if (rocketxRate === 0) {
+        if (!rocketxQuote) {
           const prices = await getCryptoPrices([fromCrypto, toCrypto]);
           const fromPrice = prices[fromCrypto]?.current_price || 0;
           const toPrice = prices[toCrypto]?.current_price || 1;
@@ -87,7 +90,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           ? (1 - SWAP_SPREAD_PERCENTAGE / 100)
           : (1 + SWAP_SPREAD_PERCENTAGE / 100);
 
-        const swapRate = rocketxRate !== 0 ? rocketxRate : marketRate * spreadMultiplier;
+        const swapRate = rocketxQuote ? rocketxQuote.toAmount : marketRate * spreadMultiplier;
         const percentageDiff = marketRate !== 0 ? Math.abs(((swapRate - marketRate) / marketRate) * 100) : 0;
 
         const data = {
@@ -96,7 +99,22 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           percentageDiff,
           isLoading: false,
           error: null,
+          bestQuote: rocketxQuote,
         };
+
+        setPriceData(data);
+        priceCache[cacheKey] = { data, timestamp: Date.now() };
+      } catch (error) {
+        console.error('Error fetching swap prices:', error);
+        if (isMounted) {
+          setPriceData((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: 'Failed to fetch live prices',
+          }));
+        }
+      }
+    };
 
         setPriceData(data);
         priceCache[cacheKey] = { data, timestamp: Date.now() };
