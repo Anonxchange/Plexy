@@ -111,6 +111,7 @@ export function Swap() {
   );
 
   const [isSwapping, setIsSwapping] = useState(false);
+  const [activeQuote, setActiveQuote] = useState<any>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [estFees, setEstFees] = useState<Record<string, string>>({
