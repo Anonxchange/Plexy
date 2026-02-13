@@ -102,7 +102,7 @@ export function Swap() {
   }, [toCurrency]);
 
   // Fetch live swap prices
-  const { marketRate, swapRate, percentageDiff, isLoading } = useSwapPrice(
+  const { marketRate, swapRate, percentageDiff, isLoading, bestQuote } = useSwapPrice(
     fromCurrency,
     toCurrency,
     fromNetwork,
@@ -111,8 +111,7 @@ export function Swap() {
   );
 
   const [isSwapping, setIsSwapping] = useState(false);
-  const [isFetchingQuote, setIsFetchingQuote] = useState(false);
-  const [activeQuote, setActiveQuote] = useState<any>(null);
+  const [balance, setBalance] = useState<number | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [estFees, setEstFees] = useState<Record<string, string>>({
     BTC: "0.0001 BTC",
@@ -121,6 +120,41 @@ export function Swap() {
     SOL: "0.000005 SOL",
     TRX: "15 TRX"
   });
+
+  // Automatically sync activeQuote with bestQuote from the hook
+  useEffect(() => {
+    if (bestQuote) {
+      setActiveQuote(bestQuote);
+    }
+  }, [bestQuote]);
+
+  // Fetch balance for the selected "From" asset
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!user) return;
+      try {
+        const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
+        const fromWallet = wallets.find(w => {
+          const target = fromNetwork.toLowerCase();
+          const symbolTarget = fromCurrency.toLowerCase();
+          const chainIdLower = w.chainId?.toLowerCase();
+          const walletTypeLower = w.walletType?.toLowerCase();
+          
+          return chainIdLower === target || chainIdLower === symbolTarget || walletTypeLower === target;
+        });
+        
+        if (fromWallet) {
+          setBalance(fromWallet.balance || 0);
+        } else {
+          setBalance(0);
+        }
+      } catch (e) {
+        console.error("Failed to fetch balance", e);
+      }
+    };
+
+    fetchBalance();
+  }, [user, fromCurrency, fromNetwork]);
 
   useEffect(() => {
     const fetchFees = async () => {
@@ -154,7 +188,14 @@ export function Swap() {
 
   // Auto-update toAmount when prices change or fromAmount changes
   useEffect(() => {
-    if (isUpdatingFromInput && swapRate > 0) {
+    if (isUpdatingFromInput && bestQuote) {
+      // Use exact amount from RocketX if available
+      setToAmount(bestQuote.toAmount.toLocaleString('en-US', { 
+        useGrouping: false, 
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 8 
+      }));
+    } else if (isUpdatingFromInput && swapRate > 0) {
       const amount = parseFloat(fromAmount) || 0;
       const calculated = calculateSwapAmount(amount, swapRate);
       // Round to 8 decimal places for better precision, especially for BTC
@@ -164,7 +205,7 @@ export function Swap() {
         maximumFractionDigits: 8 
       }));
     }
-  }, [fromAmount, swapRate, isUpdatingFromInput]);
+  }, [fromAmount, swapRate, isUpdatingFromInput, bestQuote]);
 
   // Auto-update fromAmount when toAmount is manually changed
   useEffect(() => {
@@ -212,6 +253,11 @@ export function Swap() {
   };
 
   const handleGetQuote = async () => {
+    // This is now redundant as hook fetches it, but keeping signature for handleSwap
+    return bestQuote;
+  };
+
+  const handleSwap = async () => {
     if (!user) {
       setLocation("/signin");
       return;
@@ -220,62 +266,21 @@ export function Swap() {
     const fromAmountNum = parseFloat(fromAmount);
     if (fromAmountNum <= 0) return;
 
-    setIsFetchingQuote(true);
-    setActiveQuote(null);
-    try {
-      const fromCurrObj = currencies.find(c => c.symbol === fromCurrency);
-      const toCurrObj = currencies.find(c => c.symbol === toCurrency);
-      const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
-      const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
-
-      console.log("Quotes request params:", {
-        fromToken: fromNetObj?.identifier || fromCurrObj?.identifier || fromCurrency,
-        fromNetwork,
-        toToken: toNetObj?.identifier || toCurrObj?.identifier || toCurrency,
-        toNetwork,
-        amount: fromAmountNum,
-      });
-
-      const quotes = await rocketXApi.getQuotation({
-        fromToken: fromNetObj?.identifier || fromCurrObj?.identifier || fromCurrency,
-        fromNetwork,
-        toToken: toNetObj?.identifier || toCurrObj?.identifier || toCurrency,
-        toNetwork,
-        amount: fromAmountNum,
-      });
-
-      console.log("Quotes response:", JSON.stringify(quotes, null, 2));
-
-      if (quotes && quotes.length > 0) {
-        // Find the best quote
-        const bestQuote = quotes.reduce((prev: any, current: any) => {
-          return (prev.toAmount > current.toAmount) ? prev : current;
-        });
-        setActiveQuote(bestQuote);
-        
-        // Update toAmount in UI with the exact quote amount
-        setToAmount(bestQuote.toAmount.toLocaleString('en-US', { 
-          useGrouping: false, 
-          minimumFractionDigits: 0, 
-          maximumFractionDigits: 8 
-        }));
-      } else {
-        throw new Error("No quotes available for this pair");
-      }
-    } catch (error: any) {
+    if (balance !== null && fromAmountNum > balance) {
       toast({
-        title: "Quote Failed",
-        description: error.message || "Could not fetch swap quote",
+        title: "Insufficient Balance",
+        description: `You need ${fromAmountNum} ${fromCurrency} but only have ${balance}`,
         variant: "destructive",
       });
-    } finally {
-      setIsFetchingQuote(false);
+      return;
     }
-  };
 
-  const handleSwap = async () => {
     if (!activeQuote) {
-      await handleGetQuote();
+      toast({
+        title: "No Quote",
+        description: "Please wait for a valid quote to be fetched.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -849,60 +854,54 @@ export function Swap() {
                     </div>
                   </div>
                   <div className="space-y-1 text-right">
-                    <span className="text-xs text-muted-foreground block">Rate will refresh in</span>
-                    <span className="text-xs font-bold">Updating</span>
+                    <span className="text-xs text-muted-foreground block">Rate Provider</span>
+                    <span className="text-xs font-bold text-primary">RocketX</span>
                   </div>
                 </div>
 
-                {activeQuote && (
-                  <div className="bg-accent/5 p-4 rounded-xl border border-primary/20 space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Estimated Fees:</span>
-                      <span className="font-bold">{activeQuote.gasFee} USD</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Estimated Time:</span>
-                      <span className="font-bold">{activeQuote.estimatedTime}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Exchange:</span>
-                      <div className="flex items-center gap-1">
-                        {activeQuote.exchangeIcon && <img src={activeQuote.exchangeIcon} className="w-3 h-3" alt="" />}
-                        <span className="font-bold">{activeQuote.exchange}</span>
+                  {/* Swap Details */}
+                  <div className="space-y-4 pt-2">
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-muted-foreground font-medium">Provider</span>
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src="https://cdn.rocketx.exchange/pd135zq/images/exchange/rocketx_pool_10.png" 
+                          alt="RocketX" 
+                          className="h-4 w-4 rounded-full" 
+                        />
+                        <span className="text-foreground font-bold">RocketX</span>
                       </div>
                     </div>
-                  </div>
-                )}
 
-                <div className="flex gap-2">
-                  {!activeQuote ? (
-                    <Button 
-                      className="flex-1 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-xl shadow-sm transition-all" 
-                      onClick={handleGetQuote}
-                      disabled={isFetchingQuote || parseFloat(fromAmount) <= 0}
-                    >
-                      {isFetchingQuote ? <Loader2 className="animate-spin h-6 w-6" /> : "Get Quote"}
-                    </Button>
-                  ) : (
-                    <>
-                      <Button 
-                        variant="outline"
-                        className="h-14 px-4 rounded-xl"
-                        onClick={() => setActiveQuote(null)}
-                        disabled={isSwapping}
-                      >
-                        Reset
-                      </Button>
-                      <Button 
-                        className="flex-1 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-xl shadow-sm transition-all" 
-                        onClick={handleSwap}
-                        disabled={isSwapping}
-                      >
-                        {isSwapping ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirm Swap"}
-                      </Button>
-                    </>
-                  )}
-                </div>
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-muted-foreground font-medium">Network Fee</span>
+                      <span className="text-foreground font-bold">
+                        {activeQuote?.gasFee ? `${activeQuote.gasFee.toFixed(6)} ${fromCurrency}` : estFees[fromNetwork] || "Calculated at swap"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-muted-foreground font-medium">Price Impact</span>
+                      <span className="text-emerald-500 font-bold">
+                        {isLoading ? "..." : (percentageDiff < 0.01 ? "< 0.01%" : `${percentageDiff.toFixed(2)}%`)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Swap Button */}
+                  <Button 
+                    className="w-full h-14 text-lg font-black bg-[#B4F22E] hover:bg-[#B4F22E]/90 text-black rounded-xl shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                    onClick={handleSwap}
+                    disabled={isSwapping || (balance !== null && parseFloat(fromAmount) > balance)}
+                  >
+                    {isSwapping ? (
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    ) : (balance !== null && parseFloat(fromAmount) > balance) ? (
+                      "Insufficient Balance"
+                    ) : (
+                      "Swap Now"
+                    )}
+                  </Button>
               </CardContent>
             </Card>
           </div>
