@@ -19,7 +19,7 @@ import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { rocketXApi } from "@/lib/rocketx-api";
-import { walletClient } from "@/lib/wallet-client";
+import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 
 
 const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
@@ -245,9 +245,9 @@ export function Swap() {
     const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
 
     // STEP 1: Get wallet addresses
-    const { wallets } = await walletClient.getWallets();
-    const fromWallet = wallets.find(w => w.currency === fromNetwork || w.currency === fromCurrency);
-    const toWallet = wallets.find(w => w.currency === toNetwork || w.currency === toCurrency);
+    const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user!.id);
+    const fromWallet = wallets.find(w => w.chainId === fromNetwork || w.chainId === fromCurrency);
+    const toWallet = wallets.find(w => w.chainId === toNetwork || w.chainId === toCurrency);
 
     if (!fromWallet?.address || !toWallet?.address) {
       throw new Error(`Please generate a ${fromCurrency} and ${toCurrency} wallet first.`);
