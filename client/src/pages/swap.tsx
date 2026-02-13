@@ -231,57 +231,90 @@ export function Swap() {
   };
 
   const performSwap = async (password: string) => {
-    const fromAmountNum = parseFloat(fromAmount);
-    const toAmountNum = parseFloat(toAmount);
-    const feeAmount = 0;
+  const fromAmountNum = parseFloat(fromAmount);
+  const toAmountNum = parseFloat(toAmount);
 
-    setIsSwapping(true);
-    try {
-      // Find the selected currency objects to get their identifiers/chains
-      const fromCurrObj = currencies.find(c => c.symbol === fromCurrency);
-      const toCurrObj = currencies.find(c => c.symbol === toCurrency);
+  setIsSwapping(true);
 
-      const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
-      const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
+  try {
+    const fromCurrObj = currencies.find(c => c.symbol === fromCurrency);
+    const toCurrObj = currencies.find(c => c.symbol === toCurrency);
 
-      const data = await rocketXApi.executeSwap({
-        userId: user!.id,
-        fromCrypto: fromCurrency,
-        toCrypto: toCurrency,
-        fromAmount: fromAmountNum,
-        toAmount: toAmountNum,
-        swapRate,
-        marketRate,
-        fee: feeAmount,
-        userPassword: password,
-        // Adding potential RocketX specific params from the edge function
-        fromToken: fromNetObj?.identifier || fromCurrObj?.identifier || fromCurrency,
-        fromNetwork: fromNetwork,
-        toToken: toNetObj?.identifier || toCurrObj?.identifier || toCurrency,
-        toNetwork: toNetwork,
-        slippage: 1 // Default 1%
-      });
+    const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
+    const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
 
-      toast({
-        title: "Swap Successful!",
-        description: `Swapped ${fromAmountNum} ${fromCurrency} to ${(data?.to_amount || toAmountNum).toFixed(6)} ${toCurrency}`,
-      });
+    // STEP 1: Create swap
+    const swapResponse = await rocketXApi.executeSwap({
+      userId: user!.id,
+      fromCrypto: fromCurrency,
+      toCrypto: toCurrency,
+      fromAmount: fromAmountNum,
+      toAmount: toAmountNum,
+      swapRate,
+      marketRate,
+      fee: 0,
+      userPassword: password,
+      fromToken: fromNetObj?.identifier || fromCurrObj?.identifier,
+      fromNetwork,
+      toToken: toNetObj?.identifier || toCurrObj?.identifier,
+      toNetwork,
+      slippage: 1
+    });
 
-      // setHistory(swapExecutionService.getOrderHistory());
-      setFromAmount("0.00001");
-      setToAmount("");
-      setShowPasswordDialog(false);
-    } catch (error: any) {
-      console.error('Swap error:', error);
-      toast({
-        title: "Swap Failed",
-        description: error.message || "Failed to execute swap. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSwapping(false);
+    if (!swapResponse?.data?.id) {
+      throw new Error("Swap creation failed");
     }
-  };
+
+    const swapId = swapResponse.data.id;
+
+    toast({
+      title: "Swap Initiated",
+      description: "Waiting for blockchain confirmation...",
+    });
+
+    // STEP 2: Poll status
+    let attempts = 0;
+    let completed = false;
+
+    while (attempts < 30) {
+      await new Promise(r => setTimeout(r, 3000));
+
+      const statusRes = await rocketXApi.getSwapStatus(swapId);
+
+      const status = statusRes?.data?.status;
+
+      if (status === "completed") {
+        completed = true;
+        break;
+      }
+
+      if (status === "failed") {
+        throw new Error("Swap failed due to insufficient balance or network error");
+      }
+
+      attempts++;
+    }
+
+    if (!completed) {
+      throw new Error("Swap timeout or not confirmed");
+    }
+
+    // STEP 3: Only now show success
+    toast({
+      title: "Swap Successful!",
+      description: `Successfully swapped ${fromAmountNum} ${fromCurrency} → ${toCurrency}`,
+    });
+
+  } catch (error: any) {
+    toast({
+      title: "Swap Failed",
+      description: error.message || "Transaction failed",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSwapping(false);
+  }
+};
 
   const handlePasswordSubmit = () => {
     if (walletPassword.length > 0) {
