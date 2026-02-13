@@ -12,7 +12,7 @@ interface SwapPriceData {
 }
 
 // Platform spread percentage (how much above/below market rate)
-const SWAP_SPREAD_PERCENTAGE = 0.2; // 0.2% spread
+const SWAP_SPREAD_PERCENTAGE = 0; // 0% spread - direct RocketX rates
 
 // Cache for prices to avoid unnecessary re-fetching and provide instant UI
 const priceCache: Record<string, { data: SwapPriceData; timestamp: number }> = {};
@@ -101,20 +101,6 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           error: null,
           bestQuote: rocketxQuote,
         };
-
-        setPriceData(data);
-        priceCache[cacheKey] = { data, timestamp: Date.now() };
-      } catch (error) {
-        console.error('Error fetching swap prices:', error);
-        if (isMounted) {
-          setPriceData((prev) => ({
-            ...prev,
-            isLoading: false,
-            error: 'Failed to fetch live prices',
-          }));
-        }
-      }
-    };
 
         setPriceData(data);
         priceCache[cacheKey] = { data, timestamp: Date.now() };
