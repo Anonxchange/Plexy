@@ -55,14 +55,14 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
  * @param toNetwork network of to crypto (e.g. 'ETH')
  * @returns market rate as number
  */
-export async function getRocketxRate(from: string, fromNetwork: string, to: string, toNetwork: string): Promise<number> {
+export async function getRocketxRate(from: string, fromNetwork: string, to: string, toNetwork: string, amount: number = 1): Promise<number> {
   try {
     const data = await rocketXApi.getQuotation({
       fromToken: from,
       fromNetwork: fromNetwork,
       toToken: to,
       toNetwork: toNetwork,
-      amount: 1
+      amount: amount
     });
     
     if (data && data.length > 0) {
