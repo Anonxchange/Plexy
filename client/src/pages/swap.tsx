@@ -19,6 +19,7 @@ import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { rocketXApi } from "@/lib/rocketx-api";
+import { walletClient } from "@/lib/wallet-client";
 
 
 const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
@@ -243,21 +244,26 @@ export function Swap() {
     const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
     const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
 
-    // STEP 1: Create swap
+    // STEP 1: Get wallet addresses
+    const { wallets } = await walletClient.getWallets();
+    const fromWallet = wallets.find(w => w.currency === fromNetwork || w.currency === fromCurrency);
+    const toWallet = wallets.find(w => w.currency === toNetwork || w.currency === toCurrency);
+
+    if (!fromWallet?.address || !toWallet?.address) {
+      throw new Error(`Please generate a ${fromCurrency} and ${toCurrency} wallet first.`);
+    }
+
+    // STEP 2: Create swap
     const swapResponse = await rocketXApi.executeSwap({
       userId: user!.id,
-      fromCrypto: fromCurrency,
-      toCrypto: toCurrency,
-      fromAmount: fromAmountNum,
-      toAmount: toAmountNum,
-      swapRate,
-      marketRate,
-      fee: 0,
-      userPassword: password,
       fromToken: fromNetObj?.identifier || fromCurrObj?.identifier,
       fromNetwork,
+      fromAmount: fromAmountNum,
+      fromAddress: fromWallet.address,
       toToken: toNetObj?.identifier || toCurrObj?.identifier,
       toNetwork,
+      toAmount: toAmountNum,
+      toAddress: toWallet.address,
       slippage: 1
     });
 
