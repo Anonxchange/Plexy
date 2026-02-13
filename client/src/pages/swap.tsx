@@ -228,6 +228,14 @@ export function Swap() {
       const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
       const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
 
+      console.log("Quotes request params:", {
+        fromToken: fromNetObj?.identifier || fromCurrObj?.identifier || fromCurrency,
+        fromNetwork,
+        toToken: toNetObj?.identifier || toCurrObj?.identifier || toCurrency,
+        toNetwork,
+        amount: fromAmountNum,
+      });
+
       const quotes = await rocketXApi.getQuotation({
         fromToken: fromNetObj?.identifier || fromCurrObj?.identifier || fromCurrency,
         fromNetwork,
@@ -235,6 +243,8 @@ export function Swap() {
         toNetwork,
         amount: fromAmountNum,
       });
+
+      console.log("Quotes response:", JSON.stringify(quotes, null, 2));
 
       if (quotes && quotes.length > 0) {
         // Find the best quote
