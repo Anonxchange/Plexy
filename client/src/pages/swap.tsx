@@ -245,12 +245,36 @@ export function Swap() {
     const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
 
     // STEP 1: Get wallet addresses
+    console.log("Fetching non-custodial wallets for user:", user!.id);
     const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user!.id);
-    const fromWallet = wallets.find(w => w.chainId === fromNetwork || w.chainId === fromCurrency);
-    const toWallet = wallets.find(w => w.chainId === toNetwork || w.chainId === toCurrency);
+    console.log("Found wallets:", wallets.map(w => ({ chainId: w.chainId, address: w.address })));
+    
+    // Normalize networks/currencies for comparison
+    const fromTarget = fromNetwork.toLowerCase();
+    const fromSymbolTarget = fromCurrency.toLowerCase();
+    const toTarget = toNetwork.toLowerCase();
+    const toSymbolTarget = toCurrency.toLowerCase();
+
+    const fromWallet = wallets.find(w => 
+      w.chainId.toLowerCase() === fromTarget || 
+      w.chainId.toLowerCase() === fromSymbolTarget ||
+      w.walletType.toLowerCase() === fromTarget ||
+      w.walletType.toLowerCase() === fromSymbolTarget
+    );
+    
+    const toWallet = wallets.find(w => 
+      w.chainId.toLowerCase() === toTarget || 
+      w.chainId.toLowerCase() === toSymbolTarget ||
+      w.walletType.toLowerCase() === toTarget ||
+      w.walletType.toLowerCase() === toSymbolTarget
+    );
+
+    console.log("Selected fromWallet:", fromWallet?.address, "for target:", fromTarget);
+    console.log("Selected toWallet:", toWallet?.address, "for target:", toTarget);
 
     if (!fromWallet?.address || !toWallet?.address) {
-      throw new Error(`Please generate a ${fromCurrency} and ${toCurrency} wallet first.`);
+      console.error("Wallet missing. From:", fromWallet?.address, "To:", toWallet?.address);
+      throw new Error(`Please generate a ${fromCurrency} and ${toCurrency} wallet first. Go to the Assets page to create them.`);
     }
 
     // STEP 2: Create swap
