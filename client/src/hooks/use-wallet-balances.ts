@@ -32,6 +32,8 @@ export function useWalletBalances() {
 
       const accessToken = sessionData?.session?.access_token;
 
+      // The monitor-deposits edge function is expected to return both updated balances 
+      // and potentially trigger a sync of user wallet metadata in the backend.
       const response = await supabase.functions.invoke<BalanceResponse>('monitor-deposits', {
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
@@ -41,15 +43,14 @@ export function useWalletBalances() {
       }
 
       if (response.data?.success) {
-        // Cache the successful response for offline/fallback use
         localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(response.data.balances));
         return response.data.balances;
       } else {
         throw new Error(response.data?.error || 'Unknown error');
       }
     },
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchInterval: 60000, // Refetch every minute automatically
+    staleTime: 30000,
+    refetchInterval: 60000,
     retry: 1,
   });
 
