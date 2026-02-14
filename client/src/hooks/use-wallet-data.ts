@@ -1,265 +1,242 @@
-import { nonCustodialWalletManager } from "./non-custodial-wallet";
-import { supabase } from "./supabase";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
+import { getUserWallets } from "@/lib/wallet-api";
+import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
+import { useWalletBalances } from "./use-wallet-balances";
+import { useState, useEffect } from "react";
 
-export interface Wallet {
-  id: string;
-  user_id: string;
-  crypto_symbol: string;
-  balance: number;
-  locked_balance: number;
-  deposit_address: string | null;
-  created_at: string;
-  updated_at: string;
-  isNonCustodial?: boolean;
+export interface WalletData {
+  totalBalance: number;
+  userId?: string;
+  preferredCurrency: string;
+  isConverting: boolean;
+  assets: {
+    symbol: string;
+    name: string;
+    balance: number;
+    value: number;
+    change24h: number;
+  }[];
 }
 
-export interface WalletTransaction {
-  id: string;
-  user_id: string;
-  wallet_id: string;
-  type: 'deposit' | 'withdrawal' | 'swap' | 'p2p_buy' | 'p2p_sell' | 'escrow_lock' | 'escrow_release' | 'fee';
-  crypto_symbol: string;
-  amount: number;
-  fee: number;
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
-  tx_hash: string | null;
-  from_address: string | null;
-  to_address: string | null;
-  reference_id: string | null;
-  notes: string | null;
-  confirmations: number | null;
-  created_at: string;
-  completed_at: string | null;
-}
+const ASSET_NAMES: Record<string, string> = {
+  BTC: "Bitcoin",
+  ETH: "Ethereum",
+  SOL: "Solana",
+  TRX: "Tron",
+  USDT: "Tether",
+  USDC: "USD Coin",
+  BNB: "BNB",
+  XRP: "XRP",
+  MATIC: "Polygon",
+  ARB: "Arbitrum",
+  OP: "Optimism",
+};
 
-export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  try {
-    // Remote sync logic removed as requested (custodial logic/duplicate calls)
-    const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
-    return localWallets.map((w: any) => {
-      let symbol = w.chainId;
-      if (w.chainId === 'Ethereum (ERC-20)' || w.chainId === 'ethereum') symbol = 'ETH';
-      else if (w.chainId === 'Bitcoin (SegWit)' || w.chainId === 'bitcoin') symbol = 'BTC';
-      else if (w.chainId === 'Binance Smart Chain (BEP-20)') symbol = 'BNB';
-      else if (w.chainId === 'Solana') symbol = 'SOL';
-      else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
+const VALID_CRYPTO_SYMBOLS = Object.keys(ASSET_NAMES);
 
-      return {
-        id: w.id,
-        user_id: userId,
-        crypto_symbol: symbol,
-        balance: typeof w.balance === 'number' ? w.balance : (typeof w.balance === 'string' ? parseFloat(w.balance) || 0 : 0),
-        locked_balance: 0,
-        deposit_address: w.address,
-        created_at: w.createdAt,
-        updated_at: w.createdAt,
-        isNonCustodial: true
-      };
-    });
-  } catch (e) {
-    console.error(`[getUserWallets] Error fetching wallets:`, e);
-    return [];
-  }
-}
+const SORT_ORDER: Record<string, number> = {
+  BTC: 1,
+  ETH: 2,
+  SOL: 3,
+  TRX: 4,
+  USDT: 5,
+  USDC: 6,
+  BNB: 7,
+  XRP: 8,
+  MATIC: 9,
+  ARB: 10,
+  OP: 11,
+};
 
-export async function getWalletBalance(userId: string, cryptoSymbol: string): Promise<Wallet | null> {
-  const wallets = await getUserWallets(userId);
-  return wallets.find(w => w.crypto_symbol === cryptoSymbol) || null;
-}
-
-export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
-  const { data, error } = await supabase
-    .from('wallet_transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("[getWalletTransactions] Error:", error);
-    throw new Error(error.message);
-  }
-
-  return (data ?? []) as WalletTransaction[];
-}
-
-export async function sendCrypto(
-  userId: string,
-  cryptoSymbol: string,
-  toAddress: string,
-  amount: number,
-  notes?: string
-): Promise<WalletTransaction> {
-  // Custodial withdrawal replaced with local placeholder or signing logic
-  console.log("[sendCrypto] Withdrawal requested for non-custodial flow", { cryptoSymbol, amount, toAddress });
-  
-  throw new Error("Withdrawal must be initiated via wallet signing");
-}
-
-export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
-  const wallets = await getUserWallets(userId);
-  
-  let wallet = wallets.find(w => w.crypto_symbol === cryptoSymbol);
-  
-  if (wallet?.deposit_address) {
-    return wallet.deposit_address;
-  }
-  
-  if ((cryptoSymbol === 'USDT' || cryptoSymbol === 'USDC') && !cryptoSymbol.includes('-')) {
-    wallet = wallets.find(w => w.crypto_symbol.startsWith(`${cryptoSymbol}-`));
-    if (wallet?.deposit_address) {
-      return wallet.deposit_address;
+export function useWalletData() {
+  const { user } = useAuth();
+  const { balances: monitoredBalances } = useWalletBalances();
+  const [preferredCurrency, setPreferredCurrency] = useState<string>(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      return (localStorage.getItem(`pexly_currency_${user.id}`) || 'USD').toUpperCase();
     }
-  }
-  
-  const anyWallet = wallets.find(w => w.isNonCustodial);
-  if (anyWallet?.deposit_address) {
-    return anyWallet.deposit_address;
-  }
-  
-  throw new Error('No deposit address found for this wallet.');
-}
-
-export async function monitorDeposits(userId: string, cryptoSymbol: string): Promise<{
-  detected: boolean;
-  transactions?: any[];
-  message?: string;
-}> {
-  return { detected: false, message: 'Non-custodial monitoring handled on-client' };
-}
-
-export async function createCDPSession(address: string, assets: string[]): Promise<string> {
-  console.log("[createCDPSession] Calling cdp-create-session for address:", address);
-
-  const { data, error } = await supabase.functions.invoke('cdp-create-session', {
-    body: {
-      address,
-      assets,
-    },
+    return 'USD';
   });
 
-  if (error) {
-    console.error("[createCDPSession] Error response:", error);
-    throw new Error(error.message || 'Failed to create CDP session');
-  }
+  useEffect(() => {
+    if (!user?.id) return;
 
-  console.log("[createCDPSession] Raw result:", JSON.stringify(data, null, 2));
-
-  const result = data as any;
-  const token = result?.session_token || result?.sessionToken || result?.token || 
-                result?.data?.session_token || result?.data?.sessionToken || result?.data?.token ||
-                result?.result?.session_token || result?.result?.sessionToken || result?.result?.token;
-  
-  if (!token) {
-    console.error("[createCDPSession] No token found in response:", data);
-    if (typeof data === 'string' && data.length > 20) return data;
-  }
-
-  return token;
-}
-
-export function startDepositMonitoring(
-  userId: string,
-  cryptoSymbol: string,
-  onDeposit: (transactions: any[]) => void,
-  intervalMs: number = 30000
-): () => void {
-  const checkDeposits = async () => {
-    try {
-      const result = await monitorDeposits(userId, cryptoSymbol);
-      if (result.detected && result.transactions && result.transactions.length > 0) {
-        onDeposit(result.transactions);
+    // Polling or listener for localStorage changes
+    const updateCurrency = () => {
+      const stored = localStorage.getItem(`pexly_currency_${user.id}`);
+      if (stored) {
+        const upper = stored.toUpperCase();
+        if (upper !== preferredCurrency) setPreferredCurrency(upper);
       }
-    } catch (error) {
-      console.error('Deposit monitoring error:', error);
-    }
-  };
+    };
 
-  const intervalId = setInterval(checkDeposits, intervalMs);
-  checkDeposits();
+    const interval = setInterval(updateCurrency, 1000);
+    window.addEventListener('storage', updateCurrency);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', updateCurrency);
+    };
+  }, [user?.id, preferredCurrency]);
 
-  return () => clearInterval(intervalId);
-}
+  const query = useQuery<WalletData>({
+    queryKey: [
+      "wallet-data-synced",
+      user?.id,
+      monitoredBalances?.map(
+        b => `${b.symbol}:${b.balanceFormatted}`
+      ),
+      preferredCurrency,
+    ],
 
-export async function monitorWithdrawals(userId: string): Promise<{
-  updated: any[];
-  message?: string;
-}> {
-  return { updated: [], message: 'Withdrawal monitoring handled on-client' };
-}
+    enabled: !!user?.id,
 
-export function startWithdrawalMonitoring(
-  userId: string,
-  onUpdate: (transactions: any[]) => void,
-  intervalMs: number = 30000
-): () => void {
-  const checkWithdrawals = async () => {
-    try {
-      const result = await monitorWithdrawals(userId);
-      if (result.updated && result.updated.length > 0) {
-        onUpdate(result.updated);
+    staleTime: 0,
+    gcTime: 0, // Disable garbage collection to ensure it's removed when not used
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+
+    placeholderData: undefined,
+
+    queryFn: async () => {
+      if (!user?.id) {
+        throw new Error("User not authenticated");
       }
-    } catch (error) {
-      console.error('Withdrawal monitoring error:', error);
-    }
-  };
 
-  const intervalId = setInterval(checkWithdrawals, intervalMs);
-  checkWithdrawals();
+      // 1️⃣ Use monitored balances from Supabase as the source of truth
+      const wallets = monitoredBalances && monitoredBalances.length > 0
+          ? monitoredBalances.map(mb => ({
+              crypto_symbol: mb.symbol,
+              balance: Number(mb.balance) || 0,
+            }))
+          : await getUserWallets(user.id);
 
-  return () => clearInterval(intervalId);
-}
+      // 2️⃣ Normalize + filter symbols
+      const normalizedWallets = wallets
+        .map(w => {
+          const raw = (w.crypto_symbol || "").toUpperCase();
+          const baseSymbol = raw.split("-")[0];
+          return {
+            symbol: baseSymbol,
+            balance: typeof w.balance === "number" ? w.balance : 0,
+          };
+        })
+        .filter(w => VALID_CRYPTO_SYMBOLS.includes(w.symbol));
 
-export async function sendPexlyPayment(
-  senderId: string,
-  recipientId: string,
-  amount: number,
-  cryptoSymbol: string = 'USDT',
-  note?: string
-): Promise<{
-  success: boolean;
-  transactionId?: string;
-  error?: string;
-}> {
-  try {
-    console.log('🚀 DEBUG: Calling pexly-pay-send edge function:', {
-      sender_id: senderId,
-      recipient_id: recipientId,
-      amount,
-      crypto_symbol: cryptoSymbol,
-      note
-    });
+      // 3️⃣ Build unique symbol list for pricing
+      const symbols = [...new Set(normalizedWallets.map(w => w.symbol))];
 
-    const { data, error } = await supabase.functions.invoke('pexly-pay-send', {
-      body: {
-        sender_id: senderId,
-        recipient_id: recipientId,
-        amount,
-        crypto_symbol: cryptoSymbol,
-        note: note || null,
-      },
-    });
+      // 4️⃣ Fetch prices
+      const priceResponse = await getCryptoPrices(
+        symbols.length > 0 ? symbols : VALID_CRYPTO_SYMBOLS
+      );
 
-    if (error) {
-      console.error('❌ Edge function error:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to process transfer' 
+      // 5️⃣ Normalize price response
+      const prices: Record<
+        string,
+        { price: number; change24h: number }
+      > = {};
+
+      if (Array.isArray(priceResponse)) {
+        priceResponse.forEach(p => {
+          if (p?.symbol) {
+            prices[p.symbol.toUpperCase()] = {
+              price: Number(p.current_price ?? p.price ?? 0),
+              change24h: Number(
+                p.price_change_percentage_24h ?? p.change24h ?? 0
+              ),
+            };
+          }
+        });
+      } else if (priceResponse && typeof priceResponse === "object") {
+        Object.entries(priceResponse).forEach(([symbol, p]: any) => {
+          prices[symbol.toUpperCase()] = {
+            price: Number(p.current_price ?? p.price ?? 0),
+            change24h: Number(
+              p.price_change_percentage_24h ?? p.change24h ?? 0
+            ),
+          };
+        });
+      }
+
+      // 6️⃣ Aggregate assets
+      const assetMap = new Map<string, WalletData["assets"][number]>();
+
+      normalizedWallets.forEach(({ symbol, balance }) => {
+        const priceInfo = prices[symbol] || { price: 0, change24h: 0 };
+        const value = balance * priceInfo.price;
+
+        const existing = assetMap.get(symbol);
+        if (existing) {
+          existing.balance += balance;
+          existing.value += value;
+        } else {
+          assetMap.set(symbol, {
+            symbol,
+            name: ASSET_NAMES[symbol] || symbol,
+            balance,
+            value,
+            change24h: priceInfo.change24h,
+          });
+        }
+      });
+
+      // 7️⃣ Ensure all supported assets exist
+      VALID_CRYPTO_SYMBOLS.forEach(symbol => {
+        if (!assetMap.has(symbol)) {
+          assetMap.set(symbol, {
+            symbol,
+            name: ASSET_NAMES[symbol],
+            balance: 0,
+            value: 0,
+            change24h: prices[symbol]?.change24h || 0,
+          });
+        }
+      });
+
+      const assets = Array.from(assetMap.values());
+
+      let totalBalanceUSD = assets.reduce(
+        (sum, asset) => sum + asset.value,
+        0
+      );
+
+      let finalTotalBalance = totalBalanceUSD;
+      let isConverting = false;
+
+      if (preferredCurrency !== "USD") {
+        isConverting = true;
+        try {
+          finalTotalBalance = await convertCurrency(totalBalanceUSD, preferredCurrency);
+        } catch (e) {
+          console.error("useWalletData: Currency conversion failed", e);
+        } finally {
+          isConverting = false;
+        }
+      }
+
+      // 8️⃣ Sort assets
+      assets.sort((a, b) => {
+        if (b.value !== a.value) return b.value - a.value;
+        const orderA = SORT_ORDER[a.symbol] ?? 99;
+        const orderB = SORT_ORDER[b.symbol] ?? 99;
+        return orderA - orderB || a.symbol.localeCompare(b.symbol);
+      });
+
+      return {
+        totalBalance: finalTotalBalance,
+        userId: user.id,
+        preferredCurrency,
+        isConverting,
+        assets,
       };
-    }
+    },
 
-    const result = data as any;
-    console.log('📦 DEBUG: Edge function response:', result);
+    refetchInterval: 15000,
+    refetchIntervalInBackground: false,
+  });
 
-    return {
-      success: true,
-      transactionId: result.transaction_id || result.transactionId,
-    };
-  } catch (error) {
-    console.error('❌ Error in sendPexlyPayment:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    };
-  }
+  return query;
 }
