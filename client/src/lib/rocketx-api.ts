@@ -120,7 +120,7 @@ export async function getRocketxRate(from: string, fromNetwork: string, to: stri
 export const rocketXApi = {
   /** Get supported networks and configuration */
   async getConfiguration() {
-    return callRocketX('configuration');
+    return callRocketX('configs');
   },
 
   /** Get tokens for a specific network with pagination */
