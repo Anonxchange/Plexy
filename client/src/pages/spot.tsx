@@ -40,7 +40,6 @@ import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { asterdexService } from "@/lib/asterdex-service";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { useAuth } from "@/lib/auth-context";
-import { useWallets, useWalletBalance } from "@/hooks/use-wallets";
 import { feeCalculator } from "@/lib/fee-calculator";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
