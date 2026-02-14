@@ -33,7 +33,7 @@ export function TwoFactorSetupDialog({
 }: TwoFactorSetupDialogProps) {
   const [step, setStep] = useState(1);
   const [secret, setSecret] = useState("");
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +41,14 @@ export function TwoFactorSetupDialog({
   const [copiedBackup, setCopiedBackup] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
+
+  useEffect(() => {
+    return () => {
+      if (qrCodeUrl && qrCodeUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(qrCodeUrl);
+      }
+    };
+  }, [qrCodeUrl]);
 
   useEffect(() => {
     if (!open) return;
@@ -51,8 +59,8 @@ export function TwoFactorSetupDialog({
     if (storedData) {
       try {
         const { secret: storedSecret, qrCodeUrl: storedQr, backupCodes: storedCodes } = JSON.parse(storedData);
-        // Only restore if it's a data URL (safe for images)
-        if (storedQr && storedQr.startsWith('data:image/')) {
+        // Only restore if it's a data URL or blob (safe for images)
+        if (storedQr && (storedQr.startsWith('data:image/') || storedQr.startsWith('blob:'))) {
           setSecret(storedSecret);
           setQrCodeUrl(storedQr);
           setBackupCodes(storedCodes);
@@ -74,36 +82,32 @@ export function TwoFactorSetupDialog({
 
     const otpauthUrl = OTPAuth.authenticator.keyuri(userEmail, "Pexly", newSecret);
 
-    let qrCode = '';
     try {
       // Use toDataURL which generates a safe data:image/png;base64,... string
-      qrCode = await QRCode.toDataURL(otpauthUrl);
-      if (qrCode.startsWith('data:image/png;base64,')) {
-        // Convert base64 to Blob URL for extra safety (mitigates DOMXSS)
-        const response = await fetch(qrCode);
+      const base64Qr = await QRCode.toDataURL(otpauthUrl);
+      if (base64Qr.startsWith('data:image/png;base64,')) {
+        // Convert to Blob URL to completely isolate the data from script execution context
+        const response = await fetch(base64Qr);
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
         setQrCodeUrl(blobUrl);
-        qrCode = blobUrl; // Use blob URL for session storage too
-      } else {
-        console.error("Generated QR code is not a safe data URL");
+
+        const codes = Array.from({ length: 10 }, () => 
+          Math.random().toString(36).substring(2, 10).toUpperCase()
+        );
+        setBackupCodes(codes);
+
+        // Store in sessionStorage
+        const sessionKey = `2fa_setup_${userId}`;
+        sessionStorage.setItem(sessionKey, JSON.stringify({
+          secret: newSecret,
+          qrCodeUrl: base64Qr, // Store base64, restore as blob or use base64 check
+          backupCodes: codes
+        }));
       }
     } catch (error) {
       console.error("Error generating QR code:", error);
     }
-
-    const codes = Array.from({ length: 10 }, () => 
-      Math.random().toString(36).substring(2, 10).toUpperCase()
-    );
-    setBackupCodes(codes);
-
-    // Store in sessionStorage to persist across remounts
-    const sessionKey = `2fa_setup_${userId}`;
-    sessionStorage.setItem(sessionKey, JSON.stringify({
-      secret: newSecret,
-      qrCodeUrl: qrCode,
-      backupCodes: codes
-    }));
   };
 
   const handleVerify = async () => {
@@ -243,11 +247,12 @@ export function TwoFactorSetupDialog({
         {step === 1 && (
           <div className="space-y-4">
             <div className="flex justify-center">
-              {qrCodeUrl && qrCodeUrl.startsWith('data:image/png;base64,') && (
+              {qrCodeUrl && (qrCodeUrl.startsWith('blob:') || qrCodeUrl.startsWith('data:image/png;base64,')) && (
                 <img
                   src={qrCodeUrl}
                   alt="QR Code"
                   className="w-48 h-48"
+                  style={{ pointerEvents: 'none' }}
                 />
               )}
             </div>
