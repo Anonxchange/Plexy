@@ -76,8 +76,13 @@ export function TwoFactorSetupDialog({
 
     let qrCode = '';
     try {
+      // Use toDataURL which generates a safe data:image/png;base64,... string
       qrCode = await QRCode.toDataURL(otpauthUrl);
-      setQrCodeUrl(qrCode);
+      if (qrCode.startsWith('data:image/png;base64,')) {
+        setQrCodeUrl(qrCode);
+      } else {
+        console.error("Generated QR code is not a safe data URL");
+      }
     } catch (error) {
       console.error("Error generating QR code:", error);
     }
@@ -233,7 +238,7 @@ export function TwoFactorSetupDialog({
         {step === 1 && (
           <div className="space-y-4">
             <div className="flex justify-center">
-              {qrCodeUrl && qrCodeUrl.startsWith('data:image/') && (
+              {qrCodeUrl && qrCodeUrl.startsWith('data:image/png;base64,') && (
                 <img
                   src={qrCodeUrl}
                   alt="QR Code"
