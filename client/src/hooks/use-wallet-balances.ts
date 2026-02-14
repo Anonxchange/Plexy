@@ -33,28 +33,54 @@ export function useWalletBalances() {
       const accessToken = sessionData?.session?.access_token;
 
       // Call monitor-deposits edge function
-      const response = await supabase.functions.invoke<BalanceResponse>('monitor-deposits', {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-      });
+      let balances: WalletBalance[] = [];
+      try {
+        const response = await supabase.functions.invoke<BalanceResponse>(
+          'monitor-deposits',
+          {
+            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+          }
+        );
 
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to fetch balances');
+        // Check for Supabase invoke errors
+        if (response.error) {
+          throw new Error(response.error.message || 'Failed to fetch balances');
+        }
+
+        const data = response.data;
+
+        // If success and balances are an array, use it
+        if (data?.success && Array.isArray(data.balances)) {
+          balances = data.balances;
+          localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(balances));
+        } else if (data?.error) {
+          throw new Error(data.error);
+        } else {
+          // fallback to cached snapshot if available
+          const snapshot = localStorage.getItem(`pexly_balances_${user.id}`);
+          if (snapshot) {
+            balances = JSON.parse(snapshot);
+          } else {
+            throw new Error('No balances available');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch balances:', err);
+        // fallback to cached snapshot if available
+        const snapshot = localStorage.getItem(`pexly_balances_${user.id}`);
+        if (snapshot) {
+          balances = JSON.parse(snapshot);
+        }
       }
 
-      if (response.data?.success && Array.isArray(response.data.balances)) {
-        // Save a snapshot locally for fallback
-        localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(response.data.balances));
-        return response.data.balances;
-      }
-
-      throw new Error(response.data?.error || 'Unknown error fetching balances');
+      return balances;
     },
 
-    staleTime: 30_000,            // 30s cache
-    refetchInterval: 60_000,      // refresh every 60s
-    refetchOnWindowFocus: true,   // refetch on focus
-    retry: 1,                      // retry once on failure
-    keepPreviousData: true,       // avoid UI flicker
+    staleTime: 30_000,           // 30s cache
+    refetchInterval: 60_000,     // refresh every 60s
+    refetchOnWindowFocus: true,  // refetch on focus
+    retry: 1,                     // retry once on failure
+    keepPreviousData: true,      // avoid UI flicker
   });
 
   return {
