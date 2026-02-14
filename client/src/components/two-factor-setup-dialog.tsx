@@ -233,9 +233,9 @@ export function TwoFactorSetupDialog({
         {step === 1 && (
           <div className="space-y-4">
             <div className="flex justify-center">
-              {qrCodeUrl && (
+              {qrCodeUrl && qrCodeUrl.startsWith('data:image/') && (
                 <img
-                  src={qrCodeUrl.startsWith('data:image/') ? qrCodeUrl : ''}
+                  src={qrCodeUrl}
                   alt="QR Code"
                   className="w-48 h-48"
                 />
