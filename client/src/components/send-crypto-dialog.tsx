@@ -202,8 +202,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
       // Use non-custodial signer directly
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
       
-      const userWallets = nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      const targetWallet = userWallets.find(w => w.chainId === symbolToUse);
+      const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      const targetWallet = userWallets.find(w => w.chainId === symbolToUse || w.assetType === selectedCrypto);
       const passwordToUse = sessionPassword || userPassword;
       
       if (!targetWallet) {
