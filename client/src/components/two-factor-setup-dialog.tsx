@@ -79,7 +79,12 @@ export function TwoFactorSetupDialog({
       // Use toDataURL which generates a safe data:image/png;base64,... string
       qrCode = await QRCode.toDataURL(otpauthUrl);
       if (qrCode.startsWith('data:image/png;base64,')) {
-        setQrCodeUrl(qrCode);
+        // Convert base64 to Blob URL for extra safety (mitigates DOMXSS)
+        const response = await fetch(qrCode);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        setQrCodeUrl(blobUrl);
+        qrCode = blobUrl; // Use blob URL for session storage too
       } else {
         console.error("Generated QR code is not a safe data URL");
       }
