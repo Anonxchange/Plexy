@@ -22,18 +22,17 @@ interface BalanceResponse {
 }
 
 export function useWalletBalances() {
-  const query = useQuery({
+  const query = useQuery<WalletBalance[]>({
     queryKey: ['wallet-balances'],
     queryFn: async () => {
+      // Get current user session
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData?.session?.user;
-      
       if (!user) return [];
 
       const accessToken = sessionData?.session?.access_token;
 
-      // The monitor-deposits edge function is expected to return both updated balances 
-      // and potentially trigger a sync of user wallet metadata in the backend.
+      // Call monitor-deposits edge function
       const response = await supabase.functions.invoke<BalanceResponse>('monitor-deposits', {
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
@@ -42,23 +41,26 @@ export function useWalletBalances() {
         throw new Error(response.error.message || 'Failed to fetch balances');
       }
 
-      if (response.data?.success) {
+      if (response.data?.success && Array.isArray(response.data.balances)) {
+        // Save a snapshot locally for fallback
         localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(response.data.balances));
         return response.data.balances;
-      } else {
-        throw new Error(response.data?.error || 'Unknown error');
       }
+
+      throw new Error(response.data?.error || 'Unknown error fetching balances');
     },
-    staleTime: 30000,
-    refetchInterval: 60000,
-    retry: 1,
+
+    staleTime: 30_000,            // 30s cache
+    refetchInterval: 60_000,      // refresh every 60s
+    refetchOnWindowFocus: true,   // refetch on focus
+    retry: 1,                      // retry once on failure
+    keepPreviousData: true,       // avoid UI flicker
   });
 
   return {
     balances: query.data || [],
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : null,
-    fetchBalances: query.refetch,
     refetch: query.refetch,
   };
 }
