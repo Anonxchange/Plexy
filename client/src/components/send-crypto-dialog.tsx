@@ -247,7 +247,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
         signedTx = await nonCustodialWalletManager.signTransaction(targetWallet.id, txData, passwordToUse, user.id);
       }
 
-      console.log("Signed Transaction Result:", signedTx);
       
       // Cache password if not already cached
       if (!sessionPassword && userPassword) {
