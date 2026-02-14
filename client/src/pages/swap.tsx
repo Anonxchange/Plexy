@@ -39,6 +39,8 @@ const currencies = [
     { chain: "TRX", identifier: "TRX.USDT-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", name: "Tron (TRC20)" },
     { chain: "SOL", identifier: "SOL.USDT-Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8En2vQK", name: "Solana" },
     { chain: "ARBITRUM", identifier: "ARBITRUM.USDT-0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", name: "Arbitrum One" },
+    { chain: "POLYGON", identifier: "POLYGON.USDT-0xc2132d05d31c914a87c6611c10748aeb04b58e8f", name: "Polygon" },
+    { chain: "OPTIMISM", identifier: "OPTIMISM.USDT-0x94b008aa205766a30e1ed85f482b439f76a8a489", name: "Optimism" },
   ]},
   { symbol: "ETH", name: "Ethereum", iconUrl: cryptoIconUrls.ETH, chain: "ETH", identifier: "ETH.ETH" },
   { symbol: "USDC", name: "USD Coin", iconUrl: cryptoIconUrls.USDC, networks: [
@@ -47,6 +49,8 @@ const currencies = [
     { chain: "SOL", identifier: "SOL.USDC-EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", name: "Solana" },
     { chain: "ARBITRUM", identifier: "ARBITRUM.USDC-0xaf88d065e77c8cc2239327c5edb3a432268e5831", name: "Arbitrum One" },
     { chain: "BASE", identifier: "BASE.USDC-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", name: "Base" },
+    { chain: "POLYGON", identifier: "POLYGON.USDC-0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", name: "Polygon" },
+    { chain: "OPTIMISM", identifier: "OPTIMISM.USDC-0x0b2c639c533813f4aa9d7837caf62653d097ff85", name: "Optimism" },
   ]},
   { symbol: "SOL", name: "Solana", iconUrl: cryptoIconUrls.SOL, chain: "SOL", identifier: "SOL.SOL" },
   { symbol: "TRX", name: "Tron", iconUrl: cryptoIconUrls.TRX, chain: "TRX", identifier: "TRX.TRX" },
@@ -140,11 +144,17 @@ export function Swap() {
           const symbolTarget = fromCurrency.toLowerCase();
           const chainIdLower = w.chainId?.toLowerCase();
           const walletTypeLower = w.walletType?.toLowerCase();
+          const assetTypeLower = w.assetType?.toLowerCase();
           
-          return chainIdLower === target || chainIdLower === symbolTarget || walletTypeLower === target;
+          return chainIdLower === target || 
+                 chainIdLower === symbolTarget || 
+                 walletTypeLower === target ||
+                 assetTypeLower === symbolTarget;
         });
         
         if (fromWallet) {
+          // If the wallet has a balance field (cached/monitored), use it
+          // Otherwise it might need a real-time fetch but following wallet.tsx pattern
           setBalance(fromWallet.balance || 0);
         } else {
           setBalance(0);
@@ -160,7 +170,13 @@ export function Swap() {
   useEffect(() => {
     const fetchFees = async () => {
       try {
-        // Fetch Bitcoin fees
+        if (bestQuote && bestQuote.gasFee) {
+          const feeStr = `${bestQuote.gasFee.toFixed(6)} ${fromCurrency}`;
+          setEstFees(prev => ({ ...prev, [fromNetwork]: feeStr }));
+          return;
+        }
+
+        // Fallback to manual fetch if no quote
         const btcRes = await fetch('https://mempool.space/api/v1/fees/recommended');
         if (btcRes.ok) {
           const btcData = await btcRes.json();
@@ -856,7 +872,7 @@ export function Swap() {
                     <div className="flex items-center justify-between text-sm px-1">
                       <span className="text-muted-foreground font-medium">Swapper Fee</span>
                       <span className="text-foreground font-bold">
-                        {activeQuote?.gasFee ? `${activeQuote.gasFee.toFixed(6)} ${fromCurrency}` : estFees[fromNetwork] || "Calculated at swap"}
+                        {bestQuote?.gasFee ? `${bestQuote.gasFee.toFixed(6)} ${fromCurrency}` : (estFees[fromNetwork] || "Calculated at swap")}
                       </span>
                     </div>
 
