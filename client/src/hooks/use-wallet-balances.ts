@@ -35,13 +35,21 @@ export function useWalletBalances() {
       // Call monitor-deposits edge function
       let balances: WalletBalance[] = [];
       try {
-        // Fetch specific chain for each wallet
+        // Fetch specific chain for each wallet from user_wallets
         const { data: wallets } = await supabase
-          .from('wallets')
+          .from('user_wallets')
           .select('*')
           .eq('user_id', user.id);
 
         if (wallets && wallets.length > 0) {
+          const chainToSymbol: Record<string, string> = {
+            'bitcoin': 'BTC',
+            'ethereum': 'ETH',
+            'solana': 'SOL',
+            'tron': 'TRX',
+            'bsc': 'BNB'
+          };
+
           const balancePromises = wallets.map(async (wallet) => {
             const response = await supabase.functions.invoke<any>(
               'monitor-deposits',
@@ -52,15 +60,16 @@ export function useWalletBalances() {
             );
 
             if (!response.error && response.data?.success) {
+              const symbol = chainToSymbol[wallet.chain_id.toLowerCase()] || 'CRYPTO';
               return {
                 wallet_id: wallet.id,
                 user_id: user.id,
                 address: wallet.address,
                 chain_id: wallet.chain_id,
-                symbol: wallet.symbol,
+                symbol: symbol,
                 balance: response.data.balance.toString(),
                 balanceFormatted: response.data.balance.toString(),
-                decimals: 18, // Default or fetch from wallet
+                decimals: 18, 
                 timestamp: new Date().toISOString(),
               } as WalletBalance;
             }
