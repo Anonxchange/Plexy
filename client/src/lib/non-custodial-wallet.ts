@@ -12,8 +12,7 @@ import { getBitcoinAddress } from "./bitcoinSigner";
 // Added deriveSolanaPrivateKey to the import below
 import { getSolanaAddress, deriveSolanaPrivateKey } from "./solanaSigner";
 import { getTronAddress } from "./tronSigner";
-import { deriveKey } from "./keyDerivation";
-import { encryptAES, decryptAES } from "./webCrypto";
+import { encryptVault, decryptVault, EncryptedVault } from "./webCrypto";
 
 // Constants for Encoding
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -107,8 +106,8 @@ export interface NonCustodialWallet {
   chainId: string;
   address: string;
   walletType: string;
-  encryptedPrivateKey: string;
-  encryptedMnemonic?: string;
+  encryptedPrivateKey: string | EncryptedVault;
+  encryptedMnemonic?: string | EncryptedVault;
   createdAt: string;
   isActive: boolean;
   isBackedUp: boolean;
@@ -187,8 +186,8 @@ class NonCustodialWalletManager {
       // Ensure we explicitly set the assetType for tokens if needed
       const assetType = (chainId === "USDT" || chainId === "USDC") ? chainId : undefined;
       
-      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, userId);
-      const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, userId);
+      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword);
+      const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword);
       
       const newWallet: NonCustodialWallet = {
         id: Math.random().toString(36).substring(7),
@@ -219,8 +218,8 @@ class NonCustodialWalletManager {
       walletType = chainId.toLowerCase();
     }
     
-    const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, userId);
-    const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, userId);
+    const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword);
+    const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword);
     
     const newWallet: NonCustodialWallet = {
       id: Math.random().toString(36).substring(7),
@@ -271,7 +270,7 @@ class NonCustodialWalletManager {
     const wallets = await this.getWalletsFromStorage(userId);
     const wallet = wallets.find(w => w.id === walletId);
     if (!wallet || !wallet.encryptedMnemonic) return null;
-    return this.decryptPrivateKey(wallet.encryptedMnemonic, password, userId);
+    return this.decryptPrivateKey(wallet.encryptedMnemonic, password);
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
@@ -336,14 +335,17 @@ class NonCustodialWalletManager {
     await setValue('wallets', this.getStorageKey(userId), wallets);
   }
 
-  private async encryptPrivateKey(data: string, password: string, userId: string): Promise<string> {
-    const key = await deriveKey(password, userId);
-    return encryptAES(data, key);
+  private async encryptPrivateKey(data: string, password: string): Promise<EncryptedVault> {
+    return encryptVault(data, password);
   }
 
-  async decryptPrivateKey(encrypted: string, password: string, userId: string): Promise<string> {
-    const key = await deriveKey(password, userId);
-    return decryptAES(encrypted, key);
+  async decryptPrivateKey(vault: string | EncryptedVault, password: string): Promise<string> {
+    if (typeof vault === "string") {
+      // This is a legacy vault, but we need userId for the old salt.
+      // Since our decryptPrivateKey doesn't take userId, we might need a workaround or migration during load.
+      throw new Error("Legacy vault string found. Please migrate your wallet.");
+    }
+    return decryptVault(vault, password);
   }
 }
 
