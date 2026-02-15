@@ -268,6 +268,9 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
           }),
         });
         const { result } = await response.json();
+        if (!result || !result.value || !result.value.blockhash) {
+          throw new Error("Failed to fetch recent blockhash for Solana");
+        }
         const recentBlockhash = result.value.blockhash;
 
         signedTx = await signSolanaTransaction(mnemonic, { 
