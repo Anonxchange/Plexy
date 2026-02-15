@@ -16,6 +16,7 @@ import { useLocation } from "wouter";
 import { useSchema, swapPageSchema } from "@/hooks/use-schema";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { rocketXApi } from "@/lib/rocketx-api";
@@ -133,29 +134,53 @@ export function Swap() {
     }
   }, [bestQuote]);
 
+  const { balances: monitoredBalances } = useWalletBalances();
+
   // Fetch balance for the selected "From" asset
   useEffect(() => {
     const fetchBalance = async () => {
       if (!user) return;
       try {
         const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
+        
+        // Map display symbols to internal chain IDs for matching
+        const symbolMap: Record<string, string> = {
+          'BTC': 'Bitcoin (SegWit)',
+          'ETH': 'Ethereum',
+          'SOL': 'Solana',
+          'BNB': 'Binance Smart Chain (BEP-20)',
+          'TRX': 'Tron (TRC-20)',
+          'USDT': 'USDT',
+          'USDC': 'USDC'
+        };
+
+        const chainIdToFind = symbolMap[fromCurrency] || fromNetwork;
+        
         const fromWallet = wallets.find(w => {
-          const target = fromNetwork.toLowerCase();
-          const symbolTarget = fromCurrency.toLowerCase();
           const chainIdLower = w.chainId?.toLowerCase();
           const walletTypeLower = w.walletType?.toLowerCase();
           const assetTypeLower = w.assetType?.toLowerCase();
+          const targetLower = chainIdToFind.toLowerCase();
+          const symbolLower = fromCurrency.toLowerCase();
           
-          return chainIdLower === target || 
-                 chainIdLower === symbolTarget || 
-                 walletTypeLower === target ||
-                 assetTypeLower === symbolTarget;
+          return chainIdLower === targetLower || 
+                 chainIdLower === symbolLower || 
+                 walletTypeLower === targetLower ||
+                 assetTypeLower === symbolLower;
         });
         
         if (fromWallet) {
-          // If the wallet has a balance field (cached/monitored), use it
-          // Otherwise it might need a real-time fetch but following wallet.tsx pattern
-          setBalance(fromWallet.balance || 0);
+          // Try to get balance from monitored balances first (more accurate)
+          const monitored = monitoredBalances.find(b => 
+            b.address.toLowerCase() === fromWallet.address.toLowerCase() &&
+            (b.symbol.toLowerCase() === fromCurrency.toLowerCase() || b.chain_id.toLowerCase() === fromNetwork.toLowerCase())
+          );
+          
+          if (monitored) {
+            setBalance(parseFloat(monitored.balanceFormatted));
+          } else {
+            setBalance(fromWallet.balance || 0);
+          }
         } else {
           setBalance(0);
         }
@@ -165,7 +190,7 @@ export function Swap() {
     };
 
     fetchBalance();
-  }, [user, fromCurrency, fromNetwork]);
+  }, [user, fromCurrency, fromNetwork, monitoredBalances]);
 
   useEffect(() => {
     const fetchFees = async () => {
