@@ -5,19 +5,37 @@ export async function mnemonicToSeed(mnemonic: string): Promise<Uint8Array> {
   return bip39MnemonicToSeed(mnemonic);
 }
 
-export async function deriveKey(password: string, userId: string, iterations: number = 16384): Promise<string> {
+export interface KdfParams {
+  N: number;
+  r: number;
+  p: number;
+  dkLen: number;
+}
+
+export const DEFAULT_KDF_PARAMS: KdfParams = {
+  N: 16384,
+  r: 8,
+  p: 1,
+  dkLen: 32
+};
+
+/**
+ * Derives a high-entropy 256-bit key from a password using scrypt.
+ */
+export async function deriveEncryptionKey(
+  password: string, 
+  salt: Uint8Array, 
+  params: KdfParams = DEFAULT_KDF_PARAMS
+): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const passwordBuffer = encoder.encode(password.normalize('NFKC'));
-  // Security Improvement: Use a more robust salt strategy if possible.
-  // Currently using userId which might be predictable.
-  const salt = `pexly_v1_secure_salt_${userId}`;
-  const saltBuffer = encoder.encode(salt);
   
-  const N = iterations;
-  const r = 8;
-  const p = 1;
-  const dkLen = 32;
-
-  const derivedKey = await scrypt.scrypt(passwordBuffer, saltBuffer, N, r, p, dkLen);
-  return Array.from(derivedKey).map(b => b.toString(16).padStart(2, '0')).join('');
+  return await scrypt.scrypt(
+    passwordBuffer, 
+    salt, 
+    params.N, 
+    params.r, 
+    params.p, 
+    params.dkLen
+  );
 }
