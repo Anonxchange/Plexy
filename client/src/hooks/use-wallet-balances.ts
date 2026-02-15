@@ -35,26 +35,41 @@ export function useWalletBalances() {
       // Call monitor-deposits edge function
       let balances: WalletBalance[] = [];
       try {
-        const response = await supabase.functions.invoke<BalanceResponse>(
-          'monitor-deposits',
-          {
-            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-          }
-        );
+        // Fetch specific chain for each wallet
+        const { data: wallets } = await supabase
+          .from('wallets')
+          .select('*')
+          .eq('user_id', user.id);
 
-        // Check for Supabase invoke errors
-        if (response.error) {
-          throw new Error(response.error.message || 'Failed to fetch balances');
-        }
+        if (wallets && wallets.length > 0) {
+          const balancePromises = wallets.map(async (wallet) => {
+            const response = await supabase.functions.invoke<any>(
+              'monitor-deposits',
+              {
+                body: { address: wallet.address, chain: wallet.chain_id },
+                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+              }
+            );
 
-        const data = response.data as BalanceResponse;
+            if (!response.error && response.data?.success) {
+              return {
+                wallet_id: wallet.id,
+                user_id: user.id,
+                address: wallet.address,
+                chain_id: wallet.chain_id,
+                symbol: wallet.symbol,
+                balance: response.data.balance.toString(),
+                balanceFormatted: response.data.balance.toString(),
+                decimals: 18, // Default or fetch from wallet
+                timestamp: new Date().toISOString(),
+              } as WalletBalance;
+            }
+            return null;
+          });
 
-        // If success and balances are an array, use it
-        if (data?.success && Array.isArray(data.balances)) {
-          balances = data.balances;
+          const results = await Promise.all(balancePromises);
+          balances = results.filter((b): b is WalletBalance => b !== null);
           localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(balances));
-        } else if (data?.error) {
-          throw new Error(data.error);
         } else {
           // fallback to cached snapshot if available
           const snapshot = localStorage.getItem(`pexly_balances_${user.id}`);
