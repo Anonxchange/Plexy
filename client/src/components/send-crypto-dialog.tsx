@@ -203,7 +203,25 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
       const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
       
       const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      const targetWallet = userWallets.find(w => w.chainId === symbolToUse || w.assetType === selectedCrypto);
+      
+      // Map display symbols to internal chain IDs
+      const symbolMap: Record<string, string> = {
+        'BTC': 'Bitcoin (SegWit)',
+        'ETH': 'Ethereum',
+        'SOL': 'Solana',
+        'BNB': 'Binance Smart Chain (BEP-20)',
+        'TRX': 'Tron (TRC-20)',
+        'USDT': 'USDT',
+        'USDC': 'USDC'
+      };
+
+      const chainIdToFind = symbolMap[selectedCrypto] || selectedCrypto;
+      const targetWallet = userWallets.find(w => 
+        w.chainId === chainIdToFind || 
+        w.chainId === selectedNetwork ||
+        w.assetType === selectedCrypto
+      );
+      
       const passwordToUse = sessionPassword || userPassword;
       
       if (!targetWallet) {
@@ -239,12 +257,30 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
       } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
         signedTx = await signEVMTransaction(mnemonic, txData as any);
       } else if (selectedNetwork.includes("Solana")) {
-        signedTx = await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: "SOL" });
+        // Fetch recent blockhash for Solana
+        const response = await fetch('https://api.mainnet-beta.solana.com', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'getLatestBlockhash',
+          }),
+        });
+        const { result } = await response.json();
+        const recentBlockhash = result.value.blockhash;
+
+        signedTx = await signSolanaTransaction(mnemonic, { 
+          to: toAddress, 
+          amount: cryptoAmountNum.toString(), 
+          currency: "SOL",
+          recentBlockhash 
+        });
       } else if (selectedNetwork.includes("Tron")) {
         signedTx = await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
       } else {
-        // Fallback to manager's default signing
-        signedTx = await nonCustodialWalletManager.signTransaction(targetWallet.id, txData, passwordToUse, user.id);
+        // Fallback or error if no signer available
+        throw new Error(`Signing not supported for ${selectedNetwork}`);
       }
 
       
