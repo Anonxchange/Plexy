@@ -153,7 +153,7 @@ export async function signSolanaTransaction(
   const transactionPacket = new Uint8Array([1, ...signature, ...message]);
 
   // Compute txHash (SHA256 of message)
-  const txHash = base58.encode(sha256(transactionPacket));
+  const txHash = base58.encode(sha256(message));
 
   return {
     signedTx: base58.encode(transactionPacket),
