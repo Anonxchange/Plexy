@@ -348,7 +348,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 5. No address at all? -> Create Required
 
       // 1. Is there a decrypted key in memory? -> Wallet Ready
-      const localWallets = nonCustodialWalletManager.getWalletsFromStorage(userId);
+      const localWallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
       const isUnlocked = isWalletUnlocked;
 
       if (localWallets.length > 0 && isUnlocked) {
@@ -379,7 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Re-check local wallets to ensure state is updated after cloud sync attempt
-      const syncedWallets = nonCustodialWalletManager.getWalletsFromStorage(userId);
+      const syncedWallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
       if (syncedWallets.length > 0) {
         setWalletImportState({ required: false, expectedAddress: null });
         return; 
