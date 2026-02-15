@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSchema, spotPageSchema } from "@/hooks/use-schema";
@@ -44,6 +44,8 @@ import { feeCalculator } from "@/lib/fee-calculator";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { useWalletData } from "@/hooks/use-wallet-data";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 
 import {
   Drawer,
@@ -158,9 +160,21 @@ export function Spot() {
   // Get wallet balances and list for the trading pair
   const baseCrypto = selectedPair.symbol;
   const quoteCrypto = "USDT";
-  const { data: baseWallet } = useWalletBalance(baseCrypto);
-  const { data: quoteWallet } = useWalletBalance(quoteCrypto);
-  const { data: userWallets = [] } = useWallets();
+  
+  const { data: walletData } = useWalletData();
+  const { balances: monitoredBalances } = useWalletBalances();
+
+  const baseWallet = useMemo(() => {
+    return walletData?.assets.find(a => a.symbol === baseCrypto);
+  }, [walletData, baseCrypto]);
+
+  const quoteWallet = useMemo(() => {
+    return walletData?.assets.find(a => a.symbol === quoteCrypto);
+  }, [walletData, quoteCrypto]);
+
+  const userWallets = useMemo(() => {
+    return walletData?.assets || [];
+  }, [walletData]);
 
   // Fetch real-time prices from Supabase Edge Function
   useEffect(() => {
@@ -494,7 +508,7 @@ export function Spot() {
       const amountStr = type === "buy" ? buyAmount : sellAmount;
 
       // Find the correct wallet for the network or default to first
-      const nonCustodialWallets = nonCustodialWalletManager.getWalletsFromStorage(user.id);
+      const nonCustodialWallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
       const activeWallet = nonCustodialWallets.find((w: any) => {
         const walletType = (w.walletType || "").toLowerCase();
         const chainId = (w.chainId || "").toLowerCase();
