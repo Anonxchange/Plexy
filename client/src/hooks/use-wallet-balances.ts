@@ -51,27 +51,48 @@ export function useWalletBalances() {
           };
 
           const balancePromises = wallets.map(async (wallet) => {
-            const response = await supabase.functions.invoke<any>(
-              'monitor-deposits',
-              {
-                body: { address: wallet.address, chain: wallet.chain_id },
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-              }
-            );
+            try {
+              const response = await supabase.functions.invoke<any>(
+                'monitor-deposits',
+                {
+                  body: { address: wallet.address, chain: wallet.chain_id },
+                  headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                }
+              );
 
-            if (!response.error && response.data?.success) {
-              const symbol = chainToSymbol[wallet.chain_id.toLowerCase()] || 'CRYPTO';
-              return {
-                wallet_id: wallet.id,
-                user_id: user.id,
-                address: wallet.address,
-                chain_id: wallet.chain_id,
-                symbol: symbol,
-                balance: response.data.balance.toString(),
-                balanceFormatted: response.data.balance.toString(),
-                decimals: 18, 
-                timestamp: new Date().toISOString(),
-              } as WalletBalance;
+              if (response.error) {
+                console.error(`Edge function error for ${wallet.chain_id}:`, response.error);
+                // Return a balance of 0 instead of null if we can't reach the provider
+                // but still want to show the wallet in the UI
+                return {
+                  wallet_id: wallet.id,
+                  user_id: user.id,
+                  address: wallet.address,
+                  chain_id: wallet.chain_id,
+                  symbol: chainToSymbol[wallet.chain_id.toLowerCase()] || 'CRYPTO',
+                  balance: '0',
+                  balanceFormatted: '0',
+                  decimals: 18, 
+                  timestamp: new Date().toISOString(),
+                } as WalletBalance;
+              }
+
+              if (response.data && typeof response.data.balance !== 'undefined') {
+                const symbol = chainToSymbol[wallet.chain_id.toLowerCase()] || 'CRYPTO';
+                return {
+                  wallet_id: wallet.id,
+                  user_id: user.id,
+                  address: wallet.address,
+                  chain_id: wallet.chain_id,
+                  symbol: symbol,
+                  balance: response.data.balance.toString(),
+                  balanceFormatted: response.data.balance.toString(),
+                  decimals: 18, 
+                  timestamp: new Date().toISOString(),
+                } as WalletBalance;
+              }
+            } catch (invokeErr) {
+              console.error(`Failed to invoke monitor-deposits for ${wallet.chain_id}:`, invokeErr);
             }
             return null;
           });
