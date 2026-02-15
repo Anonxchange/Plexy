@@ -52,24 +52,37 @@ export function useWalletBalances() {
 
           const balancePromises = wallets.map(async (wallet) => {
             try {
+              // Standardize chain ID to lowercase and handle common aliases
+              const chainMap: Record<string, string> = {
+                'bitcoin': 'BTC',
+                'ethereum': 'ETH',
+                'solana': 'SOL',
+                'tron': 'TRX',
+                'bsc': 'BNB',
+                'binance-smart-chain': 'BNB'
+              };
+              
+              const normalizedChain = wallet.chain_id.toLowerCase();
+              const requestChain = chainMap[normalizedChain] || normalizedChain.toUpperCase();
+
+              console.log(`Invoking monitor-deposits for ${requestChain} at ${wallet.address}`);
+
               const response = await supabase.functions.invoke<any>(
                 'monitor-deposits',
                 {
-                  body: { address: wallet.address, chain: wallet.chain_id },
+                  body: { address: wallet.address, chain: requestChain },
                   headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 }
               );
 
               if (response.error) {
-                console.error(`Edge function error for ${wallet.chain_id}:`, response.error);
-                // Return a balance of 0 instead of null if we can't reach the provider
-                // but still want to show the wallet in the UI
+                console.error(`Edge function error for ${requestChain}:`, response.error);
                 return {
                   wallet_id: wallet.id,
                   user_id: user.id,
                   address: wallet.address,
                   chain_id: wallet.chain_id,
-                  symbol: chainToSymbol[wallet.chain_id.toLowerCase()] || 'CRYPTO',
+                  symbol: chainToSymbol[normalizedChain] || requestChain,
                   balance: '0',
                   balanceFormatted: '0',
                   decimals: 18, 
@@ -78,7 +91,7 @@ export function useWalletBalances() {
               }
 
               if (response.data && typeof response.data.balance !== 'undefined') {
-                const symbol = chainToSymbol[wallet.chain_id.toLowerCase()] || 'CRYPTO';
+                const symbol = chainToSymbol[normalizedChain] || requestChain;
                 return {
                   wallet_id: wallet.id,
                   user_id: user.id,
