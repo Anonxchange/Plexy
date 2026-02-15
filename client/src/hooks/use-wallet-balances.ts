@@ -47,7 +47,7 @@ export function useWalletBalances() {
           throw new Error(response.error.message || 'Failed to fetch balances');
         }
 
-        const data = response.data;
+        const data = response.data as BalanceResponse;
 
         // If success and balances are an array, use it
         if (data?.success && Array.isArray(data.balances)) {
@@ -80,7 +80,6 @@ export function useWalletBalances() {
     refetchInterval: 60_000,     // refresh every 60s
     refetchOnWindowFocus: true,  // refetch on focus
     retry: 1,                     // retry once on failure
-    keepPreviousData: true,      // avoid UI flicker
   });
 
   return {
