@@ -132,7 +132,7 @@ export async function getBlockByHeight(height: number): Promise<MempoolBlock | n
     if (!response.ok) throw new Error('Failed to fetch block by height');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching block at height ${height}:`, error);
+    console.error("Error fetching block at height %d:", height, error);
     return null;
   }
 }
@@ -148,7 +148,7 @@ export async function getBlockByHash(blockHash: string): Promise<MempoolBlock | 
     if (!response.ok) throw new Error('Failed to fetch block by hash');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching block ${blockHash}:`, error);
+    console.error("Error fetching block %s:", blockHash, error);
     return null;
   }
 }
@@ -164,7 +164,7 @@ export async function getBlockTransactions(blockHash: string, startIndex: number
     if (!response.ok) throw new Error('Failed to fetch block transactions');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching transactions for block ${blockHash}:`, error);
+    console.error("Error fetching transactions for block %s:", blockHash, error);
     return [];
   }
 }
@@ -180,7 +180,7 @@ export async function getTransaction(txHash: string): Promise<MempoolTransaction
     if (!response.ok) throw new Error('Failed to fetch transaction');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching transaction ${txHash}:`, error);
+    console.error("Error fetching transaction %s:", txHash, error);
     return null;
   }
 }
@@ -196,7 +196,7 @@ export async function getTransactionStatus(txHash: string): Promise<{ confirmed:
     if (!response.ok) throw new Error('Failed to fetch transaction status');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching status for transaction ${txHash}:`, error);
+    console.error("Error fetching status for transaction %s:", txHash, error);
     return null;
   }
 }
@@ -212,7 +212,7 @@ export async function getAddress(address: string): Promise<MempoolAddress | null
     if (!response.ok) throw new Error('Failed to fetch address');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching address ${address}:`, error);
+    console.error("Error fetching address %s:", address, error);
     return null;
   }
 }
@@ -232,7 +232,7 @@ export async function getAddressTransactions(address: string, lastSeenTxid?: str
     if (!response.ok) throw new Error('Failed to fetch address transactions');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching transactions for address ${address}:`, error);
+    console.error("Error fetching transactions for address %s:", address, error);
     return [];
   }
 }
@@ -248,7 +248,7 @@ export async function getAddressMempoolTransactions(address: string): Promise<Me
     if (!response.ok) throw new Error('Failed to fetch mempool transactions');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching mempool transactions for address ${address}:`, error);
+    console.error("Error fetching mempool transactions for address %s:", address, error);
     return [];
   }
 }
@@ -347,7 +347,7 @@ export async function getBlockStats(blockHash: string): Promise<any> {
     if (!response.ok) throw new Error('Failed to fetch block stats');
     return await response.json();
   } catch (error) {
-    console.error(`Error fetching stats for block ${blockHash}:`, error);
+    console.error("Error fetching stats for block %s:", blockHash, error);
     return null;
   }
 }
