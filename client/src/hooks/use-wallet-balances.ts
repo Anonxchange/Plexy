@@ -122,7 +122,7 @@ function hexToNumber(hex: string): number {
    EVM BALANCES
 ========================================= */
 
-async function evmGetBalance(rpc: string, address: string): Promise<number> {
+async function evmGetBalance(rpc: string, address: string, decimals: number): Promise<number> {
   const res = await fetch(rpc, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -134,7 +134,8 @@ async function evmGetBalance(rpc: string, address: string): Promise<number> {
     }),
   });
   const { result } = await res.json();
-  return hexToNumber(result) / 1e18;
+  if (!result || result === '0x') return 0;
+  return hexToNumber(result) / Math.pow(10, decimals);
 }
 
 async function evmGetTokenBalance(
@@ -181,7 +182,7 @@ async function fetchWalletBalance(wallet: any): Promise<Wallet | null> {
 
     // EVM chains
     if (cfg.rpc) {
-      balance = await evmGetBalance(cfg.rpc, wallet.deposit_address);
+      balance = await evmGetBalance(cfg.rpc, wallet.deposit_address, cfg.decimals);
     }
 
     return {
