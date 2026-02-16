@@ -109,9 +109,9 @@ export function VerifyEmail() {
           localStorage.clear();
           sessionStorage.clear();
           
-          // Clear cookies with secure attributes
+          // Clear cookies with secure attribute
           document.cookie.split(";").forEach((c) => {
-            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/;secure;SameSite=Lax");
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/;Secure;SameSite=Lax");
           });
           
           setStatus("success");
