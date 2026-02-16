@@ -36,10 +36,10 @@ export function useWalletBalances() {
         const { data: wallets } = await supabase
           .from('user_wallets')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .eq('is_active', 'true');
 
         if (!wallets || wallets.length === 0) {
-          // fallback to cached snapshot if no wallets
           const snapshot = localStorage.getItem(`pexly_balances_${user.id}`);
           if (snapshot) return JSON.parse(snapshot);
           throw new Error('No wallets found for user');
@@ -58,17 +58,14 @@ export function useWalletBalances() {
           const normalizedChain = wallet.chain_id.toLowerCase();
           const requestChain = chainToSymbol[normalizedChain] || normalizedChain.toUpperCase();
 
-          console.log(`Fetching balance for ${requestChain} at address: ${wallet.address}`);
-
           try {
             const response = await supabase.functions.invoke<any>('monitor-deposits', {
               body: { address: wallet.address, chain: requestChain },
               headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
             });
 
-            // If edge function returns error or malformed data, fallback to 0
-            if (response.error || !response.data || typeof response.data.balance === 'undefined') {
-              console.error(`Monitor-deposits failed for ${requestChain}:`, response.error || response.data);
+            if (response.error || !response.data?.success || !response.data?.native) {
+              console.error(`monitor-deposits failed for ${requestChain}:`, response.error || response.data);
               return {
                 wallet_id: wallet.id,
                 user_id: user.id,
@@ -82,19 +79,20 @@ export function useWalletBalances() {
               } as WalletBalance;
             }
 
+            const native = response.data.native;
             return {
               wallet_id: wallet.id,
               user_id: user.id,
               address: wallet.address,
               chain_id: wallet.chain_id,
-              symbol: chainToSymbol[normalizedChain] || requestChain,
-              balance: response.data.balance.toString(),
-              balanceFormatted: response.data.balance.toString(),
-              decimals: 18,
+              symbol: native.symbol,
+              balance: native.balance,
+              balanceFormatted: native.balance,
+              decimals: native.decimals,
               timestamp: new Date().toISOString(),
             } as WalletBalance;
           } catch (err) {
-            console.error(`Exception invoking monitor-deposits for ${wallet.chain_id}:`, err);
+            console.error(`Exception for ${wallet.chain_id}:`, err);
             return {
               wallet_id: wallet.id,
               user_id: user.id,
@@ -109,14 +107,10 @@ export function useWalletBalances() {
           }
         });
 
-        const results = await Promise.all(balancePromises);
-        balances = results.filter((b): b is WalletBalance => b !== null);
-
-        // Cache balances locally
+        balances = await Promise.all(balancePromises);
         localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(balances));
       } catch (err) {
         console.error('Failed to fetch wallet balances:', err);
-        // fallback to cached snapshot
         const snapshot = localStorage.getItem(`pexly_balances_${user.id}`);
         if (snapshot) balances = JSON.parse(snapshot);
       }
@@ -124,10 +118,10 @@ export function useWalletBalances() {
       return balances;
     },
 
-    staleTime: 30_000,           // 30s cache
-    refetchInterval: 60_000,     // refresh every 60s
-    refetchOnWindowFocus: true,  // refetch on focus
-    retry: 1,                     // retry once on failure
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    retry: 1,
   });
 
   return {
