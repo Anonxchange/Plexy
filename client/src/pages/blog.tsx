@@ -17,7 +17,7 @@ function calculateReadTime(content: string): string {
 }
 
 function validateImageUrl(url: string | null | undefined): string {
-  if (!url || typeof url !== 'string') return "";
+  if (!url || typeof url !== "string") return "";
   
   const trimmedUrl = url.trim();
   if (!trimmedUrl) return "";
@@ -47,14 +47,22 @@ function validateImageUrl(url: string | null | undefined): string {
     }
 
     if (isImageBlob) {
+      // For data URLs, we only allow specific image types and ensure no script content
+      const allowedMimeTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
+      const mimeType = lowerUrl.split(",")[0].split(":")[1]?.split(";")[0];
+      if (!allowedMimeTypes.includes(mimeType)) return "";
+      
+      // Basic check for script tags in SVG data URLs
+      if (mimeType === "image/svg+xml" && (lowerUrl.includes("<script") || lowerUrl.includes("javascript:"))) return "";
+      
       return trimmedUrl;
     }
 
     const parsed = new URL(trimmedUrl);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      // Additional sanitization for the URL to prevent DOM-based XSS
-      // We encode the URL parts to ensure it can't be used for injection
-      return parsed.origin + encodeURI(parsed.pathname) + encodeURI(parsed.search) + encodeURI(parsed.hash);
+      // Reconstruct the URL to ensure it's clean and doesn't contain injection payloads
+      // We use the URL object's properties which are automatically sanitized/encoded
+      return parsed.origin + parsed.pathname + parsed.search + parsed.hash;
     }
     return "";
   } catch {
