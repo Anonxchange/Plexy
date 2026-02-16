@@ -118,7 +118,7 @@ export const asterdexService = {
         limit 
       });
     } catch (error) {
-      console.error(`Failed to fetch order book for ${symbol}:`, error);
+      console.error("Failed to fetch order book for %s:", symbol, error);
       return { bids: [], asks: [] };
     }
   },
@@ -133,7 +133,7 @@ export const asterdexService = {
         limit 
       });
     } catch (error) {
-      console.error(`Failed to fetch trades for ${symbol}:`, error);
+      console.error("Failed to fetch trades for %s:", symbol, error);
       return [];
     }
   },
