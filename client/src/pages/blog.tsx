@@ -29,8 +29,10 @@ function validateImageUrl(url: string | null | undefined): string {
   const isHttp = lowerUrl.startsWith("http://");
   const isHttps = lowerUrl.startsWith("https://");
   const isRelative = trimmedUrl.startsWith("/") && !trimmedUrl.startsWith("//");
+  const isImageBlob = lowerUrl.startsWith("data:image/");
 
-  if (!isHttp && !isHttps && !isRelative) {
+  if (!isHttp && !isHttps && !isRelative && !isImageBlob) {
+    console.warn("Invalid image URL protocol detected:", trimmedUrl);
     return "";
   }
 
@@ -42,6 +44,10 @@ function validateImageUrl(url: string | null | undefined): string {
         return trimmedUrl;
       }
       return "";
+    }
+
+    if (isImageBlob) {
+      return trimmedUrl;
     }
 
     const parsed = new URL(trimmedUrl);
