@@ -1,133 +1,96 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-export interface WalletBalance {
-  wallet_id: string;
+export interface Wallet {
+  id: string;
   user_id: string;
-  address: string;
-  chain_id: string;
-  symbol: string;
-  balance: string;
-  balanceFormatted: string;
-  decimals: number;
-  timestamp: string;
+  crypto_symbol: string;
+  balance: number;
+  locked_balance: number;
+  deposit_address: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-interface BalanceResponse {
-  success: boolean;
-  message?: string;
-  balances: WalletBalance[];
-  error?: string;
-  timestamp: string;
+export interface WalletTransaction {
+  id: string;
+  user_id: string;
+  wallet_id: string;
+  type: 'deposit' | 'withdrawal' | 'swap' | 'p2p_buy' | 'p2p_sell' | 'escrow_lock' | 'escrow_release' | 'fee';
+  crypto_symbol: string;
+  amount: number;
+  fee: number;
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  tx_hash: string | null;
+  from_address: string | null;
+  to_address: string | null;
+  reference_id: string | null;
+  notes: string | null;
+  confirmations: number | null;
+  created_at: string;
+  completed_at: string | null;
 }
 
-export function useWalletBalances() {
-  const query = useQuery<WalletBalance[]>({
-    queryKey: ['wallet-balances'],
-    queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
-      if (!user) return [];
+export async function getUserWallets(userId: string): Promise<Wallet[]> {
+  console.log("[getUserWallets] Fetching balances for user:", userId);
 
-      const accessToken = sessionData.session?.access_token;
-      let balances: WalletBalance[] = [];
+  const { data: result, error } = await supabase.functions.invoke('monitor-deposits');
 
-      try {
-        const { data: wallets } = await supabase
-          .from('user_wallets')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_active', 'true');
+  if (error) {
+    console.error("[getUserWallets] Edge function error:", error);
+    throw new Error(error.message);
+  }
 
-        if (!wallets || wallets.length === 0) {
-          const snapshot = localStorage.getItem(`pexly_balances_${user.id}`);
-          if (snapshot) return JSON.parse(snapshot);
-          throw new Error('No wallets found for user');
-        }
+  if (result?.error) {
+    console.error("[getUserWallets] API error:", result.error);
+    throw new Error(result.error);
+  }
 
-        const chainToSymbol: Record<string, string> = {
-          bitcoin: 'BTC',
-          ethereum: 'ETH',
-          solana: 'SOL',
-          tron: 'TRX',
-          bsc: 'BNB',
-          'binance-smart-chain': 'BNB',
-        };
+  const balances = result?.balances ?? [];
+  
+  const wallets: Wallet[] = balances.map((b: any) => ({
+    id: b.wallet_id || b.address,
+    user_id: userId,
+    crypto_symbol: b.symbol,
+    balance: typeof b.balance === 'number' ? b.balance : 0,
+    locked_balance: 0,
+    deposit_address: b.address,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
 
-        const balancePromises = wallets.map(async (wallet) => {
-          const normalizedChain = wallet.chain_id.toLowerCase();
-          const requestChain = chainToSymbol[normalizedChain] || normalizedChain.toUpperCase();
+  console.log("[getUserWallets] Synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
+  return wallets;
+}
 
-          try {
-            const response = await supabase.functions.invoke<any>('monitor-deposits', {
-              body: { address: wallet.address, chain: requestChain },
-              headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-            });
+export async function getWalletBalance(userId: string, cryptoSymbol: string): Promise<Wallet | null> {
+  const wallets = await getUserWallets(userId);
+  return wallets.find(w => w.crypto_symbol === cryptoSymbol) || null;
+}
 
-            if (response.error || !response.data?.success || !response.data?.native) {
-              console.error(`monitor-deposits failed for ${requestChain}:`, response.error || response.data);
-              return {
-                wallet_id: wallet.id,
-                user_id: user.id,
-                address: wallet.address,
-                chain_id: wallet.chain_id,
-                symbol: chainToSymbol[normalizedChain] || requestChain,
-                balance: '0',
-                balanceFormatted: '0',
-                decimals: 18,
-                timestamp: new Date().toISOString(),
-              } as WalletBalance;
-            }
+export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
+  const { data, error } = await supabase
+    .from('wallet_transactions' as any)
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
-            const native = response.data.native;
-            return {
-              wallet_id: wallet.id,
-              user_id: user.id,
-              address: wallet.address,
-              chain_id: wallet.chain_id,
-              symbol: native.symbol,
-              balance: native.balance,
-              balanceFormatted: native.balance,
-              decimals: native.decimals,
-              timestamp: new Date().toISOString(),
-            } as WalletBalance;
-          } catch (err) {
-            console.error(`Exception for ${wallet.chain_id}:`, err);
-            return {
-              wallet_id: wallet.id,
-              user_id: user.id,
-              address: wallet.address,
-              chain_id: wallet.chain_id,
-              symbol: chainToSymbol[normalizedChain] || requestChain,
-              balance: '0',
-              balanceFormatted: '0',
-              decimals: 18,
-              timestamp: new Date().toISOString(),
-            } as WalletBalance;
-          }
-        });
+  if (error) {
+    console.error("[getWalletTransactions] Error:", error);
+    throw new Error(error.message);
+  }
 
-        balances = await Promise.all(balancePromises);
-        localStorage.setItem(`pexly_balances_${user.id}`, JSON.stringify(balances));
-      } catch (err) {
-        console.error('Failed to fetch wallet balances:', err);
-        const snapshot = localStorage.getItem(`pexly_balances_${user.id}`);
-        if (snapshot) balances = JSON.parse(snapshot);
-      }
+  return (data as unknown as WalletTransaction[]) ?? [];
+}
 
-      return balances;
-    },
-
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
-    retry: 1,
-  });
-
-  return {
-    balances: query.data || [],
-    loading: query.isLoading,
-    error: query.error instanceof Error ? query.error.message : null,
-    refetch: query.refetch,
-  };
+export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
+  const wallets = await getUserWallets(userId);
+  const wallet = wallets.find(w => w.crypto_symbol === cryptoSymbol);
+  
+  if (wallet?.deposit_address) {
+    return wallet.deposit_address;
+  }
+  
+  throw new Error('No deposit address found for this wallet.');
 }
