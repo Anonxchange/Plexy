@@ -9,6 +9,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import DOMPurify from "dompurify";
 
 interface BlogPost {
   id: string;
@@ -346,7 +347,7 @@ export default function BlogPost() {
             prose-strong:text-foreground
             prose-img:rounded-xl
             prose-img:shadow-lg"
-          dangerouslySetInnerHTML={{ __html: formatContent(post.content) }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatContent(post.content)) }}
         />
 
         <Separator className="my-12" />
