@@ -111,7 +111,7 @@ export function VerifyEmail() {
           
           // Clear cookies
           document.cookie.split(";").forEach((c) => {
-            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/;Secure;SameSite=Lax");
           });
           
           setStatus("success");
