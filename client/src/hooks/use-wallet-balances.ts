@@ -31,44 +31,114 @@ export interface WalletTransaction {
   completed_at: string | null;
 }
 
+/* =========================================
+   FETCH USER WALLETS + LIVE BALANCES
+========================================= */
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  console.log("[getUserWallets] Fetching balances for user:", userId);
+  console.log('[getUserWallets] Fetching wallets for user:', userId);
 
-  const { data: result, error } = await supabase.functions.invoke('monitor-deposits');
+  // 1️⃣ Fetch user wallets from DB
+  const { data: userWallets, error: walletError } = await supabase
+    .from('user_wallets')
+    .select('*')
+    .eq('user_id', userId);
 
-  if (error) {
-    console.error("[getUserWallets] Edge function error:", error);
-    throw new Error(error.message);
+  if (walletError) {
+    console.error('[getUserWallets] DB error:', walletError);
+    throw new Error(walletError.message);
   }
 
-  if (result?.error) {
-    console.error("[getUserWallets] API error:", result.error);
-    throw new Error(result.error);
+  if (!userWallets || userWallets.length === 0) {
+    return [];
   }
 
-  const balances = result?.balances ?? [];
-  
-  const wallets: Wallet[] = balances.map((b: any) => ({
-    id: b.wallet_id || b.address,
-    user_id: userId,
-    crypto_symbol: b.symbol,
-    balance: typeof b.balance === 'number' ? b.balance : 0,
-    locked_balance: 0,
-    deposit_address: b.address,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }));
+  const wallets: Wallet[] = [];
 
-  console.log("[getUserWallets] Synced wallets:", wallets.map(w => `${w.crypto_symbol}: ${w.balance}`));
+  // 2️⃣ Call edge function per wallet
+  for (const w of userWallets) {
+    if (!w.deposit_address || !w.chain_id) continue;
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'monitor-deposits',
+        {
+          body: {
+            address: w.deposit_address,
+            chain: w.chain_id,
+          },
+        }
+      );
+
+      if (error) {
+        console.error('[getUserWallets] Edge error:', error);
+        continue;
+      }
+
+      if (!data?.success) {
+        console.error('[getUserWallets] API error:', data?.error);
+        continue;
+      }
+
+      wallets.push({
+        id: w.id,
+        user_id: userId,
+        crypto_symbol: w.crypto_symbol,
+        balance: Number(data.balance ?? 0),
+        locked_balance: 0,
+        deposit_address: w.deposit_address,
+        created_at: w.created_at,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('[getUserWallets] Invoke failed:', err);
+    }
+  }
+
+  console.log(
+    '[getUserWallets] Synced:',
+    wallets.map((w) => `${w.crypto_symbol}: ${w.balance}`)
+  );
+
   return wallets;
 }
 
-export async function getWalletBalance(userId: string, cryptoSymbol: string): Promise<Wallet | null> {
-  const wallets = await getUserWallets(userId);
-  return wallets.find(w => w.crypto_symbol === cryptoSymbol) || null;
+/* =========================================
+   REACT QUERY HOOK (FIXES BUILD ERROR)
+========================================= */
+export function useWalletBalances() {
+  return useQuery({
+    queryKey: ['wallet-balances'],
+    queryFn: async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (!user) return [];
+
+      return await getUserWallets(user.id);
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
 }
 
-export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
+/* =========================================
+   GET SINGLE WALLET
+========================================= */
+export async function getWalletBalance(
+  userId: string,
+  cryptoSymbol: string
+): Promise<Wallet | null> {
+  const wallets = await getUserWallets(userId);
+  return wallets.find((w) => w.crypto_symbol === cryptoSymbol) || null;
+}
+
+/* =========================================
+   GET WALLET TRANSACTIONS
+========================================= */
+export async function getWalletTransactions(
+  userId: string,
+  limit: number = 50
+): Promise<WalletTransaction[]> {
   const { data, error } = await supabase
     .from('wallet_transactions' as any)
     .select('*')
@@ -77,20 +147,30 @@ export async function getWalletTransactions(userId: string, limit: number = 50):
     .limit(limit);
 
   if (error) {
-    console.error("[getWalletTransactions] Error:", error);
+    console.error('[getWalletTransactions] Error:', error);
     throw new Error(error.message);
   }
 
   return (data as unknown as WalletTransaction[]) ?? [];
 }
 
-export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
-  const wallets = await getUserWallets(userId);
-  const wallet = wallets.find(w => w.crypto_symbol === cryptoSymbol);
-  
-  if (wallet?.deposit_address) {
-    return wallet.deposit_address;
+/* =========================================
+   GET DEPOSIT ADDRESS
+========================================= */
+export async function getDepositAddress(
+  userId: string,
+  cryptoSymbol: string
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('user_wallets')
+    .select('deposit_address')
+    .eq('user_id', userId)
+    .eq('crypto_symbol', cryptoSymbol)
+    .single();
+
+  if (error || !data?.deposit_address) {
+    throw new Error('No deposit address found for this wallet.');
   }
-  
-  throw new Error('No deposit address found for this wallet.');
+
+  return data.deposit_address;
 }
