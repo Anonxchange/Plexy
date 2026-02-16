@@ -841,7 +841,7 @@ export function Spot() {
               <div className="flex-1 min-h-0 bg-background rounded-lg overflow-hidden relative lg:flex-1">
                 <iframe
                   key={`${selectedPair.pair}-${chartInterval}`}
-                  src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${selectedPair.pair.replace('/', '')}&interval=${chartInterval}&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${selectedPair.pair.replace('/', '')}`}
+                  src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${encodeURIComponent(selectedPair.pair.replace('/', ''))}&interval=${encodeURIComponent(chartInterval)}&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${encodeURIComponent(selectedPair.pair.replace('/', ''))}`}
                   className="absolute inset-0 w-full h-full"
                   title="TradingView Chart"
                 ></iframe>
