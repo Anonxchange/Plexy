@@ -36,6 +36,11 @@ function validateImageUrl(url: string | null | undefined): string {
     return "";
   }
 
+  // Prevent characters that could break out of attributes or cause injection
+  if (trimmedUrl.includes("\"") || trimmedUrl.includes("'") || trimmedUrl.includes("<") || trimmedUrl.includes(">")) {
+    return "";
+  }
+
   try {
     if (isRelative) {
       // Basic character validation for relative paths to prevent injection
@@ -53,7 +58,12 @@ function validateImageUrl(url: string | null | undefined): string {
       if (!allowedMimeTypes.includes(mimeType)) return "";
       
       // Basic check for script tags in SVG data URLs
-      if (mimeType === "image/svg+xml" && (lowerUrl.includes("<script") || lowerUrl.includes("javascript:"))) return "";
+      if (mimeType === "image/svg+xml") {
+        const decoded = decodeURIComponent(lowerUrl);
+        if (decoded.includes("<script") || decoded.includes("javascript:") || decoded.includes("onload=") || decoded.includes("onerror=")) {
+          return "";
+        }
+      }
       
       return trimmedUrl;
     }
