@@ -125,7 +125,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
 
 export function useWalletBalances() {
   return useQuery({
-    queryKey: ['wallet-balances'],
+   queryKey: ['wallet-balances', user?.id],
     queryFn: async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData?.session?.user;
