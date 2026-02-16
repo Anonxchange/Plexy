@@ -134,7 +134,8 @@ export function Swap() {
     }
   }, [bestQuote]);
 
-  const { balances: monitoredBalances } = useWalletBalances();
+  const { data: monitoredBalancesData } = useWalletBalances();
+  const monitoredBalances = monitoredBalancesData || [];
 
   // Fetch balance for the selected "From" asset
   useEffect(() => {
@@ -157,27 +158,22 @@ export function Swap() {
         const chainIdToFind = symbolMap[fromCurrency] || fromNetwork;
         
         const fromWallet = wallets.find(w => {
-          const chainIdLower = w.chainId?.toLowerCase();
-          const walletTypeLower = w.walletType?.toLowerCase();
-          const assetTypeLower = w.assetType?.toLowerCase();
-          const targetLower = chainIdToFind.toLowerCase();
-          const symbolLower = fromCurrency.toLowerCase();
+          const chainIdToMatch = w.chainId?.toLowerCase();
+          const targetToMatch = chainIdToFind.toLowerCase();
           
-          return chainIdLower === targetLower || 
-                 chainIdLower === symbolLower || 
-                 walletTypeLower === targetLower ||
-                 assetTypeLower === symbolLower;
+          return chainIdToMatch === targetToMatch || 
+                 chainIdToMatch === fromCurrency.toLowerCase();
         });
         
         if (fromWallet) {
           // Try to get balance from monitored balances first (more accurate)
           const monitored = monitoredBalances.find(b => 
-            b.address.toLowerCase() === fromWallet.address.toLowerCase() &&
-            (b.symbol.toLowerCase() === fromCurrency.toLowerCase() || b.chain_id.toLowerCase() === fromNetwork.toLowerCase())
+            b.deposit_address?.toLowerCase() === fromWallet.address.toLowerCase() &&
+            (b.crypto_symbol.toLowerCase() === fromCurrency.toLowerCase() || b.chain_id.toLowerCase() === fromNetwork.toLowerCase())
           );
           
           if (monitored) {
-            setBalance(parseFloat(monitored.balanceFormatted));
+            setBalance(monitored.balance);
           } else {
             setBalance(fromWallet.balance || 0);
           }
@@ -232,43 +228,60 @@ export function Swap() {
   useEffect(() => {
     if (isUpdatingFromInput && bestQuote) {
       // Use exact amount from RocketX if available
-      setToAmount(bestQuote.toAmount.toLocaleString('en-US', { 
+      const formattedToAmount = bestQuote.toAmount.toLocaleString('en-US', { 
         useGrouping: false, 
         minimumFractionDigits: 0, 
         maximumFractionDigits: 8 
-      }));
+      });
+      if (toAmount !== formattedToAmount) {
+        setToAmount(formattedToAmount);
+      }
     } else if (isUpdatingFromInput && swapRate > 0) {
       const amount = parseFloat(fromAmount) || 0;
       const calculated = calculateSwapAmount(amount, swapRate);
-      // Round to 8 decimal places for better precision, especially for BTC
-      setToAmount(calculated.toLocaleString('en-US', { 
+      const formattedToAmount = calculated.toLocaleString('en-US', { 
         useGrouping: false, 
         minimumFractionDigits: 0, 
         maximumFractionDigits: 8 
-      }));
+      });
+      if (toAmount !== formattedToAmount) {
+        setToAmount(formattedToAmount);
+      }
     }
-  }, [fromAmount, swapRate, isUpdatingFromInput, bestQuote]);
+  }, [fromAmount, swapRate, isUpdatingFromInput, bestQuote, toAmount]);
 
   // Auto-update fromAmount when toAmount is manually changed
   useEffect(() => {
     if (!isUpdatingFromInput && swapRate > 0) {
       const amount = parseFloat(toAmount) || 0;
       const calculated = amount / swapRate;
-      setFromAmount(calculated.toLocaleString('en-US', { 
+      const formattedFromAmount = calculated.toLocaleString('en-US', { 
         useGrouping: false, 
         minimumFractionDigits: 0, 
         maximumFractionDigits: 8 
-      }));
+      });
+      if (fromAmount !== formattedFromAmount) {
+        setFromAmount(formattedFromAmount);
+      }
     }
-  }, [toAmount, swapRate, isUpdatingFromInput]);
+  }, [toAmount, swapRate, isUpdatingFromInput, fromAmount]);
 
   const handleSwapCurrencies = () => {
     const tempCurrency = fromCurrency;
-    const tempAmount = fromAmount;
+    const tempFromAmount = fromAmount;
+    const tempToAmount = toAmount;
+    
     setFromCurrency(toCurrency);
     setToCurrency(tempCurrency);
-    setFromAmount(toAmount);
-    setToAmount(tempAmount);
+    
+    // Swap the amounts and keep the update flag consistent
+    if (isUpdatingFromInput) {
+      setFromAmount(tempToAmount);
+      setToAmount(tempFromAmount);
+    } else {
+      setFromAmount(tempToAmount);
+      setToAmount(tempFromAmount);
+    }
   };
 
   const handleFromAmountChange = (value: string) => {
