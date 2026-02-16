@@ -46,7 +46,9 @@ function validateImageUrl(url: string | null | undefined): string {
 
     const parsed = new URL(trimmedUrl);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.href;
+      // Additional sanitization for the URL to prevent DOM-based XSS
+      // We encode the URL parts to ensure it can't be used for injection
+      return parsed.origin + encodeURI(parsed.pathname) + encodeURI(parsed.search) + encodeURI(parsed.hash);
     }
     return "";
   } catch {
