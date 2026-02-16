@@ -57,10 +57,17 @@ function validateImageUrl(url: string | null | undefined): string {
       const mimeType = lowerUrl.split(",")[0].split(":")[1]?.split(";")[0];
       if (!allowedMimeTypes.includes(mimeType)) return "";
       
-      // Basic check for script tags in SVG data URLs
+      // Strict check for SVG data URLs to prevent XSS
       if (mimeType === "image/svg+xml") {
         const decoded = decodeURIComponent(lowerUrl);
-        if (decoded.includes("<script") || decoded.includes("javascript:") || decoded.includes("onload=") || decoded.includes("onerror=")) {
+        // Block script tags and event handlers
+        if (
+          decoded.includes("<script") || 
+          decoded.includes("javascript:") || 
+          /\bon[a-z]+\s*=/i.test(decoded) || // Matches onload, onerror, etc.
+          decoded.includes("<animate") ||    // Can be used for XSS in SVG
+          decoded.includes("<set")           // Can be used for XSS in SVG
+        ) {
           return "";
         }
       }
