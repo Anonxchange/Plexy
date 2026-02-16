@@ -178,82 +178,211 @@ export function MyOffers() {
       container.style.padding = '40px';
       container.style.fontFamily = 'system-ui, -apple-system, sans-serif';
       
-      const safeFullName = escapeHtml(user?.user_metadata?.full_name);
-      const safeEmail = escapeHtml(user?.email);
-      const safeInitials = escapeHtml(user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() || user?.email?.substring(0, 2)?.toUpperCase() || 'JD');
-      const safeDisplayName = escapeHtml(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Vendor');
-      const safeOfferType = escapeHtml(selectedOffer.offer_type);
-      const safeCryptoSymbol = escapeHtml(selectedOffer.crypto_symbol);
-      const safeFiatCurrency = escapeHtml(selectedOffer.fiat_currency);
-      const safePaymentMethods = escapeHtml(
-        Array.isArray(selectedOffer.payment_methods) 
-          ? selectedOffer.payment_methods.join(', ') 
-          : selectedOffer.payment_methods
-      );
+      const safeInitials = user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() || user?.email?.substring(0, 2)?.toUpperCase() || 'JD';
+      const safeDisplayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Vendor';
+      const safeCryptoSymbol = selectedOffer.crypto_symbol;
+      const safeFiatCurrency = selectedOffer.fiat_currency;
+      const safePaymentMethods = Array.isArray(selectedOffer.payment_methods) 
+        ? selectedOffer.payment_methods.join(', ') 
+        : selectedOffer.payment_methods;
 
-      container.innerHTML = DOMPurify.sanitize(`
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 24px; padding: 32px; color: white;">
-          <!-- Header with Owner Info -->
-          <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
-            <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">
-              ${safeInitials}
-            </div>
-            <div>
-              <div style="font-size: 20px; font-weight: bold;">${safeDisplayName}</div>
-              <div style="font-size: 14px; opacity: 0.9;">Verified Trader</div>
-            </div>
-          </div>
+      // Build the UI using DOM elements instead of innerHTML
+      const mainWrapper = document.createElement('div');
+      mainWrapper.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      mainWrapper.style.borderRadius = '24px';
+      mainWrapper.style.padding = '32px';
+      mainWrapper.style.color = 'white';
 
-          <!-- Offer Type Badge -->
-          <div style="display: inline-block; background: ${selectedOffer.offer_type === 'buy' ? '#C4F82A' : '#ffffff'}; color: #000; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; margin-bottom: 16px;">
-            ${safeOfferType.toUpperCase()} ${safeCryptoSymbol}
-          </div>
+      // Header
+      const header = document.createElement('div');
+      header.style.display = 'flex';
+      header.style.alignItems = 'center';
+      header.style.gap = '16px';
+      header.style.marginBottom = '24px';
 
-          <!-- Main Offer Details -->
-          <div style="background: rgba(255,255,255,0.15); border-radius: 16px; padding: 24px; margin-bottom: 24px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-              <div>
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">Price</div>
-                <div style="font-size: 28px; font-weight: bold;">${selectedOffer.fixed_price?.toLocaleString()} ${safeFiatCurrency}</div>
-              </div>
-              <div>
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">Amount</div>
-                <div style="font-size: 28px; font-weight: bold;">${selectedOffer.available_amount} ${safeCryptoSymbol}</div>
-              </div>
-            </div>
-            
-            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">Limits</div>
-              <div style="font-size: 18px; font-weight: 600;">${selectedOffer.min_amount.toLocaleString()} - ${selectedOffer.max_amount.toLocaleString()} ${safeFiatCurrency}</div>
-            </div>
+      const initialsCircle = document.createElement('div');
+      initialsCircle.style.width = '60px';
+      initialsCircle.style.height = '60px';
+      initialsCircle.style.background = 'rgba(255,255,255,0.2)';
+      initialsCircle.style.borderRadius = '50%';
+      initialsCircle.style.display = 'flex';
+      initialsCircle.style.alignItems = 'center';
+      initialsCircle.style.justifyContent = 'center';
+      initialsCircle.style.fontSize = '24px';
+      initialsCircle.style.fontWeight = 'bold';
+      initialsCircle.textContent = safeInitials;
 
-            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
-              <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">Payment Method</div>
-              <div style="font-size: 16px; font-weight: 600;">${safePaymentMethods}</div>
-            </div>
-          </div>
+      const headerInfo = document.createElement('div');
+      const nameLabel = document.createElement('div');
+      nameLabel.style.fontSize = '20px';
+      nameLabel.style.fontWeight = 'bold';
+      nameLabel.textContent = safeDisplayName;
+      const verifiedLabel = document.createElement('div');
+      verifiedLabel.style.fontSize = '14px';
+      verifiedLabel.style.opacity = '0.9';
+      verifiedLabel.textContent = 'Verified Trader';
+      headerInfo.appendChild(nameLabel);
+      headerInfo.appendChild(verifiedLabel);
 
-          <!-- QR Code -->
-          <div style="display: flex; justify-content: center; margin-bottom: 24px;">
-            <div style="background: white; padding: 16px; border-radius: 16px;">
-              <img src="${qrCodeDataUrl}" style="display: block; width: 180px; height: 180px;" />
-            </div>
-          </div>
+      header.appendChild(initialsCircle);
+      header.appendChild(headerInfo);
+      mainWrapper.appendChild(header);
 
-          <!-- Footer with Logo and Branding -->
-          <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
-              <div style="width: 40px; height: 40px; background: #C4F82A; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #000;">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                </svg>
-              </div>
-              <div style="font-size: 32px; font-weight: bold;">pexly</div>
-            </div>
-            <div style="font-size: 14px; opacity: 0.9;">Scan QR code to trade instantly</div>
-          </div>
-        </div>
-      `);
+      // Offer Type Badge
+      const badge = document.createElement('div');
+      badge.style.display = 'inline-block';
+      badge.style.background = selectedOffer.offer_type === 'buy' ? '#C4F82A' : '#ffffff';
+      badge.style.color = '#000';
+      badge.style.padding = '8px 16px';
+      badge.style.borderRadius = '8px';
+      badge.style.fontWeight = 'bold';
+      badge.style.fontSize = '14px';
+      badge.style.marginBottom = '16px';
+      badge.textContent = `${selectedOffer.offer_type.toUpperCase()} ${safeCryptoSymbol}`;
+      mainWrapper.appendChild(badge);
+
+      // Main Offer Details
+      const detailsBox = document.createElement('div');
+      detailsBox.style.background = 'rgba(255,255,255,0.15)';
+      detailsBox.style.borderRadius = '16px';
+      detailsBox.style.padding = '24px';
+      detailsBox.style.marginBottom = '24px';
+
+      const grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = '1fr 1fr';
+      grid.style.gap = '20px';
+
+      const priceDiv = document.createElement('div');
+      const priceLabel = document.createElement('div');
+      priceLabel.style.fontSize = '14px';
+      priceLabel.style.opacity = '0.9';
+      priceLabel.style.marginBottom = '4px';
+      priceLabel.textContent = 'Price';
+      const priceValue = document.createElement('div');
+      priceValue.style.fontSize = '28px';
+      priceValue.style.fontWeight = 'bold';
+      priceValue.textContent = `${selectedOffer.fixed_price?.toLocaleString()} ${safeFiatCurrency}`;
+      priceDiv.appendChild(priceLabel);
+      priceDiv.appendChild(priceValue);
+
+      const amountDiv = document.createElement('div');
+      const amountLabel = document.createElement('div');
+      amountLabel.style.fontSize = '14px';
+      amountLabel.style.opacity = '0.9';
+      amountLabel.style.marginBottom = '4px';
+      amountLabel.textContent = 'Amount';
+      const amountValue = document.createElement('div');
+      amountValue.style.fontSize = '28px';
+      amountValue.style.fontWeight = 'bold';
+      amountValue.textContent = `${selectedOffer.available_amount} ${safeCryptoSymbol}`;
+      amountDiv.appendChild(amountLabel);
+      amountDiv.appendChild(amountValue);
+
+      grid.appendChild(priceDiv);
+      grid.appendChild(amountDiv);
+      detailsBox.appendChild(grid);
+
+      // Limits
+      const limitsSection = document.createElement('div');
+      limitsSection.style.marginTop = '16px';
+      limitsSection.style.paddingTop = '16px';
+      limitsSection.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+      const limitsLabel = document.createElement('div');
+      limitsLabel.style.fontSize = '14px';
+      limitsLabel.style.opacity = '0.9';
+      limitsLabel.style.marginBottom = '4px';
+      limitsLabel.textContent = 'Limits';
+      const limitsValue = document.createElement('div');
+      limitsValue.style.fontSize = '18px';
+      limitsValue.style.fontWeight = '600';
+      limitsValue.textContent = `${selectedOffer.min_amount.toLocaleString()} - ${selectedOffer.max_amount.toLocaleString()} ${safeFiatCurrency}`;
+      limitsSection.appendChild(limitsLabel);
+      limitsSection.appendChild(limitsValue);
+      detailsBox.appendChild(limitsSection);
+
+      // Payment Methods
+      const paymentSection = document.createElement('div');
+      paymentSection.style.marginTop = '16px';
+      paymentSection.style.paddingTop = '16px';
+      paymentSection.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+      const paymentLabel = document.createElement('div');
+      paymentLabel.style.fontSize = '14px';
+      paymentLabel.style.opacity = '0.9';
+      paymentLabel.style.marginBottom = '4px';
+      paymentLabel.textContent = 'Payment Method';
+      const paymentValue = document.createElement('div');
+      paymentValue.style.fontSize = '16px';
+      paymentValue.style.fontWeight = '600';
+      paymentValue.textContent = safePaymentMethods;
+      paymentSection.appendChild(paymentLabel);
+      paymentSection.appendChild(paymentValue);
+      detailsBox.appendChild(paymentSection);
+
+      mainWrapper.appendChild(detailsBox);
+
+      // QR Code
+      const qrWrapper = document.createElement('div');
+      qrWrapper.style.display = 'flex';
+      qrWrapper.style.justifyContent = 'center';
+      qrWrapper.style.marginBottom = '24px';
+      const qrInner = document.createElement('div');
+      qrInner.style.background = 'white';
+      qrInner.style.padding = '16px';
+      qrInner.style.borderRadius = '16px';
+      const qrImg = document.createElement('img');
+      qrImg.src = qrCodeDataUrl;
+      qrImg.style.display = 'block';
+      qrImg.style.width = '180px';
+      qrImg.style.height = '180px';
+      qrInner.appendChild(qrImg);
+      qrWrapper.appendChild(qrInner);
+      mainWrapper.appendChild(qrWrapper);
+
+      // Footer
+      const shareFooter = document.createElement('div');
+      shareFooter.style.textAlign = 'center';
+      shareFooter.style.paddingTop = '20px';
+      shareFooter.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+      
+      const logoWrapper = document.createElement('div');
+      logoWrapper.style.display = 'flex';
+      logoWrapper.style.alignItems = 'center';
+      logoWrapper.style.justifyContent = 'center';
+      logoWrapper.style.gap = '12px';
+      logoWrapper.style.marginBottom = '8px';
+      
+      const logoIcon = document.createElement('div');
+      logoIcon.style.width = '40px';
+      logoIcon.style.height = '40px';
+      logoIcon.style.background = '#C4F82A';
+      logoIcon.style.borderRadius = '10px';
+      logoIcon.style.display = 'flex';
+      logoIcon.style.alignItems = 'center';
+      logoIcon.style.justifyContent = 'center';
+      logoIcon.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #000;">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      `;
+      
+      const logoText = document.createElement('div');
+      logoText.style.fontSize = '32px';
+      logoText.style.fontWeight = 'bold';
+      logoText.textContent = 'pexly';
+      
+      logoWrapper.appendChild(logoIcon);
+      logoWrapper.appendChild(logoText);
+      shareFooter.appendChild(logoWrapper);
+      
+      const scanText = document.createElement('div');
+      scanText.style.fontSize = '14px';
+      scanText.style.opacity = '0.9';
+      scanText.textContent = 'Scan QR code to trade instantly';
+      shareFooter.appendChild(scanText);
+      
+      mainWrapper.appendChild(shareFooter);
+      container.appendChild(mainWrapper);
 
       document.body.appendChild(container);
 
