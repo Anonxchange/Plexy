@@ -37,6 +37,17 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
     };
   });
 
+  // Add a separate state for debounced amount to avoid constant API calls while typing
+  const [debouncedAmount, setDebouncedAmount] = useState(amount);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAmount(amount);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [amount]);
+
   useEffect(() => {
     let isMounted = true;
     let intervalId: NodeJS.Timeout;
@@ -68,9 +79,9 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
         }
 
         // Try to fetch from Rocketx first for real exchange rates
-        const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, amount);
+        const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount);
         
-        let marketRate = rocketxQuote?.toAmount || 0;
+        let marketRate = (rocketxQuote && rocketxQuote.toAmount ? (rocketxQuote.toAmount / (debouncedAmount || 1)) : 0);
         
         // Fallback to CoinGecko if Rocketx fails
         if (!rocketxQuote) {
@@ -90,7 +101,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           ? (1 - SWAP_SPREAD_PERCENTAGE / 100)
           : (1 + SWAP_SPREAD_PERCENTAGE / 100);
 
-        const swapRate = rocketxQuote ? rocketxQuote.toAmount : marketRate * spreadMultiplier;
+        const swapRate = (rocketxQuote && rocketxQuote.toAmount) ? (rocketxQuote.toAmount / (debouncedAmount || 1)) : marketRate * spreadMultiplier;
         const percentageDiff = marketRate !== 0 ? Math.abs(((swapRate - marketRate) / marketRate) * 100) : 0;
 
         const data = {
@@ -133,7 +144,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [fromCrypto, toCrypto, fromNetwork, toNetwork, amount, cacheKey]);
+  }, [fromCrypto, toCrypto, fromNetwork, toNetwork, debouncedAmount, cacheKey]);
 
   return priceData;
 }
