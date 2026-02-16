@@ -111,7 +111,10 @@ export function VerifyEmail() {
           
           // Clear cookies with secure attribute
           document.cookie.split(";").forEach((c) => {
-            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=; expires=" + new Date().toUTCString() + "; path=/; Secure; SameSite=Lax");
+            const cookieName = c.trim().split("=")[0];
+            if (cookieName) {
+              document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; Secure; SameSite=Lax`;
+            }
           });
           
           setStatus("success");
