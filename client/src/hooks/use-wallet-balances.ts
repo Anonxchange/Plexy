@@ -178,11 +178,22 @@ async function fetchWalletBalance(wallet: any): Promise<Wallet | null> {
 
       if (error || !data?.success) return null;
       balance = Number(data.balance ?? 0);
-    }
+    } else if (cfg.rpc || ['ETH', 'BSC', 'POLYGON', 'ARBITRUM', 'OPTIMISM'].includes(chain)) {
+      // EVM chains handled by edge function
+      const { data, error } = await supabase.functions.invoke('monitor-deposits', {
+        body: { address: wallet.deposit_address, chain: chain },
+      });
 
-    // EVM chains
-    if (cfg.rpc) {
-      balance = await evmGetBalance(cfg.rpc, wallet.deposit_address, cfg.decimals);
+      if (error || !data?.success) {
+        // Fallback to direct RPC if edge function fails and RPC is available
+        if (cfg.rpc) {
+          balance = await evmGetBalance(cfg.rpc, wallet.deposit_address, cfg.decimals);
+        } else {
+          return null;
+        }
+      } else {
+        balance = Number(data.balance ?? 0);
+      }
     }
 
     return {
