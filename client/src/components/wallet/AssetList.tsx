@@ -98,7 +98,7 @@ export function AssetList({
   onSwap,
 }: {
   onSend?: (symbol: string) => void;
-  onReceive?: (symbol: string) => void;
+  onReceive?: (symbol?: string) => void;
   onSwap?: (symbol: string) => void;
 }) {
   const { data: wallet, isLoading, isError, isRefetching } = useWalletData();
@@ -166,8 +166,6 @@ export function AssetList({
                   </TableRow>
                 ) : (
                   assets.map(asset => {
-                    const value = asset.balance * (asset.value / (asset.balance || 1));
-
                     return (
                       <TableRow key={asset.symbol}>
                         <TableCell>
@@ -183,7 +181,7 @@ export function AssetList({
 
                         <TableCell className="hidden sm:table-cell">
                           <div className="font-semibold">
-                            {(asset.value / (asset.balance || 1)).toLocaleString()} {preferredCurrency}
+                            {asset.price.toLocaleString()} {preferredCurrency}
                           </div>
                           <div
                             className={`text-xs font-bold ${
