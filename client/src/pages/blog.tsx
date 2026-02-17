@@ -7,6 +7,19 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { createClient } from "@/lib/supabase";
 import { useSchema, blogPageSchema } from "@/hooks/use-schema";
 
+function safeImageUrl(url: string | undefined): string {
+  try {
+    if (!url) return "about:blank";
+    const parsed = new URL(url);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+    return "about:blank"; // Block unsafe protocols like javascript:
+  } catch {
+    return "about:blank"; // If invalid URL
+  }
+}
+
 function calculateReadTime(content: string): string {
   if (!content) return "1 min read";
   const wordsPerMinute = 200;
@@ -14,77 +27,6 @@ function calculateReadTime(content: string): string {
   const wordCount = textContent.split(' ').filter(word => word.length > 0).length;
   const readTime = Math.ceil(wordCount / wordsPerMinute);
   return `${readTime} min read`;
-}
-
-function validateImageUrl(url: string | null | undefined): string {
-  if (!url || typeof url !== "string") return "";
-  
-  const trimmedUrl = url.trim();
-  if (!trimmedUrl) return "";
-
-  // Prevent protocol-based XSS (javascript:, data:, vbscript:, etc.)
-  const lowerUrl = trimmedUrl.toLowerCase();
-  
-  // Strict check for allowed protocols only
-  const isHttp = lowerUrl.startsWith("http://");
-  const isHttps = lowerUrl.startsWith("https://");
-  const isRelative = trimmedUrl.startsWith("/") && !trimmedUrl.startsWith("//");
-  const isImageBlob = lowerUrl.startsWith("data:image/");
-
-  if (!isHttp && !isHttps && !isRelative && !isImageBlob) {
-    console.warn("Invalid image URL protocol detected:", trimmedUrl);
-    return "";
-  }
-
-  // Prevent characters that could break out of attributes or cause injection
-  if (trimmedUrl.includes("\"") || trimmedUrl.includes("'") || trimmedUrl.includes("<") || trimmedUrl.includes(">")) {
-    return "";
-  }
-
-  try {
-    if (isRelative) {
-      // Basic character validation for relative paths to prevent injection
-      // Allow only safe characters: alphanumeric, /, ., -, _, ?, &, =, #, +
-      if (/^[a-zA-Z0-9\/\.\-\_\?\&\=\#\+]+$/.test(trimmedUrl)) {
-        return trimmedUrl;
-      }
-      return "";
-    }
-
-    if (isImageBlob) {
-      // For data URLs, we only allow specific image types and ensure no script content
-      const allowedMimeTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
-      const mimeType = lowerUrl.split(",")[0].split(":")[1]?.split(";")[0];
-      if (!allowedMimeTypes.includes(mimeType)) return "";
-      
-      // Strict check for SVG data URLs to prevent XSS
-      if (mimeType === "image/svg+xml") {
-        const decoded = decodeURIComponent(lowerUrl);
-        // Block script tags and event handlers
-        if (
-          decoded.includes("<script") || 
-          decoded.includes("javascript:") || 
-          /\bon[a-z]+\s*=/i.test(decoded) || // Matches onload, onerror, etc.
-          decoded.includes("<animate") ||    // Can be used for XSS in SVG
-          decoded.includes("<set")           // Can be used for XSS in SVG
-        ) {
-          return "";
-        }
-      }
-      
-      return trimmedUrl;
-    }
-
-    const parsed = new URL(trimmedUrl);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      // Reconstruct the URL to ensure it's clean and doesn't contain injection payloads
-      // We use the URL object's properties which are automatically sanitized/encoded
-      return parsed.origin + parsed.pathname + parsed.search + parsed.hash;
-    }
-    return "";
-  } catch {
-    return "";
-  }
 }
 
 const categories = [
@@ -363,8 +305,8 @@ export default function Blog() {
                   {post.image_url ? (
                     <>
                       <img
-                        src={validateImageUrl(post.image_url) || "about:blank"}
-                        alt={post.title}
+                        src={safeImageUrl(post.image_url)}
+                        alt={post.title || "image"}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
