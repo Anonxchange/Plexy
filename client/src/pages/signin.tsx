@@ -13,6 +13,7 @@ import * as OTPAuth from "otplib";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
+import { rateLimiter } from "@/lib/security/rate-limiter";
 
 export function SignIn() {
   const [inputValue, setInputValue] = useState("");
@@ -110,6 +111,17 @@ export function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Rate limit sign-in attempts (10 attempts per minute per IP)
+    const isAllowed = await rateLimiter.checkLimit('ip_signin', 'signin_attempt', 10, 1);
+    if (!isAllowed) {
+      toast({
+        title: "Too Many Attempts",
+        description: "Please try again in a few minutes.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Phone number → OTP only (no password)
     if (isPhoneNumber) {
