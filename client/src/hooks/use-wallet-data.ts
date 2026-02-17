@@ -51,7 +51,7 @@ const SORT_ORDER: Record<string, number> = {
 
 export function useWalletData() {
   const { user } = useAuth();
-  const { balances: monitoredBalances } = useWalletBalances();
+  const { data: monitoredBalances } = useWalletBalances();
   const [preferredCurrency, setPreferredCurrency] = useState<string>(() => {
     if (typeof window !== "undefined" && user?.id) {
       return (localStorage.getItem(`pexly_currency_${user.id}`) || "USD").toUpperCase();
@@ -75,7 +75,7 @@ export function useWalletData() {
   // Memoize monitored balances signature to avoid triggering refetch too often
   const balancesKey = useMemo(() => {
     if (!monitoredBalances) return "";
-    return monitoredBalances.map(b => `${b.symbol}:${b.balance}`).join(",");
+    return monitoredBalances.map(b => `${b.crypto_symbol}:${b.balance}`).join(",");
   }, [monitoredBalances]);
 
   const query = useQuery<WalletData>({
@@ -89,7 +89,7 @@ export function useWalletData() {
 
       // Use monitored balances if available
       const wallets = monitoredBalances && monitoredBalances.length > 0
-        ? monitoredBalances.map(mb => ({ crypto_symbol: mb.symbol, balance: Number(mb.balance) || 0 }))
+        ? monitoredBalances.map((mb: any) => ({ crypto_symbol: mb.crypto_symbol, balance: Number(mb.balance) || 0 }))
         : await getUserWallets(user.id);
 
       // Normalize & filter
