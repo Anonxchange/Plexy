@@ -17,10 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppSidebar } from "./app-sidebar";
 import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
-import { useCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
-import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { 
   getNotifications, 
   markAsRead, 
@@ -29,6 +27,7 @@ import {
   type Notification 
 } from "@/lib/notifications-api";
 import { useToast } from "@/hooks/use-toast";
+import { useWalletData } from "@/hooks/use-wallet-data";
 
 interface NotificationIconProps {
   count?: number;
@@ -62,65 +61,22 @@ export function AppHeader() {
   const { user, signOut } = useAuth();
   const [location, navigate] = useLocation();
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
-  const supabase = createClient();
   const { verificationLevel, levelConfig } = useVerificationGuard();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { toast } = useToast();
   const [userName, setUserName] = useState<string>('');
   
-  const { balances: userWallets, loading: walletsLoading } = useWalletBalances();
+  const { data: walletData, isLoading: walletLoading } = useWalletData();
   
-  // Get all unique symbols from wallets
-  const allSymbols = useMemo(() => {
-    if (!userWallets || userWallets.length === 0) return ["BTC", "ETH", "USDT", "USDC"];
-    return Array.from(new Set(userWallets.map(w => w.symbol)));
-  }, [userWallets]);
-
-  const { data: prices, isLoading: pricesLoading } = useCryptoPrices(allSymbols);
-
   const [preferredCurrency, setPreferredCurrency] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(`pexly_currency_${user?.id}`) || 'USD';
+    if (typeof window !== 'undefined' && user?.id) {
+      return localStorage.getItem(`pexly_currency_${user.id}`) || 'USD';
     }
     return 'USD';
   });
-  const [lastBalanceUpdate, setLastBalanceUpdate] = useState<number>(0);
-
-  // Derived balance calculation
-  const [balance, setBalance] = useState<number>(0);
-  const [isConverting, setIsConverting] = useState(false);
-
-  useEffect(() => {
-    const calculateBalance = async () => {
-      if (!userWallets || userWallets.length === 0 || !prices) {
-        setBalance(0);
-        return;
-      }
-
-      const totalUSD = userWallets.reduce((sum, wallet) => {
-        const priceData = prices[wallet.symbol];
-        const currentPrice = priceData?.current_price || 0;
-        const bal = parseFloat(wallet.balanceFormatted) || 0;
-        return sum + (bal * currentPrice);
-      }, 0);
-
-      if (preferredCurrency === 'USD') {
-        setBalance(totalUSD);
-      } else {
-        setIsConverting(true);
-        try {
-          const finalBalance = await convertCurrency(totalUSD, preferredCurrency);
-          setBalance(finalBalance);
-        } catch (e) {
-          setBalance(totalUSD);
-        } finally {
-          setIsConverting(false);
-        }
-      }
-    };
-
-    calculateBalance();
-  }, [userWallets, prices, preferredCurrency]);
+  
+  const balance = walletData?.totalBalance || 0;
+  const isConverting = walletData?.isConverting || false;
 
   useEffect(() => {
     if (!user) return;
@@ -186,7 +142,6 @@ export function AppHeader() {
           .single();
         
         if (profile?.username) setUserName(profile.username);
-        if (profile?.preferred_currency) setPreferredCurrency(profile.preferred_currency.toUpperCase());
       };
       
       fetchProfile();
@@ -218,14 +173,6 @@ export function AppHeader() {
       console.error('Error fetching profile avatar:', error);
     }
   };
-
-  // Helper function to format currency, assuming it's defined elsewhere or needs to be added.
-  // For now, using a placeholder similar to the balance formatting.
-  const formatCurrency = (amount: number): string => {
-    return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}`;
-  };
-
-  const walletBalance = balance; // Assuming walletBalance is the same as balance for this context
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
@@ -491,7 +438,7 @@ export function AppHeader() {
                 </div>
                 <div className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
                   <span className="truncate">
-                    {walletsLoading || pricesLoading || isConverting ? (
+                    {walletLoading || isConverting ? (
                       <Skeleton className="h-3 w-16" />
                     ) : (
                       balanceVisible ? `${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"
@@ -520,170 +467,71 @@ export function AppHeader() {
                     <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
                       <AvatarImage src={profileAvatar || user?.user_metadata?.avatar_url} alt="User avatar" />
                       <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
-                        {user?.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ?? 
-                         user?.email?.substring(0, 2)?.toUpperCase() ?? 
-                         "JD"}
+                        {userName ? userName.slice(0, 2).toUpperCase() : user?.email?.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  align="end" 
-                  className="w-[280px] p-0" 
-                  sideOffset={8}
-                >
-                  <div className="p-2">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer">
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      <div>
-                        <div className="font-medium">Dashboard</div>
-                        <div className="text-xs text-muted-foreground">Your main dashboard</div>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      <div>
-                        <div className="font-medium">Profile</div>
-                        <div className="text-xs text-muted-foreground">Your public profile</div>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/notifications')} className="cursor-pointer">
-                      <Bell className="mr-2 h-4 w-4" />
-                      <div className="flex flex-1 items-center justify-between">
-                        <div>
-                          <div className="font-medium">Notifications</div>
-                          <div className="text-xs text-muted-foreground">Messages and updates</div>
-                        </div>
-                        {unreadCount > 0 && (
-                          <Badge className="ml-2 h-5 px-2 bg-red-500 hover:bg-red-600 text-xs">
-                            {unreadCount}
-                          </Badge>
-                        )}
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/trade-history")}>
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      <div className="flex flex-col">
-                        <span className="font-medium">Trade statistics</span>
-                        <span className="text-xs text-muted-foreground">Trade history, partners, statistics</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/account-settings")}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <div className="flex flex-col">
-                        <span className="font-medium">Account settings</span>
-                        <span className="text-xs text-muted-foreground">Verification, notifications, security</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/submit-idea")}>
-                      <Lightbulb className="mr-2 h-4 w-4" />
-                      <div className="flex flex-col">
-                        <span className="font-medium">Submit an idea</span>
-                        <span className="text-xs text-muted-foreground">Improve Pexly with us</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={async () => {
-                      await signOut();
-                      navigate("/");
-                    }}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </div>
-
-                  <DropdownMenuSeparator className="my-0" />
-
-                  <div className="p-4 bg-muted/30">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                        <Wallet className="h-4 w-4" />
-                        <span>Your limits: Level {verificationLevel}</span>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={() => navigate("/verification")}
-                      >
-                        {verificationLevel === 0 ? "Verify Now" : "Upgrade"}
-                      </Button>
+                <DropdownMenuContent align="end" className="w-64 mt-2 border-border/50 bg-card/95 backdrop-blur-sm">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-bold leading-none">{userName || 'My Account'}</p>
+                      <p className="text-xs leading-none text-muted-foreground truncate">{user?.email}</p>
                     </div>
-                    {levelConfig && (
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Daily</span>
-                          <span className="font-medium">
-                            {levelConfig.dailyLimit 
-                              ? `$${levelConfig.dailyLimit.toLocaleString()}` 
-                              : "Unlimited"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Per Trade</span>
-                          <span className="font-medium">
-                            {levelConfig.perTradeLimit 
-                              ? `$${levelConfig.perTradeLimit.toLocaleString()}` 
-                              : "Unlimited"}
-                          </span>
-                        </div>
-                        {levelConfig.lifetimeTradeLimit && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Lifetime</span>
-                            <span className="font-medium">
-                              ${levelConfig.lifetimeTradeLimit.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-border/50" />
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/settings/profile')} className="cursor-pointer">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/trade-statistics')} className="cursor-pointer">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Trade Statistics
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/medals')} className="cursor-pointer">
+                    <Trophy className="mr-2 h-4 w-4" />
+                    My Medals
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border/50" />
+                  <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer text-destructive focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log Out
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Notification Icon - Real data */}
-              <NotificationIcon 
-                count={unreadCount} 
-                onClick={() => navigate('/notifications')} 
-              />
+              <NotificationIcon count={unreadCount} onClick={() => navigate('/notifications')} />
             </>
           ) : (
-            <>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={() => setMobileMenuOpen(true)}
-                data-testid="button-sidebar-toggle"
-                className="border-border lg:hidden"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              <div className="hidden lg:flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate("/signin")}
-                  data-testid="button-sign-in"
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  onClick={() => navigate("/signup")}
-                  data-testid="button-sign-up"
-                >
-                  Sign Up
-                </Button>
-              </div>
-            </>
+            <div className="flex items-center gap-2">
+              <Link href="/signin">
+                <Button variant="ghost" size="sm" className="font-semibold text-foreground">Log In</Button>
+              </Link>
+              <Link href="/signup">
+                <Button size="sm" className="font-bold bg-primary text-primary-foreground hover:opacity-90">Sign Up</Button>
+              </Link>
+            </div>
           )}
+          
+          <ThemeToggle />
         </div>
       </div>
 
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-80">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Navigation Menu</SheetTitle>
+        <SheetContent side="left" className="p-0 w-80 border-r border-border bg-card">
+          <SheetHeader className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-xl font-extrabold flex items-center gap-2 text-foreground">
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-primary-foreground" />
+                </div>
+                Pexly
+              </SheetTitle>
+            </div>
           </SheetHeader>
           <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
         </SheetContent>
