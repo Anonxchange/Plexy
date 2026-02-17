@@ -12,12 +12,12 @@ import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { AssetCardSkeleton } from "@/components/dashboard/AssetCard";
 import { MarketsSectionSkeleton } from "@/components/dashboard/MarketsSection";
+import { useWalletData } from "@/hooks/use-wallet-data";
 
 const AssetCard = lazy(() => import("@/components/dashboard/AssetCard").then(m => ({ default: m.AssetCard })));
 const MarketsSection = lazy(() => import("@/components/dashboard/MarketsSection").then(m => ({ default: m.MarketsSection })));
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
-// ... rest of imports and helpers
 
 const defaultMarkets = [
   { symbol: "BTC", name: "Bitcoin", pair: "USDT", price: "85,451.2", change: -0.79 },
@@ -81,23 +81,15 @@ export const Dashboard = () => {
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
   const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
   
-  const { balances: monitoredBalances, loading: walletsLoading } = useWalletBalances();
+  const { data: walletData, isLoading: walletLoading } = useWalletData();
   
   const symbols = useMemo(() => ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"], []);
   const { data: cryptoPricesMap, isLoading: pricesLoading } = useCryptoPrices(symbols);
   
-  const isLoading = walletsLoading || pricesLoading || authLoading;
+  const isLoading = walletLoading || pricesLoading || authLoading;
   const cryptoPrices = cryptoPricesMap || {};
 
-  const totalBalance = useMemo(() => {
-    if (!monitoredBalances || monitoredBalances.length === 0) return 0;
-    
-    return monitoredBalances.reduce((total, monitored) => {
-      const price = cryptoPrices[monitored.symbol]?.current_price || 0;
-      const balance = parseFloat(monitored.balanceFormatted) || 0;
-      return total + (balance * price);
-    }, 0);
-  }, [monitoredBalances, cryptoPrices]);
+  const totalBalance = walletData?.totalBalance || 0;
 
   const markets = useMemo(() => {
     return defaultMarkets.map(market => {
@@ -112,21 +104,19 @@ export const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      // Use getWalletsFromStorage which is now public
-      const existingWallets = nonCustodialWalletManager.getWalletsFromStorage(user.id);
-      setWalletBackupProcessed(existingWallets.length > 0);
+      const checkWallets = async () => {
+        const existingWallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
+        setWalletBackupProcessed(existingWallets.length > 0);
+      };
+      checkWallets();
     }
   }, [user]);
 
   return (
     <div className="min-h-screen bg-background pb-8">
       <div className="max-w-7xl mx-auto">
-        {/* Desktop 2-column layout */}
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:p-6">
-          
-          {/* Left Column - Main Content */}
           <div className="lg:col-span-7 xl:col-span-8">
-            {/* Asset Card */}
             <Suspense fallback={<AssetCardSkeleton />}>
               <AssetCard 
                 showBalance={showBalance}
@@ -137,7 +127,6 @@ export const Dashboard = () => {
               />
             </Suspense>
 
-            {/* Quick Actions */}
             <div className="px-4 lg:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
               <div className="grid grid-cols-4 gap-3">
                 {actions.map((action) => (
@@ -170,7 +159,6 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            {/* Event Banner */}
             <div className="px-4 lg:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
               <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-secondary rounded-2xl p-4 border border-primary/20 relative overflow-hidden">
                 <div className="absolute right-0 top-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
@@ -200,7 +188,6 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            {/* Markets Section - Shows on mobile, hidden on desktop (will be in right column) */}
             <div className="mt-6 animate-fade-in lg:hidden" style={{ animationDelay: "0.2s" }}>
               <Suspense fallback={<MarketsSectionSkeleton />}>
                 <MarketsSection 
@@ -213,10 +200,8 @@ export const Dashboard = () => {
               </Suspense>
             </div>
 
-            {/* Divider - mobile only */}
             <div className="h-3 bg-muted mt-6 lg:hidden"></div>
 
-            {/* My Rewards Section */}
             <div className="px-4 lg:px-0 py-6 animate-fade-in" style={{ animationDelay: "0.25s" }}>
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xl font-bold text-foreground">My Rewards</h2>
@@ -250,7 +235,6 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          {/* Right Column - Markets (Desktop only) */}
           <div className="hidden lg:block lg:col-span-5 xl:col-span-4">
             <div className="bg-card rounded-2xl border border-border p-5 sticky top-6 animate-fade-in" style={{ animationDelay: "0.2s" }}>
               <Suspense fallback={<MarketsSectionSkeleton />}>
@@ -267,7 +251,6 @@ export const Dashboard = () => {
       </div>
       <PexlyFooter />
       
-      {/* More Services Modal */}
       <DashboardMoreModal
         isOpen={isMoreModalOpen}
         onClose={() => setIsMoreModalOpen(false)}
