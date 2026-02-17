@@ -44,185 +44,126 @@ export interface WalletTransaction {
 }
 
 /* =========================================
-   MULTICHAIN CONFIG
+   CHAIN RESOLVER
+   Maps DB chain_id values to edge function chain keys
 ========================================= */
 
-interface ChainConfig {
-  rpc?: string;
-  symbol: string;
-  decimals: number;
-  tokens?: { symbol: string; contract?: string; decimals: number }[];
-}
+function resolveChain(chainId: string): { chain: string; isToken: boolean; tokenSymbol?: string } {
+  const id = chainId.toLowerCase();
 
-const CHAINS: Record<string, ChainConfig> = {
-  BTC: { symbol: 'BTC', decimals: 8 },
-  ETH: {
-    symbol: 'ETH',
-    decimals: 18,
-    rpc: 'https://eth.llamarpc.com',
-    tokens: [
-      { symbol: 'USDT', contract: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
-      { symbol: 'USDC', contract: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
-    ],
-  },
-  BSC: {
-    symbol: 'BNB',
-    decimals: 18,
-    rpc: 'https://bsc-dataseed.binance.org',
-    tokens: [
-      { symbol: 'USDT', contract: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
-      { symbol: 'USDC', contract: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18 },
-    ],
-  },
-  POLYGON: {
-    symbol: 'MATIC',
-    decimals: 18,
-    rpc: 'https://polygon-rpc.com',
-    tokens: [
-      { symbol: 'USDT', contract: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 },
-      { symbol: 'USDC', contract: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', decimals: 6 },
-    ],
-  },
-  ARBITRUM: {
-    symbol: 'ETH',
-    decimals: 18,
-    rpc: 'https://arb1.arbitrum.io/rpc',
-    tokens: [
-      { symbol: 'USDT', contract: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6 },
-      { symbol: 'USDC', contract: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', decimals: 6 },
-    ],
-  },
-  OPTIMISM: {
-    symbol: 'ETH',
-    decimals: 18,
-    rpc: 'https://mainnet.optimism.io',
-    tokens: [
-      { symbol: 'USDT', contract: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', decimals: 6 },
-      { symbol: 'USDC', contract: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85', decimals: 6 },
-    ],
-  },
-  SOL: { symbol: 'SOL', decimals: 9 },
-  TRX: { symbol: 'TRX', decimals: 6 },
-  XRP: { symbol: 'XRP', decimals: 6 },
-};
-
-/* =========================================
-   HELPERS
-========================================= */
-
-function formatBalance(raw: number, decimals: number): number {
-  return parseFloat(raw.toFixed(decimals));
-}
-
-function hexToNumber(hex: string): number {
-  return parseInt(hex, 16);
-}
-
-/* =========================================
-   EVM BALANCES
-========================================= */
-
-async function evmGetBalance(rpc: string, address: string, decimals: number): Promise<number> {
-  const res = await fetch(rpc, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      method: 'eth_getBalance',
-      params: [address, 'latest'],
-      id: 1,
-    }),
-  });
-  const { result } = await res.json();
-  if (!result || result === '0x') return 0;
-  return hexToNumber(result) / Math.pow(10, decimals);
-}
-
-async function evmGetTokenBalance(
-  rpc: string,
-  address: string,
-  contract: string,
-  decimals: number
-): Promise<number> {
-  const padded = address.toLowerCase().replace('0x', '').padStart(64, '0');
-  const data = '0x70a08231' + padded;
-
-  const res = await fetch(rpc, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: contract, data }, 'latest'], id: 1 }),
-  });
-
-  const { result } = await res.json();
-  if (!result || result === '0x') return 0;
-  return hexToNumber(result) / Math.pow(10, decimals);
-}
-
-/* =========================================
-   FETCH PER WALLET
-========================================= */
-
-async function fetchWalletBalance(wallet: any): Promise<Wallet | null> {
-  try {
-    const chain = wallet.chain_id.toUpperCase();
-    const cfg = CHAINS[chain];
-    if (!cfg) return null;
-
-    let balance = 0;
-
-    // Non-EVM chains handled by edge function
-    if (['BTC', 'SOL', 'TRX', 'XRP'].includes(chain)) {
-      const { data, error } = await supabase.functions.invoke('monitor-deposits', {
-        body: { address: wallet.deposit_address, chain: chain },
-      });
-
-      if (error || !data?.success) return null;
-      balance = Number(data.balance ?? 0);
-    } else if (cfg.rpc || ['ETH', 'BSC', 'POLYGON', 'ARBITRUM', 'OPTIMISM'].includes(chain)) {
-      // EVM chains handled by edge function
-      const { data, error } = await supabase.functions.invoke('monitor-deposits', {
-        body: { address: wallet.deposit_address, chain: chain },
-      });
-
-      if (error || !data?.success) {
-        // Fallback to direct RPC if edge function fails and RPC is available
-        if (cfg.rpc) {
-          balance = await evmGetBalance(cfg.rpc, wallet.deposit_address, cfg.decimals);
-        } else {
-          return null;
-        }
-      } else {
-        balance = Number(data.balance ?? 0);
-      }
-    }
-
-    return {
-      id: wallet.id,
-      user_id: wallet.user_id,
-      crypto_symbol: wallet.crypto_symbol,
-      balance: formatBalance(balance, cfg.decimals),
-      locked_balance: Number(wallet.locked_balance ?? 0),
-      deposit_address: wallet.deposit_address,
-      chain_id: wallet.chain_id,
-      created_at: wallet.created_at,
-      updated_at: new Date().toISOString(),
-    };
-  } catch (err) {
-    console.error('[fetchWalletBalance] Failed for', wallet.crypto_symbol, err);
-    return null;
+  // Token-specific wallets (USDT-Ethereum, USDC-Tron, etc.)
+  if (id.startsWith('usdt-') || id.startsWith('usdc-')) {
+    const rest = id.replace(/^usdt-|^usdc-/, '');
+    const tokenSymbol = id.startsWith('usdt-') ? 'USDT' : 'USDC';
+    const baseChain = resolveChain(rest.charAt(0).toUpperCase() + rest.slice(1));
+    return { chain: baseChain.chain, isToken: true, tokenSymbol };
   }
+
+  if (id.includes('bitcoin') || id.includes('segwit') || id === 'btc') return { chain: 'BTC', isToken: false };
+  if (id.includes('ethereum') || id.includes('erc-20') || id === 'eth') return { chain: 'ETH', isToken: false };
+  if (id.includes('binance') || id.includes('bep-20') || id === 'bsc' || id === 'bnb') return { chain: 'BSC', isToken: false };
+  if (id.includes('solana') || id === 'sol') return { chain: 'SOL', isToken: false };
+  if (id.includes('tron') || id.includes('trc-20') || id === 'trx') return { chain: 'TRX', isToken: false };
+  if (id.includes('polygon') || id === 'matic') return { chain: 'POLYGON', isToken: false };
+  if (id.includes('arbitrum') || id === 'arb') return { chain: 'ARBITRUM', isToken: false };
+  if (id.includes('optimism') || id === 'op') return { chain: 'OPTIMISM', isToken: false };
+  if (id.includes('xrp') || id.includes('ripple')) return { chain: 'XRP', isToken: false };
+
+  return { chain: chainId.toUpperCase(), isToken: false };
 }
 
 /* =========================================
    GET USER WALLETS
+   Fetches active wallets from DB, deduplicates
+   by address+chain, calls edge function once per
+   unique pair, maps native + token balances back.
 ========================================= */
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  const { data: userWallets, error } = await supabase.from('user_wallets').select('*').eq('user_id', userId);
-  if (error || !userWallets) return [];
+  // 1. Get all active wallets from DB
+  const { data: dbWallets, error: dbError } = await supabase
+    .from('user_wallets')
+    .select('id, address, chain_id, is_active')
+    .eq('user_id', userId)
+    .eq('is_active', 'true');
 
-  const wallets = await Promise.all(userWallets.map(fetchWalletBalance));
-  return wallets.filter(Boolean) as Wallet[];
+  if (dbError || !dbWallets || dbWallets.length === 0) return [];
+
+  // 2. Deduplicate: group by (address + resolved chain)
+  const seen = new Map<string, { address: string; chain: string; walletIds: string[]; chainIds: string[] }>();
+  const tokenWallets: { id: string; chainId: string; address: string; tokenSymbol: string; resolvedChain: string }[] = [];
+
+  for (const w of dbWallets) {
+    const resolved = resolveChain(w.chain_id);
+    if (resolved.isToken) {
+      tokenWallets.push({ id: w.id, chainId: w.chain_id, address: w.address, tokenSymbol: resolved.tokenSymbol!, resolvedChain: resolved.chain });
+      const key = `${w.address}::${resolved.chain}`;
+      if (!seen.has(key)) {
+        seen.set(key, { address: w.address, chain: resolved.chain, walletIds: [], chainIds: [] });
+      }
+    } else {
+      const key = `${w.address}::${resolved.chain}`;
+      if (!seen.has(key)) {
+        seen.set(key, { address: w.address, chain: resolved.chain, walletIds: [w.id], chainIds: [w.chain_id] });
+      } else {
+        seen.get(key)!.walletIds.push(w.id);
+        seen.get(key)!.chainIds.push(w.chain_id);
+      }
+    }
+  }
+
+  // 3. Fetch balances from edge function for each unique chain+address
+  const wallets: Wallet[] = [];
+  const now = new Date().toISOString();
+
+  const fetchPromises = Array.from(seen.entries()).map(async ([_key, entry]) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('monitor-deposits', {
+        body: { address: entry.address, chain: entry.chain },
+      });
+
+      if (error || !data?.success || !data?.native) return;
+
+      // Add native balance wallet
+      if (entry.walletIds.length > 0) {
+        wallets.push({
+          id: entry.walletIds[0],
+          user_id: userId,
+          crypto_symbol: data.native.symbol,
+          balance: parseFloat(data.native.balance) || 0,
+          locked_balance: 0,
+          deposit_address: entry.address,
+          chain_id: entry.chainIds[0],
+          created_at: now,
+          updated_at: now,
+        });
+      }
+
+      // Match token wallets to the tokens array from the response
+      const tokens: any[] = data.tokens || [];
+      for (const tw of tokenWallets) {
+        if (tw.address === entry.address && tw.resolvedChain === entry.chain) {
+          const match = tokens.find((t: any) => t.symbol === tw.tokenSymbol);
+          wallets.push({
+            id: tw.id,
+            user_id: userId,
+            crypto_symbol: tw.tokenSymbol,
+            balance: match ? parseFloat(match.balance) || 0 : 0,
+            locked_balance: 0,
+            deposit_address: tw.address,
+            chain_id: tw.chainId,
+            created_at: now,
+            updated_at: now,
+          });
+        }
+      }
+    } catch (err) {
+      console.error(`[getUserWallets] Exception for ${entry.chain}:`, err);
+    }
+  });
+
+  await Promise.all(fetchPromises);
+  return wallets;
 }
 
 /* =========================================
@@ -255,22 +196,18 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
 
 export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
   const { data, error } = await supabase
-    .from('wallet_transactions')
+    .from('wallet_transactions' as any)
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
-  return (data as WalletTransaction[]) ?? [];
+  return (data as unknown as WalletTransaction[]) ?? [];
 }
 
 export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('user_wallets')
-    .select('deposit_address')
-    .eq('user_id', userId)
-    .eq('crypto_symbol', cryptoSymbol)
-    .single();
-  if (error || !data?.deposit_address) throw new Error('No deposit address found.');
-  return data.deposit_address;
+  const wallets = await getUserWallets(userId);
+  const wallet = wallets.find((w) => w.crypto_symbol === cryptoSymbol);
+  if (wallet?.deposit_address) return wallet.deposit_address;
+  throw new Error('No deposit address found for this wallet.');
 }
