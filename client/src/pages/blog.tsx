@@ -6,19 +6,7 @@ import { Search, ChevronLeft, ChevronRight, Clock, User } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { createClient } from "@/lib/supabase";
 import { useSchema, blogPageSchema } from "@/hooks/use-schema";
-
-function safeImageUrl(url: string | undefined): string {
-  try {
-    if (!url) return "about:blank";
-    const parsed = new URL(url);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.toString();
-    }
-    return "about:blank"; // Block unsafe protocols like javascript:
-  } catch {
-    return "about:blank"; // If invalid URL
-  }
-}
+import { safeImageUrl } from "@/lib/utils";
 
 function calculateReadTime(content: string): string {
   if (!content) return "1 min read";
