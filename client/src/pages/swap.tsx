@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2, Lock, BarChart3, ArrowRight } from "lucide-react";
+import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2, Lock, BarChart3 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -21,7 +21,6 @@ import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { rocketXApi } from "@/lib/rocketx-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import { useWalletData } from "@/hooks/use-wallet-data";
 
 
 const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
@@ -78,9 +77,6 @@ export function Swap() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
 
-  const { data: walletData } = useWalletData();
-  const monitoredBalances = walletData?.assets || [];
-
   // Helper to get currency object
   const getCurrency = (symbol: string) => currencies.find(c => c.symbol === symbol);
 
@@ -89,6 +85,7 @@ export function Swap() {
     const curr = getCurrency(fromCurrency);
     if (curr) {
       if (curr.networks) {
+        // Keep current network if available for new currency, otherwise default to first
         const hasNetwork = curr.networks.some(n => n.chain === fromNetwork);
         if (!hasNetwork) setFromNetwork(curr.networks[0].chain);
       } else {
@@ -121,7 +118,7 @@ export function Swap() {
   const [isSwapping, setIsSwapping] = useState(false);
   const [activeQuote, setActiveQuote] = useState<any>(null);
   const [balance, setBalance] = useState<number | null>(null);
-  const [swapHistory, setSwapHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [estFees, setEstFees] = useState<Record<string, string>>({
     BTC: "0.0001 BTC",
     ETH: "0.002 ETH",
@@ -137,14 +134,59 @@ export function Swap() {
     }
   }, [bestQuote]);
 
+  const { data: monitoredBalancesData } = useWalletBalances();
+  const monitoredBalances = monitoredBalancesData || [];
+
   // Fetch balance for the selected "From" asset
   useEffect(() => {
-    const fromWallet = monitoredBalances.find(b => 
-      b.symbol.toLowerCase() === fromCurrency.toLowerCase()
-    );
-    
-    setBalance(fromWallet?.balance || 0);
-  }, [fromCurrency, fromNetwork, monitoredBalances]);
+    const fetchBalance = async () => {
+      if (!user) return;
+      try {
+        const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
+        
+        // Map display symbols to internal chain IDs for matching
+        const symbolMap: Record<string, string> = {
+          'BTC': 'Bitcoin (SegWit)',
+          'ETH': 'Ethereum',
+          'SOL': 'Solana',
+          'BNB': 'Binance Smart Chain (BEP-20)',
+          'TRX': 'Tron (TRC-20)',
+          'USDT': 'USDT',
+          'USDC': 'USDC'
+        };
+
+        const chainIdToFind = symbolMap[fromCurrency] || fromNetwork;
+        
+        const fromWallet = wallets.find(w => {
+          const chainIdToMatch = w.chainId?.toLowerCase();
+          const targetToMatch = chainIdToFind.toLowerCase();
+          
+          return chainIdToMatch === targetToMatch || 
+                 chainIdToMatch === fromCurrency.toLowerCase();
+        });
+        
+        if (fromWallet) {
+          // Try to get balance from monitored balances first (more accurate)
+          const monitored = monitoredBalances.find(b => 
+            b.deposit_address?.toLowerCase() === fromWallet.address.toLowerCase() &&
+            (b.crypto_symbol.toLowerCase() === fromCurrency.toLowerCase() || b.chain_id.toLowerCase() === fromNetwork.toLowerCase())
+          );
+          
+          if (monitored) {
+            setBalance(monitored.balance);
+          } else {
+            setBalance(fromWallet.balance || 0);
+          }
+        } else {
+          setBalance(0);
+        }
+      } catch (e) {
+        console.error("Failed to fetch balance", e);
+      }
+    };
+
+    fetchBalance();
+  }, [user, fromCurrency, fromNetwork, monitoredBalances]);
 
   useEffect(() => {
     const fetchFees = async () => {
@@ -155,17 +197,21 @@ export function Swap() {
           return;
         }
 
+        // Fallback to manual fetch if no quote
         const btcRes = await fetch('https://mempool.space/api/v1/fees/recommended');
         if (btcRes.ok) {
           const btcData = await btcRes.json();
+          // Average tx is ~140 vBytes, convert sat/vB to BTC
           const btcFee = (btcData.hourFee * 140) / 1e8;
           setEstFees(prev => ({ ...prev, BTC: `${btcFee.toFixed(6)} BTC` }));
         }
 
+        // Fetch Ethereum Gas Price
         const ethRes = await fetch('https://api.etherscan.io/api?module=proxy&action=eth_gasPrice');
         if (ethRes.ok) {
           const ethData = await ethRes.json();
           const gasPrice = parseInt(ethData.result, 16);
+          // Typical swap is ~150k gas
           const ethFee = (gasPrice * 150000) / 1e18;
           setEstFees(prev => ({ ...prev, ETH: `${ethFee.toFixed(5)} ETH` }));
         }
@@ -175,10 +221,13 @@ export function Swap() {
     };
 
     fetchFees();
+    // setHistory(swapExecutionService.getOrderHistory());
   }, []);
 
+  // Auto-update toAmount when prices change or fromAmount changes
   useEffect(() => {
     if (isUpdatingFromInput && bestQuote) {
+      // Use exact amount from RocketX if available
       const formattedToAmount = bestQuote.toAmount.toLocaleString('en-US', { 
         useGrouping: false, 
         minimumFractionDigits: 0, 
@@ -201,6 +250,7 @@ export function Swap() {
     }
   }, [fromAmount, swapRate, isUpdatingFromInput, bestQuote, toAmount]);
 
+  // Auto-update fromAmount when toAmount is manually changed
   useEffect(() => {
     if (!isUpdatingFromInput && swapRate > 0) {
       const amount = parseFloat(toAmount) || 0;
@@ -224,8 +274,14 @@ export function Swap() {
     setFromCurrency(toCurrency);
     setToCurrency(tempCurrency);
     
-    setFromAmount(tempToAmount);
-    setToAmount(tempFromAmount);
+    // Swap the amounts and keep the update flag consistent
+    if (isUpdatingFromInput) {
+      setFromAmount(tempToAmount);
+      setToAmount(tempFromAmount);
+    } else {
+      setFromAmount(tempToAmount);
+      setToAmount(tempFromAmount);
+    }
   };
 
   const handleFromAmountChange = (value: string) => {
@@ -249,6 +305,11 @@ export function Swap() {
     } else {
       return rate.toFixed(6);
     }
+  };
+
+  const handleGetQuote = async () => {
+    // This is now redundant as hook fetches it, but keeping signature for handleSwap
+    return bestQuote;
   };
 
   const handleSwap = async () => {
@@ -278,6 +339,7 @@ export function Swap() {
       return;
     }
 
+    // If we have a cached session password, execute directly
     if (sessionPassword) {
       await performSwap(sessionPassword);
     } else {
@@ -292,18 +354,30 @@ export function Swap() {
   setIsSwapping(true);
 
   try {
+    const fromCurrObj = currencies.find(c => c.symbol === fromCurrency);
+    const toCurrObj = currencies.find(c => c.symbol === toCurrency);
+
+    const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
+    const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
+
+    // STEP 1: Get wallet addresses
+    console.log("Fetching non-custodial wallets for user:", user!.id);
     const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user!.id);
+    console.log("Found wallets:", wallets.map(w => ({ chainId: w.chainId, address: w.address, walletType: w.walletType })));
     
+    // Normalize networks/currencies for comparison
     const fromTarget = fromNetwork.toLowerCase();
     const fromSymbolTarget = fromCurrency.toLowerCase();
     const toTarget = toNetwork.toLowerCase();
     const toSymbolTarget = toCurrency.toLowerCase();
 
+    // Improved matching logic to find correct wallet
     const fromWallet = wallets.find(w => {
       const chainIdLower = w.chainId?.toLowerCase();
       const walletTypeLower = w.walletType?.toLowerCase();
       const assetTypeLower = w.assetType?.toLowerCase();
       
+      // Normalized matching for various chain names and aliases
       const isBTCMatch = (target: string) => ["btc", "bitcoin", "bitcoin (segwit)"].includes(target);
       const isETHMatch = (target: string) => ["eth", "ethereum", "erc20"].includes(target);
       const isBSCMatch = (target: string) => ["bsc", "bnb", "binance", "bep20", "binance coin"].includes(target);
@@ -329,6 +403,7 @@ export function Swap() {
              matchesChain(fromTarget, walletTypeLower) ||
              matchesChain(fromSymbolTarget, walletTypeLower) ||
              matchesChain(fromSymbolTarget, assetTypeLower) ||
+             // EVM Fallback for tokens
              (["usdt", "usdc"].includes(fromSymbolTarget) && 
               (walletTypeLower === "evm-token" || isETHMatch(walletTypeLower) || isBSCMatch(walletTypeLower)));
     });
@@ -363,15 +438,21 @@ export function Swap() {
              matchesChain(toTarget, walletTypeLower) ||
              matchesChain(toSymbolTarget, walletTypeLower) ||
              matchesChain(toSymbolTarget, assetTypeLower) ||
+             // EVM Fallback for tokens
              (["usdt", "usdc"].includes(toSymbolTarget) && 
               (walletTypeLower === "evm-token" || isETHMatch(walletTypeLower) || isBSCMatch(walletTypeLower)));
     });
 
+    console.log("Selected fromWallet:", fromWallet?.address, "for target:", fromTarget);
+    console.log("Selected toWallet:", toWallet?.address, "for target:", toTarget);
+
     if (!fromWallet?.address || !toWallet?.address) {
+      console.error("Wallet missing. From:", fromWallet?.address, "To:", toWallet?.address);
       const missing = !fromWallet?.address ? fromCurrency : toCurrency;
       throw new Error(`Please generate a ${missing} wallet first. Go to the Assets page to create it.`);
     }
 
+    // STEP 2: Create swap
     const swapResponse = await rocketXApi.executeSwap({
       userId: user!.id,
       fromToken: activeQuote?.fromToken,
@@ -383,7 +464,7 @@ export function Swap() {
       toAmount: activeQuote?.toAmount || toAmountNum,
       toAddress: toWallet.address,
       slippage: 1,
-      quoteId: activeQuote?.id
+      quoteId: activeQuote?.id // Pass quote ID if available
     });
 
     if (!swapResponse?.id) {
@@ -397,12 +478,16 @@ export function Swap() {
       description: "Waiting for blockchain confirmation...",
     });
 
+    // STEP 2: Poll status
     let attempts = 0;
     let completed = false;
 
     while (attempts < 30) {
+
       await new Promise(r => setTimeout(r, 3000));
+
       const statusRes = await rocketXApi.getStatus(swapId);
+
       const status = statusRes?.status;
 
       if (status === "completed") {
@@ -448,6 +533,7 @@ export function Swap() {
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
+        {/* Background Decorative Shapes */}
         <div className="absolute inset-0 pointer-events-none opacity-10">
           <div className="absolute top-[10%] left-[5%] rotate-12">
             <div className="h-24 w-24 rounded-full border-4 border-primary/20" />
@@ -472,58 +558,199 @@ export function Swap() {
         </div>
 
         <div className="flex-1 relative z-10">
+          {/* Hero Section */}
           <section className="relative py-20 px-4 overflow-hidden">
             <div className="max-w-4xl mx-auto text-center relative z-10">
               <h1 className="text-4xl md:text-6xl font-black text-foreground mb-6 leading-tight">
-                Swap assets instantly with Pexly
+                Exchange cryptocurrencies<br />seamlessly
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-                Swap between BTC, ETH, SOL, USDT and more.
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
+                Instantly convert digital assets with competitive rates and high-speed execution
               </p>
 
               <Card className="max-w-lg mx-auto bg-card border-none shadow-2xl overflow-hidden rounded-2xl">
                 <CardContent className="p-6 space-y-4">
-                  <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
-                    <div className="flex justify-between mb-2">
-                      <Label className="text-muted-foreground">You Pay</Label>
+                  {/* From Box */}
+                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-foreground font-bold text-sm">From</Label>
                     </div>
-                    <div className="flex gap-4">
-                      <Input 
-                        type="number" 
-                        value={fromAmount}
-                        onChange={(e) => setFromAmount(e.target.value)}
-                        className="text-2xl font-bold bg-transparent border-none focus-visible:ring-0 p-0 h-auto"
-                      />
-                      <Badge variant="secondary" className="px-3 py-1.5 text-sm h-fit">BTC</Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center -my-2 relative z-10">
-                    <Button size="icon" variant="outline" className="rounded-full h-10 w-10 bg-background border-border shadow-md">
-                      <ArrowUpDown className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
-                    <div className="flex justify-between mb-2">
-                      <Label className="text-muted-foreground">You Receive</Label>
-                    </div>
-                    <div className="flex gap-4">
-                      <Input 
-                        type="number" 
-                        readOnly
-                        value={toAmount}
-                        className="text-2xl font-bold bg-transparent border-none focus-visible:ring-0 p-0 h-auto"
-                      />
-                      <Badge variant="secondary" className="px-3 py-1.5 text-sm h-fit">USDT</Badge>
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl font-bold text-muted-foreground/30">0</span>
+                      <div className="ml-auto flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
+                          <img src={getCurrency(fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                          <span className="font-bold">{fromCurrency}</span>
+                        </div>
+                        {getCurrency(fromCurrency)?.networks && (
+                          <span className="text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter">
+                            {getCurrency(fromCurrency)?.networks?.find(n => n.chain === fromNetwork)?.name || fromNetwork}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <Button className="w-full h-14 text-lg font-bold rounded-xl mt-4" onClick={() => setLocation("/signin")}>
-                    Log in to swap
+                  {/* Swap Button Middle */}
+                  <div className="flex justify-center -my-6 relative z-10">
+                    <div className="rounded-full bg-[#B4F22E] text-black h-10 w-10 flex items-center justify-center border-4 border-card shadow-lg">
+                      <ArrowUpDown className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  {/* To Box */}
+                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-foreground font-bold text-sm">To</Label>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl font-bold text-muted-foreground/30">0</span>
+                      <div className="ml-auto flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
+                          <img src={getCurrency(toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                          <span className="font-bold">{toCurrency}</span>
+                        </div>
+                        {getCurrency(toCurrency)?.networks && (
+                          <span className="text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter">
+                            {getCurrency(toCurrency)?.networks?.find(n => n.chain === toNetwork)?.name || toNetwork}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-left pt-2">
+                    <span className="text-xs text-muted-foreground block mb-1 text-[10px] uppercase font-bold tracking-wider">Market rate</span>
+                    <div className="flex items-center gap-1 min-h-[16px] overflow-hidden">
+                      {isLoading ? (
+                        <Skeleton className="h-3 w-32" />
+                      ) : (
+                        <span className="text-xs font-bold truncate">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button 
+                    className="w-full h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-xl shadow-sm transition-all" 
+                    onClick={() => setLocation("/signin")}
+                  >
+                    Log in/Join us
                   </Button>
                 </CardContent>
               </Card>
+            </div>
+          </section>
+
+          {/* Why Exchange Section */}
+          <section className="py-20 bg-background">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-black mb-4">Why use Pexly</h2>
+                <p className="text-muted-foreground">Easily trade digital assets with Pexly in just a few clicks</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {[
+                  { title: "Best rates", desc: "Exchange assets at the most competitive market rates", icon: <TrendingDown className="h-6 w-6 text-primary" /> },
+                  { title: "Privacy first", desc: "Secure and confidential transactions for all users", icon: <Shield className="h-6 w-6 text-primary" /> },
+                  { title: "Fast execution", desc: "Benefit from rapid processing and instant settlements", icon: <Gift className="h-6 w-6 text-primary" /> }
+                ].map((item, i) => (
+                  <Card key={i} className="bg-card/50 border-none shadow-sm hover:shadow-md transition-shadow p-8 text-center flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full bg-accent/5 flex items-center justify-center mb-6">
+                      {item.icon}
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                    <p className="text-muted-foreground text-sm">{item.desc}</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Asset Pairs Section */}
+          <section className="py-20 bg-accent/5">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-black mb-4">Wide range of trading pairs</h2>
+                <p className="text-muted-foreground">Easily trade between a variety of digital assets</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { pair: "BTC/USDT", color: "from-orange-500/10 to-transparent", icon: cryptoIconUrls.BTC },
+                  { pair: "XMR/USDT", color: "from-orange-600/10 to-transparent", icon: cryptoIconUrls.BTC }, // Placeholder for XMR
+                  { pair: "SOL/USDT", color: "from-purple-500/10 to-transparent", icon: cryptoIconUrls.SOL },
+                  { pair: "ETH/USDT", color: "from-blue-500/10 to-transparent", icon: cryptoIconUrls.ETH }
+                ].map((item, i) => (
+                  <Card key={i} className="bg-card border-none shadow-sm overflow-hidden p-4 group cursor-pointer hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3 mb-4">
+                      <img src={item.icon} className="w-8 h-8 rounded-full" alt="" />
+                      <span className="font-bold text-sm uppercase">{item.pair} ↑</span>
+                    </div>
+                    <div className={`h-24 w-full rounded-lg bg-gradient-to-t ${item.color} relative overflow-hidden`}>
+                      <div className="absolute inset-0 flex items-end">
+                        <div className="w-full h-1/2 bg-gradient-to-t from-background/20 to-transparent" />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* How It Works Section */}
+          <section className="py-20 bg-background border-t">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-black mb-4">How it works</h2>
+                <p className="text-muted-foreground">Log in to your Pexly account and select Swap from the Trade menu in the header</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                {[
+                  { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "/assets/IMG_3627.jpeg" },
+                  { step: "2. Open Trade page", desc: "From the Trade menu in the header, select Exchange", img: "/assets/IMG_3628.jpeg" },
+                  { step: "3. Choose a pair and execute", desc: "Enter the amount, select your assets, and proceed with the transaction", img: "/assets/IMG_3629.jpeg" }
+                ].map((item, i) => (
+                  <div key={i} className="space-y-6">
+                    <h3 className="text-xl font-bold">{item.step}</h3>
+                    <p className="text-muted-foreground text-sm">{item.desc}</p>
+                    <div className="rounded-xl overflow-hidden border border-border/40 shadow-sm bg-accent/5 p-4">
+                      <img src={item.img} className="w-full rounded-lg" alt="" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="text-center mt-20">
+                <Button 
+                  className="px-12 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-full shadow-lg transition-all"
+                  onClick={() => setLocation("/signin")}
+                >
+                  Start now
+                </Button>
+              </div>
+            </div>
+          </section>
+
+          {/* FAQ Section */}
+          <section className="py-20 bg-background border-t">
+            <div className="max-w-3xl mx-auto px-4">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-6xl font-black mb-4 leading-tight">Frequently asked questions</h2>
+                <p className="text-muted-foreground">Find answers to the most popular questions asked by our users</p>
+              </div>
+              <Accordion type="single" collapsible className="w-full space-y-4">
+                {[
+                  "Are there any fees for transactions on Pexly?",
+                  "My transaction failed. What should I do next?",
+                  "My transaction failed, and my funds are either reserved or missing. What should I do?",
+                  "What are the minimum transaction amounts?"
+                ].map((q, i) => (
+                  <AccordionItem key={i} value={`item-${i}`} className="border rounded-xl px-4 bg-card shadow-sm border-border/40 overflow-hidden">
+                    <AccordionTrigger className="text-left font-bold py-6 hover:no-underline">{q}</AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground pb-6">
+                      Detailed information about this topic will be provided here for users to understand the process.
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </div>
           </section>
         </div>
@@ -533,322 +760,330 @@ export function Swap() {
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
-      <div className="absolute inset-0 pointer-events-none opacity-10">
-        <div className="absolute top-[10%] left-[5%] rotate-12">
-          <div className="h-24 w-24 rounded-full border-4 border-primary/20" />
-        </div>
-        <div className="absolute bottom-[10%] right-[20%] -rotate-6">
-          <div className="h-40 w-40 rounded-full border border-primary/20 flex items-center justify-center">
-            <div className="h-20 w-20 rounded-full border border-primary/10" />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-7 space-y-6">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-black text-foreground">Swap Assets</h1>
-              <p className="text-muted-foreground">Swap between hundreds of assets across different networks.</p>
-            </div>
-
-            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-md rounded-3xl overflow-hidden">
-              <CardContent className="p-6 md:p-8 space-y-6">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between px-1">
-                    <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">From</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Balance:</span>
-                      <span className="text-xs font-bold text-foreground">
-                        {balance === null ? <Loader2 className="h-3 w-3 animate-spin inline" /> : `${balance.toFixed(6)} ${fromCurrency}`}
-                      </span>
-                      <button 
-                        onClick={() => balance !== null && setFromAmount(balance.toString())}
-                        className="text-[10px] font-black text-primary hover:opacity-80 transition-opacity uppercase tracking-tighter bg-primary/10 px-1.5 py-0.5 rounded"
-                      >
-                        MAX
-                      </button>
-                    </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start mb-8">
+          {/* Left Column: Swap Card */}
+          <div className="space-y-6">
+            <Card className="bg-card border-none shadow-sm">
+              <CardContent className="p-6 space-y-4">
+                {/* From Box */}
+                <div className="bg-accent/5 p-6 rounded-xl border border-border/40">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-foreground font-bold text-sm">From</Label>
                   </div>
-                  
-                  <div className="flex flex-col md:flex-row gap-3">
-                    <div className="flex-1 relative group">
-                      <Input 
-                        type="number"
-                        placeholder="0.00"
-                        value={fromAmount}
-                        onChange={(e) => handleFromAmountChange(e.target.value)}
-                        className="h-16 text-2xl font-bold bg-muted/50 border-border/50 rounded-2xl focus:bg-muted focus:ring-primary/20 transition-all pl-4"
-                      />
-                    </div>
-                    
-                    <div className="flex gap-2 min-w-[200px]">
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      value={fromAmount}
+                      onChange={(e) => handleFromAmountChange(e.target.value)}
+                      className="flex-1 h-12 text-2xl font-semibold bg-transparent border-none p-0 focus-visible:ring-0 shadow-none"
+                      placeholder="0.00"
+                    />
+                    <div className="flex flex-col gap-2 items-end">
                       <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                        <SelectTrigger className="h-16 bg-muted/50 border-border/50 rounded-2xl font-bold text-lg flex-1">
+                        <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {currencies.map(c => (
-                            <SelectItem key={c.symbol} value={c.symbol}>
+                          {currencies.map((curr) => (
+                            <SelectItem key={curr.symbol} value={curr.symbol}>
                               <div className="flex items-center gap-2">
-                                <img src={c.iconUrl} alt={c.name} className="w-6 h-6 rounded-full" />
-                                <span>{c.symbol}</span>
+                                <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
+                                <span className="font-bold">{curr.symbol}</span>
                               </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+
+                      {getCurrency(fromCurrency)?.networks && (
+                        <Select value={fromNetwork} onValueChange={setFromNetwork}>
+                          <SelectTrigger className="h-7 min-w-[100px] bg-transparent border-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground focus:ring-0 shadow-none px-2 py-0">
+                            <div className="flex items-center gap-1 justify-end w-full">
+                              <span>Network: {getCurrency(fromCurrency)?.networks?.find(n => n.chain === fromNetwork)?.name}</span>
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            {getCurrency(fromCurrency)?.networks?.map((net) => (
+                              <SelectItem key={net.chain} value={net.chain} className="text-[10px] font-bold uppercase">
+                                {net.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-center -my-4 relative z-10">
-                  <Button 
-                    size="icon" 
-                    variant="outline" 
+                {/* Swap Button Middle */}
+                <div className="flex justify-center -my-6 relative z-10">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 border-4 border-card shadow-lg"
                     onClick={handleSwapCurrencies}
-                    className="rounded-full h-12 w-12 bg-background border-border shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all"
                   >
-                    <ArrowUpDown className="h-5 w-5 text-primary" />
+                    <ArrowUpDown className="h-5 w-5" />
                   </Button>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between px-1">
-                    <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">To (Estimated)</Label>
+                {/* To Box */}
+                <div className="bg-accent/5 p-6 rounded-xl border border-border/40">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-foreground font-bold text-sm">To</Label>
                   </div>
-                  
-                  <div className="flex flex-col md:flex-row gap-3">
-                    <div className="flex-1 relative">
-                      <Input 
-                        type="number"
-                        placeholder="0.00"
-                        value={toAmount}
-                        onChange={(e) => handleToAmountChange(e.target.value)}
-                        className="h-16 text-2xl font-bold bg-muted/50 border-border/50 rounded-2xl focus:bg-muted transition-all pl-4"
-                      />
-                    </div>
-                    
-                    <div className="flex gap-2 min-w-[200px]">
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      value={toAmount}
+                      onChange={(e) => handleToAmountChange(e.target.value)}
+                      className="flex-1 h-12 text-2xl font-semibold bg-transparent border-none p-0 focus-visible:ring-0 shadow-none"
+                      placeholder="0.00"
+                    />
+                    <div className="flex flex-col gap-2 items-end">
                       <Select value={toCurrency} onValueChange={setToCurrency}>
-                        <SelectTrigger className="h-16 bg-muted/50 border-border/50 rounded-2xl font-bold text-lg flex-1">
+                        <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {currencies.map(c => (
-                            <SelectItem key={c.symbol} value={c.symbol}>
+                          {currencies.map((curr) => (
+                            <SelectItem key={curr.symbol} value={curr.symbol}>
                               <div className="flex items-center gap-2">
-                                <img src={c.iconUrl} alt={c.name} className="w-6 h-6 rounded-full" />
-                                <span>{c.symbol}</span>
+                                <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
+                                <span className="font-bold">{curr.symbol}</span>
                               </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+
+                      {getCurrency(toCurrency)?.networks && (
+                        <Select value={toNetwork} onValueChange={setToNetwork}>
+                          <SelectTrigger className="h-7 min-w-[100px] bg-transparent border-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground focus:ring-0 shadow-none px-2 py-0">
+                            <div className="flex items-center gap-1 justify-end w-full">
+                              <span>Network: {getCurrency(toCurrency)?.networks?.find(n => n.chain === toNetwork)?.name}</span>
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            {getCurrency(toCurrency)?.networks?.map((net) => (
+                              <SelectItem key={net.chain} value={net.chain} className="text-[10px] font-bold uppercase">
+                                {net.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-4 bg-primary/5 rounded-2xl animate-pulse">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
-                    <span className="text-sm font-medium text-primary">Finding best routes...</span>
+                {/* Rates Info */}
+                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Market rate</span>
+                    <div className="min-h-[16px] flex items-center overflow-hidden">
+                      {isLoading ? (
+                        <Skeleton className="h-3 w-32" />
+                      ) : (
+                        <span className="text-xs font-bold block truncate">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  marketRate > 0 && (
-                    <div className="p-4 bg-muted/30 rounded-2xl border border-border/50 flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground font-medium mb-1">Exchange Rate</span>
-                        <span className="text-sm font-bold text-foreground">
-                          1 {fromCurrency} ≈ {formatRate(swapRate)} {toCurrency}
-                        </span>
+                </div>
+
+                  {/* Swap Details */}
+                  <div className="space-y-4 pt-2">
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-muted-foreground font-medium">Provider</span>
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src="https://cdn.rocketx.exchange/pd135zq/images/exchange/rocketx_pool_10.png" 
+                          alt="RocketX" 
+                          className="h-4 w-4 rounded-full" 
+                        />
+                        <span className="text-foreground font-bold">RocketX</span>
                       </div>
-                      <Badge variant={percentageDiff <= 1 ? "secondary" : "destructive"} className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
-                        Best Rate
-                      </Badge>
                     </div>
-                  )
-                )}
 
-                <Button 
-                  className="w-full h-16 text-xl font-black rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-95 group overflow-hidden relative"
-                  disabled={isLoading || isSwapping || !fromAmount || parseFloat(fromAmount) <= 0}
-                  onClick={handleSwap}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/90 to-primary group-hover:scale-105 transition-transform" />
-                  <span className="relative flex items-center gap-2">
-                    {isSwapping ? (
-                      <>
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Swap {fromCurrency}
-                        <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </span>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-card border border-border/50 rounded-2xl flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">Secure Swap</h4>
-                  <p className="text-[10px] text-muted-foreground">End-to-end encrypted transactions</p>
-                </div>
-              </div>
-              <div className="p-4 bg-card border border-border/50 rounded-2xl flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">Low Slippage</h4>
-                  <p className="text-[10px] text-muted-foreground">Optimized for best price execution</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 space-y-6">
-            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-md rounded-3xl">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  Swap Details
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">From Network</span>
-                    <Badge variant="outline" className="font-bold border-primary/20 bg-primary/5">{fromNetwork}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">To Network</span>
-                    <Badge variant="outline" className="font-bold border-primary/20 bg-primary/5">{toNetwork}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Est. Network Fee</span>
-                    <span className="font-bold">{estFees[fromNetwork] || "Fetching..."}</span>
-                  </div>
-                  <div className="pt-4 border-t border-border/50">
-                    <div className="flex justify-between items-center text-sm mb-1">
-                      <span className="text-muted-foreground">Minimum Received</span>
-                      <span className="font-bold text-foreground">
-                        {(parseFloat(toAmount) * 0.99).toFixed(6)} {toCurrency}
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-muted-foreground font-medium">Swapper Fee</span>
+                      <span className="text-foreground font-bold">
+                        {bestQuote?.gasFee ? `${bestQuote.gasFee.toFixed(6)} ${fromCurrency}` : (estFees[fromNetwork] || "Calculated at swap")}
                       </span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground text-right italic">1% Max Slippage Applied</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-md rounded-3xl">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-bold mb-4 flex items-center justify-between">
-                  Recent Swaps
-                  <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold text-primary px-2">VIEW ALL</Button>
-                </h3>
-                <div className="space-y-3">
-                  {swapHistory.length === 0 ? (
-                    <div className="py-8 text-center">
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3 opacity-20">
-                        <Lock className="h-6 w-6" />
-                      </div>
-                      <p className="text-xs text-muted-foreground font-medium">No recent transactions</p>
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-muted-foreground font-medium">Price Impact</span>
+                      <span className="text-emerald-500 font-bold">
+                        {isLoading ? "..." : (percentageDiff < 0.01 ? "< 0.01%" : `${percentageDiff.toFixed(2)}%`)}
+                      </span>
                     </div>
-                  ) : (
-                    swapHistory.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-2xl hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="flex -space-x-2">
-                            <img src={cryptoIconUrls[item.fromToken] || cryptoIconUrls.BTC} className="w-6 h-6 rounded-full border border-background" />
-                            <img src={cryptoIconUrls[item.toToken] || cryptoIconUrls.USDT} className="w-6 h-6 rounded-full border border-background" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-foreground">{item.fromAmount} {item.fromToken} → {item.toToken}</p>
-                            <p className="text-[10px] text-muted-foreground">{formatDistanceToNow(item.timestamp)}</p>
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-none">
-                          SUCCESS
-                        </Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
+                  </div>
+
+                  {/* Swap Button */}
+                  <Button 
+                    className="w-full h-14 text-lg font-black bg-[#B4F22E] hover:bg-[#B4F22E]/90 text-black rounded-xl shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                    onClick={handleSwap}
+                    disabled={isSwapping || (balance !== null && parseFloat(fromAmount) > balance)}
+                  >
+                    {isSwapping ? (
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    ) : (balance !== null && parseFloat(fromAmount) > balance) ? (
+                      "Insufficient Balance"
+                    ) : (
+                      "Swap Now"
+                    )}
+                  </Button>
               </CardContent>
             </Card>
+          </div>
 
-            <div className="bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-6 text-primary-foreground shadow-lg shadow-primary/20 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform" />
-              <div className="relative z-10">
-                <h4 className="text-lg font-black mb-2 flex items-center gap-2">
-                  <Gift className="h-5 w-5" />
-                  Earn Rewards
-                </h4>
-                <p className="text-sm opacity-90 leading-snug mb-4">Invite your friends to swap and get up to 0.5% of their trade volume in USDT.</p>
-                <Button variant="secondary" className="w-full font-bold bg-white text-primary hover:bg-white/90">Invite Friends</Button>
+          {/* Right Column: Chart Section */}
+          <div className="space-y-4">
+            <Card className="bg-card border-none shadow-sm overflow-hidden h-[450px] relative rounded-xl">
+              <div className="p-4 border-b border-border/40 flex items-center justify-between">
+                <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
+                  <img src={currencies.find(c => c.symbol === fromCurrency)?.iconUrl} className="w-4 h-4 rounded-full" alt="" />
+                  {fromCurrency} / {toCurrency}
+                </h2>
+              </div>
+              <iframe
+                key={`${fromCurrency}-${toCurrency}`}
+                src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${fromCurrency}${toCurrency}&interval=60&hidesidetoolbar=1&symboledit=0&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=light&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=pexly.com&utm_medium=widget&utm_campaign=chart`}
+                className="absolute top-12 bottom-0 left-0 right-0 w-full h-[calc(100%-48px)]"
+                title="TradingView Chart"
+              ></iframe>
+            </Card>
+          </div>
+        </div>
+
+        {/* Recent Activity Section */}
+        <div className="space-y-6 pt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Recent activity</h2>
+          </div>
+          
+          <div className="flex items-center gap-4 mb-6 overflow-x-auto pb-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="text-sm font-medium text-muted-foreground">Filters</span>
+            </div>
+            <Select defaultValue="all">
+              <SelectTrigger className="h-8 w-[120px] bg-accent/5 text-xs">
+                <span className="text-muted-foreground mr-1">Asset</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {currencies.map(c => (
+                  <SelectItem key={c.symbol} value={c.symbol}>{c.symbol}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select defaultValue="all">
+              <SelectTrigger className="h-8 w-[120px] bg-accent/5 text-xs">
+                <span className="text-muted-foreground mr-1">Status</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select defaultValue="beginning">
+              <SelectTrigger className="h-8 w-[180px] bg-accent/5 text-xs">
+                <span className="text-muted-foreground mr-1">Date:</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginning">From the beginning</SelectItem>
+                <SelectItem value="week">Last 7 days</SelectItem>
+                <SelectItem value="month">Last 30 days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="bg-card border-none rounded-xl shadow-sm overflow-hidden">
+            <div className="min-w-full inline-block align-middle">
+              <div className="overflow-hidden">
+                <table className="min-w-full divide-y divide-border/40">
+                  <thead className="bg-accent/5">
+                    <tr>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Amount</th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Date</th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-transparent divide-y divide-border/40">
+                    {history.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                          No recent swap activity found
+                        </td>
+                      </tr>
+                    ) : (
+                      history.map((order) => (
+                        <tr key={order.id} className="hover:bg-accent/5 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">{order.amount} {order.fromToken}</span>
+                              <span className="text-muted-foreground">→</span>
+                              <span className="font-bold">{order.quote.toAmount} {order.toToken}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                            {formatDistanceToNow(order.createdAt)} ago
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Badge variant={order.status === 'submitted' ? 'default' : 'secondary'} className="bg-[#58B383]/10 text-[#58B383] border-none text-[10px] px-2 py-0.5 uppercase font-bold">
+                              {order.status === 'submitted' ? 'Pending' : order.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <PexlyFooter />
 
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-md border-border/50 rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-center">Confirm Swap</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="p-4 bg-muted/30 rounded-2xl border border-border/50 flex items-center justify-between">
-              <div className="text-center flex-1">
-                <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Pay</p>
-                <p className="text-xl font-black">{fromAmount} {fromCurrency}</p>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <ArrowRight className="h-4 w-4 text-primary" />
-              </div>
-              <div className="text-center flex-1">
-                <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Receive</p>
-                <p className="text-xl font-black">{toAmount} {toCurrency}</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Wallet Password</Label>
+        <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-primary" />
+                Wallet Password Required
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Enter your non-custodial wallet password to authorize this swap. Your password is only stored for this session.
+              </p>
               <Input
-                id="password"
                 type="password"
-                placeholder="Enter your wallet password"
+                placeholder="Enter wallet password"
                 value={walletPassword}
                 onChange={(e) => setWalletPassword(e.target.value)}
-                className="h-12 bg-muted/50 border-border/50 rounded-xl font-bold"
+                onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                autoFocus
               />
-              <p className="text-xs text-muted-foreground italic">Required to decrypt your private keys for the transaction.</p>
             </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              className="w-full h-14 text-lg font-black rounded-2xl"
-              onClick={() => {
-                setShowPasswordDialog(false);
-                handlePasswordSubmit();
-              }}
-              disabled={!walletPassword}
-            >
-              Authorize Transaction
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>Cancel</Button>
+              <Button onClick={handlePasswordSubmit} disabled={isSwapping || walletPassword.length === 0}>
+                {isSwapping ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Confirm Swap"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+      <PexlyFooter />
     </div>
   );
 }
