@@ -14,6 +14,7 @@ export interface WalletData {
     symbol: string;
     name: string;
     balance: number;
+    price: number;
     value: number;
     change24h: number;
   }[];
@@ -131,14 +132,29 @@ export function useWalletData() {
           existing.balance += balance;
           existing.value += value;
         } else {
-          assetMap.set(symbol, { symbol, name: ASSET_NAMES[symbol] || symbol, balance, value, change24h: priceInfo.change24h });
+          assetMap.set(symbol, { 
+            symbol, 
+            name: ASSET_NAMES[symbol] || symbol, 
+            balance, 
+            price: priceInfo.price,
+            value, 
+            change24h: priceInfo.change24h 
+          });
         }
       });
 
       // Ensure all assets exist
       VALID_CRYPTO_SYMBOLS.forEach(symbol => {
         if (!assetMap.has(symbol)) {
-          assetMap.set(symbol, { symbol, name: ASSET_NAMES[symbol], balance: 0, value: 0, change24h: prices[symbol]?.change24h || 0 });
+          const priceInfo = prices[symbol] || { price: 0, change24h: 0 };
+          assetMap.set(symbol, { 
+            symbol, 
+            name: ASSET_NAMES[symbol], 
+            balance: 0, 
+            price: priceInfo.price,
+            value: 0, 
+            change24h: priceInfo.change24h
+          });
         }
       });
 
