@@ -63,6 +63,17 @@ function formatContent(content: string): string {
   return formatted;
 }
 
+function sanitizeImageUrl(url: string | null): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return "";
+    return DOMPurify.sanitize(url);
+  } catch {
+    return "";
+  }
+}
+
 export default function BlogPost() {
   const [, params] = useRoute("/blog/:postId");
   const [, setLocation] = useLocation();
@@ -229,7 +240,7 @@ export default function BlogPost() {
       {post.image_url && (
         <div className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 overflow-hidden">
           <img
-            src={post.image_url}
+            src={sanitizeImageUrl(post.image_url)}
             alt={post.title}
             className="w-full h-full object-cover"
           />
@@ -451,7 +462,7 @@ export default function BlogPost() {
                 >
                   {related.image_url ? (
                     <img
-                      src={related.image_url}
+                      src={sanitizeImageUrl(related.image_url)}
                       alt={related.title}
                       className="w-full h-32 object-cover"
                     />
