@@ -6,7 +6,7 @@ import { Search, ChevronLeft, ChevronRight, Clock, User } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { createClient } from "@/lib/supabase";
 import { useSchema, blogPageSchema } from "@/hooks/use-schema";
-import { safeImageUrl } from "@/lib/utils";
+import DOMPurify from "dompurify";
 
 function calculateReadTime(content: string): string {
   if (!content) return "1 min read";
