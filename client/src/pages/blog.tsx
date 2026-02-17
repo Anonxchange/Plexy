@@ -75,6 +75,17 @@ const gradients = [
   "from-[#7CB342] via-[#B4F22E] to-[#9FD624]"
 ];
 
+function sanitizeImageUrl(url: string | null): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return "";
+    return DOMPurify.sanitize(url);
+  } catch {
+    return "";
+  }
+}
+
 export default function Blog() {
   useSchema(blogPageSchema, "blog-page-schema");
   const supabase = createClient();
