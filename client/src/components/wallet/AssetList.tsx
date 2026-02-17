@@ -106,8 +106,8 @@ export function AssetList({
   const [activeTab, setActiveTab] = useState("assets");
 
   // Show skeleton on initial load, refresh/refetch (if no data), or error
-  const loading = isLoading || (isRefetching && !wallet) || isError || wallet?.isConverting;
-  const preferredCurrency = wallet?.preferredCurrency || "USD";
+  const loading = isLoading || (isRefetching && !wallet) || isError || (wallet && 'isConverting' in (wallet as any) && (wallet as any).isConverting);
+  const preferredCurrency = (wallet as any)?.preferredCurrency || "USD";
 
   const assets = useMemo(() => {
     if (!wallet?.assets) return [];
