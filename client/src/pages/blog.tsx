@@ -292,11 +292,11 @@ export default function Blog() {
                 <div className="relative h-48 md:h-56 overflow-hidden">
                   {post.image_url ? (
                     <>
-                      <img
-                        src={safeImageUrl(post.image_url)}
-                        alt={post.title || "image"}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                        <img
+      src={sanitizeImageUrl(post.image_url)}
+      alt={post.title || "image"}
+    />
+ 
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                     </>
                   ) : (
