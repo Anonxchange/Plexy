@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 
-
 export interface RocketXQuote {
   exchange: string;
   exchangeIcon: string;
@@ -108,9 +107,7 @@ function isEvmChain(chain: string): boolean {
 function getRocketXTokenAddress(symbol: string, chain: string): string {
   const chainUpper = chain.toUpperCase();
   const symbolUpper = symbol.toUpperCase();
-  const evmChains = ['ETH', 'BSC', 'POLYGON', 'ARBITRUM', 'OPTIMISM', 'BASE', 'AVALANCHE'];
 
-  // Common token addresses for RocketX if they aren't native
   const tokenMap: Record<string, Record<string, string>> = {
     'USDT': {
       'ETH': '0xdac17f958d2ee523a2206206994597C13D831ec7',
@@ -124,95 +121,81 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
       'BASE': '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
     }
   };
-  
+
   const addr = tokenMap[symbolUpper]?.[chainUpper];
   if (addr) return addr;
-  
-  // Handling Native Tokens
-  const isNative = symbolUpper === chainUpper || 
+
+  const isNative = symbolUpper === chainUpper ||
     (symbolUpper === 'BTC' && chainUpper === 'BTC') ||
     (symbolUpper === 'BNB' && chainUpper === 'BSC') ||
     (symbolUpper === 'ETH' && chainUpper === 'ETH') ||
     (symbolUpper === 'MATIC' && chainUpper === 'POLYGON');
 
   if (isNative) {
-    if (evmChains.includes(chainUpper)) {
-      return '0x0000000000000000000000000000000000000000';
-    } else {
-      return symbolUpper; // Non-EVM (BTC, etc.) use symbol
-    }
+    return isEvmChain(chainUpper) ? '0x0000000000000000000000000000000000000000' : symbolUpper;
   }
-  
+
   return symbol; 
 }
 
 function formatAmountForRocketX(amount: number, symbol: string, chain: string, decimals: number = 18): string {
   const chainUpper = chain.toUpperCase();
-  const symbolUpper = symbol.toUpperCase();
-
   if (chainUpper === 'BTC') {
-    // BTC to satoshis (10^8)
-    return Math.floor(amount * 100000000).toString();
+    return Math.floor(amount * 1e8).toString();
   }
-
-  // EVM chains: amount to smallest unit
-  // Defaulting to 18 decimals if not provided for ETH/Native, 
-  // though real tokens should use their own decimals
   return Math.floor(amount * Math.pow(10, decimals)).toString();
 }
 
-/**
- * Get the current exchange rate for a crypto pair from RocketX
- */
 export async function getRocketxRate(
   from: string,
   fromNetwork: string,
-  to: string,
-  toNetwork: string,
+  to?: string,
+  toNetwork?: string,
   amount: number = 1,
   params: Record<string, any> = {}
 ): Promise<RocketXQuote | null> {
   try {
     const fromNetId = getRocketXNetworkId(fromNetwork);
-    const toNetId = getRocketXNetworkId(toNetwork);
+    const toNetId = toNetwork ? getRocketXNetworkId(toNetwork) : undefined;
 
-    // 1. Get official token addresses and decimals from /tokens
     const tokens = await rocketXApi.getTokens(fromNetId);
-    const targetTokens = fromNetId === toNetId ? tokens : await rocketXApi.getTokens(toNetId);
+    const targetTokens = toNetId ? await rocketXApi.getTokens(toNetId) : [];
 
     const fromToken = tokens?.find((t: any) => t.symbol.toUpperCase() === from.toUpperCase());
-    const toToken = targetTokens?.find((t: any) => t.symbol.toUpperCase() === to.toUpperCase());
+    const toToken = to && targetTokens?.find((t: any) => t.symbol.toUpperCase() === to.toUpperCase());
 
     const fromAddr = fromToken?.address || getRocketXTokenAddress(from, fromNetwork);
-    const toAddr = toToken?.address || getRocketXTokenAddress(to, toNetwork);
+    const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork!) : undefined);
     const fromDecimals = fromToken?.decimals || params.fromDecimals || 18;
 
-    // 2. Format amount based on official decimals
-    const formattedAmount = formatAmountForRocketX(
-      amount, 
-      from, 
-      fromNetwork, 
-      fromDecimals
-    );
+    const formattedAmount = formatAmountForRocketX(amount, from, fromNetwork, fromDecimals);
 
-    console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to} (${toNetId}:${toAddr}) amount: ${formattedAmount}`);
+    console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to ?? 'walletless'} (${toNetId ?? 'walletless'}), amount: ${formattedAmount}`);
 
-    // 3. Get quotation using official addresses and user wallet (if provided)
-    const data = await rocketXApi.getQuotation({
+    const quotationParams: any = {
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
-      toTokenAddress: toAddr,
-      toTokenChain: toNetId,
       amount: Number(formattedAmount),
       fromAddress: params.fromAddress || (isEvmChain(fromNetwork) ? "0x0000000000000000000000000000000000000000" : "NATIVE_SENDER"),
-      toAddress: params.toAddress,
-    });
+    };
+
+    if (toAddr && toNetId) {
+      quotationParams.toTokenAddress = toAddr;
+      quotationParams.toTokenChain = toNetId;
+    }
+
+    if (params.toAddress) {
+      quotationParams.toAddress = params.toAddress;
+    }
+
+    const data = await rocketXApi.getQuotation(quotationParams);
 
     if (data && data.length > 0) {
       return data.reduce((prev: RocketXQuote, current: RocketXQuote) =>
         prev.toAmount > current.toAmount ? prev : current
       );
     }
+
     return null;
   } catch (error) {
     console.error('Error fetching RocketX rate:', error);
@@ -221,45 +204,14 @@ export async function getRocketxRate(
 }
 
 export const rocketXApi = {
-  /** Get supported networks and configuration */
-  async getConfiguration() {
-    return callRocketX('configs');
-  },
-
-  /** Get tokens for a specific network with pagination */
-  async getTokens(networkId: string, page = 1, limit = 50) {
-    return callRocketX('tokens', { networkId, page, limit });
-  },
-
-  /** Search tokens by keyword, optionally filtered by network */
-  async searchTokens(keyword: string, networkId?: string) {
-    return callRocketX('search_tokens', { keyword, ...(networkId ? { networkId } : {}) });
-  },
-
-  /** Get swap quotation — params match the RocketX V1 API field names */
-  async getQuotation(params: {
-    fromTokenAddress: string;
-    fromTokenChain: string;
-    toTokenAddress?: string;
-    toTokenChain?: string;
-    amount: number;
-    slippage?: number;
-    fromAddress?: string;
-    toAddress?: string;
-  }) {
+  async getConfiguration() { return callRocketX('configs'); },
+  async getTokens(networkId: string, page = 1, limit = 50) { return callRocketX('tokens', { networkId, page, limit }); },
+  async searchTokens(keyword: string, networkId?: string) { return callRocketX('search_tokens', { keyword, ...(networkId ? { networkId } : {}) }); },
+  async getQuotation(params: { fromTokenAddress: string; fromTokenChain: string; toTokenAddress?: string; toTokenChain?: string; amount: number; slippage?: number; fromAddress?: string; toAddress?: string; }) {
     return callRocketX('quotation', params);
   },
-
-  /** Execute a swap */
-  async executeSwap(params: Record<string, any>) {
-    return callRocketX('swap', params);
-  },
-
-  /** Check swap status by requestId or txHash */
+  async executeSwap(params: Record<string, any>) { return callRocketX('swap', params); },
   async getStatus(requestId?: string, txHash?: string) {
-    return callRocketX('status', {
-      ...(requestId ? { requestId } : {}),
-      ...(txHash ? { txHash } : {}),
-    });
+    return callRocketX('status', { ...(requestId ? { requestId } : {}), ...(txHash ? { txHash } : {}) });
   },
 };
