@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getCryptoPrices } from '@/lib/crypto-prices';
 import { getRocketxRate, type RocketXQuote } from '@/lib/rocketx-api';
+import { nonCustodialWalletManager } from '@/lib/non-custodial-wallet';
+import { useAuth } from '@/lib/auth-context';
 
 interface SwapPriceData {
   marketRate: number;
@@ -19,7 +21,8 @@ const priceCache: Record<string, { data: SwapPriceData; timestamp: number }> = {
 const CACHE_TTL = 30000; // 30 seconds cache
 
 export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: string, toNetwork: string, amount: number = 1) {
-  const cacheKey = `${fromCrypto}-${fromNetwork}-${toCrypto}-${toNetwork}-${amount}`;
+  const { user } = useAuth();
+  const cacheKey = `${fromCrypto}-${fromNetwork}-${toCrypto}-${toNetwork}-${amount}-${user?.id || 'anon'}`;
   
   const [priceData, setPriceData] = useState<SwapPriceData>(() => {
     // Initialize from cache if available
@@ -78,8 +81,23 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           return;
         }
 
+        // Try to fetch real wallet address for quotation if user is logged in
+        let fromAddress: string | undefined = undefined;
+        if (user?.id) {
+          const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
+          const targetNet = fromNetwork.toLowerCase();
+          const wallet = wallets.find(w => 
+            w.chainId?.toLowerCase() === targetNet || 
+            w.walletType?.toLowerCase() === targetNet ||
+            (targetNet === 'btc' && w.walletType === 'bitcoin') ||
+            (targetNet === 'eth' && w.walletType === 'ethereum') ||
+            (targetNet === 'bsc' && w.walletType === 'binance')
+          );
+          if (wallet) fromAddress = wallet.address;
+        }
+
         // Try to fetch from Rocketx first for real exchange rates
-        const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount);
+        const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount, { fromAddress });
         
         let marketRate = (rocketxQuote && rocketxQuote.toAmount ? (rocketxQuote.toAmount / (debouncedAmount || 1)) : 0);
         
