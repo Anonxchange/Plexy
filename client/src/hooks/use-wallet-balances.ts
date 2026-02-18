@@ -158,7 +158,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
         }
       }
     } catch (err) {
-      console.error(`[getUserWallets] Exception for ${entry.chain}:`, err);
+      console.error('[getUserWallets] Exception for chain:', entry.chain, err);
     }
   });
 
