@@ -38,48 +38,34 @@ export interface RocketXNetwork {
 async function callRocketX(action: string, params: Record<string, any> = {}) {
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    // If Supabase is not configured, try to call RocketX directly or show a better error
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
     if (!supabaseUrl || !supabaseKey) {
       console.warn('Supabase not configured, using mock/local mode for RocketX');
-      throw new Error('RocketX service is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+      throw new Error('RocketX service is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.');
     }
 
-    console.log('Invoking RocketX Edge Function:', {
-      url: `${supabaseUrl}/functions/v1/rocketx-swap`,
-      action,
-      params
-    });
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${supabaseKey}`,
-    };
+    console.log('Invoking RocketX Edge Function:', { action, params });
 
     const { data, error } = await supabase.functions.invoke('rocketx-swap', {
       body: { action, params },
-      headers
     });
 
     if (error) {
       console.error('Supabase function invocation error:', error);
-      // Check if it's a network error vs a function error
-      const errorMsg = error.message || 'Could not reach swap service';
-      throw new Error(`Connection error: ${errorMsg}`);
+      throw new Error(`Connection error: ${error.message || 'Could not reach swap service'}`);
     }
 
     if (!data?.success) {
-      console.error('RocketX API business logic error:', data?.error);
-      throw new Error(data?.error || 'Exchange service returned an error');
+      console.error('RocketX API error:', data);
+      throw new Error(data?.error || data?.warning || 'Exchange service returned an error');
     }
 
     return data.data;
   } catch (err: any) {
-    console.error('Unexpected error in callRocketX:', err);
-    // If it's the "Failed to send a request" error, provide more context
+    console.error('callRocketX error:', err);
     if (err.message?.includes('Failed to send a request')) {
-      throw new Error('Connection error: The Edge Function "rocketx-swap" could not be reached. Please verify the function is deployed and CORS is enabled.');
+      throw new Error('Connection error: The Edge Function "rocketx-swap" could not be reached. Please verify the function is deployed.');
     }
     throw err;
   }
@@ -87,28 +73,27 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
 
 /**
  * Get the current exchange rate for a crypto pair from RocketX
- * @param from symbol of from crypto (e.g. 'BTC')
- * @param fromNetwork network of from crypto (e.g. 'BTC')
- * @param to symbol of to crypto (e.g. 'USDT')
- * @param toNetwork network of to crypto (e.g. 'ETH')
- * @returns market rate as number
  */
-export async function getRocketxRate(from: string, fromNetwork: string, to: string, toNetwork: string, amount: number = 1): Promise<RocketXQuote | null> {
+export async function getRocketxRate(
+  from: string,
+  fromNetwork: string,
+  to: string,
+  toNetwork: string,
+  amount: number = 1
+): Promise<RocketXQuote | null> {
   try {
     const data = await rocketXApi.getQuotation({
-      fromToken: from,
-      fromNetwork: fromNetwork,
-      toToken: to,
-      toNetwork: toNetwork,
-      amount: amount
+      fromTokenAddress: from,
+      fromTokenChain: fromNetwork,
+      toTokenAddress: to,
+      toTokenChain: toNetwork,
+      amount,
     });
-    
+
     if (data && data.length > 0) {
-      // Find the best rate (highest toAmount)
-      const bestQuote = data.reduce((prev: RocketXQuote, current: RocketXQuote) => {
-        return (prev.toAmount > current.toAmount) ? prev : current;
-      });
-      return bestQuote;
+      return data.reduce((prev: RocketXQuote, current: RocketXQuote) =>
+        prev.toAmount > current.toAmount ? prev : current
+      );
     }
     return null;
   } catch (error) {
@@ -124,23 +109,25 @@ export const rocketXApi = {
   },
 
   /** Get tokens for a specific network with pagination */
-  async getTokens(network: string, page = 1, limit = 50) {
-    return callRocketX('tokens', { network, page, limit });
+  async getTokens(networkId: string, page = 1, limit = 50) {
+    return callRocketX('tokens', { networkId, page, limit });
   },
 
-  /** Search tokens by keyword */
-  async searchTokens(keyword: string) {
-    return callRocketX('search_tokens', { keyword });
+  /** Search tokens by keyword, optionally filtered by network */
+  async searchTokens(keyword: string, networkId?: string) {
+    return callRocketX('search_tokens', { keyword, ...(networkId ? { networkId } : {}) });
   },
 
-  /** Get swap quotation from all exchanges */
+  /** Get swap quotation — params match the RocketX V1 API field names */
   async getQuotation(params: {
-    fromToken: string;
-    fromNetwork: string;
-    toToken?: string;
-    toNetwork?: string;
+    fromTokenAddress: string;
+    fromTokenChain: string;
+    toTokenAddress?: string;
+    toTokenChain?: string;
     amount: number;
     slippage?: number;
+    fromAddress?: string;
+    toAddress?: string;
   }) {
     return callRocketX('quotation', params);
   },
@@ -150,8 +137,11 @@ export const rocketXApi = {
     return callRocketX('swap', params);
   },
 
-  /** Check swap status */
-  async getStatus(id: string) {
-    return callRocketX('status', { id });
+  /** Check swap status by requestId or txHash */
+  async getStatus(requestId?: string, txHash?: string) {
+    return callRocketX('status', {
+      ...(requestId ? { requestId } : {}),
+      ...(txHash ? { txHash } : {}),
+    });
   },
 };
