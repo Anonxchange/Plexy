@@ -173,23 +173,31 @@ export async function getRocketxRate(
   params: Record<string, any> = {}
 ): Promise<RocketXQuote | null> {
   try {
-    const fromAddr = getRocketXTokenAddress(from, fromNetwork);
-    const toAddr = getRocketXTokenAddress(to, toNetwork);
     const fromNetId = getRocketXNetworkId(fromNetwork);
     const toNetId = getRocketXNetworkId(toNetwork);
 
-    // Format amount based on token decimals or chain rules
-    // In a real app, we'd fetch token decimals first. 
-    // For now, we use 18 for EVM as a common baseline unless specified in params.
+    // 1. Get official token addresses and decimals from /tokens
+    const tokens = await rocketXApi.getTokens(fromNetId);
+    const targetTokens = fromNetId === toNetId ? tokens : await rocketXApi.getTokens(toNetId);
+
+    const fromToken = tokens?.find((t: any) => t.symbol.toUpperCase() === from.toUpperCase());
+    const toToken = targetTokens?.find((t: any) => t.symbol.toUpperCase() === to.toUpperCase());
+
+    const fromAddr = fromToken?.address || getRocketXTokenAddress(from, fromNetwork);
+    const toAddr = toToken?.address || getRocketXTokenAddress(to, toNetwork);
+    const fromDecimals = fromToken?.decimals || params.fromDecimals || 18;
+
+    // 2. Format amount based on official decimals
     const formattedAmount = formatAmountForRocketX(
       amount, 
       from, 
       fromNetwork, 
-      params.fromDecimals || 18
+      fromDecimals
     );
 
     console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to} (${toNetId}:${toAddr}) amount: ${formattedAmount}`);
 
+    // 3. Get quotation using official addresses and user wallet (if provided)
     const data = await rocketXApi.getQuotation({
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
@@ -197,6 +205,7 @@ export async function getRocketxRate(
       toTokenChain: toNetId,
       amount: Number(formattedAmount),
       fromAddress: params.fromAddress || (isEvmChain(fromNetwork) ? "0x0000000000000000000000000000000000000000" : "NATIVE_SENDER"),
+      toAddress: params.toAddress,
     });
 
     if (data && data.length > 0) {
