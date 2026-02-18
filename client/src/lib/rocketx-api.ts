@@ -108,6 +108,7 @@ function isEvmChain(chain: string): boolean {
 function getRocketXTokenAddress(symbol: string, chain: string): string {
   const chainUpper = chain.toUpperCase();
   const symbolUpper = symbol.toUpperCase();
+  const evmChains = ['ETH', 'BSC', 'POLYGON', 'ARBITRUM', 'OPTIMISM', 'BASE', 'AVALANCHE'];
 
   // Common token addresses for RocketX if they aren't native
   const tokenMap: Record<string, Record<string, string>> = {
@@ -129,11 +130,13 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
   
   // Handling Native Tokens
   const isNative = symbolUpper === chainUpper || 
+    (symbolUpper === 'BTC' && chainUpper === 'BTC') ||
     (symbolUpper === 'BNB' && chainUpper === 'BSC') ||
+    (symbolUpper === 'ETH' && chainUpper === 'ETH') ||
     (symbolUpper === 'MATIC' && chainUpper === 'POLYGON');
 
   if (isNative) {
-    if (isEvmChain(chainUpper)) {
+    if (evmChains.includes(chainUpper)) {
       return '0x0000000000000000000000000000000000000000';
     } else {
       return symbolUpper; // Non-EVM (BTC, etc.) use symbol
