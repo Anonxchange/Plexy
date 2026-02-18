@@ -19,8 +19,7 @@ import { AppSidebar } from "./app-sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
-import { useCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
-import { useWalletBalances } from "@/hooks/use-wallet-balances";
+import { useWalletData } from "@/hooks/use-wallet-data";
 import { 
   getNotifications, 
   markAsRead, 
@@ -68,60 +67,11 @@ export function AppHeader() {
   const { toast } = useToast();
   const [userName, setUserName] = useState<string>('');
   
-  const { balances: userWallets, loading: walletsLoading } = useWalletBalances();
+  const { data: walletData, isLoading: walletsLoading } = useWalletData();
+  const balance = walletData?.totalBalance || 0;
+  const preferredCurrency = walletData?.preferredCurrency || 'USD';
+  const isConverting = walletData?.isConverting || false;
   
-  // Get all unique symbols from wallets
-  const allSymbols = useMemo(() => {
-    if (!userWallets || userWallets.length === 0) return ["BTC", "ETH", "USDT", "USDC"];
-    return Array.from(new Set(userWallets.map(w => w.symbol)));
-  }, [userWallets]);
-
-  const { data: prices, isLoading: pricesLoading } = useCryptoPrices(allSymbols);
-
-  const [preferredCurrency, setPreferredCurrency] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(`pexly_currency_${user?.id}`) || 'USD';
-    }
-    return 'USD';
-  });
-  const [lastBalanceUpdate, setLastBalanceUpdate] = useState<number>(0);
-
-  // Derived balance calculation
-  const [balance, setBalance] = useState<number>(0);
-  const [isConverting, setIsConverting] = useState(false);
-
-  useEffect(() => {
-    const calculateBalance = async () => {
-      if (!userWallets || userWallets.length === 0 || !prices) {
-        setBalance(0);
-        return;
-      }
-
-      const totalUSD = userWallets.reduce((sum, wallet) => {
-        const priceData = prices[wallet.symbol];
-        const currentPrice = priceData?.current_price || 0;
-        const bal = parseFloat(wallet.balanceFormatted) || 0;
-        return sum + (bal * currentPrice);
-      }, 0);
-
-      if (preferredCurrency === 'USD') {
-        setBalance(totalUSD);
-      } else {
-        setIsConverting(true);
-        try {
-          const finalBalance = await convertCurrency(totalUSD, preferredCurrency);
-          setBalance(finalBalance);
-        } catch (e) {
-          setBalance(totalUSD);
-        } finally {
-          setIsConverting(false);
-        }
-      }
-    };
-
-    calculateBalance();
-  }, [userWallets, prices, preferredCurrency]);
-
   useEffect(() => {
     if (!user) return;
 
@@ -491,7 +441,7 @@ export function AppHeader() {
                 </div>
                 <div className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
                   <span className="truncate">
-                    {walletsLoading || pricesLoading || isConverting ? (
+                    {walletsLoading || isConverting ? (
                       <Skeleton className="h-3 w-16" />
                     ) : (
                       balanceVisible ? `${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}` : "****"
