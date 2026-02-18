@@ -88,6 +88,7 @@ export async function getRocketxRate(
       toTokenAddress: to,
       toTokenChain: toNetwork,
       amount,
+      fromAddress: "0x0000000000000000000000000000000000000000",
     });
 
     if (data && data.length > 0) {
