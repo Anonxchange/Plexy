@@ -330,7 +330,10 @@ export function Swap() {
       return;
     }
 
-    if (!activeQuote) {
+    // Refresh quote one last time before execution to be safe
+    const finalQuote = activeQuote || bestQuote;
+
+    if (!finalQuote) {
       toast({
         title: "No Quote",
         description: "Please wait for a valid quote to be fetched.",
@@ -341,15 +344,16 @@ export function Swap() {
 
     // If we have a cached session password, execute directly
     if (sessionPassword) {
-      await performSwap(sessionPassword);
+      await performSwap(sessionPassword, finalQuote);
     } else {
       setShowPasswordDialog(true);
     }
   };
 
-  const performSwap = async (password: string) => {
+  const performSwap = async (password: string, quoteOverride?: any) => {
   const fromAmountNum = parseFloat(fromAmount);
   const toAmountNum = parseFloat(toAmount);
+  const activeQuoteToUse = quoteOverride || activeQuote || bestQuote;
 
   setIsSwapping(true);
 
@@ -455,16 +459,16 @@ export function Swap() {
     // STEP 2: Create swap
     const swapResponse = await rocketXApi.executeSwap({
       userId: user!.id,
-      fromToken: activeQuote?.fromToken,
+      fromToken: activeQuoteToUse?.fromToken,
       fromNetwork,
-      fromAmount: activeQuote?.fromAmount || fromAmountNum,
+      fromAmount: activeQuoteToUse?.fromAmount || fromAmountNum,
       fromAddress: fromWallet.address,
-      toToken: activeQuote?.toToken,
+      toToken: activeQuoteToUse?.toToken,
       toNetwork,
-      toAmount: activeQuote?.toAmount || toAmountNum,
+      toAmount: activeQuoteToUse?.toAmount || toAmountNum,
       toAddress: toWallet.address,
       slippage: 1,
-      quoteId: activeQuote?.id // Pass quote ID if available
+      quoteId: activeQuoteToUse?.id // Pass quote ID if available
     });
 
     if (!swapResponse?.id) {
