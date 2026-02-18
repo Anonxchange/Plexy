@@ -71,6 +71,65 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
   }
 }
 
+const rocketXNetworks = [
+  { symbol: "BTC", name: "Bitcoin", chain: "BTC", rocketXNetId: "BTC" },
+  { symbol: "ETH", name: "Ethereum", chain: "ETH", rocketXNetId: "ETH" },
+  { symbol: "USDT", name: "Tether", chain: "ETH", rocketXNetId: "ETH" },
+  { symbol: "USDC", name: "USD Coin", chain: "ETH", rocketXNetId: "ETH" },
+  { symbol: "BNB", name: "BNB", chain: "BSC", rocketXNetId: "BSC" },
+  { symbol: "MATIC", name: "Polygon", chain: "POLYGON", rocketXNetId: "POLYGON" },
+  { symbol: "ARB", name: "Arbitrum", chain: "ARBITRUM", rocketXNetId: "ARBITRUM" },
+  { symbol: "OP", name: "Optimism", chain: "OPTIMISM", rocketXNetId: "OPTIMISM" },
+  { symbol: "SOL", name: "Solana", chain: "SOL", rocketXNetId: "SOL" },
+  { symbol: "TRX", name: "Tron", chain: "TRX", rocketXNetId: "TRX" },
+];
+
+function getRocketXNetworkId(chain: string): string {
+  const map: Record<string, string> = {
+    'BTC': 'BTC',
+    'ETH': 'ETH',
+    'BSC': 'BSC',
+    'TRX': 'TRON',
+    'SOL': 'SOLANA',
+    'POLYGON': 'POLYGON',
+    'ARBITRUM': 'ARBITRUM',
+    'OPTIMISM': 'OPTIMISM',
+    'BASE': 'BASE',
+    'AVALANCHE': 'AVALANCHE',
+  };
+  return map[chain.toUpperCase()] || chain;
+}
+
+function getRocketXTokenAddress(symbol: string, chain: string): string {
+  // Common token addresses for RocketX if they aren't native
+  const tokenMap: Record<string, Record<string, string>> = {
+    'USDT': {
+      'ETH': '0xdac17f958d2ee523a2206206994597C13D831ec7',
+      'BSC': '0x55d398326f99059ff775485246999027b3197955',
+      'TRX': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+      'POLYGON': '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
+    },
+    'USDC': {
+      'ETH': '0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48',
+      'BSC': '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      'BASE': '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+    }
+  };
+  
+  const addr = tokenMap[symbol.toUpperCase()]?.[chain.toUpperCase()];
+  if (addr) return addr;
+  
+  // For native tokens (BTC on BTC, ETH on ETH, etc.), RocketX often uses the symbol or a specific constant
+  if (symbol.toUpperCase() === chain.toUpperCase() || 
+      (symbol.toUpperCase() === 'BTC' && chain.toUpperCase() === 'BTC') ||
+      (symbol.toUpperCase() === 'ETH' && chain.toUpperCase() === 'ETH') ||
+      (symbol.toUpperCase() === 'BNB' && chain.toUpperCase() === 'BSC')) {
+    return '0x0000000000000000000000000000000000000000'; // Native token representation
+  }
+  
+  return symbol; 
+}
+
 /**
  * Get the current exchange rate for a crypto pair from RocketX
  */
@@ -82,11 +141,18 @@ export async function getRocketxRate(
   amount: number = 1
 ): Promise<RocketXQuote | null> {
   try {
+    const fromAddr = getRocketXTokenAddress(from, fromNetwork);
+    const toAddr = getRocketXTokenAddress(to, toNetwork);
+    const fromNetId = getRocketXNetworkId(fromNetwork);
+    const toNetId = getRocketXNetworkId(toNetwork);
+
+    console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to} (${toNetId}:${toAddr}) amount: ${amount}`);
+
     const data = await rocketXApi.getQuotation({
-      fromTokenAddress: from,
-      fromTokenChain: fromNetwork,
-      toTokenAddress: to,
-      toTokenChain: toNetwork,
+      fromTokenAddress: fromAddr,
+      fromTokenChain: fromNetId,
+      toTokenAddress: toAddr,
+      toTokenChain: toNetId,
       amount,
       fromAddress: "0x0000000000000000000000000000000000000000",
     });
