@@ -42,7 +42,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
 
     if (!supabaseUrl || !supabaseKey) {
       console.warn('Supabase not configured, using mock/local mode for RocketX');
-      throw new Error('RocketX service is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.');
+      throw new Error('RocketX service is not configured. Please set VITE_SUPABASE_URL and  VITE_SUPABASE_ANON_KEY.');
     }
 
     console.log('Invoking RocketX Edge Function:', { action, params });
