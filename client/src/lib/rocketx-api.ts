@@ -97,10 +97,18 @@ function getRocketXNetworkId(chain: string): string {
     'BASE': 'BASE',
     'AVALANCHE': 'AVALANCHE',
   };
-  return map[chain.toUpperCase()] || chain;
+  return map[chain.toUpperCase()] || chain.toUpperCase();
+}
+
+function isEvmChain(chain: string): boolean {
+  const evmChains = ['ETH', 'BSC', 'POLYGON', 'ARBITRUM', 'OPTIMISM', 'BASE', 'AVALANCHE'];
+  return evmChains.includes(chain.toUpperCase());
 }
 
 function getRocketXTokenAddress(symbol: string, chain: string): string {
+  const chainUpper = chain.toUpperCase();
+  const symbolUpper = symbol.toUpperCase();
+
   // Common token addresses for RocketX if they aren't native
   const tokenMap: Record<string, Record<string, string>> = {
     'USDT': {
@@ -116,18 +124,38 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
     }
   };
   
-  const addr = tokenMap[symbol.toUpperCase()]?.[chain.toUpperCase()];
+  const addr = tokenMap[symbolUpper]?.[chainUpper];
   if (addr) return addr;
   
-  // For native tokens (BTC on BTC, ETH on ETH, etc.), RocketX often uses the symbol or a specific constant
-  if (symbol.toUpperCase() === chain.toUpperCase() || 
-      (symbol.toUpperCase() === 'BTC' && chain.toUpperCase() === 'BTC') ||
-      (symbol.toUpperCase() === 'ETH' && chain.toUpperCase() === 'ETH') ||
-      (symbol.toUpperCase() === 'BNB' && chain.toUpperCase() === 'BSC')) {
-    return '0x0000000000000000000000000000000000000000'; // Native token representation
+  // Handling Native Tokens
+  const isNative = symbolUpper === chainUpper || 
+    (symbolUpper === 'BNB' && chainUpper === 'BSC') ||
+    (symbolUpper === 'MATIC' && chainUpper === 'POLYGON');
+
+  if (isNative) {
+    if (isEvmChain(chainUpper)) {
+      return '0x0000000000000000000000000000000000000000';
+    } else {
+      return symbolUpper; // Non-EVM (BTC, etc.) use symbol
+    }
   }
   
   return symbol; 
+}
+
+function formatAmountForRocketX(amount: number, symbol: string, chain: string, decimals: number = 18): string {
+  const chainUpper = chain.toUpperCase();
+  const symbolUpper = symbol.toUpperCase();
+
+  if (chainUpper === 'BTC') {
+    // BTC to satoshis (10^8)
+    return Math.floor(amount * 100000000).toString();
+  }
+
+  // EVM chains: amount to smallest unit
+  // Defaulting to 18 decimals if not provided for ETH/Native, 
+  // though real tokens should use their own decimals
+  return Math.floor(amount * Math.pow(10, decimals)).toString();
 }
 
 /**
@@ -147,17 +175,25 @@ export async function getRocketxRate(
     const fromNetId = getRocketXNetworkId(fromNetwork);
     const toNetId = getRocketXNetworkId(toNetwork);
 
-    console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to} (${toNetId}:${toAddr}) amount: ${amount}`);
+    // Format amount based on token decimals or chain rules
+    // In a real app, we'd fetch token decimals first. 
+    // For now, we use 18 for EVM as a common baseline unless specified in params.
+    const formattedAmount = formatAmountForRocketX(
+      amount, 
+      from, 
+      fromNetwork, 
+      params.fromDecimals || 18
+    );
 
-    // RocketX quotation requires a valid fromAddress for routing. 
-    // We try to pass a real address if possible, otherwise fallback to zero address for initial quote.
+    console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to} (${toNetId}:${toAddr}) amount: ${formattedAmount}`);
+
     const data = await rocketXApi.getQuotation({
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
       toTokenAddress: toAddr,
       toTokenChain: toNetId,
-      amount,
-      fromAddress: params.fromAddress || "0x0000000000000000000000000000000000000000",
+      amount: Number(formattedAmount),
+      fromAddress: params.fromAddress || (isEvmChain(fromNetwork) ? "0x0000000000000000000000000000000000000000" : "NATIVE_SENDER"),
     });
 
     if (data && data.length > 0) {
