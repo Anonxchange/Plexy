@@ -71,6 +71,13 @@ export function AppHeader() {
   const balance = walletData?.totalBalance || 0;
   const preferredCurrency = walletData?.preferredCurrency || 'USD';
   const isConverting = walletData?.isConverting || false;
+
+  const setPreferredCurrency = (currency: string) => {
+    if (user?.id) {
+      localStorage.setItem(`pexly_currency_${user.id}`, currency);
+      // useWalletData will pick this up via the 'storage' listener or re-render
+    }
+  };
   
   useEffect(() => {
     if (!user) return;
