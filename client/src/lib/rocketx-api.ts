@@ -138,7 +138,8 @@ export async function getRocketxRate(
   fromNetwork: string,
   to: string,
   toNetwork: string,
-  amount: number = 1
+  amount: number = 1,
+  params: Record<string, any> = {}
 ): Promise<RocketXQuote | null> {
   try {
     const fromAddr = getRocketXTokenAddress(from, fromNetwork);
@@ -148,13 +149,15 @@ export async function getRocketxRate(
 
     console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to} (${toNetId}:${toAddr}) amount: ${amount}`);
 
+    // RocketX quotation requires a valid fromAddress for routing. 
+    // We try to pass a real address if possible, otherwise fallback to zero address for initial quote.
     const data = await rocketXApi.getQuotation({
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
       toTokenAddress: toAddr,
       toTokenChain: toNetId,
       amount,
-      fromAddress: "0x0000000000000000000000000000000000000000",
+      fromAddress: params.fromAddress || "0x0000000000000000000000000000000000000000",
     });
 
     if (data && data.length > 0) {
