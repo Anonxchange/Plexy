@@ -163,6 +163,13 @@ function formatAmountForRocketX(amount: number, symbol: string, chain: string, d
   const chainUpper = chain.toUpperCase();
   const symbolUpper = symbol.toUpperCase();
   
+  // For BTC, RocketX might expect a decimal string instead of satoshis in some versions of their API
+  // However, the error "Bad Request" with code 400 usually indicates a validation failure.
+  // Let's try sending it as a standard decimal string for BTC to see if it resolves the 400 error.
+  if (chainUpper === 'BTC' || symbolUpper === 'BTC') {
+    return amount.toFixed(8);
+  }
+
   // Determine decimals if not provided
   let finalDecimals = decimals;
   if (finalDecimals === undefined) {
