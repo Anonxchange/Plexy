@@ -229,8 +229,8 @@ export async function getRocketxRate(
       toTokenAddress: toAddr,
       toTokenChain: toNetId,
       amount: formattedAmount,
-      fromAddress: params.fromAddress || (isFromEvm ? "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"),
-      toAddress: params.toAddress || (isToEvm ? "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"),
+      fromAddress: params.fromAddress,
+      toAddress: params.toAddress,
       slippage: params.slippage || 3,
     };
 
@@ -267,4 +267,4 @@ export const rocketXApi = {
   async getStatus(requestId?: string, txHash?: string) {
     return callRocketX('status', { ...(requestId ? { requestId } : {}), ...(txHash ? { txHash } : {}) });
   },
-}; fix and return code back also the toaddress i mean original address sent is fake not the real
+};
