@@ -149,7 +149,10 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
     if (isEvmChain(chainUpper)) {
       return '0x0000000000000000000000000000000000000000';
     }
-    // For non-EVM native tokens, return the symbol or a specific identifier if known
+    // For non-EVM native tokens, use specific identifiers as required by RocketX
+    if (chainUpper === 'BTC') return 'BTC';
+    if (chainUpper === 'SOLANA' || chainUpper === 'SOL') return 'SOL';
+    if (chainUpper === 'TRON' || chainUpper === 'TRX') return 'TRX';
     return symbolUpper;
   }
 
@@ -224,10 +227,12 @@ export async function getRocketxRate(
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
       amount: formattedAmount,
-      fromAddress: params.fromAddress || (isFromEvm ? "0x0000000000000000000000000000000000000000" : undefined),
-      toAddress: params.toAddress || params.fromAddress || (isToEvm ? "0x0000000000000000000000000000000000000000" : undefined),
-      slippage: params.slippage || 1,
+      fromAddress: params.fromAddress || (isFromEvm ? "0x0000000000000000000000000000000000000000" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"), // Default BTC address if missing
+      toAddress: params.toAddress || params.fromAddress || (isToEvm ? "0x0000000000000000000000000000000000000000" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"),
+      slippage: params.slippage || 3, // Increased default slippage for liquidity
     };
+
+    console.log('RocketX getQuotation Params:', JSON.stringify(quotationParams, null, 2));
 
     if (toAddr && toNetId) {
       quotationParams.toTokenAddress = toAddr;
