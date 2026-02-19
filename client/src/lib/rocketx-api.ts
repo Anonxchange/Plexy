@@ -161,8 +161,8 @@ export async function getRocketxRate(
     const tokens = await rocketXApi.getTokens(fromNetId);
     const targetTokens = toNetId ? await rocketXApi.getTokens(toNetId) : [];
 
-    const fromToken = tokens?.find((t: any) => t.symbol.toUpperCase() === from.toUpperCase());
-    const toToken = to && targetTokens?.find((t: any) => t.symbol.toUpperCase() === to.toUpperCase());
+    const fromToken = tokens?.find((t: any) => t?.symbol?.toUpperCase() === from.toUpperCase());
+    const toToken = to && targetTokens?.find((t: any) => t?.symbol?.toUpperCase() === to.toUpperCase());
 
     const fromAddr = fromToken?.address || getRocketXTokenAddress(from, fromNetwork);
     const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork!) : undefined);
