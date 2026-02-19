@@ -81,23 +81,36 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           return;
         }
 
-        // Try to fetch real wallet address for quotation if user is logged in
+        // Try to fetch real wallet addresses for quotation if user is logged in
         let fromAddress: string | undefined = undefined;
+        let toAddress: string | undefined = undefined;
+
         if (user?.id) {
           const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-          const targetNet = fromNetwork.toLowerCase();
-          const wallet = wallets.find(w => 
-            w.chainId?.toLowerCase() === targetNet || 
-            w.walletType?.toLowerCase() === targetNet ||
-            (targetNet === 'btc' && w.walletType === 'bitcoin') ||
-            (targetNet === 'eth' && w.walletType === 'ethereum') ||
-            (targetNet === 'bsc' && w.walletType === 'binance')
-          );
-          if (wallet) fromAddress = wallet.address;
+          
+          const findWallet = (network: string, symbol: string) => {
+            const targetNet = network.toLowerCase();
+            const targetSym = symbol.toLowerCase();
+            return wallets.find(w => 
+              w.chainId?.toLowerCase() === targetNet || 
+              w.walletType?.toLowerCase() === targetNet ||
+              (targetNet === 'btc' && w.walletType === 'bitcoin') ||
+              (targetNet === 'eth' && w.walletType === 'ethereum') ||
+              (targetNet === 'bsc' && w.walletType === 'binance') ||
+              (targetNet === 'trx' && (w.walletType?.toLowerCase() === 'tron' || w.chainId?.toLowerCase() === 'tron (trc-20)')) ||
+              (targetNet === 'tron' && (w.walletType?.toLowerCase() === 'tron' || w.chainId?.toLowerCase() === 'tron (trc-20)'))
+            );
+          };
+
+          const fWallet = findWallet(fromNetwork, fromCrypto);
+          if (fWallet) fromAddress = fWallet.address;
+
+          const tWallet = findWallet(toNetwork, toCrypto);
+          if (tWallet) toAddress = tWallet.address;
         }
 
         // Try to fetch from Rocketx first for real exchange rates
-        const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount, { fromAddress });
+        const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount, { fromAddress, toAddress });
         
         let marketRate = (rocketxQuote && rocketxQuote.toAmount ? (rocketxQuote.toAmount / (debouncedAmount || 1)) : 0);
         
