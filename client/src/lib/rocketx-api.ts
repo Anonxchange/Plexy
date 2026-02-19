@@ -84,27 +84,33 @@ const rocketXNetworks = [
 ];
 
 function getRocketXNetworkId(chain: string): string {
+  if (!chain) return "";
   const map: Record<string, string> = {
     'BTC': 'BTC',
     'ETH': 'ETH',
     'BSC': 'BSC',
     'TRX': 'TRON',
+    'TRON': 'TRON',
     'SOL': 'SOLANA',
+    'SOLANA': 'SOLANA',
     'POLYGON': 'POLYGON',
     'ARBITRUM': 'ARBITRUM',
     'OPTIMISM': 'OPTIMISM',
     'BASE': 'BASE',
     'AVALANCHE': 'AVALANCHE',
   };
-  return map[chain.toUpperCase()] || chain.toUpperCase();
+  const upper = chain.toUpperCase();
+  return map[upper] || upper;
 }
 
 function isEvmChain(chain: string): boolean {
+  if (!chain) return false;
   const evmChains = ['ETH', 'BSC', 'POLYGON', 'ARBITRUM', 'OPTIMISM', 'BASE', 'AVALANCHE'];
   return evmChains.includes(chain.toUpperCase());
 }
 
 function getRocketXTokenAddress(symbol: string, chain: string): string {
+  if (!chain || !symbol) return "0x0000000000000000000000000000000000000000";
   const chainUpper = chain.toUpperCase();
   const symbolUpper = symbol.toUpperCase();
 
@@ -158,29 +164,51 @@ export async function getRocketxRate(
     const fromNetId = getRocketXNetworkId(fromNetwork);
     const toNetId = toNetwork ? getRocketXNetworkId(toNetwork) : undefined;
 
-    const tokens = await rocketXApi.getTokens(fromNetId);
-    const targetTokens = toNetId ? await rocketXApi.getTokens(toNetId) : [];
+    // Check if we have tokens for the networks
+    let tokens: any[] = [];
+    try {
+      tokens = await rocketXApi.getTokens(fromNetId);
+    } catch (e) {
+      console.warn('Failed to fetch fromTokens from RocketX', e);
+    }
 
-    const fromToken = tokens?.find((t: any) => t?.symbol?.toUpperCase() === from.toUpperCase());
-    const toToken = to && targetTokens?.find((t: any) => t?.symbol?.toUpperCase() === to.toUpperCase());
+    let targetTokens: any[] = [];
+    if (toNetId) {
+      try {
+        targetTokens = await rocketXApi.getTokens(toNetId);
+      } catch (e) {
+        console.warn('Failed to fetch toTokens from RocketX', e);
+      }
+    }
 
-    const fromAddr = fromToken?.address || getRocketXTokenAddress(from, fromNetwork);
-    const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork!) : undefined);
+    // Ensure we handle cases where symbol might be missing or different from what we expect
+    const fromToken = Array.isArray(tokens) ? tokens.find((t: any) => t?.symbol?.toUpperCase() === (from || "").toUpperCase()) : null;
+    const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
+
+    const fromAddr = fromToken?.address || getRocketXTokenAddress(from || "", fromNetwork || "");
+    const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : "0x0000000000000000000000000000000000000000");
     const fromDecimals = fromToken?.decimals || params.fromDecimals || 18;
 
-    const formattedAmount = formatAmountForRocketX(amount, from, fromNetwork, fromDecimals);
+    const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
 
     console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to ?? 'walletless'} (${toNetId ?? 'walletless'}), amount: ${formattedAmount}`);
 
     const quotationParams: any = {
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
-      amount: Number(formattedAmount),
-      fromAddress: params.fromAddress || (isEvmChain(fromNetwork) ? "0x0000000000000000000000000000000000000000" : "NATIVE_SENDER"),
+      amount: formattedAmount,
+      fromAddress: params.fromAddress || "0x0000000000000000000000000000000000000000",
+      toAddress: params.toAddress || params.fromAddress || "0x0000000000000000000000000000000000000000",
+      slippage: params.slippage || 1,
     };
 
     if (toAddr && toNetId) {
       quotationParams.toTokenAddress = toAddr;
+      quotationParams.toTokenChain = toNetId;
+    } else if (toNetId) {
+      // If toAddr is missing but toNetId is present, we might be missing a mapping
+      // or it's a native token on that network
+      quotationParams.toTokenAddress = getRocketXTokenAddress(to || toNetwork || "", toNetwork || "");
       quotationParams.toTokenChain = toNetId;
     }
 
