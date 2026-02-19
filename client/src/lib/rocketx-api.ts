@@ -40,6 +40,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
+      console.warn('Supabase not configured, using mock/local mode for RocketX');
       throw new Error('RocketX service is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
     }
 
@@ -49,17 +50,41 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
       body: { action, params },
     });
 
-    if (error) throw new Error(`Connection error: ${error.message || 'Could not reach swap service'}`);
-    if (!data?.success) throw new Error(data?.error || data?.warning || 'Exchange service returned an error');
+    if (error) {
+      console.error('Supabase function invocation error:', error);
+      throw new Error(`Connection error: ${error.message || 'Could not reach swap service'}`);
+    }
+
+    if (!data?.success) {
+      console.error('RocketX API error:', data);
+      throw new Error(data?.error || data?.warning || 'Exchange service returned an error');
+    }
 
     return data.data;
   } catch (err: any) {
     console.error('callRocketX error:', err);
+    if (err.message?.includes('Failed to send a request')) {
+      throw new Error('Connection error: The Edge Function "rocketx-swap" could not be reached. Please verify the function is deployed.');
+    }
     throw err;
   }
 }
 
+const rocketXNetworks = [
+  { symbol: "BTC", name: "Bitcoin", chain: "BTC", rocketXNetId: "BTC" },
+  { symbol: "ETH", name: "Ethereum", chain: "ETH", rocketXNetId: "ETH" },
+  { symbol: "USDT", name: "Tether", chain: "ETH", rocketXNetId: "ETH" },
+  { symbol: "USDC", name: "USD Coin", chain: "ETH", rocketXNetId: "ETH" },
+  { symbol: "BNB", name: "BNB", chain: "BSC", rocketXNetId: "BSC" },
+  { symbol: "MATIC", name: "Polygon", chain: "POLYGON", rocketXNetId: "POLYGON" },
+  { symbol: "ARB", name: "Arbitrum", chain: "ARBITRUM", rocketXNetId: "ARBITRUM" },
+  { symbol: "OP", name: "Optimism", chain: "OPTIMISM", rocketXNetId: "OPTIMISM" },
+  { symbol: "SOL", name: "Solana", chain: "SOL", rocketXNetId: "SOL" },
+  { symbol: "TRX", name: "Tron", chain: "TRX", rocketXNetId: "TRX" },
+];
+
 function getRocketXNetworkId(chain: string): string {
+  if (!chain) return "";
   const map: Record<string, string> = {
     'BTC': 'BTC',
     'ETH': 'ETH',
@@ -74,63 +99,80 @@ function getRocketXNetworkId(chain: string): string {
     'BASE': 'BASE',
     'AVALANCHE': 'AVALANCHE',
   };
-  return map[chain.toUpperCase()] || chain.toUpperCase();
+  const upper = chain.toUpperCase();
+  return map[upper] || upper;
 }
 
 function isEvmChain(chain: string): boolean {
+  if (!chain) return false;
   const evmChains = ['ETH', 'BSC', 'POLYGON', 'ARBITRUM', 'OPTIMISM', 'BASE', 'AVALANCHE'];
   return evmChains.includes(chain.toUpperCase());
 }
 
 function getRocketXTokenAddress(symbol: string, chain: string): string {
+  if (!chain || !symbol) return "0x0000000000000000000000000000000000000000";
+  const chainUpper = chain.toUpperCase();
+  const symbolUpper = symbol.toUpperCase();
+
   const tokenMap: Record<string, Record<string, string>> = {
     'USDT': {
-      'ETH': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      'ETH': '0xdac17f958d2ee523a2206206994597C13D831ec7',
       'BSC': '0x55d398326f99059ff775485246999027b3197955',
+      'TRX': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
       'TRON': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
       'POLYGON': '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
+      'SOLANA': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
       'SOL': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
     },
     'USDC': {
       'ETH': '0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48',
       'BSC': '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
-      'POLYGON': '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
+      'BASE': '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+      'SOLANA': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       'SOL': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-    },
+      'POLYGON': '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
+    }
   };
 
-  const chainUpper = chain.toUpperCase();
-  const symbolUpper = symbol.toUpperCase();
+  const addr = tokenMap[symbolUpper]?.[chainUpper];
+  if (addr) return addr;
 
-  if (tokenMap[symbolUpper]?.[chainUpper]) return tokenMap[symbolUpper][chainUpper];
+  const isNative = symbolUpper === chainUpper ||
+    (symbolUpper === 'BTC' && (chainUpper === 'BTC' || chainUpper === 'BITCOIN')) ||
+    (symbolUpper === 'BNB' && chainUpper === 'BSC') ||
+    (symbolUpper === 'ETH' && chainUpper === 'ETH') ||
+    (symbolUpper === 'MATIC' && chainUpper === 'POLYGON') ||
+    (symbolUpper === 'TRX' && (chainUpper === 'TRX' || chainUpper === 'TRON')) ||
+    (symbolUpper === 'SOL' && (chainUpper === 'SOL' || chainUpper === 'SOLANA'));
 
-  if (symbolUpper === chainUpper || 
-      (symbolUpper === 'BTC' && chainUpper === 'BTC') ||
-      (symbolUpper === 'ETH' && chainUpper === 'ETH') ||
-      (symbolUpper === 'BNB' && chainUpper === 'BSC') ||
-      (symbolUpper === 'MATIC' && chainUpper === 'POLYGON') ||
-      (symbolUpper === 'TRX' && (chainUpper === 'TRX' || chainUpper === 'TRON')) ||
-      (symbolUpper === 'SOL' && (chainUpper === 'SOL' || chainUpper === 'SOLANA'))) {
-
-    if (isEvmChain(chainUpper)) return '0x0000000000000000000000000000000000000000';
+  if (isNative) {
+    if (isEvmChain(chainUpper)) {
+      return '0x0000000000000000000000000000000000000000';
+    }
+    // For non-EVM native tokens, use specific identifiers as required by RocketX
     if (chainUpper === 'BTC') return 'BTC';
-    if (chainUpper === 'SOL' || chainUpper === 'SOLANA') return 'SOL';
-    if (chainUpper === 'TRX' || chainUpper === 'TRON') return 'TRX';
+    if (chainUpper === 'SOLANA' || chainUpper === 'SOL') return 'SOL';
+    if (chainUpper === 'TRON' || chainUpper === 'TRX') return 'TRX';
+    return '0x0000000000000000000000000000000000000000'; // Default for other natives if needed
   }
 
-  return symbol;
+  return symbol; 
 }
 
 function formatAmountForRocketX(amount: number, symbol: string, chain: string, decimals?: number): string {
-  let finalDecimals = decimals;
   const chainUpper = chain.toUpperCase();
   const symbolUpper = symbol.toUpperCase();
-
+  
+  // Determine decimals if not provided
+  let finalDecimals = decimals;
   if (finalDecimals === undefined) {
-    if (symbolUpper === 'BTC' || chainUpper === 'BTC') finalDecimals = 8;
-    else if (symbolUpper === 'TRX' || chainUpper === 'TRX') finalDecimals = 6;
-    else if (symbolUpper === 'SOL' || chainUpper === 'SOL') finalDecimals = 9;
-    else if (symbolUpper === 'USDT' || symbolUpper === 'USDC') finalDecimals = ['ETH','ARBITRUM','OPTIMISM','BASE'].includes(chainUpper) ? 6 : 18;
+    if (chainUpper === 'BTC' || symbolUpper === 'BTC') finalDecimals = 8;
+    else if (chainUpper === 'TRX' || chainUpper === 'TRON' || symbolUpper === 'TRX') finalDecimals = 6;
+    else if (chainUpper === 'SOL' || chainUpper === 'SOLANA' || symbolUpper === 'SOL') finalDecimals = 9;
+    else if (symbolUpper === 'USDT' || symbolUpper === 'USDC') {
+       if (chainUpper === 'ETH' || chainUpper === 'ARBITRUM' || chainUpper === 'OPTIMISM' || chainUpper === 'BASE') finalDecimals = 6;
+       else finalDecimals = 18;
+    }
     else finalDecimals = 18;
   }
 
@@ -149,30 +191,53 @@ export async function getRocketxRate(
     const fromNetId = getRocketXNetworkId(fromNetwork);
     const toNetId = toNetwork ? getRocketXNetworkId(toNetwork) : undefined;
 
-    const tokens: any[] = await rocketXApi.getTokens(fromNetId).catch(() => []);
-    const targetTokens: any[] = toNetId ? await rocketXApi.getTokens(toNetId).catch(() => []) : [];
+    // Check if we have tokens for the networks
+    let tokens: any[] = [];
+    try {
+      tokens = await rocketXApi.getTokens(fromNetId);
+    } catch (e) {
+      console.warn('Failed to fetch fromTokens from RocketX', e);
+    }
 
-    const fromToken = tokens.find((t: any) => t.symbol?.toUpperCase() === from?.toUpperCase());
-    const toToken = targetTokens.find((t: any) => t.symbol?.toUpperCase() === to?.toUpperCase());
+    let targetTokens: any[] = [];
+    if (toNetId) {
+      try {
+        targetTokens = await rocketXApi.getTokens(toNetId);
+      } catch (e) {
+        console.warn('Failed to fetch toTokens from RocketX', e);
+      }
+    }
 
-    const fromAddr = fromToken?.address || getRocketXTokenAddress(from, fromNetwork);
-    const toAddr = toToken?.address || getRocketXTokenAddress(to || '', toNetwork || fromNetwork);
+    // Ensure we handle cases where symbol might be missing or different from what we expect
+    const fromToken = Array.isArray(tokens) ? tokens.find((t: any) => t?.symbol?.toUpperCase() === (from || "").toUpperCase()) : null;
+    const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
 
-    const formattedAmount = formatAmountForRocketX(amount, from, fromNetwork, fromToken?.decimals || params.fromDecimals);
+    const fromAddr = fromToken?.address || getRocketXTokenAddress(from || "", fromNetwork || "");
+    const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : '0x0000000000000000000000000000000000000000');
+    
+    const fromDecimals = fromToken?.decimals || params.fromDecimals;
+    const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
+
+    console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to ?? 'walletless'} (${toNetId ?? 'walletless'}), amount: ${formattedAmount}`);
 
     const isFromEvm = isEvmChain(fromNetwork);
     const isToEvm = toNetwork ? isEvmChain(toNetwork) : isFromEvm;
 
-    const quotationParams = {
+    const quotationParams: any = {
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
       toTokenAddress: toAddr,
       toTokenChain: toNetId,
       amount: formattedAmount,
-      fromAddress: params.fromAddress || (isFromEvm ? 'YOUR_REAL_EVM_ADDRESS' : 'YOUR_REAL_BTC_ADDRESS'),
-      toAddress: params.toAddress || (isToEvm ? 'YOUR_REAL_EVM_ADDRESS' : 'YOUR_REAL_BTC_ADDRESS'),
+      fromAddress: params.fromAddress || (isFromEvm ? "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"),
+      toAddress: params.toAddress || (isToEvm ? "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"),
       slippage: params.slippage || 3,
     };
+
+    // Fix for specific toTokenAddress mapping if missing from API
+    if (to === 'USDT' && toNetwork === 'ETH' && quotationParams.toTokenAddress === 'USDT') {
+      quotationParams.toTokenAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+    }
 
     console.log('RocketX getQuotation Params:', JSON.stringify(quotationParams, null, 2));
 
@@ -202,4 +267,4 @@ export const rocketXApi = {
   async getStatus(requestId?: string, txHash?: string) {
     return callRocketX('status', { ...(requestId ? { requestId } : {}), ...(txHash ? { txHash } : {}) });
   },
-};
+}; fix and return code back also the toaddress i mean original address sent is fake not the real
