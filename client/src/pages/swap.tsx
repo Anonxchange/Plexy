@@ -376,79 +376,32 @@ export function Swap() {
     const toSymbolTarget = toCurrency.toLowerCase();
 
     // Improved matching logic to find correct wallet
-    const fromWallet = wallets.find(w => {
-      const chainIdLower = w.chainId?.toLowerCase();
-      const walletTypeLower = w.walletType?.toLowerCase();
-      const assetTypeLower = w.assetType?.toLowerCase();
+    const findCorrectWallet = (targetNetwork: string, targetSymbol: string) => {
+      const net = targetNetwork.toLowerCase();
+      const sym = targetSymbol.toLowerCase();
       
-      // Normalized matching for various chain names and aliases
-      const isBTCMatch = (target: string) => ["btc", "bitcoin", "bitcoin (segwit)"].includes(target);
-      const isETHMatch = (target: string) => ["eth", "ethereum", "erc20"].includes(target);
-      const isBSCMatch = (target: string) => ["bsc", "bnb", "binance", "bep20", "binance coin"].includes(target);
-      const isSolMatch = (target: string) => ["sol", "solana"].includes(target);
-      const isTronMatch = (target: string) => ["trx", "tron", "trc20", "tron (trc-20)"].includes(target);
-      const isXRPMatch = (target: string) => ["xrp", "ripple"].includes(target);
-      const isPolygonMatch = (target: string) => ["matic", "polygon"].includes(target);
+      return wallets.find(w => {
+        const wChainId = (w.chainId || "").toLowerCase();
+        const wWalletType = (w.walletType || "").toLowerCase();
+        
+        if (wChainId === net || wWalletType === net) return true;
+        
+        if (net === 'btc' || net === 'bitcoin') return wWalletType === 'bitcoin' || wChainId.includes('bitcoin');
+        if (net === 'eth' || net === 'ethereum') return wWalletType === 'ethereum' || wChainId.includes('ethereum');
+        if (net === 'bsc' || net === 'binance') return wWalletType === 'binance' || wChainId.includes('binance') || wChainId === 'bsc';
+        if (net === 'trx' || net === 'tron') return wWalletType === 'tron' || wChainId.includes('tron');
+        if (net === 'sol' || net === 'solana') return wWalletType === 'solana' || wChainId.includes('solana');
+        if (net === 'polygon' || net === 'matic') return wWalletType === 'polygon' || wChainId.includes('polygon');
+        
+        return false;
+      });
+    };
 
-      const matchesChain = (target: string, value: string | undefined) => {
-        if (!value) return false;
-        if (isBTCMatch(target)) return isBTCMatch(value);
-        if (isETHMatch(target)) return isETHMatch(value);
-        if (isBSCMatch(target)) return isBSCMatch(value);
-        if (isSolMatch(target)) return isSolMatch(value);
-        if (isTronMatch(target)) return isTronMatch(value);
-        if (isXRPMatch(target)) return isXRPMatch(value);
-        if (isPolygonMatch(target)) return isPolygonMatch(value);
-        return target === value;
-      };
+    const fromWallet = findCorrectWallet(fromNetwork, fromCurrency);
+    const toWallet = findCorrectWallet(toNetwork, toCurrency);
 
-      return matchesChain(fromTarget, chainIdLower) || 
-             matchesChain(fromSymbolTarget, chainIdLower) ||
-             matchesChain(fromTarget, walletTypeLower) ||
-             matchesChain(fromSymbolTarget, walletTypeLower) ||
-             matchesChain(fromSymbolTarget, assetTypeLower) ||
-             // EVM Fallback for tokens
-             (["usdt", "usdc"].includes(fromSymbolTarget) && 
-              (walletTypeLower === "evm-token" || isETHMatch(walletTypeLower) || isBSCMatch(walletTypeLower)));
-    });
-    
-    const toWallet = wallets.find(w => {
-      const chainIdLower = w.chainId?.toLowerCase();
-      const walletTypeLower = w.walletType?.toLowerCase();
-      const assetTypeLower = w.assetType?.toLowerCase();
-      
-      const isBTCMatch = (target: string) => ["btc", "bitcoin", "bitcoin (segwit)"].includes(target);
-      const isETHMatch = (target: string) => ["eth", "ethereum", "erc20"].includes(target);
-      const isBSCMatch = (target: string) => ["bsc", "bnb", "binance", "bep20", "binance coin"].includes(target);
-      const isSolMatch = (target: string) => ["sol", "solana"].includes(target);
-      const isTronMatch = (target: string) => ["trx", "tron", "trc20", "tron (trc-20)"].includes(target);
-      const isXRPMatch = (target: string) => ["xrp", "ripple"].includes(target);
-      const isPolygonMatch = (target: string) => ["matic", "polygon"].includes(target);
-
-      const matchesChain = (target: string, value: string | undefined) => {
-        if (!value) return false;
-        if (isBTCMatch(target)) return isBTCMatch(value);
-        if (isETHMatch(target)) return isETHMatch(value);
-        if (isBSCMatch(target)) return isBSCMatch(value);
-        if (isSolMatch(target)) return isSolMatch(value);
-        if (isTronMatch(target)) return isTronMatch(value);
-        if (isXRPMatch(target)) return isXRPMatch(value);
-        if (isPolygonMatch(target)) return isPolygonMatch(value);
-        return target === value;
-      };
-
-      return matchesChain(toTarget, chainIdLower) || 
-             matchesChain(toSymbolTarget, chainIdLower) ||
-             matchesChain(toTarget, walletTypeLower) ||
-             matchesChain(toSymbolTarget, walletTypeLower) ||
-             matchesChain(toSymbolTarget, assetTypeLower) ||
-             // EVM Fallback for tokens
-             (["usdt", "usdc"].includes(toSymbolTarget) && 
-              (walletTypeLower === "evm-token" || isETHMatch(walletTypeLower) || isBSCMatch(walletTypeLower)));
-    });
-
-    console.log("Selected fromWallet:", fromWallet?.address, "for target:", fromTarget);
-    console.log("Selected toWallet:", toWallet?.address, "for target:", toTarget);
+    console.log("Selected fromWallet:", fromWallet?.address, "for target:", fromNetwork);
+    console.log("Selected toWallet:", toWallet?.address, "for target:", toNetwork);
 
     if (!fromWallet?.address || !toWallet?.address) {
       console.error("Wallet missing. From:", fromWallet?.address, "To:", toWallet?.address);
