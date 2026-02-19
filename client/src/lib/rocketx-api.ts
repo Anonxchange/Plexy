@@ -153,7 +153,7 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
     if (chainUpper === 'BTC') return 'BTC';
     if (chainUpper === 'SOLANA' || chainUpper === 'SOL') return 'SOL';
     if (chainUpper === 'TRON' || chainUpper === 'TRX') return 'TRX';
-    return symbolUpper;
+    return '0x0000000000000000000000000000000000000000'; // Default for other natives if needed
   }
 
   return symbol; 
@@ -176,7 +176,7 @@ function formatAmountForRocketX(amount: number, symbol: string, chain: string, d
     else finalDecimals = 18;
   }
 
-  return Math.floor(amount * 100000000).toString();
+  return Math.floor(amount * Math.pow(10, finalDecimals)).toString();
 }
 
 export async function getRocketxRate(
@@ -213,9 +213,9 @@ export async function getRocketxRate(
     const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
 
     const fromAddr = fromToken?.address || getRocketXTokenAddress(from || "", fromNetwork || "");
-    const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : "0x0000000000000000000000000000000000000000");
+    const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : '0x0000000000000000000000000000000000000000');
+    
     const fromDecimals = fromToken?.decimals || params.fromDecimals;
-
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
 
     console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to ?? 'walletless'} (${toNetId ?? 'walletless'}), amount: ${formattedAmount}`);
@@ -226,33 +226,20 @@ export async function getRocketxRate(
     const quotationParams: any = {
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
+      toTokenAddress: toAddr,
+      toTokenChain: toNetId,
       amount: formattedAmount,
-      fromAddress: params.fromAddress || (isFromEvm ? "0x0000000000000000000000000000000000000000" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"),
+      fromAddress: params.fromAddress || (isFromEvm ? "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"),
       toAddress: params.toAddress || (isToEvm ? "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"),
       slippage: params.slippage || 3,
     };
 
-    if (toNetId && !isToEvm && !params.toAddress) {
-      // For non-EVM target chains, ensure we have a valid placeholder address if none provided
-      if (toNetId === 'SOLANA' || toNetId === 'SOL') quotationParams.toAddress = "G6VpPux9VvXDRy195BwL37yK1K2X9Rz8D8W9k4T6y8mP";
-      if (toNetId === 'TRON' || toNetId === 'TRX') quotationParams.toAddress = "TY6SDFR7NHqjeKQxGTCi8q8ZY4pL8otSzgj";
+    // Fix for specific toTokenAddress mapping if missing from API
+    if (to === 'USDT' && toNetwork === 'ETH' && quotationParams.toTokenAddress === 'USDT') {
+      quotationParams.toTokenAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
     }
 
     console.log('RocketX getQuotation Params:', JSON.stringify(quotationParams, null, 2));
-
-    if (toAddr && toNetId) {
-      quotationParams.toTokenAddress = toAddr;
-      quotationParams.toTokenChain = toNetId;
-    } else if (toNetId) {
-      // If toAddr is missing but toNetId is present, we might be missing a mapping
-      // or it's a native token on that network
-      quotationParams.toTokenAddress = getRocketXTokenAddress(to || toNetwork || "", toNetwork || "");
-      quotationParams.toTokenChain = toNetId;
-    }
-
-    if (!quotationParams.fromAddress || !quotationParams.toAddress) {
-       console.warn('Missing wallet address for non-EVM chain. Request might fail.');
-    }
 
     const data = await rocketXApi.getQuotation(quotationParams);
 
