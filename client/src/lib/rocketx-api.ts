@@ -163,20 +163,18 @@ function formatAmountForRocketX(amount: number, symbol: string, chain: string, d
   const chainUpper = chain.toUpperCase();
   const symbolUpper = symbol.toUpperCase();
   
-  // For BTC, RocketX might expect a decimal string instead of satoshis in some versions of their API
-  // However, the error "Bad Request" with code 400 usually indicates a validation failure.
-  // Let's try sending it as a standard decimal string for BTC to see if it resolves the 400 error.
-  if (chainUpper === 'BTC' || symbolUpper === 'BTC') {
-    return amount.toFixed(8);
+  // For BTC and other non-EVM native tokens, RocketX expects a decimal string (e.g. "0.01")
+  // For EVM tokens, it typically expects the amount in base units (e.g. wei)
+  if (chainUpper === 'BTC' || symbolUpper === 'BTC' || 
+      chainUpper === 'SOL' || symbolUpper === 'SOL' ||
+      chainUpper === 'TRX' || symbolUpper === 'TRX' || chainUpper === 'TRON') {
+    return amount.toString();
   }
 
-  // Determine decimals if not provided
+  // Determine decimals for EVM/Token units if not provided
   let finalDecimals = decimals;
   if (finalDecimals === undefined) {
-    if (chainUpper === 'BTC' || symbolUpper === 'BTC') finalDecimals = 8;
-    else if (chainUpper === 'TRX' || chainUpper === 'TRON' || symbolUpper === 'TRX') finalDecimals = 6;
-    else if (chainUpper === 'SOL' || chainUpper === 'SOLANA' || symbolUpper === 'SOL') finalDecimals = 9;
-    else if (symbolUpper === 'USDT' || symbolUpper === 'USDC') {
+    if (symbolUpper === 'USDT' || symbolUpper === 'USDC') {
        if (chainUpper === 'ETH' || chainUpper === 'ARBITRUM' || chainUpper === 'OPTIMISM' || chainUpper === 'BASE') finalDecimals = 6;
        else finalDecimals = 18;
     }
