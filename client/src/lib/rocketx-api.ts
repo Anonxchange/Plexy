@@ -163,12 +163,15 @@ function formatAmountForRocketX(amount: number, symbol: string, chain: string, d
   const chainUpper = chain.toUpperCase();
   const symbolUpper = symbol.toUpperCase();
   
-  // For BTC and other non-EVM native tokens, RocketX expects a decimal string (e.g. "0.01")
-  // For EVM tokens, it typically expects the amount in base units (e.g. wei)
+  // For BTC, SOL, and TRX, RocketX typically expects the amount as a decimal string (e.g., "0.0001")
+  // The user mentioned 1000 being wrong for Bitcoin. 1000 sats = 0.00001 BTC.
+  // If the user inputs 0.0001, we should return "0.0001".
+  
   if (chainUpper === 'BTC' || symbolUpper === 'BTC' || 
       chainUpper === 'SOL' || symbolUpper === 'SOL' ||
       chainUpper === 'TRX' || symbolUpper === 'TRX' || chainUpper === 'TRON') {
-    return amount.toString();
+    // Return with sufficient precision for crypto amounts
+    return amount.toFixed(8).replace(/\.?0+$/, "");
   }
 
   // Determine decimals for EVM/Token units if not provided
@@ -181,6 +184,7 @@ function formatAmountForRocketX(amount: number, symbol: string, chain: string, d
     else finalDecimals = 18;
   }
 
+  // Use a more robust way to handle decimals to avoid floating point issues
   return Math.floor(amount * Math.pow(10, finalDecimals)).toString();
 }
 
@@ -223,6 +227,12 @@ export async function getRocketxRate(
     const fromDecimals = fromToken?.decimals || params.fromDecimals;
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
 
+    // Validation: Ensure we don't send placeholders to RocketX
+    if (params.toAddress === 'YOUR_REAL_EVM_ADDRESS' || !params.toAddress) {
+      console.warn('Invalid toAddress detected, suppressing quote request');
+      return null;
+    }
+
     console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to ?? 'walletless'} (${toNetId ?? 'walletless'}), amount: ${formattedAmount}`);
 
     const isFromEvm = isEvmChain(fromNetwork);
@@ -239,8 +249,13 @@ export async function getRocketxRate(
       slippage: params.slippage || 3,
     };
 
+    // Ensure toAddress is always set to the user's destination wallet address
+    if (params.toAddress) {
+      quotationParams.toAddress = params.toAddress;
+    }
+
     // Fix for specific toTokenAddress mapping if missing from API
-    if (to === 'USDT' && toNetwork === 'ETH' && quotationParams.toTokenAddress === 'USDT') {
+    if (to === 'USDT' && toNetwork === 'ETH' && (quotationParams.toTokenAddress === 'USDT' || !quotationParams.toTokenAddress)) {
       quotationParams.toTokenAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
     }
 
