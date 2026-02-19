@@ -46,7 +46,8 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
 
     console.log('Invoking RocketX Edge Function:', { action, params });
 
-    const { data, error } = await supabase.functions.invoke('rocketx-swap', {
+    // Ensure action and params are sent correctly to match the edge function's expected structure
+    const { data, error } = await supabase.functions.invoke('rocketx-api', {
       body: { action, params },
     });
 
@@ -64,7 +65,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
   } catch (err: any) {
     console.error('callRocketX error:', err);
     if (err.message?.includes('Failed to send a request')) {
-      throw new Error('Connection error: The Edge Function "rocketx-swap" could not be reached. Please verify the function is deployed.');
+      throw new Error('Connection error: The Edge Function "rocketx-api" could not be reached. Please verify the function name is "rocketx-api" and it is deployed.');
     }
     throw err;
   }
@@ -218,13 +219,13 @@ export async function getRocketxRate(
     }
 
     // Ensure we handle cases where symbol might be missing or different from what we expect
-    const fromToken = Array.isArray(tokens) ? tokens.find((t: any) => t?.symbol?.toUpperCase() === (from || "").toUpperCase()) : null;
-    const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
+    const fromToken = Array.isArray(tokens) ? tokens.find((t: any) => t?.token_symbol?.toUpperCase() === (from || "").toUpperCase()) : null;
+    const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.token_symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
 
-    const fromAddr = fromToken?.address || getRocketXTokenAddress(from || "", fromNetwork || "");
-    const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : '0x0000000000000000000000000000000000000000');
+    const fromAddr = fromToken?.contract_address || getRocketXTokenAddress(from || "", fromNetwork || "");
+    const toAddr = toToken?.contract_address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : '0x0000000000000000000000000000000000000000');
     
-    const fromDecimals = fromToken?.decimals || params.fromDecimals;
+    const fromDecimals = fromToken?.token_decimals || params.fromDecimals;
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
 
     // Validation: Ensure we don't send placeholders to RocketX
@@ -239,10 +240,10 @@ export async function getRocketxRate(
     const isToEvm = toNetwork ? isEvmChain(toNetwork) : isFromEvm;
 
     const quotationParams: any = {
-      fromTokenAddress: fromAddr,
-      fromTokenChain: fromNetId,
-      toTokenAddress: toAddr,
-      toTokenChain: toNetId,
+      fromToken: fromAddr,
+      fromNetwork: fromNetId,
+      toToken: toAddr,
+      toNetwork: toNetId,
       amount: formattedAmount,
       fromAddress: params.fromAddress,
       toAddress: params.toAddress,
@@ -255,8 +256,8 @@ export async function getRocketxRate(
     }
 
     // Fix for specific toTokenAddress mapping if missing from API
-    if (to === 'USDT' && toNetwork === 'ETH' && (quotationParams.toTokenAddress === 'USDT' || !quotationParams.toTokenAddress)) {
-      quotationParams.toTokenAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+    if (to === 'USDT' && toNetwork === 'ETH' && (quotationParams.toToken === 'USDT' || !quotationParams.toToken)) {
+      quotationParams.toToken = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
     }
 
     console.log('RocketX getQuotation Params:', JSON.stringify(quotationParams, null, 2));
@@ -278,9 +279,13 @@ export async function getRocketxRate(
 
 export const rocketXApi = {
   async getConfiguration() { return callRocketX('configs'); },
-  async getTokens(networkId: string, page = 1, limit = 50) { return callRocketX('tokens', { networkId, page, limit }); },
-  async searchTokens(keyword: string, networkId?: string) { return callRocketX('search_tokens', { keyword, ...(networkId ? { networkId } : {}) }); },
-  async getQuotation(params: { fromTokenAddress: string; fromTokenChain: string; toTokenAddress?: string; toTokenChain?: string; amount: number; slippage?: number; fromAddress?: string; toAddress?: string; }) {
+  async getTokens(chainId: string, page = 1, perPage = 100) { 
+    return callRocketX('tokens', { chainId, page, perPage }); 
+  },
+  async searchTokens(keyword: string, chainId?: string) { 
+    return callRocketX('tokens', { keyword, ...(chainId ? { chainId } : {}), perPage: 100 }); 
+  },
+  async getQuotation(params: { fromToken: string; fromNetwork: string; toToken?: string; toNetwork?: string; amount: string; slippage?: number; fromAddress?: string; toAddress?: string; }) {
     return callRocketX('quotation', params);
   },
   async executeSwap(params: Record<string, any>) { return callRocketX('swap', params); },
