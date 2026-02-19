@@ -119,12 +119,18 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
       'ETH': '0xdac17f958d2ee523a2206206994597C13D831ec7',
       'BSC': '0x55d398326f99059ff775485246999027b3197955',
       'TRX': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+      'TRON': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
       'POLYGON': '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
+      'SOLANA': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+      'SOL': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
     },
     'USDC': {
       'ETH': '0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48',
       'BSC': '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
       'BASE': '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+      'SOLANA': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      'SOL': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      'POLYGON': '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
     }
   };
 
@@ -132,24 +138,42 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
   if (addr) return addr;
 
   const isNative = symbolUpper === chainUpper ||
-    (symbolUpper === 'BTC' && chainUpper === 'BTC') ||
+    (symbolUpper === 'BTC' && (chainUpper === 'BTC' || chainUpper === 'BITCOIN')) ||
     (symbolUpper === 'BNB' && chainUpper === 'BSC') ||
     (symbolUpper === 'ETH' && chainUpper === 'ETH') ||
-    (symbolUpper === 'MATIC' && chainUpper === 'POLYGON');
+    (symbolUpper === 'MATIC' && chainUpper === 'POLYGON') ||
+    (symbolUpper === 'TRX' && (chainUpper === 'TRX' || chainUpper === 'TRON')) ||
+    (symbolUpper === 'SOL' && (chainUpper === 'SOL' || chainUpper === 'SOLANA'));
 
   if (isNative) {
-    return isEvmChain(chainUpper) ? '0x0000000000000000000000000000000000000000' : symbolUpper;
+    if (isEvmChain(chainUpper)) {
+      return '0x0000000000000000000000000000000000000000';
+    }
+    // For non-EVM native tokens, return the symbol or a specific identifier if known
+    return symbolUpper;
   }
 
   return symbol; 
 }
 
-function formatAmountForRocketX(amount: number, symbol: string, chain: string, decimals: number = 18): string {
+function formatAmountForRocketX(amount: number, symbol: string, chain: string, decimals?: number): string {
   const chainUpper = chain.toUpperCase();
-  if (chainUpper === 'BTC') {
-    return Math.floor(amount * 1e8).toString();
+  const symbolUpper = symbol.toUpperCase();
+  
+  // Determine decimals if not provided
+  let finalDecimals = decimals;
+  if (finalDecimals === undefined) {
+    if (chainUpper === 'BTC' || symbolUpper === 'BTC') finalDecimals = 8;
+    else if (chainUpper === 'TRX' || chainUpper === 'TRON' || symbolUpper === 'TRX') finalDecimals = 6;
+    else if (chainUpper === 'SOL' || chainUpper === 'SOLANA' || symbolUpper === 'SOL') finalDecimals = 9;
+    else if (symbolUpper === 'USDT' || symbolUpper === 'USDC') {
+       if (chainUpper === 'ETH' || chainUpper === 'ARBITRUM' || chainUpper === 'OPTIMISM' || chainUpper === 'BASE') finalDecimals = 6;
+       else finalDecimals = 18;
+    }
+    else finalDecimals = 18;
   }
-  return Math.floor(amount * Math.pow(10, decimals)).toString();
+
+  return Math.floor(amount * Math.pow(10, finalDecimals)).toString();
 }
 
 export async function getRocketxRate(
@@ -187,18 +211,21 @@ export async function getRocketxRate(
 
     const fromAddr = fromToken?.address || getRocketXTokenAddress(from || "", fromNetwork || "");
     const toAddr = toToken?.address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : "0x0000000000000000000000000000000000000000");
-    const fromDecimals = fromToken?.decimals || params.fromDecimals || 18;
+    const fromDecimals = fromToken?.decimals || params.fromDecimals;
 
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
 
     console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to ?? 'walletless'} (${toNetId ?? 'walletless'}), amount: ${formattedAmount}`);
 
+    const isFromEvm = isEvmChain(fromNetwork);
+    const isToEvm = toNetwork ? isEvmChain(toNetwork) : isFromEvm;
+
     const quotationParams: any = {
       fromTokenAddress: fromAddr,
       fromTokenChain: fromNetId,
       amount: formattedAmount,
-      fromAddress: params.fromAddress || "0x0000000000000000000000000000000000000000",
-      toAddress: params.toAddress || params.fromAddress || "0x0000000000000000000000000000000000000000",
+      fromAddress: params.fromAddress || (isFromEvm ? "0x0000000000000000000000000000000000000000" : undefined),
+      toAddress: params.toAddress || params.fromAddress || (isToEvm ? "0x0000000000000000000000000000000000000000" : undefined),
       slippage: params.slippage || 1,
     };
 
@@ -212,8 +239,8 @@ export async function getRocketxRate(
       quotationParams.toTokenChain = toNetId;
     }
 
-    if (params.toAddress) {
-      quotationParams.toAddress = params.toAddress;
+    if (!quotationParams.fromAddress || !quotationParams.toAddress) {
+       console.warn('Missing wallet address for non-EVM chain. Request might fail.');
     }
 
     const data = await rocketXApi.getQuotation(quotationParams);
