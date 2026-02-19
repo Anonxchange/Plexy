@@ -56,7 +56,9 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
     let intervalId: NodeJS.Timeout;
 
     const fetchPrices = async (showLoading = false) => {
-      if (showLoading && isMounted) {
+      // Use cached data for market reference but still force a fresh RocketX quote
+      const cached = priceCache[cacheKey];
+      if (showLoading && isMounted && !cached) {
         setPriceData(prev => ({ ...prev, isLoading: true }));
       }
       
@@ -158,28 +160,21 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
         // Try to fetch from Rocketx first for real exchange rates
         const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount, { fromAddress, toAddress });
         
-        let marketRate = (rocketxQuote && rocketxQuote.toAmount ? (rocketxQuote.toAmount / (debouncedAmount || 1)) : 0);
-        
-        // Fallback to CoinGecko if Rocketx fails
+        // Ensure we prioritize RocketX quote. If it's missing, we wait or show error instead of jumping to market rate
         if (!rocketxQuote) {
-          const prices = await getCryptoPrices([fromCrypto, toCrypto]);
-          const fromPrice = prices[fromCrypto]?.current_price || 0;
-          const toPrice = prices[toCrypto]?.current_price || 1;
-          marketRate = fromPrice / toPrice;
+          if (isMounted) {
+            setPriceData(prev => ({ 
+              ...prev, 
+              isLoading: false, 
+              error: 'Fetching best exchange rate...' 
+            }));
+          }
+          return;
         }
 
-        if (!isMounted) return;
-
-        // Calculate swap rate with spread
-        // If we have a direct rocketxRate, it's already the quote from the exchange
-        // including their best routing, so we use it directly as both market and swap rate
-        const isSellingCrypto = toCrypto === 'USDT' || toCrypto === 'USDC';
-        const spreadMultiplier = isSellingCrypto 
-          ? (1 - SWAP_SPREAD_PERCENTAGE / 100)
-          : (1 + SWAP_SPREAD_PERCENTAGE / 100);
-
-        const swapRate = (rocketxQuote && rocketxQuote.toAmount) ? (rocketxQuote.toAmount / (debouncedAmount || 1)) : marketRate * spreadMultiplier;
-        const percentageDiff = marketRate !== 0 ? Math.abs(((swapRate - marketRate) / marketRate) * 100) : 0;
+        const marketRate = rocketxQuote.toAmount / (debouncedAmount || 1);
+        const swapRate = marketRate; // Use direct rocketx rate
+        const percentageDiff = 0; // Since we use the direct quote as the rate
 
         const data = {
           marketRate,
