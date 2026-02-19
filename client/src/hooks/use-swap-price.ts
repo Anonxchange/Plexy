@@ -88,25 +88,71 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
         if (user?.id) {
           const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
           
-          const findWallet = (network: string, symbol: string) => {
-            const targetNet = network.toLowerCase();
-            const targetSym = symbol.toLowerCase();
-            return wallets.find(w => 
-              w.chainId?.toLowerCase() === targetNet || 
-              w.walletType?.toLowerCase() === targetNet ||
-              (targetNet === 'btc' && w.walletType === 'bitcoin') ||
-              (targetNet === 'eth' && w.walletType === 'ethereum') ||
-              (targetNet === 'bsc' && w.walletType === 'binance') ||
-              (targetNet === 'trx' && (w.walletType?.toLowerCase() === 'tron' || w.chainId?.toLowerCase() === 'tron (trc-20)')) ||
-              (targetNet === 'tron' && (w.walletType?.toLowerCase() === 'tron' || w.chainId?.toLowerCase() === 'tron (trc-20)'))
-            );
-          };
+        const findWallet = (network: string, symbol: string) => {
+          const targetNet = network.toLowerCase();
+          const targetSym = symbol.toLowerCase();
+          
+          return wallets.find(w => {
+            const wChainId = (w.chainId || "").toLowerCase();
+            const wWalletType = (w.walletType || "").toLowerCase();
+            
+            // Direct matches
+            if (wChainId === targetNet || wWalletType === targetNet) return true;
+            
+            // Network specific aliases
+            if (targetNet === 'btc' || targetNet === 'bitcoin') {
+              return wWalletType === 'bitcoin' || wChainId.includes('bitcoin');
+            }
+            if (targetNet === 'eth' || targetNet === 'ethereum') {
+              return wWalletType === 'ethereum' || wChainId.includes('ethereum');
+            }
+            if (targetNet === 'bsc' || targetNet === 'binance') {
+              return wWalletType === 'binance' || wChainId.includes('binance') || wChainId === 'bsc';
+            }
+            if (targetNet === 'trx' || targetNet === 'tron') {
+              return wWalletType === 'tron' || wChainId.includes('tron');
+            }
+            if (targetNet === 'sol' || targetNet === 'solana') {
+              return wWalletType === 'solana' || wChainId.includes('solana');
+            }
+            if (targetNet === 'polygon' || targetNet === 'matic') {
+              return wWalletType === 'polygon' || wChainId.includes('polygon');
+            }
+            if (targetNet === 'arbitrum') {
+              return wWalletType === 'arbitrum' || wChainId.includes('arbitrum');
+            }
+            if (targetNet === 'optimism') {
+              return wWalletType === 'optimism' || wChainId.includes('optimism');
+            }
+            if (targetNet === 'base') {
+              return wWalletType === 'base' || wChainId.includes('base');
+            }
+            
+            return false;
+          });
+        };
 
           const fWallet = findWallet(fromNetwork, fromCrypto);
           if (fWallet) fromAddress = fWallet.address;
 
           const tWallet = findWallet(toNetwork, toCrypto);
           if (tWallet) toAddress = tWallet.address;
+        }
+
+        console.log('useSwapPrice addresses:', { fromCrypto, fromNetwork, fromAddress, toCrypto, toNetwork, toAddress });
+
+        // RocketX requires real addresses for quotations. 
+        // If the user isn't logged in or hasn't generated wallets, 
+        // we can't get a real quote from their API with placeholders.
+        if (!fromAddress || !toAddress) {
+          if (isMounted) {
+            setPriceData(prev => ({ 
+              ...prev, 
+              isLoading: false, 
+              error: `Please ensure you have both ${fromNetwork} and ${toNetwork} wallets created to get live swap rates` 
+            }));
+          }
+          return;
         }
 
         // Try to fetch from Rocketx first for real exchange rates
