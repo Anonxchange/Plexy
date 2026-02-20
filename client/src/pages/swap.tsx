@@ -202,8 +202,8 @@ export function Swap() {
           const btcFee = (btcData.hourFee * 140) / 1e8;
           // Get BTC price to show in USD
           try {
-            const prices = await getCryptoPrices(['bitcoin']);
-            const btcPrice = prices.bitcoin?.usd || 0;
+            const prices = await getCryptoPrices(['BTC']);
+            const btcPrice = prices.BTC?.current_price || 0;
             const feeInUsd = btcFee * btcPrice;
             setEstFees(prev => ({ ...prev, BTC: `$${feeInUsd.toFixed(2)}` }));
           } catch {
@@ -214,14 +214,14 @@ export function Swap() {
         // Fetch Ethereum Gas Price
         const ethRes = await fetch('https://api.etherscan.io/api?module=proxy&action=eth_gasPrice');
         if (ethRes.ok) {
-          const ethData = await ethRes.ok ? await ethRes.json() : null;
+          const ethData = await ethRes.json();
           if (ethData && ethData.result) {
             const gasPrice = parseInt(ethData.result, 16);
             // Typical swap is ~150k gas
             const ethFee = (gasPrice * 150000) / 1e18;
             try {
-              const prices = await getCryptoPrices(['ethereum']);
-              const ethPrice = prices.ethereum?.usd || 0;
+              const prices = await getCryptoPrices(['ETH']);
+              const ethPrice = prices.ETH?.current_price || 0;
               const feeInUsd = ethFee * ethPrice;
               setEstFees(prev => ({ ...prev, ETH: `$${feeInUsd.toFixed(2)}` }));
             } catch {
