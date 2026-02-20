@@ -241,33 +241,44 @@ export async function getRocketxRate(
     const isFromEvm = isEvmChain(fromNetwork);
     const isToEvm = toNetwork ? isEvmChain(toNetwork) : isFromEvm;
 
+    // Build quotation params to match Edge Function expectations
     const quotationParams: any = {
       fromToken: fromAddr === '0x0000000000000000000000000000000000000000' || fromAddr === 'BTC' ? 'null' : fromAddr,
       fromNetwork: fromNetId,
       toToken: toAddr === '0x0000000000000000000000000000000000000000' || toAddr === 'BTC' ? 'null' : toAddr,
       toNetwork: toNetId,
       amount: formattedAmount,
-      fromAddress: params.fromAddress,
-      toAddress: params.toAddress,
-      slippage: params.slippage || 3,
+      slippage: params.slippage || 1,
     };
 
-    // Ensure toAddress is always set to the user's destination wallet address
-    if (params.toAddress) {
-      quotationParams.toAddress = params.toAddress;
-    }
-
-    // Fix for specific toTokenAddress mapping if missing from API
-    if (to === 'USDT' && toNetwork === 'ETH' && (quotationParams.toToken === 'USDT' || !quotationParams.toToken)) {
-      quotationParams.toToken = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
-    }
+    if (params.fromAddress) quotationParams.fromAddress = params.fromAddress;
+    if (params.toAddress) quotationParams.toAddress = params.toAddress;
+    if (params.excludedExchanges) quotationParams.excludedExchanges = params.excludedExchanges;
 
     console.log('RocketX getQuotation Params:', JSON.stringify(quotationParams, null, 2));
 
     const data = await rocketXApi.getQuotation(quotationParams);
 
-    if (data && data.length > 0) {
-      return data.reduce((prev: RocketXQuote, current: RocketXQuote) =>
+    // The Edge Function returns { success: boolean, status: number, data: { quotes: [...] } }
+    if (data && data.quotes && Array.isArray(data.quotes) && data.quotes.length > 0) {
+      // Map RocketX response to our internal RocketXQuote interface
+      const mappedQuotes: RocketXQuote[] = data.quotes.map((q: any) => ({
+        exchange: q.exchangeInfo?.title || 'Unknown',
+        exchangeIcon: q.exchangeInfo?.logo || '',
+        type: q.type || 'swap',
+        fromAmount: q.fromAmount,
+        fromToken: q.fromTokenInfo?.token_symbol || from,
+        toAmount: q.toAmount,
+        toToken: q.toTokenInfo?.token_symbol || to,
+        gasFee: q.gasFeeUsd || 0,
+        estimatedTime: q.estTimeInSeconds?.avg ? `${Math.floor(q.estTimeInSeconds.avg / 60)}m` : 'Unknown',
+        walletless: q.exchangeInfo?.walletLess,
+        fromAmountInUsd: q.fromTokenInfo?.price ? q.fromAmount * q.fromTokenInfo.price : undefined,
+        toAmountInUsd: q.toTokenInfo?.price ? q.toAmount * q.toTokenInfo.price : undefined,
+      }));
+
+      // Return the best quote (highest toAmount)
+      return mappedQuotes.reduce((prev, current) =>
         prev.toAmount > current.toAmount ? prev : current
       );
     }
