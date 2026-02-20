@@ -16,6 +16,7 @@ export interface RocketXQuote {
   fromAmountInUsd?: number;
   toAmountInUsd?: number;
   id?: string;
+  priceImpact?: number;
 }
 
 export interface RocketXToken {
@@ -289,6 +290,7 @@ export async function getRocketxRate(
           fromAmountInUsd: q.fromTokenInfo?.price ? Number(fromAmount) * q.fromTokenInfo.price : undefined,
           toAmountInUsd: q.toTokenInfo?.price ? Number(toAmount) * q.toTokenInfo.price : undefined,
           minAmount: q.additionalInfo?.minRecieved || q.additionalInfo?.minReceived,
+          priceImpact: q.additionalInfo?.priceImpact || q.priceImpact,
         };
       });
 
