@@ -67,8 +67,8 @@ export function Swap() {
   const { user, sessionPassword, setSessionPassword } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [fromAmount, setFromAmount] = useState("0.00001");
-  const [toAmount, setToAmount] = useState("");
+  const [fromAmount, setFromAmount] = useState("0.00");
+  const [toAmount, setToAmount] = useState("0.00");
   const [fromCurrency, setFromCurrency] = useState("BTC");
   const [toCurrency, setToCurrency] = useState("USDT");
   const [fromNetwork, setFromNetwork] = useState("BTC");
@@ -76,6 +76,8 @@ export function Swap() {
   const [isUpdatingFromInput, setIsUpdatingFromInput] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
+
+  const [lastQuoteFetchTime, setLastQuoteFetchTime] = useState<number>(0);
 
   // Helper to get currency object
   const getCurrency = (symbol: string) => currencies.find(c => c.symbol === symbol);
@@ -125,6 +127,7 @@ export function Swap() {
   useEffect(() => {
     if (bestQuote) {
       setActiveQuote(bestQuote);
+      setLastQuoteFetchTime(Date.now());
       if (bestQuote.gasFee) {
         const feeStr = `$${bestQuote.gasFee.toFixed(2)}`;
         setEstFees(prev => ({ ...prev, [fromNetwork]: feeStr }));
@@ -240,6 +243,17 @@ export function Swap() {
 
   // Auto-update toAmount when prices change or fromAmount changes
   useEffect(() => {
+    const fromAmtNum = parseFloat(fromAmount);
+    if (fromAmtNum === 0 || isNaN(fromAmtNum)) {
+      setToAmount("0.00");
+      return;
+    }
+
+    if (isLoading) {
+      setToAmount("..."); // Show loading state
+      return;
+    }
+
     if (isUpdatingFromInput && bestQuote) {
       // Use exact amount from RocketX quote
       const toAmt = bestQuote.toAmount;
@@ -270,7 +284,7 @@ export function Swap() {
         setToAmount(formattedToAmount);
       }
     }
-  }, [fromAmount, swapRate, isUpdatingFromInput, bestQuote, toAmount]);
+  }, [fromAmount, swapRate, isUpdatingFromInput, bestQuote, toAmount, isLoading]);
 
   // Auto-update fromAmount when toAmount is manually changed
   useEffect(() => {
@@ -353,6 +367,17 @@ export function Swap() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Check if quote is expired (20 seconds)
+    const isQuoteExpired = Date.now() - lastQuoteFetchTime > 20000;
+    if (isQuoteExpired) {
+      toast({
+        title: "Quote Expired",
+        description: "Refreshing quote before execution...",
+      });
+      // The useSwapPrice hook will automatically refresh on next interval or we can trigger it
+      // For now, we'll wait for the next auto-refresh or let performSwap handle the best available
     }
 
     // Refresh quote one last time before execution to be safe
