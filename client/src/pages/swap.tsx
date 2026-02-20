@@ -200,17 +200,34 @@ export function Swap() {
           const btcData = await btcRes.json();
           // Average tx is ~140 vBytes, convert sat/vB to BTC
           const btcFee = (btcData.hourFee * 140) / 1e8;
-          setEstFees(prev => ({ ...prev, BTC: `${btcFee.toFixed(6)} BTC` }));
+          // Get BTC price to show in USD
+          try {
+            const prices = await getCryptoPrices(['bitcoin']);
+            const btcPrice = prices.bitcoin?.usd || 0;
+            const feeInUsd = btcFee * btcPrice;
+            setEstFees(prev => ({ ...prev, BTC: `$${feeInUsd.toFixed(2)}` }));
+          } catch {
+            setEstFees(prev => ({ ...prev, BTC: `${btcFee.toFixed(6)} BTC` }));
+          }
         }
 
         // Fetch Ethereum Gas Price
         const ethRes = await fetch('https://api.etherscan.io/api?module=proxy&action=eth_gasPrice');
         if (ethRes.ok) {
-          const ethData = await ethRes.json();
-          const gasPrice = parseInt(ethData.result, 16);
-          // Typical swap is ~150k gas
-          const ethFee = (gasPrice * 150000) / 1e18;
-          setEstFees(prev => ({ ...prev, ETH: `${ethFee.toFixed(5)} ETH` }));
+          const ethData = await ethRes.ok ? await ethRes.json() : null;
+          if (ethData && ethData.result) {
+            const gasPrice = parseInt(ethData.result, 16);
+            // Typical swap is ~150k gas
+            const ethFee = (gasPrice * 150000) / 1e18;
+            try {
+              const prices = await getCryptoPrices(['ethereum']);
+              const ethPrice = prices.ethereum?.usd || 0;
+              const feeInUsd = ethFee * ethPrice;
+              setEstFees(prev => ({ ...prev, ETH: `$${feeInUsd.toFixed(2)}` }));
+            } catch {
+              setEstFees(prev => ({ ...prev, ETH: `${ethFee.toFixed(5)} ETH` }));
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to fetch live fees", e);
@@ -864,7 +881,7 @@ export function Swap() {
                     <div className="flex items-center justify-between text-sm px-1">
                       <span className="text-muted-foreground font-medium">Swapper Fee</span>
                       <span className="text-foreground font-bold">
-                        {bestQuote?.gasFee ? `${bestQuote.gasFee.toFixed(2)} USD` : (estFees[fromNetwork] || "Calculated at swap")}
+                        {bestQuote?.gasFee ? (bestQuote.gasFee < 0.01 ? `< $0.01 USD` : `$${bestQuote.gasFee.toFixed(2)} USD`) : (estFees[fromNetwork] || "Calculated at swap")}
                       </span>
                     </div>
 
