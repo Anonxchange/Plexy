@@ -180,7 +180,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           return;
         }
 
-        const marketRate = rocketxQuote.toAmount / (debouncedAmount || 1);
+        const marketRate = (rocketxQuote.toAmount || 0) / (debouncedAmount || 1);
         const swapRate = marketRate; // Use direct rocketx rate
         const percentageDiff = 0; // Since we use the direct quote as the rate
 
