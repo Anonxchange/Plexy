@@ -220,12 +220,13 @@ export async function getRocketxRate(
       }
     }
 
-    // Ensure we handle cases where symbol might be missing or different from what we expect
     const fromToken = Array.isArray(tokens) ? tokens.find((t: any) => t?.token_symbol?.toUpperCase() === (from || "").toUpperCase()) : null;
     const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.token_symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
 
-    const fromAddr = fromToken?.contract_address || getRocketXTokenAddress(from || "", fromNetwork || "");
-    const toAddr = toToken?.contract_address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : 'null');
+    const fromAddr_fallback = getRocketXTokenAddress(from || "", fromNetwork || "");
+    const fromAddr = fromToken?.is_native_token === 1 || fromAddr_fallback === '0x0000000000000000000000000000000000000000' || fromAddr_fallback === 'BTC' || fromAddr_fallback === 'SOL' || fromAddr_fallback === 'TRX' ? 'null' : fromAddr_fallback;
+    const toAddr_fallback = to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : 'null';
+    const toAddr = toToken?.is_native_token === 1 || toAddr_fallback === '0x0000000000000000000000000000000000000000' || toAddr_fallback === 'BTC' || toAddr_fallback === 'SOL' || toAddr_fallback === 'TRX' ? 'null' : toAddr_fallback;
     
     const fromDecimals = fromToken?.token_decimals || params.fromDecimals;
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
