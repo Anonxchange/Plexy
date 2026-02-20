@@ -277,12 +277,12 @@ export async function getRocketxRate(
         fromToken: q.fromTokenInfo?.token_symbol || from,
         toAmount: q.toAmount,
         toToken: q.toTokenInfo?.token_symbol || to,
-        gasFee: q.gasFeeUsd || 0,
+        gasFee: q.gasFeeUsd || q.totalFeeUsd || 0,
         estimatedTime: q.estTimeInSeconds?.avg ? `${Math.floor(q.estTimeInSeconds.avg / 60)}m` : 'Unknown',
         walletless: q.exchangeInfo?.walletLess,
         fromAmountInUsd: q.fromTokenInfo?.price ? q.fromAmount * q.fromTokenInfo.price : undefined,
         toAmountInUsd: q.toTokenInfo?.price ? q.toAmount * q.toTokenInfo.price : undefined,
-        minAmount: q.additionalInfo?.minReceived,
+        minAmount: q.additionalInfo?.minRecieved || q.additionalInfo?.minReceived,
       }));
 
       // Return the best quote (highest toAmount)
