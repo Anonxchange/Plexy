@@ -119,20 +119,18 @@ export function Swap() {
   const [activeQuote, setActiveQuote] = useState<any>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [history, setHistory] = useState<any[]>([]);
-  const [estFees, setEstFees] = useState<Record<string, string>>({
-    BTC: "0.0001 BTC",
-    ETH: "0.002 ETH",
-    BSC: "0.001 BNB",
-    SOL: "0.000005 SOL",
-    TRX: "15 TRX"
-  });
+  const [estFees, setEstFees] = useState<Record<string, string>>({});
 
   // Automatically sync activeQuote with bestQuote from the hook
   useEffect(() => {
     if (bestQuote) {
       setActiveQuote(bestQuote);
+      if (bestQuote.gasFee) {
+        const feeStr = `$${bestQuote.gasFee.toFixed(2)}`;
+        setEstFees(prev => ({ ...prev, [fromNetwork]: feeStr }));
+      }
     }
-  }, [bestQuote]);
+  }, [bestQuote, fromNetwork]);
 
   const { data: monitoredBalancesData } = useWalletBalances();
   const monitoredBalances = monitoredBalancesData || [];
@@ -192,9 +190,7 @@ export function Swap() {
     const fetchFees = async () => {
       try {
         if (bestQuote && bestQuote.gasFee) {
-          // RocketX returns gasFeeUsd, we need to show it clearly
-          const feeStr = `$${bestQuote.gasFee.toFixed(2)}`;
-          setEstFees(prev => ({ ...prev, [fromNetwork]: feeStr }));
+          // Already handled in the bestQuote sync useEffect
           return;
         }
 
@@ -868,7 +864,7 @@ export function Swap() {
                     <div className="flex items-center justify-between text-sm px-1">
                       <span className="text-muted-foreground font-medium">Swapper Fee</span>
                       <span className="text-foreground font-bold">
-                        {bestQuote?.gasFee ? `${bestQuote.gasFee.toFixed(6)} ${fromCurrency}` : (estFees[fromNetwork] || "Calculated at swap")}
+                        {bestQuote?.gasFee ? `${bestQuote.gasFee.toFixed(2)} USD` : (estFees[fromNetwork] || "Calculated at swap")}
                       </span>
                     </div>
 
