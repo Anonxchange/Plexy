@@ -56,6 +56,21 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
     let intervalId: NodeJS.Timeout;
 
     const fetchPrices = async (showLoading = false) => {
+      // Don't fetch if amount is 0 or invalid
+      if (debouncedAmount <= 0 || isNaN(debouncedAmount)) {
+        if (isMounted) {
+          setPriceData({
+            marketRate: 0,
+            swapRate: 0,
+            percentageDiff: 0,
+            isLoading: false,
+            error: null,
+            bestQuote: null,
+          });
+        }
+        return;
+      }
+
       const cached = priceCache[cacheKey];
       if (showLoading && isMounted && !cached) {
         setPriceData(prev => ({ ...prev, isLoading: true }));
