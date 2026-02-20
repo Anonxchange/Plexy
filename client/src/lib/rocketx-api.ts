@@ -101,6 +101,8 @@ function getRocketXNetworkId(chain: string): string {
     'BASE': 'base',
     'AVALANCHE': 'avaxc-mainnet',
     'NEAR': 'near',
+    'ETHEREUM': 'ethereum',
+    'BINANCE': 'binance',
   };
   const upper = chain.toUpperCase();
   return map[upper] || upper;
@@ -120,7 +122,9 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
   const tokenMap: Record<string, Record<string, string>> = {
     'USDT': {
       'ETH': '0xdac17f958d2ee523a2206206994597C13D831ec7',
+      'ETHEREUM': '0xdac17f958d2ee523a2206206994597C13D831ec7',
       'BSC': '0x55d398326f99059ff775485246999027b3197955',
+      'BINANCE': '0x55d398326f99059ff775485246999027b3197955',
       'TRX': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
       'TRON': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
       'POLYGON': '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
@@ -129,7 +133,9 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
     },
     'USDC': {
       'ETH': '0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48',
+      'ETHEREUM': '0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48',
       'BSC': '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      'BINANCE': '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
       'BASE': '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
       'SOLANA': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       'SOL': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -142,11 +148,12 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
 
   const isNative = symbolUpper === chainUpper ||
     (symbolUpper === 'BTC' && (chainUpper === 'BTC' || chainUpper === 'BITCOIN')) ||
-    (symbolUpper === 'BNB' && chainUpper === 'BSC') ||
-    (symbolUpper === 'ETH' && chainUpper === 'ETH') ||
-    (symbolUpper === 'MATIC' && chainUpper === 'POLYGON') ||
+    (symbolUpper === 'BNB' && (chainUpper === 'BSC' || chainUpper === 'BINANCE')) ||
+    (symbolUpper === 'ETH' && (chainUpper === 'ETH' || chainUpper === 'ETHEREUM')) ||
+    (symbolUpper === 'MATIC' && (chainUpper === 'POLYGON' || chainUpper === 'MATIC')) ||
     (symbolUpper === 'TRX' && (chainUpper === 'TRX' || chainUpper === 'TRON')) ||
-    (symbolUpper === 'SOL' && (chainUpper === 'SOL' || chainUpper === 'SOLANA'));
+    (symbolUpper === 'SOL' && (chainUpper === 'SOL' || chainUpper === 'SOLANA')) ||
+    (symbolUpper === 'NEAR' && chainUpper === 'NEAR');
 
   if (isNative) {
     if (isEvmChain(chainUpper)) {
@@ -221,9 +228,9 @@ export async function getRocketxRate(
     const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.token_symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
 
     const fromAddr_fallback = getRocketXTokenAddress(from || "", fromNetwork || "");
-    const fromAddr = fromToken?.is_native_token === 1 || fromAddr_fallback === '0x0000000000000000000000000000000000000000' || fromAddr_fallback === 'BTC' || fromAddr_fallback === 'SOL' || fromAddr_fallback === 'TRX' || fromAddr_fallback === 'NEAR' ? 'null' : fromAddr_fallback;
+    const fromAddr = fromToken?.is_native_token === 1 || fromAddr_fallback === '0x0000000000000000000000000000000000000000' || fromAddr_fallback === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || fromAddr_fallback === 'BTC' || fromAddr_fallback === 'SOL' || fromAddr_fallback === 'TRX' || fromAddr_fallback === 'NEAR' ? 'null' : fromAddr_fallback;
     const toAddr_fallback = to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : 'null';
-    const toAddr = toToken?.is_native_token === 1 || toAddr_fallback === '0x0000000000000000000000000000000000000000' || toAddr_fallback === 'BTC' || toAddr_fallback === 'SOL' || toAddr_fallback === 'TRX' || toAddr_fallback === 'NEAR' ? 'null' : toAddr_fallback;
+    const toAddr = toToken?.is_native_token === 1 || toAddr_fallback === '0x0000000000000000000000000000000000000000' || toAddr_fallback === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || toAddr_fallback === 'BTC' || toAddr_fallback === 'SOL' || toAddr_fallback === 'TRX' || toAddr_fallback === 'NEAR' ? 'null' : toAddr_fallback;
     
     const fromDecimals = fromToken?.token_decimals || params.fromDecimals;
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
