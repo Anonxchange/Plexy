@@ -224,7 +224,7 @@ export async function getRocketxRate(
     const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.token_symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
 
     const fromAddr = fromToken?.contract_address || getRocketXTokenAddress(from || "", fromNetwork || "");
-    const toAddr = toToken?.contract_address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : '0x0000000000000000000000000000000000000000');
+    const toAddr = toToken?.contract_address || (to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : 'null');
     
     const fromDecimals = fromToken?.token_decimals || params.fromDecimals;
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
@@ -241,9 +241,9 @@ export async function getRocketxRate(
     const isToEvm = toNetwork ? isEvmChain(toNetwork) : isFromEvm;
 
     const quotationParams: any = {
-      fromToken: fromAddr,
+      fromToken: fromAddr === '0x0000000000000000000000000000000000000000' || fromAddr === 'BTC' ? 'null' : fromAddr,
       fromNetwork: fromNetId,
-      toToken: toAddr,
+      toToken: toAddr === '0x0000000000000000000000000000000000000000' || toAddr === 'BTC' ? 'null' : toAddr,
       toNetwork: toNetId,
       amount: formattedAmount,
       fromAddress: params.fromAddress,
