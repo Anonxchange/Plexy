@@ -244,11 +244,13 @@ export function Swap() {
       // Use exact amount from RocketX quote
       const toAmt = bestQuote.toAmount;
       const formattedToAmount = (toAmt !== undefined && toAmt !== null) 
-        ? toAmt.toLocaleString('en-US', { 
-            useGrouping: false, 
-            minimumFractionDigits: 0, 
-            maximumFractionDigits: 8 
-          })
+        ? (typeof toAmt === 'number' 
+            ? toAmt.toLocaleString('en-US', { 
+                useGrouping: false, 
+                minimumFractionDigits: 0, 
+                maximumFractionDigits: 8 
+              })
+            : String(toAmt))
         : "";
       if (toAmount !== formattedToAmount) {
         setToAmount(formattedToAmount);
@@ -274,7 +276,7 @@ export function Swap() {
   useEffect(() => {
     if (!isUpdatingFromInput && swapRate > 0) {
       const amount = parseFloat(toAmount) || 0;
-      const calculated = (amount / swapRate) || 0;
+      const calculated = (amount / (swapRate || 1)) || 0;
       const formattedFromAmount = (calculated !== undefined && calculated !== null)
         ? calculated.toLocaleString('en-US', { 
             useGrouping: false, 
