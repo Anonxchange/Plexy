@@ -165,16 +165,12 @@ function formatAmountForRocketX(amount: number, symbol: string, chain: string, d
   const chainUpper = chain.toUpperCase();
   const symbolUpper = symbol.toUpperCase();
   
-  // For BTC, SOL, and TRX, RocketX typically expects the amount as a decimal string (e.g., "0.0001")
-  // The user mentioned 1000 being wrong for Bitcoin. 1000 sats = 0.00001 BTC.
-  // If the user inputs 0.0001, we should return "0.0001".
-  
+  // RocketX expects decimal string for these non-EVM chains
   if (chainUpper === 'BTC' || symbolUpper === 'BTC' || 
       chainUpper === 'SOL' || symbolUpper === 'SOL' ||
       chainUpper === 'TRX' || symbolUpper === 'TRX' || chainUpper === 'TRON' ||
-      chainUpper === 'BITCOIN') {
-    // Return with sufficient precision for crypto amounts
-    return amount.toFixed(8).replace(/\.?0+$/, "");
+      chainUpper === 'BITCOIN' || chainUpper === 'NEAR' || symbolUpper === 'NEAR') {
+    return amount.toString();
   }
 
   // Determine decimals for EVM/Token units if not provided
@@ -187,8 +183,8 @@ function formatAmountForRocketX(amount: number, symbol: string, chain: string, d
     else finalDecimals = 18;
   }
 
-  // Use a more robust way to handle decimals to avoid floating point issues
-  return Math.floor(amount * Math.pow(10, finalDecimals)).toString();
+  // Use decimal string instead of satoshis/wei for better API compatibility
+  return amount.toString();
 }
 
 export async function getRocketxRate(
@@ -259,11 +255,13 @@ export async function getRocketxRate(
     console.log('RocketX getQuotation Params:', JSON.stringify(quotationParams, null, 2));
 
     const data = await rocketXApi.getQuotation(quotationParams);
+    console.log('RocketX Quotation Raw Response:', data);
 
     // The Edge Function returns { success: boolean, status: number, data: { quotes: [...] } }
-    if (data && data.quotes && Array.isArray(data.quotes) && data.quotes.length > 0) {
+    const quotes = data?.quotes || data?.data?.quotes;
+    if (quotes && Array.isArray(quotes) && quotes.length > 0) {
       // Map RocketX response to our internal RocketXQuote interface
-      const mappedQuotes: RocketXQuote[] = data.quotes.map((q: any) => ({
+      const mappedQuotes: RocketXQuote[] = quotes.map((q: any) => ({
         exchange: q.exchangeInfo?.title || 'Unknown',
         exchangeIcon: q.exchangeInfo?.logo || '',
         type: q.type || 'swap',
@@ -271,11 +269,12 @@ export async function getRocketxRate(
         fromToken: q.fromTokenInfo?.token_symbol || from,
         toAmount: q.toAmount,
         toToken: q.toTokenInfo?.token_symbol || to,
-        gasFee: q.gasFeeUsd || q.totalFee || 0, // Fallback to totalFee if gasFeeUsd is missing
+        gasFee: q.gasFeeUsd || 0,
         estimatedTime: q.estTimeInSeconds?.avg ? `${Math.floor(q.estTimeInSeconds.avg / 60)}m` : 'Unknown',
         walletless: q.exchangeInfo?.walletLess,
         fromAmountInUsd: q.fromTokenInfo?.price ? q.fromAmount * q.fromTokenInfo.price : undefined,
         toAmountInUsd: q.toTokenInfo?.price ? q.toAmount * q.toTokenInfo.price : undefined,
+        minAmount: q.additionalInfo?.minReceived,
       }));
 
       // Return the best quote (highest toAmount)
