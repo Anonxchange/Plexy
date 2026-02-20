@@ -100,6 +100,7 @@ function getRocketXNetworkId(chain: string): string {
     'OPTIMISM': 'optimism',
     'BASE': 'base',
     'AVALANCHE': 'avaxc-mainnet',
+    'NEAR': 'near',
   };
   const upper = chain.toUpperCase();
   return map[upper] || upper;
@@ -220,9 +221,9 @@ export async function getRocketxRate(
     const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.token_symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
 
     const fromAddr_fallback = getRocketXTokenAddress(from || "", fromNetwork || "");
-    const fromAddr = fromToken?.is_native_token === 1 || fromAddr_fallback === '0x0000000000000000000000000000000000000000' || fromAddr_fallback === 'BTC' || fromAddr_fallback === 'SOL' || fromAddr_fallback === 'TRX' ? 'null' : fromAddr_fallback;
+    const fromAddr = fromToken?.is_native_token === 1 || fromAddr_fallback === '0x0000000000000000000000000000000000000000' || fromAddr_fallback === 'BTC' || fromAddr_fallback === 'SOL' || fromAddr_fallback === 'TRX' || fromAddr_fallback === 'NEAR' ? 'null' : fromAddr_fallback;
     const toAddr_fallback = to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : 'null';
-    const toAddr = toToken?.is_native_token === 1 || toAddr_fallback === '0x0000000000000000000000000000000000000000' || toAddr_fallback === 'BTC' || toAddr_fallback === 'SOL' || toAddr_fallback === 'TRX' ? 'null' : toAddr_fallback;
+    const toAddr = toToken?.is_native_token === 1 || toAddr_fallback === '0x0000000000000000000000000000000000000000' || toAddr_fallback === 'BTC' || toAddr_fallback === 'SOL' || toAddr_fallback === 'TRX' || toAddr_fallback === 'NEAR' ? 'null' : toAddr_fallback;
     
     const fromDecimals = fromToken?.token_decimals || params.fromDecimals;
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
