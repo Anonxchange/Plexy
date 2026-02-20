@@ -145,7 +145,8 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
 
         // RocketX requires real addresses for quotations. 
         // If the user isn't logged in or hasn't generated wallets, 
-        // we can't get a real quote from their API with placeholders.
+        // we use a generic address for quotation purposes only if needed,
+        // but it's better to prompt the user.
         if (!fromAddress || !toAddress) {
           if (isMounted) {
             setPriceData(prev => ({ 
@@ -156,6 +157,8 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           }
           return;
         }
+
+        console.log('useSwapPrice fetching quote for:', { fromCrypto, fromNetwork, toCrypto, toNetwork, amount: debouncedAmount });
 
         // Try to fetch from Rocketx first for real exchange rates
         const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount, { fromAddress, toAddress });
