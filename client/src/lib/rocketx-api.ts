@@ -87,18 +87,19 @@ const rocketXNetworks = [
 function getRocketXNetworkId(chain: string): string {
   if (!chain) return "";
   const map: Record<string, string> = {
-    'BTC': 'BTC',
-    'ETH': 'ETH',
-    'BSC': 'BSC',
-    'TRX': 'TRON',
-    'TRON': 'TRON',
-    'SOL': 'SOLANA',
-    'SOLANA': 'SOLANA',
-    'POLYGON': 'POLYGON',
-    'ARBITRUM': 'ARBITRUM',
-    'OPTIMISM': 'OPTIMISM',
-    'BASE': 'BASE',
-    'AVALANCHE': 'AVALANCHE',
+    'BTC': 'bitcoin',
+    'BITCOIN': 'bitcoin',
+    'ETH': 'ethereum',
+    'BSC': 'binance',
+    'TRX': 'tron',
+    'TRON': 'tron',
+    'SOL': 'solana',
+    'SOLANA': 'solana',
+    'POLYGON': 'polygon',
+    'ARBITRUM': 'arbitrum',
+    'OPTIMISM': 'optimism',
+    'BASE': 'base',
+    'AVALANCHE': 'avaxc-mainnet',
   };
   const upper = chain.toUpperCase();
   return map[upper] || upper;
@@ -150,11 +151,11 @@ function getRocketXTokenAddress(symbol: string, chain: string): string {
     if (isEvmChain(chainUpper)) {
       return '0x0000000000000000000000000000000000000000';
     }
-    // For non-EVM native tokens, use specific identifiers as required by RocketX
-    if (chainUpper === 'BTC') return 'BTC';
+    // RocketX expects the symbol for native non-EVM tokens in fromToken/toToken
+    if (chainUpper === 'BTC' || chainUpper === 'BITCOIN') return 'BTC';
     if (chainUpper === 'SOLANA' || chainUpper === 'SOL') return 'SOL';
     if (chainUpper === 'TRON' || chainUpper === 'TRX') return 'TRX';
-    return '0x0000000000000000000000000000000000000000'; // Default for other natives if needed
+    return '0x0000000000000000000000000000000000000000';
   }
 
   return symbol; 
