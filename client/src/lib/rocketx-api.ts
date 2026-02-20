@@ -243,9 +243,9 @@ export async function getRocketxRate(
 
     // Build quotation params to match Edge Function expectations
     const quotationParams: any = {
-      fromToken: fromAddr === '0x0000000000000000000000000000000000000000' || fromAddr === 'BTC' ? 'null' : fromAddr,
+      fromToken: fromAddr,
       fromNetwork: fromNetId,
-      toToken: toAddr === '0x0000000000000000000000000000000000000000' || toAddr === 'BTC' ? 'null' : toAddr,
+      toToken: toAddr,
       toNetwork: toNetId,
       amount: formattedAmount,
       slippage: params.slippage || 1,
@@ -270,7 +270,7 @@ export async function getRocketxRate(
         fromToken: q.fromTokenInfo?.token_symbol || from,
         toAmount: q.toAmount,
         toToken: q.toTokenInfo?.token_symbol || to,
-        gasFee: q.gasFeeUsd || 0,
+        gasFee: q.gasFeeUsd || q.totalFee || 0, // Fallback to totalFee if gasFeeUsd is missing
         estimatedTime: q.estTimeInSeconds?.avg ? `${Math.floor(q.estTimeInSeconds.avg / 60)}m` : 'Unknown',
         walletless: q.exchangeInfo?.walletLess,
         fromAmountInUsd: q.fromTokenInfo?.price ? q.fromAmount * q.fromTokenInfo.price : undefined,
