@@ -47,7 +47,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
     console.log('Invoking RocketX Edge Function:', { action, params });
 
     // Ensure action and params are sent correctly to match the edge function's expected structure
-    const { data, error } = await supabase.functions.invoke('rocketx-api', {
+    const { data, error } = await supabase.functions.invoke('rocketx-swap', {
       body: { action, params },
     });
 
@@ -65,7 +65,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
   } catch (err: any) {
     console.error('callRocketX error:', err);
     if (err.message?.includes('Failed to send a request')) {
-      throw new Error('Connection error: The Edge Function "rocketx-api" could not be reached. Please verify the function name is "rocketx-api" and it is deployed.');
+      throw new Error('Connection error: The Edge Function "rocketx-swap" could not be reached. Please verify the function name is "rocketx-swap" and it is deployed.');
     }
     throw err;
   }
@@ -170,7 +170,8 @@ function formatAmountForRocketX(amount: number, symbol: string, chain: string, d
   
   if (chainUpper === 'BTC' || symbolUpper === 'BTC' || 
       chainUpper === 'SOL' || symbolUpper === 'SOL' ||
-      chainUpper === 'TRX' || symbolUpper === 'TRX' || chainUpper === 'TRON') {
+      chainUpper === 'TRX' || symbolUpper === 'TRX' || chainUpper === 'TRON' ||
+      chainUpper === 'BITCOIN') {
     // Return with sufficient precision for crypto amounts
     return amount.toFixed(8).replace(/\.?0+$/, "");
   }
