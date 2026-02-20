@@ -265,28 +265,38 @@ export async function getRocketxRate(
     const data = await rocketXApi.getQuotation(quotationParams);
     console.log('RocketX Quotation Raw Response:', data);
 
-    // The Edge Function returns { success: boolean, status: number, data: { quotes: [...] } }
-    const quotes = data?.quotes || data?.data?.quotes || data?.data?.data?.quotes;
+    // The data might be nested differently depending on the response structure
+    const actualData = data?.data?.data || data?.data || data;
+    const quotes = actualData?.quotes;
+    
     if (quotes && Array.isArray(quotes) && quotes.length > 0) {
       // Map RocketX response to our internal RocketXQuote interface
-      const mappedQuotes: RocketXQuote[] = quotes.map((q: any) => ({
-        exchange: q.exchangeInfo?.title || 'Unknown',
-        exchangeIcon: q.exchangeInfo?.logo || '',
-        type: q.type || 'swap',
-        fromAmount: q.fromAmount,
-        fromToken: q.fromTokenInfo?.token_symbol || from,
-        toAmount: q.toAmount,
-        toToken: q.toTokenInfo?.token_symbol || to,
-        gasFee: q.gasFeeUsd || q.totalFeeUsd || 0,
-        estimatedTime: q.estTimeInSeconds?.avg ? `${Math.floor(q.estTimeInSeconds.avg / 60)}m` : 'Unknown',
-        walletless: q.exchangeInfo?.walletLess,
-        fromAmountInUsd: q.fromTokenInfo?.price ? q.fromAmount * q.fromTokenInfo.price : undefined,
-        toAmountInUsd: q.toTokenInfo?.price ? q.toAmount * q.toTokenInfo.price : undefined,
-        minAmount: q.additionalInfo?.minRecieved || q.additionalInfo?.minReceived,
-      }));
+      const mappedQuotes: RocketXQuote[] = quotes.map((q: any) => {
+        const toAmount = q.toAmount || q.toTokenAmount || 0;
+        const fromAmount = q.fromAmount || q.fromTokenAmount || amount;
+        
+        return {
+          exchange: q.exchangeInfo?.title || q.exchange || 'Unknown',
+          exchangeIcon: q.exchangeInfo?.logo || q.exchangeLogo || '',
+          type: q.type || 'swap',
+          fromAmount: Number(fromAmount),
+          fromToken: q.fromTokenInfo?.token_symbol || q.fromTokenSymbol || from,
+          toAmount: Number(toAmount),
+          toToken: q.toTokenInfo?.token_symbol || q.toTokenSymbol || (to || ""),
+          gasFee: q.gasFeeUsd || q.totalFeeUsd || 0,
+          estimatedTime: q.estTimeInSeconds?.avg ? `${Math.floor(q.estTimeInSeconds.avg / 60)}m` : 'Unknown',
+          walletless: q.exchangeInfo?.walletLess || q.walletLess,
+          fromAmountInUsd: q.fromTokenInfo?.price ? Number(fromAmount) * q.fromTokenInfo.price : undefined,
+          toAmountInUsd: q.toTokenInfo?.price ? Number(toAmount) * q.toTokenInfo.price : undefined,
+          minAmount: q.additionalInfo?.minRecieved || q.additionalInfo?.minReceived,
+        };
+      });
 
-      // Return the best quote (highest toAmount)
-      return mappedQuotes.reduce((prev, current) =>
+      // Filter out quotes with 0 toAmount and return the best one (highest toAmount)
+      const validQuotes = mappedQuotes.filter(q => q.toAmount > 0);
+      if (validQuotes.length === 0) return null;
+
+      return validQuotes.reduce((prev, current) =>
         prev.toAmount > current.toAmount ? prev : current
       );
     }
