@@ -224,15 +224,15 @@ export async function getRocketxRate(
       }
     }
 
-    const fromToken = Array.isArray(tokens) ? tokens.find((t: any) => t?.token_symbol?.toUpperCase() === (from || "").toUpperCase()) : null;
-    const toToken = to && Array.isArray(targetTokens) ? targetTokens.find((t: any) => t?.token_symbol?.toUpperCase() === (to || "").toUpperCase()) : null;
+    const fromToken = (Array.isArray(tokens) ? tokens : (tokens as any)?.tokens || []).find((t: any) => t?.token_symbol?.toUpperCase() === (from || "").toUpperCase());
+    const toToken = to && (Array.isArray(targetTokens) ? targetTokens : (targetTokens as any)?.tokens || []).find((t: any) => t?.token_symbol?.toUpperCase() === (to || "").toUpperCase());
 
     const fromAddr_fallback = getRocketXTokenAddress(from || "", fromNetwork || "");
     const fromAddr = fromToken?.is_native_token === 1 || fromAddr_fallback === '0x0000000000000000000000000000000000000000' || fromAddr_fallback === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || fromAddr_fallback === 'BTC' || fromAddr_fallback === 'SOL' || fromAddr_fallback === 'TRX' || fromAddr_fallback === 'NEAR' ? 'null' : fromAddr_fallback;
     const toAddr_fallback = to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : 'null';
     const toAddr = toToken?.is_native_token === 1 || toAddr_fallback === '0x0000000000000000000000000000000000000000' || toAddr_fallback === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || toAddr_fallback === 'BTC' || toAddr_fallback === 'SOL' || toAddr_fallback === 'TRX' || toAddr_fallback === 'NEAR' ? 'null' : toAddr_fallback;
     
-    const fromDecimals = fromToken?.token_decimals || params.fromDecimals;
+    const fromDecimals = fromToken?.token_decimals || params.fromDecimals || (from?.toUpperCase() === 'USDT' || from?.toUpperCase() === 'USDC' ? (['ETH', 'ARBITRUM', 'OPTIMISM', 'BASE'].includes(fromNetwork?.toUpperCase() || '') ? 6 : 18) : 18);
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
 
     // Validation: Ensure we don't send placeholders to RocketX
@@ -266,7 +266,7 @@ export async function getRocketxRate(
     console.log('RocketX Quotation Raw Response:', data);
 
     // The Edge Function returns { success: boolean, status: number, data: { quotes: [...] } }
-    const quotes = data?.quotes || data?.data?.quotes;
+    const quotes = data?.quotes || data?.data?.quotes || data?.data?.data?.quotes;
     if (quotes && Array.isArray(quotes) && quotes.length > 0) {
       // Map RocketX response to our internal RocketXQuote interface
       const mappedQuotes: RocketXQuote[] = quotes.map((q: any) => ({
