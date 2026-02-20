@@ -192,7 +192,8 @@ export function Swap() {
     const fetchFees = async () => {
       try {
         if (bestQuote && bestQuote.gasFee) {
-          const feeStr = `${bestQuote.gasFee.toFixed(6)} ${fromCurrency}`;
+          // RocketX returns gasFeeUsd, we need to show it clearly
+          const feeStr = `$${bestQuote.gasFee.toFixed(2)}`;
           setEstFees(prev => ({ ...prev, [fromNetwork]: feeStr }));
           return;
         }
