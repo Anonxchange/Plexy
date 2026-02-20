@@ -242,11 +242,14 @@ export function Swap() {
   useEffect(() => {
     if (isUpdatingFromInput && bestQuote) {
       // Use exact amount from RocketX quote
-      const formattedToAmount = bestQuote.toAmount.toLocaleString('en-US', { 
-        useGrouping: false, 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 8 
-      });
+      const toAmt = bestQuote.toAmount;
+      const formattedToAmount = (toAmt !== undefined && toAmt !== null) 
+        ? toAmt.toLocaleString('en-US', { 
+            useGrouping: false, 
+            minimumFractionDigits: 0, 
+            maximumFractionDigits: 8 
+          })
+        : "";
       if (toAmount !== formattedToAmount) {
         setToAmount(formattedToAmount);
       }
@@ -254,11 +257,13 @@ export function Swap() {
       // Fallback to calculated market rate if no specific quote
       const amount = parseFloat(fromAmount) || 0;
       const calculated = calculateSwapAmount(amount, swapRate) || 0;
-      const formattedToAmount = calculated.toLocaleString('en-US', { 
-        useGrouping: false, 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 8 
-      });
+      const formattedToAmount = (calculated !== undefined && calculated !== null)
+        ? calculated.toLocaleString('en-US', { 
+            useGrouping: false, 
+            minimumFractionDigits: 0, 
+            maximumFractionDigits: 8 
+          })
+        : "";
       if (toAmount !== formattedToAmount) {
         setToAmount(formattedToAmount);
       }
@@ -270,11 +275,13 @@ export function Swap() {
     if (!isUpdatingFromInput && swapRate > 0) {
       const amount = parseFloat(toAmount) || 0;
       const calculated = (amount / swapRate) || 0;
-      const formattedFromAmount = calculated.toLocaleString('en-US', { 
-        useGrouping: false, 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 8 
-      });
+      const formattedFromAmount = (calculated !== undefined && calculated !== null)
+        ? calculated.toLocaleString('en-US', { 
+            useGrouping: false, 
+            minimumFractionDigits: 0, 
+            maximumFractionDigits: 8 
+          })
+        : "";
       if (fromAmount !== formattedFromAmount) {
         setFromAmount(formattedFromAmount);
       }
@@ -310,7 +317,7 @@ export function Swap() {
   };
 
   const formatRate = (rate: number) => {
-    if (!rate && rate !== 0) return "0.00";
+    if (rate === undefined || rate === null) return "0.00";
     if (rate >= 1000) {
       return rate.toLocaleString('en-US', { 
         minimumFractionDigits: 2,
