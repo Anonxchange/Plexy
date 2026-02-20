@@ -213,12 +213,18 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
       setPriceData({ ...cached.data, isLoading: false });
       // Still fetch in background to keep it updated, but don't show loading
       fetchPrices(false);
-    } else {
+    } else if (debouncedAmount > 0) {
       fetchPrices(true);
+    } else {
+      setPriceData(prev => ({ ...prev, isLoading: false }));
     }
 
-    // Refresh every 18 seconds
-    intervalId = setInterval(() => fetchPrices(false), 18000);
+    // Refresh every 20 seconds (Production Standard)
+    intervalId = setInterval(() => {
+      if (debouncedAmount > 0) {
+        fetchPrices(false);
+      }
+    }, 20000);
 
     return () => {
       isMounted = false;
