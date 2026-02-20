@@ -241,9 +241,8 @@ export function Swap() {
   // Auto-update toAmount when prices change or fromAmount changes
   useEffect(() => {
     if (isUpdatingFromInput && bestQuote) {
-      // Use exact amount from RocketX if available
-      const calculated = bestQuote.toAmount || 0;
-      const formattedToAmount = calculated.toLocaleString('en-US', { 
+      // Use exact amount from RocketX quote
+      const formattedToAmount = bestQuote.toAmount.toLocaleString('en-US', { 
         useGrouping: false, 
         minimumFractionDigits: 0, 
         maximumFractionDigits: 8 
@@ -252,6 +251,7 @@ export function Swap() {
         setToAmount(formattedToAmount);
       }
     } else if (isUpdatingFromInput && swapRate > 0) {
+      // Fallback to calculated market rate if no specific quote
       const amount = parseFloat(fromAmount) || 0;
       const calculated = calculateSwapAmount(amount, swapRate) || 0;
       const formattedToAmount = calculated.toLocaleString('en-US', { 
