@@ -558,22 +558,158 @@ export function Swap() {
                       <Label className="text-foreground font-bold text-sm">From</Label>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-3xl font-bold text-muted-foreground/30">0</span>
+                      <Input
+                        type="number"
+                        value={fromAmount}
+                        onChange={(e) => handleFromAmountChange(e.target.value)}
+                        className="bg-transparent border-none text-3xl font-bold p-0 focus-visible:ring-0 h-auto w-full"
+                        placeholder="0"
+                      />
                       <div className="ml-auto flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
-                          <img src={getCurrency(fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
-                          <span className="font-bold">{fromCurrency}</span>
-                        </div>
+                        <Select value={fromCurrency} onValueChange={setFromCurrency}>
+                          <SelectTrigger className="w-auto bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm h-auto font-bold">
+                            <div className="flex items-center gap-2">
+                              <img src={getCurrency(fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                              <SelectValue placeholder="Select" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {currencies.map(c => (
+                              <SelectItem key={c.symbol} value={c.symbol}>
+                                <div className="flex items-center gap-2">
+                                  <img src={c.iconUrl} alt="" className="w-4 h-4 rounded-full" />
+                                  <span>{c.symbol}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         {getCurrency(fromCurrency)?.networks && (
-                          <span className="text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter">
-                            {getCurrency(fromCurrency)?.networks?.find(n => n.chain === fromNetwork)?.name || fromNetwork}
-                          </span>
+                          <Select value={fromNetwork} onValueChange={setFromNetwork}>
+                            <SelectTrigger className="h-auto p-0 border-none bg-transparent text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter focus:ring-0">
+                              <SelectValue placeholder="Network" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getCurrency(fromCurrency)?.networks?.map(n => (
+                                <SelectItem key={n.chain} value={n.chain}>{n.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">
+                        Balance: {balance !== null ? balance.toLocaleString(undefined, { maximumFractionDigits: 8 }) : <Skeleton className="h-3 w-16 inline-block" />} {fromCurrency}
+                      </span>
+                      {balance !== null && balance > 0 && (
+                        <button 
+                          onClick={() => handleFromAmountChange(balance.toString())}
+                          className="text-xs text-primary font-bold hover:underline"
+                        >
+                          MAX
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center -my-6 relative z-10">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="rounded-full bg-card border-2 border-border shadow-md hover:bg-accent transition-all active:scale-95"
+                      onClick={handleSwapCurrencies}
+                    >
+                      <ArrowUpDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* To Box */}
+                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-foreground font-bold text-sm">To (Estimated)</Label>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {isLoading ? (
+                        <Skeleton className="h-9 w-32" />
+                      ) : (
+                        <Input
+                          type="number"
+                          value={toAmount}
+                          onChange={(e) => handleToAmountChange(e.target.value)}
+                          className="bg-transparent border-none text-3xl font-bold p-0 focus-visible:ring-0 h-auto w-full"
+                          placeholder="0"
+                        />
+                      )}
+                      <div className="ml-auto flex flex-col items-end gap-1">
+                        <Select value={toCurrency} onValueChange={setToCurrency}>
+                          <SelectTrigger className="w-auto bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm h-auto font-bold">
+                            <div className="flex items-center gap-2">
+                              <img src={getCurrency(toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                              <SelectValue placeholder="Select" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {currencies.map(c => (
+                              <SelectItem key={c.symbol} value={c.symbol}>
+                                <div className="flex items-center gap-2">
+                                  <img src={c.iconUrl} alt="" className="w-4 h-4 rounded-full" />
+                                  <span>{c.symbol}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {getCurrency(toCurrency)?.networks && (
+                          <Select value={toNetwork} onValueChange={setToNetwork}>
+                            <SelectTrigger className="h-auto p-0 border-none bg-transparent text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter focus:ring-0">
+                              <SelectValue placeholder="Network" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getCurrency(toCurrency)?.networks?.map(n => (
+                                <SelectItem key={n.chain} value={n.chain}>{n.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Swap Button Middle */}
+                  {/* Quote Details */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        <TrendingDown className="h-3.5 w-3.5" />
+                        Exchange Rate
+                      </span>
+                      <span className="font-medium">
+                        {isLoading ? <Skeleton className="h-4 w-24" /> : `1 ${fromCurrency} ≈ ${formatRate(swapRate)} ${toCurrency}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        <Shield className="h-3.5 w-3.5" />
+                        Network Fee
+                      </span>
+                      <span className="font-medium text-amber-500">
+                        {isLoading ? <Skeleton className="h-4 w-16" /> : (estFees[fromNetwork] || "Fetching...")}
+                      </span>
+                    </div>
+
+                    {bestQuote?.priceImpact !== undefined && (
+                      <div className="flex items-center justify-between text-sm px-1">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          <BarChart3 className="h-3.5 w-3.5" />
+                          Price Impact
+                        </span>
+                        <span className={`font-medium ${bestQuote.priceImpact > 2 ? 'text-red-500' : 'text-green-500'}`}>
+                          {bestQuote.priceImpact.toFixed(2)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex justify-center -my-6 relative z-10">
                     <div className="rounded-full bg-[#B4F22E] text-black h-10 w-10 flex items-center justify-center border-4 border-card shadow-lg">
                       <ArrowUpDown className="h-5 w-5" />
