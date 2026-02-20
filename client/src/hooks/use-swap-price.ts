@@ -56,13 +56,18 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
     let intervalId: NodeJS.Timeout;
 
     const fetchPrices = async (showLoading = false) => {
-      // Use cached data for market reference but still force a fresh RocketX quote
       const cached = priceCache[cacheKey];
       if (showLoading && isMounted && !cached) {
         setPriceData(prev => ({ ...prev, isLoading: true }));
       }
       
       try {
+        // Prevent repeated tokens calls if we already have the tokens for these networks
+        // Or if we just fetched them
+        if (isMounted && cached && Date.now() - cached.timestamp < 10000) {
+           return;
+        }
+
         // For stablecoins to stablecoins, rate is 1:1
         if (
           (fromCrypto === 'USDT' || fromCrypto === 'USDC') &&
