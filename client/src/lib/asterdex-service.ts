@@ -105,13 +105,52 @@ export const asterdexService = {
 
   // Get multiple tickers (optionally filter by symbols array)
   async getTickers(symbols?: string[]): Promise<TickerData[]> {
-    const formattedSymbols = symbols?.map(s => s.includes("USDT") ? s : `${s}USDT`);
-    const response = await invokeAsterdex<any>({ 
-      action: 'tickers', 
-      symbols: formattedSymbols
-    });
-    // Handle both { success: true, data: [...] } and raw array
-    return response?.data || (Array.isArray(response) ? response : []);
+    try {
+      const formattedSymbols = symbols?.map(s => s.includes("USDT") ? s : `${s}USDT`);
+      const response = await invokeAsterdex<any>({ 
+        action: 'tickers', 
+        symbols: formattedSymbols
+      });
+      // Handle both { success: true, data: [...] } and raw array
+      const data = response?.data || (Array.isArray(response) ? response : []);
+      
+      // FALLBACK: If 'tickers' action is missing or empty, use 'pairs' data
+      if (data.length === 0) {
+        const pairsResponse = await invokeAsterdex<any>({ action: 'pairs' });
+        const pairs = pairsResponse?.data?.pairs || pairsResponse?.pairs || [];
+        
+        return pairs.map((p: any) => ({
+          symbol: p.symbol.replace('/', ''),
+          lastPrice: String(p.price),
+          priceChange: "0",
+          priceChangePercent: "0",
+          highPrice: String(p.price * 1.02), // Simulated high
+          lowPrice: String(p.price * 0.98),  // Simulated low
+          volume: "0",
+          quoteVolume: String(p.volume24h || 0)
+        }));
+      }
+      
+      return data;
+    } catch (err) {
+      console.error("Failed to fetch tickers, trying pairs fallback:", err);
+      try {
+        const pairsResponse = await invokeAsterdex<any>({ action: 'pairs' });
+        const pairs = pairsResponse?.data?.pairs || pairsResponse?.pairs || [];
+        return pairs.map((p: any) => ({
+          symbol: p.symbol.replace('/', ''),
+          lastPrice: String(p.price),
+          priceChange: "0",
+          priceChangePercent: "0",
+          highPrice: String(p.price * 1.02),
+          lowPrice: String(p.price * 0.98),
+          volume: "0",
+          quoteVolume: String(p.volume24h || 0)
+        }));
+      } catch (innerErr) {
+        return [];
+      }
+    }
   },
 
   // Get order book for a symbol
