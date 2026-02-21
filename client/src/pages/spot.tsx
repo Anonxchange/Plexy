@@ -197,13 +197,12 @@ export function Spot() {
                 const price = parseFloat(ticker.lastPrice) || 0;
                 const change = parseFloat(ticker.priceChangePercent) || 0;
                 const quoteVolume = parseFloat(ticker.quoteVolume) || 0;
-                const volume24h = quoteVolume > 0 ? quoteVolume : (parseFloat(ticker.volume) * price || 0);
                 
                 return {
                   ...pair,
                   price,
                   change,
-                  volume: volume24h > 1e9 ? `${(volume24h / 1e9).toFixed(2)}B` : `${(volume24h / 1e6).toFixed(2)}M`,
+                  volume: quoteVolume > 1e9 ? `${(quoteVolume / 1e9).toFixed(2)}B` : `${(quoteVolume / 1e6).toFixed(2)}M`,
                   high: parseFloat(ticker.highPrice) || 0,
                   low: parseFloat(ticker.lowPrice) || 0,
                 };
@@ -824,13 +823,7 @@ export function Spot() {
               </div>
               <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
                 <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">24h Volume</p>
-                <p className="text-base md:text-lg font-bold">
-                  {selectedPair.volume === "0.00M" || selectedPair.volume === "0" ? (
-                    <span className="animate-pulse text-muted-foreground/50">Fetching...</span>
-                  ) : (
-                    selectedPair.volume
-                  )}
-                </p>
+                <p className="text-base md:text-lg font-bold">{selectedPair.volume}</p>
               </div>
             </div>
           </div>
