@@ -1,4 +1,3 @@
-
 import { ShieldCheck, AlertTriangle, Search, FileCheck, AlertCircle, ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -19,7 +18,7 @@ export default function AMLPolicy() {
       links: [
         { text: "Terms & Conditions", href: "/terms" },
         { text: "VIP Terms", href: "/vip-terms" },
-      ]
+      ],
     },
     {
       category: "Policies",
@@ -27,14 +26,12 @@ export default function AMLPolicy() {
         { text: "Privacy Policy", href: "/privacy" },
         { text: "Cookie Policy", href: "/cookie-policy" },
         { text: "AML Policy", href: "/aml-policy" },
-      ]
+      ],
     },
     {
       category: "Other",
-      links: [
-        { text: "Vendor Reminder", href: "/vendor-reminder" },
-      ]
-    }
+      links: [{ text: "Vendor Reminder", href: "/vendor-reminder" }],
+    },
   ];
 
   return (
@@ -43,19 +40,17 @@ export default function AMLPolicy() {
       <section className="relative overflow-hidden bg-primary py-20 px-4">
         <div className="absolute top-20 right-20 w-96 h-96 bg-primary-foreground/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary-foreground/5 rounded-full blur-3xl"></div>
-        
+
         <div className="max-w-4xl mx-auto relative z-10 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             <span className="block text-primary-foreground">Anti-Money Laundering Policy</span>
           </h1>
-          
+
           <p className="text-lg md:text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
             Our commitment to preventing money laundering and terrorist financing
           </p>
 
-          <p className="text-sm text-primary-foreground/80">
-            Last Updated: November 2, 2024
-          </p>
+          <p className="text-sm text-primary-foreground/80">Last Updated: February 20, 2026</p>
         </div>
       </section>
 
@@ -135,7 +130,7 @@ export default function AMLPolicy() {
               <div>
                 <h2 className="text-2xl font-bold mb-4">Introduction</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Pexly is a non-custodial software service provider. We provide technical infrastructure and software tools that enable users to interact on a peer-to-peer basis. Pexly is not a financial institution, digital asset exchange, or money transmitter. This policy outlines our procedures to ensure our software environment is used responsibly.
+                  Pexly provides non-custodial software and infrastructure that enables users to interact peer-to-peer. Pexly does not custody, hold, or control user funds or private keys. Pexly does not operate an exchange, matching engine, escrow service, payment processor, or provide fiat on/off ramps. Pexly is not a Virtual Asset Service Provider (VASP), money transmitter, bank, or licensed exchange. All settlements and fiat transfers occur directly between users or through third-party payment services chosen by users.
                 </p>
               </div>
 
@@ -158,14 +153,14 @@ export default function AMLPolicy() {
                   1. Know Your Customer (KYC)
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  We implement robust KYC procedures to verify the identity of our users:
+                  We implement KYC measures where required by partners or by law to verify identity and reduce risk. Pexly's KYC checks are limited to identity verification and do not imply custody or control of assets. KYC measures may include:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
                   <li>Verification of government-issued identification documents</li>
                   <li>Proof of address verification</li>
                   <li>Liveness detection to prevent identity fraud</li>
-                  <li>Enhanced due diligence for high-risk customers</li>
-                  <li>Ongoing monitoring of customer transactions and behavior</li>
+                  <li>Enhanced due diligence for high-risk customers where applicable</li>
+                  <li>Ongoing monitoring of account activity where required by applicable law</li>
                 </ul>
               </div>
 
@@ -175,14 +170,14 @@ export default function AMLPolicy() {
                   2. Transaction Monitoring
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  We employ sophisticated systems to monitor and analyze transactions:
+                  Where we have transactional metadata or logs (e.g., platform actions, listings, or API logs), we analyze activity to detect abuse, fraud, or patterns that may indicate illicit activity. Because Pexly does not custody funds, our monitoring focuses on platform behavior rather than account balances. Monitoring tools include:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-                  <li>Real-time transaction screening against sanctions lists</li>
-                  <li>Detection of unusual transaction patterns</li>
+                  <li>Real-time screening of user identities against sanctions lists</li>
+                  <li>Detection of unusual platform behavior and listing patterns</li>
                   <li>Automated alerts for suspicious activities</li>
-                  <li>Regular review of high-value and high-frequency transactions</li>
-                  <li>Analysis of transaction sources and destinations</li>
+                  <li>Regular review of high-risk or high-volume accounts</li>
+                  <li>Analysis of activity metadata where available</li>
                 </ul>
               </div>
 
@@ -192,13 +187,12 @@ export default function AMLPolicy() {
                   3. Suspicious Activity Reporting
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  We are required to report suspicious activities to the relevant authorities:
+                  We cooperate with law enforcement and regulatory authorities and will report suspicious activities when required by law. Reporting typically relates to platform misuse, fraud, or identity-related offenses rather than custody or transfer of funds.
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-                  <li>Transactions that appear to have no economic or lawful purpose</li>
-                  <li>Unusual patterns inconsistent with expected customer behavior</li>
+                  <li>Platform misuse, fraud, or identity-related offenses</li>
                   <li>Attempts to avoid reporting or recordkeeping requirements</li>
-                  <li>Transactions involving high-risk jurisdictions</li>
+                  <li>Listings or offers involving sanctioned individuals or entities</li>
                   <li>Any activities that may relate to terrorist financing</li>
                 </ul>
               </div>
@@ -206,7 +200,7 @@ export default function AMLPolicy() {
               <div>
                 <h2 className="text-2xl font-bold mb-4">4. Risk Assessment</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  We conduct ongoing risk assessments to identify and mitigate AML/CTF risks:
+                  We conduct ongoing risk assessments to identify and mitigate AML/CTF risks related to our platform operations and users' interactions. These assessments are focused on platform risk, user behavior, and our integration partners.
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
                   <li>Customer risk rating based on various factors</li>
@@ -220,14 +214,14 @@ export default function AMLPolicy() {
               <div>
                 <h2 className="text-2xl font-bold mb-4">5. Record Keeping</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  We maintain comprehensive records of all transactions and customer information for a minimum of 5 years, or as required by applicable law. This includes identification documents, transaction records, and any reports filed with authorities.
+                  We maintain comprehensive records of platform activity, identity verification, and compliance-related documentation for a minimum of 5 years, or as required by applicable law. This includes identification documents, activity logs, and any reports filed with authorities.
                 </p>
               </div>
 
               <div>
                 <h2 className="text-2xl font-bold mb-4">6. Training and Awareness</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Our staff receives regular training on AML/CTF requirements, red flags, and reporting procedures. We ensure that all team members understand their responsibilities in preventing money laundering and terrorist financing.
+                  Our staff receives regular training on AML/CTF requirements, red flags, and reporting procedures. We ensure that all team members understand their responsibilities in preventing illicit activity on the platform.
                 </p>
               </div>
 
@@ -249,14 +243,14 @@ export default function AMLPolicy() {
               <div>
                 <h2 className="text-2xl font-bold mb-4">8. Sanctions Compliance</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  We screen all users and transactions against international sanctions lists, including OFAC, UN, and EU sanctions. We do not provide services to individuals or entities in sanctioned jurisdictions or on sanctions lists.
+                  We screen user identities and platform activities against international sanctions lists, including OFAC, UN, and EU sanctions. We do not knowingly provide services to individuals or entities that are subject to sanctions.
                 </p>
               </div>
 
               <div>
                 <h2 className="text-2xl font-bold mb-4">9. Cooperation with Authorities</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  We fully cooperate with law enforcement and regulatory authorities in their investigations of money laundering, terrorist financing, or other illegal activities. We respond promptly to lawful requests for information.
+                  We fully cooperate with law enforcement and regulatory authorities in their investigations of illicit activity. We respond promptly to lawful requests for information and provide records where required.
                 </p>
               </div>
 
@@ -273,7 +267,7 @@ export default function AMLPolicy() {
                   <div>
                     <h3 className="font-semibold mb-2">Report Suspicious Activity</h3>
                     <p className="text-sm text-muted-foreground">
-                      If you suspect any money laundering or terrorist financing activities, please report immediately to{" "}
+                      If you suspect any money laundering or terrorist financing activities, please report immediately to{' '}
                       <a href="mailto:compliance@pexly.com" className="text-primary hover:underline">
                         compliance@pexly.com
                       </a>
