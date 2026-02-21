@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin, Lock, Shield, Award, TrendingUp, CheckCircle, User } from "lucide-react";
+import { ArrowDownUp, Edit, Bitcoin, Building2, Search, Menu, Wallet, CreditCard, Gift, Smartphone, Coins, MapPin, Lock, Shield, Award, TrendingUp, CheckCircle, User, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useRoute } from "wouter";
@@ -574,8 +574,26 @@ export function CreateOffer() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 container mx-auto px-4 lg:px-8 py-6 max-w-2xl lg:max-w-4xl">
+    <div className="min-h-screen flex flex-col bg-background relative">
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <Card className="max-w-md mx-4 border-primary/20 shadow-2xl">
+          <CardContent className="pt-6 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Clock className="h-8 w-8 text-primary animate-pulse" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Coming Soon</h2>
+            <p className="text-muted-foreground mb-6">
+              Creating offers is currently unavailable as we prepare for our launch. Check back soon!
+            </p>
+            <Button onClick={() => window.history.back()} variant="default" className="w-full">
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+      <main className="flex-1 container mx-auto px-4 lg:px-8 py-6 max-w-2xl lg:max-w-4xl opacity-50 pointer-events-none">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl lg:text-4xl font-bold">{isEditMode ? "Edit offer" : "Create an offer"}</h1>
           <Badge variant="outline">LITE</Badge>
