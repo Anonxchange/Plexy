@@ -886,9 +886,9 @@ export function Spot() {
             </div>
 
             {/* Combined Sidebar: Order Book and Trade Panel */}
-            <div className="w-full lg:w-[480px] lg:flex-[1.5] flex flex-row border-t lg:border-t-0 h-auto lg:h-[500px] overflow-hidden">
+            <div className="w-full lg:w-[600px] lg:flex-[2] flex flex-row border-t lg:border-t-0 h-auto lg:h-[500px] overflow-hidden">
               {/* Column 1: Order Book */}
-              <div className="flex-[0.8] border-r border-border flex flex-col overflow-hidden h-full">
+              <div className="flex-[1.2] border-r border-border flex flex-col overflow-hidden h-full">
                 <div className="p-2 border-b border-border text-xs font-semibold flex items-center flex-shrink-0">
                   <BookOpen className="h-3 w-3 mr-1" /> Order Book
                 </div>
