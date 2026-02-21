@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -234,8 +235,26 @@ export function OfferDetail() {
   const totalWithFee = parseFloat(tradeAmount || "0") * (1 + feePercent / 100);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 pb-6">
+    <div className="min-h-screen flex flex-col bg-background relative">
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <Card className="max-w-md mx-4 border-primary/20 shadow-2xl">
+          <CardContent className="pt-6 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Clock className="h-8 w-8 text-primary animate-pulse" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Coming Soon</h2>
+            <p className="text-muted-foreground mb-6">
+              Offer details are temporarily unavailable. Please try again later!
+            </p>
+            <Button onClick={() => window.history.back()} variant="default" className="w-full">
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+      <main className="flex-1 pb-6 opacity-50 pointer-events-none">
         {/* Breadcrumb */}
         <div className="px-4 py-4">
           <Button 
