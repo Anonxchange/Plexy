@@ -234,12 +234,12 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
       setPriceData(prev => ({ ...prev, isLoading: false }));
     }
 
-    // Refresh every 20 seconds (Production Standard)
+    // Refresh every 15 seconds (Production Standard)
     intervalId = setInterval(() => {
       if (debouncedAmount > 0) {
         fetchPrices(false);
       }
-    }, 20000);
+    }, 15000);
 
     return () => {
       isMounted = false;
