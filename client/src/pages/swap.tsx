@@ -250,7 +250,7 @@ export function Swap() {
     }
 
     if (isLoading) {
-      setToAmount("..."); // Show loading state
+      // Don't update toAmount while loading to allow skeleton to show
       return;
     }
 
@@ -325,6 +325,9 @@ export function Swap() {
   const handleFromAmountChange = (value: string) => {
     setIsUpdatingFromInput(true);
     setFromAmount(value);
+    if (parseFloat(value) <= 0 || isNaN(parseFloat(value))) {
+      setToAmount("0.00");
+    }
   };
 
   const handleToAmountChange = (value: string) => {
@@ -374,10 +377,10 @@ export function Swap() {
     if (isQuoteExpired) {
       toast({
         title: "Quote Expired",
-        description: "Refreshing quote before execution...",
+        description: "Please wait for the quote to refresh.",
+        variant: "destructive"
       });
-      // The useSwapPrice hook will automatically refresh on next interval or we can trigger it
-      // For now, we'll wait for the next auto-refresh or let performSwap handle the best available
+      return;
     }
 
     // Refresh quote one last time before execution to be safe
@@ -978,13 +981,17 @@ export function Swap() {
                     <Label className="text-foreground font-bold text-sm">To</Label>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Input
-                      type="number"
-                      value={toAmount}
-                      onChange={(e) => handleToAmountChange(e.target.value)}
-                      className="flex-1 h-12 text-2xl font-semibold bg-transparent border-none p-0 focus-visible:ring-0 shadow-none"
-                      placeholder="0.00"
-                    />
+                    {isLoading ? (
+                      <Skeleton className="h-10 w-24 bg-foreground/10" />
+                    ) : (
+                      <Input
+                        type="number"
+                        value={toAmount}
+                        onChange={(e) => handleToAmountChange(e.target.value)}
+                        className="flex-1 h-12 text-2xl font-semibold bg-transparent border-none p-0 focus-visible:ring-0 shadow-none"
+                        placeholder="0.00"
+                      />
+                    )}
                     <div className="flex flex-col gap-2 items-end">
                       <Select value={toCurrency} onValueChange={setToCurrency}>
                         <SelectTrigger className="w-[120px] h-10 bg-card border-border/40 rounded-full shadow-sm">
