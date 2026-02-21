@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { Plus, Package, TrendingUp, TrendingDown, Share2, MoreVertical, History, Users, Star, ThumbsUp, Lock, BarChart3, Award, QrCode, Medal, Settings, Code } from "lucide-react";
+import { Plus, Package, TrendingUp, TrendingDown, Share2, MoreVertical, History, Users, Star, ThumbsUp, Lock, BarChart3, Award, QrCode, Medal, Settings, Code, Clock } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
