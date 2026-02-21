@@ -40,6 +40,10 @@ interface TradePair {
 }
 
 interface OrderBook {
+  data?: {
+    bids: Array<{ price: number; amount: number; total: number }>;
+    asks: Array<{ price: number; amount: number; total: number }>;
+  };
   bids: Array<[string, string]> | Array<{ price: number; amount: number; total: number }>;
   asks: Array<[string, string]> | Array<{ price: number; amount: number; total: number }>;
 }
@@ -102,19 +106,33 @@ export const asterdexService = {
   // Get multiple tickers (optionally filter by symbols array)
   async getTickers(symbols?: string[]): Promise<TickerData[]> {
     const formattedSymbols = symbols?.map(s => s.includes("USDT") ? s : `${s}USDT`);
-    return invokeAsterdex<TickerData[]>({ 
+    const response = await invokeAsterdex<any>({ 
       action: 'tickers', 
       symbols: formattedSymbols
     });
+    // Handle both { success: true, data: [...] } and raw array
+    return response?.data || (Array.isArray(response) ? response : []);
   },
 
   // Get order book for a symbol
   async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBook> {
     try {
-      const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
+      // Split the symbol into from/to (e.g., BTCUSDT -> BTC, USDT)
+      let fromSymbol = symbol;
+      let toSymbol = 'USDT';
+      
+      if (symbol.endsWith('USDT')) {
+        fromSymbol = symbol.replace('USDT', '');
+      } else if (symbol.includes('/')) {
+        const parts = symbol.split('/');
+        fromSymbol = parts[0];
+        toSymbol = parts[1];
+      }
+
       return await invokeAsterdex<OrderBook>({ 
         action: 'orderbook', 
-        symbol: formattedSymbol,
+        fromSymbol,
+        toSymbol,
         limit 
       });
     } catch (error) {
@@ -126,12 +144,28 @@ export const asterdexService = {
   // Get recent trades for a symbol
   async getRecentTrades(symbol: string, limit: number = 50): Promise<RecentTrade[]> {
     try {
-      const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-      return await invokeAsterdex<RecentTrade[]>({ 
+      // Split the symbol into from/to (e.g., BTCUSDT -> BTC, USDT)
+      let fromSymbol = symbol;
+      let toSymbol = 'USDT';
+      
+      if (symbol.endsWith('USDT')) {
+        fromSymbol = symbol.replace('USDT', '');
+      } else if (symbol.includes('/')) {
+        const parts = symbol.split('/');
+        fromSymbol = parts[0];
+        toSymbol = parts[1];
+      }
+
+      const response = await invokeAsterdex<any>({ 
         action: 'trades', 
-        symbol: formattedSymbol,
+        fromSymbol,
+        toSymbol,
         limit 
       });
+      // Handle both { success: true, data: [...] } and raw array
+      const data = response?.data || (Array.isArray(response) ? response : []);
+      // Ensure the return type matches RecentTrade[]
+      return data as RecentTrade[];
     } catch (error) {
       console.error("Failed to fetch trades for %s:", symbol, error);
       return [];
@@ -163,7 +197,7 @@ export const asterdexService = {
     amount: number,
     slippage: number = 0.005
   ): Promise<TradeQuote> {
-    return invokeAsterdex<TradeQuote>({
+    const response = await invokeAsterdex<any>({
       action: 'quote',
       fromSymbol: fromToken,
       toSymbol: toToken,
@@ -171,6 +205,7 @@ export const asterdexService = {
       tradeType: 'buy', // Match Edge Function's expected tradeType
       slippage,
     });
+    return response?.data || response;
   },
   // ---- Non-Custodial Trade Flow ----
   // Step 1: Backend validates price + builds unsigned order payload
