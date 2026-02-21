@@ -949,8 +949,8 @@ export function Spot() {
                         <TabsTrigger value="sell" className="text-xs data-[state=active]:text-red-500 data-[state=active]:bg-red-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-red-500">Sell</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="buy" className="m-0 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
+                      <TabsContent value="buy" className="m-0 flex-1 flex flex-col relative min-h-0">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-3 pb-16">
                           <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Order Type" />
@@ -1101,7 +1101,8 @@ export function Spot() {
                               </div>
                             </div>
                           )}
-
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 p-2 bg-background border-t border-border z-10">
                           <Button 
                             className="w-full h-9 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
                             onClick={handleBuy}
@@ -1112,8 +1113,8 @@ export function Spot() {
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="sell" className="m-0 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
+                      <TabsContent value="sell" className="m-0 flex-1 flex flex-col relative min-h-0">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-3 pb-16">
                           <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Order Type" />
@@ -1264,7 +1265,8 @@ export function Spot() {
                               </div>
                             </div>
                           )}
-
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 p-2 bg-background border-t border-border z-10">
                           <Button 
                             className="w-full h-9 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider"
                             onClick={handleSell}
