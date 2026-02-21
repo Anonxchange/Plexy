@@ -30,6 +30,24 @@ import {
 } from "@/lib/notifications-api";
 import { useAuth } from "@/lib/auth-context";
 import { notificationSounds } from "@/lib/notification-sounds";
+import DOMPurify from "dompurify";
+
+function sanitizeImageUrl(url: string | null): string {
+  if (!url) return "";
+
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (!["http:", "https:"].includes(parsed.protocol)) return "";
+    return DOMPurify.sanitize(url);
+  } catch {
+    return "";
+  }
+}
+
+function sanitizeAnnouncementContent(content?: string, fallback?: string): string {
+  const htmlContent = content?.replace(/\n/g, "<br />") || fallback || "";
+  return DOMPurify.sanitize(htmlContent);
+}
 
 export default function NotificationsPage() {
   const [, navigate] = useLocation();
@@ -563,7 +581,7 @@ export default function NotificationsPage() {
                 {selectedAnnouncement.image_url && (
                   <div className="mb-6">
                     <img
-                      src={selectedAnnouncement.image_url}
+                      src={sanitizeImageUrl(selectedAnnouncement.image_url)}
                       alt={selectedAnnouncement.title}
                       className="w-full h-64 rounded-lg object-cover"
                     />
@@ -575,7 +593,7 @@ export default function NotificationsPage() {
                   <div
                     className="text-foreground/90 leading-relaxed whitespace-pre-wrap"
                     dangerouslySetInnerHTML={{
-                      __html: selectedAnnouncement.content?.replace(/\n/g, '<br />') || selectedAnnouncement.excerpt || ''
+                      __html: sanitizeAnnouncementContent(selectedAnnouncement.content, selectedAnnouncement.excerpt)
                     }}
                   />
                 </div>
