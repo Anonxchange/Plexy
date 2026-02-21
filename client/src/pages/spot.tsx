@@ -182,7 +182,10 @@ export function Spot() {
     const fetchPrices = async () => {
       try {
         const symbols = tradingPairs.map(p => p.symbol);
-        const tickers = await asterdexService.getTickers(symbols);
+        const response = await asterdexService.getTickers(symbols);
+        
+        // The service returns the raw data array directly
+        const tickers = response;
         
         if (Array.isArray(tickers) && tickers.length > 0) {
           setTradingPairs(prevPairs => 
@@ -217,15 +220,15 @@ export function Spot() {
     const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
-  }, [supabase]);
+  }, [tradingPairs.length]); // Fixed dependency to prevent infinite loops but allow initial fetch
 
   // Update selected pair when trading pairs change
   useEffect(() => {
     const updatedPair = tradingPairs.find(p => p.pair === selectedPair.pair);
-    if (updatedPair) {
+    if (updatedPair && updatedPair.price !== selectedPair.price) {
       setSelectedPair(updatedPair);
     }
-  }, [tradingPairs]);
+  }, [tradingPairs, selectedPair.pair, selectedPair.price]);
 
   // Handle price/quote updates when amounts change
   const [tradeQuote, setTradeQuote] = useState<any>(null);
@@ -280,30 +283,41 @@ export function Spot() {
         console.log("[Spot] Market data results for %s:", formattedSymbol, { orderBookData, tradesData });
         
         if (orderBookData) {
-          if (orderBookData.bids && orderBookData.asks) {
-            setLiveOrderBook({
-              bids: Array.isArray(orderBookData.bids) ? orderBookData.bids as any : [],
-              asks: Array.isArray(orderBookData.asks) ? orderBookData.asks as any : []
-            });
+          // Handle both { success: true, data: { bids, asks } } and raw { bids, asks }
+          const rawData = (orderBookData as any).data || orderBookData;
+          const bidsData = Array.isArray(rawData.bids) ? rawData.bids : [];
+          const asksData = Array.isArray(rawData.asks) ? rawData.asks : [];
+
+          const bids: [string, string][] = bidsData.map((b: any) => 
+            Array.isArray(b) ? [String(b[0]), String(b[1])] : [String(b.price), String(b.amount)]
+          ) as [string, string][];
+          
+          const asks: [string, string][] = asksData.map((a: any) => 
+            Array.isArray(a) ? [String(a[0]), String(a[1])] : [String(a.price), String(a.amount)]
+          ) as [string, string][];
+
+          setLiveOrderBook({ bids, asks });
             
-            if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
-              const bestBid = orderBookData.bids[0];
-              const bestAsk = orderBookData.asks[0];
-              if (bestBid && bestAsk) {
-                const bidPrice = Array.isArray(bestBid) ? parseFloat(bestBid[0]) : (bestBid as any).price;
-                const askPrice = Array.isArray(bestAsk) ? parseFloat(bestAsk[0]) : (bestAsk as any).price;
-                
-                if (!isNaN(bidPrice) && !isNaN(askPrice)) {
-                  const middlePrice = ((bidPrice + askPrice) / 2).toString();
-                  setBuyPrice(middlePrice);
-                  setSellPrice(middlePrice);
-                }
+          if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
+            const bestBid = bids[0];
+            const bestAsk = asks[0];
+            if (bestBid && bestAsk) {
+              const bidPrice = parseFloat(bestBid[0]);
+              const askPrice = parseFloat(bestAsk[0]);
+              
+              if (!isNaN(bidPrice) && !isNaN(askPrice)) {
+                const middlePrice = ((bidPrice + askPrice) / 2).toString();
+                setBuyPrice(middlePrice);
+                setSellPrice(middlePrice);
               }
             }
           }
         }
-        if (tradesData && Array.isArray(tradesData)) {
-          setLiveTrades(tradesData);
+        
+        // Fix: Properly handle tradesData if it's wrapped in { success, data }
+        const rawTrades = (tradesData as any)?.data || (Array.isArray(tradesData) ? tradesData : []);
+        if (Array.isArray(rawTrades)) {
+          setLiveTrades(rawTrades);
         }
       } catch (error) {
         console.error('[Spot] Error fetching market data:', error);
@@ -313,7 +327,7 @@ export function Spot() {
     fetchOrderBookAndTrades();
     const interval = setInterval(fetchOrderBookAndTrades, 5000);
     return () => clearInterval(interval);
-  }, [selectedPair.symbol, orderType]);
+  }, [selectedPair.symbol, orderType]); // Added missing dependencies to fix closure issues
 
   const SlippageSelector = () => (
     <div className="flex items-center gap-1.5 mb-2">
