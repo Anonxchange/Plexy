@@ -455,8 +455,26 @@ export function MyOffers() {
         </DialogContent>
       </Dialog>
 
-      <div className="min-h-screen flex flex-col bg-background">
-        <main className="flex-1 container mx-auto px-4 py-6">
+      <div className="min-h-screen flex flex-col bg-background relative">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <Card className="max-w-md mx-4 border-primary/20 shadow-2xl">
+            <CardContent className="pt-6 text-center">
+              <div className="mb-4 flex justify-center">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <Clock className="h-8 w-8 text-primary animate-pulse" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Coming Soon</h2>
+              <p className="text-muted-foreground mb-6">
+                My Offers dashboard is currently unavailable. We are working hard to bring this feature to you!
+              </p>
+              <Button onClick={() => window.history.back()} variant="default" className="w-full">
+                Go Back
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        <main className="flex-1 container mx-auto px-4 py-6 opacity-50 pointer-events-none">
           {/* Mobile Header */}
           <div className="lg:hidden">
             <div className="flex items-center justify-between mb-6">
