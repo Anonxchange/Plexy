@@ -62,17 +62,17 @@ const categories = [
   {
     icon: Sparkles,
     title: "Get started",
-    description: "Create your Phantom wallet, customize your accounts, and learn about the key features.",
+    description: "Create your Pexly wallet, customize your accounts, and learn about the key features.",
   },
   {
     icon: Coins,
-    title: "Phantom Cash",
-    description: "Use Phantom Cash like everyday money: add from bank or card, spend globally with your debit card, pay friends, and earn rewards.",
+    title: "Pexly Cash",
+    description: "Use Pexly Cash like everyday money: add from bank or card, spend globally with your debit card, pay friends, and earn rewards.",
   },
   {
     icon: User,
     title: "Account and settings",
-    description: "Manage your wallets, account names, recovery phrases, privacy, and device settings in Phantom.",
+    description: "Manage your wallets, account names, recovery phrases, privacy, and device settings in Pexly.",
   },
   {
     icon: RefreshCw,
@@ -82,7 +82,7 @@ const categories = [
   {
     icon: Layout,
     title: "Apps",
-    description: "Connect Phantom to apps, manage your connection settings, and troubleshoot connections.",
+    description: "Connect Pexly to apps, manage your connection settings, and troubleshoot connections.",
   },
   {
     icon: Shield,
@@ -102,13 +102,13 @@ const categories = [
 ];
 
 const promotedArticles = [
-  "Get started with Phantom",
-  "Create a new Phantom wallet",
-  "Receive tokens in Phantom",
-  "Get started with Phantom Cash",
-  "Send tokens from Phantom",
-  "Buy tokens in Phantom",
-  "Get help from Phantom",
+  "Get started with Pexly",
+  "Create a new Pexly wallet",
+  "Receive tokens in Pexly",
+  "Get started with Pexly Cash",
+  "Send tokens from Pexly",
+  "Buy tokens in Pexly",
+  "Get help from Pexly",
   "What to do if I was scammed?",
 ];
 
@@ -117,19 +117,19 @@ const HelpCenter = () => {
 
   const HeroSection = () => {
     return (
-      <section className="relative min-h-[300px] overflow-hidden bg-[#A394F0]">
+      <section className="relative min-h-[300px] overflow-hidden bg-primary">
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 py-8">
           {/* Navigation */}
           <nav className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
-                <div className="w-6 h-4 bg-[#A394F0] rounded-full relative">
+                <div className="w-6 h-4 bg-primary rounded-full relative">
                   <div className="absolute top-1 left-1 w-1 h-1 bg-white rounded-full" />
                   <div className="absolute top-1 right-1 w-1 h-1 bg-white rounded-full" />
                 </div>
               </div>
-              <span className="text-white text-2xl font-bold tracking-tight">phantom</span>
+              <span className="text-white text-2xl font-bold tracking-tight">pexly</span>
             </div>
             <button className="text-white">
               <Menu className="w-8 h-8" />
@@ -187,7 +187,7 @@ const HelpCenter = () => {
           </div>
 
           {/* Promoted Articles */}
-          <section className="mb-16">
+          <section className="mb-4">
             <h2 className="text-xl font-semibold text-[#2D2D2D] mb-6 px-2">Promoted articles</h2>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               {promotedArticles.map((article, index) => (
@@ -208,10 +208,10 @@ const HelpCenter = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white py-12 border-t border-gray-100">
+      <footer className="bg-white py-6 border-t border-gray-100">
         <div className="container mx-auto max-w-4xl px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-8">
-            <p className="text-gray-500 text-sm">© Phantom Technologies, Inc.</p>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-4">
+            <p className="text-gray-500 text-sm">© Pexly Technologies, Inc.</p>
             
             <div className="flex items-center gap-6">
               <button className="flex items-center gap-2 text-gray-500 hover:text-gray-800 transition-colors text-sm font-medium">
@@ -224,13 +224,13 @@ const HelpCenter = () => {
           
           <div className="flex justify-center md:justify-end">
             <div className="flex items-center gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-[#A394F0] transition-colors">
+              <a href="#" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-primary transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-[#A394F0] transition-colors">
+              <a href="#" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-primary transition-colors">
                 <Twitter className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-[#A394F0] transition-colors">
+              <a href="#" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-primary transition-colors">
                 <Instagram className="w-5 h-5" />
               </a>
             </div>
@@ -240,7 +240,7 @@ const HelpCenter = () => {
 
       {/* Floating Help Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <button className="flex items-center gap-2 bg-[#A394F0] text-white px-6 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity font-semibold">
+        <button className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity font-semibold">
           <MessageCircle className="w-6 h-6" />
           <span>Chat</span>
         </button>
