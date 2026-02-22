@@ -36,11 +36,11 @@ interface GiftCardProps {
 function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
   return (
     <div
-      className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up"
+      className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up flex flex-col h-full"
       onClick={() => setLocation(`/gift-cards/${card.id}`)}
       style={{ animationDelay: `${0.2 + index * 0.05}s` }}
     >
-      <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden`}>
+      <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden flex-shrink-0`}>
         <img
           src={card.image}
           alt={card.name}
@@ -49,17 +49,22 @@ function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
       </div>
 
-      <div className="p-4">
+      <div className="p-4 flex flex-col flex-grow">
         <div className="flex items-start justify-between mb-2">
-          <h3 className="font-semibold text-foreground text-lg leading-tight">{card.name}</h3>
-          <span className="text-xs font-semibold text-destructive bg-discount-bg px-2 py-1 rounded-md flex-shrink-0 ml-2">
+          <h3 className="font-semibold text-foreground text-sm sm:text-base leading-tight line-clamp-1">{card.name}</h3>
+          <span className="text-[10px] font-bold text-destructive bg-discount-bg px-1.5 py-0.5 rounded flex-shrink-0 ml-2">
             {card.discount}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground mb-2">{card.description}</p>
-        <p className="text-sm text-muted-foreground">
-          {card.priceRange} <span className="text-muted-foreground/70">({card.cryptoRange})</span>
-        </p>
+        <p className="text-xs text-muted-foreground mb-3 line-clamp-2 flex-grow">{card.description}</p>
+        <div className="mt-auto pt-2 border-t border-border/40">
+          <p className="text-xs font-medium text-foreground">
+            {card.priceRange}
+          </p>
+          <p className="text-[10px] text-muted-foreground/70">
+            {card.cryptoRange}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -79,7 +84,8 @@ function GiftCardSkeleton() {
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-6 w-12" />
         </div>
-        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-full mb-1" />
+        <Skeleton className="h-4 w-2/3 mb-2" />
         <Skeleton className="h-4 w-3/4" />
       </div>
     </div>
