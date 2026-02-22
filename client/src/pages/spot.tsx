@@ -886,72 +886,54 @@ export function Spot() {
             </div>
 
             {/* Combined Sidebar: Order Book and Trade Panel */}
-            <div className="w-full lg:w-[680px] lg:flex-[2.5] flex flex-col lg:flex-row gap-6 h-auto lg:h-[750px] overflow-visible mb-10">
+            <div className="w-full lg:w-[600px] lg:flex-[2] flex flex-row border-t lg:border-t-0 h-auto lg:h-[500px] overflow-hidden">
               {/* Column 1: Order Book */}
-              <div className="flex-[1] bg-card/30 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl flex flex-col overflow-hidden h-full transition-all hover:bg-card/40 hover:border-white/10 group/book">
-                <div className="p-4 border-b border-white/5 text-[10px] font-black flex items-center justify-between flex-shrink-0 bg-white/5 uppercase tracking-[0.2em]">
-                  <div className="flex items-center">
-                    <BookOpen className="h-4 w-4 mr-3 text-primary animate-pulse" /> 
-                    <span>Order Analytics</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    <span className="text-[9px] text-muted-foreground font-mono opacity-60">Synchronized</span>
-                  </div>
+              <div className="flex-[1.2] border-r border-border flex flex-col overflow-hidden h-full">
+                <div className="p-2 border-b border-border text-xs font-semibold flex items-center flex-shrink-0">
+                  <BookOpen className="h-3 w-3 mr-1" /> Order Book
                 </div>
-                <div className="flex-1 overflow-y-auto no-scrollbar p-3">
-                  <div className="grid grid-cols-2 text-[9px] text-muted-foreground/40 mb-3 px-3 font-black uppercase tracking-[0.15em]">
-                    <div>Price (USDT)</div>
-                    <div className="text-right">Volume</div>
+                <div className="flex-1 overflow-y-auto no-scrollbar p-1">
+                  <div className="grid grid-cols-2 text-[10px] text-muted-foreground mb-1 px-1">
+                    <div>Price</div>
+                    <div className="text-right">Size</div>
                   </div>
 
                   {/* Asks */}
-                  <div className="space-y-1 mb-4">
-                    {(liveOrderBook.asks || []).slice(-(isDesktop ? 14 : 8)).reverse().map((ask, i) => {
+                  <div className="space-y-0.5 mb-2">
+                    {(liveOrderBook.asks || []).slice(-(isDesktop ? 10 : 7)).reverse().map((ask, i) => {
                       const price = parseFloat(ask[0]);
                       const amount = parseFloat(ask[1]);
                       if (isNaN(price) || isNaN(amount)) return null;
                       const maxAmount = Math.max(...(liveOrderBook.asks || []).map(a => parseFloat(a[1]) || 0), 1);
                       return (
-                        <div key={i} className="grid grid-cols-2 text-[10px] px-3 py-1.5 hover:bg-red-500/10 cursor-pointer relative group transition-all duration-300 rounded-lg">
-                          <div className="absolute inset-y-0 right-0 bg-red-500/5 rounded-lg transition-all duration-500 group-hover:bg-red-500/15" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
-                          <div className="text-red-400/90 relative z-10 font-mono font-bold tracking-tight">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                          <div className="text-right relative z-10 font-mono text-muted-foreground/70 group-hover:text-foreground transition-colors">{amount.toFixed(4)}</div>
+                        <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-red-500/10 cursor-pointer relative">
+                          <div className="absolute inset-y-0 right-0 bg-red-500/10" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
+                          <div className="text-red-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
+                          <div className="text-right relative z-10">{amount.toFixed(3)}</div>
                         </div>
                       );
                     })}
                   </div>
 
                   {/* Spread/Mid Price */}
-                  <div className="flex items-center justify-between px-5 py-3 my-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] group-hover/book:bg-white/10 transition-all duration-500">
-                    <div className="flex flex-col">
-                      <span className={`text-lg font-black tracking-tighter ${(selectedPair.change || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {(selectedPair.price || 0).toLocaleString()}
-                      </span>
-                      <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Mark Price</span>
-                    </div>
-                    <div className={`flex flex-col items-end`}>
-                      <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${selectedPair.change >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                        {selectedPair.change >= 0 ? '↑' : '↓'} {Math.abs(selectedPair.change).toFixed(2)}%
-                      </span>
-                    </div>
+                  <div className="text-center py-1 my-1 bg-muted/30 rounded border-y border-border/50">
+                    <span className={`text-xs font-bold ${(selectedPair.change || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {(selectedPair.price || 0).toLocaleString()}
+                    </span>
                   </div>
 
                   {/* Bids */}
-                  <div className="space-y-1">
-                    {(liveOrderBook.bids || []).slice(0, isDesktop ? 14 : 10).map((bid, i) => {
+                  <div className="space-y-0.5">
+                    {(liveOrderBook.bids || []).slice(0, isDesktop ? 10 : 8).map((bid, i) => {
                       const price = parseFloat(bid[0]);
                       const amount = parseFloat(bid[1]);
                       if (isNaN(price) || isNaN(amount)) return null;
                       const maxAmount = Math.max(...(liveOrderBook.bids || []).map(b => parseFloat(b[1]) || 0), 1);
                       return (
-                        <div key={i} className="grid grid-cols-2 text-[10px] px-3 py-1.5 hover:bg-green-500/10 cursor-pointer relative group transition-all duration-300 rounded-lg">
-                          <div className="absolute inset-y-0 right-0 bg-green-500/5 rounded-lg transition-all duration-500 group-hover:bg-green-500/15" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
-                          <div className="text-green-400/90 relative z-10 font-mono font-bold tracking-tight">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                          <div className="text-right relative z-10 font-mono text-muted-foreground/70 group-hover:text-foreground transition-colors">{amount.toFixed(4)}</div>
+                        <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-green-500/10 cursor-pointer relative">
+                          <div className="absolute inset-y-0 right-0 bg-green-500/10" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
+                          <div className="text-green-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
+                          <div className="text-right relative z-10">{amount.toFixed(3)}</div>
                         </div>
                       );
                     })}
@@ -960,310 +942,335 @@ export function Spot() {
               </div>
 
               {/* Column 2: Trade Panel */}
-              <div className="flex-[1.4] bg-card/30 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl flex flex-col overflow-hidden h-full transition-all hover:bg-card/40 hover:border-white/10 group/trade">
+              <div className="flex-[1.2] flex flex-col overflow-hidden h-full">
                     <Tabs defaultValue="buy" className="flex-1 flex flex-col">
-                      <TabsList className="w-full grid grid-cols-2 rounded-none h-14 border-b border-white/5 bg-white/5 p-2 gap-2">
-                        <TabsTrigger value="buy" className="text-[10px] font-black uppercase tracking-[0.25em] data-[state=active]:text-green-400 data-[state=active]:bg-green-500/10 rounded-2xl transition-all duration-500 hover:bg-white/5">Buy Asset</TabsTrigger>
-                        <TabsTrigger value="sell" className="text-[10px] font-black uppercase tracking-[0.25em] data-[state=active]:text-red-400 data-[state=active]:bg-red-500/10 rounded-2xl transition-all duration-500 hover:bg-white/5">Sell Asset</TabsTrigger>
+                      <TabsList className="w-full grid grid-cols-2 rounded-none h-9 border-b border-border bg-transparent">
+                        <TabsTrigger value="buy" className="text-xs data-[state=active]:text-green-500 data-[state=active]:bg-green-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-green-500">Buy</TabsTrigger>
+                        <TabsTrigger value="sell" className="text-xs data-[state=active]:text-red-500 data-[state=active]:bg-red-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-red-500">Sell</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="buy" className="m-0 flex-1 flex flex-col relative min-h-0 bg-transparent">
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 pb-32">
+                      <TabsContent value="buy" className="m-0 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
                           <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
-                            <SelectTrigger className="h-12 text-[10px] bg-white/5 border-none hover:bg-white/10 transition-all rounded-2xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] font-black uppercase tracking-widest px-5">
-                              <SelectValue placeholder="Execution Strategy" />
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Order Type" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-white/10 bg-card/95 backdrop-blur-2xl shadow-2xl">
-                              <SelectItem value="limit" className="text-[10px] font-bold uppercase tracking-widest py-3">Limit Order</SelectItem>
-                              <SelectItem value="market" className="text-[10px] font-bold uppercase tracking-widest py-3">Instant Market</SelectItem>
+                            <SelectContent>
+                              <SelectItem value="limit">Limit</SelectItem>
+                              <SelectItem value="market">Market</SelectItem>
                             </SelectContent>
                           </Select>
 
                           {orderType === "limit" ? (
-                            <div className="space-y-3">
-                              <div className="flex justify-between text-[9px] text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
-                                <span>Entry Price</span>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
                                 <span>USDT</span>
                               </div>
                               <Input 
-                                className="h-12 text-xs bg-white/5 border-none focus-visible:ring-2 focus-visible:ring-green-500/20 rounded-2xl shadow-inner font-mono font-bold px-5 transition-all" 
+                                className="h-8 text-xs bg-muted/20" 
                                 value={buyPrice}
                                 onChange={(e) => setBuyPrice(e.target.value)}
                               />
                             </div>
                           ) : (
-                            <div className="space-y-3">
-                              <div className="flex justify-between text-[9px] text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
-                                <span>Current Valuation</span>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
                                 <span>USDT</span>
                               </div>
-                              <div className="h-12 flex items-center px-5 rounded-2xl bg-white/5 text-[10px] text-muted-foreground/60 font-black uppercase tracking-widest shadow-inner border border-white/5">
-                                Market Optimized
+                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                                Market Price
                               </div>
                             </div>
                           )}
 
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-[9px] text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
-                              <span>Trade Volume</span>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>{orderType === "market" ? "Total (approx)" : "Total"}</span>
                               <span>USDT</span>
                             </div>
-                            <div className="relative group">
-                              <Input 
-                                className="h-12 text-xs bg-white/5 border-none focus-visible:ring-2 focus-visible:ring-green-500/20 rounded-2xl shadow-inner font-mono font-bold px-5 pr-16 transition-all" 
-                                value={buyAmount}
-                                onChange={(e) => setBuyAmount(e.target.value)}
-                                placeholder="0.00"
-                              />
-                              <div className="absolute right-5 top-1/2 -translate-y-1/2 text-[9px] font-black text-muted-foreground/30 group-focus-within:text-primary transition-all">USDT</div>
-                            </div>
-                            <div className="bg-green-500/5 rounded-2xl p-4 border border-green-500/10 flex justify-between items-center animate-in zoom-in-95 duration-500 shadow-sm">
-                              <div className="flex flex-col">
-                                <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-[0.15em]">Allocated Assets</span>
-                                <span className="text-[13px] text-green-400 font-black font-mono tracking-tighter">
-                                  {buyAmount && !isNaN(parseFloat(buyAmount)) 
-                                    ? (parseFloat(buyAmount) / (orderType === "limit" ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price)).toFixed(8)
-                                    : "0.00000000"}
-                                </span>
-                              </div>
-                              <span className="text-[10px] font-black text-green-500/50 bg-green-500/10 px-2 py-1 rounded-md">{selectedPair.symbol}</span>
+                            <Input 
+                              className="h-8 text-xs bg-muted/20" 
+                              value={buyAmount}
+                              onChange={(e) => setBuyAmount(e.target.value)}
+                              placeholder="0.00"
+                            />
+                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
+                              <span>Est. Receive:</span>
+                              <span className="text-green-500">
+                                {buyAmount && !isNaN(parseFloat(buyAmount)) 
+                                  ? (parseFloat(buyAmount) / (orderType === "limit" ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price)).toFixed(6)
+                                  : "0.00"} {selectedPair.symbol}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="pt-4 space-y-4">
+                          <div className="pt-1">
                             <Slider
                               value={buyPercentage}
                               onValueChange={setBuyPercentage}
                               max={100}
-                              step={1}
+                              step={25}
                               className="py-2"
                             />
-                            <div className="flex justify-between gap-2">
-                              {[25, 50, 75, 100].map((p) => (
-                                <button 
-                                  key={p} 
-                                  className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all duration-300 border border-white/5 ${buyPercentage[0] >= p ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-white/5 text-muted-foreground/40 hover:bg-white/10 hover:text-foreground'}`}
-                                  onClick={() => setBuyPercentage([p])}
-                                >
-                                  {p}%
-                                </button>
-                              ))}
+                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
+                              <span>0%</span>
+                              <span>25%</span>
+                              <span>50%</span>
+                              <span>75%</span>
+                              <span>100%</span>
                             </div>
                           </div>
 
-                          <div className="pt-6 border-t border-white/5">
-                            <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5 shadow-inner">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <Wallet className="w-4 h-4 text-primary" />
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Available liquidity</span>
-                                  <span className="text-[11px] font-black text-foreground font-mono">{quoteWallet?.balance.toFixed(2) || "0.00"} USDT</span>
-                                </div>
-                              </div>
-                              <button className="text-[9px] font-black text-primary hover:underline uppercase tracking-widest">Deposit</button>
+                          <div className="space-y-1 pt-2 border-t border-border/50">
+                            {orderType === "market" && <SlippageSelector />}
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-muted-foreground">Avbl</span>
+                              <span>{quoteWallet?.balance.toFixed(2) || "0.00"} USDT</span>
                             </div>
                           </div>
 
                           {orderType === "limit" && (
-                            <div className="space-y-4 pt-2">
-                              <div 
-                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-500 cursor-pointer ${isTPEnabled ? 'bg-green-500/5 border-green-500/20' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
-                                onClick={() => setIsTPEnabled(!isTPEnabled)}
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className={`w-2 h-2 rounded-full transition-all duration-500 ${isTPEnabled ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-muted-foreground/30'}`}></div>
-                                  <span className={`text-[10px] font-black uppercase tracking-widest ${isTPEnabled ? 'text-foreground' : 'text-muted-foreground/60'}`}>Risk Mitigation (TP/SL)</span>
+                            <div className="space-y-2 py-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="buy-tp-sl"
+                                    checked={isTPEnabled}
+                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="buy-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
                                 </div>
-                                <div className={`transition-transform duration-500 ${isTPEnabled ? 'rotate-180' : ''}`}>
-                                  <ChevronDown className="w-4 h-4 text-muted-foreground/40" />
-                                </div>
+                                {isTPEnabled && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
+                                    <span>Basic</span>
+                                    <ArrowUpDown className="w-3 h-3" />
+                                  </div>
+                                )}
                               </div>
 
                               {isTPEnabled && (
-                                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                                  <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-green-500 uppercase tracking-widest">TP</div>
+                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <div className="relative">
                                     <Input
                                       value={tpPrice}
                                       onChange={(e) => setTpPrice(e.target.value)}
-                                      placeholder="Target"
-                                      className="h-12 text-xs bg-white/5 border-none focus-visible:ring-2 focus-visible:ring-green-500/20 transition-all pl-12 pr-4 rounded-2xl font-mono"
+                                      placeholder="Take Profit"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
                                     />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
                                   </div>
-                                  <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-red-500 uppercase tracking-widest">SL</div>
+                                  <div className="relative">
                                     <Input
                                       value={slPrice}
                                       onChange={(e) => setSlPrice(e.target.value)}
-                                      placeholder="Stop"
-                                      className="h-12 text-xs bg-white/5 border-none focus-visible:ring-2 focus-visible:ring-red-500/20 transition-all pl-12 pr-4 rounded-2xl font-mono"
+                                      placeholder="Stop Loss"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
                                     />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
                                   </div>
                                 </div>
                               )}
+
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="buy-post-only"
+                                    checked={isPostOnlyEnabled}
+                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="buy-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
+                                </div>
+                                <div className="ml-auto">
+                                  <Select value={gtcType} onValueChange={setGtcType}>
+                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
+                                      <SelectValue placeholder="GTC" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="GTC">GTC</SelectItem>
+                                      <SelectItem value="IOC">IOC</SelectItem>
+                                      <SelectItem value="FOK">FOK</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
                             </div>
                           )}
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/90 to-transparent z-40 rounded-b-3xl">
+
                           <Button 
-                            className="w-full h-14 text-[11px] bg-green-500 hover:bg-green-400 hover:shadow-[0_0_40px_rgba(34,197,94,0.3)] text-white font-black uppercase tracking-[0.3em] transition-all duration-500 active:scale-[0.95] rounded-2xl border-none shadow-2xl relative overflow-hidden group/btn"
+                            className="w-full h-9 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
                             onClick={handleBuy}
                             disabled={isExecuting}
                           >
-                            <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000"></div>
-                            <span className="relative z-10">{isExecuting ? "Executing Order..." : `Initialize Buy Order`}</span>
+                            {isExecuting ? "Processing..." : "Buy"}
                           </Button>
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="sell" className="m-0 flex-1 flex flex-col relative min-h-0 bg-transparent">
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 pb-32">
+                      <TabsContent value="sell" className="m-0 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
                           <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
-                            <SelectTrigger className="h-12 text-[10px] bg-white/5 border-none hover:bg-white/10 transition-all rounded-2xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] font-black uppercase tracking-widest px-5">
-                              <SelectValue placeholder="Execution Strategy" />
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Order Type" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-white/10 bg-card/95 backdrop-blur-2xl shadow-2xl">
-                              <SelectItem value="limit" className="text-[10px] font-bold uppercase tracking-widest py-3">Limit Order</SelectItem>
-                              <SelectItem value="market" className="text-[10px] font-bold uppercase tracking-widest py-3">Instant Market</SelectItem>
+                            <SelectContent>
+                              <SelectItem value="limit">Limit</SelectItem>
+                              <SelectItem value="market">Market</SelectItem>
                             </SelectContent>
                           </Select>
 
                           {orderType === "limit" ? (
-                            <div className="space-y-3">
-                              <div className="flex justify-between text-[9px] text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
-                                <span>Exit Price</span>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
                                 <span>USDT</span>
                               </div>
                               <Input 
-                                className="h-12 text-xs bg-white/5 border-none focus-visible:ring-2 focus-visible:ring-red-500/20 rounded-2xl shadow-inner font-mono font-bold px-5 transition-all" 
+                                className="h-8 text-xs bg-muted/20" 
                                 value={sellPrice}
                                 onChange={(e) => setSellPrice(e.target.value)}
                               />
                             </div>
                           ) : (
-                            <div className="space-y-3">
-                              <div className="flex justify-between text-[9px] text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
-                                <span>Current Valuation</span>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>Price</span>
                                 <span>USDT</span>
                               </div>
-                              <div className="h-12 flex items-center px-5 rounded-2xl bg-white/5 text-[10px] text-muted-foreground/60 font-black uppercase tracking-widest shadow-inner border border-white/5">
-                                Market Optimized
+                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                                Market Price
                               </div>
                             </div>
                           )}
 
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-[9px] text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
-                              <span>Trade Volume</span>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>Amount</span>
                               <span>{selectedPair.symbol}</span>
                             </div>
-                            <div className="relative group">
-                              <Input 
-                                className="h-12 text-xs bg-white/5 border-none focus-visible:ring-2 focus-visible:ring-red-500/20 rounded-2xl shadow-inner font-mono font-bold px-5 pr-16 transition-all" 
-                                value={sellAmount}
-                                onChange={(e) => setSellAmount(e.target.value)}
-                                placeholder="0.00"
-                              />
-                              <div className="absolute right-5 top-1/2 -translate-y-1/2 text-[9px] font-black text-muted-foreground/30 group-focus-within:text-primary transition-all">{selectedPair.symbol}</div>
-                            </div>
-                            <div className="bg-red-500/5 rounded-2xl p-4 border border-red-500/10 flex justify-between items-center animate-in zoom-in-95 duration-500 shadow-sm">
-                              <div className="flex flex-col">
-                                <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-[0.15em]">Estimated Yield</span>
-                                <span className="text-[13px] text-red-400 font-black font-mono tracking-tighter">
-                                  {sellAmount && !isNaN(parseFloat(sellAmount)) 
-                                    ? (parseFloat(sellAmount) * (orderType === "limit" ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price)).toFixed(2)
-                                    : "0.00"}
-                                </span>
-                              </div>
-                              <span className="text-[10px] font-black text-red-500/50 bg-red-500/10 px-2 py-1 rounded-md">USDT</span>
+                            <Input 
+                              className="h-8 text-xs bg-muted/20" 
+                              value={sellAmount}
+                              onChange={(e) => setSellAmount(e.target.value)}
+                              placeholder="0.00"
+                            />
+                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
+                              <span>Est. Receive:</span>
+                              <span className="text-red-500">
+                                {sellAmount && !isNaN(parseFloat(sellAmount)) 
+                                  ? (parseFloat(sellAmount) * (orderType === "limit" ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price)).toFixed(2)
+                                  : "0.00"} USDT
+                              </span>
                             </div>
                           </div>
 
-                          <div className="pt-4 space-y-4">
+                          <div className="pt-1">
                             <Slider
                               value={sellPercentage}
                               onValueChange={setSellPercentage}
                               max={100}
-                              step={1}
+                              step={25}
                               className="py-2"
                             />
-                            <div className="flex justify-between gap-2">
-                              {[25, 50, 75, 100].map((p) => (
-                                <button 
-                                  key={p} 
-                                  className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all duration-300 border border-white/5 ${sellPercentage[0] >= p ? 'bg-red-500 text-white shadow-lg shadow-red-500/20 scale-[1.02]' : 'bg-white/5 text-muted-foreground/40 hover:bg-white/10 hover:text-foreground'}`}
-                                  onClick={() => setSellPercentage([p])}
-                                >
-                                  {p}%
-                                </button>
-                              ))}
+                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
+                              <span>0%</span>
+                              <span>25%</span>
+                              <span>50%</span>
+                              <span>75%</span>
+                              <span>100%</span>
                             </div>
                           </div>
 
-                          <div className="pt-6 border-t border-white/5">
-                            <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5 shadow-inner">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center">
-                                  <Wallet className="w-4 h-4 text-red-500" />
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Available liquidity</span>
-                                  <span className="text-[11px] font-black text-foreground font-mono">{baseWallet?.balance.toFixed(4) || "0.0000"} {selectedPair.symbol}</span>
-                                </div>
-                              </div>
+                          <div className="space-y-1 pt-2 border-t border-border/50">
+                            {orderType === "market" && <SlippageSelector />}
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-muted-foreground">Avbl</span>
+                              <span>{baseWallet?.balance.toFixed(4) || "0.00"} {selectedPair.symbol}</span>
                             </div>
                           </div>
 
                           {orderType === "limit" && (
-                            <div className="space-y-4 pt-2">
-                              <div 
-                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-500 cursor-pointer ${isTPEnabled ? 'bg-red-500/5 border-red-500/20' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
-                                onClick={() => setIsTPEnabled(!isTPEnabled)}
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className={`w-2 h-2 rounded-full transition-all duration-500 ${isTPEnabled ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-muted-foreground/30'}`}></div>
-                                  <span className={`text-[10px] font-black uppercase tracking-widest ${isTPEnabled ? 'text-foreground' : 'text-muted-foreground/60'}`}>Risk Mitigation (TP/SL)</span>
+                            <div className="space-y-2 py-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="sell-tp-sl"
+                                    checked={isTPEnabled}
+                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="sell-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
                                 </div>
-                                <div className={`transition-transform duration-500 ${isTPEnabled ? 'rotate-180' : ''}`}>
-                                  <ChevronDown className="w-4 h-4 text-muted-foreground/40" />
-                                </div>
+                                {isTPEnabled && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
+                                    <span>Basic</span>
+                                    <ArrowUpDown className="w-3 h-3" />
+                                  </div>
+                                )}
                               </div>
 
                               {isTPEnabled && (
-                                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                                  <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-green-500 uppercase tracking-widest">TP</div>
+                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <div className="relative">
                                     <Input
                                       value={tpPrice}
                                       onChange={(e) => setTpPrice(e.target.value)}
-                                      placeholder="Target"
-                                      className="h-12 text-xs bg-white/5 border-none focus-visible:ring-2 focus-visible:ring-green-500/20 transition-all pl-12 pr-4 rounded-2xl font-mono"
+                                      placeholder="Take Profit"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
                                     />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
                                   </div>
-                                  <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-red-500 uppercase tracking-widest">SL</div>
+                                  <div className="relative">
                                     <Input
                                       value={slPrice}
                                       onChange={(e) => setSlPrice(e.target.value)}
-                                      placeholder="Stop"
-                                      className="h-12 text-xs bg-white/5 border-none focus-visible:ring-2 focus-visible:ring-red-500/20 transition-all pl-12 pr-4 rounded-2xl font-mono"
+                                      placeholder="Stop Loss"
+                                      className="h-9 text-xs bg-muted/20 pr-12"
                                     />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
                                   </div>
                                 </div>
                               )}
+
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    id="sell-post-only"
+                                    checked={isPostOnlyEnabled}
+                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor="sell-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
+                                </div>
+                                <div className="ml-auto">
+                                  <Select value={gtcType} onValueChange={setGtcType}>
+                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
+                                      <SelectValue placeholder="GTC" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="GTC">GTC</SelectItem>
+                                      <SelectItem value="IOC">IOC</SelectItem>
+                                      <SelectItem value="FOK">FOK</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
                             </div>
                           )}
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/90 to-transparent z-40 rounded-b-3xl">
+
                           <Button 
-                            className="w-full h-14 text-[11px] bg-red-500 hover:bg-red-400 hover:shadow-[0_0_40px_rgba(239,68,68,0.3)] text-white font-black uppercase tracking-[0.3em] transition-all duration-500 active:scale-[0.95] rounded-2xl border-none shadow-2xl relative overflow-hidden group/btn"
+                            className="w-full h-9 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider"
                             onClick={handleSell}
                             disabled={isExecuting}
                           >
-                            <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000"></div>
-                            <span className="relative z-10">{isExecuting ? "Executing Order..." : `Initialize Sell Order`}</span>
+                            {isExecuting ? "Processing..." : "Sell"}
                           </Button>
                         </div>
                       </TabsContent>
