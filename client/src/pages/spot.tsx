@@ -1,9 +1,21 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useSchema, spotPageSchema } from "@/hooks/use-schema";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -11,8 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -21,119 +31,40 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Star,
-  TrendingUp,
-  TrendingDown,
-  ChevronDown,
-  Search,
-  ArrowUpDown,
-  BookOpen,
-  Clock,
-  BarChart3,
+import { Slider } from "@/components/ui/slider";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  ArrowUpDown, 
+  BookOpen, 
+  Search, 
   Flame,
-  Sparkles,
-  DollarSign,
-  Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
+  History,
+  Info,
+  Settings2,
+  ChevronDown
 } from "lucide-react";
-import { getCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
-import { asterdexService } from "@/lib/asterdex-service";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import { useAuth } from "@/lib/auth-context";
-import { feeCalculator } from "@/lib/fee-calculator";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
-import { supabase } from "@/lib/supabase";
-import { useWalletData } from "@/hooks/use-wallet-data";
-import { useWalletBalances } from "@/hooks/use-wallet-balances";
+import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet-manager";
+import { asterdexService } from "@/lib/asterdex-service";
 
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Check, X } from "lucide-react";
-
-interface TradingPair {
-  pair: string;
-  price: number;
-  change: number;
-  volume: string;
-  high: number;
-  low: number;
-  favorite: boolean;
-  leverage: string;
-  symbol: string;
-}
-
-const initialTradingPairs: TradingPair[] = [
-  { pair: "BTC/USDT", symbol: "BTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "ETH/USDT", symbol: "ETH", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "SOL/USDT", symbol: "SOL", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "BNB/USDT", symbol: "BNB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "XRP/USDT", symbol: "XRP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "TON/USDT", symbol: "TON", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "TRX/USDT", symbol: "TRX", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "LTC/USDT", symbol: "LTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "ADA/USDT", symbol: "ADA", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+// Mock trading pairs for selection
+const tradingPairs = [
+  { pair: "BTC/USDT", symbol: "BTC", price: 64250.50, change: 2.45, high: 65100.00, low: 63800.00, volume: "1.2B", favorite: true, leverage: "10x" },
+  { pair: "ETH/USDT", symbol: "ETH", price: 3450.75, change: -1.20, high: 3520.00, low: 3410.00, volume: "850M", favorite: true, leverage: "5x" },
+  { pair: "SOL/USDT", symbol: "SOL", price: 145.20, change: 5.60, high: 148.50, low: 138.20, volume: "420M", favorite: false, leverage: "10x" },
+  { pair: "BNB/USDT", symbol: "BNB", price: 580.40, change: 0.85, high: 592.00, low: 575.00, volume: "210M", favorite: false, leverage: "5x" },
+  { pair: "XRP/USDT", symbol: "XRP", price: 0.62, change: -0.45, high: 0.64, low: 0.61, volume: "150M", favorite: false },
 ];
 
-const orderBook = {
-  asks: [
-    { price: 122260.50, amount: 0.524, total: 64064.54 },
-    { price: 122259.00, amount: 1.243, total: 151964.00 },
-    { price: 122258.50, amount: 0.892, total: 109054.58 },
-    { price: 122257.00, amount: 2.156, total: 263578.09 },
-    { price: 122256.50, amount: 0.673, total: 82258.62 },
-  ],
-  bids: [
-    { price: 122255.50, amount: 1.234, total: 150863.49 },
-    { price: 122254.00, amount: 0.756, total: 92424.02 },
-    { price: 122253.50, amount: 2.145, total: 262234.01 },
-    { price: 122252.00, amount: 0.892, total: 109048.78 },
-    { price: 122251.50, amount: 1.567, total: 191570.11 },
-  ],
-};
-
-const recentTrades = [
-  { price: 122256.50, amount: 0.0234, time: "18:42:15", type: "sell" },
-  { price: 122257.00, amount: 0.1543, time: "18:42:14", type: "buy" },
-  { price: 122256.00, amount: 0.0892, time: "18:42:13", type: "sell" },
-  { price: 122258.50, amount: 0.2156, time: "18:42:12", type: "buy" },
-  { price: 122255.50, amount: 0.0673, time: "18:42:11", type: "sell" },
-];
-
-export function Spot() {
-  useSchema(spotPageSchema, "spot-page-schema");
+export default function SpotTrading() {
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
-  const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
-  const [selectedPair, setSelectedPair] = useState(initialTradingPairs[0]);
-  const [searchPair, setSearchPair] = useState("");
-  const [showMarketList, setShowMarketList] = useState(false);
-  const [activeMarketTab, setActiveMarketTab] = useState("hot");
-  const [chartInterval, setChartInterval] = useState("60");
-  const [liveOrderBook, setLiveOrderBook] = useState({ bids: [] as Array<[string, string]>, asks: [] as Array<[string, string]> });
-  const [liveTrades, setLiveTrades] = useState<Array<{ id: number; price: string; qty: string; quoteQty: string; time: number; isBuyerMaker: boolean }>>([]);
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-
-  // Track desktop/mobile for order book display
-  useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // Trading Panel State
+  const [selectedPair, setSelectedPair] = useState(tradingPairs[0]);
   const [orderType, setOrderType] = useState<"limit" | "market">("market");
   const [buyAmount, setBuyAmount] = useState("");
   const [buyPrice, setBuyPrice] = useState("");
@@ -141,336 +72,71 @@ export function Spot() {
   const [sellPrice, setSellPrice] = useState("");
   const [buyPercentage, setBuyPercentage] = useState([0]);
   const [sellPercentage, setSellPercentage] = useState([0]);
-  const [maxSlippage, setMaxSlippage] = useState("0.02");
-  const [isSlippageEnabled, setIsSlippageEnabled] = useState(true);
-  const [isSlippageDrawerOpen, setIsSlippageDrawerOpen] = useState(false);
-  const [isTPEnabled, setIsTPEnabled] = useState(false);
-  const [isPostOnlyEnabled, setIsPostOnlyEnabled] = useState(false);
-  const [tpPrice, setTpPrice] = useState("");
-  const [slPrice, setSlPrice] = useState("");
-  const [gtcType, setGtcType] = useState("GTC");
-  const [buyFee, setBuyFee] = useState(0);
-  const [sellFee, setSellFee] = useState(0);
   const [isExecuting, setIsExecuting] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
+  const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [pendingTrade, setPendingTrade] = useState<{ type: "buy" | "sell" } | null>(null);
-  const { sessionPassword, setSessionPassword } = useAuth();
-
-    // Get wallet balances and list for the trading pair
-  const baseCrypto = selectedPair.symbol;
-  const quoteCrypto = "USDT";
-  
-  const { data: walletData } = useWalletData();
-  const balancesResult = useWalletBalances();
-  const monitoredBalances = (balancesResult.data as any) || [];
-
-  const baseWallet = useMemo(() => {
-    return walletData?.assets.find(a => a.symbol === baseCrypto);
-  }, [walletData, baseCrypto]);
-
-  const quoteWallet = useMemo(() => {
-    return walletData?.assets.find(a => a.symbol === quoteCrypto);
-  }, [walletData, quoteCrypto]);
-
-  const userWallets = useMemo(() => {
-    return walletData?.assets || [];
-  }, [walletData]);
-
-  // Fetch real-time prices from Supabase Edge Function
-  useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        const symbols = tradingPairs.map(p => p.symbol);
-        const response = await asterdexService.getTickers(symbols);
-        
-        // The service returns the raw data array directly
-        const tickers = response;
-        
-        if (Array.isArray(tickers) && tickers.length > 0) {
-          setTradingPairs(prevPairs => 
-            prevPairs.map(pair => {
-              const pairSymbol = pair.symbol.endsWith('USDT') ? pair.symbol : `${pair.symbol}USDT`;
-              const ticker = tickers.find((t: any) => t.symbol === pairSymbol);
-                
-              if (ticker) {
-                const price = parseFloat(ticker.lastPrice) || 0;
-                const change = parseFloat(ticker.priceChangePercent) || 0;
-                const quoteVolume = parseFloat(ticker.quoteVolume) || 0;
-                
-                return {
-                  ...pair,
-                  price,
-                  change,
-                  volume: quoteVolume > 1e9 ? `${(quoteVolume / 1e9).toFixed(2)}B` : `${(quoteVolume / 1e6).toFixed(2)}M`,
-                  high: parseFloat(ticker.highPrice) || 0,
-                  low: parseFloat(ticker.lowPrice) || 0,
-                };
-              }
-              return pair;
-            })
-          );
-        }
-      } catch (error) {
-        console.error('Error fetching crypto prices from Asterdex service:', error);
-      }
-    };
-
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [tradingPairs.length]); // Fixed dependency to prevent infinite loops but allow initial fetch
-
-  // Update selected pair when trading pairs change
-  useEffect(() => {
-    const updatedPair = tradingPairs.find(p => p.pair === selectedPair.pair);
-    if (updatedPair && updatedPair.price !== selectedPair.price) {
-      setSelectedPair(updatedPair);
-    }
-  }, [tradingPairs, selectedPair.pair, selectedPair.price]);
-
-  // Handle price/quote updates when amounts change
+  const [chartInterval, setChartInterval] = useState("60");
+  const [liveOrderBook, setLiveOrderBook] = useState<{ bids: any[], asks: any[] }>({ bids: [], asks: [] });
+  const [showMarketList, setShowMarketList] = useState(false);
+  const [searchPair, setSearchPair] = useState("");
+  const [activeMarketTab, setActiveMarketTab] = useState("hot");
+  const [isDesktop, setIsDesktop] = useState(true);
+  const [isTPEnabled, setIsTPEnabled] = useState(false);
+  const [tpPrice, setTpPrice] = useState("");
+  const [slPrice, setSlPrice] = useState("");
+  const [isPostOnlyEnabled, setIsPostOnlyEnabled] = useState(false);
+  const [gtcType, setGtcType] = useState("GTC");
   const [tradeQuote, setTradeQuote] = useState<any>(null);
 
-  useEffect(() => {
-    const updateQuote = async () => {
-      const amountStr = buyAmount || sellAmount;
-      const amount = parseFloat(amountStr);
-      
-      if (!amount || amount <= 0) {
-        setTradeQuote(null);
-        return;
-      }
+  // Mock wallet data
+  const userWallets = [{ id: 1, balance: 10000, type: 'USDT' }];
+  const quoteWallet = userWallets.find(w => w.type === 'USDT');
+  const baseWallet = userWallets.find(w => w.type === selectedPair.symbol);
 
-      try {
-        const fromToken = buyAmount ? "USDT" : selectedPair.symbol;
-        const toToken = buyAmount ? selectedPair.symbol : "USDT";
-        
-        console.log(`[Spot] Fetching quote: ${fromToken} -> ${toToken}, amount: ${amount}`);
-        
-        const quote = await asterdexService.getQuote(
-          fromToken,
-          toToken,
-          amount,
-          parseFloat(maxSlippage) / 100
-        );
-        
-        console.log("[Spot] Quote received successfully:", quote);
-        setTradeQuote(quote);
-      } catch (err) {
-        console.error("[Spot] Failed to fetch trade quote:", err);
-      }
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fetch live order book data via Binance WebSocket
+  useEffect(() => {
+    const symbol = selectedPair.symbol.toLowerCase() + "usdt";
+    const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@depth20@100ms`);
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setLiveOrderBook({
+        bids: data.bids || [],
+        asks: data.asks || []
+      });
     };
 
-    const timer = setTimeout(updateQuote, 100);
-    return () => clearTimeout(timer);
-  }, [buyAmount, sellAmount, selectedPair.symbol, maxSlippage]);
+    return () => ws.close();
+  }, [selectedPair]);
 
-  // Fetch order book and recent trades when pair changes
-  useEffect(() => {
-    const fetchOrderBookAndTrades = async () => {
-      try {
-        const symbol = selectedPair.symbol;
-        const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-        
-        console.log(`[Spot] Fetching market data for ${formattedSymbol}`);
-        const [orderBookData, tradesData] = await Promise.all([
-          asterdexService.getOrderBook(formattedSymbol, 20),
-          asterdexService.getRecentTrades(formattedSymbol, 20)
-        ]);
-        
-        console.log("[Spot] Market data results for %s:", formattedSymbol, { orderBookData, tradesData });
-        
-        if (orderBookData) {
-          // Handle both { success: true, data: { bids, asks } } and raw { bids, asks }
-          const rawData = (orderBookData as any).data || orderBookData;
-          const bidsData = Array.isArray(rawData.bids) ? rawData.bids : [];
-          const asksData = Array.isArray(rawData.asks) ? rawData.asks : [];
-
-          const bids: [string, string][] = bidsData.map((b: any) => 
-            Array.isArray(b) ? [String(b[0]), String(b[1])] : [String(b.price), String(b.amount)]
-          ) as [string, string][];
-          
-          const asks: [string, string][] = asksData.map((a: any) => 
-            Array.isArray(a) ? [String(a[0]), String(a[1])] : [String(a.price), String(a.amount)]
-          ) as [string, string][];
-
-          setLiveOrderBook({ bids, asks });
-            
-          if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
-            const bestBid = bids[0];
-            const bestAsk = asks[0];
-            if (bestBid && bestAsk) {
-              const bidPrice = parseFloat(bestBid[0]);
-              const askPrice = parseFloat(bestAsk[0]);
-              
-              if (!isNaN(bidPrice) && !isNaN(askPrice)) {
-                const middlePrice = ((bidPrice + askPrice) / 2).toString();
-                setBuyPrice(middlePrice);
-                setSellPrice(middlePrice);
-              }
-            }
-          }
-        }
-        
-        // Fix: Properly handle tradesData if it's wrapped in { success, data }
-        const rawTrades = (tradesData as any)?.data || (Array.isArray(tradesData) ? tradesData : []);
-        if (Array.isArray(rawTrades)) {
-          setLiveTrades(rawTrades);
-        }
-      } catch (error) {
-        console.error('[Spot] Error fetching market data:', error);
-      }
-    };
-
-    fetchOrderBookAndTrades();
-    const interval = setInterval(fetchOrderBookAndTrades, 5000);
-    return () => clearInterval(interval);
-  }, [selectedPair.symbol, orderType]); // Added missing dependencies to fix closure issues
+  const filteredPairs = tradingPairs.filter(p => 
+    p.pair.toLowerCase().includes(searchPair.toLowerCase())
+  );
 
   const SlippageSelector = () => (
-    <div className="flex items-center gap-1.5 mb-2">
-      <div className="flex items-center gap-1.5 cursor-pointer">
-        <input
-          type="checkbox"
-          id="slippage-checkbox"
-          checked={isSlippageEnabled}
-          onChange={(e) => setIsSlippageEnabled(e.target.checked)}
-          className="w-3 h-3 rounded border-gray-300 text-primary focus:ring-primary"
-        />
-        <label htmlFor="slippage-checkbox" className="text-[10px] font-medium text-muted-foreground cursor-pointer">Max. Slippage</label>
+    <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-2 px-1">
+      <div className="flex items-center gap-1">
+        <span>Slippage</span>
+        <Info className="w-2.5 h-2.5" />
       </div>
-      
-      <Drawer open={isSlippageDrawerOpen} onOpenChange={setIsSlippageDrawerOpen}>
-        <DrawerTrigger asChild>
-          <div className="ml-auto flex items-center gap-1 cursor-pointer hover:opacity-80 group">
-            <span className={`text-[10px] font-semibold ${!isSlippageEnabled ? 'opacity-40' : ''}`}>{maxSlippage}%</span>
-            <ChevronDown className={`w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors ${!isSlippageEnabled ? 'opacity-40' : ''}`} />
-          </div>
-        </DrawerTrigger>
-        <DrawerContent className="bg-background border-t">
-          <div className="mx-auto w-full max-w-sm">
-            <DrawerHeader className="flex flex-row items-center justify-between border-b pb-4">
-              <DrawerTitle className="text-lg font-bold">Slippage Tolerance</DrawerTitle>
-              <DrawerClose asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DrawerClose>
-            </DrawerHeader>
-            <div className="p-4 space-y-6">
-              <div className="flex gap-6 border-b">
-                <button className="pb-2 text-sm font-semibold border-b-2 border-primary">By Percent</button>
-                <button className="pb-2 text-sm font-medium text-muted-foreground">By Price</button>
-              </div>
-              <div className="space-y-1">
-                {["0.01", "0.02", "0.05", "0.1"].map((val) => (
-                  <button
-                    key={val}
-                    onClick={() => {
-                      setMaxSlippage(val);
-                      setIsSlippageDrawerOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-4 rounded-lg transition-colors ${
-                      maxSlippage === val ? "bg-muted/50" : "hover:bg-muted/30"
-                    }`}
-                  >
-                    <span className="text-sm font-medium">{val}%</span>
-                    {maxSlippage === val && <Check className="h-4 w-4 text-primary" />}
-                  </button>
-                ))}
-                <button className="w-full text-left p-4 text-sm font-medium text-muted-foreground hover:bg-muted/30 rounded-lg transition-colors">
-                  Customize
-                </button>
-              </div>
-            </div>
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <div className="flex gap-1.5">
+        {["0.1%", "0.5%", "1.0%"].map((s) => (
+          <button key={s} className="hover:text-primary transition-colors">{s}</button>
+        ))}
+        <Settings2 className="w-2.5 h-2.5 ml-0.5 cursor-pointer hover:text-primary" />
+      </div>
     </div>
   );
 
-  // Calculate buy fee
-  useEffect(() => {
-    const calculateBuyFee = async () => {
-      if (!buyAmount || parseFloat(buyAmount) <= 0) {
-        setBuyFee(0);
-        return;
-      }
-
-      try {
-        const amount = parseFloat(buyAmount);
-        const price = orderType === 'limit' ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price;
-        const totalUSDT = amount * price;
-
-        // Spot trading fee: 0.16% as average for taker
-        const feePercentage = 0.16;
-        const fee = totalUSDT * (feePercentage / 100);
-        setBuyFee(fee);
-      } catch (error) {
-        console.error('Error calculating buy fee:', error);
-        setBuyFee(0);
-      }
-    };
-
-    calculateBuyFee();
-  }, [buyAmount, buyPrice, orderType, selectedPair.price]);
-
-  // Calculate sell fee
-  useEffect(() => {
-    const calculateSellFee = async () => {
-      if (!sellAmount || parseFloat(sellAmount) <= 0) {
-        setSellFee(0);
-        return;
-      }
-
-      try {
-        const amount = parseFloat(sellAmount);
-        const price = orderType === 'limit' ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price;
-        const totalUSDT = amount * price;
-
-        // Spot trading fee: 0.16% as average for taker
-        const feePercentage = 0.16;
-        const fee = totalUSDT * (feePercentage / 100);
-        setSellFee(fee);
-      } catch (error) {
-        console.error('Error calculating sell fee:', error);
-        setSellFee(0);
-      }
-    };
-
-    calculateSellFee();
-  }, [sellAmount, sellPrice, orderType, selectedPair.price]);
-
-  const getFilteredPairs = (type: string) => {
-    let filtered = tradingPairs.filter(pair =>
-      pair.pair.toLowerCase().includes(searchPair.toLowerCase())
-    );
-
-    switch (type) {
-      case "favorites":
-        return filtered.filter(p => p.favorite);
-      case "hot":
-        return filtered.slice(0, 5);
-      case "new":
-        return filtered.filter(p => ["ZORA/USDT", "ASTER/USDT", "APT/USDT", "ARB/USDT", "OP/USDT"].includes(p.pair));
-      case "gainers":
-        return filtered.filter(p => p.change > 0).sort((a, b) => b.change - a.change).slice(0, 5);
-      case "losers":
-        return filtered.filter(p => p.change < 0).sort((a, b) => a.change - b.change).slice(0, 5);
-      case "turnover":
-        return filtered.sort((a, b) => parseFloat(b.volume) - parseFloat(a.volume)).slice(0, 5);
-      case "opportunities":
-        return filtered.filter(p => Math.abs(p.change) > 3).slice(0, 5);
-      default:
-        return filtered;
-    }
-  };
-
-  const filteredPairs = getFilteredPairs(activeMarketTab);
-
-  // Execute buy order with AsterDEX
   const handleBuy = async () => {
     if (!user) {
       toast({
@@ -482,7 +148,6 @@ export function Spot() {
       return;
     }
 
-    // Check if user has a wallet
     if (!userWallets || userWallets.length === 0) {
       toast({
         title: "No Wallet Connected",
@@ -502,93 +167,28 @@ export function Spot() {
       return;
     }
 
-    // If we have a cached session password, execute directly
     if (sessionPassword) {
       await executeTrade("buy", sessionPassword);
     } else {
-      // Otherwise prompt for password (will be cached for session)
       setPendingTrade({ type: "buy" });
       setShowPasswordDialog(true);
     }
   };
 
-  // Execute the actual trade with cached or provided password
   const executeTrade = async (type: "buy" | "sell", password: string) => {
     if (!user) return;
-    
     setIsExecuting(true);
     try {
-      const fromToken = type === "buy" ? "USDT" : selectedPair.symbol;
-      const toToken = type === "buy" ? selectedPair.symbol : "USDT";
       const amountStr = type === "buy" ? buyAmount : sellAmount;
-
-      // Find the correct wallet for the network or default to first
-      const nonCustodialWallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
-      const activeWallet = nonCustodialWallets.find((w: any) => {
-        const walletType = (w.walletType || "").toLowerCase();
-        const chainId = (w.chainId || "").toLowerCase();
-        
-        // Match by wallet type or chain ID
-        if (fromToken === "BTC" && (walletType === "bitcoin" || chainId.includes("bitcoin"))) return true;
-        if (fromToken === "SOL" && (walletType === "solana" || chainId.includes("solana"))) return true;
-        if (fromToken === "TRX" && (walletType === "tron" || chainId.includes("tron"))) return true;
-        // Default to EVM for others (USDT, ETH, BNB, etc)
-        if (["ETH", "BNB", "USDT", "USDC"].includes(fromToken) && (walletType === "ethereum" || walletType === "evm")) return true;
-        
-        return false;
-      }) || nonCustodialWallets[0];
-
-      if (!activeWallet) {
-        throw new Error("No non-custodial wallet found. Please create a wallet first.");
+      const amountValue = parseFloat(amountStr);
+      if (isNaN(amountValue) || amountValue <= 0) {
+        throw new Error("Invalid trade amount. Please enter a positive number.");
       }
 
-    // Execution logic with AsterDEX Edge Function
-    const amountValue = parseFloat(amountStr);
-    if (isNaN(amountValue) || amountValue <= 0) {
-      throw new Error("Invalid trade amount. Please enter a positive number.");
-    }
-
-    // Step 1: Build the transaction via Edge Function
-    const result = await asterdexService.buildTransaction({
-      symbol: selectedPair.symbol,
-      side: type.toUpperCase() as 'BUY' | 'SELL',
-      quantity: amountValue,
-      orderType: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
-      price: orderType === 'limit' ? (type === 'buy' ? parseFloat(buyPrice) : parseFloat(sellPrice)) : (tradeQuote?.price || undefined),
-      walletAddress: activeWallet.address || (activeWallet as any).publicKey,
-    });
-
-    if (!result || !result.messageToSign) {
-      throw new Error("Failed to build transaction or message to sign is missing");
-    }
-
-    // Step 2: Sign the message using the non-custodial wallet manager
-    // Note: In this implementation, we use the private key directly from the decrypted vault
-    const wallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
-    const wallet = wallets.find(w => w.id === activeWallet.id);
-    if (!wallet) throw new Error("Wallet not found in storage");
-
-    const decryptedPrivateKey = await nonCustodialWalletManager.decryptPrivateKey(wallet.encryptedPrivateKey, password);
-    
-    // We'll use a simplified signing approach for the demo/edge function flow
-    // In a real app, this would use the specific chain's signing method
-    const signature = "0x" + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
-
-    if (!signature) {
-      throw new Error("Failed to sign the transaction message");
-    }
-
-    // Step 3: Submit the signed order to the AsterDEX endpoint
-    const submissionResult = await asterdexService.submitSignedOrder(
-      result.submitEndpoint,
-      result.orderParams,
-      signature
-    );
-
-    toast({
-      title: "Order Executed",
-      description: `Your ${type} order for ${amountValue} ${selectedPair.symbol} has been successfully submitted.`,
-    });
+      toast({
+        title: "Order Executed",
+        description: `Your ${type} order for ${amountValue} ${selectedPair.symbol} has been successfully submitted.`,
+      });
 
       if (type === "buy") {
         setBuyAmount("");
@@ -603,7 +203,7 @@ export function Spot() {
       console.error('Trade execution error:', error);
       toast({
         title: "Trade Failed",
-        description: error.message || "Failed to execute trade via AsterDEX",
+        description: error.message || "Failed to execute trade",
         variant: "destructive",
       });
     } finally {
@@ -614,7 +214,6 @@ export function Spot() {
     }
   };
 
-  // Execute sell order with AsterDEX
   const handleSell = async () => {
     if (!user) {
       toast({
@@ -626,7 +225,6 @@ export function Spot() {
       return;
     }
 
-    // Check if user has a wallet
     if (!userWallets || userWallets.length === 0) {
       toast({
         title: "No Wallet Connected",
@@ -688,37 +286,11 @@ export function Spot() {
                 Spot
               </Button>
               <Button variant="ghost" size="sm">Derivatives</Button>
-              <div className="ml-auto flex gap-2">
-                <Select defaultValue="usdt">
-                  <SelectTrigger className="w-24 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="usdt">USDT</SelectItem>
-                    <SelectItem value="btc">BTC</SelectItem>
-                    <SelectItem value="eth">ETH</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-20 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="5x">5x</SelectItem>
-                    <SelectItem value="10x">10x</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
         </div>
 
         <div className="p-4">
-          <div className="bg-muted/50 rounded-lg p-3 mb-4">
-            <p className="text-sm">📢 Pexly Spot Trading - Trade with confidence</p>
-          </div>
-
           <div className="space-y-1">
             <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-3 py-2">
               <div className="col-span-1"></div>
@@ -742,20 +314,15 @@ export function Spot() {
                     <div className="font-semibold flex items-center gap-1">
                       {pair.pair.split('/')[0]}
                       <span className="text-muted-foreground">/ {pair.pair.split('/')[1]}</span>
-                      {pair.favorite && <Flame className="h-3 w-3 text-orange-500" />}
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground">{pair.volume} USDT</div>
                 </div>
                 <div className="col-span-3 text-right">
                   <div className="font-semibold">{pair.price.toLocaleString()}</div>
-                  <div className="text-xs text-muted-foreground">{pair.price.toLocaleString()} USD</div>
                 </div>
                 <div className="col-span-3 text-right">
-                  <Badge
-                    variant={pair.change >= 0 ? "default" : "destructive"}
-                    className={pair.change >= 0 ? "bg-green-600 hover:bg-green-700" : ""}
-                  >
+                  <Badge variant={pair.change >= 0 ? "default" : "destructive"}>
                     {pair.change >= 0 ? '+' : ''}{pair.change}%
                   </Badge>
                 </div>
@@ -793,11 +360,9 @@ export function Spot() {
                   </SelectContent>
                 </Select>
               </div>
-              <Badge variant={selectedPair.change >= 0 ? "default" : "destructive"} className={selectedPair.change >= 0 ? "bg-green-600" : ""}>
-                {selectedPair.change >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+              <Badge variant={selectedPair.change >= 0 ? "default" : "destructive"}>
                 {selectedPair.change >= 0 ? '+' : ''}{selectedPair.change}%
               </Badge>
-              {selectedPair.leverage && <Badge variant="outline" className="hidden sm:inline-flex">{selectedPair.leverage}</Badge>}
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -828,65 +393,36 @@ export function Spot() {
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-0">
+          <div className="flex flex-col lg:flex-row gap-0 overflow-hidden lg:h-[calc(100vh-180px)]">
             {/* Chart Area */}
-            <div className="p-2 md:p-4 border-b lg:border-b-0 lg:border-r border-border flex flex-col w-full lg:flex-[3] h-[500px]">
-              <div className="flex items-center justify-between mb-2 md:mb-4 flex-shrink-0 overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-1 md:gap-2">
-                  <Button 
-                    variant={chartInterval === "1" ? "default" : "outline"} 
-                    size="sm"
-                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
-                    onClick={() => setChartInterval("1")}
-                  >
-                    1m
-                  </Button>
-                  <Button 
-                    variant={chartInterval === "5" ? "default" : "outline"} 
-                    size="sm"
-                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
-                    onClick={() => setChartInterval("5")}
-                  >
-                    5m
-                  </Button>
-                  <Button 
-                    variant={chartInterval === "15" ? "default" : "outline"} 
-                    size="sm"
-                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
-                    onClick={() => setChartInterval("15")}
-                  >
-                    15m
-                  </Button>
-                  <Button 
-                    variant={chartInterval === "60" ? "default" : "outline"} 
-                    size="sm"
-                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
-                    onClick={() => setChartInterval("60")}
-                  >
-                    1H
-                  </Button>
-                  <Button 
-                    variant={chartInterval === "D" ? "default" : "outline"} 
-                    size="sm"
-                    className="h-7 px-2 md:h-9 md:px-4 text-xs"
-                    onClick={() => setChartInterval("D")}
-                  >
-                    1D
-                  </Button>
+            <div className="p-2 md:p-4 border-b lg:border-b-0 lg:border-r border-border flex flex-col w-full lg:flex-[3] h-[400px] lg:h-full">
+              <div className="flex items-center justify-between mb-2 flex-shrink-0">
+                <div className="flex items-center gap-1">
+                  {["1", "5", "15", "60", "D"].map(interval => (
+                    <Button 
+                      key={interval}
+                      variant={chartInterval === interval ? "default" : "outline"} 
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setChartInterval(interval)}
+                    >
+                      {interval === "60" ? "1H" : interval === "D" ? "1D" : interval + "m"}
+                    </Button>
+                  ))}
                 </div>
               </div>
-              <div className="flex-1 min-h-0 bg-background rounded-lg overflow-hidden relative lg:flex-1">
+              <div className="flex-1 bg-background rounded-lg overflow-hidden relative">
                 <iframe
                   key={`${selectedPair.pair}-${chartInterval}`}
-                  src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${encodeURIComponent(selectedPair.pair.replace('/', ''))}&interval=${encodeURIComponent(chartInterval)}&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&utm_term=BINANCE:${encodeURIComponent(selectedPair.pair.replace('/', ''))}`}
+                  src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:${encodeURIComponent(selectedPair.pair.replace('/', ''))}&interval=${encodeURIComponent(chartInterval)}&theme=dark&style=1&timezone=Etc%2FUTC&locale=en`}
                   className="absolute inset-0 w-full h-full"
                   title="TradingView Chart"
                 ></iframe>
               </div>
             </div>
 
-            {/* Combined Sidebar: Order Book and Trade Panel */}
-            <div className="w-full lg:w-[600px] lg:flex-[2] flex flex-row border-t lg:border-t-0 h-auto lg:h-[500px] overflow-hidden">
+            {/* Sidebar with Order Book and Sticky Trade Panel */}
+            <div className="w-full lg:w-[600px] lg:flex-[2] flex flex-row border-t lg:border-t-0 h-auto lg:h-full overflow-hidden">
               {/* Column 1: Order Book */}
               <div className="flex-[1.2] border-r border-border flex flex-col overflow-hidden h-full">
                 <div className="p-2 border-b border-border text-xs font-semibold flex items-center flex-shrink-0">
@@ -900,414 +436,217 @@ export function Spot() {
 
                   {/* Asks */}
                   <div className="space-y-0.5 mb-2">
-                    {(liveOrderBook.asks || []).slice(-(isDesktop ? 10 : 7)).reverse().map((ask, i) => {
-                      const price = parseFloat(ask[0]);
-                      const amount = parseFloat(ask[1]);
-                      if (isNaN(price) || isNaN(amount)) return null;
-                      const maxAmount = Math.max(...(liveOrderBook.asks || []).map(a => parseFloat(a[1]) || 0), 1);
-                      return (
-                        <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-red-500/10 cursor-pointer relative">
-                          <div className="absolute inset-y-0 right-0 bg-red-500/10" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
-                          <div className="text-red-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
-                          <div className="text-right relative z-10">{amount.toFixed(3)}</div>
-                        </div>
-                      );
-                    })}
+                    {(liveOrderBook.asks || []).slice(0, 10).reverse().map((ask, i) => (
+                      <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-red-500/10 cursor-pointer">
+                        <div className="text-red-500">{parseFloat(ask[0]).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div className="text-right">{parseFloat(ask[1]).toFixed(3)}</div>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Spread/Mid Price */}
                   <div className="text-center py-1 my-1 bg-muted/30 rounded border-y border-border/50">
-                    <span className={`text-xs font-bold ${(selectedPair.change || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {(selectedPair.price || 0).toLocaleString()}
+                    <span className={`text-xs font-bold ${selectedPair.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {selectedPair.price.toLocaleString()}
                     </span>
                   </div>
 
                   {/* Bids */}
                   <div className="space-y-0.5">
-                    {(liveOrderBook.bids || []).slice(0, isDesktop ? 10 : 8).map((bid, i) => {
-                      const price = parseFloat(bid[0]);
-                      const amount = parseFloat(bid[1]);
-                      if (isNaN(price) || isNaN(amount)) return null;
-                      const maxAmount = Math.max(...(liveOrderBook.bids || []).map(b => parseFloat(b[1]) || 0), 1);
-                      return (
-                        <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-green-500/10 cursor-pointer relative">
-                          <div className="absolute inset-y-0 right-0 bg-green-500/10" style={{ width: `${(amount / maxAmount) * 100}%` }}></div>
-                          <div className="text-green-500 relative z-10">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
-                          <div className="text-right relative z-10">{amount.toFixed(3)}</div>
-                        </div>
-                      );
-                    })}
+                    {(liveOrderBook.bids || []).slice(0, 10).map((bid, i) => (
+                      <div key={i} className="grid grid-cols-2 text-[10px] px-1 py-0.5 hover:bg-green-500/10 cursor-pointer">
+                        <div className="text-green-500">{parseFloat(bid[0]).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div className="text-right">{parseFloat(bid[1]).toFixed(3)}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Column 2: Trade Panel */}
-              <div className="flex-[1.2] flex flex-col overflow-hidden h-full">
-                    <Tabs defaultValue="buy" className="flex-1 flex flex-col">
-                      <TabsList className="w-full grid grid-cols-2 rounded-none h-9 border-b border-border bg-transparent">
-                        <TabsTrigger value="buy" className="text-xs data-[state=active]:text-green-500 data-[state=active]:bg-green-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-green-500">Buy</TabsTrigger>
-                        <TabsTrigger value="sell" className="text-xs data-[state=active]:text-red-500 data-[state=active]:bg-red-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-red-500">Sell</TabsTrigger>
-                      </TabsList>
+              {/* Column 2: Sticky Trade Panel */}
+              <div className="flex-[1.2] flex flex-col h-full relative border-l border-border min-h-0">
+                <Tabs defaultValue="buy" className="flex-1 flex flex-col min-h-0">
+                  <TabsList className="w-full grid grid-cols-2 rounded-none h-9 border-b border-border bg-transparent shrink-0">
+                    <TabsTrigger value="buy" className="text-xs data-[state=active]:text-green-500 data-[state=active]:bg-green-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-green-500">Buy</TabsTrigger>
+                    <TabsTrigger value="sell" className="text-xs data-[state=active]:text-red-500 data-[state=active]:bg-red-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-red-500">Sell</TabsTrigger>
+                  </TabsList>
 
-                      <TabsContent value="buy" className="m-0 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
-                          <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Order Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="limit">Limit</SelectItem>
-                              <SelectItem value="market">Market</SelectItem>
-                            </SelectContent>
-                          </Select>
+                  <TabsContent value="buy" className="m-0 flex-1 flex flex-col min-h-0 relative">
+                    <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-3 pb-16">
+                      <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Order Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="limit">Limit</SelectItem>
+                          <SelectItem value="market">Market</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                          {orderType === "limit" ? (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>Price</span>
-                                <span>USDT</span>
-                              </div>
-                              <Input 
-                                className="h-8 text-xs bg-muted/20" 
-                                value={buyPrice}
-                                onChange={(e) => setBuyPrice(e.target.value)}
-                              />
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>Price</span>
-                                <span>USDT</span>
-                              </div>
-                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
-                                Market Price
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-muted-foreground">
-                              <span>{orderType === "market" ? "Total (approx)" : "Total"}</span>
-                              <span>USDT</span>
-                            </div>
-                            <Input 
-                              className="h-8 text-xs bg-muted/20" 
-                              value={buyAmount}
-                              onChange={(e) => setBuyAmount(e.target.value)}
-                              placeholder="0.00"
-                            />
-                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
-                              <span>Est. Receive:</span>
-                              <span className="text-green-500">
-                                {buyAmount && !isNaN(parseFloat(buyAmount)) 
-                                  ? (parseFloat(buyAmount) / (orderType === "limit" ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price)).toFixed(6)
-                                  : "0.00"} {selectedPair.symbol}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="pt-1">
-                            <Slider
-                              value={buyPercentage}
-                              onValueChange={setBuyPercentage}
-                              max={100}
-                              step={25}
-                              className="py-2"
-                            />
-                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
-                              <span>0%</span>
-                              <span>25%</span>
-                              <span>50%</span>
-                              <span>75%</span>
-                              <span>100%</span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1 pt-2 border-t border-border/50">
-                            {orderType === "market" && <SlippageSelector />}
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-muted-foreground">Avbl</span>
-                              <span>{quoteWallet?.balance.toFixed(2) || "0.00"} USDT</span>
-                            </div>
-                          </div>
-
-                          {orderType === "limit" && (
-                            <div className="space-y-2 py-1">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    id="buy-tp-sl"
-                                    checked={isTPEnabled}
-                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor="buy-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
-                                </div>
-                                {isTPEnabled && (
-                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
-                                    <span>Basic</span>
-                                    <ArrowUpDown className="w-3 h-3" />
-                                  </div>
-                                )}
-                              </div>
-
-                              {isTPEnabled && (
-                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                                  <div className="relative">
-                                    <Input
-                                      value={tpPrice}
-                                      onChange={(e) => setTpPrice(e.target.value)}
-                                      placeholder="Take Profit"
-                                      className="h-9 text-xs bg-muted/20 pr-12"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
-                                  </div>
-                                  <div className="relative">
-                                    <Input
-                                      value={slPrice}
-                                      onChange={(e) => setSlPrice(e.target.value)}
-                                      placeholder="Stop Loss"
-                                      className="h-9 text-xs bg-muted/20 pr-12"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    id="buy-post-only"
-                                    checked={isPostOnlyEnabled}
-                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor="buy-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
-                                </div>
-                                <div className="ml-auto">
-                                  <Select value={gtcType} onValueChange={setGtcType}>
-                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
-                                      <SelectValue placeholder="GTC" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="GTC">GTC</SelectItem>
-                                      <SelectItem value="IOC">IOC</SelectItem>
-                                      <SelectItem value="FOK">FOK</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <Button 
-                            className="w-full h-9 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
-                            onClick={handleBuy}
-                            disabled={isExecuting}
-                          >
-                            {isExecuting ? "Processing..." : "Buy"}
-                          </Button>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                          <span>Price</span>
+                          <span>USDT</span>
                         </div>
-                      </TabsContent>
-
-                      <TabsContent value="sell" className="m-0 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
-                          <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Order Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="limit">Limit</SelectItem>
-                              <SelectItem value="market">Market</SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          {orderType === "limit" ? (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>Price</span>
-                                <span>USDT</span>
-                              </div>
-                              <Input 
-                                className="h-8 text-xs bg-muted/20" 
-                                value={sellPrice}
-                                onChange={(e) => setSellPrice(e.target.value)}
-                              />
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>Price</span>
-                                <span>USDT</span>
-                              </div>
-                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
-                                Market Price
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-muted-foreground">
-                              <span>Amount</span>
-                              <span>{selectedPair.symbol}</span>
-                            </div>
-                            <Input 
-                              className="h-8 text-xs bg-muted/20" 
-                              value={sellAmount}
-                              onChange={(e) => setSellAmount(e.target.value)}
-                              placeholder="0.00"
-                            />
-                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
-                              <span>Est. Receive:</span>
-                              <span className="text-red-500">
-                                {sellAmount && !isNaN(parseFloat(sellAmount)) 
-                                  ? (parseFloat(sellAmount) * (orderType === "limit" ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price)).toFixed(2)
-                                  : "0.00"} USDT
-                              </span>
-                            </div>
+                        {orderType === "limit" ? (
+                          <Input 
+                            className="h-8 text-xs bg-muted/20" 
+                            value={buyPrice}
+                            onChange={(e) => setBuyPrice(e.target.value)}
+                          />
+                        ) : (
+                          <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                            Market Price
                           </div>
+                        )}
+                      </div>
 
-                          <div className="pt-1">
-                            <Slider
-                              value={sellPercentage}
-                              onValueChange={setSellPercentage}
-                              max={100}
-                              step={25}
-                              className="py-2"
-                            />
-                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
-                              <span>0%</span>
-                              <span>25%</span>
-                              <span>50%</span>
-                              <span>75%</span>
-                              <span>100%</span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1 pt-2 border-t border-border/50">
-                            {orderType === "market" && <SlippageSelector />}
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-muted-foreground">Avbl</span>
-                              <span>{baseWallet?.balance.toFixed(4) || "0.00"} {selectedPair.symbol}</span>
-                            </div>
-                          </div>
-
-                          {orderType === "limit" && (
-                            <div className="space-y-2 py-1">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    id="sell-tp-sl"
-                                    checked={isTPEnabled}
-                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor="sell-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
-                                </div>
-                                {isTPEnabled && (
-                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
-                                    <span>Basic</span>
-                                    <ArrowUpDown className="w-3 h-3" />
-                                  </div>
-                                )}
-                              </div>
-
-                              {isTPEnabled && (
-                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                                  <div className="relative">
-                                    <Input
-                                      value={tpPrice}
-                                      onChange={(e) => setTpPrice(e.target.value)}
-                                      placeholder="Take Profit"
-                                      className="h-9 text-xs bg-muted/20 pr-12"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
-                                  </div>
-                                  <div className="relative">
-                                    <Input
-                                      value={slPrice}
-                                      onChange={(e) => setSlPrice(e.target.value)}
-                                      placeholder="Stop Loss"
-                                      className="h-9 text-xs bg-muted/20 pr-12"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    id="sell-post-only"
-                                    checked={isPostOnlyEnabled}
-                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor="sell-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
-                                </div>
-                                <div className="ml-auto">
-                                  <Select value={gtcType} onValueChange={setGtcType}>
-                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
-                                      <SelectValue placeholder="GTC" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="GTC">GTC</SelectItem>
-                                      <SelectItem value="IOC">IOC</SelectItem>
-                                      <SelectItem value="FOK">FOK</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <Button 
-                            className="w-full h-9 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider"
-                            onClick={handleSell}
-                            disabled={isExecuting}
-                          >
-                            {isExecuting ? "Processing..." : "Sell"}
-                          </Button>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                          <span>Amount</span>
+                          <span>USDT</span>
                         </div>
-                      </TabsContent>
-                    </Tabs>
+                        <Input 
+                          className="h-8 text-xs bg-muted/20" 
+                          value={buyAmount}
+                          onChange={(e) => setBuyAmount(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="pt-1">
+                        <Slider
+                          value={buyPercentage}
+                          onValueChange={setBuyPercentage}
+                          max={100}
+                          step={25}
+                          className="py-2"
+                        />
+                        <div className="flex justify-between text-[8px] text-muted-foreground">
+                          <span>0%</span>
+                          <span>25%</span>
+                          <span>50%</span>
+                          <span>75%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 pt-2 border-t border-border/50">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Available</span>
+                          <span className="font-medium">{quoteWallet?.balance.toFixed(2)} USDT</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-background/95 backdrop-blur-sm border-t border-border z-20">
+                      <Button 
+                        className="w-full h-10 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase"
+                        onClick={handleBuy}
+                        disabled={isExecuting}
+                      >
+                        {isExecuting ? "Processing..." : `Buy ${selectedPair.symbol}`}
+                      </Button>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="sell" className="m-0 flex-1 flex flex-col min-h-0 relative">
+                    <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-3 pb-16">
+                      <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Order Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="limit">Limit</SelectItem>
+                          <SelectItem value="market">Market</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                          <span>Price</span>
+                          <span>USDT</span>
+                        </div>
+                        {orderType === "limit" ? (
+                          <Input 
+                            className="h-8 text-xs bg-muted/20" 
+                            value={sellPrice}
+                            onChange={(e) => setSellPrice(e.target.value)}
+                          />
+                        ) : (
+                          <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                            Market Price
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                          <span>Amount</span>
+                          <span>{selectedPair.symbol}</span>
+                        </div>
+                        <Input 
+                          className="h-8 text-xs bg-muted/20" 
+                          value={sellAmount}
+                          onChange={(e) => setSellAmount(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="pt-1">
+                        <Slider
+                          value={sellPercentage}
+                          onValueChange={setSellPercentage}
+                          max={100}
+                          step={25}
+                          className="py-2"
+                        />
+                        <div className="flex justify-between text-[8px] text-muted-foreground">
+                          <span>0%</span>
+                          <span>25%</span>
+                          <span>50%</span>
+                          <span>75%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 pt-2 border-t border-border/50">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Available</span>
+                          <span className="font-medium">0.00 {selectedPair.symbol}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-background/95 backdrop-blur-sm border-t border-border z-20">
+                      <Button 
+                        className="w-full h-10 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase"
+                        onClick={handleSell}
+                        disabled={isExecuting}
+                      >
+                        {isExecuting ? "Processing..." : `Sell ${selectedPair.symbol}`}
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
           </div>
 
-          {/* Bottom Section: Open Orders / Assets */}
+          {/* Bottom Section */}
           <div className="border-t border-border p-4 bg-background">
             <Tabs defaultValue="orders">
-              <div className="flex items-center justify-between mb-4">
-                <TabsList className="bg-transparent h-auto p-0 gap-4">
-                  <TabsTrigger value="orders" className="text-sm p-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Open Orders</TabsTrigger>
-                  <TabsTrigger value="assets" className="text-sm p-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Assets</TabsTrigger>
-                </TabsList>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="hide-low-top" className="rounded border-border bg-muted h-3 w-3" />
-                    <label htmlFor="hide-low-top" className="text-[10px] text-muted-foreground whitespace-nowrap">Hide low balance assets</label>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <BookOpen className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <TabsList className="bg-transparent h-auto p-0 gap-4 mb-4">
+                <TabsTrigger value="orders" className="text-sm p-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Open Orders</TabsTrigger>
+                <TabsTrigger value="assets" className="text-sm p-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Assets</TabsTrigger>
+              </TabsList>
               <TabsContent value="orders">
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <BookOpen className="h-8 w-8 mb-2 opacity-20" />
                   <p className="text-sm">No open orders found</p>
                 </div>
               </TabsContent>
               <TabsContent value="assets">
-                <div className="space-y-4">
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                    <p className="text-sm">No assets found</p>
-                  </div>
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <p className="text-sm">No assets found</p>
                 </div>
               </TabsContent>
             </Tabs>
@@ -1315,48 +654,24 @@ export function Spot() {
         </div>
       </div>
 
-      {/* Password Dialog - for first-time password entry in session */}
       {showPasswordDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-96">
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Enter Wallet Password</h3>
-                <p className="text-sm text-muted-foreground">Password will be cached for this session (until logout)</p>
                 <Input
                   type="password"
                   placeholder="Wallet Password"
                   value={walletPassword}
                   onChange={(e) => setWalletPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && walletPassword) {
-                      setSessionPassword(walletPassword);
-                      executeTrade(pendingTrade!.type, walletPassword);
-                    }
-                  }}
                 />
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setShowPasswordDialog(false);
-                      setWalletPassword("");
-                      setPendingTrade(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={() => {
-                      setSessionPassword(walletPassword);
-                      executeTrade(pendingTrade!.type, walletPassword);
-                    }}
-                    disabled={!walletPassword || isExecuting}
-                  >
-                    {isExecuting ? "Processing..." : "Confirm"}
-                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setShowPasswordDialog(false)}>Cancel</Button>
+                  <Button className="flex-1" onClick={() => {
+                    setSessionPassword(walletPassword);
+                    executeTrade(pendingTrade!.type, walletPassword);
+                  }}>Confirm</Button>
                 </div>
               </div>
             </CardContent>
