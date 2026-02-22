@@ -25,10 +25,13 @@ import {
   Coins,
   History,
   TrendingUp,
+  Home as HomeIcon,
+  Phone,
   CreditCard as CreditCardIcon
 } from "lucide-react";
 import { useState } from "react";
 import { FloatingHelpButton } from "../components/floating-help-button";
+import { Link } from "wouter";
 
 interface CategoryCardProps {
   icon: LucideIcon;
@@ -116,12 +119,14 @@ const HelpCenter = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const HeroSection = () => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
     return (
       <section className="relative min-h-[300px] overflow-hidden bg-primary">
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 py-8">
           {/* Navigation */}
-          <nav className="flex items-center justify-between mb-10">
+          <nav className="flex items-center justify-between mb-10 relative">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
                 <div className="w-6 h-4 bg-primary rounded-full relative">
@@ -131,9 +136,31 @@ const HelpCenter = () => {
               </div>
               <span className="text-white text-2xl font-bold tracking-tight">pexly</span>
             </div>
-            <button className="text-white">
-              <Menu className="w-8 h-8" />
-            </button>
+            <div className="relative">
+              <button 
+                className="text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                <Menu className="w-8 h-8" />
+              </button>
+              
+              {isMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                  <Link href="/">
+                    <a className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+                      <HomeIcon className="w-5 h-5 text-gray-400" />
+                      <span className="font-medium">Home</span>
+                    </a>
+                  </Link>
+                  <Link href="/contact">
+                    <a className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100">
+                      <Phone className="w-5 h-5 text-gray-400" />
+                      <span className="font-medium">Contact</span>
+                    </a>
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Hero content */}
@@ -143,7 +170,7 @@ const HelpCenter = () => {
             </h1>
             
             {/* Search bar */}
-            <div className="relative max-w-md mx-auto">
+            <div className="relative max-w-4xl mx-auto">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/70" />
               <input
                 type="text"
@@ -165,7 +192,7 @@ const HelpCenter = () => {
       <div className="bg-[#FF7A45] py-4 px-6 text-white text-center flex items-center justify-center gap-3">
         <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold">!</div>
         <p className="text-sm md:text-base font-medium">
-          Phantom Support will NEVER DM you or ask for your Secret Recovery Phrase!
+          Pexly Support will NEVER DM you or ask for your Secret Recovery Phrase!
         </p>
       </div>
 
