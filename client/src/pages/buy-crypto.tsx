@@ -36,10 +36,13 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/svg-image-1-3.svg";
-import imgStep2 from "@assets/svg-image-1-3.svg";
-import imgStep3 from "@assets/svg-image-1-3.svg";
-import imgPostBuy from "@assets/svg-image-1-3.svg";
+import imgStep1 from "@assets/svg-image-1 17.svg";
+import imgStep2 from "@assets/svg-image-1 17.svg";
+import imgStep3 from "@assets/svg-image-1 17.svg";
+import imgPostBuy from "@assets/svg-image-1 17.svg";
+import imgHold from "@assets/svg-image-1 17.svg";
+import imgSwap from "@assets/svg-image-1 18.svg";
+import imgSpend from "@assets/svg-image-1 19.svg";
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
@@ -276,15 +279,15 @@ const BuyCryptoPage = () => {
       {/* Benefits */}
       <section className="py-20 px-4 bg-white">
         <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-12">Benefits of buying cryptocurrency through Pexly</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-12">Benefits of buying cryptocurrency through Pexly</h2>
           <div className="space-y-6">
             {benefits.map((benefit, i) => (
               <div key={i} className="p-8 md:p-10 rounded-[32px] bg-[#f8faff] text-left border border-gray-50">
                 <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center text-white mb-8">
                   <benefit.icon className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{benefit.title}</h3>
-                <p className="text-gray-600 text-lg leading-relaxed">{benefit.description}</p>
+                <h3 className="text-xl font-bold mb-4">{benefit.title}</h3>
+                <p className="text-gray-600 text-base leading-relaxed">{benefit.description}</p>
               </div>
             ))}
           </div>
@@ -294,32 +297,32 @@ const BuyCryptoPage = () => {
       {/* Post-Buy Actions */}
       <section className="py-20 px-4 bg-white">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">What can I do after I buy cryptocurrency?</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">What can I do after I buy cryptocurrency?</h2>
           <div className="space-y-12">
               {[
                 { 
                   title: "Hold", 
                   desc: "Buy your favorite coins and add to your growing portfolio.",
-                  icon: imgPostBuy
+                  icon: imgHold
                 },
                 { 
                   title: "Swap", 
                   desc: "Exchange one asset for another without leaving the app. Swap Bitcoin, Ethereum, Dogecoin and all of your favorite coins.",
-                  icon: imgPostBuy
+                  icon: imgSwap
                 },
                 { 
                   title: "Spend", 
                   desc: "Pay bills, shop with top brands, buy gift cards, or use HODL Pay to spend without selling, all in the Pexly Wallet.",
-                  icon: imgPostBuy
+                  icon: imgSpend
                 },
               ].map((item, i) => (
                 <div key={i} className="flex flex-col md:flex-row gap-8 items-start">
-                  <div className="w-20 h-20 rounded-full bg-[#f8faff] flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-50">
-                    <img src={item.icon} alt={item.title} className="w-full h-full object-cover scale-150" />
+                  <div className="w-16 h-16 rounded-full bg-[#f8faff] flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-50 p-3">
+                    <img src={item.icon} alt={item.title} className="w-full h-full object-contain" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
-                    <p className="text-gray-600 text-lg leading-relaxed">{item.desc}</p>
+                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                    <p className="text-gray-600 text-base leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}
