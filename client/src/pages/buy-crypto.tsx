@@ -277,7 +277,7 @@ const BuyCryptoPage = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative rounded-[40px] overflow-hidden shadow-2xl bg-white p-4">
-              <img src="/assets/IMG_2657.png" alt="Pexly Wallet App" className="w-full h-auto rounded-[32px]" />
+              <img src="/assets/IMG_4250.webp" alt="Pexly Wallet App" className="w-full h-auto rounded-[32px]" />
             </div>
             <div className="space-y-12">
               <h2 className="text-4xl md:text-5xl font-bold leading-tight">What can I do after I buy cryptocurrency?</h2>
