@@ -39,10 +39,10 @@ const cryptoCurrencies = [
 import imgStep1 from "@assets/svg-image-1-3.svg";
 import imgStep2 from "@assets/svg-image-1-3.svg";
 import imgStep3 from "@assets/svg-image-1-3.svg";
-import imgPostBuy from "@assets/svg-image-1 17.svg";
-import imgHold from "@assets/svg-image-1 17.svg";
-import imgSwap from "@assets/svg-image-1 18.svg";
-import imgSpend from "@assets/svg-image-1 19.svg";
+import imgPostBuy from "@assets/svg-image-1-3.svg";
+import imgHold from "@assets/svg-image-1-3.svg";
+import imgSwap from "@assets/svg-image-1-3.svg";
+import imgSpend from "@assets/svg-image-1-3.svg";
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
