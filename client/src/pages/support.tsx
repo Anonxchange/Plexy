@@ -122,23 +122,47 @@ const HelpCenter = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
-      <section className="relative min-h-[300px] overflow-hidden bg-primary">
+      <section className="relative min-h-[400px] overflow-hidden bg-gradient-to-br from-primary to-primary/80">
+        {/* Decorative curves */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Left curve */}
+          <div 
+            className="absolute -left-32 top-1/2 w-[500px] h-[500px] animate-curve-float"
+            style={{
+              background: "#4F46E5",
+              borderRadius: "50%",
+              transform: "translate(-60%, -30%)",
+            }}
+          />
+          {/* Right curve */}
+          <div 
+            className="absolute -right-32 top-1/2 w-[500px] h-[500px] animate-curve-float-reverse"
+            style={{
+              background: "#4F46E5",
+              borderRadius: "50%",
+              transform: "translate(60%, -20%)",
+            }}
+          />
+          
+          {/* Decorative sparkles */}
+          <Sparkles className="absolute top-20 left-[15%] w-4 h-4 text-lime animate-sparkle" />
+          <Sparkles className="absolute top-32 right-[20%] w-3 h-3 text-lime animate-sparkle-delay-1" />
+          <Sparkles className="absolute bottom-24 left-[25%] w-3 h-3 text-lime animate-sparkle-delay-2" />
+          <Sparkles className="absolute bottom-32 right-[15%] w-4 h-4 text-lime animate-sparkle" />
+        </div>
+
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 py-8">
           {/* Navigation */}
-          <nav className="flex items-center justify-between mb-10 relative">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
-                <div className="w-6 h-4 bg-primary rounded-full relative">
-                  <div className="absolute top-1 left-1 w-1 h-1 bg-white rounded-full" />
-                  <div className="absolute top-1 right-1 w-1 h-1 bg-white rounded-full" />
-                </div>
-              </div>
-              <span className="text-white text-2xl font-bold tracking-tight">pexly</span>
-            </div>
+          <nav className="flex items-center justify-between mb-14 pb-4">
+            <Link href="/">
+              <a className="text-black font-bold text-2xl tracking-tight hover:opacity-80 transition-opacity">
+                Pexly<span style={{ color: "#4F46E5" }}>P2P</span>
+              </a>
+            </Link>
             <div className="relative">
               <button 
-                className="text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="text-black p-2 hover:bg-black/5 rounded-lg transition-colors"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
                 <Menu className="w-8 h-8" />
@@ -164,20 +188,20 @@ const HelpCenter = () => {
           </nav>
 
           {/* Hero content */}
-          <div className="text-center max-w-2xl mx-auto">
-            <h1 className="text-3xl md:text-4xl font-semibold text-white mb-8">
+          <div className="max-w-3xl">
+            <h1 className="text-5xl md:text-6xl font-bold text-black mb-8">
               How can we help you?
             </h1>
             
             {/* Search bar */}
-            <div className="relative max-w-4xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/70" />
+            <div className="relative max-w-xl">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Ask a question, press Enter"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full py-4 pl-12 pr-6 rounded-xl bg-white/20 border border-white/30 text-white placeholder:text-white/70 focus:outline-none text-lg backdrop-blur-sm"
+                className="w-full py-4 pl-14 pr-6 rounded-full bg-white text-gray-900 placeholder:text-muted-foreground focus:outline-none text-lg shadow-lg"
               />
             </div>
           </div>
