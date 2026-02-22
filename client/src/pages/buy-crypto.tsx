@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Helmet } from "react-helmet";
 import { 
   ChevronRight,
@@ -19,7 +19,7 @@ import {
   AccordionItem, 
   AccordionTrigger 
 } from "@/components/ui/accordion";
-import { CryptoCurrencySelector } from "@/components/crypto-currency-selector";
+import { CryptoCurrencySelector, cryptoCurrencies } from "@/components/crypto-currency-selector";
 import { FiatCurrencySelector } from "@/components/fiat-currency-selector";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAuth } from "@/lib/auth-context";
@@ -32,25 +32,20 @@ const BuyCryptoPage = () => {
   const [fiat, setFiat] = useState("USD");
   const [crypto, setCrypto] = useState("BTC");
 
-  const supportedAssets = [
-    { symbol: "BTC", name: "Bitcoin", price: "$66,961.63" },
-    { symbol: "BCH", name: "Bitcoin Cash", price: "$572.86" },
-    { symbol: "ETH", name: "Ethereum", price: "$1,950.53" },
-    { symbol: "DOGE", name: "Dogecoin", price: "$0.10" },
-    { symbol: "LTC", name: "Litecoin", price: "$53.79" },
-    { symbol: "USDC", name: "USDC", price: "$1.00" },
-    { symbol: "PYUSD", name: "Pax Dollar", price: "$1.00" },
-    { symbol: "GUSD", name: "Gemini Dollar", price: "$1.00" },
-    { symbol: "BUSD", name: "Binance USD", price: "$1.00" },
-    { symbol: "DAI", name: "DAI", price: "$1.00" },
-    { symbol: "WBTC", name: "Wrapped Bitcoin", price: "$67,927.86" },
-    { symbol: "SHIB", name: "Shiba Inu", price: "$0.00000621" },
-    { symbol: "APE", name: "ApeCoin", price: "$0.11" },
-    { symbol: "POL", name: "Polygon", price: "$0.11" },
-    { symbol: "USDT", name: "Tether", price: "$1.00" },
-    { symbol: "XRP", name: "XRP", price: "$1.41" },
-    { symbol: "SOL", name: "Solana", price: "$84.35" },
-  ];
+  const supportedAssets = useMemo(() => {
+    return cryptoCurrencies.map(c => ({
+      symbol: c.symbol,
+      name: c.name,
+      price: c.symbol === "BTC" ? "$66,961.63" : 
+             c.symbol === "ETH" ? "$1,950.53" :
+             c.symbol === "SOL" ? "$84.35" :
+             c.symbol === "BCH" ? "$572.86" :
+             c.symbol === "DOGE" ? "$0.10" :
+             c.symbol === "LTC" ? "$53.79" :
+             c.symbol === "USDC" ? "$1.00" :
+             c.symbol === "USDT" ? "$1.00" : "$1.00"
+    }));
+  }, []);
 
   const benefits = [
     {
@@ -230,19 +225,19 @@ const BuyCryptoPage = () => {
               <h2 className="text-4xl font-bold mb-4 text-gray-900">Supported Assets</h2>
               <p className="text-lg text-gray-600 max-w-lg">Buy the most popular cryptocurrencies including Bitcoin, Ethereum and more.</p>
             </div>
-            <div className="space-y-10">
-              {supportedAssets.slice(0, 4).map((asset) => (
-                <div key={asset.symbol} className="flex items-start gap-5">
+            <div className="space-y-8">
+              {supportedAssets.slice(0, 6).map((asset) => (
+                <div key={asset.symbol} className="flex items-start gap-4">
                   <img 
                     src={cryptoIconUrls[asset.symbol as keyof typeof cryptoIconUrls] || `/logos/${asset.name.toLowerCase().replace(" ", "-")}-logo.svg`} 
                     alt={asset.name} 
-                    className="w-14 h-14 rounded-full"
+                    className="w-10 h-10 rounded-full mt-1"
                   />
-                  <div className="space-y-1">
-                    <p className="text-base text-gray-500 font-medium">{asset.name}</p>
-                    <p className="text-3xl font-bold text-gray-900 tracking-tight">{asset.price}</p>
-                    <Link href={`/buy-crypto?coin=${asset.symbol}`} className="text-blue-600 font-medium flex items-center gap-1 hover:underline pt-1 text-base">
-                      Buy {asset.name} ({asset.symbol}) <ChevronRight className="w-4 h-4" />
+                  <div className="space-y-0.5">
+                    <p className="text-sm text-gray-500 font-medium">{asset.name}</p>
+                    <p className="text-xl font-bold text-gray-900 tracking-tight">{asset.price}</p>
+                    <Link href={`/buy-crypto?coin=${asset.symbol}`} className="text-blue-600 font-medium flex items-center gap-1 hover:underline pt-0.5 text-sm">
+                      Buy {asset.name} ({asset.symbol}) <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 </div>
