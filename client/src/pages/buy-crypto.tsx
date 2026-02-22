@@ -225,24 +225,24 @@ const BuyCryptoPage = () => {
       {/* Supported Assets */}
       <section className="py-24 px-4 bg-gray-50">
         <div className="container mx-auto max-w-4xl">
-          <div className="bg-white rounded-[32px] p-12 shadow-sm border border-gray-100">
-            <div className="mb-12">
-              <h2 className="text-5xl font-bold mb-6 text-gray-900">Supported Assets</h2>
-              <p className="text-xl text-gray-600 max-w-xl">Buy the most popular cryptocurrencies including Bitcoin, Ethereum and more.</p>
+          <div className="bg-white rounded-none p-12 shadow-sm border border-gray-100">
+            <div className="mb-10">
+              <h2 className="text-4xl font-bold mb-4 text-gray-900">Supported Assets</h2>
+              <p className="text-lg text-gray-600 max-w-lg">Buy the most popular cryptocurrencies including Bitcoin, Ethereum and more.</p>
             </div>
-            <div className="space-y-12">
+            <div className="space-y-10">
               {supportedAssets.slice(0, 4).map((asset) => (
-                <div key={asset.symbol} className="flex items-start gap-6">
+                <div key={asset.symbol} className="flex items-start gap-5">
                   <img 
                     src={cryptoIconUrls[asset.symbol as keyof typeof cryptoIconUrls] || `/logos/${asset.name.toLowerCase().replace(" ", "-")}-logo.svg`} 
                     alt={asset.name} 
-                    className="w-16 h-16 rounded-full shadow-sm"
+                    className="w-14 h-14 rounded-full"
                   />
                   <div className="space-y-1">
-                    <p className="text-lg text-gray-500 font-medium">{asset.name}</p>
-                    <p className="text-4xl font-bold text-gray-900 tracking-tight">{asset.price}</p>
-                    <Link href={`/buy-crypto?coin=${asset.symbol}`} className="text-blue-600 font-bold flex items-center gap-1 hover:underline pt-2 text-lg">
-                      Buy {asset.name} ({asset.symbol}) <ChevronRight className="w-5 h-5" />
+                    <p className="text-base text-gray-500 font-medium">{asset.name}</p>
+                    <p className="text-3xl font-bold text-gray-900 tracking-tight">{asset.price}</p>
+                    <Link href={`/buy-crypto?coin=${asset.symbol}`} className="text-blue-600 font-medium flex items-center gap-1 hover:underline pt-1 text-base">
+                      Buy {asset.name} ({asset.symbol}) <ChevronRight className="w-4 h-4" />
                     </Link>
                   </div>
                 </div>
