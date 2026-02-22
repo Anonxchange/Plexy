@@ -36,13 +36,13 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/svg-image-1-3.svg";
-import imgStep2 from "@assets/svg-image-1-3.svg";
-import imgStep3 from "@assets/svg-image-1-3.svg";
-import imgPostBuy from "@assets/svg-image-1-3.svg";
-import imgHold from "@assets/svg-image-1-3.svg";
-import imgSwap from "@assets/svg-image-1-3.svg";
-import imgSpend from "@assets/svg-image-1-3.svg";
+import imgStep1 from "@assets/IMG_4255_1771801088531.png";
+import imgStep2 from "@assets/IMG_4256_1771801088531.png";
+import imgStep3 from "@assets/IMG_4257_1771801088531.png";
+import imgPostBuy from "@assets/IMG_4260_1771801088531.png";
+import imgHold from "@assets/svg-image-1 17.svg";
+import imgSwap from "@assets/svg-image-1 18.svg";
+import imgSpend from "@assets/svg-image-1 19.svg";
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
@@ -131,67 +131,66 @@ const BuyCryptoPage = () => {
             </p>
 
             {/* Buy Widget Card */}
-            <div className="bg-white rounded-3xl p-6 text-left text-gray-900 shadow-xl max-w-md mx-auto w-full border border-gray-100">
-              <h2 className="text-xl font-bold mb-6">Buy Crypto</h2>
+            <div className="bg-white rounded-[32px] p-8 text-left text-gray-900 shadow-2xl max-w-lg mx-auto w-full border border-gray-100">
+              <h2 className="text-2xl font-bold mb-8">Buy Crypto</h2>
               
-              <div className="flex justify-center mb-6">
-                <div className="bg-gray-50 p-1 rounded-full flex w-full max-w-[160px]">
+              <div className="flex justify-center mb-8">
+                <div className="bg-gray-100 p-1.5 rounded-full flex w-full max-w-[240px]">
                   <button 
                     onClick={() => setMode("buy")}
-                    className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "buy" ? "bg-black text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex-1 py-3 rounded-full text-sm font-bold transition-all ${mode === "buy" ? "bg-black text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Buy
                   </button>
                   <button 
                     onClick={() => setMode("sell")}
-                    className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all ${mode === "sell" ? "bg-black text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex-1 py-3 rounded-full text-sm font-bold transition-all ${mode === "sell" ? "bg-black text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Sell
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="border border-gray-100 rounded-xl p-4">
-                  <label className="text-[10px] font-semibold text-gray-400 mb-2 block uppercase tracking-wider">Amount</label>
+              <div className="space-y-6">
+                <div className="border border-gray-200 rounded-2xl p-6 hover:border-black transition-colors">
+                  <label className="text-xs font-bold text-gray-500 mb-3 block uppercase tracking-widest">Amount</label>
                   <div className="flex items-center justify-between gap-4">
-                    <div className="bg-black text-white px-3 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-gray-800 transition-colors min-w-[120px]">
-                        <span className="font-bold text-xs flex-1">Select Currency</span>
-                        <ChevronDown className="w-3.5 h-3.5" />
+                    <div className="bg-black text-white px-5 py-3 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-gray-800 transition-all min-w-[160px] shadow-sm">
+                        <span className="font-bold text-sm flex-1 text-center">Select Currency</span>
+                        <ChevronDown className="w-4 h-4" />
                     </div>
                     <input 
                       type="number" 
                       placeholder="0.00"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="text-right text-2xl font-medium w-full outline-none text-gray-400 placeholder:text-gray-200"
+                      className="text-right text-3xl font-bold w-full outline-none text-black placeholder:text-gray-300 bg-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="border border-gray-100 rounded-xl p-4">
-                  <label className="text-[10px] font-semibold text-gray-400 mb-2 block uppercase tracking-wider">Buying</label>
-                  <div className="bg-black text-white px-3 py-2 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-colors">
-                      <span className="font-bold text-xs">Select</span>
-                      <ChevronDown className="w-3.5 h-3.5" />
+                <div className="border border-gray-200 rounded-2xl p-6 hover:border-black transition-colors">
+                  <label className="text-xs font-bold text-gray-500 mb-3 block uppercase tracking-widest">Buying</label>
+                  <div className="bg-black text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
+                      <span className="font-bold text-sm">Select Asset</span>
+                      <ChevronDown className="w-5 h-5" />
                   </div>
                 </div>
 
-                <div className="border border-gray-100 rounded-xl p-4">
-                  <label className="text-[10px] font-semibold text-gray-400 mb-2 block uppercase tracking-wider">Payment Method</label>
-                  <div className="bg-black text-white px-3 py-2 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-colors">
-                      <span className="font-bold text-xs">Select</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                <div className="border border-gray-200 rounded-2xl p-6 hover:border-black transition-colors">
+                  <label className="text-xs font-bold text-gray-500 mb-3 block uppercase tracking-widest">Payment Method</label>
+                  <div className="bg-black text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
+                      <span className="font-bold text-sm">Select Payment</span>
+                      <ChevronRight className="w-5 h-5" />
                   </div>
                 </div>
 
-                <Button className="w-full h-12 bg-gray-50 hover:bg-gray-100 text-gray-400 rounded-xl text-sm font-bold shadow-none mt-2 uppercase tracking-wider" disabled={true}>
+                <Button className="w-full h-16 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-2xl text-base font-black shadow-lg mt-4 uppercase tracking-widest border-none transition-all hover:scale-[1.02] active:scale-[0.98]" disabled={false}>
                   View Offers
                 </Button>
 
-                <div className="text-center mt-4 space-y-0.5">
-                  <p className="text-black font-bold cursor-pointer hover:underline text-base">Don't have a wallet?</p>
-                  <p className="text-black font-bold cursor-pointer hover:underline text-base">Get the Pexly app</p>
+                <div className="text-center mt-6 space-y-2">
+                  <p className="text-gray-500 font-medium text-sm">Don't have a wallet? <span className="text-black font-bold cursor-pointer hover:underline">Get the Pexly app</span></p>
                 </div>
               </div>
             </div>
