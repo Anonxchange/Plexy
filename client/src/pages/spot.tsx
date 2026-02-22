@@ -113,7 +113,7 @@ export function Spot() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
+
   const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
   const [selectedPair, setSelectedPair] = useState(initialTradingPairs[0]);
   const [searchPair, setSearchPair] = useState("");
@@ -160,7 +160,7 @@ export function Spot() {
     // Get wallet balances and list for the trading pair
   const baseCrypto = selectedPair.symbol;
   const quoteCrypto = "USDT";
-  
+
   const { data: walletData } = useWalletData();
   const balancesResult = useWalletBalances();
   const monitoredBalances = (balancesResult.data as any) || [];
@@ -183,21 +183,21 @@ export function Spot() {
       try {
         const symbols = tradingPairs.map(p => p.symbol);
         const response = await asterdexService.getTickers(symbols);
-        
+
         // The service returns the raw data array directly
         const tickers = response;
-        
+
         if (Array.isArray(tickers) && tickers.length > 0) {
           setTradingPairs(prevPairs => 
             prevPairs.map(pair => {
               const pairSymbol = pair.symbol.endsWith('USDT') ? pair.symbol : `${pair.symbol}USDT`;
               const ticker = tickers.find((t: any) => t.symbol === pairSymbol);
-                
+
               if (ticker) {
                 const price = parseFloat(ticker.lastPrice) || 0;
                 const change = parseFloat(ticker.priceChangePercent) || 0;
                 const quoteVolume = parseFloat(ticker.quoteVolume) || 0;
-                
+
                 return {
                   ...pair,
                   price,
@@ -237,7 +237,7 @@ export function Spot() {
     const updateQuote = async () => {
       const amountStr = buyAmount || sellAmount;
       const amount = parseFloat(amountStr);
-      
+
       if (!amount || amount <= 0) {
         setTradeQuote(null);
         return;
@@ -246,16 +246,16 @@ export function Spot() {
       try {
         const fromToken = buyAmount ? "USDT" : selectedPair.symbol;
         const toToken = buyAmount ? selectedPair.symbol : "USDT";
-        
+
         console.log(`[Spot] Fetching quote: ${fromToken} -> ${toToken}, amount: ${amount}`);
-        
+
         const quote = await asterdexService.getQuote(
           fromToken,
           toToken,
           amount,
           parseFloat(maxSlippage) / 100
         );
-        
+
         console.log("[Spot] Quote received successfully:", quote);
         setTradeQuote(quote);
       } catch (err) {
@@ -273,15 +273,15 @@ export function Spot() {
       try {
         const symbol = selectedPair.symbol;
         const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-        
+
         console.log(`[Spot] Fetching market data for ${formattedSymbol}`);
         const [orderBookData, tradesData] = await Promise.all([
           asterdexService.getOrderBook(formattedSymbol, 20),
           asterdexService.getRecentTrades(formattedSymbol, 20)
         ]);
-        
+
         console.log("[Spot] Market data results for %s:", formattedSymbol, { orderBookData, tradesData });
-        
+
         if (orderBookData) {
           // Handle both { success: true, data: { bids, asks } } and raw { bids, asks }
           const rawData = (orderBookData as any).data || orderBookData;
@@ -291,20 +291,20 @@ export function Spot() {
           const bids: [string, string][] = bidsData.map((b: any) => 
             Array.isArray(b) ? [String(b[0]), String(b[1])] : [String(b.price), String(b.amount)]
           ) as [string, string][];
-          
+
           const asks: [string, string][] = asksData.map((a: any) => 
             Array.isArray(a) ? [String(a[0]), String(a[1])] : [String(a.price), String(a.amount)]
           ) as [string, string][];
 
           setLiveOrderBook({ bids, asks });
-            
+
           if (orderType === 'limit' && (!buyPrice || !sellPrice)) {
             const bestBid = bids[0];
             const bestAsk = asks[0];
             if (bestBid && bestAsk) {
               const bidPrice = parseFloat(bestBid[0]);
               const askPrice = parseFloat(bestAsk[0]);
-              
+
               if (!isNaN(bidPrice) && !isNaN(askPrice)) {
                 const middlePrice = ((bidPrice + askPrice) / 2).toString();
                 setBuyPrice(middlePrice);
@@ -313,7 +313,7 @@ export function Spot() {
             }
           }
         }
-        
+
         // Fix: Properly handle tradesData if it's wrapped in { success, data }
         const rawTrades = (tradesData as any)?.data || (Array.isArray(tradesData) ? tradesData : []);
         if (Array.isArray(rawTrades)) {
@@ -341,7 +341,7 @@ export function Spot() {
         />
         <label htmlFor="slippage-checkbox" className="text-[10px] font-medium text-muted-foreground cursor-pointer">Max. Slippage</label>
       </div>
-      
+
       <Drawer open={isSlippageDrawerOpen} onOpenChange={setIsSlippageDrawerOpen}>
         <DrawerTrigger asChild>
           <div className="ml-auto flex items-center gap-1 cursor-pointer hover:opacity-80 group">
@@ -515,7 +515,7 @@ export function Spot() {
   // Execute the actual trade with cached or provided password
   const executeTrade = async (type: "buy" | "sell", password: string) => {
     if (!user) return;
-    
+
     setIsExecuting(true);
     try {
       const fromToken = type === "buy" ? "USDT" : selectedPair.symbol;
@@ -527,14 +527,14 @@ export function Spot() {
       const activeWallet = nonCustodialWallets.find((w: any) => {
         const walletType = (w.walletType || "").toLowerCase();
         const chainId = (w.chainId || "").toLowerCase();
-        
+
         // Match by wallet type or chain ID
         if (fromToken === "BTC" && (walletType === "bitcoin" || chainId.includes("bitcoin"))) return true;
         if (fromToken === "SOL" && (walletType === "solana" || chainId.includes("solana"))) return true;
         if (fromToken === "TRX" && (walletType === "tron" || chainId.includes("tron"))) return true;
         // Default to EVM for others (USDT, ETH, BNB, etc)
         if (["ETH", "BNB", "USDT", "USDC"].includes(fromToken) && (walletType === "ethereum" || walletType === "evm")) return true;
-        
+
         return false;
       }) || nonCustodialWallets[0];
 
@@ -569,7 +569,7 @@ export function Spot() {
     if (!wallet) throw new Error("Wallet not found in storage");
 
     const decryptedPrivateKey = await nonCustodialWalletManager.decryptPrivateKey(wallet.encryptedPrivateKey, password);
-    
+
     // We'll use a simplified signing approach for the demo/edge function flow
     // In a real app, this would use the specific chain's signing method
     const signature = "0x" + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
@@ -942,339 +942,171 @@ export function Spot() {
               </div>
 
               {/* Column 2: Trade Panel */}
-              <div className="flex-[1.2] flex flex-col overflow-hidden h-full">
-                    <Tabs defaultValue="buy" className="flex-1 flex flex-col">
-                      <TabsList className="w-full grid grid-cols-2 rounded-none h-9 border-b border-border bg-transparent">
-                        <TabsTrigger value="buy" className="text-xs data-[state=active]:text-green-500 data-[state=active]:bg-green-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-green-500">Buy</TabsTrigger>
-                        <TabsTrigger value="sell" className="text-xs data-[state=active]:text-red-500 data-[state=active]:bg-red-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-red-500">Sell</TabsTrigger>
-                      </TabsList>
+              <div className="flex-[1.2] flex flex-col h-full relative border-l border-border min-h-0">
+                <Tabs defaultValue="buy" className="flex-1 flex flex-col min-h-0">
+                  <TabsList className="w-full grid grid-cols-2 rounded-none h-9 border-b border-border bg-transparent shrink-0">
+                    <TabsTrigger value="buy" className="text-xs data-[state=active]:text-green-500 data-[state=active]:bg-green-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-green-500">Buy</TabsTrigger>
+                    <TabsTrigger value="sell" className="text-xs data-[state=active]:text-red-500 data-[state=active]:bg-red-500/10 rounded-none border-b-2 border-transparent data-[state=active]:border-red-500">Sell</TabsTrigger>
+                  </TabsList>
 
-                      <TabsContent value="buy" className="m-0 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
-                          <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Order Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="limit">Limit</SelectItem>
-                              <SelectItem value="market">Market</SelectItem>
-                            </SelectContent>
-                          </Select>
+                  <TabsContent value="buy" className="m-0 flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-3">
+                      <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Order Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="limit">Limit</SelectItem>
+                          <SelectItem value="market">Market</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                          {orderType === "limit" ? (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>Price</span>
-                                <span>USDT</span>
-                              </div>
-                              <Input 
-                                className="h-8 text-xs bg-muted/20" 
-                                value={buyPrice}
-                                onChange={(e) => setBuyPrice(e.target.value)}
-                              />
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>Price</span>
-                                <span>USDT</span>
-                              </div>
-                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
-                                Market Price
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-muted-foreground">
-                              <span>{orderType === "market" ? "Total (approx)" : "Total"}</span>
-                              <span>USDT</span>
-                            </div>
-                            <Input 
-                              className="h-8 text-xs bg-muted/20" 
-                              value={buyAmount}
-                              onChange={(e) => setBuyAmount(e.target.value)}
-                              placeholder="0.00"
-                            />
-                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
-                              <span>Est. Receive:</span>
-                              <span className="text-green-500">
-                                {buyAmount && !isNaN(parseFloat(buyAmount)) 
-                                  ? (parseFloat(buyAmount) / (orderType === "limit" ? parseFloat(buyPrice) || selectedPair.price : selectedPair.price)).toFixed(6)
-                                  : "0.00"} {selectedPair.symbol}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="pt-1">
-                            <Slider
-                              value={buyPercentage}
-                              onValueChange={setBuyPercentage}
-                              max={100}
-                              step={25}
-                              className="py-2"
-                            />
-                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
-                              <span>0%</span>
-                              <span>25%</span>
-                              <span>50%</span>
-                              <span>75%</span>
-                              <span>100%</span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1 pt-2 border-t border-border/50">
-                            {orderType === "market" && <SlippageSelector />}
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-muted-foreground">Avbl</span>
-                              <span>{quoteWallet?.balance.toFixed(2) || "0.00"} USDT</span>
-                            </div>
-                          </div>
-
-                          {orderType === "limit" && (
-                            <div className="space-y-2 py-1">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    id="buy-tp-sl"
-                                    checked={isTPEnabled}
-                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor="buy-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
-                                </div>
-                                {isTPEnabled && (
-                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
-                                    <span>Basic</span>
-                                    <ArrowUpDown className="w-3 h-3" />
-                                  </div>
-                                )}
-                              </div>
-
-                              {isTPEnabled && (
-                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                                  <div className="relative">
-                                    <Input
-                                      value={tpPrice}
-                                      onChange={(e) => setTpPrice(e.target.value)}
-                                      placeholder="Take Profit"
-                                      className="h-9 text-xs bg-muted/20 pr-12"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
-                                  </div>
-                                  <div className="relative">
-                                    <Input
-                                      value={slPrice}
-                                      onChange={(e) => setSlPrice(e.target.value)}
-                                      placeholder="Stop Loss"
-                                      className="h-9 text-xs bg-muted/20 pr-12"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    id="buy-post-only"
-                                    checked={isPostOnlyEnabled}
-                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor="buy-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
-                                </div>
-                                <div className="ml-auto">
-                                  <Select value={gtcType} onValueChange={setGtcType}>
-                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
-                                      <SelectValue placeholder="GTC" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="GTC">GTC</SelectItem>
-                                      <SelectItem value="IOC">IOC</SelectItem>
-                                      <SelectItem value="FOK">FOK</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <Button 
-                            className="w-full h-9 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
-                            onClick={handleBuy}
-                            disabled={isExecuting}
-                          >
-                            {isExecuting ? "Processing..." : "Buy"}
-                          </Button>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                          <span>Price</span>
+                          <span>USDT</span>
                         </div>
-                      </TabsContent>
-
-                      <TabsContent value="sell" className="m-0 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-2 space-y-3 overflow-y-auto no-scrollbar flex-1">
-                          <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Order Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="limit">Limit</SelectItem>
-                              <SelectItem value="market">Market</SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          {orderType === "limit" ? (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>Price</span>
-                                <span>USDT</span>
-                              </div>
-                              <Input 
-                                className="h-8 text-xs bg-muted/20" 
-                                value={sellPrice}
-                                onChange={(e) => setSellPrice(e.target.value)}
-                              />
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>Price</span>
-                                <span>USDT</span>
-                              </div>
-                              <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
-                                Market Price
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-muted-foreground">
-                              <span>Amount</span>
-                              <span>{selectedPair.symbol}</span>
-                            </div>
-                            <Input 
-                              className="h-8 text-xs bg-muted/20" 
-                              value={sellAmount}
-                              onChange={(e) => setSellAmount(e.target.value)}
-                              placeholder="0.00"
-                            />
-                            <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
-                              <span>Est. Receive:</span>
-                              <span className="text-red-500">
-                                {sellAmount && !isNaN(parseFloat(sellAmount)) 
-                                  ? (parseFloat(sellAmount) * (orderType === "limit" ? parseFloat(sellPrice) || selectedPair.price : selectedPair.price)).toFixed(2)
-                                  : "0.00"} USDT
-                              </span>
-                            </div>
+                        {orderType === "limit" ? (
+                          <Input 
+                            className="h-8 text-xs bg-muted/20" 
+                            value={buyPrice}
+                            onChange={(e) => setBuyPrice(e.target.value)}
+                          />
+                        ) : (
+                          <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                            Market Price
                           </div>
+                        )}
+                      </div>
 
-                          <div className="pt-1">
-                            <Slider
-                              value={sellPercentage}
-                              onValueChange={setSellPercentage}
-                              max={100}
-                              step={25}
-                              className="py-2"
-                            />
-                            <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
-                              <span>0%</span>
-                              <span>25%</span>
-                              <span>50%</span>
-                              <span>75%</span>
-                              <span>100%</span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1 pt-2 border-t border-border/50">
-                            {orderType === "market" && <SlippageSelector />}
-                            <div className="flex justify-between text-[10px]">
-                              <span className="text-muted-foreground">Avbl</span>
-                              <span>{baseWallet?.balance.toFixed(4) || "0.00"} {selectedPair.symbol}</span>
-                            </div>
-                          </div>
-
-                          {orderType === "limit" && (
-                            <div className="space-y-2 py-1">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    id="sell-tp-sl"
-                                    checked={isTPEnabled}
-                                    onChange={(e) => setIsTPEnabled(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor="sell-tp-sl" className="text-xs font-medium text-muted-foreground cursor-pointer">TP/SL</label>
-                                </div>
-                                {isTPEnabled && (
-                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
-                                    <span>Basic</span>
-                                    <ArrowUpDown className="w-3 h-3" />
-                                  </div>
-                                )}
-                              </div>
-
-                              {isTPEnabled && (
-                                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                                  <div className="relative">
-                                    <Input
-                                      value={tpPrice}
-                                      onChange={(e) => setTpPrice(e.target.value)}
-                                      placeholder="Take Profit"
-                                      className="h-9 text-xs bg-muted/20 pr-12"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
-                                  </div>
-                                  <div className="relative">
-                                    <Input
-                                      value={slPrice}
-                                      onChange={(e) => setSlPrice(e.target.value)}
-                                      placeholder="Stop Loss"
-                                      className="h-9 text-xs bg-muted/20 pr-12"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">USDT</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    id="sell-post-only"
-                                    checked={isPostOnlyEnabled}
-                                    onChange={(e) => setIsPostOnlyEnabled(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor="sell-post-only" className="text-xs font-medium text-muted-foreground cursor-pointer">Post-Only</label>
-                                </div>
-                                <div className="ml-auto">
-                                  <Select value={gtcType} onValueChange={setGtcType}>
-                                    <SelectTrigger className="w-16 h-6 text-[10px] px-2 border-none bg-muted/30">
-                                      <SelectValue placeholder="GTC" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="GTC">GTC</SelectItem>
-                                      <SelectItem value="IOC">IOC</SelectItem>
-                                      <SelectItem value="FOK">FOK</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <Button 
-                            className="w-full h-9 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider"
-                            onClick={handleSell}
-                            disabled={isExecuting}
-                          >
-                            {isExecuting ? "Processing..." : "Sell"}
-                          </Button>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                          <span>Amount</span>
+                          <span>USDT</span>
                         </div>
-                      </TabsContent>
-                    </Tabs>
+                        <Input 
+                          className="h-8 text-xs bg-muted/20" 
+                          value={buyAmount}
+                          onChange={(e) => setBuyAmount(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="pt-1">
+                        <Slider
+                          value={buyPercentage}
+                          onValueChange={setBuyPercentage}
+                          max={100}
+                          step={25}
+                          className="py-2"
+                        />
+                        <div className="flex justify-between text-[8px] text-muted-foreground">
+                          <span>0%</span>
+                          <span>25%</span>
+                          <span>50%</span>
+                          <span>75%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 pt-2 border-t border-border/50">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Available</span>
+                          <span className="font-medium">{quoteWallet?.balance.toFixed(2) || "0.00"} USDT</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-2 border-t border-border bg-background shrink-0">
+                      <Button 
+                        className="w-full h-10 text-xs bg-green-500 hover:bg-green-600 text-white font-bold uppercase"
+                        onClick={handleBuy}
+                        disabled={isExecuting}
+                      >
+                        {isExecuting ? "Processing..." : `Buy ${selectedPair.symbol}`}
+                      </Button>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="sell" className="m-0 flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-3">
+                      <Select defaultValue="market" onValueChange={(v) => setOrderType(v as any)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Order Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="limit">Limit</SelectItem>
+                          <SelectItem value="market">Market</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                          <span>Price</span>
+                          <span>USDT</span>
+                        </div>
+                        {orderType === "limit" ? (
+                          <Input 
+                            className="h-8 text-xs bg-muted/20" 
+                            value={sellPrice}
+                            onChange={(e) => setSellPrice(e.target.value)}
+                          />
+                        ) : (
+                          <div className="h-8 flex items-center px-3 rounded-md bg-muted/40 text-xs text-muted-foreground">
+                            Market Price
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                          <span>Amount</span>
+                          <span>{selectedPair.symbol}</span>
+                        </div>
+                        <Input 
+                          className="h-8 text-xs bg-muted/20" 
+                          value={sellAmount}
+                          onChange={(e) => setSellAmount(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="pt-1">
+                        <Slider
+                          value={sellPercentage}
+                          onValueChange={setSellPercentage}
+                          max={100}
+                          step={25}
+                          className="py-2"
+                        />
+                        <div className="flex justify-between text-[8px] text-muted-foreground">
+                          <span>0%</span>
+                          <span>25%</span>
+                          <span>50%</span>
+                          <span>75%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 pt-2 border-t border-border/50">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Available</span>
+                          <span className="font-medium">{baseWallet?.balance.toFixed(4) || "0.00"} {selectedPair.symbol}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-2 border-t border-border bg-background shrink-0">
+                      <Button 
+                        className="w-full h-10 text-xs bg-red-500 hover:bg-red-600 text-white font-bold uppercase"
+                        onClick={handleSell}
+                        disabled={isExecuting}
+                      >
+                        {isExecuting ? "Processing..." : `Sell ${selectedPair.symbol}`}
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
           </div>
