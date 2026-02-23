@@ -36,13 +36,13 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/svg-image-1-3.svg";
-import imgStep2 from "@assets/svg-image-1-3.svg";
-import imgStep3 from "@assets/svg-image-1-3.svg";
-import imgPostBuy from "@assets/svg-image-1-3.svg";
-import imgHold from "@assets/svg-image-1-3.svg";
-import imgSwap from "@assets/svg-image-1-3.svg";
-import imgSpend from "@assets/svg-image-1-3.svg";
+import imgStep1 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
+import imgStep2 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
+import imgStep3 from "@assets/Screenshot_2026-02-22_at_05.28.40_1771806577226.png";
+import imgPostBuy from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgHold from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgSwap from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgSpend from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
@@ -130,7 +130,7 @@ const BuyCryptoPage = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <section className="relative bg-[#0033ad] text-white overflow-hidden py-16 md:py-24 px-4 min-h-[600px] flex items-center">
+      <section className="relative bg-[#CCFF00] text-black overflow-hidden py-16 md:py-24 px-4 min-h-[600px] flex items-center">
         <div className="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="text-left md:w-1/2">
                 <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight">Buy crypto instantly.</h1>
@@ -147,13 +147,13 @@ const BuyCryptoPage = () => {
                 <div className="bg-gray-100 p-1 rounded-full flex w-full max-w-[200px]">
                   <button 
                     onClick={() => setMode("buy")}
-                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${mode === "buy" ? "bg-[#0033ad] text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${mode === "buy" ? "bg-[#CCFF00] text-black shadow-md" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Buy
                   </button>
                   <button 
                     onClick={() => setMode("sell")}
-                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${mode === "sell" ? "bg-[#0033ad] text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${mode === "sell" ? "bg-[#CCFF00] text-black shadow-md" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Sell
                   </button>
@@ -161,7 +161,7 @@ const BuyCryptoPage = () => {
               </div>
 
               <div className="space-y-5">
-                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-[#0033ad] transition-colors bg-white group">
+                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-black transition-colors bg-white group">
                   <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Amount</label>
                   <div className="flex items-center justify-between gap-4">
                     <div className="bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-gray-100 transition-all min-w-[120px]">
@@ -178,28 +178,28 @@ const BuyCryptoPage = () => {
                   </div>
                 </div>
 
-                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-[#0033ad] transition-colors bg-white group">
+                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-black transition-colors bg-white group">
                   <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Buying</label>
-                  <div className="bg-[#0033ad] text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-[#002a8f] transition-all shadow-sm">
+                  <div className="bg-black text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
                       <span className="font-bold text-sm">Select a crypto currency</span>
                       <ChevronDown className="w-5 h-5" />
                   </div>
                 </div>
 
-                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-[#0033ad] transition-colors bg-white group">
+                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-black transition-colors bg-white group">
                   <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Payment Method</label>
-                  <div className="bg-[#0033ad] text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-[#002a8f] transition-all shadow-sm">
+                  <div className="bg-black text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
                       <span className="font-bold text-sm">Select a payment method</span>
                       <ChevronRight className="w-5 h-5" />
                   </div>
                 </div>
 
-                <Button className="w-full h-16 bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-xl text-lg font-bold shadow-sm mt-6 border-none transition-all" disabled={true}>
+                <Button className="w-full h-16 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl text-lg font-bold shadow-sm mt-6 border-none transition-all" disabled={false}>
                   View Offers
                 </Button>
 
                 <div className="text-center mt-8">
-                  <p className="text-gray-500 font-medium text-sm">Don't have a wallet? <span className="text-[#0033ad] font-bold cursor-pointer hover:underline">Get the Pexly app</span></p>
+                  <p className="text-gray-500 font-medium text-sm">Don't have a wallet? <span className="text-black font-bold cursor-pointer hover:underline">Get the Pexly app</span></p>
                 </div>
               </div>
             </div>
@@ -238,7 +238,7 @@ const BuyCryptoPage = () => {
               }
             ].map((item) => (
               <div key={item.step} className="text-center flex flex-col">
-                <div className="text-[#0033ad] text-2xl font-black mb-6">
+                <div className="text-[#CCFF00] text-2xl font-black mb-6">
                   {item.step}
                 </div>
                 <h3 className="text-2xl font-black mb-4 tracking-tight">{item.title}</h3>
@@ -273,7 +273,7 @@ const BuyCryptoPage = () => {
                       <div>
                         <p className="text-[12px] text-gray-500 font-bold mb-0.5 leading-none">{asset.name}</p>
                         <p className="text-lg font-black text-gray-900 mb-0.5 leading-tight">{asset.price}</p>
-                        <Link href={`/buy-crypto?coin=${asset.symbol}`} className="text-[#0033ad] font-bold flex items-center gap-1 hover:underline text-[11px] uppercase tracking-wide">
+                        <Link href={`/buy-crypto?coin=${asset.symbol}`} className="text-black font-bold flex items-center gap-1 hover:underline text-[11px] uppercase tracking-wide">
                           Buy {asset.name} ({asset.symbol}) →
                         </Link>
                       </div>
@@ -291,7 +291,7 @@ const BuyCryptoPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {benefits.map((benefit, i) => (
               <div key={i} className="p-10 rounded-[32px] bg-[#f4f7ff] text-left border border-gray-50 group hover:bg-[#ebf0ff] transition-all">
-                <div className="w-14 h-14 rounded-2xl bg-[#0033ad] flex items-center justify-center text-white mb-8 shadow-lg">
+                <div className="w-14 h-14 rounded-2xl bg-[#CCFF00] flex items-center justify-center text-black mb-8 shadow-lg">
                   <benefit.icon className="w-7 h-7" />
                 </div>
                 <h3 className="text-2xl font-black mb-4 tracking-tight">{benefit.title}</h3>
@@ -354,9 +354,9 @@ const BuyCryptoPage = () => {
               {faqs.map((faq, i) => (
                 <AccordionItem key={i} value={`item-${i}`} className="border-b border-gray-100 px-0">
                   <AccordionTrigger className="text-xl font-bold hover:no-underline text-left py-8 group">
-                    <span className="flex items-center gap-4">
-                      <Plus className="w-6 h-6 text-[#0033ad] group-data-[state=open]:hidden" />
-                      <Minus className="w-6 h-6 text-[#0033ad] hidden group-data-[state=open]:block" />
+                    <span className="flex items-center gap-4 text-black">
+                      <Plus className="w-6 h-6 text-black group-data-[state=open]:hidden" />
+                      <Minus className="w-6 h-6 text-black hidden group-data-[state=open]:block" />
                       {faq.question}
                     </span>
                   </AccordionTrigger>
