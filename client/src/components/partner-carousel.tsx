@@ -17,7 +17,7 @@ const partners = [
 
 export function PartnerCarousel() {
   return (
-    <div className="bg-zinc-100 py-4 overflow-hidden border-y border-zinc-200">
+    <div className="bg-zinc-100 dark:bg-zinc-900/50 py-4 overflow-hidden border-y border-zinc-200 dark:border-zinc-800 backdrop-blur-sm">
       <div className="flex gap-16 items-center animate-scroll [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]">
         {[...partners, ...partners].map((partner, index) => (
           <div 
@@ -29,11 +29,11 @@ export function PartnerCarousel() {
                 src={partner.logo} 
                 alt=""
                 role="presentation"
-                className="w-8 h-8 object-contain"
+                className="w-8 h-8 object-contain dark:brightness-0 dark:invert"
                 loading="lazy"
               />
             )}
-            <span className="font-bold text-zinc-800 text-base tracking-tight">
+            <span className="font-bold text-zinc-800 dark:text-zinc-200 text-base tracking-tight">
               {partner.name}
             </span>
           </div>
