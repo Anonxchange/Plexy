@@ -133,7 +133,7 @@ const BuyCryptoPage = () => {
       <section className="relative bg-[#CCFF00] text-black overflow-hidden py-12 md:py-20 px-4 min-h-[500px] flex items-center">
         {/* Floating Icons for Desktop */}
         <div className="hidden md:block absolute inset-0 pointer-events-none">
-          <div className="absolute top-[15%] left-[10%] animate-curve-float opacity-40">
+          <div className="absolute top-[15%] left-[10%] animate-curve-float opacity-60">
             <img src={cryptoIconUrls.BTC} className="w-16 h-16 grayscale brightness-0" alt="" />
           </div>
           <div className="absolute top-[60%] left-[5%] animate-curve-float-reverse opacity-35">
