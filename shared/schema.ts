@@ -87,6 +87,25 @@ export const userWallets = pgTable("user_wallets", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  walletId: text("wallet_id").notNull(),
+  type: text("type").notNull(),
+  cryptoSymbol: text("crypto_symbol").notNull(),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  fee: numeric("fee", { precision: 20, scale: 8 }).default("0").notNull(),
+  status: text("status").default("completed").notNull(),
+  txHash: text("tx_hash"),
+  fromAddress: text("from_address"),
+  toAddress: text("to_address"),
+  referenceId: text("reference_id"),
+  notes: text("notes"),
+  confirmations: numeric("confirmations"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
