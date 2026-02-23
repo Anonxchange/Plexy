@@ -36,7 +36,7 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/svg-image-1-3.svg";
+import imgStep1 from "@assets/IMG_4268.webp";
 import imgStep2 from "@assets/svg-image-1-3.svg";
 import imgStep3 from "@assets/svg-image-1-3.svg";
 import imgPostBuy from "@assets/svg-image-1-3.svg";
