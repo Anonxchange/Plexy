@@ -36,13 +36,13 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/svg-image-1-3.svg";
-import imgStep2 from "@assets/svg-image-1-3.svg";
-import imgStep3 from "@assets/svg-image-1-3.svg";
-import imgPostBuy from "@assets/svg-image-1-3.svg";
-import imgHold from "@assets/svg-image-1-3.svg";
-import imgSwap from "@assets/svg-image-1-3.svg";
-import imgSpend from "@assets/svg-image-1-3.svg";
+import imgStep1 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
+import imgStep2 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
+import imgStep3 from "@assets/Screenshot_2026-02-22_at_05.28.40_1771806577226.png";
+import imgPostBuy from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgHold from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgSwap from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgSpend from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
@@ -52,18 +52,25 @@ const BuyCryptoPage = () => {
   const [crypto, setCrypto] = useState("BTC");
 
   const supportedAssets = useMemo(() => {
-    return cryptoCurrencies.map(c => ({
-      symbol: c.symbol,
-      name: c.name,
-      price: c.symbol === "BTC" ? "$66,924.64" : 
-             c.symbol === "ETH" ? "$1,952.29" :
-             c.symbol === "SOL" ? "$84.35" :
-             c.symbol === "BCH" ? "$568.99" :
-             c.symbol === "DOGE" ? "$0.10" :
-             c.symbol === "LTC" ? "$53.33" :
-             c.symbol === "USDC" ? "$1.00" :
-             c.symbol === "USDT" ? "$1.00" : "$1.00"
-    }));
+    return [
+      { symbol: "BTC", name: "Bitcoin", price: "$67,248.58" },
+      { symbol: "BCH", name: "Bitcoin Cash", price: "$569.42" },
+      { symbol: "ETH", name: "Ethereum", price: "$1,966.33" },
+      { symbol: "DOGE", name: "Dogecoin", price: "$0.10" },
+      { symbol: "LTC", name: "Litecoin", price: "$53.79" },
+      { symbol: "USDC", name: "USDC", price: "$1.00" },
+      { symbol: "PAX", name: "Pax Dollar", price: "$1.00" },
+      { symbol: "GUSD", name: "Gemini Dollar", price: "$1.00" },
+      { symbol: "BUSD", name: "Binance USD", price: "$1.00" },
+      { symbol: "DAI", name: "DAI", price: "$1.00" },
+      { symbol: "WBTC", name: "Wrapped Bitcoin", price: "$67,927.86" },
+      { symbol: "SHIB", name: "Shiba Inu", price: "$0.00000621" },
+      { symbol: "APE", name: "ApeCoin", price: "$0.11" },
+      { symbol: "POL", name: "Polygon", price: "$0.11" },
+      { symbol: "USDT", name: "Tether", price: "$1.00" },
+      { symbol: "XRP", name: "XRP", price: "$1.41" },
+      { symbol: "SOL", name: "Solana", price: "$84.35" }
+    ];
   }, []);
 
   const benefits = [
@@ -123,74 +130,76 @@ const BuyCryptoPage = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <section className="relative bg-[#CCFF00] text-black overflow-hidden py-12 px-4">
-        <div className="container mx-auto max-w-4xl text-center">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Buy crypto instantly.</h1>
-            <p className="text-base md:text-lg opacity-80 mb-10 max-w-2xl mx-auto">
-                Choose from 16+ cryptocurrencies. Download the app to store with self-custody.
-            </p>
+      <section className="relative bg-[#0033ad] text-white overflow-hidden py-16 md:py-24 px-4 min-h-[600px] flex items-center">
+        <div className="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-12">
+            <div className="text-left md:w-1/2">
+                <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight">Buy crypto instantly.</h1>
+                <p className="text-lg md:text-xl opacity-90 mb-8 max-w-md">
+                    Choose from 16+ cryptocurrencies. Download the app to store with self-custody.
+                </p>
+            </div>
 
             {/* Buy Widget Card */}
-            <div className="bg-white rounded-[32px] p-8 text-left text-gray-900 shadow-2xl max-w-lg mx-auto w-full border border-gray-100">
-              <h2 className="text-2xl font-bold mb-8">Buy Crypto</h2>
+            <div className="bg-white rounded-[24px] p-6 md:p-10 text-left text-gray-900 shadow-2xl w-full max-w-[540px] border border-gray-100 relative z-10">
+              <h2 className="text-2xl md:text-3xl font-black text-center mb-8 tracking-tight">Buy Cryptocurrency</h2>
               
-              <div className="flex justify-center mb-8">
-                <div className="bg-gray-100 p-1.5 rounded-full flex w-full max-w-[240px]">
+              <div className="flex justify-center mb-10">
+                <div className="bg-gray-100 p-1 rounded-full flex w-full max-w-[200px]">
                   <button 
                     onClick={() => setMode("buy")}
-                    className={`flex-1 py-3 rounded-full text-sm font-bold transition-all ${mode === "buy" ? "bg-black text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${mode === "buy" ? "bg-[#0033ad] text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Buy
                   </button>
                   <button 
                     onClick={() => setMode("sell")}
-                    className={`flex-1 py-3 rounded-full text-sm font-bold transition-all ${mode === "sell" ? "bg-black text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${mode === "sell" ? "bg-[#0033ad] text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Sell
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div className="border border-gray-200 rounded-2xl p-6 hover:border-black transition-colors">
-                  <label className="text-xs font-bold text-gray-500 mb-3 block uppercase tracking-widest">Amount</label>
+              <div className="space-y-5">
+                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-[#0033ad] transition-colors bg-white group">
+                  <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Amount</label>
                   <div className="flex items-center justify-between gap-4">
-                    <div className="bg-black text-white px-5 py-3 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-gray-800 transition-all min-w-[160px] shadow-sm">
-                        <span className="font-bold text-sm flex-1 text-center">Select Currency</span>
-                        <ChevronDown className="w-4 h-4" />
+                    <div className="bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-gray-100 transition-all min-w-[120px]">
+                        <span className="font-bold text-sm text-gray-700">USD</span>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
                     </div>
                     <input 
                       type="number" 
                       placeholder="0.00"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="text-right text-3xl font-bold w-full outline-none text-black placeholder:text-gray-300 bg-transparent"
+                      className="text-right text-3xl font-medium w-full outline-none text-gray-300 placeholder:text-gray-200 bg-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="border border-gray-200 rounded-2xl p-6 hover:border-black transition-colors">
-                  <label className="text-xs font-bold text-gray-500 mb-3 block uppercase tracking-widest">Buying</label>
-                  <div className="bg-black text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
-                      <span className="font-bold text-sm">Select Asset</span>
+                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-[#0033ad] transition-colors bg-white group">
+                  <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Buying</label>
+                  <div className="bg-[#0033ad] text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-[#002a8f] transition-all shadow-sm">
+                      <span className="font-bold text-sm">Select a crypto currency</span>
                       <ChevronDown className="w-5 h-5" />
                   </div>
                 </div>
 
-                <div className="border border-gray-200 rounded-2xl p-6 hover:border-black transition-colors">
-                  <label className="text-xs font-bold text-gray-500 mb-3 block uppercase tracking-widest">Payment Method</label>
-                  <div className="bg-black text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
-                      <span className="font-bold text-sm">Select Payment</span>
+                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-[#0033ad] transition-colors bg-white group">
+                  <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Payment Method</label>
+                  <div className="bg-[#0033ad] text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-[#002a8f] transition-all shadow-sm">
+                      <span className="font-bold text-sm">Select a payment method</span>
                       <ChevronRight className="w-5 h-5" />
                   </div>
                 </div>
 
-                <Button className="w-full h-16 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-2xl text-base font-black shadow-lg mt-4 uppercase tracking-widest border-none transition-all hover:scale-[1.02] active:scale-[0.98]" disabled={false}>
+                <Button className="w-full h-16 bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-xl text-lg font-bold shadow-sm mt-6 border-none transition-all" disabled={true}>
                   View Offers
                 </Button>
 
-                <div className="text-center mt-6 space-y-2">
-                  <p className="text-gray-500 font-medium text-sm">Don't have a wallet? <span className="text-black font-bold cursor-pointer hover:underline">Get the Pexly app</span></p>
+                <div className="text-center mt-8">
+                  <p className="text-gray-500 font-medium text-sm">Don't have a wallet? <span className="text-[#0033ad] font-bold cursor-pointer hover:underline">Get the Pexly app</span></p>
                 </div>
               </div>
             </div>
@@ -198,16 +207,16 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* How it works */}
-      <section className="py-20 px-4 bg-white">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6">How to buy crypto online or with the Pexly App</h2>
-            <p className="text-lg text-gray-600 leading-relaxed">
+      <section className="py-24 px-4 bg-white">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-black mb-8 tracking-tight">How to buy crypto online or with the Pexly App</h2>
+            <p className="text-lg text-gray-500 leading-relaxed max-w-4xl mx-auto font-medium">
               Buy cryptocurrency with a credit card, debit card, bank account, Apple Pay, Google Pay, Venmo, PayPal, and Cash App from Pexly's trusted partners. Delivered quickly to any wallet, no hidden fees or third-party custody. Buy crypto online or in the Pexly app.
             </p>
           </div>
 
-          <div className="space-y-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
               { 
                 step: 1, 
@@ -228,14 +237,14 @@ const BuyCryptoPage = () => {
                 img: imgStep3
               }
             ].map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="w-12 h-12 rounded-full bg-white border border-gray-100 shadow-sm text-black flex items-center justify-center text-xl font-bold mx-auto mb-8">
+              <div key={item.step} className="text-center flex flex-col">
+                <div className="text-[#0033ad] text-2xl font-black mb-6">
                   {item.step}
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{item.title}</h3>
-                <p className="text-gray-600 text-base mb-10 max-w-xl mx-auto">{item.desc}</p>
-                <div className="bg-[#f8faff] rounded-[32px] p-8 max-w-xl mx-auto shadow-sm">
-                  <img src={item.img} alt={item.title} className="w-full h-auto rounded-2xl shadow-md" />
+                <h3 className="text-2xl font-black mb-4 tracking-tight">{item.title}</h3>
+                <p className="text-gray-500 text-sm mb-10 max-w-xs mx-auto font-medium leading-relaxed">{item.desc}</p>
+                <div className="mt-auto bg-[#f4f7ff] rounded-[32px] p-6 shadow-sm border border-gray-50">
+                  <img src={item.img} alt={item.title} className="w-full h-auto rounded-xl shadow-md" />
                 </div>
               </div>
             ))}
@@ -243,28 +252,28 @@ const BuyCryptoPage = () => {
         </div>
       </section>
 
-      {/* Supported Assets Section - Containerized */}
-      <section className="py-20 px-4 bg-white border-t border-gray-50">
-        <div className="container mx-auto max-w-4xl">
-            <div className="bg-[#fdfdfd] border border-gray-100 rounded-[32px] p-8 md:p-12">
-                <div className="mb-10">
-                  <h2 className="text-3xl font-bold mb-4 text-gray-900">Supported Assets</h2>
-                  <p className="text-lg text-gray-600 mb-8">Buy the most popular cryptocurrencies including Bitcoin, Ethereum and more.</p>
+      {/* Supported Assets Section */}
+      <section className="py-24 px-4 bg-white border-t border-gray-50">
+        <div className="container mx-auto max-w-7xl">
+            <div className="bg-white border border-gray-100 rounded-[32px] p-12 md:p-16 shadow-sm">
+                <div className="mb-12">
+                  <h2 className="text-4xl font-black mb-4 text-gray-900 tracking-tight">Supported Assets</h2>
+                  <p className="text-lg text-gray-500 font-medium">Buy the most popular cryptocurrencies including Bitcoin, Ethereum and more.</p>
                 </div>
-                <div className="space-y-10">
-                  {supportedAssets.slice(0, 6).map((asset) => (
-                    <div key={asset.symbol} className="flex items-start gap-5 group cursor-pointer">
-                      <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-y-12 gap-x-8">
+                  {supportedAssets.map((asset) => (
+                    <div key={asset.symbol} className="flex items-start gap-4 group cursor-pointer">
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 shadow-sm border border-gray-100">
                         <img 
                             src={cryptoIconUrls[asset.symbol as keyof typeof cryptoIconUrls] || `/logos/${asset.name.toLowerCase().replace(" ", "-")}-logo.svg`} 
                             alt={asset.name} 
                             className="w-full h-full object-cover"
                         />
                       </div>
-                      <div className="flex-1 border-b border-gray-50 pb-6 last:border-0">
-                        <p className="text-base text-gray-500 font-medium mb-1">{asset.name}</p>
-                        <p className="text-2xl font-bold text-gray-900 mb-2">{asset.price}</p>
-                        <Link href={`/buy-crypto?coin=${asset.symbol}`} className="text-black font-bold flex items-center gap-1 hover:underline text-sm uppercase tracking-wide">
+                      <div>
+                        <p className="text-[12px] text-gray-500 font-bold mb-0.5 leading-none">{asset.name}</p>
+                        <p className="text-lg font-black text-gray-900 mb-0.5 leading-tight">{asset.price}</p>
+                        <Link href={`/buy-crypto?coin=${asset.symbol}`} className="text-[#0033ad] font-bold flex items-center gap-1 hover:underline text-[11px] uppercase tracking-wide">
                           Buy {asset.name} ({asset.symbol}) →
                         </Link>
                       </div>
@@ -276,17 +285,17 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* Benefits */}
-      <section className="py-20 px-4 bg-white">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-12">Benefits of buying cryptocurrency through Pexly</h2>
-          <div className="space-y-6">
+      <section className="py-24 px-4 bg-white">
+        <div className="container mx-auto max-w-7xl">
+          <h2 className="text-3xl md:text-4xl font-black text-center mb-16 tracking-tight">Benefits of buying cryptocurrency through Pexly</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {benefits.map((benefit, i) => (
-              <div key={i} className="p-8 md:p-10 rounded-[32px] bg-[#f8faff] text-left border border-gray-50">
-                <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center text-white mb-8">
-                  <benefit.icon className="w-8 h-8" />
+              <div key={i} className="p-10 rounded-[32px] bg-[#f4f7ff] text-left border border-gray-50 group hover:bg-[#ebf0ff] transition-all">
+                <div className="w-14 h-14 rounded-2xl bg-[#0033ad] flex items-center justify-center text-white mb-8 shadow-lg">
+                  <benefit.icon className="w-7 h-7" />
                 </div>
-                <h3 className="text-xl font-bold mb-4">{benefit.title}</h3>
-                <p className="text-gray-600 text-base leading-relaxed">{benefit.description}</p>
+                <h3 className="text-2xl font-black mb-4 tracking-tight">{benefit.title}</h3>
+                <p className="text-gray-500 text-base leading-relaxed font-medium">{benefit.description}</p>
               </div>
             ))}
           </div>
@@ -294,57 +303,64 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* Post-Buy Actions */}
-      <section className="py-20 px-4 bg-white">
-        <div className="container mx-auto max-w-4xl">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">What can I do after I buy cryptocurrency?</h2>
-          <div className="space-y-12">
-              {[
-                { 
-                  title: "Hold", 
-                  desc: "Buy your favorite coins and add to your growing portfolio.",
-                  icon: imgHold
-                },
-                { 
-                  title: "Swap", 
-                  desc: "Exchange one asset for another without leaving the app. Swap Bitcoin, Ethereum, Dogecoin and all of your favorite coins.",
-                  icon: imgSwap
-                },
-                { 
-                  title: "Spend", 
-                  desc: "Pay bills, shop with top brands, buy gift cards, or use HODL Pay to spend without selling, all in the Pexly Wallet.",
-                  icon: imgSpend
-                },
-              ].map((item, i) => (
-                <div key={i} className="flex flex-col md:flex-row gap-8 items-start">
-                  <div className="w-16 h-16 rounded-full bg-[#f8faff] flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-50 p-3">
-                    <img src={item.icon} alt={item.title} className="w-full h-full object-contain" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                    <p className="text-gray-600 text-base leading-relaxed">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
+      <section className="py-24 px-4 bg-white">
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex flex-col md:flex-row gap-16 items-center">
+            <div className="md:w-1/2">
+               <img src={imgPostBuy} alt="Post Buy" className="w-full h-auto rounded-[32px] shadow-2xl" />
+            </div>
+            <div className="md:w-1/2">
+              <h2 className="text-3xl md:text-5xl font-black mb-12 tracking-tight leading-tight">What can I do after I buy cryptocurrency?</h2>
+              <div className="space-y-12">
+                  {[
+                    { 
+                      title: "Hold", 
+                      desc: "Buy your favorite coins and add to your growing portfolio.",
+                      icon: imgHold
+                    },
+                    { 
+                      title: "Swap", 
+                      desc: "Exchange one asset for another without leaving the app. Swap Bitcoin, Ethereum, Dogecoin and all of your favorite coins.",
+                      icon: imgSwap
+                    },
+                    { 
+                      title: "Spend", 
+                      desc: "Pay bills, shop with top brands, buy gift cards, or use HODL Pay to spend without selling, all in the Pexly Wallet.",
+                      icon: imgSpend
+                    },
+                  ].map((item, i) => (
+                    <div key={i} className="flex gap-6 items-start">
+                      <div className="w-14 h-14 rounded-full bg-[#f4f7ff] flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-50 p-3 shadow-sm">
+                        <img src={item.icon} alt={item.title} className="w-full h-full object-contain" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black mb-3 tracking-tight">{item.title}</h3>
+                        <p className="text-gray-500 text-base leading-relaxed font-medium">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* FAQ Section - Containerized */}
-      <section className="py-20 px-4 bg-[#f8faff]">
-        <div className="container mx-auto max-w-4xl">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Cryptocurrency frequently asked questions</h2>
-          <div className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100 p-4 md:p-8">
-            <Accordion type="single" collapsible className="divide-y divide-gray-50">
+      {/* FAQ Section */}
+      <section className="py-24 px-4 bg-white border-t border-gray-50">
+        <div className="container mx-auto max-w-7xl">
+          <h2 className="text-4xl md:text-5xl font-black text-center mb-16 tracking-tight">Cryptocurrency frequently asked questions</h2>
+          <div className="max-w-5xl mx-auto">
+            <Accordion type="single" collapsible className="space-y-4">
               {faqs.map((faq, i) => (
-                <AccordionItem key={i} value={`item-${i}`} className="border-none px-4">
-                  <AccordionTrigger className="text-lg font-bold hover:no-underline text-left py-6">
+                <AccordionItem key={i} value={`item-${i}`} className="border-b border-gray-100 px-0">
+                  <AccordionTrigger className="text-xl font-bold hover:no-underline text-left py-8 group">
                     <span className="flex items-center gap-4">
-                      <Plus className="w-5 h-5 text-black group-data-[state=open]:hidden" />
-                      <Minus className="w-5 h-5 text-black hidden group-data-[state=open]:block" />
+                      <Plus className="w-6 h-6 text-[#0033ad] group-data-[state=open]:hidden" />
+                      <Minus className="w-6 h-6 text-[#0033ad] hidden group-data-[state=open]:block" />
                       {faq.question}
                     </span>
                   </AccordionTrigger>
-                  <AccordionContent className="text-gray-600 text-base leading-relaxed pt-0 pb-6 pl-9 pr-4">
+                  <AccordionContent className="text-gray-500 text-lg leading-relaxed pt-0 pb-8 pl-10 font-medium">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>
