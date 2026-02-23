@@ -89,7 +89,7 @@ export const userWallets = pgTable("user_wallets", {
 
 export const walletTransactions = pgTable("wallet_transactions", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull(),
   walletId: text("wallet_id").notNull(),
   type: text("type").notNull(),
   cryptoSymbol: text("crypto_symbol").notNull(),
