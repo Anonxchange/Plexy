@@ -36,13 +36,13 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/svg-image-1-3.svg";
-import imgStep2 from "@assets/svg-image-1-3.svg";
-import imgStep3 from "@assets/svg-image-1-3.svg";
-import imgPostBuy from "@assets/svg-image-1-3.svg";
-import imgHold from "@assets/svg-image-1-3.svg";
-import imgSwap from "@assets/svg-image-1-3.svg";
-import imgSpend from "@assets/svg-image-1-3.svg";
+import imgStep1 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
+import imgStep2 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
+import imgStep3 from "@assets/Screenshot_2026-02-22_at_05.28.40_1771806577226.png";
+import imgPostBuy from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgHold from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgSwap from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgSpend from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
@@ -130,76 +130,92 @@ const BuyCryptoPage = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <section className="relative bg-[#CCFF00] text-black overflow-hidden py-16 md:py-24 px-4 min-h-[600px] flex items-center">
-        <div className="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-12">
+      <section className="relative bg-[#CCFF00] text-black overflow-hidden py-12 md:py-20 px-4 min-h-[500px] flex items-center">
+        {/* Floating Icons for Desktop */}
+        <div className="hidden md:block absolute inset-0 pointer-events-none">
+          <div className="absolute top-[15%] left-[10%] animate-curve-float opacity-20">
+            <img src={cryptoIconUrls.BTC} className="w-16 h-16 grayscale brightness-0" alt="" />
+          </div>
+          <div className="absolute top-[60%] left-[5%] animate-curve-float-reverse opacity-15">
+            <img src={cryptoIconUrls.ETH} className="w-12 h-12 grayscale brightness-0" alt="" />
+          </div>
+          <div className="absolute top-[20%] left-[35%] animate-curve-float opacity-10">
+            <img src={cryptoIconUrls.SOL} className="w-10 h-10 grayscale brightness-0" alt="" />
+          </div>
+          <div className="absolute bottom-[15%] left-[25%] animate-curve-float-reverse opacity-20">
+            <img src={cryptoIconUrls.LTC} className="w-14 h-14 grayscale brightness-0" alt="" />
+          </div>
+        </div>
+
+        <div className="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 relative z-10">
             <div className="text-left md:w-1/2">
-                <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight">Buy crypto instantly.</h1>
-                <p className="text-lg md:text-xl opacity-90 mb-8 max-w-md">
+                <h1 className="text-4xl md:text-6xl font-black mb-4 leading-tight">Buy crypto instantly.</h1>
+                <p className="text-lg md:text-xl opacity-80 mb-6 max-w-md">
                     Choose from 16+ cryptocurrencies. Download the app to store with self-custody.
                 </p>
             </div>
 
             {/* Buy Widget Card */}
-            <div className="bg-white rounded-[24px] p-6 md:p-10 text-left text-gray-900 shadow-2xl w-full max-w-[540px] border border-gray-100 relative z-10">
-              <h2 className="text-2xl md:text-3xl font-black text-center mb-8 tracking-tight">Buy Cryptocurrency</h2>
+            <div className="bg-white rounded-[24px] p-6 md:p-8 text-left text-gray-900 shadow-2xl w-full max-w-[500px] border border-gray-100">
+              <h2 className="text-2xl md:text-3xl font-black text-center mb-6 tracking-tight">Buy Cryptocurrency</h2>
               
-              <div className="flex justify-center mb-10">
-                <div className="bg-gray-100 p-1 rounded-full flex w-full max-w-[200px]">
+              <div className="flex justify-center mb-8">
+                <div className="bg-gray-100 p-1 rounded-full flex w-full max-w-[180px]">
                   <button 
                     onClick={() => setMode("buy")}
-                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${mode === "buy" ? "bg-[#CCFF00] text-black shadow-md" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex-1 py-2 rounded-full text-xs font-bold transition-all ${mode === "buy" ? "bg-[#CCFF00] text-black shadow-md" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Buy
                   </button>
                   <button 
                     onClick={() => setMode("sell")}
-                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${mode === "sell" ? "bg-[#CCFF00] text-black shadow-md" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex-1 py-2 rounded-full text-xs font-bold transition-all ${mode === "sell" ? "bg-[#CCFF00] text-black shadow-md" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Sell
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-5">
-                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-black transition-colors bg-white group">
-                  <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Amount</label>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-gray-100 transition-all min-w-[120px]">
-                        <span className="font-bold text-sm text-gray-700">USD</span>
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
+              <div className="space-y-4">
+                <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
+                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Amount</label>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-gray-100 transition-all min-w-[100px]">
+                        <span className="font-bold text-xs text-gray-700">USD</span>
+                        <ChevronDown className="w-3 h-3 text-gray-400" />
                     </div>
                     <input 
                       type="number" 
                       placeholder="0.00"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="text-right text-3xl font-medium w-full outline-none text-gray-300 placeholder:text-gray-200 bg-transparent"
+                      className="text-right text-2xl font-medium w-full outline-none text-gray-400 placeholder:text-gray-200 bg-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-black transition-colors bg-white group">
-                  <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Buying</label>
-                  <div className="bg-black text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
-                      <span className="font-bold text-sm">Select a crypto currency</span>
-                      <ChevronDown className="w-5 h-5" />
+                <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
+                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Buying</label>
+                  <div className="bg-black text-white px-4 py-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
+                      <span className="font-bold text-xs">Select a crypto currency</span>
+                      <ChevronDown className="w-4 h-4" />
                   </div>
                 </div>
 
-                <div className="border border-gray-200 rounded-xl p-5 focus-within:border-black transition-colors bg-white group">
-                  <label className="text-[11px] font-bold text-gray-400 mb-2 block uppercase tracking-wider">Payment Method</label>
-                  <div className="bg-black text-white px-5 py-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
-                      <span className="font-bold text-sm">Select a payment method</span>
-                      <ChevronRight className="w-5 h-5" />
+                <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
+                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Payment Method</label>
+                  <div className="bg-black text-white px-4 py-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
+                      <span className="font-bold text-xs">Select a payment method</span>
+                      <ChevronRight className="w-4 h-4" />
                   </div>
                 </div>
 
-                <Button className="w-full h-16 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl text-lg font-bold shadow-sm mt-6 border-none transition-all" disabled={false}>
+                <Button className="w-full h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl text-base font-bold shadow-sm mt-4 border-none transition-all" disabled={false}>
                   View Offers
                 </Button>
 
-                <div className="text-center mt-8">
-                  <p className="text-gray-500 font-medium text-sm">Don't have a wallet? <span className="text-black font-bold cursor-pointer hover:underline">Get the Pexly app</span></p>
+                <div className="text-center mt-6">
+                  <p className="text-gray-500 font-medium text-xs">Don't have a wallet? <span className="text-black font-bold cursor-pointer hover:underline">Get the Pexly app</span></p>
                 </div>
               </div>
             </div>
