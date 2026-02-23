@@ -109,10 +109,24 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
 }
 
 export async function getWalletTransactions(userId: string, limit: number = 29): Promise<WalletTransaction[]> {
-  const { data, error } = await supabase
+  // Fetch transactions where the user is the owner (custodial/recorded)
+  // OR where their address matches from/to (non-custodial/blockchain)
+  const wallets = await getUserWallets(userId);
+  const addresses = wallets.map(w => w.deposit_address).filter(Boolean);
+
+  let query = supabase
     .from('wallet_transactions')
-    .select('*')
-    .eq('user_id', userId)
+    .select('*');
+
+  if (addresses.length > 0) {
+    // Search by user_id OR from_address OR to_address
+    const addressFilter = addresses.map(addr => `from_address.eq.${addr},to_address.eq.${addr}`).join(',');
+    query = query.or(`user_id.eq.${userId},${addressFilter}`);
+  } else {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(limit);
 
