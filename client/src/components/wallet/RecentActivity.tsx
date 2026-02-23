@@ -162,9 +162,11 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
         
         {isOperations ? (
           <>
-            <FilterItem label="Transactions" value="All" />
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterItem label="Filter" value="Transactions: All" />
             <FilterItem label="Action" value="All" />
-            <FilterItem label="Date" value="Past 7 days" isPrimary />
+            <FilterItem label="Date" value="All" isPrimary />
+          </div>
           </>
         ) : (
           <>
