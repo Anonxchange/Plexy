@@ -32,6 +32,46 @@ export interface WalletTransaction {
   completed_at: string | null;
 }
 
+export async function recordTransaction(
+  userId: string,
+  walletId: string,
+  type: WalletTransaction['type'],
+  cryptoSymbol: string,
+  amount: number,
+  fee: number = 0,
+  status: WalletTransaction['status'] = 'completed',
+  txHash: string | null = null,
+  fromAddress: string | null = null,
+  toAddress: string | null = null,
+  notes: string | null = null
+): Promise<WalletTransaction> {
+  const { data, error } = await supabase
+    .from('wallet_transactions')
+    .insert({
+      user_id: userId,
+      wallet_id: walletId,
+      type,
+      crypto_symbol: cryptoSymbol,
+      amount,
+      fee,
+      status,
+      tx_hash: txHash,
+      from_address: fromAddress,
+      to_address: toAddress,
+      notes,
+      created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("[recordTransaction] Error:", error);
+    throw new Error(error.message);
+  }
+
+  return data as WalletTransaction;
+}
+
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
   try {
     // Remote sync logic removed as requested (custodial logic/duplicate calls)
@@ -67,7 +107,7 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
   return wallets.find(w => w.crypto_symbol === cryptoSymbol) || null;
 }
 
-export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
+export async function getWalletTransactions(userId: string, limit: number = 29): Promise<WalletTransaction[]> {
   const { data, error } = await supabase
     .from('wallet_transactions')
     .select('*')
