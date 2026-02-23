@@ -76,6 +76,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
   try {
     // Remote sync logic removed as requested (custodial logic/duplicate calls)
     const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
+    console.log(`[getUserWallets] Found ${localWallets.length} local wallets for user ${userId}`);
     return localWallets.map((w: any) => {
       let symbol = w.chainId;
       if (w.chainId === 'Ethereum (ERC-20)' || w.chainId === 'ethereum') symbol = 'ETH';
