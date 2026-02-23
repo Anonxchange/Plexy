@@ -36,13 +36,13 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/svg-image-1-3.svg";
-import imgStep2 from "@assets/svg-image-1-3.svg";
-import imgStep3 from "@assets/svg-image-1-3.svg";
-import imgPostBuy from "@assets/svg-image-1-3.svg";
-import imgHold from "@assets/svg-image-1-3.svg";
-import imgSwap from "@assets/svg-image-1-3.svg";
-import imgSpend from "@assets/svg-image-1-3.svg";
+import imgStep1 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
+import imgStep2 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
+import imgStep3 from "@assets/Screenshot_2026-02-22_at_05.28.40_1771806577226.png";
+import imgPostBuy from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgHold from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgSwap from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgSpend from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
@@ -133,16 +133,16 @@ const BuyCryptoPage = () => {
       <section className="relative bg-[#CCFF00] text-black overflow-hidden py-12 md:py-20 px-4 min-h-[500px] flex items-center">
         {/* Floating Icons for Desktop */}
         <div className="hidden md:block absolute inset-0 pointer-events-none">
-          <div className="absolute top-[15%] left-[10%] animate-curve-float opacity-20">
+          <div className="absolute top-[15%] left-[10%] animate-curve-float opacity-40">
             <img src={cryptoIconUrls.BTC} className="w-16 h-16 grayscale brightness-0" alt="" />
           </div>
-          <div className="absolute top-[60%] left-[5%] animate-curve-float-reverse opacity-15">
+          <div className="absolute top-[60%] left-[5%] animate-curve-float-reverse opacity-35">
             <img src={cryptoIconUrls.ETH} className="w-12 h-12 grayscale brightness-0" alt="" />
           </div>
-          <div className="absolute top-[20%] left-[35%] animate-curve-float opacity-10">
+          <div className="absolute top-[20%] left-[35%] animate-curve-float opacity-30">
             <img src={cryptoIconUrls.SOL} className="w-10 h-10 grayscale brightness-0" alt="" />
           </div>
-          <div className="absolute bottom-[15%] left-[25%] animate-curve-float-reverse opacity-20">
+          <div className="absolute bottom-[15%] left-[25%] animate-curve-float-reverse opacity-40">
             <img src={cryptoIconUrls.LTC} className="w-14 h-14 grayscale brightness-0" alt="" />
           </div>
         </div>
