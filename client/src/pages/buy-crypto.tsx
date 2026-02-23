@@ -36,13 +36,13 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
-import imgStep2 from "@assets/Screenshot_2026-02-22_at_05.28.37_1771806577226.png";
-import imgStep3 from "@assets/Screenshot_2026-02-22_at_05.28.40_1771806577226.png";
-import imgPostBuy from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
-import imgHold from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
-import imgSwap from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
-import imgSpend from "@assets/Screenshot_2026-02-22_at_05.28.53_1771806577226.png";
+import imgStep1 from "@assets/svg-image-1-3.svg";
+import imgStep2 from "@assets/svg-image-1-3.svg";
+import imgStep3 from "@assets/svg-image-1-3.svg";
+import imgPostBuy from "@assets/svg-image-1-3.svg";
+import imgHold from "@assets/svg-image-1-3.svg";
+import imgSwap from "@assets/svg-image-1-3.svg";
+import imgSpend from "@assets/svg-image-1-3.svg";
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
