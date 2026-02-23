@@ -649,8 +649,8 @@ export function P2P() {
             </div>
             <h2 className="text-2xl font-bold mb-2">Coming Soon</h2>
             <p className="text-muted-foreground mb-6">
-              Our P2P Marketplace is currently under maintenance and will be available shortly. Thank you for your patience!
-            </p>
+             Our P2P  is currently unavailable. We are working hard to bring this feature to you!
+  </p>
             <Button onClick={() => window.history.back()} variant="default" className="w-full">
               Go Back
             </Button>
