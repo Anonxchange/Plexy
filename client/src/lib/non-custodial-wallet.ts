@@ -14,6 +14,8 @@ import { getSolanaAddress, deriveSolanaPrivateKey } from "./solanaSigner";
 import { getTronAddress } from "./tronSigner";
 import { encryptVault, decryptVault, EncryptedVault } from "./webCrypto";
 
+import { recordTransaction } from "./wallet-api";
+
 // Constants for Encoding
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const XRP_ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
@@ -208,6 +210,24 @@ class NonCustodialWalletManager {
 
       if (supabase) {
         await this.saveWalletToSupabase(supabase, newWallet, userId);
+        // Record the creation of the wallet as an initial activity
+        try {
+          await recordTransaction(
+            userId,
+            newWallet.id,
+            'deposit',
+            newWallet.chainId,
+            0,
+            0,
+            'completed',
+            null,
+            null,
+            newWallet.address,
+            `Wallet created for ${newWallet.chainId}`
+          );
+        } catch (e) {
+          console.error("Failed to record wallet creation transaction:", e);
+        }
       }
       
       return { wallet: newWallet, mnemonicPhrase: mnemonic };
