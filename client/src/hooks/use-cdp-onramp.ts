@@ -12,7 +12,12 @@ export function useCdpOnramp() {
       paymentAmount?: string;
       paymentCurrency?: string;
     }) => {
-      const onrampUrl = await createCDPSession(params.address, params.purchaseCurrency ? [params.purchaseCurrency] : []);
+      const onrampUrl = await createCDPSession(
+        params.address, 
+        params.purchaseCurrency ? [params.purchaseCurrency] : [],
+        params.paymentAmount,
+        params.paymentCurrency
+      );
       return { success: true, onrampUrl };
     },
   });
