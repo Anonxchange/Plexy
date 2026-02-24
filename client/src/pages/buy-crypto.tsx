@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Helmet } from "react-helmet";
 import { 
   ChevronRight,
@@ -23,9 +24,10 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
 import { AppFooter } from "@/components/app-footer";
-import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector.tsx";
+import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector";
 import { CryptoCurrencySelector } from "@/components/crypto-currency-selector";
 import { useToast } from "@/hooks/use-toast";
+import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
 
 import imgStep1 from "@assets/IMG_4268.webp";
 import imgStep2 from "@assets/svg-image-1-3.svg";
@@ -54,7 +56,7 @@ const BuyCryptoPage = () => {
   const [fiat, setFiat] = useState("USD");
   const [crypto, setCrypto] = useState("BTC");
   const [paymentMethod, setPaymentMethod] = useState("CARD");
-  const [loading, setLoading] = useState(false);
+  const cdpOnramp = useCdpOnramp();
 
   const handleBuy = async () => {
     if (!user) {
@@ -75,28 +77,16 @@ const BuyCryptoPage = () => {
       return;
     }
 
-    setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cdp-create-session`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user.id}`, // Placeholder or actual session token
-        },
-        body: JSON.stringify({
-          address: (user as any)?.walletAddress || "YOUR_WALLET_ADDRESS",
-          purchaseCurrency: crypto,
-          paymentAmount: amount,
-          paymentCurrency: fiat,
-          paymentMethod: paymentMethod,
-        }),
+      const data = await cdpOnramp.mutateAsync({
+        address: (user as any)?.walletAddress || "YOUR_WALLET_ADDRESS",
+        purchaseCurrency: crypto,
+        paymentAmount: amount,
+        paymentCurrency: fiat,
       });
 
-      const data = await response.json();
       if (data.onrampUrl) {
         window.open(data.onrampUrl, "_blank");
-      } else {
-        throw new Error(data.error || "Failed to create onramp session");
       }
     } catch (error: any) {
       toast({
@@ -104,8 +94,6 @@ const BuyCryptoPage = () => {
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -270,10 +258,10 @@ const BuyCryptoPage = () => {
 
                 <Button 
                   onClick={handleBuy}
-                  disabled={loading || !amount}
+                  disabled={cdpOnramp.isPending || !amount}
                   className="w-full h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl text-base font-bold shadow-sm mt-4 border-none transition-all"
                 >
-                  {loading ? (
+                  {cdpOnramp.isPending ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     "View Offers"
