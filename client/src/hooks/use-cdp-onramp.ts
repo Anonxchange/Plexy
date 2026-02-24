@@ -12,13 +12,19 @@ export function useCdpOnramp() {
       paymentAmount?: string;
       paymentCurrency?: string;
     }) => {
-      const onrampUrl = await createCDPSession(
+      const result = await createCDPSession(
         params.address, 
         params.purchaseCurrency ? [params.purchaseCurrency] : [],
         params.paymentAmount,
         params.paymentCurrency
       );
-      return { success: true, onrampUrl };
+      
+      // result could be the URL directly or a token
+      const onrampUrl = typeof result === 'string' && result.startsWith('http') 
+        ? result 
+        : null;
+
+      return { success: true, onrampUrl, sessionToken: !onrampUrl ? result : null };
     },
   });
 }
