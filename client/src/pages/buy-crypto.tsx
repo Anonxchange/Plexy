@@ -36,6 +36,7 @@ import imgPostBuy from "@assets/svg-image-1-3.svg";
 import imgHold from "@assets/svg-image-1-3.svg";
 import imgSwap from "@assets/svg-image-1-3.svg";
 import imgSpend from "@assets/svg-image-1-3.svg";
+import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 
 const cryptoCurrencies = [
   { symbol: "BTC", name: "Bitcoin" },
@@ -81,8 +82,21 @@ const BuyCryptoPage = () => {
 
     try {
       console.log("Starting buy process with user:", user);
-      // Try to get wallet address from multiple possible locations in the user object
-      const walletAddress = user?.wallet_address || 
+      
+      // Get all wallets to find the active one
+      const userId = user.id;
+      const wallets = await nonCustodialWalletManager.getNonCustodialWallets(userId);
+      
+      // Select the first BTC wallet as default, or any active wallet
+      const btcWallet = wallets.find(w => (w.chainId === "BTC" || w.walletType === "bitcoin") && String(w.isActive) === "true") ||
+                        wallets.find(w => w.chainId === "BTC" || w.walletType === "bitcoin");
+      
+      const activeWallet = btcWallet || wallets.find(w => String(w.isActive) === "true") || wallets[0];
+      
+      // Try to get wallet address from multiple possible locations
+      const walletAddress = activeWallet?.address || 
+                          (user as any)?.walletAddress || 
+                          (user as any)?.wallet_address || 
                           (user as any)?.user_metadata?.wallet_address || 
                           (user as any)?.public_metadata?.wallet_address;
       
