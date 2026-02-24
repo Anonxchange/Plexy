@@ -128,10 +128,20 @@ const BuyCryptoPage = () => {
         paymentCurrency: fiat,
       });
 
-      const onrampUrl = data.onrampUrl || data.session?.onrampUrl;
+      console.log("CDP session response data:", data);
+
+      const onrampUrl = data.onrampUrl || (data as any).session?.onrampUrl;
 
       if (onrampUrl) {
+        console.log("Redirecting to:", onrampUrl);
         window.location.href = onrampUrl;
+      } else if (data.sessionToken) {
+        // Fallback to constructing URL if only token is present
+        const constructedUrl = `https://pay.coinbase.com/buy?sessionToken=${data.sessionToken}`;
+        console.log("Redirecting to constructed URL:", constructedUrl);
+        window.location.href = constructedUrl;
+      } else {
+        throw new Error("Failed to retrieve onramp URL from response");
       }
     } catch (error: any) {
       toast({
