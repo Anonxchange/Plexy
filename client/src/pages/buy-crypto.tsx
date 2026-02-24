@@ -10,7 +10,8 @@ import {
   Plus,
   Minus,
   Smartphone,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -23,8 +24,9 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
 import { AppFooter } from "@/components/app-footer";
+import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector";
+import { useToast } from "@/hooks/use-toast";
 
-// Mock data for currencies since we can't import them
 const cryptoCurrencies = [
   { symbol: "BTC", name: "Bitcoin" },
   { symbol: "ETH", name: "Ethereum" },
@@ -36,20 +38,68 @@ const cryptoCurrencies = [
   { symbol: "USDT", name: "Tether" }
 ];
 
-import imgStep1 from "@assets/IMG_4268.webp";
-import imgStep2 from "@assets/svg-image-1-3.svg";
-import imgStep3 from "@assets/svg-image-1-3.svg";
-import imgPostBuy from "@assets/svg-image-1-3.svg";
-import imgHold from "@assets/svg-image-1-3.svg";
-import imgSwap from "@assets/svg-image-1-3.svg";
-import imgSpend from "@assets/svg-image-1-3.svg";
-
 const BuyCryptoPage = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [mode, setMode] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
   const [fiat, setFiat] = useState("USD");
   const [crypto, setCrypto] = useState("BTC");
+  const [paymentMethod, setPaymentMethod] = useState("CARD");
+  const [loading, setLoading] = useState(false);
+
+  const handleBuy = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to buy crypto.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cdp-onramp-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${user.id}`, // Placeholder or actual session token
+        },
+        body: JSON.stringify({
+          address: user.walletAddress || "YOUR_WALLET_ADDRESS",
+          purchaseCurrency: crypto,
+          paymentAmount: amount,
+          paymentCurrency: fiat,
+          paymentMethod: paymentMethod,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.onrampUrl) {
+        window.open(data.onrampUrl, "_blank");
+      } else {
+        throw new Error(data.error || "Failed to create onramp session");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const supportedAssets = useMemo(() => {
     return [
@@ -196,22 +246,38 @@ const BuyCryptoPage = () => {
 
                 <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
                   <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Buying</label>
-                  <div className="bg-black text-white px-4 py-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
-                      <span className="font-bold text-xs">Select a crypto currency</span>
+                  <div 
+                    onClick={() => {
+                      // Logic to open crypto selector
+                    }}
+                    className="bg-black text-white px-4 py-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm"
+                  >
+                      <div className="flex items-center gap-2">
+                        <img src={cryptoIconUrls[crypto as keyof typeof cryptoIconUrls]} className="w-4 h-4" alt="" />
+                        <span className="font-bold text-xs">{crypto}</span>
+                      </div>
                       <ChevronDown className="w-4 h-4" />
                   </div>
                 </div>
 
                 <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
                   <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Payment Method</label>
-                  <div className="bg-black text-white px-4 py-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm">
-                      <span className="font-bold text-xs">Select a payment method</span>
-                      <ChevronRight className="w-4 h-4" />
-                  </div>
+                  <PaymentMethodSelector 
+                    selectedId={paymentMethod}
+                    onSelect={setPaymentMethod}
+                  />
                 </div>
 
-                <Button className="w-full h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl text-base font-bold shadow-sm mt-4 border-none transition-all" disabled={false}>
-                  View Offers
+                <Button 
+                  onClick={handleBuy}
+                  disabled={loading || !amount}
+                  className="w-full h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl text-base font-bold shadow-sm mt-4 border-none transition-all"
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "View Offers"
+                  )}
                 </Button>
 
                 <div className="text-center mt-6">
