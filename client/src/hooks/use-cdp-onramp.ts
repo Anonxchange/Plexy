@@ -1,11 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { useMutation } from '@tanstack/react-query';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-);
+const supabase = createClient();
 
 export function useCdpOnramp() {
   const { user } = useAuth();
