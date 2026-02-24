@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/accordion";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAuth } from "@/lib/auth-context";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { AppFooter } from "@/components/app-footer";
 import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector";
 import { CryptoCurrencySelector } from "@/components/crypto-currency-selector";
@@ -50,6 +50,7 @@ const cryptoCurrencies = [
 
 const BuyCryptoPage = () => {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [mode, setMode] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
@@ -65,6 +66,7 @@ const BuyCryptoPage = () => {
         description: "Please sign in to buy crypto.",
         variant: "destructive",
       });
+      setLocation("/signin");
       return;
     }
 
