@@ -87,11 +87,21 @@ const BuyCryptoPage = () => {
       const userId = user.id;
       const wallets = await nonCustodialWalletManager.getNonCustodialWallets(userId);
       
-      // Select the first BTC wallet as default, or any active wallet
-      const btcWallet = wallets.find(w => (w.chainId === "BTC" || w.walletType === "bitcoin") && String(w.isActive) === "true") ||
-                        wallets.find(w => w.chainId === "BTC" || w.walletType === "bitcoin");
+      // Select the wallet corresponding to the selected crypto symbol
+      const selectedWallet = wallets.find(w => {
+        const symbol = crypto.toUpperCase();
+        const walletSymbol = (w.chainId || "").toUpperCase();
+        const walletType = (w.walletType || "").toUpperCase();
+        
+        if (symbol === "BTC") return walletSymbol === "BTC" || walletType === "BITCOIN";
+        if (symbol === "ETH") return walletSymbol === "ETH" || walletType === "ETHEREUM";
+        if (symbol === "SOL") return walletSymbol === "SOL" || walletType === "SOLANA";
+        if (symbol === "TRX") return walletSymbol === "TRX" || walletType === "TRON";
+        
+        return walletSymbol.includes(symbol) || walletType.includes(symbol);
+      });
       
-      const activeWallet = btcWallet || wallets.find(w => String(w.isActive) === "true") || wallets[0];
+      const activeWallet = selectedWallet || wallets.find(w => String(w.isActive) === "true") || wallets[0];
       
       // Try to get wallet address from multiple possible locations
       const walletAddress = activeWallet?.address || 
