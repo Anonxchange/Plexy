@@ -128,8 +128,10 @@ const BuyCryptoPage = () => {
         paymentCurrency: fiat,
       });
 
-      if (data.onrampUrl) {
-        window.open(data.onrampUrl, "_blank");
+      const onrampUrl = data.onrampUrl || data.session?.onrampUrl;
+
+      if (onrampUrl) {
+        window.location.href = onrampUrl;
       }
     } catch (error: any) {
       toast({
