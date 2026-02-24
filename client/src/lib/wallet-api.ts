@@ -262,10 +262,17 @@ export async function createCDPSession(
   const result = data as any;
   const token = result?.session_token || result?.sessionToken || result?.token || 
                 result?.data?.session_token || result?.data?.sessionToken || result?.data?.token ||
-                result?.result?.session_token || result?.result?.sessionToken || result?.result?.token;
+                result?.result?.session_token || result?.result?.sessionToken || result?.result?.token ||
+                result?.session?.sessionToken || result?.session?.session_token;
   
-  if (!token) {
-    console.error("[createCDPSession] No token found in response:", data);
+  const onrampUrl = result?.onramp_url || result?.onrampUrl || 
+                    result?.data?.onramp_url || result?.data?.onrampUrl ||
+                    result?.session?.onrampUrl || result?.session?.onramp_url;
+
+  if (onrampUrl) return onrampUrl;
+  
+  if (!token && !onrampUrl) {
+    console.error("[createCDPSession] No token or URL found in response:", data);
     if (typeof data === 'string' && data.length > 20) return data;
   }
 
