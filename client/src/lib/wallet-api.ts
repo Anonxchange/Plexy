@@ -226,8 +226,13 @@ export async function monitorDeposits(userId: string, cryptoSymbol: string): Pro
   return { detected: false, message: 'Non-custodial monitoring handled on-client' };
 }
 
-export async function createCDPSession(address: string, assets: string[]): Promise<string> {
-  console.log("[createCDPSession] Calling cdp-create-session for address:", address, "assets:", assets);
+export async function createCDPSession(
+  address: string, 
+  assets: string[], 
+  paymentAmount?: string, 
+  paymentCurrency?: string
+): Promise<string> {
+  console.log("[createCDPSession] Calling cdp-create-session for address:", address, "assets:", assets, "amount:", paymentAmount);
 
   const { data: { session } } = await supabase.auth.getSession();
   const access_token = session?.access_token;
@@ -239,6 +244,8 @@ export async function createCDPSession(address: string, assets: string[]): Promi
       address,
       purchaseCurrency,
       assets,
+      paymentAmount,
+      paymentCurrency,
     },
     headers: access_token ? {
       Authorization: `Bearer ${access_token}`,
