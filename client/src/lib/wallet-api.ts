@@ -227,14 +227,17 @@ export async function monitorDeposits(userId: string, cryptoSymbol: string): Pro
 }
 
 export async function createCDPSession(address: string, assets: string[]): Promise<string> {
-  console.log("[createCDPSession] Calling cdp-create-session for address:", address);
+  console.log("[createCDPSession] Calling cdp-create-session for address:", address, "assets:", assets);
 
   const { data: { session } } = await supabase.auth.getSession();
   const access_token = session?.access_token;
 
+  const purchaseCurrency = assets[0] || 'USDC';
+
   const { data, error } = await supabase.functions.invoke('cdp-create-session', {
     body: {
       address,
+      purchaseCurrency,
       assets,
     },
     headers: access_token ? {
