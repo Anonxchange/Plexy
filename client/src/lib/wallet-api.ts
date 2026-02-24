@@ -170,6 +170,38 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
     ).slice(0, limit);
   }
 
+  // Include deposits from pexly_balances table if any (initial deposits/legacy)
+  const { data: balanceData, error: balanceError } = await supabase
+    .from('pexly_balances')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (!balanceError && balanceData && Number(balanceData.total_received) > 0) {
+    // Check if we already have a deposit representing this
+    const hasDeposit = transactions.some(t => t.type === 'deposit');
+    if (!hasDeposit) {
+      transactions.unshift({
+        id: `init-${userId}`,
+        user_id: userId,
+        wallet_id: 'initial',
+        type: 'deposit',
+        crypto_symbol: 'USD',
+        amount: Number(balanceData.total_received),
+        fee: 0,
+        status: 'completed',
+        tx_hash: null,
+        from_address: 'System',
+        to_address: userId,
+        reference_id: balanceData.id,
+        notes: 'Initial balance / Deposit',
+        confirmations: 1,
+        created_at: balanceData.created_at,
+        completed_at: balanceData.created_at
+      });
+    }
+  }
+
   console.log(`[getWalletTransactions] Found ${transactions.length} total transactions for user ${userId}`);
   return transactions;
 }
