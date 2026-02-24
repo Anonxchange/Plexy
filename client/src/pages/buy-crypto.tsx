@@ -1,4 +1,3 @@
-import { useState, useMemo } from "react";
 import { Helmet } from "react-helmet";
 import { 
   ChevronRight,
