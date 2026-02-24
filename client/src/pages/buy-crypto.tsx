@@ -81,7 +81,7 @@ const BuyCryptoPage = () => {
 
     try {
       const data = await cdpOnramp.mutateAsync({
-        address: (user as any)?.walletAddress || "YOUR_WALLET_ADDRESS",
+        address: user.wallet_address || (user as any)?.user_metadata?.wallet_address || "YOUR_WALLET_ADDRESS",
         purchaseCurrency: crypto,
         paymentAmount: amount,
         paymentCurrency: fiat,
