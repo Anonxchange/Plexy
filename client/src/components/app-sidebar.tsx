@@ -261,17 +261,17 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     </div>
                   </Button>
                 </Link>
-                <Link href="/wallet/crypto-to-bank" onClick={handleLinkClick}>
+                <Link href="/wallet/stake" onClick={handleLinkClick}>
                   <Button
-                    variant={location === "/wallet/crypto-to-bank" ? "default" : "ghost"}
+                    variant={location === "/wallet/stake" ? "secondary" : "ghost"}
                     className="w-full justify-start gap-3 h-auto py-3"
                     size="sm"
-                    data-testid="nav-wallet-crypto-to-bank"
+                    data-testid="nav-wallet-stake"
                   >
-                    <Banknote className="h-5 w-5 flex-shrink-0" />
+                    <TrendingUp className="h-5 w-5 flex-shrink-0" />
                     <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Crypto to Bank</span>
-                      <span className="text-xs text-muted-foreground leading-tight">Cash out your crypto to a bank or MoMo wallet</span>
+                      <span className="text-sm font-semibold">Stake</span>
+                      <span className="text-xs text-muted-foreground leading-tight">Earn rewards by staking your crypto</span>
                     </div>
                   </Button>
                 </Link>
