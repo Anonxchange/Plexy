@@ -114,14 +114,16 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
   const wallets = await getUserWallets(userId);
   const addresses = wallets.map(w => w.deposit_address).filter(Boolean);
 
+  console.log(`[getWalletTransactions] Fetching for user ${userId} and addresses:`, addresses);
+
   let query = supabase
     .from('wallet_transactions')
     .select('*');
 
   if (addresses.length > 0) {
     // Search by user_id OR from_address OR to_address
-    const addressFilter = addresses.map(addr => `from_address.eq.${addr},to_address.eq.${addr}`).join(',');
-    query = query.or(`user_id.eq.${userId},${addressFilter}`);
+    const addressFilter = addresses.map(addr => `from_address.eq."${addr}",to_address.eq."${addr}"`).join(',');
+    query = query.or(`user_id.eq."${userId}",${addressFilter}`);
   } else {
     query = query.eq('user_id', userId);
   }
@@ -131,18 +133,20 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
     .limit(limit);
 
   if (error) {
-    console.error("[getWalletTransactions] Error:", error);
-    // Return empty array instead of throwing to prevent UI crash
-    return [];
+    console.error("[getWalletTransactions] wallet_transactions error:", error);
   }
 
   // Also fetch from pexly_transactions for internal transfers
   const { data: pexlyData, error: pexlyError } = await supabase
     .from('pexly_transactions')
     .select('*')
-    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .or(`sender_id.eq."${userId}",receiver_id.eq."${userId}"`)
     .order('created_at', { ascending: false })
     .limit(limit);
+
+  if (pexlyError) {
+    console.error("[getWalletTransactions] pexly_transactions error:", pexlyError);
+  }
 
   let transactions = (data ?? []) as WalletTransaction[];
   
@@ -165,45 +169,16 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
       created_at: tx.created_at,
       completed_at: tx.created_at
     }));
-    transactions = [...transactions, ...internalTxs].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    ).slice(0, limit);
+    transactions = [...transactions, ...internalTxs];
   }
 
-  // Include deposits from pexly_balances table if any (initial deposits/legacy)
-  const { data: balanceData, error: balanceError } = await supabase
-    .from('pexly_balances')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+  // Deduplicate and sort
+  const uniqueTxs = Array.from(new Map(transactions.map(item => [item.id, item])).values())
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, limit);
 
-  if (!balanceError && balanceData && Number(balanceData.total_received) > 0) {
-    // Check if we already have a deposit representing this
-    const hasDeposit = transactions.some(t => t.type === 'deposit');
-    if (!hasDeposit) {
-      transactions.unshift({
-        id: `init-${userId}`,
-        user_id: userId,
-        wallet_id: 'initial',
-        type: 'deposit',
-        crypto_symbol: 'USD',
-        amount: Number(balanceData.total_received),
-        fee: 0,
-        status: 'completed',
-        tx_hash: null,
-        from_address: 'System',
-        to_address: userId,
-        reference_id: balanceData.id,
-        notes: 'Initial balance / Deposit',
-        confirmations: 1,
-        created_at: balanceData.created_at,
-        completed_at: balanceData.created_at
-      });
-    }
-  }
-
-  console.log(`[getWalletTransactions] Found ${transactions.length} total transactions for user ${userId}`);
-  return transactions;
+  console.log(`[getWalletTransactions] Found ${uniqueTxs.length} total transactions for user ${userId}`);
+  return uniqueTxs;
 }
 
 export async function sendCrypto(
