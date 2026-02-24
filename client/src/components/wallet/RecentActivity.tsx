@@ -144,7 +144,8 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
       if (!user) return;
       try {
         setIsLoading(true);
-        const data = await getWalletTransactions(user.id, 29);
+        const data = await getWalletTransactions(user.id, 50);
+        console.log("Loaded transactions in RecentActivity:", data);
         setTransactions(data);
       } catch (error) {
         console.error("Failed to load transactions:", error);
