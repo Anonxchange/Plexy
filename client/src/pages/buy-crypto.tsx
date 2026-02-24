@@ -24,8 +24,17 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
 import { AppFooter } from "@/components/app-footer";
-import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector";
+import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector.tsx";
+import { CryptoCurrencySelector } from "@/components/crypto-currency-selector";
 import { useToast } from "@/hooks/use-toast";
+
+import imgStep1 from "@assets/IMG_4268.webp";
+import imgStep2 from "@assets/svg-image-1-3.svg";
+import imgStep3 from "@assets/svg-image-1-3.svg";
+import imgPostBuy from "@assets/svg-image-1-3.svg";
+import imgHold from "@assets/svg-image-1-3.svg";
+import imgSwap from "@assets/svg-image-1-3.svg";
+import imgSpend from "@assets/svg-image-1-3.svg";
 
 const cryptoCurrencies = [
   { symbol: "BTC", name: "Bitcoin" },
@@ -76,7 +85,7 @@ const BuyCryptoPage = () => {
           "Authorization": `Bearer ${user.id}`, // Placeholder or actual session token
         },
         body: JSON.stringify({
-          address: user.walletAddress || "YOUR_WALLET_ADDRESS",
+          address: (user as any)?.walletAddress || "YOUR_WALLET_ADDRESS",
           purchaseCurrency: crypto,
           paymentAmount: amount,
           paymentCurrency: fiat,
@@ -246,18 +255,10 @@ const BuyCryptoPage = () => {
 
                 <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
                   <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Buying</label>
-                  <div 
-                    onClick={() => {
-                      // Logic to open crypto selector
-                    }}
-                    className="bg-black text-white px-4 py-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-all shadow-sm"
-                  >
-                      <div className="flex items-center gap-2">
-                        <img src={cryptoIconUrls[crypto as keyof typeof cryptoIconUrls]} className="w-4 h-4" alt="" />
-                        <span className="font-bold text-xs">{crypto}</span>
-                      </div>
-                      <ChevronDown className="w-4 h-4" />
-                  </div>
+                  <CryptoCurrencySelector 
+                  value={crypto}
+                  onChange={(symbol) => setCrypto(symbol)}
+                />
                 </div>
 
                 <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
