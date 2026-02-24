@@ -132,10 +132,46 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
 
   if (error) {
     console.error("[getWalletTransactions] Error:", error);
-    throw new Error(error.message);
+    // Return empty array instead of throwing to prevent UI crash
+    return [];
   }
 
-  return (data ?? []) as WalletTransaction[];
+  // Also fetch from pexly_transactions for internal transfers
+  const { data: pexlyData, error: pexlyError } = await supabase
+    .from('pexly_transactions')
+    .select('*')
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  let transactions = (data ?? []) as WalletTransaction[];
+  
+  if (!pexlyError && pexlyData) {
+    const internalTxs: WalletTransaction[] = pexlyData.map((tx: any) => ({
+      id: tx.id,
+      user_id: userId,
+      wallet_id: 'pexly-internal',
+      type: tx.sender_id === userId ? 'withdrawal' : 'deposit',
+      crypto_symbol: 'USDT', // Pexly internal usually USDT
+      amount: Number(tx.amount),
+      fee: Number(tx.fee),
+      status: tx.status as any,
+      tx_hash: null,
+      from_address: tx.sender_id,
+      to_address: tx.receiver_id,
+      reference_id: tx.id,
+      notes: tx.note,
+      confirmations: 1,
+      created_at: tx.created_at,
+      completed_at: tx.created_at
+    }));
+    transactions = [...transactions, ...internalTxs].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    ).slice(0, limit);
+  }
+
+  console.log(`[getWalletTransactions] Found ${transactions.length} total transactions for user ${userId}`);
+  return transactions;
 }
 
 export async function sendCrypto(
