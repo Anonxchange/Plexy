@@ -78,7 +78,7 @@ const BuyCryptoPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cdp-onramp-session`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cdp-create-session`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
