@@ -56,7 +56,7 @@ export function ReceiveMethodDialog({ open, onOpenChange, onSelectMethod }: Rece
               <Button
                 variant="outline"
                 className="w-full h-auto p-4 justify-start gap-4 border-none bg-muted/30 hover:bg-muted/50 text-foreground rounded-xl group transition-all"
-                onClick={() => onSelectMethod("fiat")}
+                onClick={() => onSelectMethod("wallet/buy-crypto")}
               >
                 <div className="bg-background p-2 rounded-lg border border-border/50 group-hover:border-border transition-colors">
                   <Landmark className="h-5 w-5 text-foreground/70" />
