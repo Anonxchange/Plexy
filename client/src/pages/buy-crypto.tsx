@@ -80,8 +80,25 @@ const BuyCryptoPage = () => {
     }
 
     try {
+      console.log("Starting buy process with user:", user);
+      // Try to get wallet address from multiple possible locations in the user object
+      const walletAddress = user?.wallet_address || 
+                          (user as any)?.user_metadata?.wallet_address || 
+                          (user as any)?.public_metadata?.wallet_address;
+      
+      console.log("Using wallet address:", walletAddress);
+
+      if (!walletAddress) {
+        toast({
+          title: "Wallet Required",
+          description: "Please set up your wallet address in profile settings first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const data = await cdpOnramp.mutateAsync({
-        address: user.wallet_address || (user as any)?.user_metadata?.wallet_address || "YOUR_WALLET_ADDRESS",
+        address: walletAddress,
         purchaseCurrency: crypto,
         paymentAmount: amount,
         paymentCurrency: fiat,
