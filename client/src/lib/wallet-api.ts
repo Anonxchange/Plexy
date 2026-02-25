@@ -279,6 +279,52 @@ export async function createCDPSession(
   return token;
 }
 
+export async function createCDPOfframpSession(
+  address: string, 
+  assets: string[], 
+  sellAmount?: string, 
+  fiatCurrency?: string,
+  options?: { network?: string }
+): Promise<string> {
+  console.log("[createCDPOfframpSession] Calling cdp-offramp-session for address:", address, "assets:", assets, "amount:", sellAmount);
+
+  const { data: { session } } = await supabase.auth.getSession();
+  const access_token = session?.access_token;
+
+  const sellCurrency = assets[0] || 'USDC';
+
+  const { data, error } = await supabase.functions.invoke('cdp-offramp-session', {
+    body: {
+      address,
+      sellCurrency,
+      assets,
+      sellAmount,
+      fiatCurrency,
+      network: options?.network
+    },
+    headers: access_token ? {
+      Authorization: `Bearer ${access_token}`,
+    } : undefined,
+  });
+
+  if (error) {
+    console.error("[createCDPOfframpSession] Error response:", error);
+    throw new Error(error.message || 'Failed to create CDP offramp session');
+  }
+
+  const result = data as any;
+  const token = result?.session_token || result?.sessionToken || result?.token || 
+                result?.data?.session_token || result?.data?.sessionToken || result?.data?.token ||
+                result?.session?.sessionToken || result?.session?.session_token;
+  
+  const offrampUrl = result?.offramp_url || result?.offrampUrl || 
+                     result?.data?.offramp_url || result?.data?.offrampUrl ||
+                     result?.session?.offrampUrl || result?.session?.offramp_url;
+
+  if (offrampUrl) return offrampUrl;
+  return token;
+}
+
 export function startDepositMonitoring(
   userId: string,
   cryptoSymbol: string,
