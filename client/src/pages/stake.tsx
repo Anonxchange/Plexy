@@ -1,23 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PexlyFooter } from "@/components/pexly-footer";
 
 export default function Stake() {
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-grow max-w-4xl mx-auto px-4 py-8 w-full">
         <h1 className="text-3xl md:text-4xl font-bold mb-8">Staking</h1>
         
-        <Card className="border-2">
+        <Card className="border-2 overflow-hidden flex flex-col">
           <CardHeader>
             <CardTitle>Earn with Kiln</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 flex-grow min-h-[400px]">
             {/* Kiln Widget Integration */}
-            <div className="w-full h-[800px] overflow-hidden bg-background">
+            <div className="w-full h-full min-h-[600px] lg:min-h-[800px] bg-background">
               <iframe
                 src="https://kiln.widget.testnet.kiln.fi"
                 title="Kiln Widget"
                 allow="clipboard-write"
-                className="w-full h-full border-0"
+                className="w-full h-full border-0 min-h-[inherit]"
               />
             </div>
           </CardContent>
@@ -44,6 +45,7 @@ export default function Stake() {
           </Card>
         </div>
       </div>
+      <PexlyFooter />
     </div>
   );
 }
