@@ -296,6 +296,7 @@ export async function createCDPOfframpSession(
   const { data, error } = await supabase.functions.invoke('cdp-create-offramp-session', {
     body: {
       address,
+      sourceAddress: address,
       sellCurrency,
       assets,
       sellAmount,
