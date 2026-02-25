@@ -16,7 +16,7 @@ export function useCdpOfframp() {
         'BTC': 'bitcoin',
         'ETH': 'ethereum',
         'SOL': 'solana',
-        'USDC': 'base',
+        'USDC': 'ethereum',
         'USDT': 'ethereum',
         'POL': 'polygon',
       };
