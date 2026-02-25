@@ -137,6 +137,7 @@ const BuyCryptoPage = () => {
           sellCurrency: crypto,
           sellAmount: amount,
           fiatCurrency: fiat,
+          paymentMethod: paymentMethod, // Pass the selected payment method
         });
       }
 
