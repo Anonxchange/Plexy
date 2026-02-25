@@ -230,9 +230,10 @@ export async function createCDPSession(
   address: string, 
   assets: string[], 
   paymentAmount?: string, 
-  paymentCurrency?: string
+  paymentCurrency?: string,
+  options?: { network?: string }
 ): Promise<string> {
-  console.log("[createCDPSession] Calling cdp-create-session for address:", address, "assets:", assets, "amount:", paymentAmount);
+  console.log("[createCDPSession] Calling cdp-create-session for address:", address, "assets:", assets, "amount:", paymentAmount, "network:", options?.network);
 
   const { data: { session } } = await supabase.auth.getSession();
   const access_token = session?.access_token;
@@ -246,6 +247,8 @@ export async function createCDPSession(
       assets,
       paymentAmount,
       paymentCurrency,
+      destinationNetwork: options?.network || 'ethereum-mainnet',
+      sourceNetwork: options?.network || 'ethereum-mainnet'
     },
     headers: access_token ? {
       Authorization: `Bearer ${access_token}`,
