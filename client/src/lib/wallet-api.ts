@@ -330,6 +330,7 @@ export async function createCDPOfframpSession(
       sourceAddress: address,
       sellCurrency,
       sellNetwork,
+      sellAmount,
       cashoutCurrency: fiatCurrency || 'USD',
       cashoutMethod: options?.paymentMethod || 'BANK_ACCOUNT',
     },
