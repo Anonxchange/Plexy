@@ -310,6 +310,20 @@ export async function createCDPOfframpSession(
 
   const sellCurrency = assets[0] || 'USDC';
 
+  // Map network based on currency if not provided
+  let sellNetwork = options?.network;
+  if (!sellNetwork) {
+    if (sellCurrency === 'BTC') {
+      sellNetwork = 'bitcoin';
+    } else if (sellCurrency === 'ETH' || sellCurrency === 'USDC' || sellCurrency === 'USDT') {
+      sellNetwork = 'ethereum';
+    } else if (sellCurrency === 'SOL') {
+      sellNetwork = 'solana';
+    } else {
+      sellNetwork = 'ethereum'; // Default
+    }
+  }
+
   const { data, error } = await supabase.functions.invoke('cdp-create-offramp-session', {
     body: {
       address,
@@ -318,7 +332,8 @@ export async function createCDPOfframpSession(
       assets,
       sellAmount,
       fiatCurrency,
-      network: options?.network
+      sellNetwork,
+      network: sellNetwork
     },
     headers: access_token ? {
       Authorization: `Bearer ${access_token}`,
