@@ -240,6 +240,20 @@ export async function createCDPSession(
 
   const purchaseCurrency = assets[0] || 'USDC';
 
+  // Map network based on currency if not provided
+  let destinationNetwork = options?.network;
+  if (!destinationNetwork) {
+    if (purchaseCurrency === 'BTC') {
+      destinationNetwork = 'bitcoin';
+    } else if (purchaseCurrency === 'ETH' || purchaseCurrency === 'USDC' || purchaseCurrency === 'USDT') {
+      destinationNetwork = 'ethereum';
+    } else if (purchaseCurrency === 'SOL') {
+      destinationNetwork = 'solana';
+    } else {
+      destinationNetwork = 'ethereum'; // Default
+    }
+  }
+
   const { data, error } = await supabase.functions.invoke('cdp-create-session', {
     body: {
       address,
@@ -247,8 +261,8 @@ export async function createCDPSession(
       assets,
       paymentAmount,
       paymentCurrency,
-      destinationNetwork: options?.network || 'ethereum-mainnet',
-      sourceNetwork: options?.network || 'ethereum-mainnet'
+      destinationNetwork,
+      sourceNetwork: destinationNetwork
     },
     headers: access_token ? {
       Authorization: `Bearer ${access_token}`,
