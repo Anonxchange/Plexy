@@ -329,11 +329,10 @@ export async function createCDPOfframpSession(
       address,
       sourceAddress: address,
       sellCurrency,
+      sellNetwork,
       assets,
       sellAmount,
       fiatCurrency,
-      sellNetwork,
-      network: sellNetwork
     },
     headers: access_token ? {
       Authorization: `Bearer ${access_token}`,
