@@ -329,7 +329,7 @@ export async function createCDPOfframpSession(
     body: {
       address,
       sourceAddress: address,
-      addresses: [{ address, network: sellNetwork }],
+      addresses: { [address]: [sellNetwork] },
       sellCurrency,
       sellNetwork,
       assets,
