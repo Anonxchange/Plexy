@@ -302,7 +302,7 @@ export async function createCDPOfframpSession(
   assets: string[], 
   sellAmount?: string, 
   fiatCurrency?: string,
-  options?: { network?: string }
+  options?: { network?: string, paymentMethod?: string }
 ): Promise<string> {
   console.log("[createCDPOfframpSession] Calling cdp-offramp-session for address:", address, "assets:", assets, "amount:", sellAmount);
 
@@ -327,14 +327,11 @@ export async function createCDPOfframpSession(
 
   const { data, error } = await supabase.functions.invoke('cdp-create-offramp-session', {
     body: {
-      address,
       sourceAddress: address,
-      addresses: { [address]: [sellNetwork] },
       sellCurrency,
       sellNetwork,
-      assets,
-      sellAmount,
-      fiatCurrency,
+      cashoutCurrency: fiatCurrency || 'USD',
+      cashoutMethod: options?.paymentMethod || 'BANK_ACCOUNT',
     },
     headers: access_token ? {
       Authorization: `Bearer ${access_token}`,
