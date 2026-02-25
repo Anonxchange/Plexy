@@ -257,6 +257,7 @@ export async function createCDPSession(
   const { data, error } = await supabase.functions.invoke('cdp-create-session', {
     body: {
       address,
+      addresses: [{ address, network: destinationNetwork }],
       purchaseCurrency,
       assets,
       paymentAmount,
@@ -328,6 +329,7 @@ export async function createCDPOfframpSession(
     body: {
       address,
       sourceAddress: address,
+      addresses: [{ address, network: sellNetwork }],
       sellCurrency,
       sellNetwork,
       assets,
