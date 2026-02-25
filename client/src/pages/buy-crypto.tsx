@@ -28,6 +28,7 @@ import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSele
 import { CryptoCurrencySelector } from "@/components/crypto-currency-selector";
 import { useToast } from "@/hooks/use-toast";
 import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
+import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
 
 import imgStep1 from "@assets/IMG_4268.webp";
 import imgStep2 from "@assets/IMG_4281.webp";
@@ -59,12 +60,13 @@ const BuyCryptoPage = () => {
   const [crypto, setCrypto] = useState("BTC");
   const [paymentMethod, setPaymentMethod] = useState("CARD");
   const cdpOnramp = useCdpOnramp();
+  const cdpOfframp = useCdpOfframp();
 
-  const handleBuy = async () => {
+  const handleAction = async () => {
     if (!user) {
       toast({
         title: "Authentication Required",
-        description: "Please sign in to buy crypto.",
+        description: `Please sign in to ${mode} crypto.`,
         variant: "destructive",
       });
       setLocation("/signin");
@@ -81,7 +83,7 @@ const BuyCryptoPage = () => {
     }
 
     try {
-      console.log("Starting buy process with user:", user);
+      console.log(`Starting ${mode} process with user:`, user);
       
       // Get all wallets to find the active one
       const userId = user.id;
@@ -121,27 +123,38 @@ const BuyCryptoPage = () => {
         return;
       }
 
-      const data = await cdpOnramp.mutateAsync({
-        address: walletAddress,
-        purchaseCurrency: crypto,
-        paymentAmount: amount,
-        paymentCurrency: fiat,
-      });
+      let data;
+      if (mode === "buy") {
+        data = await cdpOnramp.mutateAsync({
+          address: walletAddress,
+          purchaseCurrency: crypto,
+          paymentAmount: amount,
+          paymentCurrency: fiat,
+        });
+      } else {
+        data = await cdpOfframp.mutateAsync({
+          address: walletAddress,
+          sellCurrency: crypto,
+          sellAmount: amount,
+          fiatCurrency: fiat,
+        });
+      }
 
       console.log("CDP session response data:", data);
 
-      const onrampUrl = data.onrampUrl || (data as any).session?.onrampUrl;
+      const redirectUrl = data.onrampUrl || data.offrampUrl || (data as any).session?.onrampUrl || (data as any).session?.offrampUrl;
 
-      if (onrampUrl) {
-        console.log("Redirecting to:", onrampUrl);
-        window.location.href = onrampUrl;
+      if (redirectUrl) {
+        console.log("Redirecting to:", redirectUrl);
+        window.location.href = redirectUrl;
       } else if (data.sessionToken) {
         // Fallback to constructing URL if only token is present
-        const constructedUrl = `https://pay.coinbase.com/buy?sessionToken=${data.sessionToken}`;
+        const baseUrl = mode === "buy" ? "https://pay.coinbase.com/buy" : "https://pay.coinbase.com/sell";
+        const constructedUrl = `${baseUrl}?sessionToken=${data.sessionToken}`;
         console.log("Redirecting to constructed URL:", constructedUrl);
         window.location.href = constructedUrl;
       } else {
-        throw new Error("Failed to retrieve onramp URL from response");
+        throw new Error(`Failed to retrieve ${mode} URL from response`);
       }
     } catch (error: any) {
       toast({
@@ -296,7 +309,7 @@ const BuyCryptoPage = () => {
                 </div>
 
                 <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
-                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Buying</label>
+                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">{mode === "buy" ? "Buying" : "Selling"}</label>
                   <CryptoCurrencySelector 
                   value={crypto}
                   onChange={(symbol) => setCrypto(symbol)}
@@ -304,7 +317,7 @@ const BuyCryptoPage = () => {
                 </div>
 
                 <div className="border border-gray-200 rounded-xl p-4 focus-within:border-black transition-colors bg-white">
-                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Payment Method</label>
+                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">{mode === "buy" ? "Payment Method" : "Receiving Method"}</label>
                   <PaymentMethodSelector 
                     selectedId={paymentMethod}
                     onSelect={setPaymentMethod}
@@ -312,11 +325,11 @@ const BuyCryptoPage = () => {
                 </div>
 
                 <Button 
-                  onClick={handleBuy}
-                  disabled={cdpOnramp.isPending || !amount}
+                  onClick={handleAction}
+                  disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount}
                   className="w-full h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl text-base font-bold shadow-sm mt-4 border-none transition-all"
                 >
-                  {cdpOnramp.isPending ? (
+                  {cdpOnramp.isPending || cdpOfframp.isPending ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     "View Offers"
