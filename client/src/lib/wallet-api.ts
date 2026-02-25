@@ -293,7 +293,7 @@ export async function createCDPOfframpSession(
 
   const sellCurrency = assets[0] || 'USDC';
 
-  const { data, error } = await supabase.functions.invoke('cdp-offramp-session', {
+  const { data, error } = await supabase.functions.invoke('cdp-create-offramp-session', {
     body: {
       address,
       sellCurrency,
