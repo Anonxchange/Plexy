@@ -14,7 +14,7 @@ export default function Stake() {
             {/* Kiln Widget Integration */}
             <div className="w-full h-[800px] overflow-hidden bg-background">
               <iframe
-                src="https://kiln.widget.kiln.fi"
+                src="https://kiln.widget.testnet.kiln.fi"
                 title="Kiln Widget"
                 allow="clipboard-write"
                 className="w-full h-full border-0"
