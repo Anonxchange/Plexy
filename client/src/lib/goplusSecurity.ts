@@ -1,5 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
-
+import { supabase } from "./supabase";
 // Chain ID mapping for GoPlus API
 export const GOPLUS_CHAINS: Record<string, string> = {
   ethereum: '1',
