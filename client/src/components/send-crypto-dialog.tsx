@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Loader2, CheckCircle2, X, Copy } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle2, X, Copy, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
 import { signEVMTransaction } from "@/lib/evmSigner";
@@ -28,6 +28,7 @@ import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSendFee } from "@/hooks/use-fees";
 import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
+import { preTransactionCheck, type AddressSecurityResult, type TokenSecurityResult, GOPLUS_CHAINS } from "@/lib/goplusSecurity";
 
 interface SendCryptoDialogProps {
   open: boolean;
@@ -70,6 +71,50 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
   const [cryptoPrice, setCryptoPrice] = useState<number>(0);
   const [useNonCustodial, setUseNonCustodial] = useState(false);
   const [userPassword, setUserPassword] = useState<string>("");
+  const [securityCheck, setSecurityCheck] = useState<{
+    loading: boolean;
+    safe: boolean;
+    warnings: string[];
+    addressCheck?: AddressSecurityResult;
+    tokenCheck?: TokenSecurityResult;
+  }>({ loading: false, safe: true, warnings: [] });
+
+  // GoPlus Security Check
+  useEffect(() => {
+    const performSecurityCheck = async () => {
+      if (!toAddress || toAddress.length < 30 || !selectedCrypto || !selectedNetwork) {
+        setSecurityCheck({ loading: false, safe: true, warnings: [] });
+        return;
+      }
+
+      setSecurityCheck(prev => ({ ...prev, loading: true }));
+      try {
+        const chainId = GOPLUS_CHAINS[selectedNetwork.toLowerCase().split(' ')[0]] || 
+                        GOPLUS_CHAINS[selectedCrypto.toLowerCase()] || '1';
+        
+        const result = await preTransactionCheck({
+          chainId,
+          toAddress,
+          // If it's a token (USDT/USDC), we might want to pass the contract address here
+          // For now, focusing on address security
+        });
+
+        setSecurityCheck({
+          loading: false,
+          safe: result.safe,
+          warnings: result.warnings,
+          addressCheck: result.addressCheck,
+          tokenCheck: result.tokenCheck
+        });
+      } catch (err) {
+        console.error("Security check failed:", err);
+        setSecurityCheck(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    const timer = setTimeout(performSecurityCheck, 800);
+    return () => clearTimeout(timer);
+  }, [toAddress, selectedCrypto, selectedNetwork]);
 
   const networkMap: Record<string, string[]> = {
     BTC: ["Bitcoin (SegWit)"],
@@ -192,6 +237,11 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
 
     if (selectedWallet && total > selectedWallet.balance) {
       setError("Insufficient balance");
+      return;
+    }
+
+    if (!securityCheck.safe) {
+      setError("Security check failed. This address may be malicious.");
       return;
     }
 
@@ -473,8 +523,22 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                   placeholder="Enter address or username"
                   value={toAddress}
                   onChange={(e) => setToAddress(e.target.value)}
-                  className="h-12 pr-20 bg-muted"
+                  className={`h-12 pr-20 bg-muted ${
+                    !securityCheck.safe ? "border-red-500" : 
+                    securityCheck.warnings.length > 0 ? "border-yellow-500" : ""
+                  }`}
                 />
+                <div className="absolute right-12 top-2 h-8 flex items-center pr-2">
+                  {securityCheck.loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : toAddress.length > 30 ? (
+                    securityCheck.safe ? (
+                      <ShieldCheck className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <ShieldAlert className="h-4 w-4 text-red-500" />
+                    )
+                  ) : null}
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -484,6 +548,16 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                   Paste
                 </Button>
               </div>
+              {securityCheck.warnings.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {securityCheck.warnings.map((warning, i) => (
+                    <p key={i} className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {warning}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
