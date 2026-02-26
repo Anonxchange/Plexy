@@ -190,7 +190,7 @@ export function Spot() {
         if (Array.isArray(tickers) && tickers.length > 0) {
           setTradingPairs(prevPairs => 
             prevPairs.map(pair => {
-              const pairSymbol = pair.symbol.endsWith('USDT') ? pair.symbol : `${pair.symbol}USDT`;
+              const pairSymbol = pair.symbol.includes('USDT') ? pair.symbol : `${pair.symbol}USDT`;
               const ticker = tickers.find((t: any) => t.symbol === pairSymbol);
                 
               if (ticker) {
@@ -202,7 +202,7 @@ export function Spot() {
                   ...pair,
                   price,
                   change,
-                  volume: quoteVolume > 1e9 ? `${(quoteVolume / 1e9).toFixed(2)}B` : `${(quoteVolume / 1e6).toFixed(2)}M`,
+                  volume: quoteVolume > 1e9 ? `${(quoteVolume / 1e9).toFixed(2)}B` : (quoteVolume > 1e6 ? `${(quoteVolume / 1e6).toFixed(2)}M` : `${quoteVolume.toFixed(2)}`),
                   high: parseFloat(ticker.highPrice) || 0,
                   low: parseFloat(ticker.lowPrice) || 0,
                 };
@@ -217,7 +217,7 @@ export function Spot() {
     };
 
     fetchPrices();
-    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
+    const interval = setInterval(fetchPrices, 10000); // Update every 10 seconds for more responsiveness
 
     return () => clearInterval(interval);
   }, [tradingPairs.length]); // Fixed dependency to prevent infinite loops but allow initial fetch
@@ -823,7 +823,7 @@ export function Spot() {
               </div>
               <div className="bg-card p-2 md:p-3 rounded-lg border border-border shadow-sm">
                 <p className="text-muted-foreground text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">24h Volume</p>
-                <p className="text-base md:text-lg font-bold">{selectedPair.volume}</p>
+                <p className="text-base md:text-lg font-bold">{selectedPair.volume} USDT</p>
               </div>
             </div>
           </div>
