@@ -130,7 +130,8 @@ export async function getCryptoPrices(symbols: string[]): Promise<Record<string,
         const mapping: Record<string, string> = {
           BTC: 'bitcoin', ETH: 'ethereum', USDT: 'tether', USDC: 'usd-coin', 
           SOL: 'solana', TON: 'the-open-network', XMR: 'monero', LTC: 'litecoin',
-          XRP: 'ripple', BNB: 'binancecoin', TRX: 'tron'
+          XRP: 'ripple', BNB: 'binancecoin', TRX: 'tron', MATIC: 'matic-network',
+          ARB: 'arbitrum', OP: 'optimism'
         };
         return mapping[s] || s.toLowerCase();
       }).join(',');
