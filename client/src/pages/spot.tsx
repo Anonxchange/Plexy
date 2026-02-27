@@ -69,20 +69,42 @@ interface TradingPair {
   favorite: boolean;
   leverage: string;
   symbol: string;
+  baseSymbol: string;
+  quoteSymbol: string;
 }
 
-const initialTradingPairs: TradingPair[] = [
-  { pair: "BTC/USDT", symbol: "BTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "ETH/USDT", symbol: "ETH", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "SOL/USDT", symbol: "SOL", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "TRX/USDT", symbol: "TRX", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "USDT/USDC", symbol: "USDT", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "1x" },
-  { pair: "BNB/USDT", symbol: "BNB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
-  { pair: "XRP/USDT", symbol: "XRP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "MATIC/USDT", symbol: "MATIC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "ARB/USDT", symbol: "ARB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "OP/USDT", symbol: "OP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-];
+const baseCoins = ["BTC", "ETH", "SOL", "TRX", "BNB", "XRP", "MATIC", "ARB", "OP", "ADA", "DOT", "LINK", "AVAX", "LTC"];
+const quoteCoins = ["USDT", "USDC", "BTC", "ETH"];
+
+const initialTradingPairs: TradingPair[] = (() => {
+  const pairs: TradingPair[] = [];
+  
+  // Generate pairs for each quote coin
+  quoteCoins.forEach(quote => {
+    baseCoins.forEach(base => {
+      if (base === quote) return; // Can't pair same coin
+      
+      // Default some as favorites for UI
+      const isFavorite = (base === "BTC" || base === "ETH" || base === "SOL") && quote === "USDT";
+      
+      pairs.push({
+        pair: `${base}/${quote}`,
+        symbol: base,
+        baseSymbol: base,
+        quoteSymbol: quote,
+        price: 0,
+        change: 0,
+        volume: "0",
+        high: 0,
+        low: 0,
+        favorite: isFavorite,
+        leverage: "10x"
+      });
+    });
+  });
+  
+  return pairs;
+})();
 
 const orderBook = {
   asks: [
@@ -116,6 +138,7 @@ export function Spot() {
   const { toast } = useToast();
   
   const [tradingPairs, setTradingPairs] = useState<TradingPair[]>(initialTradingPairs);
+  const [activeQuoteTab, setActiveQuoteTab] = useState("USDT");
   const [selectedPair, setSelectedPair] = useState(initialTradingPairs[0]);
   const [searchPair, setSearchPair] = useState("");
   const [showMarketList, setShowMarketList] = useState(false);
@@ -124,6 +147,11 @@ export function Spot() {
   const [liveOrderBook, setLiveOrderBook] = useState({ bids: [] as Array<[string, string]>, asks: [] as Array<[string, string]> });
   const [liveTrades, setLiveTrades] = useState<Array<{ id: number; price: string; qty: string; quoteQty: string; time: number; isBuyerMaker: boolean }>>([]);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  // Filter pairs by active quote tab
+  const pairsInTab = useMemo(() => {
+    return tradingPairs.filter(p => p.quoteSymbol === activeQuoteTab);
+  }, [tradingPairs, activeQuoteTab]);
 
   // Track desktop/mobile for order book display
   useEffect(() => {
@@ -159,8 +187,8 @@ export function Spot() {
   const { sessionPassword, setSessionPassword } = useAuth();
 
     // Get wallet balances and list for the trading pair
-  const baseCrypto = selectedPair.symbol;
-  const quoteCrypto = "USDT";
+  const baseCrypto = selectedPair.baseSymbol;
+  const quoteCrypto = selectedPair.quoteSymbol;
   
   const { data: walletData } = useWalletData();
   const balancesResult = useWalletBalances();
@@ -182,20 +210,34 @@ export function Spot() {
   useEffect(() => {
     const fetchPrices = async () => {
       try {
-        const symbols = tradingPairs.map(p => p.symbol);
+        // We only fetch for a subset of pairs to avoid overloading or use a smarter strategy
+        // In this case, we'll try to get all unique base symbols paired with USDT as a proxy for price
+        const uniqueBases = Array.from(new Set(tradingPairs.map(p => p.baseSymbol)));
+        const symbols = uniqueBases;
         const response = await asterdexService.getTickers(symbols);
         
-        // The service returns the raw data array directly
         const tickers = response;
         
         if (Array.isArray(tickers) && tickers.length > 0) {
           setTradingPairs(prevPairs => 
             prevPairs.map(pair => {
-              const pairSymbol = pair.symbol.includes('USDT') ? pair.symbol : `${pair.symbol}USDT`;
-              const ticker = tickers.find((t: any) => t.symbol === pairSymbol);
+              // For now, we assume Binance-like pricing where we can derive cross rates 
+              // but mostly we use the USDT pair ticker as primary source
+              const tickerSymbol = `${pair.baseSymbol}USDT`;
+              const ticker = tickers.find((t: any) => t.symbol === tickerSymbol);
+              
+              const quoteTickerSymbol = `${pair.quoteSymbol}USDT`;
+              const quoteTicker = tickers.find((t: any) => t.symbol === quoteTickerSymbol);
                 
               if (ticker) {
-                const price = parseFloat(ticker.lastPrice) || 0;
+                let price = parseFloat(ticker.lastPrice) || 0;
+                
+                // If it's a cross pair like BTC/ETH, adjust price
+                if (pair.quoteSymbol !== "USDT" && quoteTicker) {
+                   const quotePrice = parseFloat(quoteTicker.lastPrice) || 1;
+                   price = price / quotePrice;
+                }
+
                 const change = parseFloat(ticker.priceChangePercent) || 0;
                 const quoteVolume = parseFloat(ticker.quoteVolume) || 0;
                 
@@ -448,6 +490,11 @@ export function Spot() {
     let filtered = tradingPairs.filter(pair =>
       pair.pair.toLowerCase().includes(searchPair.toLowerCase())
     );
+
+    // Apply quote filter if not in special category that might span quotes
+    if (type !== "favorites" && type !== "turnover") {
+      filtered = filtered.filter(p => p.quoteSymbol === activeQuoteTab);
+    }
 
     switch (type) {
       case "favorites":
