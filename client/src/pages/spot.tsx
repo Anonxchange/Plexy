@@ -75,12 +75,13 @@ const initialTradingPairs: TradingPair[] = [
   { pair: "BTC/USDT", symbol: "BTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
   { pair: "ETH/USDT", symbol: "ETH", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
   { pair: "SOL/USDT", symbol: "SOL", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
+  { pair: "TRX/USDT", symbol: "TRX", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "USDT/USDC", symbol: "USDT", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "1x" },
   { pair: "BNB/USDT", symbol: "BNB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: true, leverage: "10x" },
   { pair: "XRP/USDT", symbol: "XRP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "TON/USDT", symbol: "TON", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "TRX/USDT", symbol: "TRX", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "LTC/USDT", symbol: "LTC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
-  { pair: "ADA/USDT", symbol: "ADA", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "MATIC/USDT", symbol: "MATIC", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "ARB/USDT", symbol: "ARB", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
+  { pair: "OP/USDT", symbol: "OP", price: 0, change: 0, volume: "0", high: 0, low: 0, favorite: false, leverage: "10x" },
 ];
 
 const orderBook = {
