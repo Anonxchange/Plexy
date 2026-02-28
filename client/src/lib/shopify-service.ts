@@ -73,8 +73,12 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
 }
 
 export const PRODUCTS_QUERY = `
-  query GetProducts($first: Int!, $query: String) {
-    products(first: $first, query: $query) {
+  query GetProducts($first: Int!, $after: String, $query: String) {
+    products(first: $first, after: $after, query: $query) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
       edges {
         node {
           id
@@ -232,9 +236,12 @@ function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message
 }
 
 export const shopifyService = {
-  async getProducts(first: number = 20, query?: string) {
-    const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, query });
-    return data?.data?.products?.edges || [];
+  async getProducts(first: number = 20, after?: string, query?: string) {
+    const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, after, query });
+    return {
+      products: data?.data?.products?.edges || [],
+      pageInfo: data?.data?.products?.pageInfo
+    };
   },
 
   async getProductByHandle(handle: string) {
