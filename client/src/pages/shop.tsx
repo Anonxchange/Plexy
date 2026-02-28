@@ -87,7 +87,7 @@ export function Shop() {
       setIsLoading(true);
     }
     try {
-      const result = await shopifyService.getProducts(20, after);
+      const result = await shopifyService.getProducts(250, after);
       const transformed: Listing[] = result.products.map((edge: any) => {
         const p = edge.node;
         return {
