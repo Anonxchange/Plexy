@@ -47,7 +47,7 @@ export interface ShopifyProduct {
 
 export async function storefrontApiRequest(query: string, variables: Record<string, unknown> = {}) {
   try {
-    const { data, error } = await supabase.functions.invoke('shopify-storefront', {
+    const { data, error } = await supabase.functions.invoke('shopify-proxy', {
       body: { query, variables }
     });
 
