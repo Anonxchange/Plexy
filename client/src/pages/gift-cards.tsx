@@ -260,17 +260,17 @@ export function GiftCards() {
   const giftCards = data?.content?.map((card: any) => ({
     id: card.productId,
     name: card.productName,
-    brand: card.brand.brandName,
+    brand: card.brand?.brandName || "",
     priceRange: card.denominationType === "FIXED" 
-      ? `$${Math.min(...card.fixedRecipientDenominations)} - $${Math.max(...card.fixedRecipientDenominations)}`
-      : `$${card.minRecipientDenomination} - $${card.maxRecipientDenomination}`,
-    cryptoRange: `${(card.minRecipientDenomination * 0.99).toFixed(2)} USDT - ${(card.maxRecipientDenomination * 0.99).toFixed(2)} USDT`,
-    discount: `${card.discountPercentage}%`,
-    image: card.logoUrls[0] || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
+      ? `$${card.fixedRecipientDenominations ? Math.min(...card.fixedRecipientDenominations) : 0} - $${card.fixedRecipientDenominations ? Math.max(...card.fixedRecipientDenominations) : 0}`
+      : `$${card.minRecipientDenomination || 0} - $${card.maxRecipientDenomination || 0}`,
+    cryptoRange: `${(card.minRecipientDenomination * 0.99 || 0).toFixed(2)} USDT - ${(card.maxRecipientDenomination * 0.99 || 0).toFixed(2)} USDT`,
+    discount: `${card.discountPercentage || 0}%`,
+    image: (card.logoUrls && card.logoUrls[0]) || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
     gradient: "from-gray-100 to-white",
-    description: card.redeemInstruction.concise || "",
-    minValue: card.minRecipientDenomination,
-    maxValue: card.maxRecipientDenomination,
+    description: card.redeemInstruction?.concise || "",
+    minValue: card.minRecipientDenomination || 0,
+    maxValue: card.maxRecipientDenomination || 0,
   })) || [];
 
   const selectedCurrency = currencies.find((c) => c.code === currency);
