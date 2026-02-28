@@ -71,6 +71,13 @@ export function Shop() {
   useEffect(() => {
     fetchListings();
     fetchShopifyProducts();
+    
+    // Set up an interval to refresh products every 2 minutes
+    const interval = setInterval(() => {
+      fetchShopifyProducts();
+    }, 120000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchShopifyProducts = async (after?: string) => {
