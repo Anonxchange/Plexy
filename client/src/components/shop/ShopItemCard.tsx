@@ -42,7 +42,7 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
           <Button
             size="icon"
             variant="secondary"
-            className="absolute bottom-2 right-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+            className="absolute bottom-2 right-2 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-md hover:bg-primary hover:text-primary-foreground"
             onClick={(e) => {
               e.stopPropagation();
               onAddToCart(product);
