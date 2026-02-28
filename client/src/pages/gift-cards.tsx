@@ -251,6 +251,8 @@ export function GiftCards() {
   const [selectedCategory, setSelectedCategory] = useState("All categories");
   const [selectedSidebarCategory, setSelectedSidebarCategory] = useState("All Categories");
   const [searchQuery, setSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [amount, setAmount] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
@@ -259,6 +261,11 @@ export function GiftCards() {
     page: page,
     size: pageSize,
   });
+
+  const handleSearch = () => {
+    setSearchQuery(inputValue);
+    setPage(1);
+  };
 
   const giftCards = data?.content?.map((card: any) => ({
     id: card.productId,
@@ -329,8 +336,13 @@ export function GiftCards() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search for gift cards"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch();
+                      }
+                    }}
                     className="pl-10 bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                   />
                 </div>
@@ -342,6 +354,8 @@ export function GiftCards() {
                     </label>
                     <Input
                       placeholder="Enter amount"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
                       className="bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary"
                     />
                   </div>
@@ -401,7 +415,10 @@ export function GiftCards() {
                   <Button variant="ghost" className="h-10 font-medium bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20">
                     Advanced
                   </Button>
-                  <Button className="h-10 font-medium bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Button 
+                    className="h-10 font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                    onClick={handleSearch}
+                  >
                     Search
                   </Button>
                 </div>
