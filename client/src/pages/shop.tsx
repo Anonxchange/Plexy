@@ -12,6 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,9 +25,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, ShoppingCart, Star, Filter, Package, Plus, Loader2 } from "lucide-react";
+import { Search, ShoppingCart, Star, Filter, Package, Plus, Loader2, Store } from "lucide-react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { shopifyService, type ShopifyProduct } from "@/lib/shopify-service";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 
 const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m => ({ default: m.ShopItemCard })));
@@ -50,11 +57,36 @@ export function Shop() {
   const [selectedProduct, setSelectedProduct] = useState<Listing | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
+  const [activeTab, setActiveTab] = useState("marketplace");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchListings();
+    fetchShopifyProducts();
   }, []);
+
+  const fetchShopifyProducts = async () => {
+    try {
+      const products = await shopifyService.getProducts();
+      const transformed: Listing[] = products.map(p => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        price: parseFloat(p.priceRange.minVariantPrice.amount),
+        currency: p.priceRange.minVariantPrice.currencyCode,
+        category: "Shopify",
+        images: p.images.edges.map(e => e.node.url),
+        location: "Online",
+        user_id: "shopify",
+        status: "active",
+        metadata: []
+      }));
+      setShopifyProducts(transformed);
+    } catch (error) {
+      console.error('Error fetching Shopify products:', error);
+    }
+  };
 
   const fetchListings = async () => {
     setIsLoading(true);
@@ -113,7 +145,9 @@ export function Shop() {
     }
   };
 
-  const filteredProducts = listings
+  const currentListings = activeTab === "marketplace" ? listings : shopifyProducts;
+
+  const filteredProducts = currentListings
     .filter(product => {
       const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -206,8 +240,21 @@ export function Shop() {
           </div>
         </div>
 
-        {/* Products Grid */}
+        {/* Tabs and Grid */}
         <div className="min-h-[600px]">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+            <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+              <TabsTrigger value="marketplace" className="gap-2">
+                <Package className="h-4 w-4" />
+                Marketplace
+              </TabsTrigger>
+              <TabsTrigger value="shopify" className="gap-2">
+                <Store className="h-4 w-4" />
+                Shopify Store
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {isLoading ? (
             <ShopSkeleton />
           ) : filteredProducts.length === 0 ? (
