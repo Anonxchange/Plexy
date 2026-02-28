@@ -63,16 +63,24 @@ export function Shop() {
   const [activeTab, setActiveTab] = useState("shopify");
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     fetchListings();
     fetchShopifyProducts();
   }, []);
 
-  const fetchShopifyProducts = async () => {
+  const fetchShopifyProducts = async (after?: string) => {
+    if (after) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
-      const products = await shopifyService.getProducts();
-      const transformed: Listing[] = products.map((edge: any) => {
+      const result = await shopifyService.getProducts(20, after);
+      const transformed: Listing[] = result.products.map((edge: any) => {
         const p = edge.node;
         return {
           id: p.id,
@@ -89,9 +97,26 @@ export function Shop() {
           variantId: p.variants.edges[0]?.node?.id
         };
       });
-      setShopifyProducts(transformed);
+      
+      if (after) {
+        setShopifyProducts(prev => [...prev, ...transformed]);
+      } else {
+        setShopifyProducts(transformed);
+      }
+      
+      setCursor(result.pageInfo?.endCursor || null);
+      setHasNextPage(result.pageInfo?.hasNextPage || false);
     } catch (error) {
       console.error('Error fetching Shopify products:', error);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (cursor && hasNextPage) {
+      fetchShopifyProducts(cursor);
     }
   };
 
@@ -292,17 +317,41 @@ export function Shop() {
               <p className="text-muted-foreground">Try adjusting your search or filters</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-              <Suspense fallback={<ShopSkeleton />}>
-                {filteredProducts.map((product) => (
-                  <ShopItemCard 
-                    key={product.id} 
-                    product={product} 
-                    onViewDetails={setSelectedProduct} 
-                  />
-                ))}
-              </Suspense>
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                <Suspense fallback={<ShopSkeleton />}>
+                  {filteredProducts.map((product) => (
+                    <ShopItemCard 
+                      key={product.id} 
+                      product={product} 
+                      onViewDetails={setSelectedProduct}
+                      onAddToCart={handleAddToCart}
+                    />
+                  ))}
+                </Suspense>
+              </div>
+
+              {activeTab === "shopify" && hasNextPage && (
+                <div className="mt-12 flex justify-center pb-12">
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="min-w-[200px]"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading more...
+                      </>
+                    ) : (
+                      "Load More Products"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
