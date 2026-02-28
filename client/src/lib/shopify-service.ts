@@ -236,7 +236,7 @@ function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message
 }
 
 export const shopifyService = {
-  async getProducts(first: number = 20, after?: string, query?: string) {
+  async getProducts(first: number = 250, after?: string, query?: string) {
     const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, after, query });
     return {
       products: data?.data?.products?.edges || [],
