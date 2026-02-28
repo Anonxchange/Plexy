@@ -40,7 +40,7 @@ function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
       onClick={() => setLocation(`/gift-cards/${card.id}`)}
       style={{ animationDelay: `${0.2 + index * 0.05}s` }}
     >
-      <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden flex-shrink-0`}>
+      <div className={`h-32 sm:h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden flex-shrink-0`}>
         <img
           src={card.image}
           alt={card.name}
@@ -49,19 +49,19 @@ function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
       </div>
 
-      <div className="p-4 flex flex-col flex-grow">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-semibold text-foreground text-sm sm:text-base leading-tight line-clamp-1">{card.name}</h3>
-          <span className="text-[10px] font-bold text-destructive bg-discount-bg px-1.5 py-0.5 rounded flex-shrink-0 ml-2">
+      <div className="p-3 sm:p-4 flex flex-col flex-grow">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2">
+          <h3 className="font-semibold text-foreground text-xs sm:text-base leading-tight line-clamp-1">{card.name}</h3>
+          <span className="text-[9px] sm:text-[10px] font-bold text-destructive bg-discount-bg px-1.5 py-0.5 rounded flex-shrink-0 mt-1 sm:mt-0 sm:ml-2 w-fit">
             {card.discount}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground mb-3 line-clamp-2 flex-grow">{card.description}</p>
+        <p className="hidden sm:block text-xs text-muted-foreground mb-3 line-clamp-2 flex-grow">{card.description}</p>
         <div className="mt-auto pt-2 border-t border-border/40">
-          <p className="text-xs font-medium text-foreground">
+          <p className="text-[10px] sm:text-xs font-medium text-foreground">
             {card.priceRange}
           </p>
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="hidden sm:block text-[10px] text-muted-foreground/70">
             {card.cryptoRange}
           </p>
         </div>
@@ -251,10 +251,13 @@ export function GiftCards() {
   const [selectedCategory, setSelectedCategory] = useState("All categories");
   const [selectedSidebarCategory, setSelectedSidebarCategory] = useState("All Categories");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const { data, isLoading, error } = useGiftCardProducts({
     productName: searchQuery,
-    // Add other params if needed
+    page: page,
+    size: pageSize,
   });
 
   const giftCards = data?.content?.map((card: any) => ({
@@ -430,7 +433,7 @@ export function GiftCards() {
 
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">All categories</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
               {isLoading ? (
                 [...Array(6)].map((_, i) => (
                   <GiftCardSkeleton key={i} />
@@ -447,6 +450,35 @@ export function GiftCards() {
                 )
               )}
             </div>
+
+            {/* Pagination */}
+            {data && data.totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mb-8">
+                <Button
+                  variant="outline"
+                  disabled={page <= 1}
+                  onClick={() => {
+                    setPage(p => Math.max(1, p - 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm font-medium">
+                  Page {page} of {data.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  disabled={page >= data.totalPages}
+                  onClick={() => {
+                    setPage(p => p + 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
 
 
