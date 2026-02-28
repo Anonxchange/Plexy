@@ -156,12 +156,13 @@ const networkOptions = [
   { id: "eth", name: "Ethereum", symbol: "ETH", network: "Ethereum" },
 ];
 
+import { useGiftCardProduct, useCreateGiftCardOrder } from "@/hooks/use-reloadly";
+import { toast } from "sonner";
+
 export function GiftCardDetail() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/gift-cards/:id");
-  const [card, setCard] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [cardValue, setCardValue] = useState("");
   const [numberOfCards, setNumberOfCards] = useState("1");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -170,73 +171,44 @@ export function GiftCardDetail() {
   const [selectedNetwork, setSelectedNetwork] = useState("usdt-tron");
 
   const cardId = params?.id;
-
-  useEffect(() => {
-    const fetchCard = async () => {
-      if (!cardId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from('gift_cards')
-          .select('*')
-          .eq('id', cardId)
-          .single();
-
-        if (error || !data) {
-          // Fallback to sample data if not found
-          const sampleCard = giftCards.find((c) => c.id === parseInt(cardId) || c.id === cardId);
-          setCard(sampleCard || null);
-        } else {
-          // Transform Supabase data
-          setCard({
-            id: data.id,
-            name: data.name,
-            brand: data.brand,
-            priceRange: `$${data.min_value} - $${data.max_value}`,
-            cryptoRange: `${(data.min_value * 0.99).toFixed(2)} USDT - ${(data.max_value * 0.99).toFixed(2)} USDT`,
-            discount: data.discount || "-0.58%",
-            image: data.image_url || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
-            gradient: "from-gray-100 to-white",
-            description: data.description || "",
-            minValue: data.min_value,
-            maxValue: data.max_value,
-            available: data.available,
-            redeemInfo: data.redeem_info || "Visit the service website and enter your gift card code.",
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching gift card:', error);
-        const sampleCard = giftCards.find((c) => c.id === parseInt(cardId) || c.id === cardId);
-        setCard(sampleCard || null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCard();
-  }, [cardId]);
+  const { data: card, isLoading } = useGiftCardProduct(cardId);
+  const { mutate: createOrder, isPending: isOrdering } = useCreateGiftCardOrder();
 
   useEffect(() => {
     if (card) {
-      setCardValue(String(card.minValue || 10));
+      setCardValue(String(card.minRecipientDenomination || 10));
     }
   }, [card]);
 
   const handleBuyCard = () => {
     if (!user) {
-      // Not logged in: show external wallet dialog directly
       setShowExternalWalletDialog(true);
     } else {
-      // Logged in: show payment source selection
       setShowPaymentDialog(true);
     }
   };
 
-  if (loading) {
+  const handleContinueOrder = () => {
+    if (!card) return;
+    
+    createOrder({
+      productId: card.productId,
+      unitPrice: parseFloat(cardValue),
+      quantity: parseInt(numberOfCards),
+      recipientEmail: email,
+    }, {
+      onSuccess: (data) => {
+        toast.success("Order placed successfully!");
+        setShowExternalWalletDialog(false);
+        // Maybe redirect to a success page or show redeem code
+      },
+      onError: (err) => {
+        toast.error("Failed to place order: " + (err as Error).message);
+      }
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -259,7 +231,7 @@ export function GiftCardDetail() {
     );
   }
 
-  const value = parseFloat(cardValue) || card.minValue;
+  const value = parseFloat(cardValue) || card.minRecipientDenomination;
   const priceInCrypto = (value * 0.9985).toFixed(4);
 
   return (
@@ -273,18 +245,18 @@ export function GiftCardDetail() {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-2xl font-bold text-foreground">{card.name}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{card.productName}</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left: Image and Info */}
           <div className="lg:order-1">
             <div
-              className={`h-80 bg-gradient-to-br ${card.gradient} rounded-2xl overflow-hidden shadow-lg mb-4`}
+              className={`h-80 bg-gradient-to-br from-gray-100 to-white rounded-2xl overflow-hidden shadow-lg mb-4`}
             >
               <img
-                src={card.image}
-                alt={card.name}
+                src={card.logoUrls[0]}
+                alt={card.productName}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -293,7 +265,7 @@ export function GiftCardDetail() {
             <div>
               <h3 className="font-semibold text-foreground mb-2">About</h3>
               <p className="text-muted-foreground leading-relaxed">
-                {card.description}
+                {card.redeemInstruction.verbose || card.redeemInstruction.concise}
               </p>
             </div>
           </div>
@@ -309,12 +281,12 @@ export function GiftCardDetail() {
                 type="number"
                 value={cardValue}
                 onChange={(e) => setCardValue(e.target.value)}
-                min={card.minValue}
-                max={card.maxValue}
+                min={card.minRecipientDenomination}
+                max={card.maxRecipientDenomination}
                 className="h-12 text-base"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Range: {card.minValue} - {card.maxValue}
+                Range: {card.minRecipientDenomination} - {card.maxRecipientDenomination} {card.recipientCurrencyCode}
               </p>
             </div>
 
@@ -335,15 +307,12 @@ export function GiftCardDetail() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-2">
-                Available: {card.available}
-              </p>
             </div>
 
             {/* Price Display */}
             <div className="bg-card border border-border rounded-xl p-4 mb-4">
               <p className="text-sm text-muted-foreground mb-2">
-                Price for {card.brand}: {value}
+                Price for {card.brand.brandName}: {value}
               </p>
               <div className="flex items-center gap-2">
                 <img
@@ -365,6 +334,7 @@ export function GiftCardDetail() {
               <ShoppingCart className="h-5 w-5 mr-2" />
               Buy card
             </Button>
+
 
             {/* Accepted Networks */}
             <div className="mb-4">
@@ -524,9 +494,10 @@ export function GiftCardDetail() {
               </Button>
               <Button
                 className="flex-1 h-12 bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={!email}
+                disabled={!email || isOrdering}
+                onClick={handleContinueOrder}
               >
-                Continue
+                {isOrdering ? "Processing..." : "Continue"}
               </Button>
             </div>
           </div>
