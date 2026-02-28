@@ -241,25 +241,24 @@ export function ProductDetail() {
                 </Button>
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground leading-tight">
+              <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground leading-tight">
                 {product.title}
               </h1>
 
               <div className="flex items-center gap-4">
                 <div className="flex text-yellow-500">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} className="h-4 w-4 fill-current" />
+                    <Star key={i} className="h-3 w-3 fill-current" />
                   ))}
                 </div>
-                <span className="text-sm text-muted-foreground font-medium">4.8 (24 reviews)</span>
               </div>
 
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-serif font-bold text-[#C58E58]">
+                <span className="text-2xl font-serif font-bold text-[#C58E58]">
                   {product.currency} {product.price.toLocaleString()}
                 </span>
                 {product.user_id === 'shopify' && (
-                  <span className="text-sm text-muted-foreground line-through opacity-50">
+                  <span className="text-xs text-muted-foreground line-through opacity-50">
                     {product.currency} {(product.price * 1.2).toLocaleString()}
                   </span>
                 )}
@@ -270,17 +269,17 @@ export function ProductDetail() {
               {/* Size selection */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Size</h3>
-                  <button className="text-xs font-bold text-primary hover:underline">Size Guide</button>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Size</h3>
+                  <button className="text-[10px] font-bold text-primary hover:underline">Size Guide</button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {sizes.map((size) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`h-12 min-w-[3.5rem] px-4 rounded-lg font-bold border-2 transition-all ${
+                      className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
                         selectedSize === size 
-                          ? 'bg-foreground text-background border-foreground shadow-lg' 
+                          ? 'bg-foreground text-background border-foreground shadow-md' 
                           : 'bg-background text-foreground border-border/40 hover:border-primary/50'
                       }`}
                     >
@@ -290,10 +289,10 @@ export function ProductDetail() {
                 </div>
               </div>
 
-              <div className="pt-4 flex flex-col gap-3">
+              <div className="pt-2 flex flex-col gap-3">
                 <Button 
-                  size="lg"
-                  className="w-full h-14 rounded-xl text-lg font-bold bg-[#D3884D] hover:bg-[#C0783D] text-white transition-all active:scale-[0.98] gap-2 shadow-lg shadow-[#D3884D]/20"
+                  size="default"
+                  className="w-full h-12 rounded-xl text-base font-bold bg-[#D3884D] hover:bg-[#C0783D] text-white transition-all active:scale-[0.98] gap-2 shadow-md shadow-[#D3884D]/20"
                   onClick={handleAddToCart}
                   disabled={isAddingToCart}
                 >
