@@ -177,6 +177,10 @@ export function Shop() {
     }
   };
 
+  const handleViewDetails = (product: Listing) => {
+    navigate(`/shop/product/${encodeURIComponent(product.id)}`);
+  };
+
   const currentListings = activeTab === "marketplace" ? listings : shopifyProducts;
 
   const filteredProducts = currentListings
@@ -322,13 +326,13 @@ export function Shop() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 <Suspense fallback={<ShopSkeleton />}>
                   {filteredProducts.map((product) => (
                     <ShopItemCard 
                       key={product.id} 
                       product={product} 
-                      onViewDetails={setSelectedProduct}
+                      onViewDetails={handleViewDetails}
                       onAddToCart={handleAddToCart}
                     />
                   ))}
@@ -359,115 +363,6 @@ export function Shop() {
           )}
         </div>
       </main>
-
-      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden border-none shadow-2xl bg-background/95 backdrop-blur-xl">
-          {selectedProduct && (
-            <div className="flex flex-col md:flex-row h-full max-h-[90vh]">
-              {/* Left Side: Image Gallery */}
-              <div className="w-full md:w-1/2 bg-muted/30 relative aspect-square md:aspect-auto flex items-center justify-center border-b md:border-b-0 md:border-r border-border/40">
-                {selectedProduct.images && selectedProduct.images.length > 0 ? (
-                  <img
-                    src={selectedProduct.images[0]}
-                    alt={selectedProduct.title}
-                    className="w-full h-full object-cover transition-all hover:scale-105 duration-700"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-4 text-muted-foreground/30">
-                    <Package className="h-24 w-24" />
-                    <span className="text-sm font-medium">No Image Available</span>
-                  </div>
-                )}
-                <Badge className="absolute top-4 left-4 bg-background/80 backdrop-blur-md text-foreground border-border/40 px-3 py-1 text-xs font-bold uppercase tracking-wider">
-                  {selectedProduct.category}
-                </Badge>
-              </div>
-
-              {/* Right Side: Product Details */}
-              <div className="w-full md:w-1/2 flex flex-col p-6 md:p-8 space-y-6 overflow-y-auto">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-widest">
-                    <Store className="h-3 w-3" />
-                    {selectedProduct.user_id === 'shopify' ? 'Verified Store' : 'Community Marketplace'}
-                  </div>
-                  <h2 className="text-3xl font-extrabold tracking-tight leading-none text-foreground">
-                    {selectedProduct.title}
-                  </h2>
-                  <div className="flex items-center gap-2 pt-1">
-                    <div className="flex text-yellow-500">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Star key={i} className="h-3.5 w-3.5 fill-current" />
-                      ))}
-                    </div>
-                    <span className="text-xs text-muted-foreground font-medium">(4.8/5 based on 24 reviews)</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-4xl font-black text-primary flex items-baseline gap-1">
-                    {selectedProduct.price}
-                    <span className="text-sm font-bold text-muted-foreground uppercase">{selectedProduct.currency}</span>
-                  </p>
-                  <p className="text-xs text-green-500 font-bold flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                    In Stock & Ready to Deliver
-                  </p>
-                </div>
-
-                <Separator className="bg-border/40" />
-
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Description</h4>
-                  <p className="text-sm leading-relaxed text-muted-foreground/90 font-medium">
-                    {selectedProduct.description || "No description provided for this item."}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 py-2">
-                  <div className="space-y-1 p-3 rounded-xl bg-muted/30 border border-border/40">
-                    <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">Location</p>
-                    <p className="text-sm font-bold truncate">{selectedProduct.location || "Global"}</p>
-                  </div>
-                  <div className="space-y-1 p-3 rounded-xl bg-muted/30 border border-border/40">
-                    <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">Shipping</p>
-                    <p className="text-sm font-bold">Instant Digital</p>
-                  </div>
-                </div>
-
-                <div className="pt-4 mt-auto flex flex-col sm:flex-row gap-3">
-                  <Button 
-                    size="lg"
-                    className="flex-1 h-14 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-[0.98] gap-2"
-                    onClick={() => handleAddToCart(selectedProduct)}
-                    disabled={isAddingToCart}
-                  >
-                    {isAddingToCart ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-5 w-5" />
-                        {selectedProduct.user_id === 'shopify' ? 'Add to Cart' : 'Purchase Now'}
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    className="h-14 px-6 rounded-2xl border-border/60 font-bold hover:bg-muted/50 transition-colors"
-                    onClick={() => setSelectedProduct(null)}
-                  >
-                    Close
-                  </Button>
-                </div>
-                
-                <p className="text-[10px] text-center text-muted-foreground font-medium pt-2">
-                  Secure transaction protected by Pexly Escrow Protocol
-                </p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <PexlyFooter />
     </div>
