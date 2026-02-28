@@ -25,24 +25,27 @@ interface ShopItemCardProps {
 
 export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCardProps) => {
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
-      <div className="aspect-[4/3] bg-muted relative group cursor-pointer" onClick={() => onViewDetails(product)}>
+    <div 
+      className="group cursor-pointer flex flex-col h-full" 
+      onClick={() => onViewDetails(product)}
+    >
+      <div className="aspect-square bg-[#F5F5F5] rounded-xl overflow-hidden relative mb-3">
         {product.images && product.images.length > 0 ? (
           <img
             src={product.images[0]}
             alt={product.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="h-12 w-12 text-muted-foreground/20" />
+            <Package className="h-10 w-10 text-muted-foreground/20" />
           </div>
         )}
         {product.user_id === 'shopify' && onAddToCart && (
           <Button
             size="icon"
             variant="secondary"
-            className="absolute bottom-2 right-2 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-md hover:bg-primary hover:text-primary-foreground"
+            className="absolute bottom-2 right-2 h-8 w-8 rounded-lg bg-white/80 backdrop-blur-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all shadow-sm border border-border/10 hover:bg-primary hover:text-primary-foreground"
             onClick={(e) => {
               e.stopPropagation();
               onAddToCart(product);
@@ -52,31 +55,17 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
           </Button>
         )}
       </div>
-      <CardHeader className="pb-3 flex-none">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg line-clamp-1">{product.title}</CardTitle>
-          <Badge variant="outline" className="shrink-0">{product.category}</Badge>
+      
+      <div className="flex flex-col flex-1 space-y-1">
+        <h3 className="text-[15px] font-medium leading-tight text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+          {product.title}
+        </h3>
+        <div className="flex flex-col mt-auto pt-1">
+          <p className="text-[16px] font-serif font-bold text-foreground">
+            {product.currency} {product.price.toLocaleString()}
+          </p>
         </div>
-        <CardDescription className="line-clamp-2">
-          {product.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pb-3 flex-1">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-sm text-muted-foreground">
-            Location: {product.location}
-          </span>
-        </div>
-        <p className="text-2xl font-bold">{product.price} {product.currency}</p>
-      </CardContent>
-      <CardFooter className="pt-0 flex-none">
-        <Button
-          className="w-full"
-          onClick={() => onViewDetails(product)}
-        >
-          View Details
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };
