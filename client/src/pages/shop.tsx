@@ -30,6 +30,8 @@ import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { shopifyService, type ShopifyProduct } from "@/lib/shopify-service";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
+import { CartSheet } from "@/components/shop/CartSheet";
+import { toast } from "sonner";
 
 const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m => ({ default: m.ShopItemCard })));
 
@@ -45,6 +47,7 @@ interface Listing {
   user_id: string;
   status: string;
   metadata: any[];
+  variantId?: string;
 }
 
 const categories = ["All", "Services", "Digital", "Goods", "Domains", "Jobs", "Software", "Electronics", "Clothing", "Home & Garden", "Sports", "Other"];
@@ -55,11 +58,11 @@ export function Shop() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [selectedProduct, setSelectedProduct] = useState<Listing | null>(null);
-  const [cartCount, setCartCount] = useState(0);
   const [listings, setListings] = useState<Listing[]>([]);
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
-  const [activeTab, setActiveTab] = useState("marketplace");
+  const [activeTab, setActiveTab] = useState("shopify");
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
     fetchListings();
@@ -69,19 +72,23 @@ export function Shop() {
   const fetchShopifyProducts = async () => {
     try {
       const products = await shopifyService.getProducts();
-      const transformed: Listing[] = products.map(p => ({
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        price: parseFloat(p.priceRange.minVariantPrice.amount),
-        currency: p.priceRange.minVariantPrice.currencyCode,
-        category: "Shopify",
-        images: p.images.edges.map(e => e.node.url),
-        location: "Online",
-        user_id: "shopify",
-        status: "active",
-        metadata: []
-      }));
+      const transformed: Listing[] = products.map((edge: any) => {
+        const p = edge.node;
+        return {
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          price: parseFloat(p.priceRange.minVariantPrice.amount),
+          currency: p.priceRange.minVariantPrice.currencyCode,
+          category: "Shopify",
+          images: p.images.edges.map((e: any) => e.node.url),
+          location: "Online",
+          user_id: "shopify",
+          status: "active",
+          metadata: [],
+          variantId: p.variants.edges[0]?.node?.id
+        };
+      });
       setShopifyProducts(transformed);
     } catch (error) {
       console.error('Error fetching Shopify products:', error);
@@ -97,11 +104,9 @@ export function Shop() {
 
       if (error) throw error;
       
-      // Transform data to handle different image formats (array vs string)
       const transformedData = (data || []).map(item => {
         let imageUrls: string[] = [];
         
-        // Handle images field
         if (Array.isArray(item.images)) {
           imageUrls = item.images.filter(img => typeof img === 'string' && img.startsWith('http'));
         } else if (typeof item.images === 'string' && item.images.trim() !== '') {
@@ -115,7 +120,6 @@ export function Shop() {
           }
         }
         
-        // Handle metadata fallback if images are empty
         if (imageUrls.length === 0 && item.metadata) {
           try {
             const metadata = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
@@ -136,7 +140,6 @@ export function Shop() {
         };
       });
 
-      console.log('Final Transformed Shop Listings:', transformedData);
       setListings(transformedData);
     } catch (error) {
       console.error('Error fetching listings:', error);
@@ -168,15 +171,50 @@ export function Shop() {
       }
     });
 
-  const handleAddToCart = (product: Listing) => {
-    setCartCount(cartCount + 1);
-    setSelectedProduct(null);
+  const handleAddToCart = async (product: Listing) => {
+    if (product.user_id !== 'shopify' || !product.variantId) {
+      toast.info("Marketplace checkout coming soon. Only Shopify items can be added to cart currently.");
+      return;
+    }
+
+    setIsAddingToCart(true);
+    try {
+      let cartId = localStorage.getItem('shopify_cart_id');
+      let result;
+
+      if (!cartId) {
+        result = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
+        if (result) {
+          localStorage.setItem('shopify_cart_id', result.cartId);
+          localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
+          toast.success("Added to cart!");
+        }
+      } else {
+        result = await shopifyService.addLineToCart(cartId, { variantId: product.variantId, quantity: 1 });
+        if (result.success) {
+          toast.success("Added to cart!");
+        } else if (result.cartNotFound) {
+          // Retry once by creating new cart
+          localStorage.removeItem('shopify_cart_id');
+          const newResult = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
+          if (newResult) {
+            localStorage.setItem('shopify_cart_id', newResult.cartId);
+            localStorage.setItem('shopify_checkout_url', newResult.checkoutUrl);
+            toast.success("Added to cart!");
+          }
+        }
+      }
+      setSelectedProduct(null);
+    } catch (error) {
+      toast.error("Failed to add to cart");
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -191,19 +229,10 @@ export function Shop() {
                 <Plus className="h-5 w-5" />
                 Post an Ad
               </Button>
-              <Button variant="outline" className="relative">
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                Cart
-                {cartCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0">
-                    {cartCount}
-                  </Badge>
-                )}
-              </Button>
+              <CartSheet />
             </div>
           </div>
 
-          {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -240,17 +269,16 @@ export function Shop() {
           </div>
         </div>
 
-        {/* Tabs and Grid */}
         <div className="min-h-[600px]">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
             <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-              <TabsTrigger value="marketplace" className="gap-2">
-                <Package className="h-4 w-4" />
-                Marketplace
-              </TabsTrigger>
               <TabsTrigger value="shopify" className="gap-2">
                 <Store className="h-4 w-4" />
                 Shopify Store
+              </TabsTrigger>
+              <TabsTrigger value="marketplace" className="gap-2">
+                <Package className="h-4 w-4" />
+                Marketplace
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -279,7 +307,6 @@ export function Shop() {
         </div>
       </main>
 
-      {/* Product Details Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
         <DialogContent className="max-w-2xl">
           {selectedProduct && (
@@ -316,18 +343,6 @@ export function Shop() {
                       <span className="text-muted-foreground">Location</span>
                       <span className="font-medium">{selectedProduct.location}</span>
                     </div>
-                    {selectedProduct.metadata && selectedProduct.metadata.length > 0 && (
-                      <div className="py-2 border-t">
-                        <span className="text-muted-foreground block mb-2">Attachments</span>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedProduct.metadata.map((file, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-[10px]">
-                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -335,9 +350,16 @@ export function Shop() {
                 <Button variant="outline" onClick={() => setSelectedProduct(null)}>
                   Close
                 </Button>
-                <Button onClick={() => handleAddToCart(selectedProduct)}>
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Buy Now
+                <Button 
+                  onClick={() => handleAddToCart(selectedProduct)}
+                  disabled={isAddingToCart}
+                >
+                  {isAddingToCart ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                  )}
+                  {selectedProduct.user_id === 'shopify' ? 'Add to Cart' : 'Buy Now'}
                 </Button>
               </DialogFooter>
             </>
