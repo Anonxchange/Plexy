@@ -255,7 +255,7 @@ export function GiftCardDetail() {
               className={`h-80 bg-gradient-to-br from-gray-100 to-white rounded-2xl overflow-hidden shadow-lg mb-4`}
             >
               <img
-                src={card.logoUrls[0]}
+                src={card.logoUrls?.[0] || ""}
                 alt={card.productName}
                 className="w-full h-full object-cover"
               />
@@ -265,7 +265,7 @@ export function GiftCardDetail() {
             <div>
               <h3 className="font-semibold text-foreground mb-2">About</h3>
               <p className="text-muted-foreground leading-relaxed">
-                {card.redeemInstruction.verbose || card.redeemInstruction.concise}
+                {card.redeemInstruction?.verbose || card.redeemInstruction?.concise || ""}
               </p>
             </div>
           </div>
@@ -309,10 +309,9 @@ export function GiftCardDetail() {
               </Select>
             </div>
 
-            {/* Price Display */}
             <div className="bg-card border border-border rounded-xl p-4 mb-4">
               <p className="text-sm text-muted-foreground mb-2">
-                Price for {card.brand.brandName}: {value}
+                Price for {card.brand?.brandName || card.productName || "Gift Card"}: {value}
               </p>
               <div className="flex items-center gap-2">
                 <img
