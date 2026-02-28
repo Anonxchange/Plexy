@@ -65,7 +65,7 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
     if (data?.errors) {
       throw new Error(`Error calling Shopify: ${data.errors.map((e: { message: string }) => e.message).join(', ')}`);
     }
-    return { data };
+    return data;
   } catch (err) {
     console.error('Shopify request failed:', err);
     throw err;
