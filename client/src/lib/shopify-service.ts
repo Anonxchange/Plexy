@@ -46,25 +46,30 @@ export interface ShopifyProduct {
 }
 
 export async function storefrontApiRequest(query: string, variables: Record<string, unknown> = {}) {
-  const { data, error } = await supabase.functions.invoke('shopify-storefront', {
-    body: { query, variables }
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke('shopify-storefront', {
+      body: { query, variables }
+    });
 
-  if (error) {
-    if (error.status === 402) {
-      toast.error("Shopify: Payment required", {
-        description: "Your store needs an active billing plan. Visit https://admin.shopify.com to upgrade.",
-      });
-      return;
+    if (error) {
+      if (error.status === 402) {
+        toast.error("Shopify: Payment required", {
+          description: "Your store needs an active billing plan. Visit https://admin.shopify.com to upgrade.",
+        });
+        return;
+      }
+      console.error('Supabase function error:', error);
+      throw error;
     }
-    console.error('Supabase function error:', error);
-    throw error;
-  }
 
-  if (data?.errors) {
-    throw new Error(`Error calling Shopify: ${data.errors.map((e: { message: string }) => e.message).join(', ')}`);
+    if (data?.errors) {
+      throw new Error(`Error calling Shopify: ${data.errors.map((e: { message: string }) => e.message).join(', ')}`);
+    }
+    return { data };
+  } catch (err) {
+    console.error('Shopify request failed:', err);
+    throw err;
   }
-  return { data };
 }
 
 export const PRODUCTS_QUERY = `
