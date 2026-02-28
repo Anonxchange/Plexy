@@ -241,6 +241,8 @@ const faqs = [
   }
 ];
 
+import { useGiftCardProducts } from "@/hooks/use-reloadly";
+
 export function GiftCards() {
   const [, setLocation] = useLocation();
   const [currency, setCurrency] = useState("USD");
@@ -248,67 +250,28 @@ export function GiftCards() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All categories");
   const [selectedSidebarCategory, setSelectedSidebarCategory] = useState("All Categories");
-  const [giftCards, setGiftCards] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    fetchGiftCards();
-  }, []);
+  const { data, isLoading, error } = useGiftCardProducts({
+    productName: searchQuery,
+    // Add other params if needed
+  });
 
-  const fetchGiftCards = async () => {
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        setGiftCards(defaultGiftCards);
-        setLoading(false);
-        return;
-      }
-
-      const supabase = createClient();
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-
-      const { data, error } = await Promise.race([
-        supabase
-          .from('gift_cards')
-          .select('*')
-          .order('created_at', { ascending: false }),
-        new Promise((_, reject) => {
-          controller.signal.addEventListener('abort', () => {
-            reject(new Error('Fetch timeout'));
-          });
-        })
-      ]) as any;
-      clearTimeout(timeout);
-
-      if (error) {
-        setGiftCards(defaultGiftCards);
-      } else if (data && data.length > 0) {
-        setGiftCards(data.map((card: any) => ({
-          id: card.id,
-          name: card.name,
-          brand: card.brand,
-          priceRange: `$${card.min_value} - $${card.max_value}`,
-          cryptoRange: `${(card.min_value * 0.99).toFixed(2)} USDT - ${(card.max_value * 0.99).toFixed(2)} USDT`,
-          discount: card.discount || "-0.58%",
-          image: card.image_url || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
-          gradient: "from-gray-100 to-white",
-          description: card.description || "",
-          minValue: card.min_value,
-          maxValue: card.max_value,
-          available: card.available,
-        })));
-      } else {
-        setGiftCards(defaultGiftCards);
-      }
-    } catch (error) {
-      setGiftCards(defaultGiftCards);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const giftCards = data?.content?.map((card: any) => ({
+    id: card.productId,
+    name: card.productName,
+    brand: card.brand.brandName,
+    priceRange: card.denominationType === "FIXED" 
+      ? `$${Math.min(...card.fixedRecipientDenominations)} - $${Math.max(...card.fixedRecipientDenominations)}`
+      : `$${card.minRecipientDenomination} - $${card.maxRecipientDenomination}`,
+    cryptoRange: `${(card.minRecipientDenomination * 0.99).toFixed(2)} USDT - ${(card.maxRecipientDenomination * 0.99).toFixed(2)} USDT`,
+    discount: `${card.discountPercentage}%`,
+    image: card.logoUrls[0] || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
+    gradient: "from-gray-100 to-white",
+    description: card.redeemInstruction.concise || "",
+    minValue: card.minRecipientDenomination,
+    maxValue: card.maxRecipientDenomination,
+  })) || [];
 
   const selectedCurrency = currencies.find((c) => c.code === currency);
 
@@ -363,6 +326,8 @@ export function GiftCards() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search for gift cards"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                   />
                 </div>
@@ -466,7 +431,7 @@ export function GiftCards() {
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">All categories</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
-              {loading ? (
+              {isLoading ? (
                 [...Array(6)].map((_, i) => (
                   <GiftCardSkeleton key={i} />
                 ))
@@ -483,6 +448,7 @@ export function GiftCards() {
               )}
             </div>
           </div>
+
 
           <div className="mt-8">
             <h3 className="text-lg font-semibold text-foreground mb-6">Frequently asked questions</h3>
