@@ -40,6 +40,7 @@ export function ProductDetail() {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("L");
+  const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
 
   const sizes = ["3XL", "L", "M", "S", "XL", "2XL"];
 
@@ -55,7 +56,8 @@ export function ProductDetail() {
       // First try Shopify if the ID looks like a Shopify ID (contains 'Product')
       if (id?.includes('Product')) {
         const result = await shopifyService.getProducts(250); // Get all to find the one
-        const found = result.products.find((edge: any) => edge.node.id === decodeURIComponent(id));
+        const decodedId = decodeURIComponent(id);
+        const found = result.products.find((edge: any) => edge.node.id === decodedId);
         
         if (found) {
           const p = found.node;
@@ -72,6 +74,28 @@ export function ProductDetail() {
             status: "active",
             variantId: p.variants.edges[0]?.node?.id
           });
+
+          // Fetch related products (same category or just others from Shopify)
+          const related = result.products
+            .filter((edge: any) => edge.node.id !== decodedId)
+            .slice(0, 4)
+            .map((edge: any) => {
+              const rp = edge.node;
+              return {
+                id: rp.id,
+                title: rp.title,
+                description: rp.description,
+                price: parseFloat(rp.priceRange.minVariantPrice.amount),
+                currency: rp.priceRange.minVariantPrice.currencyCode,
+                category: "Shopify",
+                images: rp.images.edges.map((e: any) => e.node.url),
+                location: "Online",
+                user_id: "shopify",
+                status: "active",
+                variantId: rp.variants.edges[0]?.node?.id
+              };
+            });
+          setRelatedProducts(related);
           setIsLoading(false);
           return;
         }
@@ -313,6 +337,41 @@ export function ProductDetail() {
             </div>
           </div>
         </div>
+
+        {/* Related Products Section */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-20 mb-12">
+            <h2 className="text-2xl font-serif font-bold mb-8">You may also like</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {relatedProducts.map((related) => (
+                <div 
+                  key={related.id} 
+                  className="group cursor-pointer"
+                  onClick={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                >
+                  <div className="aspect-[4/5] bg-muted rounded-xl overflow-hidden mb-3 relative border border-border/40">
+                    <img 
+                      src={related.images[0]} 
+                      alt={related.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    {related.status === 'sold_out' && (
+                      <Badge className="absolute top-2 right-2 bg-background/80 text-foreground backdrop-blur-sm border-none">
+                        Sold out
+                      </Badge>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-bold line-clamp-2 mb-1 group-hover:text-primary transition-colors">
+                    {related.title}
+                  </h3>
+                  <p className="text-[#C58E58] font-bold text-sm">
+                    {related.currency} {related.price.toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
       <PexlyFooter />
     </div>
