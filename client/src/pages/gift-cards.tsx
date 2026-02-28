@@ -254,7 +254,7 @@ export function GiftCards() {
   const [inputValue, setInputValue] = useState("");
   const [amount, setAmount] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const pageSize = 30;
 
   const { data, isLoading, error } = useGiftCardProducts({
     productName: searchQuery,
@@ -452,7 +452,7 @@ export function GiftCards() {
             <h2 className="text-lg font-semibold text-foreground mb-4">All categories</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
               {isLoading ? (
-                [...Array(6)].map((_, i) => (
+                [...Array(9)].map((_, i) => (
                   <GiftCardSkeleton key={i} />
                 ))
               ) : (
