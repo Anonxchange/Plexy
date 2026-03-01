@@ -47,10 +47,9 @@ const Index = () => {
   const [view, setView] = useState<"countries" | "operators" | "topup">("countries");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { countries, isLoadingCountries, getOperators, processTopup } = useAirtime();
-  const operatorQuery = getOperators(selectedCountry);
-  const operators = operatorQuery.data;
-  const isLoadingOperators = operatorQuery.isLoading;
+  const { countries, isLoadingCountries, getOperators, processTopup } = useAirtime(selectedCountry);
+  const operators = getOperators.data;
+  const isLoadingOperators = getOperators.isLoading;
 
   const filteredCountries = useMemo(() => {
     return countries.filter(c => 
@@ -87,8 +86,6 @@ const Index = () => {
     setSelectedCountry(countryCode);
     setSearchQuery("");
     setView("operators");
-    // Ensure operators are refetched for the new country
-    operatorQuery.refetch();
   };
 
   const handleProviderClick = (operator: any) => {
