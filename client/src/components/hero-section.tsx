@@ -168,7 +168,7 @@ export function HeroSection() {
 
             {/* Subheadline */}
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Unlock the power of decentralized finance. Earn, shop, and manage crypto seamlessly simple, secure, and for everyone.
+              Unlock the power of decentralized finance. Earn, shop, and manage crypto seamlessly simple, secure, and for everyone. </p>
             {/* Stats - Arranged horizontally on mobile like in the reference image */}
             <div className="flex justify-between items-center pt-4 max-w-[340px] mx-auto gap-4">
               <div className="text-center flex-1">
