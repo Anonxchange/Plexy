@@ -18,9 +18,9 @@ interface ProviderCardProps {
   onClick?: () => void;
 }
 
-const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-card", badge, onClick }: ProviderCardProps) => (
+const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-white", badge, onClick }: ProviderCardProps) => (
   <div className="group cursor-pointer" onClick={onClick}>
-    <div className={`relative ${bgColor} rounded-xl aspect-[4/3] flex items-center justify-center shadow-card group-hover:shadow-card-hover transition-all duration-300 group-hover:-translate-y-1 overflow-hidden border border-border p-4`}>
+    <div className={`relative ${bgColor} rounded-xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 overflow-hidden border border-border p-4`}>
       {badge && (
         <span className="absolute top-2 left-2 bg-success text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
           <span>💰</span> {badge}
@@ -84,6 +84,7 @@ const Index = () => {
     setSelectedCountry(countryCode);
     setSearchQuery("");
     setView("operators");
+    // The useAirtime(selectedCountry) hook will automatically refetch when selectedCountry changes
   };
 
   const handleProviderClick = (operator: any) => {
@@ -121,9 +122,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-[#d9f99d] text-primary-foreground pt-12 pb-20 px-4">
+      <section className="relative bg-[#f8fafc] text-slate-900 pt-12 pb-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-8 animate-fade-in text-gray-900">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-8 animate-fade-in text-slate-900">
             Top up prepaid mobile phones with Bitcoin and other cryptocurrencies from anywhere in the world
           </h1>
         </div>
@@ -135,9 +136,12 @@ const Index = () => {
               <div className="relative">
                 <button 
                   className="appearance-none bg-white px-3 py-3 md:px-6 md:py-4 border-r border-gray-200 text-gray-900 font-medium cursor-pointer outline-none min-w-[80px] flex items-center gap-2"
-                  onClick={() => setView("countries")}
+                  onClick={() => {
+                    setSelectedCountry("");
+                    setView("countries");
+                  }}
                 >
-                  {selectedCountry}
+                  {selectedCountry || "Select"}
                   <ChevronDown className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
@@ -167,7 +171,7 @@ const Index = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     placeholder="Search countries..." 
-                    className="pl-10 h-12 rounded-2xl bg-card border-border"
+                    className="pl-10 h-12 rounded-2xl bg-white border-border"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -196,7 +200,12 @@ const Index = () => {
             <div className="animate-fade-in">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
-                  <Button variant="ghost" onClick={() => setView("countries")} className="p-2 h-auto rounded-full hover:bg-muted">
+                  <Button variant="ghost" onClick={() => {
+                    setSelectedCountry("");
+                    setSelectedOperator(null);
+                    setSearchQuery("");
+                    setView("countries");
+                  }} className="p-2 h-auto rounded-full hover:bg-muted">
                     <ArrowRight className="w-5 h-5 rotate-180" />
                   </Button>
                   <h2 className="text-xl md:text-2xl font-bold text-foreground">
