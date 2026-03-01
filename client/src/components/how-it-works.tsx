@@ -10,7 +10,7 @@ const steps = [
   {
     iconSrc: "/icons/step2.svg",
     title: "Acquire Crypto",
-    description: "Buy or sell crypto through trusted third-party providers — fast, secure, and non-custodial.",
+    description: "Buy or sell crypto through trusted third-party providers fast, secure, and non-custodial.",
   },
   {
     iconSrc: "/icons/step3.svg",
