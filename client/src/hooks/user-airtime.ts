@@ -59,7 +59,7 @@ export interface TopupPayload {
   operatorName?: string;
 }
 
-export function useAirtime() {
+export function useAirtime(countryCode?: string) {
   // Fetch countries
   const countriesQuery = useQuery({
     queryKey: ["airtime-countries"],
@@ -74,21 +74,19 @@ export function useAirtime() {
   });
 
   // Fetch operators by country
-  const getOperators = (countryCode?: string) => {
-    return useQuery({
-      queryKey: ["airtime-operators", countryCode],
-      queryFn: async () => {
-        if (!countryCode) return [];
-        const { data, error } = await supabase.functions.invoke("reloadly-airtime", {
-          method: "GET",
-          queryParams: { action: "operators", countryCode },
-        });
-        if (error) throw error;
-        return data as ReloadlyOperator[];
-      },
-      enabled: !!countryCode,
-    });
-  };
+  const operatorsQuery = useQuery({
+    queryKey: ["airtime-operators", countryCode],
+    queryFn: async () => {
+      if (!countryCode) return [];
+      const { data, error } = await supabase.functions.invoke("reloadly-airtime", {
+        method: "GET",
+        queryParams: { action: "operators", countryCode },
+      });
+      if (error) throw error;
+      return data as ReloadlyOperator[];
+    },
+    enabled: !!countryCode,
+  });
 
   // Auto-detect operator by phone
   const detectOperator = useMutation({
@@ -125,13 +123,16 @@ export function useAirtime() {
     },
   });
 
-  return {
-    countries: countriesQuery.data || [],
-    isLoadingCountries: countriesQuery.isLoading,
-    countriesError: countriesQuery.error,
-    getOperators,
-    detectOperator,
-    getFxRate,
-    processTopup: topupMutation,
-  };
+  
+    return {
+      countries: countriesQuery.data || [],
+      isLoadingCountries: countriesQuery.isLoading,
+      countriesError: countriesQuery.error,
+      operators: operatorsQuery.data || [],
+      isLoadingOperators: operatorsQuery.isLoading,
+      operatorsError: operatorsQuery.error,
+      detectOperator,
+      getFxRate,
+      processTopup: topupMutation,
+    };
 }
