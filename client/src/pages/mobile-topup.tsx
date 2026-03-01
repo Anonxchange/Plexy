@@ -48,7 +48,9 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { countries, isLoadingCountries, getOperators, processTopup } = useAirtime();
-  const { data: operators, isLoading: isLoadingOperators } = getOperators(selectedCountry);
+  const operatorQuery = getOperators(selectedCountry);
+  const operators = operatorQuery.data;
+  const isLoadingOperators = operatorQuery.isLoading;
 
   const filteredCountries = useMemo(() => {
     return countries.filter(c => 
