@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -142,10 +142,14 @@ export function useAirtime(countryCode?: string, phone?: string) {
   const countries = useAirtimeCountries();
   const operators = useAirtimeOperators(countryCode);
   const autoDetect = useAutoDetectOperator(phone, countryCode);
+  const processTopup = useMutation({
+    mutationFn: sendTopup,
+  });
 
   return {
     countries,
     operators,
     autoDetect,
+    processTopup,
   };
 }
