@@ -44,7 +44,7 @@ const Index = () => {
   const [selectedCountry, setSelectedCountry] = useState<string>("NG");
   const [selectedOperator, setSelectedOperator] = useState<any>(null);
   const [amount, setAmount] = useState<string>("");
-  const [view, setView] = useState<"countries" | "operators" | "topup">("operators");
+  const [view, setView] = useState<"countries" | "operators" | "topup">("countries");
   const [searchQuery, setSearchQuery] = useState("");
 
   const { countries, isLoadingCountries, getOperators, processTopup } = useAirtime();
@@ -91,6 +91,7 @@ const Index = () => {
     setSelectedOperator(operator);
     setSearchQuery("");
     setView("topup");
+    setAmount(""); // Reset amount when operator changes
   };
 
   const handleTopup = async () => {
@@ -167,7 +168,7 @@ const Index = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     placeholder="Search countries..." 
-                    className="pl-10"
+                    className="pl-10 h-12 rounded-2xl bg-card border-border"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -178,14 +179,14 @@ const Index = () => {
                   <button
                     key={c.countryCode}
                     onClick={() => handleCountrySelect(c.countryCode)}
-                    className={`p-4 rounded-xl border text-left transition-all ${
+                    className={`p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
                       selectedCountry === c.countryCode 
-                        ? "border-primary bg-primary/5 ring-1 ring-primary" 
-                        : "border-border bg-card hover:border-primary/50"
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
+                        : "border-border bg-card hover:border-primary/50 shadow-sm"
                     }`}
                   >
-                    <span className="font-bold block text-lg">{c.countryCode}</span>
-                    <span className="text-sm text-muted-foreground truncate block">{c.name}</span>
+                    <span className="font-bold block text-xl mb-1">{c.countryCode}</span>
+                    <span className="text-sm text-muted-foreground truncate block font-medium">{c.name}</span>
                   </button>
                 ))}
               </div>
@@ -195,26 +196,22 @@ const Index = () => {
           {view === "operators" && (
             <div className="animate-fade-in">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <h2 className="text-xl md:text-2xl font-bold text-foreground">
-                  {isLoadingCountries ? <Skeleton className="h-8 w-64" /> : `Popular Phone Refill products in ${currentCountry?.name || 'Nigeria'}`}
-                </h2>
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                  <div className="relative flex-1 md:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search operators..." 
-                      className="pl-10 h-10 rounded-full"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    variant="secondary"
-                    onClick={() => { setView("countries"); setSearchQuery(""); }}
-                    className="rounded-full px-6"
-                  >
-                    Change Country
+                <div className="flex items-center gap-4">
+                  <Button variant="ghost" onClick={() => setView("countries")} className="p-2 h-auto rounded-full hover:bg-muted">
+                    <ArrowRight className="w-5 h-5 rotate-180" />
                   </Button>
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground">
+                    {isLoadingCountries ? <Skeleton className="h-8 w-64" /> : `Operators in ${currentCountry?.name || 'Nigeria'}`}
+                  </h2>
+                </div>
+                <div className="relative w-full md:w-72">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search operators..." 
+                    className="pl-10 h-12 rounded-2xl bg-card border-border"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
               </div>
 
@@ -222,9 +219,9 @@ const Index = () => {
                 {isLoadingOperators ? (
                   Array(8).fill(0).map((_, i) => (
                     <div key={i} className="space-y-3">
-                      <Skeleton className="aspect-[4/3] w-full rounded-xl" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
+                      <Skeleton className="h-4 w-3/4 rounded" />
+                      <Skeleton className="h-3 w-1/2 rounded" />
                     </div>
                   ))
                 ) : (
