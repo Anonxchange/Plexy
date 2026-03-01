@@ -177,6 +177,14 @@ export function AppHeader() {
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
+  const isSecurityStrong = useMemo(() => {
+    if (!user) return false;
+    const has2FA = user.user_metadata?.two_factor_enabled;
+    const hasPhone = !!user.phone;
+    const hasEmailVerified = !!user.email_confirmed_at;
+    return has2FA && hasPhone && hasEmailVerified;
+  }, [user]);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-[#f2f2f2]/60 dark:bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-[#f2f2f2]/60 dark:supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
@@ -502,11 +510,52 @@ export function AppHeader() {
                       <LayoutDashboard className="h-4 w-4 mr-3" />
                       Dashboard
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer py-2.5">
+                      <User className="h-4 w-4 mr-3" />
+                      Profile
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/account-settings')} className="cursor-pointer py-2.5">
                       <Settings className="h-4 w-4 mr-3" />
                       Account Settings
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/submit-idea')} className="cursor-pointer py-2.5">
+                      <Lightbulb className="h-4 w-4 mr-3" />
+                      Submit Ideas
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    
+                    {/* Security Level Section */}
+                    <div className="px-4 py-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-[10px]">Security Level:</span>
+                        <span className={`text-[11px] font-bold ${!isSecurityStrong ? 'text-red-500' : 'text-green-500'}`}>
+                          {!isSecurityStrong ? 'Low' : 'High'}
+                        </span>
+                      </div>
+                      <div className={`relative overflow-hidden rounded-xl p-3 border ${!isSecurityStrong ? 'bg-red-500/5 border-red-200 dark:border-red-900/30' : 'bg-green-500/5 border-green-200 dark:border-green-900/30'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <p className="text-[11px] leading-tight text-foreground font-semibold">
+                              {!isSecurityStrong 
+                                ? "Your account security level is low. Please enable 2FA and verify your info." 
+                                : "Your account security level is high. Please maintain a high level of security."}
+                            </p>
+                          </div>
+                          <div className="relative flex-shrink-0 w-12 h-12">
+                            <img 
+                              src="/assets/security-shield.jpeg" 
+                              alt="Security Shield"
+                              className={`w-full h-full object-contain transition-all duration-500 ${!isSecurityStrong ? 'hue-rotate-[140deg] saturate-150 brightness-75' : 'hue-rotate-0'}`}
+                            />
+                            <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white font-bold ${!isSecurityStrong ? 'bg-red-500' : 'bg-green-500'}`}>
+                              {!isSecurityStrong ? '!' : '✓'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    
                     <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer py-2.5 text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-950/20">
                       <LogOut className="h-4 w-4 mr-3" />
                       Sign Out
