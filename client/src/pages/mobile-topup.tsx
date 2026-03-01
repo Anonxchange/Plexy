@@ -47,9 +47,7 @@ const Index = () => {
   const [view, setView] = useState<"countries" | "operators" | "topup">("countries");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { countries, isLoadingCountries, getOperators, processTopup } = useAirtime(selectedCountry);
-  const operators = getOperators.data;
-  const isLoadingOperators = getOperators.isLoading;
+  const { countries, isLoadingCountries, operators, isLoadingOperators, processTopup } = useAirtime(selectedCountry);
 
   const filteredCountries = useMemo(() => {
     return countries.filter(c => 
@@ -123,9 +121,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-primary text-primary-foreground pt-12 pb-20 px-4">
+      <section className="relative bg-[#d9f99d] text-primary-foreground pt-12 pb-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-8 animate-fade-in">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-8 animate-fade-in text-gray-900">
             Top up prepaid mobile phones with Bitcoin and other cryptocurrencies from anywhere in the world
           </h1>
         </div>
@@ -183,7 +181,7 @@ const Index = () => {
                     className={`p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
                       selectedCountry === c.countryCode 
                         ? "border-primary bg-white ring-2 ring-primary/20" 
-                        : "border-border bg-white hover:border-primary/50 shadow-sm"
+                        : "border-border bg-white hover:border-primary/50"
                     }`}
                   >
                     <span className="font-bold block text-xl mb-1">{c.countryCode}</span>
