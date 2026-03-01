@@ -41,7 +41,7 @@ const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-card", badge, onCl
 
 const Index = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState<string>("NG");
+  const [selectedCountry, setSelectedCountry] = useState<string>("AF");
   const [selectedOperator, setSelectedOperator] = useState<any>(null);
   const [amount, setAmount] = useState<string>("");
   const [view, setView] = useState<"countries" | "operators" | "topup">("countries");
@@ -183,8 +183,8 @@ const Index = () => {
                     onClick={() => handleCountrySelect(c.countryCode)}
                     className={`p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
                       selectedCountry === c.countryCode 
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
-                        : "border-border bg-card hover:border-primary/50 shadow-sm"
+                        ? "border-primary bg-white ring-2 ring-primary/20" 
+                        : "border-border bg-white hover:border-primary/50 shadow-sm"
                     }`}
                   >
                     <span className="font-bold block text-xl mb-1">{c.countryCode}</span>
@@ -203,7 +203,7 @@ const Index = () => {
                     <ArrowRight className="w-5 h-5 rotate-180" />
                   </Button>
                   <h2 className="text-xl md:text-2xl font-bold text-foreground">
-                    {isLoadingCountries ? <Skeleton className="h-8 w-64" /> : `Operators in ${currentCountry?.name || 'Nigeria'}`}
+                    {isLoadingCountries ? <Skeleton className="h-8 w-64" /> : `Operators in ${currentCountry?.name || 'Afghanistan'}`}
                   </h2>
                 </div>
                 <div className="relative w-full md:w-72">
