@@ -15,7 +15,7 @@ const steps = [
   {
     iconSrc: "/icons/step3.svg",
     title: "Use Your Crypto",
-    description: "Send, receive, swap, stake, or trade ,all powered by decentralized protocols.
+    description: "Send, receive, swap, stake, or trade, all powered by decentralized protocols.
 ",
   },
 ];
