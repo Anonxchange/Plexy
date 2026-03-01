@@ -27,7 +27,7 @@ export function PageNavigation() {
     <div className="bg-card border-b lg:hidden">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3">
         <div className="grid grid-cols-5 gap-1 sm:gap-2">
-          {["HOME", "P2P", "SHOP", "SWAP", "WALLET"].map((tab) => (
+          {["HOME", "BUY", "SHOP", "SWAP", "WALLET"].map((tab) => (
             <Button
               key={tab}
               variant={activeTab === tab.toLowerCase() ? "default" : "outline"}
