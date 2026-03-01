@@ -47,12 +47,16 @@ const Index = () => {
   const [view, setView] = useState<"countries" | "operators" | "topup">("countries");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { countries, isLoadingCountries, operators, isLoadingOperators, processTopup } = useAirtime(selectedCountry);
+  const { countries: countriesQuery, operators: operatorsQuery, processTopup } = useAirtime(selectedCountry);
+  const countries = countriesQuery.data || [];
+  const isLoadingCountries = countriesQuery.isLoading;
+  const operators = operatorsQuery.data || [];
+  const isLoadingOperators = operatorsQuery.isLoading;
 
   const filteredCountries = useMemo(() => {
     return countries.filter(c => 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      c.countryCode.toLowerCase().includes(searchQuery.toLowerCase())
+      (c as any).isoName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [countries, searchQuery]);
 
@@ -63,7 +67,7 @@ const Index = () => {
   }, [operators, searchQuery]);
 
   const currentCountry = useMemo(() => 
-    countries.find(c => c.countryCode === selectedCountry), 
+    countries.find(c => (c as any).isoName === selectedCountry), 
     [countries, selectedCountry]
   );
 
@@ -122,9 +126,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-[#f8fafc] text-slate-900 pt-12 pb-20 px-4">
+      <section className="relative bg-primary text-primary-foreground pt-12 pb-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-8 animate-fade-in text-slate-900">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-8 animate-fade-in text-primary-foreground">
             Top up prepaid mobile phones with Bitcoin and other cryptocurrencies from anywhere in the world
           </h1>
         </div>
@@ -180,15 +184,15 @@ const Index = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {filteredCountries.map((c) => (
                   <button
-                    key={c.countryCode}
-                    onClick={() => handleCountrySelect(c.countryCode)}
+                    key={(c as any).isoName}
+                    onClick={() => handleCountrySelect((c as any).isoName)}
                     className={`p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                      selectedCountry === c.countryCode 
+                      selectedCountry === (c as any).isoName 
                         ? "border-primary bg-white ring-2 ring-primary/20" 
                         : "border-border bg-white hover:border-primary/50"
                     }`}
                   >
-                    <span className="font-bold block text-xl mb-1">{c.countryCode}</span>
+                    <span className="font-bold block text-xl mb-1">{(c as any).isoName}</span>
                     <span className="text-sm text-muted-foreground truncate block font-medium">{c.name}</span>
                   </button>
                 ))}
