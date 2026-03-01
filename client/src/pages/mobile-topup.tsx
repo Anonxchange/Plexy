@@ -193,7 +193,15 @@ const Index = () => {
                     }`}
                   >
                     <span className="font-bold block text-xl mb-1">{(c as any).isoName}</span>
-                    <span className="text-sm text-muted-foreground truncate block font-medium">{c.name}</span>
+                    <div className="flex items-center gap-2">
+                      <img 
+                        src={`https://flagcdn.com/w40/${(c as any).isoName.toLowerCase()}.png`} 
+                        alt="" 
+                        className="w-5 h-3.5 object-cover rounded-sm shadow-sm"
+                        loading="lazy"
+                      />
+                      <span className="text-sm text-muted-foreground truncate block font-medium">{c.name}</span>
+                    </div>
                   </button>
                 ))}
               </div>
