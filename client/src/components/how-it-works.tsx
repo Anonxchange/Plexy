@@ -5,17 +5,18 @@ const steps = [
   {
     iconSrc: "/icons/step1.svg",
     title: "Create Your Account",
-    description: "Sign up in seconds and get instant access to the global crypto marketplace.",
+    description: "Sign up in seconds and get instant access to your non-custodial wallet and DeFi services.",
   },
   {
     iconSrc: "/icons/step2.svg",
-    title: "Choose Payment Method",
-    description: "Select from 500+ payment options including bank transfers, cards, and e-wallets.",
+    title: "Acquire Crypto",
+    description: "Buy or sell crypto through trusted third-party providers — fast, secure, and non-custodial.",
   },
   {
     iconSrc: "/icons/step3.svg",
-    title: "Trade with Smart Contract Protection",
-    description: "Your transaction is secured by automated smart contracts until both parties complete the trade.",
+    title: "Use Your Crypto",
+    description: "Send, receive, swap, stake, or trade ,all powered by decentralized protocols.
+",
   },
 ];
 
