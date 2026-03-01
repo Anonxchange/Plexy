@@ -45,10 +45,19 @@ export interface ShopifyProduct {
   };
 }
 
-export async function storefrontApiRequest(query: string, variables: Record<string, unknown> = {}) {
+// Query name constants matching server-side allowlist
+export const PRODUCTS_QUERY = 'getProducts';
+export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
+export const CART_QUERY = 'cartQuery';
+export const CART_CREATE_MUTATION = 'cartCreate';
+export const CART_LINES_ADD_MUTATION = 'cartLinesAdd';
+export const CART_LINES_UPDATE_MUTATION = 'cartLinesUpdate';
+export const CART_LINES_REMOVE_MUTATION = 'cartLinesRemove';
+
+export async function storefrontApiRequest(queryName: string, variables: Record<string, unknown> = {}) {
   try {
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
-      body: { query, variables }
+      body: { queryName, variables }
     });
 
     if (error) {
@@ -58,168 +67,27 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
         });
         return;
       }
+      // Handle generic error message from server
+      const errorMessage = error.message || "Failed to process request";
       console.error('Supabase function error:', error);
-      throw error;
+      throw new Error(errorMessage);
     }
 
     if (data?.errors) {
       throw new Error(`Error calling Shopify: ${data.errors.map((e: { message: string }) => e.message).join(', ')}`);
     }
+    
+    // Check if the response itself contains an error field (from our Deno.serve catch block)
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
     return data;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Shopify request failed:', err);
     throw err;
   }
 }
-
-export const PRODUCTS_QUERY = `
-  query GetProducts($first: Int!, $after: String, $query: String) {
-    products(first: $first, after: $after, query: $query) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      edges {
-        node {
-          id
-          title
-          description
-          handle
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 5) {
-            edges {
-              node {
-                url
-                altText
-              }
-            }
-          }
-          variants(first: 10) {
-            edges {
-              node {
-                id
-                title
-                price {
-                  amount
-                  currencyCode
-                }
-                availableForSale
-                selectedOptions {
-                  name
-                  value
-                }
-              }
-            }
-          }
-          options {
-            name
-            values
-          }
-        }
-      }
-    }
-  }
-`;
-
-export const PRODUCT_BY_HANDLE_QUERY = `
-  query GetProductByHandle($handle: String!) {
-    productByHandle(handle: $handle) {
-      id
-      title
-      description
-      handle
-      priceRange {
-        minVariantPrice {
-          amount
-          currencyCode
-        }
-      }
-      images(first: 10) {
-        edges {
-          node {
-            url
-            altText
-          }
-        }
-      }
-      variants(first: 50) {
-        edges {
-          node {
-            id
-            title
-            price {
-              amount
-              currencyCode
-            }
-            availableForSale
-            selectedOptions {
-              name
-              value
-            }
-          }
-        }
-      }
-      options {
-        name
-        values
-      }
-    }
-  }
-`;
-
-export const CART_QUERY = `
-  query cart($id: ID!) {
-    cart(id: $id) { id totalQuantity }
-  }
-`;
-
-export const CART_CREATE_MUTATION = `
-  mutation cartCreate($input: CartInput!) {
-    cartCreate(input: $input) {
-      cart {
-        id
-        checkoutUrl
-        lines(first: 100) { edges { node { id merchandise { ... on ProductVariant { id } } } } }
-      }
-      userErrors { field message }
-    }
-  }
-`;
-
-export const CART_LINES_ADD_MUTATION = `
-  mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
-    cartLinesAdd(cartId: $cartId, lines: $lines) {
-      cart {
-        id
-        lines(first: 100) { edges { node { id merchandise { ... on ProductVariant { id } } } } }
-      }
-      userErrors { field message }
-    }
-  }
-`;
-
-export const CART_LINES_UPDATE_MUTATION = `
-  mutation cartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
-    cartLinesUpdate(cartId: $cartId, lines: $lines) {
-      cart { id }
-      userErrors { field message }
-    }
-  }
-`;
-
-export const CART_LINES_REMOVE_MUTATION = `
-  mutation cartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
-    cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
-      cart { id }
-      userErrors { field message }
-    }
-  }
-`;
 
 function formatCheckoutUrl(checkoutUrl: string): string {
   try {
