@@ -1,9 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+/* ============================= */
+/* 🔹 Base Fetch Function */
+/* ============================= */
+
 async function fetchAirtime(params: Record<string, string>) {
   const url = new URL(`${SUPABASE_URL}/functions/v1/reloadly-airtime`);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
 
   const res = await fetch(url.toString(), {
     headers: {
@@ -11,9 +21,18 @@ async function fetchAirtime(params: Record<string, string>) {
       "Content-Type": "application/json",
     },
   });
-  if (!res.ok) throw new Error("Failed to fetch airtime data");
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || "Failed to fetch airtime data");
+  }
+
   return res.json();
 }
+
+/* ============================= */
+/* 🔹 Types */
+/* ============================= */
 
 export interface AirtimeCountry {
   isoName: string;
@@ -26,68 +45,79 @@ export interface AirtimeCountry {
 }
 
 export interface AirtimeOperator {
-  id: number;
   operatorId: number;
   name: string;
   bundle: boolean;
   data: boolean;
   pin: boolean;
   supportsLocalAmounts: boolean;
-  supportsGeographicalRechargePlans: boolean;
   denominationType: string;
   senderCurrencyCode: string;
   senderCurrencySymbol: string;
   destinationCurrencyCode: string;
   destinationCurrencySymbol: string;
   commission: number;
-  internationalDiscount: number;
-  localDiscount: number;
-  mostPopularAmount: number | null;
-  mostPopularLocalAmount: number | null;
   minAmount: number | null;
   maxAmount: number | null;
   localMinAmount: number | null;
   localMaxAmount: number | null;
-  country: { isoName: string; name: string; flagUrl: string };
-  fx: { rate: number; currencyCode: string };
+  country: {
+    isoName: string;
+    name: string;
+    flagUrl: string;
+  };
   logoUrls: string[];
   fixedAmounts: number[];
-  fixedAmountsDescriptions: Record<string, string>;
   localFixedAmounts: number[];
-  localFixedAmountsDescriptions: Record<string, string>;
-  suggestedAmounts: number[];
-  suggestedAmountsMap: Record<string, string>;
-  geographicalRechargePlans: unknown[];
 }
+
+/* ============================= */
+/* 🔹 Hooks */
+/* ============================= */
 
 export function useAirtimeCountries() {
   return useQuery<AirtimeCountry[]>({
     queryKey: ["airtime-countries"],
     queryFn: () => fetchAirtime({ action: "countries" }),
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 60,
   });
 }
 
-export function useAirtimeOperators(countryCode: string | undefined) {
+export function useAirtimeOperators(countryCode?: string) {
   return useQuery<AirtimeOperator[]>({
     queryKey: ["airtime-operators", countryCode],
     enabled: !!countryCode,
-    queryFn: () => fetchAirtime({ action: "operators", countryCode: countryCode! }),
+    queryFn: () =>
+      fetchAirtime({
+        action: "operators",
+        countryCode: countryCode!,
+      }),
   });
 }
 
-export function useAutoDetectOperator(phone: string, countryCode: string) {
+export function useAutoDetectOperator(
+  phone?: string,
+  countryCode?: string
+) {
   return useQuery<AirtimeOperator>({
     queryKey: ["airtime-auto-detect", phone, countryCode],
-    enabled: phone.length >= 6 && !!countryCode,
-    queryFn: () => fetchAirtime({ action: "operators", phone, countryCode }),
+    enabled: !!phone && phone.length >= 6 && !!countryCode,
+    queryFn: () =>
+      fetchAirtime({
+        action: "auto-detect", // ✅ FIXED
+        phone: phone!,
+        countryCode: countryCode!,
+      }),
     retry: false,
   });
 }
 
+/* ============================= */
+/* 🔹 Send Topup */
+/* ============================= */
+
 export async function sendTopup(params: {
   operatorId: number;
-  operatorName?: string;
   amount: number;
   useLocalAmount?: boolean;
   recipientPhone: string;
@@ -98,6 +128,24 @@ export async function sendTopup(params: {
   const { data, error } = await supabase.functions.invoke("reloadly-topup", {
     body: params,
   });
+
   if (error) throw error;
+
   return data;
+}
+
+/* ============================= */
+/* 🔹 Optional Combined Hook */
+/* ============================= */
+
+export function useAirtime(countryCode?: string, phone?: string) {
+  const countries = useAirtimeCountries();
+  const operators = useAirtimeOperators(countryCode);
+  const autoDetect = useAutoDetectOperator(phone, countryCode);
+
+  return {
+    countries,
+    operators,
+    autoDetect,
+  };
 }
