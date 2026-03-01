@@ -4,14 +4,6 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAirtime } from "@/hooks/user-airtime";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -52,19 +44,53 @@ const Index = () => {
   const [selectedCountry, setSelectedCountry] = useState<string>("NG");
   const [selectedOperator, setSelectedOperator] = useState<any>(null);
   const [amount, setAmount] = useState<string>("");
-  const [isTopupDialogOpen, setIsTopupDialogOpen] = useState(false);
+  const [view, setView] = useState<"countries" | "operators" | "topup">("operators");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { countries, isLoadingCountries, getOperators, processTopup } = useAirtime();
   const { data: operators, isLoading: isLoadingOperators } = getOperators(selectedCountry);
+
+  const filteredCountries = useMemo(() => {
+    return countries.filter(c => 
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      c.countryCode.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [countries, searchQuery]);
+
+  const filteredOperators = useMemo(() => {
+    return operators?.filter((op: any) => 
+      op.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [operators, searchQuery]);
 
   const currentCountry = useMemo(() => 
     countries.find(c => c.countryCode === selectedCountry), 
     [countries, selectedCountry]
   );
 
+  const suggestedAmounts = useMemo(() => {
+    if (!selectedOperator) return [];
+    const min = selectedOperator.minAmount || 2;
+    const max = selectedOperator.maxAmount || 120;
+    const step = 5;
+    const amounts = [];
+    for (let i = Math.ceil(min / 5) * 5; i <= Math.min(max, 120); i += step) {
+      if (i >= min) amounts.push(i);
+      if (amounts.length >= 24) break;
+    }
+    return [2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120].filter(a => a >= min && a <= max);
+  }, [selectedOperator]);
+
+  const handleCountrySelect = (countryCode: string) => {
+    setSelectedCountry(countryCode);
+    setSearchQuery("");
+    setView("operators");
+  };
+
   const handleProviderClick = (operator: any) => {
     setSelectedOperator(operator);
-    setIsTopupDialogOpen(true);
+    setSearchQuery("");
+    setView("topup");
   };
 
   const handleTopup = async () => {
@@ -84,7 +110,7 @@ const Index = () => {
 
       if (result.success) {
         toast.success("Top-up processed successfully!");
-        setIsTopupDialogOpen(false);
+        setView("operators");
         setAmount("");
       }
     } catch (error: any) {
@@ -107,18 +133,13 @@ const Index = () => {
           <div className="max-w-sm md:max-w-lg mx-auto">
             <div className="flex items-center bg-card rounded-lg shadow-lg overflow-hidden animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <div className="relative">
-                <select 
-                  className="appearance-none bg-white px-3 py-3 md:px-6 md:py-4 border-r border-gray-200 text-gray-900 font-medium cursor-pointer outline-none min-w-[80px]"
-                  value={selectedCountry}
-                  onChange={(e) => setSelectedCountry(e.target.value)}
+                <button 
+                  className="appearance-none bg-white px-3 py-3 md:px-6 md:py-4 border-r border-gray-200 text-gray-900 font-medium cursor-pointer outline-none min-w-[80px] flex items-center gap-2"
+                  onClick={() => setView("countries")}
                 >
-                  {countries.map(c => (
-                    <option key={c.countryCode} value={c.countryCode}>
-                      {c.countryCode}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" />
+                  {selectedCountry}
+                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                </button>
               </div>
               <input
                 type="tel"
@@ -135,82 +156,197 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Provider Grid */}
+      {/* Main Content Area */}
       <section className="pt-14 pb-8 px-4 md:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">
-              {isLoadingCountries ? <Skeleton className="h-8 w-64" /> : `Popular Phone Refill products in ${currentCountry?.name || 'Nigeria'}`}
-            </h2>
-            <button className="flex items-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-full transition-colors text-sm font-medium w-fit">
-              <Search className="w-4 h-4" />
-              <span>Search</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 md:gap-6">
-            {isLoadingOperators ? (
-              Array(8).fill(0).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-[4/3] w-full rounded-xl" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              ))
-            ) : (
-              operators?.map((operator: any, index: number) => (
-                <div key={operator.operatorId} className="animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
-                  <ProviderCard 
-                    name={operator.name}
-                    logo={operator.logoUrls?.[0]}
-                    priceRange={`${operator.minAmount || '50'} - ${operator.maxAmount || '50000'} ${operator.senderCurrencyCode}`}
-                    onClick={() => handleProviderClick(operator)}
+          {view === "countries" && (
+            <div className="animate-fade-in">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">Select Country</h2>
+                <div className="relative w-full md:w-72">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search countries..." 
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {filteredCountries.map((c) => (
+                  <button
+                    key={c.countryCode}
+                    onClick={() => handleCountrySelect(c.countryCode)}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      selectedCountry === c.countryCode 
+                        ? "border-primary bg-primary/5 ring-1 ring-primary" 
+                        : "border-border bg-card hover:border-primary/50"
+                    }`}
+                  >
+                    <span className="font-bold block text-lg">{c.countryCode}</span>
+                    <span className="text-sm text-muted-foreground truncate block">{c.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {view === "operators" && (
+            <div className="animate-fade-in">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">
+                  {isLoadingCountries ? <Skeleton className="h-8 w-64" /> : `Popular Phone Refill products in ${currentCountry?.name || 'Nigeria'}`}
+                </h2>
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  <div className="relative flex-1 md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search operators..." 
+                      className="pl-10 h-10 rounded-full"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    variant="secondary"
+                    onClick={() => { setView("countries"); setSearchQuery(""); }}
+                    className="rounded-full px-6"
+                  >
+                    Change Country
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 md:gap-6">
+                {isLoadingOperators ? (
+                  Array(8).fill(0).map((_, i) => (
+                    <div key={i} className="space-y-3">
+                      <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  ))
+                ) : (
+                  filteredOperators?.map((operator: any, index: number) => (
+                    <div key={operator.operatorId} className="animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
+                      <ProviderCard 
+                        name={operator.name}
+                        logo={operator.logoUrls?.[0]}
+                        priceRange={`${operator.minAmount || '50'} - ${operator.maxAmount || '50000'} ${operator.senderCurrencyCode}`}
+                        onClick={() => handleProviderClick(operator)}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {view === "topup" && selectedOperator && (
+            <div className="animate-fade-in max-w-2xl mx-auto space-y-4">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" onClick={() => setView("operators")} className="gap-2 text-muted-foreground hover:text-foreground">
+                  <ArrowRight className="w-4 h-4 rotate-180" />
+                  Back
+                </Button>
+              </div>
+
+              {/* Operator Header Card */}
+              <div className="bg-card border border-border rounded-3xl p-8 shadow-sm">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center p-3 border border-border shadow-sm">
+                    {selectedOperator.logoUrls?.[0] ? (
+                      <img src={selectedOperator.logoUrls[0]} alt={selectedOperator.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <Smartphone className="w-10 h-10 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-foreground leading-tight">{selectedOperator.name}</h2>
+                    <p className="text-muted-foreground text-lg">{currentCountry?.name} • {selectedOperator.senderCurrencyCode}</p>
+                    <div className="mt-3">
+                      <span className="bg-[#ff4d4d] text-white text-sm font-bold px-4 py-1.5 rounded-full">
+                        4.0% discount
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recipient Phone Card */}
+              <div className="bg-card border border-border rounded-3xl p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <Smartphone className="w-6 h-6 text-foreground" />
+                  <h3 className="text-xl font-bold text-foreground">Recipient Phone</h3>
+                </div>
+                <div className="space-y-3">
+                  <Input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="text-xl py-7 px-6 bg-background border-border focus-visible:ring-primary rounded-2xl"
+                  />
+                  <p className="text-sm text-muted-foreground px-1">
+                    Enter number without country code prefix
+                  </p>
+                </div>
+              </div>
+
+              {/* Select Amount Card */}
+              <div className="bg-card border border-border rounded-3xl p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <Bot className="w-6 h-6 text-foreground" />
+                  <h3 className="text-xl font-bold text-foreground">Select Amount ({selectedOperator.senderCurrencyCode})</h3>
+                </div>
+                <div className="space-y-8">
+                  <div className="space-y-3">
+                    <p className="text-base text-muted-foreground px-1">
+                      Range: {selectedOperator.senderCurrencyCode} {selectedOperator.minAmount} - {selectedOperator.maxAmount}
+                    </p>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="Enter amount"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      min={selectedOperator.minAmount}
+                      max={selectedOperator.maxAmount}
+                      className="text-xl py-7 px-6 bg-background border-border focus-visible:ring-primary rounded-2xl"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                    {suggestedAmounts.map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setAmount(amt.toString())}
+                        className={`py-4 px-2 rounded-2xl border text-base font-bold transition-all shadow-sm ${
+                          amount === amt.toString()
+                            ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/20"
+                            : "border-border bg-card hover:border-primary/50 text-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        ${amt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <Button 
+                    className="w-full py-8 text-xl font-bold bg-[#555a64] hover:bg-[#444952] text-white flex items-center justify-center gap-3 rounded-2xl shadow-lg mt-4 transition-transform active:scale-[0.98]" 
+                    onClick={handleTopup}
+                    disabled={processTopup.isPending}
+                  >
+                    <Check className="w-6 h-6" />
+                    {processTopup.isPending ? "Processing..." : "Send Top-up"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
-
-      {/* Topup Dialog */}
-      <Dialog open={isTopupDialogOpen} onOpenChange={setIsTopupDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Top up {selectedOperator?.name}</DialogTitle>
-            <DialogDescription>
-              Enter the amount you want to send to {phoneNumber || 'the recipient'}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="amount" className="text-sm font-medium">Amount ({selectedOperator?.senderCurrencyCode})</label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="Enter amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min={selectedOperator?.minAmount}
-                max={selectedOperator?.maxAmount}
-              />
-              <p className="text-xs text-muted-foreground">
-                Min: {selectedOperator?.minAmount} {selectedOperator?.senderCurrencyCode} / 
-                Max: {selectedOperator?.maxAmount} {selectedOperator?.senderCurrencyCode}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              className="w-full bg-cta hover:bg-cta/90 text-cta-foreground" 
-              onClick={handleTopup}
-              disabled={processTopup.isPending}
-            >
-              {processTopup.isPending ? "Processing..." : "Confirm Top-up"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* How It Works */}
       <section className="py-12 px-4 md:px-6 lg:px-8 bg-secondary/50">
