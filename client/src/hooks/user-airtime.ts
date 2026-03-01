@@ -134,5 +134,6 @@ export function useAirtime(countryCode?: string) {
       detectOperator,
       getFxRate,
       processTopup: topupMutation,
+      getOperators: operatorsQuery
     };
 }
