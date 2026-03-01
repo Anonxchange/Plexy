@@ -8,7 +8,7 @@ export function PageNavigation() {
 
   const getActiveTab = () => {
     if (location === "/") return "home";
-    if (location === "/p2p") return "p2p";
+    if (location === "/wallet/buy") return "buy";
     if (location === "/shop") return "shop";
     if (location === "/swap") return "swap";
     if (location === "/wallet") return "wallet";
