@@ -20,7 +20,7 @@ export const TrustStats = () => {
             Zero personal tracking
           </h2>
           <p className="text-primary-foreground/90 text-xl md:text-2xl max-w-3xl mx-auto">
-            Pexly lets you trade directly with other users while keeping full control of your funds we never hold your money. Trades happen wallet-to-wallet, so your assets stay private.    </p>
+            Pexly gives you full control of your crypto. Non-custodial by design — we never hold your funds. Every transaction is executed on-chain, keeping your assets secure and private.  </p>
         </div>
 
         {/* HERO CARD */}
