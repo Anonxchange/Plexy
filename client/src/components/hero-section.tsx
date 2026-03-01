@@ -400,8 +400,7 @@ export function HeroSection() {
 
             {/* Subheadline */}
             <p className="text-xl xl:text-2xl text-muted-foreground max-w-xl">
-              Connect with traders worldwide. 500+ payment methods. Zero hassle.
-            </p>
+              Unlock the power of decentralized finance. Earn, shop, and manage crypto seamlessly simple, secure, and for everyone.  </p>
 
             {/* Stats - Fixed dimensions for stability */}
             <div className="flex gap-12 pt-4 h-[90px]" style={{ contain: 'layout size' }}>
