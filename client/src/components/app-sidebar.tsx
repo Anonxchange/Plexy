@@ -97,17 +97,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/p2p" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/p2p" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    data-testid="nav-p2p"
-                  >
-                    P2P Trading
-                    <Badge variant="secondary" className="ml-auto text-xs">LOW FEES</Badge>
-                  </Button>
-                </Link>
                 <Link href="/spot" onClick={handleLinkClick}>
                   <Button
                     variant={location === "/spot" ? "secondary" : "ghost"}
@@ -128,26 +117,15 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     Swap
                   </Button>
                 </Link>
-                <Link href="/my-offers" onClick={handleLinkClick}>
+                <Link href="/wallet/buy-crypto" onClick={handleLinkClick}>
                   <Button
-                    variant={location === "/my-offers" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-2"
+                    variant={location === "/wallet/buy-crypto" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
                     size="sm"
-                    data-testid="nav-my-offers"
+                    data-testid="nav-wallet-buy-crypto-trade"
                   >
-                    <List className="h-4 w-4" />
-                    My Offers
-                  </Button>
-                </Link>
-                <Link href="/create-offer" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/create-offer" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-2"
-                    size="sm"
-                    data-testid="nav-create-offer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Create Offer</span>
+                    Buy Crypto
+                    <Badge variant="secondary" className="ml-auto text-xs">LOW FEES</Badge>
                   </Button>
                 </Link>
               </CollapsibleContent>
@@ -247,34 +225,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     </div>
                   </Button>
                 </Link>
-                <Link href="/wallet/buy-crypto" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/wallet/buy-crypto" ? "default" : "ghost"}
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    size="sm"
-                    data-testid="nav-wallet-buy-crypto"
-                  >
-                    <ShoppingBag className="h-5 w-5 flex-shrink-0" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Buy crypto</span>
-                      <span className="text-xs text-muted-foreground leading-tight">Pay using card, bank, or mobile money</span>
-                    </div>
-                  </Button>
-                </Link>
-                <Link href="/wallet/stake" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/wallet/stake" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    size="sm"
-                    data-testid="nav-wallet-stake"
-                  >
-                    <TrendingUp className="h-5 w-5 flex-shrink-0" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Stake</span>
-                      <span className="text-xs text-muted-foreground leading-tight">Earn rewards by staking your crypto</span>
-                    </div>
-                  </Button>
-                </Link>
                 <Link href="/wallet/lightning" onClick={handleLinkClick}>
                   <Button
                     variant={location === "/wallet/lightning" ? "secondary" : "ghost"}
@@ -315,6 +265,18 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
+                <Link href="/wallet/stake" onClick={handleLinkClick}>
+                  <Button 
+                    variant={location === "/wallet/stake" ? "secondary" : "ghost"} 
+                    className="w-full justify-start gap-2" 
+                    size="sm" 
+                    data-testid="nav-stake"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Stake
+                    <Badge variant="secondary" className="ml-auto text-xs bg-red-500 text-white hover:bg-red-600 border-none animate-pulse">HOT</Badge>
+                  </Button>
+                </Link>
                 <Link href="/referral" onClick={handleLinkClick}>
                   <Button 
                     variant={location === "/referral" ? "secondary" : "ghost"} 
@@ -324,11 +286,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   >
                     <Users className="h-4 w-4" />
                     Referral Program
-                  </Button>
-                </Link>
-                <Link href="/affiliate" onClick={handleLinkClick}>
-                  <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-affiliate">
-                    Affiliate Program
                   </Button>
                 </Link>
                 <Link href="/rewards" onClick={handleLinkClick}>
