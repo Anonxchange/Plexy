@@ -41,7 +41,7 @@ const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-card", badge, onCl
 
 const Index = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState<string>("AF");
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedOperator, setSelectedOperator] = useState<any>(null);
   const [amount, setAmount] = useState<string>("");
   const [view, setView] = useState<"countries" | "operators" | "topup">("countries");
@@ -87,6 +87,8 @@ const Index = () => {
     setSelectedCountry(countryCode);
     setSearchQuery("");
     setView("operators");
+    // Ensure operators are refetched for the new country
+    operatorQuery.refetch();
   };
 
   const handleProviderClick = (operator: any) => {
@@ -122,7 +124,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <section className="relative bg-primary text-primary-foreground pt-12 pb-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
@@ -203,7 +205,7 @@ const Index = () => {
                     <ArrowRight className="w-5 h-5 rotate-180" />
                   </Button>
                   <h2 className="text-xl md:text-2xl font-bold text-foreground">
-                    {isLoadingCountries ? <Skeleton className="h-8 w-64" /> : `Operators in ${currentCountry?.name || 'Afghanistan'}`}
+                    {isLoadingCountries ? <Skeleton className="h-8 w-64" /> : `Operators in ${currentCountry?.name || 'Selected Country'}`}
                   </h2>
                 </div>
                 <div className="relative w-full md:w-72">
