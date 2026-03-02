@@ -101,12 +101,17 @@ export const Dashboard = () => {
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
   const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
   
-  const { data: walletData, isLoading: walletLoading } = useWalletData();
+  const { data: walletData, isLoading: walletLoading, error: walletError } = useWalletData();
   
   const symbols = useMemo(() => ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"], []);
-  const { data: cryptoPricesMap, isLoading: pricesLoading } = useCryptoPrices(symbols);
+  const { data: cryptoPricesMap, isLoading: pricesLoading, error: pricesError } = useCryptoPrices(symbols);
   
-  const isLoading = walletLoading || pricesLoading || authLoading;
+  if (walletError || pricesError) {
+    console.error("Dashboard data fetch error:", { walletError, pricesError });
+    // Prevent blank page by allowing the UI to render with default/cached values
+  }
+
+  const isLoading = (walletLoading && !walletData) || (pricesLoading && !cryptoPricesMap) || authLoading;
   const cryptoPrices = cryptoPricesMap || {};
 
   const totalBalance = walletData?.totalBalance || 0;
