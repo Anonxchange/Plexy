@@ -58,7 +58,7 @@ export default function PredictionPage() {
               <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
                 <TrendingUp className="text-primary-foreground w-5 h-5" />
               </div>
-              <span className="font-bold text-xl tracking-tight hidden md:block">Pexly Markets</span>
+              <span className="font-bold text-xl tracking-tight hidden md:block">Prediction market</span>
             </div>
             
             <div className="flex-1 max-w-2xl relative">
@@ -73,8 +73,6 @@ export default function PredictionPage() {
 
             <div className="hidden lg:flex items-center gap-4 text-sm font-medium text-muted-foreground">
               <span className="hover:text-primary cursor-pointer transition-colors">How it works</span>
-              <Button size="sm" variant="ghost" className="rounded-full">Log In</Button>
-              <Button size="sm" className="rounded-full px-6 font-bold">Sign Up</Button>
             </div>
           </div>
 
