@@ -239,6 +239,9 @@ export function AppHeader() {
                 <DropdownMenuItem onClick={() => { navigate('/swap'); setActiveDropdown(null); }} className="cursor-pointer">
                   Swap
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/prediction'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Prediction
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/wallet/buy-crypto'); setActiveDropdown(null); }} className="cursor-pointer">
                   <div className="flex items-center justify-between w-full">
                     <span>Buy Crypto</span>
