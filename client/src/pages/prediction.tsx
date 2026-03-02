@@ -7,17 +7,29 @@ import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 export default function PredictionPage() {
-  const { data: markets, isLoading } = useMarkets({ limit: 40 });
+    const [limit, setLimit] = useState(36);
+    const [activeCategory, setActiveCategory] = useState("All");
+  const { data: markets, isLoading } = useMarkets({ limit });
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
 
-  const filteredMarkets = markets?.filter(m => 
-    m.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredMarkets = markets?.filter(m => {
+      const matchesSearch = m.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesCategory = activeCategory === "All" || m.tags?.includes(activeCategory);
+      return matchesSearch && matchesCategory;
+    });
 
   return (
+    <div className="min-h-screen bg-background">
+      {/* Header / Search Area */}
+      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto py-4 px-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold tracking-tight">Markets</h1>
             <div className="flex gap-2">
               <Badge variant="secondary" className="cursor-pointer hover:bg-primary/20">New</Badge>
               <Badge variant="outline" className="cursor-pointer hover:bg-primary/10">Crypto</Badge>
@@ -73,7 +85,7 @@ export default function PredictionPage() {
               };
 
               return (
-                <Card key={market.id} className="group overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+                <Card key={market.id} className="group overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between cursor-pointer" onClick={() => setLocation(`/prediction/${market.conditionId}`)}>
                   <CardContent className="p-4 flex flex-col h-full">
                     <div className="flex justify-between items-start gap-3 mb-3">
                       <div className="flex-1">
@@ -130,7 +142,19 @@ export default function PredictionPage() {
               );
             })}
           </div>
-        )}
+            {!isLoading && filteredMarkets && filteredMarkets.length >= limit && (
+              <div className="mt-12 flex justify-center">
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="font-bold uppercase tracking-widest px-12 rounded-xl border-primary/20 hover:bg-primary/5"
+                  onClick={() => setLimit(prev => prev + 36)}
+                >
+                  Show More
+                </Button>
+              </div>
+            )}
+          )}
         
         {!isLoading && filteredMarkets?.length === 0 && (
           <div className="text-center py-20 border rounded-xl bg-card/50">
