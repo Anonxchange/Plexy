@@ -18,12 +18,6 @@ export default function PredictionPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header / Search Area */}
-      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto py-4 px-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold tracking-tight">Markets</h1>
             <div className="flex gap-2">
               <Badge variant="secondary" className="cursor-pointer hover:bg-primary/20">New</Badge>
               <Badge variant="outline" className="cursor-pointer hover:bg-primary/10">Crypto</Badge>
