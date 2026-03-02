@@ -73,15 +73,27 @@ const Index = () => {
 
   const suggestedAmounts = useMemo(() => {
     if (!selectedOperator) return [];
+    
+    // If it's a data/bundle operator, show the fixed amounts with their descriptions
+    if ((selectedOperator.bundle || selectedOperator.data) && selectedOperator.fixedAmountsDescriptions) {
+      return Object.entries(selectedOperator.fixedAmountsDescriptions).map(([amount, description]) => ({
+        amount: Number(amount),
+        description: String(description)
+      }));
+    }
+
+    // Fallback for regular airtime or if descriptions are missing
     const min = selectedOperator.minAmount || 2;
     const max = selectedOperator.maxAmount || 120;
-    const step = 5;
-    const amounts = [];
-    for (let i = Math.ceil(min / 5) * 5; i <= Math.min(max, 120); i += step) {
-      if (i >= min) amounts.push(i);
-      if (amounts.length >= 24) break;
+    const fixed = selectedOperator.fixedAmounts || [];
+    
+    if (fixed.length > 0) {
+      return fixed.map((f: any) => ({ amount: Number(f), description: null }));
     }
-    return [2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120].filter(a => a >= min && a <= max);
+
+    return [2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120]
+      .filter(a => a >= min && a <= max)
+      .map(a => ({ amount: a, description: null }));
   }, [selectedOperator]);
 
   const handleCountrySelect = (countryCode: string) => {
@@ -334,18 +346,27 @@ const Index = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
-                    {suggestedAmounts.map((amt) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {suggestedAmounts.map((item: any) => (
                       <button
-                        key={amt}
-                        onClick={() => setAmount(amt.toString())}
-                        className={`py-4 px-2 rounded-2xl border text-base font-bold transition-all shadow-sm ${
-                          amount === amt.toString()
+                        key={item.amount}
+                        onClick={() => setAmount(item.amount.toString())}
+                        className={`py-4 px-2 rounded-2xl border transition-all shadow-sm flex flex-col items-center justify-center gap-1 ${
+                          amount === item.amount.toString()
                             ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/20"
                             : "border-border bg-card hover:border-primary/50 text-foreground hover:bg-muted/50"
                         }`}
                       >
-                        ${amt}
+                        <span className="text-lg font-bold">
+                          {selectedOperator.senderCurrencySymbol || "$"}{item.amount}
+                        </span>
+                        {item.description && (
+                          <span className={`text-[10px] line-clamp-2 px-1 font-medium ${
+                            amount === item.amount.toString() ? "text-primary-foreground/80" : "text-muted-foreground"
+                          }`}>
+                            {item.description}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
