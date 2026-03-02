@@ -33,8 +33,8 @@ export const homePageSchema = {
       "@type": "WebPage",
       "@id": "https://www.pexly.app/#webpage",
       "url": "https://www.pexly.app/",
-      "name": "Pexly - Non-Custodial P2P Crypto Software",
-      "description": "Pexly provides non-custodial software that connects crypto buyers and sellers peer-to-peer. Users maintain full control of their funds at all times.",
+      "name": "Pexly - Non-Custodial Decentralized Crypto Software",
+      "description": "Pexly provides non-custodial software that connects crypto buyers and sellers in a decentralized way, including gift cards and mobile top-ups. Users maintain full control of their funds at all times.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -49,8 +49,8 @@ export const homePageSchema = {
     },
     {
       "@type": "SoftwareApplication",
-      "name": "Pexly P2P Software Platform",
-      "description": "Non-custodial software platform that facilitates peer-to-peer cryptocurrency transactions. Pexly does not hold, control, or manage user funds. All trades occur directly between users.",
+      "name": "Pexly Decentralized Software",
+      "description": "Non-custodial software platform facilitating decentralized cryptocurrency transactions, gift cards, and mobile top-ups. Pexly does not hold, control, or manage user funds. All trades occur directly between users.",
       "provider": {
         "@id": "https://www.pexly.app/#organization"
       },
@@ -85,7 +85,7 @@ export const aboutPageSchema = {
       "@id": "https://www.pexly.app/about#webpage",
       "url": "https://www.pexly.app/about",
       "name": "About Pexly - Non-Custodial Software Provider",
-      "description": "Learn about Pexly, a non-custodial software provider offering tools for peer-to-peer cryptocurrency transactions. We never hold or control user assets.",
+      "description": "Learn about Pexly, a non-custodial software provider offering decentralized tools for cryptocurrency transactions. We never hold or control user assets.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -121,8 +121,8 @@ export const p2pPageSchema = {
       "@type": "WebPage",
       "@id": "https://www.pexly.app/p2p#webpage",
       "url": "https://www.pexly.app/p2p",
-      "name": "P2P Software - Connect Buyers & Sellers Directly | Pexly",
-      "description": "Non-custodial software connecting crypto buyers and sellers directly. Users trade peer-to-peer and retain full custody of their assets throughout.",
+      "name": "Decentralized Software - Connect Directly | Pexly",
+      "description": "Non-custodial software connecting crypto buyers and sellers directly. Users trade in a decentralized way and retain full custody of their assets throughout.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -132,7 +132,7 @@ export const p2pPageSchema = {
       "@type": "SoftwareApplication",
       "@id": "https://www.pexly.app/p2p#software",
       "name": "Pexly P2P Matching Software",
-      "description": "Non-custodial peer-to-peer matching software. Pexly provides the interface for users to discover and connect with each other. Pexly does not execute trades, hold funds, or act as a counterparty.",
+      "description": "Non-custodial peer-to-peer matching software offering decentralized tools for cryptocurrency transactions, gift cards, and mobile top-ups. Pexly provides the interface for users to discover and connect with each other. Pexly does not execute trades, hold funds, or act as a counterparty.",
       "provider": {
         "@id": "https://www.pexly.app/#organization"
       },
@@ -167,7 +167,7 @@ export const spotPageSchema = {
       "@id": "https://www.pexly.app/spot#webpage",
       "url": "https://www.pexly.app/spot",
       "name": "Spot Interface - Market Data & Charting Tools | Pexly",
-      "description": "Access real-time market data, charting tools, and order book visualization. Pexly is a non-custodial software provider and does not hold user funds.",
+      "description": "Access real-time market data, charting tools, and order book visualization. Pexly is a non-custodial software provider and does not hold, control, or manage user funds.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -212,7 +212,7 @@ export const swapPageSchema = {
       "@id": "https://www.pexly.app/swap#webpage",
       "url": "https://www.pexly.app/swap",
       "name": "Swap Interface - Non-Custodial Token Swap Software | Pexly",
-      "description": "Non-custodial swap interface powered by third-party decentralized protocols. Pexly provides the software interface only and never takes custody of user assets.",
+      "description": "Non-custodial swap interface powered by third-party decentralized protocols. Pexly provides the software interface only and never takes custody, control, or possession of user assets.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -257,7 +257,7 @@ export const marketsPageSchema = {
       "@id": "https://www.pexly.app/markets#webpage",
       "url": "https://www.pexly.app/markets",
       "name": "Market Data - Live Crypto Prices & Charts | Pexly",
-      "description": "View live cryptocurrency market data, prices, and charts. Pexly provides informational software tools only and is a non-custodial software provider.",
+      "description": "View live cryptocurrency market data, prices, and charts. Pexly provides informational software tools only and is a non-custodial software provider that never holds user funds.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -291,7 +291,7 @@ export const buyPageSchema = {
       "@id": "https://www.pexly.app/buy#webpage",
       "url": "https://www.pexly.app/buy",
       "name": "Buy Crypto - Connect with Sellers via Pexly Software",
-      "description": "Use Pexly's non-custodial software to connect with sellers. Pexly provides the matching interface only — all transactions occur directly between users without Pexly holding any funds.",
+      "description": "Use Pexly's non-custodial software to connect with sellers. Pexly provides the matching interface only — all transactions occur directly between users without Pexly holding, controlling, or managing any funds.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -405,7 +405,7 @@ export const supportPageSchema = {
       "@id": "https://www.pexly.app/support#webpage",
       "url": "https://www.pexly.app/support",
       "name": "Support - Get Help | Pexly",
-      "description": "Get help with using Pexly software. Our support team assists with platform usage — Pexly is a non-custodial software provider and does not manage user funds.",
+      "description": "Get help with using Pexly software. Our support team assists with platform usage — Pexly is a non-custodial software provider and does not manage, hold, or control user funds.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
