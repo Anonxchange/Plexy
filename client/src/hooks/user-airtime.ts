@@ -68,7 +68,9 @@ export interface AirtimeOperator {
   };
   logoUrls: string[];
   fixedAmounts: number[];
+  fixedAmountsDescriptions: Record<string, string>;
   localFixedAmounts: number[];
+  localFixedAmountsDescriptions: Record<string, string>;
 }
 
 /* ============================= */
