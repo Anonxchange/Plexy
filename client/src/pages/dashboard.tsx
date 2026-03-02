@@ -61,17 +61,37 @@ const QuickActionIcon = ({ type, color }: { type: string; color: string }) => {
 };
 
 const actions = [
-  { type: "p2p", label: "P2P Trading", color: "#4FACFE" },
-  { type: "quick_trade", label: "Quick Trade", color: "#7C3AED" },
-  { type: "rewards", label: "Rewards", color: "#F59E0B" },
-  { type: "more", label: "More", color: "#6B7280" },
+  { 
+    type: "p2p", 
+    label: "Buy Crypto", 
+    color: "#4FACFE",
+    onClick: () => navigate("/wallet/buy-crypto")
+  },
+  { 
+    type: "quick_trade", 
+    label: "Swap", 
+    color: "#7C3AED",
+    onClick: () => navigate("/swap")
+  },
+  { 
+    type: "rewards", 
+    label: "Rewards", 
+    color: "#F59E0B",
+    onClick: () => navigate("/rewards")
+  },
+  { 
+    type: "more", 
+    label: "More", 
+    color: "#6B7280",
+    onClick: () => setIsMoreModalOpen(true)
+  },
 ];
 
 const rewards = [
-  { chances: 1, type: "Lucky Draw" },
-  { chances: 2, type: "Lucky Draw" },
-  { chances: 2, type: "Lucky Draw" },
-  { chances: 1, type: "Lucky Draw" },
+  { chances: 1, type: "Lucky Draw", onClick: () => navigate("/rewards") },
+  { chances: 2, type: "Lucky Draw", onClick: () => navigate("/rewards") },
+  { chances: 2, type: "Lucky Draw", onClick: () => navigate("/rewards") },
+  { chances: 1, type: "Lucky Draw", onClick: () => navigate("/rewards") },
 ];
 
 export const Dashboard = () => {
@@ -132,7 +152,13 @@ export const Dashboard = () => {
                 {actions.map((action) => (
                   <button
                     key={action.label}
-                    onClick={() => action.label === "More" && setIsMoreModalOpen(true)}
+                    onClick={() => {
+                      if (action.label === "More") {
+                        setIsMoreModalOpen(true);
+                      } else if (action.onClick) {
+                        action.onClick();
+                      }
+                    }}
                     className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
                   >
                     <div 
@@ -219,6 +245,7 @@ export const Dashboard = () => {
                   <div
                     key={index}
                     className="flex items-center gap-4 p-4 bg-muted/50 rounded-2xl hover:bg-muted transition-colors cursor-pointer"
+                    onClick={() => reward.onClick?.()}
                   >
                     <div className="w-14 h-14 rounded-full bg-pink-100 border-2 border-pink-300 flex items-center justify-center">
                       <Star className="h-6 w-6 text-pink-400" />
