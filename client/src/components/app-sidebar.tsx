@@ -128,6 +128,16 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     <Badge variant="secondary" className="ml-auto text-xs">LOW FEES</Badge>
                   </Button>
                 </Link>
+                <Link href="/prediction" onClick={handleLinkClick}>
+                  <Button
+                    variant={location === "/prediction" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    size="sm"
+                    data-testid="nav-prediction"
+                  >
+                    Prediction
+                  </Button>
+                </Link>
               </CollapsibleContent>
             </Collapsible>
 
