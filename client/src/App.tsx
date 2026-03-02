@@ -106,12 +106,14 @@ function LazyRoute({ component: Component, skeleton = <PageSkeleton /> }: { comp
 }
 
 const Prediction = lazy(() => import("@/pages/prediction"));
+const PredictionDetail = lazy(() => import("@/pages/prediction-detail"));
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/prediction">{() => <LazyRoute component={Prediction} />}</Route>
+      <Route path="/prediction/:id">{() => <LazyRoute component={PredictionDetail} />}</Route>
       <Route path="/about">{() => <LazyRoute component={About} />}</Route>
       <Route path="/explorer">{() => <LazyRoute component={Explorer} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/prices">{() => <LazyRoute component={Prices} skeleton={<ChartPageSkeleton />} />}</Route>
