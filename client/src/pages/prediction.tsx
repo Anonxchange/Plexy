@@ -2,7 +2,7 @@ import { useMarkets, PolymarketMarket } from "@/hooks/use-polymarket";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, Clock, Search, ChevronRight, Share2, Bookmark } from "lucide-react";
+import { TrendingUp, Clock, Search, ChevronRight, Share2, Bookmark, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -133,8 +133,26 @@ export default function PredictionPage() {
 
 function MarketCard({ market }: { market: PolymarketMarket }) {
   const [, setLocation] = useLocation();
-  const outcomes = JSON.parse(market.outcomes || "[]");
-  const prices = JSON.parse(market.outcomePrices || "[]");
+  
+  const outcomes = useMemo(() => {
+    try {
+      const o = JSON.parse(market.outcomes || "[]");
+      return Array.isArray(o) ? o : [];
+    } catch (e) {
+      console.error("Error parsing outcomes in MarketCard:", e);
+      return [];
+    }
+  }, [market.outcomes]);
+
+  const prices = useMemo(() => {
+    try {
+      const p = JSON.parse(market.outcomePrices || "[]");
+      return Array.isArray(p) ? p : [];
+    } catch (e) {
+      console.error("Error parsing prices in MarketCard:", e);
+      return [];
+    }
+  }, [market.outcomePrices]);
   
   return (
     <Card 
@@ -189,15 +207,25 @@ function MarketCard({ market }: { market: PolymarketMarket }) {
 
 function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, allMarkets: PolymarketMarket[] }) {
   const [, setLocation] = useLocation();
-  const prices = JSON.parse(market.outcomePrices || "[]");
+  
+  const prices = useMemo(() => {
+    try {
+      const p = JSON.parse(market.outcomePrices || "[]");
+      return Array.isArray(p) ? p : [];
+    } catch (e) {
+      console.error("Error parsing prices in FeaturedMarketCard:", e);
+      return [];
+    }
+  }, [market.outcomePrices]);
+
   const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
 
   // Get breaking news from other markets
   const breakingNews = useMemo(() => {
-    if (!allMarkets) return [];
-    return allMarkets
-      .filter(m => m.id !== market.id)
-      .sort((a, b) => (b.volumeNum || 0) - (a.volumeNum || 0))
+    if (!allMarkets || !Array.isArray(allMarkets)) return [];
+    return [...allMarkets]
+      .filter(m => m && m.id !== market.id)
+      .sort((a, b) => (Number(b.volumeNum) || 0) - (Number(a.volumeNum) || 0))
       .slice(0, 3);
   }, [allMarkets, market.id]);
 
@@ -245,8 +273,6 @@ function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, 
           <div className="space-y-4">
             {breakingNews.length > 0 ? (
               breakingNews.map((newsMarket, i) => {
-                const newsPrices = JSON.parse(newsMarket.outcomePrices || "[]");
-                const newsPrice = newsPrices[0] ? Math.round(parseFloat(newsPrices[0]) * 100) : 0;
                 return (
                   <div key={newsMarket.id} className="flex gap-4 cursor-pointer hover:opacity-80" onClick={(e) => {
                     e.stopPropagation();
@@ -257,7 +283,16 @@ function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, 
                       <p className="text-xs font-bold leading-snug line-clamp-2">{newsMarket.question}</p>
                       <span className="text-[10px] text-muted-foreground">{newsMarket.tags?.[0] || 'Politics'}</span>
                     </div>
-                    <span className="text-xs font-bold">{newsPrice}%</span>
+                    <span className="text-xs font-bold">
+                      {(() => {
+                        try {
+                          const newsPrices = JSON.parse(newsMarket.outcomePrices || "[]");
+                          return newsPrices[0] ? Math.round(parseFloat(newsPrices[0]) * 100) : 0;
+                        } catch (e) {
+                          return 0;
+                        }
+                      })()}%
+                    </span>
                   </div>
                 );
               })
