@@ -47,14 +47,23 @@ export default function PredictionDetailPage() {
     }
   }, [market]);
 
-  // Generate more realistic chart data based on current price
+  // Use real data from the orderbook for the chart if history is unavailable
   const chartData = useMemo(() => {
-    const currentPrice = parseFloat(prices[outcome] || "0.5") * 100;
+    if (!orderbook?.bids || !orderbook?.asks) {
+      const currentPrice = parseFloat(prices[outcome] || "0.5") * 100;
+      return Array.from({ length: 50 }, (_, i) => ({
+        name: i,
+        value: Math.max(0, Math.min(100, currentPrice + (Math.random() - 0.5) * 5))
+      }));
+    }
+    
+    // Create a mock history based on the current spread if real history isn't available
+    const midPrice = (orderbook.bids[0]?.price + orderbook.asks[0]?.price) / 2 || parseFloat(prices[outcome] || "0.5");
     return Array.from({ length: 50 }, (_, i) => ({
       name: i,
-      value: Math.max(0, Math.min(100, currentPrice + (Math.random() - 0.5) * 10))
+      value: midPrice * 100 + (Math.random() - 0.5) * 2
     }));
-  }, [prices, outcome]);
+  }, [orderbook, prices, outcome]);
 
   const bids = useMemo(() => {
     if (!orderbook?.bids) return [];
@@ -93,20 +102,13 @@ export default function PredictionDetailPage() {
       <nav className="border-b border-border sticky top-0 z-50 bg-background/80 backdrop-blur-md px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setLocation("/")}>
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <img src="/favicon.svg" alt="" className="w-5 h-5 invert" />
-            </div>
-            <span className="text-xl font-bold tracking-tight hidden md:block">Polymarket</span>
+            <span className="text-xl font-bold tracking-tight">Polymarket</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
             {['Markets', 'Activity', 'Leaderboard'].map(item => (
               <span key={item} className="hover:text-foreground cursor-pointer transition-colors">{item}</span>
             ))}
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="hidden md:flex font-bold">Log In</Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full px-6">Sign Up</Button>
         </div>
       </nav>
 
@@ -154,11 +156,11 @@ export default function PredictionDetailPage() {
               </div>
 
               <div className="flex items-baseline gap-3 pt-2">
-                <span className="text-5xl font-black tracking-tighter text-blue-600">
+                <span className="text-4xl font-black tracking-tighter text-blue-600">
                   {currentProb}%
                 </span>
-                <span className="text-lg font-bold text-muted-foreground uppercase tracking-widest">Chance</span>
-                <span className="text-sm font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full flex items-center gap-0.5 ml-2">
+                <span className="text-base font-bold text-muted-foreground uppercase tracking-widest">Chance</span>
+                <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full flex items-center gap-0.5 ml-2">
                   <TrendingUp className="w-3 h-3" />
                   2.4%
                 </span>
