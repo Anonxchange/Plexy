@@ -1,22 +1,26 @@
 import { useMarketDetail, useOrderbook, PolymarketMarket, useMarkets } from "@/hooks/use-polymarket";
 import { useRoute, useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ChevronLeft, TrendingUp, Clock, Info, ArrowUpRight, ArrowDownRight, Share2, Star, MoreHorizontal, Search } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, ChevronDown, Calendar, Link2, Bookmark, Share2, Search, TrendingUp, Info, Star } from "lucide-react";
 import { format } from "date-fns";
-import { useState, useMemo, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { useState, useMemo } from "react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
 
 const FIXED_CATEGORIES = [
   "Trending", "Breaking", "New", "Politics", "Sports", 
   "Crypto", "Iran", "Finance", "Geopolitics", "Tech", 
   "Culture", "Economy"
 ];
+
+const QUICK_AMOUNTS = [1, 5, 10, 100];
 
 export default function PredictionDetailPage() {
   const [, params] = useRoute("/prediction/:id");
@@ -25,64 +29,71 @@ export default function PredictionDetailPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("Trending");
   
-  const tokenIds = useMemo(() => {
+  const outcomes = useMemo(() => {
     try {
-      return JSON.parse(market?.clobTokenIds || "[]");
+      const names = JSON.parse(market?.outcomes || "[]");
+      const prices = JSON.parse(market?.outcomePrices || "[]");
+      const clobTokenIds = JSON.parse(market?.clobTokenIds || "[]");
+      return names.map((name: string, i: number) => ({
+        name,
+        price: parseFloat(prices[i] || "0.5"),
+        tokenId: clobTokenIds[i]
+      }));
     } catch {
       return [];
     }
   }, [market]);
 
-  const [outcome, setOutcome] = useState<number>(0);
-  const { data: orderbook, isLoading: orderbookLoading } = useOrderbook(tokenIds[outcome] || tokenIds[0]);
-  const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [amount, setAmount] = useState("");
+  const isBinary = outcomes.length === 2 &&
+    ['yes', 'no'].includes(outcomes[0]?.name.toLowerCase()) &&
+    ['yes', 'no'].includes(outcomes[1]?.name.toLowerCase());
+
+  const [selectedOutcomeIdx, setSelectedOutcomeIdx] = useState(0);
+  const [amount, setAmount] = useState('');
+  const [tradeTab, setTradeTab] = useState<'buy' | 'sell'>('buy');
+  const [orderbookOpen, setOrderbookOpen] = useState(true);
+  const [rulesTab, setRulesTab] = useState<'rules' | 'context'>('rules');
+
+  const selectedOutcome = outcomes[selectedOutcomeIdx];
+  const { data: orderbook, isLoading: orderbookLoading } = useOrderbook(selectedOutcome?.tokenId);
 
   const isLoading = marketLoading || (orderbookLoading && !orderbook);
 
-  const outcomes = useMemo(() => {
-    try {
-      return JSON.parse(market?.outcomes || "[]");
-    } catch {
-      return [];
-    }
-  }, [market]);
+  const endDate = market?.endDate ? format(new Date(market.endDate), 'MMM d, yyyy') : null;
 
-  const prices = useMemo(() => {
-    try {
-      return JSON.parse(market?.outcomePrices || "[]");
-    } catch {
-      return [];
-    }
-  }, [market]);
+  const yesPrice = outcomes[0]?.price ?? 0.5;
+  const noPrice = outcomes[1]?.price ?? 0.5;
+  const yesCents = Math.round(yesPrice * 100);
+  const noCents = Math.round(noPrice * 100);
+  const selectedPrice = selectedOutcome?.price ?? 0.5;
+  const selectedCents = Math.round(selectedPrice * 100);
 
-  // Use real data from the orderbook for the chart if history is unavailable
+  const amountNum = Number(amount) || 0;
+  const estimatedShares = selectedCents > 0 ? amountNum / (selectedCents / 100) : 0;
+  const potentialReturn = estimatedShares > 0 ? (estimatedShares - amountNum).toFixed(2) : '0.00';
+
   const chartData = useMemo(() => {
     if (!orderbook?.bids || !orderbook?.asks) {
-      const currentPrice = parseFloat(prices[outcome] || "0.5") * 100;
+      const currentPrice = selectedPrice * 100;
       return Array.from({ length: 50 }, (_, i) => ({
         name: i,
         value: Math.max(0, Math.min(100, currentPrice + (Math.random() - 0.5) * 5))
       }));
     }
-    
-    // Create a mock history based on the current spread if real history isn't available
-    const midPrice = (orderbook.bids[0]?.price + orderbook.asks[0]?.price) / 2 || parseFloat(prices[outcome] || "0.5");
+    const midPrice = (orderbook.bids[0]?.price + orderbook.asks[0]?.price) / 2 || selectedPrice;
     return Array.from({ length: 50 }, (_, i) => ({
       name: i,
       value: midPrice * 100 + (Math.random() - 0.5) * 2
     }));
-  }, [orderbook, prices, outcome]);
+  }, [orderbook, selectedPrice]);
 
-  const bids = useMemo(() => {
-    if (!orderbook?.bids) return [];
-    return orderbook.bids.slice(0, 8);
-  }, [orderbook]);
-
-  const asks = useMemo(() => {
-    if (!orderbook?.asks) return [];
-    return orderbook.asks.slice(0, 8);
-  }, [orderbook]);
+  const handleTrade = async () => {
+    if (amountNum <= 0) {
+      toast({ title: "Error", description: "Enter a valid amount", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Success", description: "Sign up to start trading!" });
+  };
 
   if (isLoading) {
     return (
@@ -102,8 +113,6 @@ export default function PredictionDetailPage() {
   }
 
   if (!market) return <div className="p-8 text-center">Market not found</div>;
-
-  const currentProb = Math.round(parseFloat(prices[outcome] || prices[0] || "0") * 100);
 
   return (
     <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] text-foreground font-sans">
@@ -134,7 +143,6 @@ export default function PredictionDetailPage() {
             </div>
           </div>
 
-          {/* Categories Bar */}
           <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-3">
             {FIXED_CATEGORIES.map(cat => (
               <button
@@ -158,78 +166,61 @@ export default function PredictionDetailPage() {
         </div>
       </div>
 
-      <main className="container mx-auto max-w-7xl py-6 px-4">
-        {/* Market Breadcrumbs/Tags */}
-        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-6">
-          <span className="hover:text-foreground cursor-pointer" onClick={() => setLocation("/prediction")}>Markets</span>
-          <span className="opacity-30">/</span>
-          <span className="hover:text-foreground cursor-pointer">{market.tags?.[0] || "Politics"}</span>
-          <span className="opacity-30">/</span>
-          <span className="text-foreground">{market.tags?.[1] || "World"}</span>
-        </div>
+      <main className="container mx-auto max-w-6xl py-6 px-4">
+        {/* Back button */}
+        <button
+          onClick={() => setLocation("/prediction")}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Markets
+        </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Main Content Area */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Header Section */}
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center shrink-0 border border-border overflow-hidden">
-                    <img src={market.image} alt="" className="w-full h-full object-cover" />
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+          {/* ===== LEFT COLUMN ===== */}
+          <div className="space-y-6 min-w-0">
+            {/* Market Header */}
+            <div className="flex items-start gap-4">
+              {market.image && (
+                <img
+                  src={market.image}
+                  alt=""
+                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                {market.tags?.length > 0 && (
+                  <div className="flex items-center gap-1.5 mb-1.5 text-xs text-muted-foreground">
+                    {market.tags.map((tag, i) => (
+                      <span key={tag}>
+                        {i > 0 && <span className="mx-1">·</span>}
+                        <span className="hover:underline cursor-pointer">{tag}</span>
+                      </span>
+                    ))}
                   </div>
-                  <div className="space-y-2">
-                    <h1 className="text-3xl md:text-4xl font-bold leading-tight tracking-tight">
-                      {market.question}
-                    </h1>
-                    <div className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant="outline" className="rounded-full bg-accent/50 border-none px-3 py-1 text-foreground">
-                          {market.tags?.[0] || "Politics"}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4" />
-                        <span>Ends {market.endDate ? format(new Date(market.endDate), 'MMM d, yyyy') : 'TBD'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="icon" className="rounded-full h-10 w-10"><Share2 className="w-4 h-4" /></Button>
-                  <Button variant="outline" size="icon" className="rounded-full h-10 w-10"><Star className="w-4 h-4" /></Button>
-                </div>
+                )}
+                <h1 className="text-xl md:text-2xl font-bold font-display leading-tight">
+                  {market.question}
+                </h1>
               </div>
-
-              <div className="flex items-baseline gap-3 pt-2">
-                <span className="text-4xl font-black tracking-tighter text-blue-600">
-                  {currentProb}%
-                </span>
-                <span className="text-base font-bold text-muted-foreground uppercase tracking-widest">Chance</span>
-                <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full flex items-center gap-0.5 ml-2">
-                  <TrendingUp className="w-3 h-3" />
-                  2.4%
-                </span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors">
+                  <Link2 className="h-4 w-4" />
+                </button>
+                <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors">
+                  <Bookmark className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
-            {/* Main Chart Card */}
-            <Card className="border-none shadow-none bg-transparent">
-              <CardContent className="p-0 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-1">
-                    {['1H', '1D', '1W', '1M', 'ALL'].map(t => (
-                      <Button key={t} variant="ghost" size="sm" className={`text-[11px] h-8 px-3 font-bold rounded-lg ${t === 'ALL' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                        {t}
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    <span>${market.volumeNum ? market.volumeNum.toLocaleString() : "0"} Volume</span>
-                  </div>
+            {/* Price Chart */}
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-5xl font-bold font-display text-blue-600">{selectedCents}%</span>
+                  <span className="text-sm text-muted-foreground">chance</span>
                 </div>
 
-                <div className="h-[400px] w-full relative">
+                <div className="h-[300px] w-full relative mb-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                       <defs>
@@ -272,184 +263,308 @@ export default function PredictionDetailPage() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Order Book Section */}
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center justify-between border-b border-border pb-4">
-                <h2 className="text-xl font-bold">Order Book</h2>
-                <div className="flex gap-4">
-                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      <div className="w-2 h-2 rounded-full bg-green-500" /> Yes
-                   </div>
-                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      <div className="w-2 h-2 rounded-full bg-red-500" /> No
-                   </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8">
-                {/* Bids Table */}
-                <div className="space-y-2">
-                  <div className="grid grid-cols-3 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 px-2">
-                    <span>Price</span>
-                    <span className="text-center">Size</span>
-                    <span className="text-right">Total</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    {bids.length > 0 ? bids.map((bid: any, i: number) => (
-                      <div key={`bid-${i}`} className="grid grid-cols-3 items-center h-10 px-2 rounded-lg hover:bg-accent/50 transition-colors group relative overflow-hidden">
-                        <div className="absolute inset-y-0 left-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors" style={{ width: `${Math.min((bid.size / 5000) * 100, 100)}%` }} />
-                        <span className="font-bold text-green-600 z-10">{Math.round(bid.price * 100)}¢</span>
-                        <span className="text-sm font-medium text-center z-10">{Math.round(bid.size).toLocaleString()}</span>
-                        <span className="text-sm font-bold text-right z-10">${Math.round(bid.price * bid.size).toLocaleString()}</span>
-                      </div>
-                    )) : (
-                      <div className="h-40 flex items-center justify-center text-sm font-medium text-muted-foreground bg-accent/20 rounded-xl border border-dashed border-border">No bids</div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      ${market.volumeNum ? market.volumeNum.toLocaleString() : "0"} Vol.
+                    </span>
+                    {endDate && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {endDate}
+                      </span>
                     )}
                   </div>
-                </div>
-
-                {/* Asks Table */}
-                <div className="space-y-2">
-                  <div className="grid grid-cols-3 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 px-2">
-                    <span>Price</span>
-                    <span className="text-center">Size</span>
-                    <span className="text-right">Total</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    {asks.length > 0 ? asks.map((ask: any, i: number) => (
-                      <div key={`ask-${i}`} className="grid grid-cols-3 items-center h-10 px-2 rounded-lg hover:bg-accent/50 transition-colors group relative overflow-hidden">
-                        <div className="absolute inset-y-0 right-0 bg-red-500/5 group-hover:bg-red-500/10 transition-colors" style={{ width: `${Math.min((ask.size / 5000) * 100, 100)}%` }} />
-                        <span className="font-bold text-red-600 z-10">{Math.round(ask.price * 100)}¢</span>
-                        <span className="text-sm font-medium text-center z-10">{Math.round(ask.size).toLocaleString()}</span>
-                        <span className="text-sm font-bold text-right z-10">${Math.round(ask.price * ask.size).toLocaleString()}</span>
-                      </div>
-                    )) : (
-                      <div className="h-40 flex items-center justify-center text-sm font-medium text-muted-foreground bg-accent/20 rounded-xl border border-dashed border-border">No asks</div>
-                    )}
+                  <div className="flex items-center gap-1">
+                    {['1H', '6H', '1D', '1W', '1M', 'ALL'].map((t) => (
+                      <button
+                        key={t}
+                        className={cn(
+                          "px-2 py-1 text-xs font-medium rounded transition-colors",
+                          t === 'ALL'
+                            ? "bg-secondary text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {t}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* About Section */}
-            <div className="space-y-6 pt-8 border-t border-border">
-              <div className="flex gap-8 items-center border-b border-border pb-4">
-                <h3 className="font-bold text-lg relative after:absolute after:bottom-[-17px] after:left-0 after:right-0 after:h-[3px] after:bg-blue-600">Rules</h3>
-                <h3 className="font-bold text-lg text-muted-foreground hover:text-foreground cursor-pointer transition-colors">Market Context</h3>
-                <h3 className="font-bold text-lg text-muted-foreground hover:text-foreground cursor-pointer transition-colors">Comments</h3>
+            {/* Order Book (collapsible) */}
+            <Collapsible open={orderbookOpen} onOpenChange={setOrderbookOpen}>
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center justify-between rounded-xl border bg-card p-4 hover:bg-secondary/30 transition-colors">
+                  <span className="font-semibold text-sm">Order Book</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 text-muted-foreground transition-transform",
+                      orderbookOpen && "rotate-180"
+                    )}
+                  />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="border border-t-0 rounded-b-xl bg-card p-4">
+                  {orderbook ? (
+                    <div className="grid grid-cols-2 gap-6 text-xs">
+                      <div>
+                        <p className="font-semibold text-emerald-600 dark:text-emerald-400 mb-2">Bids</p>
+                        {(orderbook.bids || []).slice(0, 8).map((bid: any, i: number) => (
+                          <div key={i} className="flex justify-between py-0.5">
+                            <span>{(Number(bid.price) * 100).toFixed(1)}¢</span>
+                            <span className="text-muted-foreground">{Number(bid.size).toLocaleString()}</span>
+                          </div>
+                        ))}
+                        {(!orderbook.bids || orderbook.bids.length === 0) && (
+                          <p className="text-muted-foreground">No bids</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-rose-500 dark:text-rose-400 mb-2">Asks</p>
+                        {(orderbook.asks || []).slice(0, 8).map((ask: any, i: number) => (
+                          <div key={i} className="flex justify-between py-0.5">
+                            <span>{(Number(ask.price) * 100).toFixed(1)}¢</span>
+                            <span className="text-muted-foreground">{Number(ask.size).toLocaleString()}</span>
+                          </div>
+                        ))}
+                        {(!orderbook.asks || orderbook.asks.length === 0) && (
+                          <p className="text-muted-foreground">No asks</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">Loading orderbook…</p>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Rules / Market Context */}
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <div className="flex border-b">
+                <button
+                  onClick={() => setRulesTab('rules')}
+                  className={cn(
+                    "px-5 py-3 text-sm font-semibold transition-colors",
+                    rulesTab === 'rules'
+                      ? "text-foreground border-b-2 border-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Rules
+                </button>
+                <button
+                  onClick={() => setRulesTab('context')}
+                  className={cn(
+                    "px-5 py-3 text-sm font-semibold transition-colors",
+                    rulesTab === 'context'
+                      ? "text-foreground border-b-2 border-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Market Context
+                </button>
               </div>
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                  {market.description || "This market will resolve based on the official outcome of the event. Payouts are distributed to the holders of the correct outcome tokens."}
-                </p>
+              <div className="p-5">
+                {rulesTab === 'rules' ? (
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                    {market.description || 'No rules specified for this market.'}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    This market tracks the probability of the stated outcome. Trade based on your own research and judgment.
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* All Outcomes (for multi-outcome markets) */}
+            {!isBinary && outcomes.length > 2 && (
+              <div className="rounded-xl border bg-card p-5">
+                <h3 className="font-semibold text-sm mb-3">All Outcomes</h3>
+                <div className="space-y-2">
+                  {[...outcomes].sort((a, b) => b.price - a.price).map((o, i) => {
+                    const pct = Math.round(o.price * 100);
+                    const realIdx = outcomes.indexOf(o);
+                    const isSelected = realIdx === selectedOutcomeIdx;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedOutcomeIdx(realIdx)}
+                        className={cn(
+                          "w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left",
+                          isSelected
+                            ? "border-accent bg-accent/5"
+                            : "border-border hover:border-accent/40"
+                        )}
+                      >
+                        <span className="font-medium text-sm">{o.name}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 h-2 rounded-full bg-secondary overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-blue-600 transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="font-bold text-sm w-10 text-right">{pct}%</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Sidebar Trading Panel */}
-          <div className="lg:col-span-1 sticky top-24">
-            <Card className="border border-border shadow-2xl rounded-[24px] overflow-hidden bg-card">
-              <CardContent className="p-0">
-                <Tabs value={side} onValueChange={(v) => setSide(v as any)}>
-                  <TabsList className="w-full h-14 rounded-none border-b border-border bg-muted/30 p-1">
-                    <TabsTrigger value="buy" className="flex-1 h-full rounded-xl font-bold text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">Buy</TabsTrigger>
-                    <TabsTrigger value="sell" className="flex-1 h-full rounded-xl font-bold text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">Sell</TabsTrigger>
-                  </TabsList>
-                  
-                  <div className="p-6 space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Select Outcome</span>
-                        <Badge variant="secondary" className="font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Market</Badge>
-                      </div>
-                      <div className="flex gap-3">
-                        {outcomes.map((o: string, i: number) => {
-                          const isYes = o.toLowerCase() === 'yes';
-                          const priceVal = Math.round(parseFloat(prices[i] || "0.5") * 100);
-                          return (
-                            <Button 
-                              key={o}
-                              variant={outcome === i ? "default" : "outline"}
-                              className={`flex-1 h-20 flex-col gap-1 rounded-2xl border-2 transition-all active:scale-[0.97] ${
-                                outcome === i 
-                                  ? (isYes ? "bg-green-600 hover:bg-green-700 border-green-600 text-white" : "bg-red-600 hover:bg-red-700 border-red-600 text-white") 
-                                  : "bg-muted/30 hover:bg-muted border-transparent"
-                              }`}
-                              onClick={() => setOutcome(i)}
-                            >
-                              <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{o}</span>
-                              <span className="text-2xl font-black">{priceVal}¢</span>
-                            </Button>
-                          );
-                        })}
-                      </div>
+          {/* ===== RIGHT COLUMN — Trading Panel ===== */}
+          <div>
+            <Card className="sticky top-20 rounded-xl shadow-xl overflow-hidden bg-card">
+              <CardContent className="p-5 space-y-5">
+                {/* Buy / Sell tabs */}
+                <div className="flex border-b">
+                  <button
+                    onClick={() => setTradeTab('buy')}
+                    className={cn(
+                      "flex-1 pb-2.5 text-sm font-semibold transition-colors text-center",
+                      tradeTab === 'buy'
+                        ? "text-foreground border-b-2 border-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Buy
+                  </button>
+                  <button
+                    onClick={() => setTradeTab('sell')}
+                    className={cn(
+                      "flex-1 pb-2.5 text-sm font-semibold transition-colors text-center",
+                      tradeTab === 'sell'
+                        ? "text-foreground border-b-2 border-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Sell
+                  </button>
+                  <div className="ml-auto pb-2.5">
+                    <Badge variant="outline" className="text-xs">Market</Badge>
+                  </div>
+                </div>
+
+                {/* Outcome selector */}
+                {isBinary ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setSelectedOutcomeIdx(0)}
+                      className={cn(
+                        "py-2.5 rounded-lg font-semibold text-sm transition-all",
+                        selectedOutcomeIdx === 0
+                          ? "bg-emerald-500 text-white shadow-sm"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Yes {yesCents}¢
+                    </button>
+                    <button
+                      onClick={() => setSelectedOutcomeIdx(1)}
+                      className={cn(
+                        "py-2.5 rounded-lg font-semibold text-sm transition-all",
+                        selectedOutcomeIdx === 1
+                          ? "bg-rose-500 text-white shadow-sm"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      No {noCents}¢
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid gap-1.5" style={{ gridTemplateColumns: outcomes.length <= 3 ? `repeat(${outcomes.length}, 1fr)` : 'repeat(2, 1fr)' }}>
+                    {outcomes.map((o, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedOutcomeIdx(i)}
+                        className={cn(
+                          "py-2 px-2 rounded-lg border text-xs font-semibold transition-colors truncate",
+                          i === selectedOutcomeIdx
+                            ? "border-blue-600 bg-blue-600 text-white"
+                            : "border-border hover:border-blue-600/40"
+                        )}
+                      >
+                        {o.name} {Math.round(o.price * 100)}¢
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Amount
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground/50">$</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0"
+                      className="pl-8 text-2xl font-bold h-14 text-right bg-muted/20"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    {QUICK_AMOUNTS.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => setAmount(String((Number(amount) || 0) + q))}
+                        className="flex-1 py-1.5 rounded-lg border text-xs font-medium hover:bg-secondary transition-colors"
+                      >
+                        +${q}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setAmount('1000')}
+                      className="py-1.5 px-3 rounded-lg border text-xs font-medium hover:bg-secondary transition-colors"
+                    >
+                      Max
+                    </button>
+                  </div>
+                </div>
+
+                {/* Summary */}
+                {amountNum > 0 && (
+                  <div className="bg-secondary/50 rounded-lg p-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg price</span>
+                      <span>{selectedCents}¢</span>
                     </div>
-
-                    <div className="space-y-4 pt-2">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Amount</label>
-                        <div className="text-sm font-bold text-muted-foreground flex items-center gap-1">
-                          <Badge variant="outline" className="text-[10px] border-border">USD</Badge>
-                        </div>
-                      </div>
-                      <div className="relative group">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-black text-2xl group-focus-within:text-blue-600 transition-colors">$</span>
-                        <Input 
-                          type="number" 
-                          placeholder="0" 
-                          className="pl-10 h-16 text-3xl font-black bg-muted/20 border-2 border-border rounded-2xl focus-visible:ring-0 focus-visible:border-blue-600 transition-all placeholder:text-muted-foreground/30"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        {['10', '50', '100', '500'].map(v => (
-                          <Button key={v} variant="outline" size="sm" className="flex-1 text-[11px] h-9 font-bold rounded-xl border-border bg-muted/30 hover:bg-muted" onClick={() => {
-                            setAmount(v);
-                          }}>${v}</Button>
-                        ))}
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Est. shares</span>
+                      <span>{estimatedShares.toFixed(2)}</span>
                     </div>
-
-                    <div className="space-y-4 pt-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-bold text-muted-foreground">
-                          <span>Est. Shares</span>
-                          <span className="text-foreground">{amount ? Math.floor(parseFloat(amount) / (parseFloat(prices[outcome] || "0.5"))).toLocaleString() : "0"}</span>
-                        </div>
-                        <div className="flex justify-between text-xs font-bold text-muted-foreground">
-                          <span>Potential Return</span>
-                          <span className="text-green-600">${amount ? (parseFloat(amount) / (parseFloat(prices[outcome] || "0.5"))).toFixed(2) : "0.00"}</span>
-                        </div>
-                      </div>
-
-                      <Button className="w-full h-16 text-base font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-[0.98] mt-2">
-                        Sign Up to Trade
-                      </Button>
-                      
-                      <p className="text-[10px] text-center text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">
-                        By trading, you agree to the <span className="underline cursor-pointer hover:text-foreground">Terms of Use</span> and <span className="underline cursor-pointer hover:text-foreground">Privacy Policy</span>.
-                      </p>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Potential return</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">+${potentialReturn}</span>
                     </div>
                   </div>
-                </Tabs>
-              </CardContent>
-            </Card>
+                )}
 
-            <Card className="mt-6 border border-border bg-muted/20 rounded-2xl">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center text-blue-600">
-                  <Info className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black uppercase tracking-widest mb-1">How it works</h4>
-                  <p className="text-[11px] font-medium text-muted-foreground leading-snug">
-                    Each share resolves to $1.00 if the outcome is correct, and $0.00 otherwise.
-                  </p>
-                </div>
+                {/* Trade button */}
+                <Button
+                  className="w-full h-14 text-base font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg"
+                  size="lg"
+                  onClick={handleTrade}
+                  disabled={!amountNum}
+                >
+                  Sign Up to Trade
+                </Button>
+
+                <p className="text-[10px] text-muted-foreground text-center leading-relaxed font-bold uppercase tracking-wider">
+                  By trading, you agree to the Terms of Use.
+                </p>
               </CardContent>
             </Card>
           </div>
