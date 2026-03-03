@@ -54,22 +54,11 @@ export default function PredictionPage() {
           <div className="flex items-center h-14 gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setLocation("/")}>
               <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-                <TrendingUp className="text-primary-foreground w-5 h-5" />
+                <Zap className="text-primary-foreground w-5 h-5" />
               </div>
-              <span className="font-bold text-xl tracking-tight hidden md:block">Prediction market</span>
-            </div>
-            
-            <div className="flex-1 max-w-2xl relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search markets..." 
-                className="pl-10 h-10 bg-[#F1F4F9] dark:bg-[#1E2329] border-none focus-visible:ring-1 focus-visible:ring-primary/30"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
             </div>
 
-            <div className="hidden lg:flex items-center gap-4 text-sm font-medium text-muted-foreground">
+            <div className="hidden lg:flex items-center gap-4 text-sm font-medium text-muted-foreground ml-auto">
               <span className="hover:text-primary cursor-pointer transition-colors">How it works</span>
             </div>
           </div>
@@ -102,6 +91,17 @@ export default function PredictionPage() {
             <FeaturedMarketCard market={displayedMarkets[0]} allMarkets={markets || []} />
           </div>
         )}
+
+        {/* Search Bar after Hero */}
+        <div className="mb-8 max-w-2xl mx-auto relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search markets..." 
+            className="pl-10 h-12 bg-white dark:bg-[#12161C] border-none shadow-sm focus-visible:ring-1 focus-visible:ring-primary/30 rounded-xl"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
 
         {/* Market Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -241,6 +241,7 @@ function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, 
             <span className="text-sm font-bold">Breaking news</span>
             <ChevronRight className="w-4 h-4" />
           </div>
+
           <div className="space-y-4">
             {breakingNews.length > 0 ? (
               breakingNews.map((newsMarket, i) => {
