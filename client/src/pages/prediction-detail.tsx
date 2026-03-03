@@ -14,11 +14,18 @@ import { cn } from "@/lib/utils";
 
 const QUICK_AMOUNTS = [1, 5, 10, 100];
 
+const FIXED_CATEGORIES = [
+  "Trending", "Breaking", "New", "Politics", "Sports", 
+  "Crypto", "Iran", "Finance", "Geopolitics", "Tech", 
+  "Culture", "Economy"
+];
+
 export default function PredictionDetailPage() {
   const [, params] = useRoute("/prediction/:id");
   const [, setLocation] = useLocation();
   const { data: market, isLoading: marketLoading, error: marketError } = useMarketDetail(params?.id);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("");
   
   if (marketError) {
     console.error("Market fetch error:", marketError);
@@ -165,26 +172,30 @@ export default function PredictionDetailPage() {
       <div className="bg-white dark:bg-[#12161C] border-b border-border/40 sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center h-14 gap-8">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setLocation("/prediction")}>
-              <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-                <TrendingUp className="text-primary-foreground w-5 h-5" />
-              </div>
-              <span className="font-bold text-xl tracking-tight hidden md:block">Prediction market</span>
-            </div>
-            
-            <div className="flex-1 max-w-2xl relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search markets..." 
-                className="pl-10 h-10 bg-[#F1F4F9] dark:bg-[#1E2329] border-none focus-visible:ring-1 focus-visible:ring-primary/30"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && setLocation(`/prediction?q=${searchQuery}`)}
-              />
+            {/* Categories Bar in Header */}
+            <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-3 flex-1">
+              {FIXED_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setActiveCategory(cat);
+                    setLocation("/prediction");
+                  }}
+                  className={cn(
+                    "text-sm font-semibold whitespace-nowrap transition-colors relative pb-1",
+                    activeCategory === cat 
+                      ? "text-primary border-b-2 border-primary" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {cat === "Trending" && <TrendingUp className="inline-block w-4 h-4 mr-1 mb-0.5" />}
+                  {cat}
+                </button>
+              ))}
             </div>
 
-            <div className="hidden lg:flex items-center gap-4 text-sm font-medium text-muted-foreground">
-              <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => setLocation("/prediction")}>Explore</span>
+            <div className="hidden lg:flex items-center gap-4 text-sm font-medium text-muted-foreground ml-auto">
+              <span className="hover:text-primary cursor-pointer transition-colors">How it works</span>
             </div>
           </div>
         </div>
