@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from "@/lib/utils";
-import { toast } from "@/components/ui/use-toast";
+
 
 const FIXED_CATEGORIES = [
   "Trending", "Breaking", "New", "Politics", "Sports", 
