@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import DOMPurify from "dompurify";
 import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift, ShieldAlert, Search } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
@@ -44,6 +45,7 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
   const currentMarket = activeMarkets[currentIndex];
   const prices = JSON.parse(currentMarket.outcomePrices || "[]");
   const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
+  const imageSrc = currentMarket.image ? DOMPurify.sanitize(currentMarket.image) : null;
 
   return (
     <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-secondary rounded-2xl p-4 border border-primary/20 relative overflow-hidden h-[140px] flex flex-col justify-between transition-all duration-500">
@@ -51,17 +53,25 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
       
       <div className="relative flex items-center gap-4">
         <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {currentMarket.image ? (
+          {imageSrc ? (
             <img 
-              src={currentMarket.image} 
+              src={imageSrc} 
               alt="" 
               className="w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-                (e.target as HTMLImageElement).parentElement?.classList.add('flex', 'items-center', 'justify-center');
-                const icon = document.createElement('div');
-                icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-6 w-6 text-primary"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>';
-                (e.target as HTMLImageElement).parentElement?.appendChild(icon.firstChild as Node);
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.classList.add('flex', 'items-center', 'justify-center');
+                  // Only add icon if not already present
+                  if (!parent.querySelector('.fallback-icon')) {
+                    const iconContainer = document.createElement('div');
+                    iconContainer.className = 'fallback-icon';
+                    iconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-6 w-6 text-primary"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>';
+                    parent.appendChild(iconContainer);
+                  }
+                }
               }}
             />
           ) : (
