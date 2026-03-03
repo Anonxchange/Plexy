@@ -25,14 +25,14 @@ const testimonials = [
   {
     name: "Creative Studio",
     type: "Design Agency",
-    text: "The P2P marketplace made it so easy to manage our crypto assets. We had a professional setup running in just a few hours. Highly recommend for anyone starting their crypto journey.",
+    text: "The decentralized marketplace made it so easy to manage our crypto assets. We had a professional setup running in just a few hours. Highly recommend for anyone starting their crypto journey.",
   },
 ];
 
 const historyItems = [
   { year: "2018", text: "Pexly was founded with a mission to make cryptocurrency trading accessible to everyone worldwide." },
-  { year: "2019", text: "We launched our first-class P2P marketplace supporting 50+ payment methods." },
-  { year: "2020", text: "The Pexly brand was officially expanded with enhanced security features and escrow protection." },
+  { year: "2019", text: "We launched our first-class decentralized marketplace supporting 50+ payment methods." },
+  { year: "2020", text: "The Pexly brand was officially expanded with enhanced security features and third-party provider protection." },
   { year: "2021", text: "We reached our first million users worldwide and expanded across 100+ countries." },
   { year: "2022", text: "Pexly introduced an innovative lightning network integration for instant transfers." },
   { year: "2023", text: "We launched the AI-powered trading assistant for market analysis." },
@@ -44,12 +44,12 @@ const strengths = [
   {
     title: "Seamless trading tools",
     description:
-      "Regardless of your background or technical expertise, our trading and management tools have been created with user experience and security in mind. Control everything in one place with Pexly, from wallet management and offers to secure escrow trades. Have more time for what matters with our intuitive P2P marketplace – start trading within minutes, without limits.",
+      "Regardless of your background or technical expertise, our trading and management tools have been created with user experience and security in mind. Control everything in one place with Pexly, from wallet management and offers to secure third-party provider trades. Have more time for what matters with our intuitive decentralized marketplace – start trading within minutes, without limits.",
   },
   {
     title: "Transaction speed",
     description:
-      "We want crypto traders and business owners to move forward, and fast. Imagine having your trades completed in milliseconds anywhere in the world with our globally distributed network and secure escrow system. Give your trading the best experience, and watch as your portfolio grows.",
+      "We want crypto traders and business owners to move forward, and fast. Imagine having your trades completed in milliseconds anywhere in the world with our globally distributed network and secure third-party provider system. Give your trading the best experience, and watch as your portfolio grows.",
   },
   {
     title: "Dedicated 24/7 support",
@@ -74,7 +74,7 @@ const HeroSection = () => {
             <span className="block">Online.</span>
           </h1>
           <p className="mt-8 text-xl text-gray-600 max-w-lg hidden lg:block">
-            Pexly is a leading global P2P cryptocurrency marketplace, 
+            Pexly is a leading global decentralized cryptocurrency marketplace, 
             connecting millions of traders worldwide with zero hassle.
           </p>
         </motion.div>
@@ -154,7 +154,7 @@ const AboutSection = () => {
           <p className="font-sans text-lg md:text-xl leading-relaxed opacity-90">
             Pexly is on a mission to make cryptocurrency trading accessible to everyone worldwide – 
             from institutional traders to aspiring crypto enthusiasts. With our fast trading 
-            technology, secure escrow system, and easy-to-operate dashboard you can succeed 
+            technology, secure third-party provider integrations, and easy-to-operate dashboard you can succeed 
             in the crypto market faster and easier.
           </p>
         </motion.div>
@@ -206,7 +206,7 @@ const GlobalSection = () => {
           
           <p className="font-sans text-lg md:text-xl leading-relaxed opacity-90 mb-6">
             Launched in 2018 as a fintech tech startup, Pexly is now a leading 
-            provider of P2P trading solutions, and we serve over 14 million people from 140+ countries
+            provider of decentralized trading solutions, and we serve over 14 million people from 140+ countries
           </p>
           
           <p className="font-sans text-lg md:text-xl leading-relaxed opacity-90 mb-6">
@@ -499,7 +499,7 @@ const TechnologySection = () => {
             transition={{ delay: 0.2 }}
             className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
           >
-            As one of the fastest and most efficient P2P marketplace providers around, we keep 
+            As one of the fastest and most efficient decentralized marketplace providers around, we keep 
             adapting to the latest tech advancements in the industry. We constantly improve our 
             security infrastructure with advanced encryption, lightning-powered tech 
             stack, and our custom-built dashboard.
@@ -552,7 +552,7 @@ const PeopleSection = () => {
             transition={{ delay: 0.2 }}
             className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mb-6"
           >
-            We're one of the world's largest P2P cryptocurrency marketplace providers, with 
+            We're one of the world's largest decentralized cryptocurrency marketplace providers, with 
             over 900 employees in 54 countries. Like our dedication to our clients, we take 
             care of our own so that we can grow professionally and take our customers to 
             the next level. Join Pexly and hustle with us!
