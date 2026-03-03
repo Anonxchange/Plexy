@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift, ShieldAlert, Search } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";
@@ -13,9 +13,80 @@ import { PageSkeleton } from "@/components/page-skeleton";
 import { AssetCardSkeleton } from "@/components/dashboard/AssetCard";
 import { MarketsSectionSkeleton } from "@/components/dashboard/MarketsSection";
 import { useWalletData } from "@/hooks/use-wallet-data";
+import { useMarkets, PolymarketMarket } from "@/hooks/use-polymarket";
+import { useLocation } from "wouter";
+import { cn } from "@/lib/utils";
 
 const AssetCard = lazy(() => import("@/components/dashboard/AssetCard").then(m => ({ default: m.AssetCard })));
 const MarketsSection = lazy(() => import("@/components/dashboard/MarketsSection").then(m => ({ default: m.MarketsSection })));
+
+const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [, setLocation] = useLocation();
+
+  const activeMarkets = useMemo(() => {
+    if (!markets) return [];
+    return [...markets]
+      .sort((a, b) => (b.volumeNum || 0) - (a.volumeNum || 0))
+      .slice(0, 4);
+  }, [markets]);
+
+  useEffect(() => {
+    if (activeMarkets.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % activeMarkets.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [activeMarkets.length]);
+
+  if (activeMarkets.length === 0) return null;
+
+  const currentMarket = activeMarkets[currentIndex];
+  const prices = JSON.parse(currentMarket.outcomePrices || "[]");
+  const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
+
+  return (
+    <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-secondary rounded-2xl p-4 border border-primary/20 relative overflow-hidden h-[140px] flex flex-col justify-between transition-all duration-500">
+      <div className="absolute right-0 top-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+      
+      <div className="relative flex items-center gap-4">
+        <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
+          <TrendingUp className="h-6 w-6 text-primary" />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Prediction Market</span>
+            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{price}% Yes</span>
+          </div>
+          <h3 className="text-foreground font-semibold mt-1 line-clamp-2 text-sm sm:text-base leading-tight">
+            {currentMarket.question}
+          </h3>
+          <button 
+            onClick={() => setLocation(`/prediction/${currentMarket.conditionId}`)}
+            className="flex items-center gap-1 text-primary font-medium text-sm mt-2 hover:gap-2 transition-all"
+          >
+            Predict Now
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex justify-center gap-1.5 mt-2">
+        {activeMarkets.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              currentIndex === i ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
 
@@ -104,6 +175,7 @@ export const Dashboard = () => {
   const { data: walletData, isLoading: walletLoading, error: walletError } = useWalletData();
   
   const symbols = useMemo(() => ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"], []);
+  const { data: predictionMarkets, isLoading: predictionLoading } = useMarkets({ limit: 10 });
   const { data: cryptoPricesMap, isLoading: pricesLoading, error: pricesError } = useCryptoPrices(symbols);
   
   if (walletError || pricesError) {
@@ -191,32 +263,7 @@ export const Dashboard = () => {
             </div>
 
             <div className="px-4 lg:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
-              <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-secondary rounded-2xl p-4 border border-primary/20 relative overflow-hidden">
-                <div className="absolute right-0 top-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
-                
-                <div className="relative flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Gift className="h-6 w-6 text-primary" />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Events</span>
-                    <h3 className="text-foreground font-semibold mt-0.5">
-                      Claim your share of $125,000 in Christmas prize!
-                    </h3>
-                    <button className="flex items-center gap-1 text-primary font-medium text-sm mt-2 hover:gap-2 transition-all">
-                      Explore Now
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex justify-center gap-1.5 mt-4">
-                  <div className="w-6 h-1.5 bg-primary rounded-full"></div>
-                  <div className="w-1.5 h-1.5 bg-muted-foreground/30 rounded-full"></div>
-                  <div className="w-1.5 h-1.5 bg-muted-foreground/30 rounded-full"></div>
-                </div>
-              </div>
+              <PredictionEventSlider markets={predictionMarkets || []} />
             </div>
 
             <div className="mt-6 animate-fade-in lg:hidden" style={{ animationDelay: "0.2s" }}>
