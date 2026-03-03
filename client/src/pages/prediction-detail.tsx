@@ -70,34 +70,34 @@ import { useMarketDetail, useOrderbook, PolymarketMarket } from "@/hooks/use-pol
     if (!market) return <div>Market not found</div>;
 
     return (
-      <div className="min-h-screen bg-[#0E1114] text-white">
-        <div className="bg-[#0E1114] sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="bg-background sticky top-0 z-50 px-4 py-3 flex items-center justify-between border-b border-border/50">
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="hover:bg-white/10 rounded-full" 
+              className="hover:bg-accent rounded-full" 
               onClick={() => setLocation("/prediction")}
             >
               <ChevronLeft className="w-6 h-6" />
             </Button>
             <div className="flex items-center gap-2">
-              <div className="bg-white p-1 rounded-md">
-                <img src="/favicon.svg" alt="Polymarket" className="w-6 h-6" />
+              <div className="bg-primary p-1 rounded-md">
+                <img src="/favicon.svg" alt="Polymarket" className="w-6 h-6 invert dark:invert-0" />
               </div>
               <span className="text-xl font-bold tracking-tight">Polymarket</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-             <Button variant="ghost" size="icon" className="text-white/70"><Clock className="w-5 h-5" /></Button>
+             <Button variant="ghost" size="icon" className="text-muted-foreground"><Clock className="w-5 h-5" /></Button>
              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500" />
           </div>
         </div>
 
         <div className="container mx-auto py-6 px-4">
-          <div className="flex gap-6 overflow-x-auto no-scrollbar mb-8 border-b border-white/5 pb-2">
+          <div className="flex gap-6 overflow-x-auto no-scrollbar mb-8 border-b border-border/50 pb-2">
             {['Trending', 'Breaking', 'New', 'Politics', 'Sports', 'Crypto'].map((tab, i) => (
-              <span key={tab} className={`text-sm font-bold whitespace-nowrap cursor-pointer ${i === 0 ? 'text-white border-b-2 border-white pb-2' : 'text-white/50'}`}>
+              <span key={tab} className={`text-sm font-bold whitespace-nowrap cursor-pointer transition-colors ${i === 0 ? 'text-foreground border-b-2 border-primary pb-2' : 'text-muted-foreground hover:text-foreground'}`}>
                 {tab}
               </span>
             ))}
@@ -109,105 +109,238 @@ import { useMarketDetail, useOrderbook, PolymarketMarket } from "@/hooks/use-pol
               <div className="space-y-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#F7931A] flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center shrink-0 border border-border">
                        <img src={market.image} alt="" className="w-8 h-8 rounded-full" />
                     </div>
                     <div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mb-1 uppercase tracking-wider">
+                         <span>{market.tags?.[0] || 'Market'}</span>
+                         {market.tags?.[1] && <span>• {market.tags[1]}</span>}
+                      </div>
                       <h1 className="text-2xl font-bold leading-tight max-w-xl">
                         {market.question}
                       </h1>
-                      <p className="text-white/40 text-sm mt-1">
-                        {market.endDate ? format(new Date(market.endDate), 'MMM d, h:mm a') : 'TBD'} ET
-                      </p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" className="text-white/70"><ArrowUpRight className="w-5 h-5" /></Button>
-                    <Button variant="ghost" size="icon" className="text-white/70"><Info className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground"><ArrowUpRight className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground"><Info className="w-5 h-5" /></Button>
                   </div>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-xs font-bold uppercase tracking-wider text-white/40">Price to beat</p>
-                    <p className="text-3xl font-bold tracking-tighter">
-                      ${parseFloat(market.volumeNum?.toString() || "0").toLocaleString()}
+                    <p className="text-3xl font-bold tracking-tighter text-blue-500">
+                      {Math.round(parseFloat(prices[0] || "0") * 100)}% chance
+                      <span className="text-sm font-bold text-green-500 ml-2">▲ 20%</span>
                     </p>
                   </div>
-                  <div className="bg-white/5 border border-white/10 rounded-full px-4 py-2 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-sm font-bold">Live</span>
-                    <ChevronLeft className="w-4 h-4 rotate-180" />
+                  <div className="text-muted-foreground text-xs font-bold flex items-center gap-1 uppercase tracking-widest">
+                    <img src="/favicon.svg" alt="" className="w-4 h-4 opacity-20" />
+                    Polymarket
                   </div>
                 </div>
               </div>
 
               {/* Chart */}
               <div className="space-y-4">
-                <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
-                  <Button variant="ghost" size="sm" className="bg-white/10 rounded-lg h-8 px-3"><TrendingUp className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="sm" className="text-white/40 h-8 px-3"><div className="w-4 h-4 rounded-full bg-orange-500/20 flex items-center justify-center text-[10px] text-orange-500 font-bold">B</div></Button>
-                  <Button variant="ghost" size="sm" className="text-white/40 h-8 px-3"><div className="flex gap-0.5"><div className="w-1 h-4 bg-white/40" /><div className="w-1 h-3 bg-white/40" /></div></Button>
+                <div className="h-[300px] w-full pt-6 relative border-t border-b border-border/30 border-dashed">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="rgb(59 130 246)" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="rgb(59 130 246)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.3)" />
+                      <XAxis dataKey="name" hide />
+                      <YAxis domain={[0, 100]} orientation="right" tick={{fontSize: 10, fill: 'hsl(var(--muted-foreground))'}} axisLine={false} tickLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="rgb(59 130 246)" 
+                        fillOpacity={1} 
+                        fill="url(#colorValue)" 
+                        strokeWidth={2} 
+                        dot={false}
+                        activeDot={{ r: 4, fill: "rgb(59 130 246)", strokeWidth: 2, stroke: "white" }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
 
-                <div className="flex gap-2 py-4">
-                  {['Past', '8:30 AM', '8:35 AM', '8:40 AM'].map((t, i) => (
-                    <Button key={t} variant="ghost" size="sm" className={`rounded-full h-10 px-5 text-sm font-bold ${i === 1 ? 'bg-white text-black hover:bg-white' : 'bg-white/5 text-white'}`}>
-                      {i === 2 && <div className="w-2 h-2 rounded-full bg-red-500 mr-2" />}
-                      {t}
-                      {i === 0 && <ChevronLeft className="w-4 h-4 rotate-270 ml-2" />}
-                    </Button>
-                  ))}
+                <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-4">
+                     <span className="text-sm font-bold text-foreground">
+                       ${parseFloat(market.volumeNum?.toString() || "0").toLocaleString()} Vol.
+                     </span>
+                     <span className="text-sm font-bold text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {market.endDate ? format(new Date(market.endDate), 'MMM d, yyyy') : 'TBD'}
+                     </span>
+                   </div>
+                   <div className="flex gap-1">
+                      {['1H', '1D', '1W', '1M', 'MAX'].map(t => (
+                        <Button key={t} variant="ghost" size="sm" className={`text-[10px] h-7 px-2 font-bold ${t === 'MAX' ? 'text-foreground underline' : 'text-muted-foreground'}`}>{t}</Button>
+                      ))}
+                   </div>
                 </div>
               </div>
 
               {/* Order Book */}
-              <Card className="border-white/5 bg-transparent shadow-none overflow-hidden">
-                <CardHeader className="p-0 pb-4 flex flex-row items-center justify-between">
+              <Card className="border-border/50 bg-card/30 shadow-none overflow-hidden rounded-2xl">
+                <CardHeader className="p-4 flex flex-row items-center justify-between border-b border-border/50">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-xl font-bold">Order Book</CardTitle>
-                    <Info className="w-4 h-4 text-white/30" />
+                    <CardTitle className="text-lg font-bold">Order Book</CardTitle>
+                    <Info className="w-4 h-4 text-muted-foreground" />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-white/40 font-bold">${(parseFloat(market.volumeNum?.toString() || "0") / 1000).toFixed(1)}K Vol.</span>
-                    <ChevronLeft className="w-5 h-5 rotate-90 text-white/70" />
-                  </div>
+                  <ChevronLeft className="w-5 h-5 rotate-90 text-muted-foreground" />
                 </CardHeader>
-                <CardContent className="p-0 border-t border-white/5">
-                  <div className="flex gap-8 py-6">
-                    <span className="text-lg font-bold text-white underline underline-offset-8">Trade Up</span>
-                    <span className="text-lg font-bold text-white/30">Trade Down</span>
-                    <div className="ml-auto flex gap-4 text-orange-500">
-                       <TrendingUp className="w-5 h-5" />
-                       <div className="w-5 h-5 border-2 border-orange-500 rounded-md" />
-                       <Clock className="w-5 h-5" />
+                <CardContent className="p-0">
+                  <div className="flex gap-8 px-6 py-4 border-b border-border/50">
+                    <span className="text-sm font-bold text-foreground border-b-2 border-foreground pb-4 -mb-4">Trade Yes</span>
+                    <span className="text-sm font-bold text-muted-foreground">Trade No</span>
+                    <div className="ml-auto flex gap-4 text-muted-foreground">
+                       <Button variant="ghost" size="icon" className="h-5 w-5"><ArrowUpRight className="w-4 h-4" /></Button>
+                       <Button variant="ghost" size="icon" className="h-5 w-5"><Clock className="w-4 h-4" /></Button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 text-[11px] font-bold uppercase tracking-widest text-white/30 mb-4 px-2">
-                    <div>Trade Up</div>
+                  <div className="grid grid-cols-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-4 mb-2 px-6">
+                    <div>Order Type</div>
                     <div className="text-center">Price</div>
                     <div className="text-center">Shares</div>
                     <div className="text-right">Total</div>
                   </div>
                   
-                  <div className="space-y-1">
-                    {bids.length > 0 ? bids.map((bid: any, i: number) => (
-                      <div key={i} className="grid grid-cols-4 items-center h-10 px-2 relative group cursor-pointer hover:bg-white/5 rounded-lg transition-colors">
-                        <div className="absolute inset-0 bg-green-500/5 left-0" style={{ width: `${Math.min((bid.size / 5000) * 100, 100)}%` }} />
-                        <div className="z-10 text-xs font-bold text-white/40">
-                           <div className="w-5 h-5 border border-white/20 rounded-sm" />
-                        </div>
-                        <div className="z-10 text-sm font-bold text-green-500 text-center">{Math.round(bid.price * 100)}¢</div>
-                        <div className="z-10 text-sm font-bold text-white/70 text-center">{Math.round(bid.size).toLocaleString()}</div>
-                        <div className="z-10 text-sm font-bold text-white/70 text-right">${Math.round(bid.price * bid.size).toLocaleString()}</div>
+                  <div className="space-y-1 pb-4">
+                    {asks && asks.length > 0 && asks.map((ask: any, i: number) => (
+                      <div key={`ask-${i}`} className="grid grid-cols-4 items-center h-10 px-6 relative group cursor-pointer hover:bg-accent/50 transition-colors">
+                        <div className="absolute inset-y-1 right-0 bg-red-500/5 z-0" style={{ width: `${Math.min((ask.size / 5000) * 100, 100)}%` }} />
+                        <div className="z-10 text-[10px] font-bold text-red-500/50 uppercase">Ask</div>
+                        <div className="z-10 text-sm font-bold text-red-500 text-center">{Math.round(ask.price * 100)}¢</div>
+                        <div className="z-10 text-sm font-bold text-foreground/70 text-center">{Math.round(ask.size).toLocaleString()}</div>
+                        <div className="z-10 text-sm font-bold text-foreground/70 text-right">${Math.round(ask.price * ask.size).toLocaleString()}</div>
                       </div>
-                    )) : (
-                      <div className="py-10 text-center text-white/20 font-bold">No active orders</div>
+                    ))}
+                    {bids && bids.length > 0 && bids.map((bid: any, i: number) => (
+                      <div key={`bid-${i}`} className="grid grid-cols-4 items-center h-10 px-6 relative group cursor-pointer hover:bg-accent/50 transition-colors">
+                        <div className="absolute inset-y-1 right-0 bg-green-500/5 z-0" style={{ width: `${Math.min((bid.size / 5000) * 100, 100)}%` }} />
+                        <div className="z-10 text-[10px] font-bold text-green-500/50 uppercase">Bid</div>
+                        <div className="z-10 text-sm font-bold text-green-500 text-center">{Math.round(bid.price * 100)}¢</div>
+                        <div className="z-10 text-sm font-bold text-foreground/70 text-center">{Math.round(bid.size).toLocaleString()}</div>
+                        <div className="z-10 text-sm font-bold text-foreground/70 text-right">${Math.round(bid.price * bid.size).toLocaleString()}</div>
+                      </div>
+                    ))}
+                    {(!bids || bids.length === 0) && (!asks || asks.length === 0) && (
+                      <div className="py-10 text-center text-muted-foreground/50 font-bold">No active orders</div>
                     )}
                   </div>
                 </CardContent>
               </Card>
+
+              <div className="space-y-6 pt-4">
+                 <div className="flex gap-6 border-b border-border/50 pb-2">
+                    <h3 className="font-bold text-base border-b-2 border-foreground pb-2 -mb-2">Rules</h3>
+                    <h3 className="font-bold text-base text-muted-foreground">Market Context</h3>
+                 </div>
+                 <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                   {market.description || "This market will resolve based on the official outcome of the event. Payouts are distributed to the holders of the correct outcome tokens."}
+                 </p>
+              </div>
+            </div>
+
+            {/* Sidebar Trade */}
+            <div className="space-y-6">
+              <Card className="border-border shadow-xl sticky top-24 rounded-2xl overflow-hidden bg-card">
+                <CardContent className="p-0">
+                  <Tabs value={side} onValueChange={(v) => setSide(v as any)}>
+                    <TabsList className="w-full h-14 rounded-none border-b border-border/50 bg-transparent p-1">
+                      <TabsTrigger value="buy" className="flex-1 h-full rounded-xl font-bold text-xs data-[state=active]:bg-accent">Buy</TabsTrigger>
+                      <TabsTrigger value="sell" className="flex-1 h-full rounded-xl font-bold text-xs data-[state=active]:bg-accent">Sell</TabsTrigger>
+                    </TabsList>
+                    
+                    <div className="p-6 space-y-6">
+                      <div className="flex gap-2">
+                        {outcomes.map((o: string, i: number) => {
+                          const isYes = o.toLowerCase() === 'yes';
+                          return (
+                            <Button 
+                              key={o}
+                              variant={outcome === i ? "default" : "outline"}
+                              className={`flex-1 h-16 flex-col gap-0 rounded-2xl border-border transition-all ${
+                                outcome === i 
+                                  ? (isYes ? "bg-green-600 hover:bg-green-700 border-transparent text-white" : "bg-red-600 hover:bg-red-700 border-transparent text-white") 
+                                  : "bg-accent/50 hover:bg-accent"
+                              }`}
+                              onClick={() => setOutcome(i)}
+                            >
+                              <span className="text-[10px] font-bold uppercase opacity-60">{o} {Math.round(parseFloat(prices[i] || "0") * 100)}¢</span>
+                            </Button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="space-y-4">
+                         <div className="flex justify-between items-center">
+                           <label className="text-sm font-bold text-foreground">Amount</label>
+                           <span className="text-3xl font-bold text-muted-foreground/30">${amount || "0"}</span>
+                         </div>
+                         <div className="relative">
+                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-lg">$</span>
+                           <Input 
+                             type="number" 
+                             placeholder="0" 
+                             className="pl-10 h-14 text-xl font-bold bg-accent/30 border-border rounded-2xl focus-visible:ring-primary/20"
+                             value={amount}
+                             onChange={(e) => setAmount(e.target.value)}
+                           />
+                         </div>
+                         <div className="flex gap-2">
+                           {['+1', '+5', '+10', '+100', 'Max'].map(v => (
+                             <Button key={v} variant="ghost" size="sm" className="flex-1 text-[10px] h-9 font-bold bg-accent rounded-xl hover:bg-accent/80" onClick={() => {
+                               if(v === 'Max') setAmount("1000");
+                               else setAmount((prev) => (parseFloat(prev || "0") + parseFloat(v.replace('+', ''))).toString());
+                             }}>{v}</Button>
+                           ))}
+                         </div>
+                      </div>
+
+                      <Button className="w-full h-16 text-sm font-black uppercase tracking-[0.1em] rounded-2xl shadow-lg bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-[0.98]">
+                        Trade
+                      </Button>
+                      
+                      <p className="text-[11px] text-center text-muted-foreground font-medium">
+                        By trading, you agree to the <span className="underline cursor-pointer">Terms of Use</span>.
+                      </p>
+                    </div>
+                  </Tabs>
+                </CardContent>
+              </Card>
+              
+              <div className="space-y-4">
+                 {['Iran', 'Geopolitics', 'Politics', 'Middle East'].map(tag => (
+                    <div key={tag} className="flex items-center justify-between p-3 rounded-xl bg-accent/30 border border-border/50 cursor-pointer hover:bg-accent/50 transition-colors">
+                       <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center">
+                             <img src="/favicon.svg" alt="" className="w-4 h-4 opacity-50" />
+                          </div>
+                          <span className="text-sm font-bold text-foreground/80">{tag} related market</span>
+                       </div>
+                       <span className="text-sm font-black text-foreground">37%</span>
+                    </div>
+                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
               <div className="space-y-4">
                  <h3 className="font-bold text-lg">Rules</h3>
