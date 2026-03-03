@@ -99,7 +99,7 @@ export default function PredictionPage() {
         {/* Featured Market (Hero Style) */}
         {!isLoading && displayedMarkets && displayedMarkets.length > 0 && searchQuery === "" && activeCategory === "Trending" && (
           <div className="mb-8">
-            <FeaturedMarketCard market={displayedMarkets[0]} />
+            <FeaturedMarketCard market={displayedMarkets[0]} allMarkets={markets || []} />
           </div>
         )}
 
@@ -187,10 +187,19 @@ function MarketCard({ market }: { market: PolymarketMarket }) {
   );
 }
 
-function FeaturedMarketCard({ market }: { market: PolymarketMarket }) {
+function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, allMarkets: PolymarketMarket[] }) {
   const [, setLocation] = useLocation();
   const prices = JSON.parse(market.outcomePrices || "[]");
   const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
+
+  // Get breaking news from other markets
+  const breakingNews = useMemo(() => {
+    if (!allMarkets) return [];
+    return allMarkets
+      .filter(m => m.id !== market.id)
+      .sort((a, b) => (b.volumeNum || 0) - (a.volumeNum || 0))
+      .slice(0, 3);
+  }, [allMarkets, market.id]);
 
   return (
     <Card 
@@ -201,7 +210,7 @@ function FeaturedMarketCard({ market }: { market: PolymarketMarket }) {
         <div className="p-8 flex flex-col justify-center">
           <div className="flex items-center gap-2 mb-4">
             {market.image && <img src={market.image} className="w-6 h-6 rounded" />}
-            <span className="text-xs font-bold text-muted-foreground uppercase">{market.tags?.[0]} • Iran</span>
+            <span className="text-xs font-bold text-muted-foreground uppercase">{market.tags?.[0] || 'Market'}</span>
           </div>
           <h2 className="text-2xl font-black mb-6 leading-tight">
             {market.question}
@@ -233,18 +242,41 @@ function FeaturedMarketCard({ market }: { market: PolymarketMarket }) {
             <ChevronRight className="w-4 h-4" />
           </div>
           <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="flex gap-4">
-                <span className="text-xs font-bold text-muted-foreground">{i}</span>
-                <div className="flex-1">
-                  <p className="text-xs font-bold leading-snug">Will Jasmine Crockett and Ken Paxton be candidates for the Texas Senate...</p>
-                  <span className="text-[10px] text-muted-foreground">Reuters • 13h ago</span>
+            {breakingNews.length > 0 ? (
+              breakingNews.map((newsMarket, i) => {
+                const newsPrices = JSON.parse(newsMarket.outcomePrices || "[]");
+                const newsPrice = newsPrices[0] ? Math.round(parseFloat(newsPrices[0]) * 100) : 0;
+                return (
+                  <div key={newsMarket.id} className="flex gap-4 cursor-pointer hover:opacity-80" onClick={(e) => {
+                    e.stopPropagation();
+                    setLocation(`/prediction/${newsMarket.conditionId}`);
+                  }}>
+                    <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold leading-snug line-clamp-2">{newsMarket.question}</p>
+                      <span className="text-[10px] text-muted-foreground">{newsMarket.tags?.[0] || 'Politics'}</span>
+                    </div>
+                    <span className="text-xs font-bold">{newsPrice}%</span>
+                  </div>
+                );
+              })
+            ) : (
+              [1, 2, 3].map(i => (
+                <div key={i} className="flex gap-4">
+                  <span className="text-xs font-bold text-muted-foreground">{i}</span>
+                  <div className="flex-1">
+                    <Skeleton className="h-3 w-full mb-1" />
+                    <Skeleton className="h-2 w-1/2" />
+                  </div>
+                  <Skeleton className="h-3 w-6" />
                 </div>
-                <span className="text-xs font-bold">17%</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-          <Button variant="outline" className="w-full font-bold">Explore all</Button>
+          <Button variant="outline" className="w-full font-bold" onClick={(e) => {
+            e.stopPropagation();
+            setActiveCategory("Trending");
+          }}>Explore all</Button>
         </div>
       </div>
     </Card>
