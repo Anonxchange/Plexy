@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Link2, Bookmark, Search, TrendingUp } from "lucide-react";
+import { ChevronDown, Link2, Bookmark, Search, TrendingUp, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -17,14 +17,21 @@ const QUICK_AMOUNTS = [1, 5, 10, 100];
 export default function PredictionDetailPage() {
   const [, params] = useRoute("/prediction/:id");
   const [, setLocation] = useLocation();
-  const { data: market, isLoading: marketLoading } = useMarketDetail(params?.id);
+  const { data: market, isLoading: marketLoading, error: marketError } = useMarketDetail(params?.id);
   const [searchQuery, setSearchQuery] = useState("");
   
+  if (marketError) {
+    console.error("Market fetch error:", marketError);
+  }
+
   const outcomes = useMemo(() => {
     try {
-      const prices = JSON.parse(market?.outcomePrices || "[]");
-      const clobTokenIds = JSON.parse(market?.clobTokenIds || "[]");
-      const names = JSON.parse(market?.outcomes || "[]");
+      if (!market) return [];
+      console.log("Processing market data:", market);
+      
+      const prices = JSON.parse(market.outcomePrices || "[]");
+      const clobTokenIds = JSON.parse(market.clobTokenIds || "[]");
+      const names = JSON.parse(market.outcomes || "[]");
       
       const res = names.map((name: string, i: number) => ({
         name,
@@ -40,6 +47,7 @@ export default function PredictionDetailPage() {
       }
       return res;
     } catch (e) {
+      console.error("Error parsing outcomes:", e, market);
       return [];
     }
   }, [market]);
@@ -98,28 +106,37 @@ export default function PredictionDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] p-8 space-y-8">
-        <div className="container mx-auto max-w-6xl">
-          <div className="flex items-center gap-4 mb-8">
-            <Skeleton className="h-16 w-16 rounded-xl" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-8 w-3/4" />
-            </div>
+        <div className="container mx-auto max-w-6xl text-center py-20">
+          <div className="flex justify-center mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-            <div className="space-y-6">
-              <Skeleton className="h-[450px] w-full rounded-xl" />
-              <Skeleton className="h-16 w-full rounded-xl" />
-              <Skeleton className="h-32 w-full rounded-xl" />
-            </div>
-            <Skeleton className="h-[500px] w-full rounded-xl" />
-          </div>
+          <p className="text-muted-foreground font-medium">Loading market details...</p>
         </div>
       </div>
     );
   }
 
-  if (!market) return <div className="p-8 text-center">Market not found</div>;
+  if (marketError) {
+    return (
+      <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] p-8">
+        <div className="container mx-auto max-w-6xl text-center py-20 bg-card rounded-xl border border-destructive/20">
+          <h2 className="text-2xl font-bold text-destructive mb-2">Error Loading Market</h2>
+          <p className="text-muted-foreground mb-6">{(marketError as Error)?.message || 'An unexpected error occurred'}</p>
+          <Button onClick={() => setLocation("/prediction")}>Back to Markets</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!market) return (
+    <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] p-8">
+      <div className="container mx-auto max-w-6xl text-center py-20 bg-card rounded-xl border">
+        <h2 className="text-2xl font-bold mb-2">Market Not Found</h2>
+        <p className="text-muted-foreground mb-6">The market you are looking for does not exist or has been removed.</p>
+        <Button onClick={() => setLocation("/prediction")}>Back to Markets</Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] text-foreground font-sans">
@@ -497,7 +514,7 @@ export default function PredictionDetailPage() {
                   </div>
                   
                   <div className="flex items-center gap-2 mt-4 overflow-x-auto no-scrollbar pb-1">
-                    {['1', '5', '10', '100'].map(amt => (
+                    {QUICK_AMOUNTS.map(amt => (
                       <Button
                         key={amt}
                         variant="outline"
