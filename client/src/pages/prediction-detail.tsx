@@ -1,24 +1,16 @@
-import { useMarketDetail, useOrderbook, PolymarketMarket, useMarkets } from "@/hooks/use-polymarket";
+import { useMarketDetail, useOrderbook } from "@/hooks/use-polymarket";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, Calendar, Link2, Bookmark, Share2, Search, TrendingUp, Info, Star } from "lucide-react";
+import { ChevronDown, Link2, Bookmark, Search, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from "@/lib/utils";
-
-
-const FIXED_CATEGORIES = [
-  "Trending", "Breaking", "New", "Politics", "Sports", 
-  "Crypto", "Iran", "Finance", "Geopolitics", "Tech", 
-  "Culture", "Economy"
-];
 
 const QUICK_AMOUNTS = [1, 5, 10, 100];
 
@@ -27,26 +19,35 @@ export default function PredictionDetailPage() {
   const [, setLocation] = useLocation();
   const { data: market, isLoading: marketLoading } = useMarketDetail(params?.id);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("Trending");
   
   const outcomes = useMemo(() => {
     try {
-      const names = JSON.parse(market?.outcomes || "[]");
       const prices = JSON.parse(market?.outcomePrices || "[]");
       const clobTokenIds = JSON.parse(market?.clobTokenIds || "[]");
-      return names.map((name: string, i: number) => ({
+      const names = JSON.parse(market?.outcomes || "[]");
+      
+      const res = names.map((name: string, i: number) => ({
         name,
         price: parseFloat(prices[i] || "0.5"),
         tokenId: clobTokenIds[i]
       }));
-    } catch {
+
+      if (res.length === 2) {
+        const isYesNo = res.every(o => ['yes', 'no'].includes(o.name.toLowerCase()));
+        if (isYesNo && res[0].name.toLowerCase() === 'no') {
+          return [res[1], res[0]];
+        }
+      }
+      return res;
+    } catch (e) {
       return [];
     }
   }, [market]);
 
-  const isBinary = outcomes.length === 2 &&
-    ['yes', 'no'].includes(outcomes[0]?.name.toLowerCase()) &&
-    ['yes', 'no'].includes(outcomes[1]?.name.toLowerCase());
+  const isBinary = useMemo(() => 
+    outcomes.length === 2 && outcomes.every(o => ['yes', 'no'].includes(o.name.toLowerCase())),
+    [outcomes]
+  );
 
   const [selectedOutcomeIdx, setSelectedOutcomeIdx] = useState(0);
   const [amount, setAmount] = useState('');
@@ -61,50 +62,57 @@ export default function PredictionDetailPage() {
 
   const endDate = market?.endDate ? format(new Date(market.endDate), 'MMM d, yyyy') : null;
 
-  const yesPrice = outcomes[0]?.price ?? 0.5;
-  const noPrice = outcomes[1]?.price ?? 0.5;
+  const yesPrice = outcomes.find(o => o.name.toLowerCase() === 'yes')?.price ?? 0.5;
+  const noPrice = outcomes.find(o => o.name.toLowerCase() === 'no')?.price ?? 0.5;
   const yesCents = Math.round(yesPrice * 100);
   const noCents = Math.round(noPrice * 100);
   const selectedPrice = selectedOutcome?.price ?? 0.5;
   const selectedCents = Math.round(selectedPrice * 100);
 
   const amountNum = Number(amount) || 0;
-  const estimatedShares = selectedCents > 0 ? amountNum / (selectedCents / 100) : 0;
+  const estimatedShares = selectedPrice > 0 ? amountNum / selectedPrice : 0;
   const potentialReturn = estimatedShares > 0 ? (estimatedShares - amountNum).toFixed(2) : '0.00';
 
   const chartData = useMemo(() => {
-    if (!orderbook?.history?.length) {
-      const currentPrice = selectedCents;
-      return Array.from({ length: 50 }, (_, i) => ({
+    // Generate some mock history if none exists for a better visual
+    const history = orderbook?.history || [];
+    if (history.length < 10) {
+      const basePrice = selectedCents;
+      return Array.from({ length: 40 }, (_, i) => ({
         name: i,
-        value: Math.max(0, Math.min(100, currentPrice + (Math.random() - 0.5) * 5))
+        value: Math.max(1, Math.min(99, basePrice + (Math.sin(i / 5) * 5) + (Math.random() - 0.5) * 3))
       }));
     }
-    return orderbook.history.map((h: any, i: number) => ({
+    return history.map((h: any, i: number) => ({
       name: i,
       value: h.price * 100
     }));
   }, [orderbook, selectedCents]);
 
   const handleTrade = async () => {
-    if (amountNum <= 0) {
-      toast({ title: "Error", description: "Enter a valid amount", variant: "destructive" });
-      return;
+    if (amountNum > 0) {
+      // Logic for trade
     }
-    toast({ title: "Success", description: "Sign up to start trading!" });
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-8 space-y-8">
-        <div className="container mx-auto max-w-7xl">
-          <Skeleton className="h-12 w-48 mb-8" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-[400px] w-full" />
+      <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] p-8 space-y-8">
+        <div className="container mx-auto max-w-6xl">
+          <div className="flex items-center gap-4 mb-8">
+            <Skeleton className="h-16 w-16 rounded-xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-8 w-3/4" />
             </div>
-            <Skeleton className="h-[500px] w-full" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+            <div className="space-y-6">
+              <Skeleton className="h-[450px] w-full rounded-xl" />
+              <Skeleton className="h-16 w-full rounded-xl" />
+              <Skeleton className="h-32 w-full rounded-xl" />
+            </div>
+            <Skeleton className="h-[500px] w-full rounded-xl" />
           </div>
         </div>
       </div>
@@ -157,21 +165,26 @@ export default function PredictionDetailPage() {
                   className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
                 />
               )}
-              <div className="flex-1 min-w-0">
-                {market.tags?.length > 0 && (
-                  <div className="flex items-center gap-1.5 mb-1.5 text-xs text-muted-foreground">
-                    {market.tags.map((tag, i) => (
-                      <span key={tag}>
-                        {i > 0 && <span className="mx-1">·</span>}
-                        <span className="hover:underline cursor-pointer">{tag}</span>
-                      </span>
-                    ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[10px] font-black uppercase tracking-widest px-2 py-0.5">
+                        Active
+                      </Badge>
+                      {market.tags?.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                          {market.tags.map((tag, i) => (
+                            <span key={tag} className="flex items-center">
+                              {i > 0 && <span className="mx-1 opacity-30">|</span>}
+                              <span className="hover:text-primary cursor-pointer transition-colors">{tag}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight leading-[1.1]">
+                      {market.question}
+                    </h1>
                   </div>
-                )}
-                <h1 className="text-xl md:text-2xl font-bold font-display leading-tight">
-                  {market.question}
-                </h1>
-              </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors">
                   <Link2 className="h-4 w-4" />
@@ -185,18 +198,34 @@ export default function PredictionDetailPage() {
             {/* Price Chart */}
             <div className="rounded-xl border bg-card overflow-hidden">
               <div className="p-6">
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-5xl font-bold font-display text-blue-600">{selectedCents}%</span>
-                  <span className="text-sm text-muted-foreground">chance</span>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className={cn(
+                    "text-5xl font-black tracking-tight",
+                    selectedOutcome?.name.toLowerCase() === 'no' ? "text-rose-500" : "text-[#2563eb]"
+                  )}>
+                    {selectedCents}%
+                  </span>
+                  <span className="text-lg font-bold text-muted-foreground uppercase tracking-wider">chance</span>
+                </div>
+                <div className="flex items-center gap-2 mb-6 text-sm">
+                  <span className="flex items-center gap-1 text-emerald-500 font-bold">
+                    <TrendingUp className="h-3 w-3" />
+                    +2.4%
+                  </span>
+                  <span className="text-muted-foreground font-medium">Last 24h</span>
                 </div>
 
                 <div className="h-[300px] w-full relative mb-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="colorValue-blue" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
                           <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorValue-red" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
@@ -223,43 +252,33 @@ export default function PredictionDetailPage() {
                       <Area 
                         type="monotone" 
                         dataKey="value" 
-                        stroke="#2563eb" 
+                        stroke={selectedOutcome?.name.toLowerCase() === 'no' ? "#f43f5e" : "#2563eb"} 
                         fillOpacity={1} 
-                        fill="url(#colorValue)" 
+                        fill={`url(#colorValue-${selectedOutcome?.name.toLowerCase() === 'no' ? 'red' : 'blue'})`} 
                         strokeWidth={3} 
                         dot={false}
-                        activeDot={{ r: 6, fill: "#2563eb", stroke: "white", strokeWidth: 2 }}
+                        activeDot={{ r: 6, fill: selectedOutcome?.name.toLowerCase() === 'no' ? "#f43f5e" : "#2563eb", stroke: "white", strokeWidth: 2 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      ${market.volumeNum ? market.volumeNum.toLocaleString() : "0"} Vol.
-                    </span>
-                    {endDate && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {endDate}
+                <div className="flex items-center justify-between border-t pt-4">
+                  <div className="flex items-center gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Volume</span>
+                      <span className="text-sm font-bold">
+                        ${market.volumeNum ? market.volumeNum.toLocaleString() : "0"}
                       </span>
+                    </div>
+                    {endDate && (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Ends</span>
+                        <span className="text-sm font-bold flex items-center gap-1">
+                          {endDate}
+                        </span>
+                      </div>
                     )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {['1H', '6H', '1D', '1W', '1M', 'ALL'].map((t) => (
-                      <button
-                        key={t}
-                        className={cn(
-                          "px-2 py-1 text-xs font-medium rounded transition-colors",
-                          t === 'ALL'
-                            ? "bg-secondary text-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {t}
-                      </button>
-                    ))}
                   </div>
                 </div>
               </div>
@@ -269,7 +288,7 @@ export default function PredictionDetailPage() {
             <Collapsible open={orderbookOpen} onOpenChange={setOrderbookOpen}>
               <CollapsibleTrigger className="w-full">
                 <div className="flex items-center justify-between rounded-xl border bg-card p-4 hover:bg-secondary/30 transition-colors">
-                  <span className="font-semibold text-sm">Order Book</span>
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Order Book</span>
                   <ChevronDown
                     className={cn(
                       "h-4 w-4 text-muted-foreground transition-transform",
@@ -279,36 +298,46 @@ export default function PredictionDetailPage() {
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="border border-t-0 rounded-b-xl bg-card p-4">
+                <div className="border border-t-0 rounded-b-xl bg-card p-6">
                   {orderbook ? (
-                    <div className="grid grid-cols-2 gap-6 text-xs">
+                    <div className="grid grid-cols-2 gap-12 text-[10px] font-black uppercase tracking-widest">
                       <div>
-                        <p className="font-semibold text-emerald-600 dark:text-emerald-400 mb-2">Bids</p>
-                        {(orderbook.bids || []).slice(0, 8).map((bid: any, i: number) => (
-                          <div key={i} className="flex justify-between py-0.5">
-                            <span>{(Number(bid.price) * 100).toFixed(1)}¢</span>
-                            <span className="text-muted-foreground">{Number(bid.size).toLocaleString()}</span>
-                          </div>
-                        ))}
-                        {(!orderbook.bids || orderbook.bids.length === 0) && (
-                          <p className="text-muted-foreground">No bids</p>
-                        )}
+                        <div className="flex justify-between text-emerald-500 mb-4">
+                          <span>Price</span>
+                          <span>Qty</span>
+                        </div>
+                        <div className="space-y-1">
+                          {(orderbook.bids || []).slice(0, 8).map((bid: any, i: number) => (
+                            <div key={i} className="flex justify-between font-bold normal-case tracking-normal text-sm">
+                              <span className="text-emerald-500">{(Number(bid.price) * 100).toFixed(1)}¢</span>
+                              <span className="text-muted-foreground">{Number(bid.size).toLocaleString()}</span>
+                            </div>
+                          ))}
+                          {(!orderbook.bids || orderbook.bids.length === 0) && (
+                            <p className="text-muted-foreground normal-case font-medium">No bids</p>
+                          )}
+                        </div>
                       </div>
                       <div>
-                        <p className="font-semibold text-rose-500 dark:text-rose-400 mb-2">Asks</p>
-                        {(orderbook.asks || []).slice(0, 8).map((ask: any, i: number) => (
-                          <div key={i} className="flex justify-between py-0.5">
-                            <span>{(Number(ask.price) * 100).toFixed(1)}¢</span>
-                            <span className="text-muted-foreground">{Number(ask.size).toLocaleString()}</span>
-                          </div>
-                        ))}
-                        {(!orderbook.asks || orderbook.asks.length === 0) && (
-                          <p className="text-muted-foreground">No asks</p>
-                        )}
+                        <div className="flex justify-between text-rose-500 mb-4">
+                          <span>Price</span>
+                          <span>Qty</span>
+                        </div>
+                        <div className="space-y-1">
+                          {(orderbook.asks || []).slice(0, 8).map((ask: any, i: number) => (
+                            <div key={i} className="flex justify-between font-bold normal-case tracking-normal text-sm">
+                              <span className="text-rose-500">{(Number(ask.price) * 100).toFixed(1)}¢</span>
+                              <span className="text-muted-foreground">{Number(ask.size).toLocaleString()}</span>
+                            </div>
+                          ))}
+                          {(!orderbook.asks || orderbook.asks.length === 0) && (
+                            <p className="text-muted-foreground normal-case font-medium">No asks</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">Loading orderbook…</p>
+                    <p className="text-xs font-bold text-muted-foreground text-center py-4 uppercase tracking-widest">Loading orderbook…</p>
                   )}
                 </div>
               </CollapsibleContent>
@@ -320,9 +349,9 @@ export default function PredictionDetailPage() {
                 <button
                   onClick={() => setRulesTab('rules')}
                   className={cn(
-                    "px-5 py-3 text-sm font-semibold transition-colors",
+                    "px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-colors relative",
                     rulesTab === 'rules'
-                      ? "text-foreground border-b-2 border-foreground"
+                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -331,64 +360,64 @@ export default function PredictionDetailPage() {
                 <button
                   onClick={() => setRulesTab('context')}
                   className={cn(
-                    "px-5 py-3 text-sm font-semibold transition-colors",
+                    "px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-colors relative",
                     rulesTab === 'context'
-                      ? "text-foreground border-b-2 border-foreground"
+                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   Market Context
                 </button>
               </div>
-              <div className="p-5">
+              <div className="p-6">
                 {rulesTab === 'rules' ? (
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  <p className="text-sm font-medium text-muted-foreground whitespace-pre-wrap leading-relaxed">
                     {market.description || 'No rules specified for this market.'}
                   </p>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm font-medium text-muted-foreground leading-relaxed">
                     This market tracks the probability of the stated outcome. Trade based on your own research and judgment.
                   </p>
                 )}
               </div>
             </div>
 
-            {/* All Outcomes (for multi-outcome markets) */}
-            {!isBinary && outcomes.length > 2 && (
-              <div className="rounded-xl border bg-card p-5">
-                <h3 className="font-semibold text-sm mb-3">All Outcomes</h3>
-                <div className="space-y-2">
-                  {[...outcomes].sort((a, b) => b.price - a.price).map((o, i) => {
-                    const pct = Math.round(o.price * 100);
-                    const realIdx = outcomes.indexOf(o);
-                    const isSelected = realIdx === selectedOutcomeIdx;
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => setSelectedOutcomeIdx(realIdx)}
-                        className={cn(
-                          "w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left",
-                          isSelected
-                            ? "border-accent bg-accent/5"
-                            : "border-border hover:border-accent/40"
-                        )}
-                      >
-                        <span className="font-medium text-sm">{o.name}</span>
-                        <div className="flex items-center gap-3">
-                          <div className="w-24 h-2 rounded-full bg-secondary overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-blue-600 transition-all"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="font-bold text-sm w-10 text-right">{pct}%</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                {/* All Outcomes (for multi-outcome markets) */}
+                {!isBinary && outcomes.length > 2 && (
+                  <div className="rounded-xl border bg-card p-5">
+                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">All Outcomes</h3>
+                    <div className="space-y-2">
+                      {[...outcomes].sort((a, b) => b.price - a.price).map((o, i) => {
+                        const pct = Math.round(o.price * 100);
+                        const realIdx = outcomes.indexOf(o);
+                        const isSelected = realIdx === selectedOutcomeIdx;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => setSelectedOutcomeIdx(realIdx)}
+                            className={cn(
+                              "w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
+                              isSelected
+                                ? "border-primary bg-primary/5"
+                                : "border-[#EBEBEB] dark:border-[#2B2E33] hover:border-muted"
+                            )}
+                          >
+                            <span className="font-bold text-sm">{o.name}</span>
+                            <div className="flex items-center gap-3">
+                              <div className="w-24 h-1.5 rounded-full bg-secondary overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-primary transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="font-black text-sm w-10 text-right">{pct}%</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
           </div>
 
           {/* ===== RIGHT COLUMN — Trading Panel ===== */}
@@ -396,32 +425,32 @@ export default function PredictionDetailPage() {
             <Card className="sticky top-20 rounded-xl shadow-xl overflow-hidden bg-card">
               <CardContent className="p-5 space-y-5">
                 {/* Buy / Sell tabs */}
-                <div className="flex border-b">
-                  <button
-                    onClick={() => setTradeTab('buy')}
-                    className={cn(
-                      "flex-1 pb-2.5 text-sm font-semibold transition-colors text-center",
-                      tradeTab === 'buy'
-                        ? "text-foreground border-b-2 border-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Buy
-                  </button>
-                  <button
-                    onClick={() => setTradeTab('sell')}
-                    className={cn(
-                      "flex-1 pb-2.5 text-sm font-semibold transition-colors text-center",
-                      tradeTab === 'sell'
-                        ? "text-foreground border-b-2 border-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Sell
-                  </button>
-                  <div className="ml-auto pb-2.5">
-                    <Badge variant="outline" className="text-xs">Market</Badge>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setTradeTab('buy')}
+                      className={cn(
+                        "pb-2 text-sm font-bold transition-colors relative",
+                        tradeTab === 'buy'
+                          ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Buy
+                    </button>
+                    <button
+                      onClick={() => setTradeTab('sell')}
+                      className={cn(
+                        "pb-2 text-sm font-bold transition-colors relative",
+                        tradeTab === 'sell'
+                          ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Sell
+                    </button>
                   </div>
+                  <Badge variant="secondary" className="bg-[#F1F4F9] dark:bg-[#1E2329] border-none text-[10px] font-black uppercase tracking-widest">Market</Badge>
                 </div>
 
                 {/* Outcome selector */}
@@ -430,24 +459,24 @@ export default function PredictionDetailPage() {
                     <button
                       onClick={() => setSelectedOutcomeIdx(0)}
                       className={cn(
-                        "py-4 rounded-xl font-bold text-lg transition-all flex flex-col items-center justify-center gap-1",
+                        "py-4 rounded-xl font-black text-lg transition-all border-2",
                         selectedOutcomeIdx === 0
-                          ? "bg-[#00C076] text-white shadow-md"
-                          : "bg-[#EBEBEB] dark:bg-[#2B2E33] text-[#757575] hover:bg-[#E0E0E0]"
+                          ? "bg-[#E6F4EA] text-[#1E8E3E] border-[#1E8E3E]"
+                          : "bg-white dark:bg-[#12161C] border-[#EBEBEB] dark:border-[#2B2E33] text-muted-foreground hover:border-muted"
                       )}
                     >
-                      <span>Yes {yesCents}¢</span>
+                      Yes {yesCents}¢
                     </button>
                     <button
                       onClick={() => setSelectedOutcomeIdx(1)}
                       className={cn(
-                        "py-4 rounded-xl font-bold text-lg transition-all flex flex-col items-center justify-center gap-1",
+                        "py-4 rounded-xl font-black text-lg transition-all border-2",
                         selectedOutcomeIdx === 1
-                          ? "bg-[#FF3B30] text-white shadow-md"
-                          : "bg-[#EBEBEB] dark:bg-[#2B2E33] text-[#757575] hover:bg-[#E0E0E0]"
+                          ? "bg-[#FCE8E6] text-[#D93025] border-[#D93025]"
+                          : "bg-white dark:bg-[#12161C] border-[#EBEBEB] dark:border-[#2B2E33] text-muted-foreground hover:border-muted"
                       )}
                     >
-                      <span>No {noCents}¢</span>
+                      No {noCents}¢
                     </button>
                   </div>
                 ) : (
@@ -473,56 +502,59 @@ export default function PredictionDetailPage() {
                 {/* Amount */}
                 <div className="pt-2">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-muted-foreground">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
                       Amount
                     </label>
                   </div>
                   <div className="relative group">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-4xl font-bold text-[#757575]">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-black text-muted-foreground">$</span>
                     <Input
                       type="number"
                       min={0}
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0"
-                      className="pl-12 h-20 text-5xl font-bold bg-white dark:bg-[#12161C] border-2 border-[#EBEBEB] focus-visible:ring-0 focus-visible:border-primary/30 rounded-xl text-right pr-6"
+                      className="pl-10 h-16 text-3xl font-black bg-[#F1F4F9] dark:bg-[#1E2329] border-none focus-visible:ring-1 focus-visible:ring-primary/20 rounded-xl text-right pr-4"
                     />
                   </div>
                   
-                  <div className="grid grid-cols-5 gap-2 mt-3">
+                  <div className="grid grid-cols-4 gap-2 mt-3">
                     {QUICK_AMOUNTS.map(amt => (
                       <Button
                         key={amt}
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => setAmount(String((Number(amount) || 0) + amt))}
-                        className="h-12 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-xl"
+                        className="h-10 text-xs font-bold bg-white dark:bg-[#12161C] border border-[#EBEBEB] dark:border-[#2B2E33] hover:bg-secondary transition-all rounded-lg"
                       >
                         +${amt}
                       </Button>
                     ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAmount('1000')}
-                      className="h-12 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-xl"
-                    >
-                      Max
-                    </Button>
                   </div>
                 </div>
 
-                {/* Trade button */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-muted-foreground uppercase tracking-wider">Shares</span>
+                    <span>{estimatedShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-muted-foreground uppercase tracking-wider">Potential Return</span>
+                    <span className="text-emerald-500">${potentialReturn} ({((Number(potentialReturn) / (amountNum || 1)) * 100).toFixed(1)}%)</span>
+                  </div>
+                </div>
+
                 <Button 
-                  onClick={handleTrade}
                   className={cn(
-                    "w-full h-20 text-2xl font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] bg-[#9B9B9B] hover:bg-[#8A8A8A] text-white"
+                    "w-full h-14 text-lg font-black rounded-xl transition-all",
+                    selectedOutcome?.name.toLowerCase() === 'no' ? "bg-rose-500 hover:bg-rose-600" : "bg-primary hover:bg-primary/90"
                   )}
+                  onClick={handleTrade}
                 >
-                  {tradeTab === 'buy' ? 'Buy' : 'Sell'} {selectedOutcome?.name || 'Yes'}
+                  Log in to trade
                 </Button>
 
-                <p className="text-center text-sm text-[#757575] font-medium">
+                <p className="text-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
                   By trading, you agree to the Terms of Use.
                 </p>
               </CardContent>
