@@ -73,19 +73,18 @@ export default function PredictionDetailPage() {
   const potentialReturn = estimatedShares > 0 ? (estimatedShares - amountNum).toFixed(2) : '0.00';
 
   const chartData = useMemo(() => {
-    if (!orderbook?.bids || !orderbook?.asks) {
-      const currentPrice = selectedPrice * 100;
+    if (!orderbook?.history?.length) {
+      const currentPrice = selectedCents;
       return Array.from({ length: 50 }, (_, i) => ({
         name: i,
         value: Math.max(0, Math.min(100, currentPrice + (Math.random() - 0.5) * 5))
       }));
     }
-    const midPrice = (orderbook.bids[0]?.price + orderbook.asks[0]?.price) / 2 || selectedPrice;
-    return Array.from({ length: 50 }, (_, i) => ({
+    return orderbook.history.map((h: any, i: number) => ({
       name: i,
-      value: midPrice * 100 + (Math.random() - 0.5) * 2
+      value: h.price * 100
     }));
-  }, [orderbook, selectedPrice]);
+  }, [orderbook, selectedCents]);
 
   const handleTrade = async () => {
     if (amountNum <= 0) {
@@ -142,39 +141,10 @@ export default function PredictionDetailPage() {
               <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => setLocation("/prediction")}>Explore</span>
             </div>
           </div>
-
-          <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-3">
-            {FIXED_CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => {
-                  setActiveCategory(cat);
-                  setLocation(`/prediction?category=${cat}`);
-                }}
-                className={cn(
-                  "text-sm font-semibold whitespace-nowrap transition-colors relative pb-1",
-                  activeCategory === cat 
-                    ? "text-primary border-b-2 border-primary" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {cat === "Trending" && <TrendingUp className="inline-block w-4 h-4 mr-1 mb-0.5" />}
-                {cat}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
       <main className="container mx-auto max-w-6xl py-6 px-4">
-        {/* Back button */}
-        <button
-          onClick={() => setLocation("/prediction")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to Markets
-        </button>
-
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
           {/* ===== LEFT COLUMN ===== */}
           <div className="space-y-6 min-w-0">
@@ -460,24 +430,26 @@ export default function PredictionDetailPage() {
                     <button
                       onClick={() => setSelectedOutcomeIdx(0)}
                       className={cn(
-                        "py-2.5 rounded-lg font-semibold text-sm transition-all",
+                        "py-4 rounded-xl font-bold text-lg transition-all flex flex-col items-center justify-center gap-1",
                         selectedOutcomeIdx === 0
-                          ? "bg-emerald-500 text-white shadow-sm"
-                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                          ? "bg-[#00C076] text-white shadow-md scale-[1.02]"
+                          : "bg-[#F1F4F9] dark:bg-[#1E2329] text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      Yes {yesCents}¢
+                      <span className="text-xl">Yes</span>
+                      <span className="text-sm opacity-90">{yesCents}¢</span>
                     </button>
                     <button
                       onClick={() => setSelectedOutcomeIdx(1)}
                       className={cn(
-                        "py-2.5 rounded-lg font-semibold text-sm transition-all",
+                        "py-4 rounded-xl font-bold text-lg transition-all flex flex-col items-center justify-center gap-1",
                         selectedOutcomeIdx === 1
-                          ? "bg-rose-500 text-white shadow-sm"
-                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                          ? "bg-[#FF3B30] text-white shadow-md scale-[1.02]"
+                          : "bg-[#F1F4F9] dark:bg-[#1E2329] text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      No {noCents}¢
+                      <span className="text-xl">No</span>
+                      <span className="text-sm opacity-90">{noCents}¢</span>
                     </button>
                   </div>
                 ) : (
@@ -487,82 +459,93 @@ export default function PredictionDetailPage() {
                         key={i}
                         onClick={() => setSelectedOutcomeIdx(i)}
                         className={cn(
-                          "py-2 px-2 rounded-lg border text-xs font-semibold transition-colors truncate",
+                          "py-3 px-2 rounded-xl border text-sm font-bold transition-all truncate flex flex-col items-center gap-0.5",
                           i === selectedOutcomeIdx
-                            ? "border-blue-600 bg-blue-600 text-white"
-                            : "border-border hover:border-blue-600/40"
+                            ? "border-primary bg-primary text-white shadow-md"
+                            : "border-border bg-[#F1F4F9] dark:bg-[#1E2329] hover:border-primary/40"
                         )}
                       >
-                        {o.name} {Math.round(o.price * 100)}¢
+                        <span className="truncate w-full text-center">{o.name}</span>
+                        <span className="text-xs opacity-80">{Math.round(o.price * 100)}¢</span>
                       </button>
                     ))}
                   </div>
                 )}
 
                 {/* Amount */}
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    Amount
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground/50">$</span>
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold text-foreground">
+                      Amount
+                    </label>
+                  </div>
+                  <div className="relative group">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground/30 group-focus-within:text-primary/50 transition-colors">$</span>
                     <Input
                       type="number"
                       min={0}
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0"
-                      className="pl-8 text-2xl font-bold h-14 text-right bg-muted/20"
+                      className="pl-10 h-16 text-3xl font-bold bg-[#F1F4F9] dark:bg-[#1E2329] border-2 border-transparent focus-visible:ring-0 focus-visible:border-primary/30 rounded-2xl transition-all"
                     />
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    {QUICK_AMOUNTS.map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => setAmount(String((Number(amount) || 0) + q))}
-                        className="flex-1 py-1.5 rounded-lg border text-xs font-medium hover:bg-secondary transition-colors"
+                  
+                  <div className="grid grid-cols-5 gap-2 mt-3">
+                    {QUICK_AMOUNTS.map(amt => (
+                      <Button
+                        key={amt}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAmount(String((Number(amount) || 0) + amt))}
+                        className="h-10 text-sm font-bold bg-white dark:bg-[#12161C] border-border hover:bg-primary/10 hover:border-primary/30 transition-all rounded-xl"
                       >
-                        +${q}
-                      </button>
+                        +${amt}
+                      </Button>
                     ))}
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setAmount('1000')}
-                      className="py-1.5 px-3 rounded-lg border text-xs font-medium hover:bg-secondary transition-colors"
+                      className="h-10 text-sm font-bold bg-white dark:bg-[#12161C] border-border hover:bg-primary/10 hover:border-primary/30 transition-all rounded-xl"
                     >
                       Max
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
                 {/* Summary */}
                 {amountNum > 0 && (
-                  <div className="bg-secondary/50 rounded-lg p-3 space-y-1.5 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Avg price</span>
-                      <span>{selectedCents}¢</span>
+                  <div className="bg-secondary/30 rounded-xl p-4 space-y-2 text-sm border border-border/50">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground font-medium">Avg price</span>
+                      <span className="font-bold">{selectedCents}¢</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Est. shares</span>
-                      <span>{estimatedShares.toFixed(2)}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground font-medium">Est. shares</span>
+                      <span className="font-bold">{estimatedShares.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Potential return</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">+${potentialReturn}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground font-medium">Potential return</span>
+                      <span className="text-[#00C076] font-bold">+${potentialReturn}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Trade button */}
-                <Button
-                  className="w-full h-14 text-base font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg"
-                  size="lg"
+                <Button 
                   onClick={handleTrade}
-                  disabled={!amountNum}
+                  className={cn(
+                    "w-full h-16 text-xl font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98]",
+                    tradeTab === 'buy' 
+                      ? "bg-[#8E8E93] hover:bg-[#7A7A7F] text-white" 
+                      : "bg-[#8E8E93] hover:bg-[#7A7A7F] text-white"
+                  )}
                 >
-                  Sign Up to Trade
+                  {tradeTab === 'buy' ? 'Buy' : 'Sell'} {selectedOutcome?.name || 'Yes'}
                 </Button>
 
-                <p className="text-[10px] text-muted-foreground text-center leading-relaxed font-bold uppercase tracking-wider">
+                <p className="text-center text-[10px] text-muted-foreground font-medium uppercase tracking-widest opacity-60">
                   By trading, you agree to the Terms of Use.
                 </p>
               </CardContent>
