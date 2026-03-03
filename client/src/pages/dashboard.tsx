@@ -50,8 +50,23 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
       <div className="absolute right-0 top-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
       
       <div className="relative flex items-center gap-4">
-        <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
-          <TrendingUp className="h-6 w-6 text-primary" />
+        <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {currentMarket.image ? (
+            <img 
+              src={currentMarket.image} 
+              alt="" 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as HTMLImageElement).parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                const icon = document.createElement('div');
+                icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-6 w-6 text-primary"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>';
+                (e.target as HTMLImageElement).parentElement?.appendChild(icon.firstChild as Node);
+              }}
+            />
+          ) : (
+            <TrendingUp className="h-6 w-6 text-primary" />
+          )}
         </div>
         
         <div className="flex-1 min-w-0">
