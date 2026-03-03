@@ -459,10 +459,10 @@ export default function PredictionDetailPage() {
                     <button
                       onClick={() => setSelectedOutcomeIdx(0)}
                       className={cn(
-                        "py-4 rounded-xl font-black text-lg transition-all border-2",
+                        "py-3 rounded-xl font-black text-sm transition-all border-none",
                         selectedOutcomeIdx === 0
-                          ? "bg-[#E6F4EA] text-[#1E8E3E] border-[#1E8E3E]"
-                          : "bg-white dark:bg-[#12161C] border-[#EBEBEB] dark:border-[#2B2E33] text-muted-foreground hover:border-muted"
+                          ? "bg-[#00BA71] text-white"
+                          : "bg-[#F0F0F0] dark:bg-[#2B2E33] text-muted-foreground hover:bg-[#E0E0E0]"
                       )}
                     >
                       Yes {yesCents}¢
@@ -470,10 +470,10 @@ export default function PredictionDetailPage() {
                     <button
                       onClick={() => setSelectedOutcomeIdx(1)}
                       className={cn(
-                        "py-4 rounded-xl font-black text-lg transition-all border-2",
+                        "py-3 rounded-xl font-black text-sm transition-all border-none",
                         selectedOutcomeIdx === 1
-                          ? "bg-[#FCE8E6] text-[#D93025] border-[#D93025]"
-                          : "bg-white dark:bg-[#12161C] border-[#EBEBEB] dark:border-[#2B2E33] text-muted-foreground hover:border-muted"
+                          ? "bg-[#F0F0F0] dark:bg-[#2B2E33] text-[#D93025] ring-2 ring-[#D93025]"
+                          : "bg-[#F0F0F0] dark:bg-[#2B2E33] text-muted-foreground hover:bg-[#E0E0E0]"
                       )}
                     >
                       No {noCents}¢
@@ -502,34 +502,42 @@ export default function PredictionDetailPage() {
                 {/* Amount */}
                 <div className="pt-2">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                    <label className="text-sm font-bold text-muted-foreground">
                       Amount
                     </label>
                   </div>
                   <div className="relative group">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-black text-muted-foreground">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-bold text-[#ADADAD]">$</span>
                     <Input
                       type="number"
                       min={0}
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0"
-                      className="pl-10 h-16 text-3xl font-black bg-[#F1F4F9] dark:bg-[#1E2329] border-none focus-visible:ring-1 focus-visible:ring-primary/20 rounded-xl text-right pr-4"
+                      className="pl-10 h-20 text-5xl font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] focus-visible:ring-0 focus-visible:border-muted rounded-xl text-right pr-4"
                     />
                   </div>
                   
-                  <div className="grid grid-cols-4 gap-2 mt-3">
-                    {QUICK_AMOUNTS.map(amt => (
+                  <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar pb-1">
+                    {['1', '5', '10', '100'].map(amt => (
                       <Button
                         key={amt}
-                        variant="secondary"
+                        variant="outline"
                         size="sm"
-                        onClick={() => setAmount(String((Number(amount) || 0) + amt))}
-                        className="h-10 text-xs font-bold bg-white dark:bg-[#12161C] border border-[#EBEBEB] dark:border-[#2B2E33] hover:bg-secondary transition-all rounded-lg"
+                        onClick={() => setAmount(String((Number(amount) || 0) + Number(amt)))}
+                        className="h-10 px-4 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-xl whitespace-nowrap"
                       >
                         +${amt}
                       </Button>
                     ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAmount('1000')}
+                      className="h-10 px-4 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-xl"
+                    >
+                      Max
+                    </Button>
                   </div>
                 </div>
 
@@ -546,12 +554,12 @@ export default function PredictionDetailPage() {
 
                 <Button 
                   className={cn(
-                    "w-full h-14 text-lg font-black rounded-xl transition-all",
-                    selectedOutcome?.name.toLowerCase() === 'no' ? "bg-rose-500 hover:bg-rose-600" : "bg-primary hover:bg-primary/90"
+                    "w-full h-16 text-xl font-bold rounded-xl transition-all border-none",
+                    selectedOutcomeIdx === 0 ? "bg-[#00BA71] hover:bg-[#00a665]" : "bg-[#F0F0F0] dark:bg-[#2B2E33] text-[#D93025] hover:bg-[#E0E0E0] ring-2 ring-[#D93025]"
                   )}
                   onClick={handleTrade}
                 >
-                  Log in to trade
+                  Buy {selectedOutcome?.name || 'Yes'}
                 </Button>
 
                 <p className="text-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
