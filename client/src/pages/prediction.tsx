@@ -52,12 +52,6 @@ export default function PredictionPage() {
       <div className="bg-white dark:bg-[#12161C] border-b border-border/40 sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center h-14 gap-8">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setLocation("/")}>
-              <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-                <Zap className="text-primary-foreground w-5 h-5" />
-              </div>
-            </div>
-
             {/* Categories Bar in Header */}
             <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-3 flex-1">
               {FIXED_CATEGORIES.map(cat => (
