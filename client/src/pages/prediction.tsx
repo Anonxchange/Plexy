@@ -30,17 +30,15 @@ export default function PredictionPage() {
       const matchesSearch = m.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
         m.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      // Polymarket often uses tags for categories. We map our fixed categories to tags.
+      if (activeCategory === "Trending") return matchesSearch;
+
       const matchesCategory = activeCategory === "All" || 
-                             activeCategory === "Trending" || // Showing all for trending for now
                              m.tags?.some(t => {
                                const tag = t.toLowerCase();
                                const category = activeCategory.toLowerCase();
-                               // Flexible matching for categories like "Sports" -> "sport" or "Crypto" -> "cryptocurrency"
-                               return tag.includes(category) || category.includes(tag) ||
-                                      (category === "iran" && (tag.includes("iran") || tag.includes("persian"))) ||
-                                      (category === "geopolitics" && (tag.includes("politics") || tag.includes("world") || tag.includes("global")));
-                             });
+                               return tag.includes(category) || category.includes(tag);
+                             }) ||
+                             m.question.toLowerCase().includes(activeCategory.toLowerCase());
       
       return matchesSearch && matchesCategory;
     });
