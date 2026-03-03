@@ -10,30 +10,6 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
-export function parseOutcomes(market: PolymarketMarket) {
-  try {
-    const outcomes = JSON.parse(market.outcomes || '["Yes","No"]');
-    const prices = JSON.parse(market.outcomePrices || '[0.5,0.5]');
-    const tokenIds = JSON.parse(market.clobTokenIds || '[]');
-    return outcomes.map((name: string, i: number) => ({
-      name,
-      price: Number(prices[i] || 0),
-      tokenId: tokenIds[i] || '',
-    }));
-  } catch {
-    return [
-      { name: 'Yes', price: 0.5, tokenId: '' },
-      { name: 'No', price: 0.5, tokenId: '' },
-    ];
-  }
-}
-
-export function formatVolume(v: number) {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${v.toFixed(0)}`;
-}
-
 const FIXED_CATEGORIES = [
   "Trending", "Breaking", "New", "Politics", "Sports", 
   "Crypto", "Iran", "Finance", "Geopolitics", "Tech", 
@@ -157,89 +133,53 @@ export default function PredictionPage() {
 
 function MarketCard({ market }: { market: PolymarketMarket }) {
   const [, setLocation] = useLocation();
-  const outcomes = parseOutcomes(market);
-  const isBinary = outcomes.length === 2 && 
-    ['yes', 'no'].includes(outcomes[0].name.toLowerCase()) && 
-    ['yes', 'no'].includes(outcomes[1].name.toLowerCase());
+  const outcomes = JSON.parse(market.outcomes || "[]");
+  const prices = JSON.parse(market.outcomePrices || "[]");
   
   return (
     <Card 
       className="bg-white dark:bg-[#12161C] border-none shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group"
       onClick={() => setLocation(`/prediction/${market.conditionId}`)}
     >
-      <CardContent className="p-4 flex flex-col h-full">
-        <div className="flex items-start gap-3 mb-3 flex-1">
-          {market.image && (
-            <img 
-              src={market.image} 
-              alt="" 
-              className="w-10 h-10 rounded-lg object-cover flex-shrink-0" 
-              loading="lazy"
-            />
-          )}
-          <div className="flex flex-col flex-1">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              {market.tags?.[0] || 'Market'}
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex gap-2">
+            {market.image && (
+              <img src={market.image} alt="" className="w-10 h-10 rounded-md object-cover border" />
+            )}
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                {market.tags?.[0] || 'Market'}
+              </span>
+              <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                {market.question}
+              </h3>
+            </div>
+          </div>
+          <div className="bg-[#F1F4F9] dark:bg-[#1E2329] p-1.5 rounded-full flex flex-col items-center justify-center min-w-[3rem]">
+            <span className="text-xs font-black text-primary">
+              {prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0}%
             </span>
-            <h3 className="font-bold text-sm leading-tight line-clamp-3 group-hover:text-primary transition-colors">
-              {market.question}
-            </h3>
+            <span className="text-[8px] font-bold text-muted-foreground uppercase">chance</span>
           </div>
         </div>
 
-        {isBinary ? (
-          <div className="mb-3">
-            <div className="flex items-baseline gap-1.5 mb-2">
-              <span className="text-lg font-bold">{Math.round(outcomes[0].price * 100)}%</span>
-              <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest">chance</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button 
-                variant="outline" 
-                className="h-10 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Yes {Math.round(outcomes[0].price * 100)}¢
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-10 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold"
-                onClick={(e) => e.stopPropagation()}
-              >
-                No {Math.round(outcomes[1].price * 100)}¢
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2 mb-3">
-            {outcomes
-              .sort((a, b) => b.price - a.price)
-              .slice(0, 4)
-              .map((o, i) => (
-              <div key={i} className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground truncate mr-2 max-w-[60%] font-medium">{o.name}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary/60"
-                      style={{ width: `${Math.round(o.price * 100)}%` }}
-                    />
-                  </div>
-                  <span className="font-bold w-8 text-right">{Math.round(o.price * 100)}%</span>
-                </div>
-              </div>
-            ))}
-            {outcomes.length > 4 && (
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">+{outcomes.length - 4} more</p>
-            )}
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <Button variant="outline" className="h-10 border-green-500/20 bg-green-500/5 hover:bg-green-500/10 text-green-600 dark:text-green-400 font-bold">
+            Yes
+          </Button>
+          <Button variant="outline" className="h-10 border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-600 dark:text-red-400 font-bold">
+            No
+          </Button>
+        </div>
 
-        <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/40 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-          <span>{formatVolume(market.volumeNum || 0)} Vol.</span>
+        <div className="flex items-center justify-between mt-4 text-[10px] text-muted-foreground font-bold">
+          <div className="flex items-center gap-1">
+            <span>${parseFloat(market.volumeNum?.toString() || "0").toLocaleString(undefined, { maximumFractionDigits: 0 })} Vol.</span>
+          </div>
           <div className="flex items-center gap-2">
-            <Share2 className="w-3.5 h-3.5 hover:text-primary cursor-pointer transition-colors" onClick={(e) => e.stopPropagation()} />
-            <Bookmark className="w-3.5 h-3.5 hover:text-primary cursor-pointer transition-colors" onClick={(e) => e.stopPropagation()} />
+            <Share2 className="w-3 h-3 hover:text-primary cursor-pointer" />
+            <Bookmark className="w-3 h-3 hover:text-primary cursor-pointer" />
           </div>
         </div>
       </CardContent>
@@ -249,8 +189,8 @@ function MarketCard({ market }: { market: PolymarketMarket }) {
 
 function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, allMarkets: PolymarketMarket[] }) {
   const [, setLocation] = useLocation();
-  const outcomes = parseOutcomes(market);
-  const price = outcomes[0] ? Math.round(outcomes[0].price * 100) : 0;
+  const prices = JSON.parse(market.outcomePrices || "[]");
+  const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
 
   // Get breaking news from other markets
   const breakingNews = useMemo(() => {
@@ -270,7 +210,7 @@ function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, 
         <div className="p-8 flex flex-col justify-center">
           <div className="flex items-center gap-2 mb-4">
             {market.image && <img src={market.image} className="w-6 h-6 rounded" />}
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{market.tags?.[0] || 'Market'}</span>
+            <span className="text-xs font-bold text-muted-foreground uppercase">{market.tags?.[0] || 'Market'}</span>
           </div>
           <h2 className="text-2xl font-black mb-6 leading-tight">
             {market.question}
@@ -279,48 +219,44 @@ function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, 
           <div className="flex items-center gap-8 mb-8">
             <div className="flex flex-col">
               <span className="text-4xl font-black text-primary">{price}% chance</span>
-              <span className="text-xs font-bold text-emerald-500 mt-1 uppercase tracking-widest">▲ 2.4% last 24h</span>
+              <span className="text-xs font-bold text-green-500 mt-1">▲ 2%</span>
             </div>
             
-            <div className="flex-1 hidden md:block h-24 bg-[#F1F4F9] dark:bg-[#1E2329] rounded-xl p-2 relative overflow-hidden">
+            <div className="flex-1 hidden md:block h-24 bg-[#F1F4F9] dark:bg-[#1E2329] rounded-lg p-2 relative">
                {/* Simple visualization of a line chart */}
-               <div className="absolute inset-0 flex items-end">
-                 <div className="w-full h-[60%] bg-primary/5 border-t-2 border-primary/20" style={{ clipPath: 'polygon(0 100%, 0 40%, 20% 60%, 40% 30%, 60% 50%, 80% 20%, 100% 40%, 100% 100%)' }} />
+               <div className="absolute inset-x-2 bottom-4 h-1 bg-primary/20 rounded-full overflow-hidden">
+                 <div className="h-full bg-primary w-2/3" />
                </div>
             </div>
           </div>
 
           <div className="flex gap-4">
-            <Button size="lg" className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 border-2 font-black text-lg h-14 rounded-2xl">
-              Yes {price}¢
-            </Button>
-            <Button size="lg" className="flex-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/20 border-2 font-black text-lg h-14 rounded-2xl">
-              No {100 - price}¢
-            </Button>
+            <Button size="lg" className="flex-1 bg-[#E6F4EA] hover:bg-[#D2E9D8] text-[#1E8E3E] border-[#CEEAD6] border font-bold text-lg">Yes</Button>
+            <Button size="lg" className="flex-1 bg-[#FCE8E6] hover:bg-[#F9D7D3] text-[#D93025] border-[#FAD2CF] border font-bold text-lg">No</Button>
           </div>
         </div>
 
         <div className="bg-[#F8FAFC] dark:bg-[#1E2329] p-8 flex flex-col gap-6">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-black uppercase tracking-widest">Breaking news</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-bold">Breaking news</span>
+            <ChevronRight className="w-4 h-4" />
           </div>
           <div className="space-y-4">
             {breakingNews.length > 0 ? (
               breakingNews.map((newsMarket, i) => {
-                const newsOutcomes = parseOutcomes(newsMarket);
-                const newsPrice = newsOutcomes[0] ? Math.round(newsOutcomes[0].price * 100) : 0;
+                const newsPrices = JSON.parse(newsMarket.outcomePrices || "[]");
+                const newsPrice = newsPrices[0] ? Math.round(parseFloat(newsPrices[0]) * 100) : 0;
                 return (
-                  <div key={newsMarket.id} className="flex gap-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => {
+                  <div key={newsMarket.id} className="flex gap-4 cursor-pointer hover:opacity-80" onClick={(e) => {
                     e.stopPropagation();
                     setLocation(`/prediction/${newsMarket.conditionId}`);
                   }}>
-                    <span className="text-xs font-black text-muted-foreground/50">{i + 1}</span>
+                    <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>
                     <div className="flex-1">
                       <p className="text-xs font-bold leading-snug line-clamp-2">{newsMarket.question}</p>
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{newsMarket.tags?.[0] || 'Politics'}</span>
+                      <span className="text-[10px] text-muted-foreground">{newsMarket.tags?.[0] || 'Politics'}</span>
                     </div>
-                    <span className="text-xs font-black text-primary">{newsPrice}%</span>
+                    <span className="text-xs font-bold">{newsPrice}%</span>
                   </div>
                 );
               })
@@ -337,7 +273,7 @@ function FeaturedMarketCard({ market, allMarkets }: { market: PolymarketMarket, 
               ))
             )}
           </div>
-          <Button variant="outline" className="w-full font-black uppercase tracking-widest h-12 rounded-xl border-2" onClick={(e) => {
+          <Button variant="outline" className="w-full font-bold" onClick={(e) => {
             e.stopPropagation();
             setActiveCategory("Trending");
           }}>Explore all</Button>
