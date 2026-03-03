@@ -157,39 +157,35 @@ export default function PredictionDetailPage() {
           {/* ===== LEFT COLUMN ===== */}
           <div className="space-y-6 min-w-0">
             {/* Market Header */}
-            <div className="flex items-start gap-4">
-              {market.image && (
-                <img
-                  src={market.image}
-                  alt=""
-                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-                />
+            <div className="flex items-start gap-4 mb-8">
+              {market.image ? (
+                <div className="flex-shrink-0">
+                  <img
+                    src={market.image}
+                    alt=""
+                    className="w-16 h-16 rounded-xl object-cover shadow-sm border border-border/50"
+                  />
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-[#F7931A] flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <span className="text-white font-bold text-2xl">₿</span>
+                </div>
               )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[10px] font-black uppercase tracking-widest px-2 py-0.5">
-                        Active
-                      </Badge>
-                      {market.tags?.length > 0 && (
-                        <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                          {market.tags.map((tag, i) => (
-                            <span key={tag} className="flex items-center">
-                              {i > 0 && <span className="mx-1 opacity-30">|</span>}
-                              <span className="hover:text-primary cursor-pointer transition-colors">{tag}</span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight leading-[1.1]">
-                      {market.question}
-                    </h1>
-                  </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors">
-                  <Link2 className="h-4 w-4" />
+              <div className="flex-1 min-w-0 pt-1">
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-[1.1] mb-2">
+                  {market.question}
+                </h1>
+                <div className="flex items-center gap-2.5 text-xs font-bold text-muted-foreground">
+                  <span className="uppercase tracking-widest text-[#757575]">{endDate ? format(new Date(market.endDate), 'MMM d, h:mm a') : ''}</span>
+                  <span className="opacity-20 text-[#757575]">|</span>
+                  <span className="uppercase tracking-widest text-[#757575]">{market.tags?.[0] || 'Market'}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 pt-1">
+                <button className="p-2.5 rounded-xl hover:bg-secondary text-muted-foreground transition-colors border border-border/60">
+                  <Share2 className="h-4 w-4" />
                 </button>
-                <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors">
+                <button className="p-2.5 rounded-xl hover:bg-secondary text-muted-foreground transition-colors border border-border/60">
                   <Bookmark className="h-4 w-4" />
                 </button>
               </div>
@@ -454,14 +450,14 @@ export default function PredictionDetailPage() {
                 </div>
 
                 {/* Outcome selector */}
-                {isBinary ? (
-                  <div className="grid grid-cols-2 gap-2">
+                {isBinary && (
+                  <div className="grid grid-cols-2 gap-3 mb-6">
                     <button
                       onClick={() => setSelectedOutcomeIdx(0)}
                       className={cn(
-                        "py-3 rounded-xl font-black text-sm transition-all border-none",
+                        "py-4 rounded-2xl font-black text-lg transition-all border-none",
                         selectedOutcomeIdx === 0
-                          ? "bg-[#00BA71] text-white"
+                          ? "bg-[#00BA71] text-white shadow-md shadow-emerald-500/20"
                           : "bg-[#F0F0F0] dark:bg-[#2B2E33] text-muted-foreground hover:bg-[#E0E0E0]"
                       )}
                     >
@@ -470,7 +466,7 @@ export default function PredictionDetailPage() {
                     <button
                       onClick={() => setSelectedOutcomeIdx(1)}
                       className={cn(
-                        "py-3 rounded-xl font-black text-sm transition-all border-none",
+                        "py-4 rounded-2xl font-black text-lg transition-all border-none",
                         selectedOutcomeIdx === 1
                           ? "bg-[#F0F0F0] dark:bg-[#2B2E33] text-[#D93025] ring-2 ring-[#D93025]"
                           : "bg-[#F0F0F0] dark:bg-[#2B2E33] text-muted-foreground hover:bg-[#E0E0E0]"
@@ -479,74 +475,56 @@ export default function PredictionDetailPage() {
                       No {noCents}¢
                     </button>
                   </div>
-                ) : (
-                  <div className="grid gap-1.5" style={{ gridTemplateColumns: outcomes.length <= 3 ? `repeat(${outcomes.length}, 1fr)` : 'repeat(2, 1fr)' }}>
-                    {outcomes.map((o, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSelectedOutcomeIdx(i)}
-                        className={cn(
-                          "py-3 px-2 rounded-xl border text-sm font-bold transition-all truncate flex flex-col items-center gap-0.5",
-                          i === selectedOutcomeIdx
-                            ? "border-primary bg-primary text-white shadow-md"
-                            : "border-border bg-[#EBEBEB] dark:bg-[#2B2E33] text-[#757575] hover:bg-[#E0E0E0]"
-                        )}
-                      >
-                        <span className="truncate w-full text-center">{o.name}</span>
-                        <span className="text-xs opacity-80">{Math.round(o.price * 100)}¢</span>
-                      </button>
-                    ))}
-                  </div>
                 )}
 
                 {/* Amount */}
                 <div className="pt-2">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <label className="text-sm font-bold text-muted-foreground">
                       Amount
                     </label>
                   </div>
                   <div className="relative group">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-bold text-[#ADADAD]">$</span>
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-4xl font-bold text-[#ADADAD]">$</span>
                     <Input
                       type="number"
                       min={0}
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0"
-                      className="pl-10 h-20 text-5xl font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] focus-visible:ring-0 focus-visible:border-muted rounded-xl text-right pr-4"
+                      className="pl-12 h-24 text-6xl font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] focus-visible:ring-0 focus-visible:border-muted rounded-2xl text-right pr-6"
                     />
                   </div>
                   
-                  <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar pb-1">
+                  <div className="flex items-center gap-2 mt-4 overflow-x-auto no-scrollbar pb-1">
                     {['1', '5', '10', '100'].map(amt => (
                       <Button
                         key={amt}
                         variant="outline"
-                        size="sm"
+                        size="lg"
                         onClick={() => setAmount(String((Number(amount) || 0) + Number(amt)))}
-                        className="h-10 px-4 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-xl whitespace-nowrap"
+                        className="h-12 px-6 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-2xl whitespace-nowrap"
                       >
                         +${amt}
                       </Button>
                     ))}
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="lg"
                       onClick={() => setAmount('1000')}
-                      className="h-10 px-4 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-xl"
+                      className="h-12 px-6 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-2xl"
                     >
                       Max
                     </Button>
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between text-xs font-bold">
+                <div className="space-y-4 pt-4">
+                  <div className="flex items-center justify-between text-xs font-bold px-1">
                     <span className="text-muted-foreground uppercase tracking-wider">Shares</span>
-                    <span>{estimatedShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <span className="text-foreground">{estimatedShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs font-bold">
+                  <div className="flex items-center justify-between text-xs font-bold px-1">
                     <span className="text-muted-foreground uppercase tracking-wider">Potential Return</span>
                     <span className="text-emerald-500">${potentialReturn} ({((Number(potentialReturn) / (amountNum || 1)) * 100).toFixed(1)}%)</span>
                   </div>
@@ -554,8 +532,7 @@ export default function PredictionDetailPage() {
 
                 <Button 
                   className={cn(
-                    "w-full h-16 text-xl font-bold rounded-xl transition-all border-none",
-                    selectedOutcomeIdx === 0 ? "bg-[#00BA71] hover:bg-[#00a665]" : "bg-[#F0F0F0] dark:bg-[#2B2E33] text-[#D93025] hover:bg-[#E0E0E0] ring-2 ring-[#D93025]"
+                    "w-full h-20 text-2xl font-black rounded-2xl transition-all border-none bg-[#8E8E93] hover:bg-[#787880] text-white mt-4"
                   )}
                   onClick={handleTrade}
                 >
