@@ -33,6 +33,9 @@ export default function PredictionDetailPage() {
       const clobTokenIds = JSON.parse(market.clobTokenIds || "[]");
       const names = JSON.parse(market.outcomes || "[]");
       
+      // Ensure we have valid arrays before mapping
+      if (!Array.isArray(names)) return [];
+
       const res = names.map((name: string, i: number) => ({
         name,
         price: parseFloat(prices[i] || "0.5"),
