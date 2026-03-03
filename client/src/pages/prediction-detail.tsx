@@ -432,24 +432,22 @@ export default function PredictionDetailPage() {
                       className={cn(
                         "py-4 rounded-xl font-bold text-lg transition-all flex flex-col items-center justify-center gap-1",
                         selectedOutcomeIdx === 0
-                          ? "bg-[#00C076] text-white shadow-md scale-[1.02]"
-                          : "bg-[#F1F4F9] dark:bg-[#1E2329] text-muted-foreground hover:text-foreground"
+                          ? "bg-[#00C076] text-white shadow-md"
+                          : "bg-[#EBEBEB] dark:bg-[#2B2E33] text-[#757575] hover:bg-[#E0E0E0]"
                       )}
                     >
-                      <span className="text-xl">Yes</span>
-                      <span className="text-sm opacity-90">{yesCents}¢</span>
+                      <span>Yes {yesCents}¢</span>
                     </button>
                     <button
                       onClick={() => setSelectedOutcomeIdx(1)}
                       className={cn(
                         "py-4 rounded-xl font-bold text-lg transition-all flex flex-col items-center justify-center gap-1",
                         selectedOutcomeIdx === 1
-                          ? "bg-[#FF3B30] text-white shadow-md scale-[1.02]"
-                          : "bg-[#F1F4F9] dark:bg-[#1E2329] text-muted-foreground hover:text-foreground"
+                          ? "bg-[#FF3B30] text-white shadow-md"
+                          : "bg-[#EBEBEB] dark:bg-[#2B2E33] text-[#757575] hover:bg-[#E0E0E0]"
                       )}
                     >
-                      <span className="text-xl">No</span>
-                      <span className="text-sm opacity-90">{noCents}¢</span>
+                      <span>No {noCents}¢</span>
                     </button>
                   </div>
                 ) : (
@@ -462,7 +460,7 @@ export default function PredictionDetailPage() {
                           "py-3 px-2 rounded-xl border text-sm font-bold transition-all truncate flex flex-col items-center gap-0.5",
                           i === selectedOutcomeIdx
                             ? "border-primary bg-primary text-white shadow-md"
-                            : "border-border bg-[#F1F4F9] dark:bg-[#1E2329] hover:border-primary/40"
+                            : "border-border bg-[#EBEBEB] dark:bg-[#2B2E33] text-[#757575] hover:bg-[#E0E0E0]"
                         )}
                       >
                         <span className="truncate w-full text-center">{o.name}</span>
@@ -475,19 +473,19 @@ export default function PredictionDetailPage() {
                 {/* Amount */}
                 <div className="pt-2">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-foreground">
+                    <label className="text-sm font-semibold text-muted-foreground">
                       Amount
                     </label>
                   </div>
                   <div className="relative group">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground/30 group-focus-within:text-primary/50 transition-colors">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-4xl font-bold text-[#757575]">$</span>
                     <Input
                       type="number"
                       min={0}
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0"
-                      className="pl-10 h-16 text-3xl font-bold bg-[#F1F4F9] dark:bg-[#1E2329] border-2 border-transparent focus-visible:ring-0 focus-visible:border-primary/30 rounded-2xl transition-all"
+                      className="pl-12 h-20 text-5xl font-bold bg-white dark:bg-[#12161C] border-2 border-[#EBEBEB] focus-visible:ring-0 focus-visible:border-primary/30 rounded-xl text-right pr-6"
                     />
                   </div>
                   
@@ -498,7 +496,7 @@ export default function PredictionDetailPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setAmount(String((Number(amount) || 0) + amt))}
-                        className="h-10 text-sm font-bold bg-white dark:bg-[#12161C] border-border hover:bg-primary/10 hover:border-primary/30 transition-all rounded-xl"
+                        className="h-12 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-xl"
                       >
                         +${amt}
                       </Button>
@@ -507,45 +505,24 @@ export default function PredictionDetailPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setAmount('1000')}
-                      className="h-10 text-sm font-bold bg-white dark:bg-[#12161C] border-border hover:bg-primary/10 hover:border-primary/30 transition-all rounded-xl"
+                      className="h-12 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-xl"
                     >
                       Max
                     </Button>
                   </div>
                 </div>
 
-                {/* Summary */}
-                {amountNum > 0 && (
-                  <div className="bg-secondary/30 rounded-xl p-4 space-y-2 text-sm border border-border/50">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground font-medium">Avg price</span>
-                      <span className="font-bold">{selectedCents}¢</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground font-medium">Est. shares</span>
-                      <span className="font-bold">{estimatedShares.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground font-medium">Potential return</span>
-                      <span className="text-[#00C076] font-bold">+${potentialReturn}</span>
-                    </div>
-                  </div>
-                )}
-
                 {/* Trade button */}
                 <Button 
                   onClick={handleTrade}
                   className={cn(
-                    "w-full h-16 text-xl font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98]",
-                    tradeTab === 'buy' 
-                      ? "bg-[#8E8E93] hover:bg-[#7A7A7F] text-white" 
-                      : "bg-[#8E8E93] hover:bg-[#7A7A7F] text-white"
+                    "w-full h-20 text-2xl font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] bg-[#9B9B9B] hover:bg-[#8A8A8A] text-white"
                   )}
                 >
                   {tradeTab === 'buy' ? 'Buy' : 'Sell'} {selectedOutcome?.name || 'Yes'}
                 </Button>
 
-                <p className="text-center text-[10px] text-muted-foreground font-medium uppercase tracking-widest opacity-60">
+                <p className="text-center text-sm text-[#757575] font-medium">
                   By trading, you agree to the Terms of Use.
                 </p>
               </CardContent>
