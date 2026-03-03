@@ -29,9 +29,27 @@ export default function PredictionDetailPage() {
       if (!market) return [];
       console.log("Processing market data:", market);
       
-      const prices = JSON.parse(market.outcomePrices || "[]");
-      const clobTokenIds = JSON.parse(market.clobTokenIds || "[]");
-      const names = JSON.parse(market.outcomes || "[]");
+      const prices = (() => {
+        try { 
+          const p = JSON.parse(market.outcomePrices || "[]");
+          return Array.isArray(p) ? p : [];
+        }
+        catch (e) { return []; }
+      })();
+      const clobTokenIds = (() => {
+        try { 
+          const c = JSON.parse(market.clobTokenIds || "[]");
+          return Array.isArray(c) ? c : [];
+        }
+        catch (e) { return []; }
+      })();
+      const names = (() => {
+        try { 
+          const n = JSON.parse(market.outcomes || "[]");
+          return Array.isArray(n) ? n : [];
+        }
+        catch (e) { return []; }
+      })();
       
       // Ensure we have valid arrays before mapping
       if (!Array.isArray(names)) return [];
