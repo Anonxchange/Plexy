@@ -58,28 +58,28 @@ export default function PredictionPage() {
               </div>
             </div>
 
+            {/* Categories Bar in Header */}
+            <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-3 flex-1">
+              {FIXED_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={cn(
+                    "text-sm font-semibold whitespace-nowrap transition-colors relative pb-1",
+                    activeCategory === cat 
+                      ? "text-primary border-b-2 border-primary" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {cat === "Trending" && <TrendingUp className="inline-block w-4 h-4 mr-1 mb-0.5" />}
+                  {cat}
+                </button>
+              ))}
+            </div>
+
             <div className="hidden lg:flex items-center gap-4 text-sm font-medium text-muted-foreground ml-auto">
               <span className="hover:text-primary cursor-pointer transition-colors">How it works</span>
             </div>
-          </div>
-
-          {/* Categories Bar */}
-          <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-3">
-            {FIXED_CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={cn(
-                  "text-sm font-semibold whitespace-nowrap transition-colors relative pb-1",
-                  activeCategory === cat 
-                    ? "text-primary border-b-2 border-primary" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {cat === "Trending" && <TrendingUp className="inline-block w-4 h-4 mr-1 mb-0.5" />}
-                {cat}
-              </button>
-            ))}
           </div>
         </div>
       </div>
