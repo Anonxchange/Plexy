@@ -219,7 +219,7 @@ export function ProductDetail() {
           const items = [{ ...cartItem, id: result.lineId }];
           localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
           
-          window.dispatchEvent(new Event('shopify-cart-updated'));
+          window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
           toast.success("Added to cart!");
         }
       } else {
@@ -234,7 +234,7 @@ export function ProductDetail() {
           }
           localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
           
-          window.dispatchEvent(new Event('shopify-cart-updated'));
+          window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: cartId } }));
           toast.success("Added to cart!");
         } else if (result.cartNotFound) {
           // If cart not found, clear and retry once
