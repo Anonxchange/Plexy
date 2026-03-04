@@ -97,26 +97,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/spot" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/spot" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    data-testid="nav-spot"
-                  >
-                    Spot Trading
-                  </Button>
-                </Link>
-                <Link href="/swap" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/swap" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    data-testid="nav-swap"
-                  >
-                    Swap
-                  </Button>
-                </Link>
                 <Link href="/wallet/buy-crypto" onClick={handleLinkClick}>
                   <Button
                     variant={location === "/wallet/buy-crypto" ? "secondary" : "ghost"}
@@ -126,6 +106,16 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   >
                     Buy Crypto
                     <Badge variant="secondary" className="ml-auto text-xs">LOW FEES</Badge>
+                  </Button>
+                </Link>
+                <Link href="/spot" onClick={handleLinkClick}>
+                  <Button
+                    variant={location === "/spot" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    size="sm"
+                    data-testid="nav-spot"
+                  >
+                    Spot Trading
                   </Button>
                 </Link>
                 <Link href="/prediction" onClick={handleLinkClick}>
@@ -260,6 +250,20 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     <div className="flex flex-col items-start">
                       <span className="text-sm font-semibold">Mobile top-up</span>
                       <span className="text-xs text-muted-foreground leading-tight">Recharge your phone using crypto</span>
+                    </div>
+                  </Button>
+                </Link>
+                <Link href="/utility" onClick={handleLinkClick}>
+                  <Button
+                    variant={location === "/utility" ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    size="sm"
+                    data-testid="nav-utility"
+                  >
+                    <Settings className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Utility</span>
+                      <span className="text-xs text-muted-foreground leading-tight">Pay bills and other services</span>
                     </div>
                   </Button>
                 </Link>
