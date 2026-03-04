@@ -1,6 +1,10 @@
 import { toast } from "sonner";
 import { supabase } from "./supabase";
 
+const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SHOPIFY_PROXY_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/shopify-storefront`;
+
 export interface ShopifyProduct {
   node: {
     id: string;
@@ -56,6 +60,34 @@ export const CART_LINES_REMOVE_MUTATION = 'cartLinesRemove';
 
 export async function storefrontApiRequest(queryName: string, variables: Record<string, unknown> = {}) {
   try {
+    // Check if we have the explicit project ID and key
+    if (SUPABASE_PROJECT_ID && SUPABASE_ANON_KEY) {
+      const response = await fetch(SHOPIFY_PROXY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ queryName, variables }),
+      });
+
+      if (response.status === 402) {
+        toast.error("Shopify: Payment required", {
+          description: "Your store needs an active billing plan. Visit https://admin.shopify.com to upgrade.",
+        });
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.errors) {
+          throw new Error(`Error calling Shopify: ${data.errors.map((e: { message: string }) => e.message).join(', ')}`);
+        }
+        return data;
+      }
+    }
+
+    // Fallback to standard invoke if direct fetch fails or env vars missing
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
       body: { queryName, variables }
     });
@@ -67,7 +99,6 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
         });
         return;
       }
-      // Handle generic error message from server
       const errorMessage = error.message || "Failed to process request";
       console.error('Supabase function error:', error);
       throw new Error(errorMessage);
@@ -77,7 +108,6 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
       throw new Error(`Error calling Shopify: ${data.errors.map((e: { message: string }) => e.message).join(', ')}`);
     }
     
-    // Check if the response itself contains an error field (from our Deno.serve catch block)
     if (data?.error) {
       throw new Error(data.error);
     }
