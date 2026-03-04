@@ -241,6 +241,10 @@ export function Shop() {
           const items = [{ ...cartItem, id: result.lineId }];
           localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
           
+          // Force fetch to sync with Shopify
+          await shopifyService.getCart(result.cartId);
+
+          window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         }
@@ -258,6 +262,8 @@ export function Shop() {
              localStorage.setItem('shopify_checkout_url', newResult.checkoutUrl);
              const items = [{ ...cartItem, id: newResult.lineId }];
              localStorage.setItem(`cart_items_${newResult.cartId}`, JSON.stringify(items));
+
+             window.dispatchEvent(new Event('storage'));
              window.dispatchEvent(new Event('cart-updated'));
              toast.success("Added to cart!");
            }
@@ -275,11 +281,16 @@ export function Shop() {
           }
           localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
           
+          // Force fetch to sync with Shopify
+          await shopifyService.getCart(cartId);
+
+          window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         } else if (result.cartNotFound) {
           // Retry once by creating new cart
           localStorage.removeItem('shopify_cart_id');
+          localStorage.removeItem('shopify_checkout_url');
           localStorage.removeItem(`cart_items_${cartId}`);
           const newResult = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
           if (newResult) {
@@ -289,6 +300,7 @@ export function Shop() {
             const items = [{ ...cartItem, id: newResult.lineId }];
             localStorage.setItem(`cart_items_${newResult.cartId}`, JSON.stringify(items));
             
+            window.dispatchEvent(new Event('storage'));
             window.dispatchEvent(new Event('cart-updated'));
             toast.success("Added to cart!");
           }
