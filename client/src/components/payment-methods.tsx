@@ -90,7 +90,7 @@ const paymentCategories = [
   { icon: "bank", color: "#8B5CF6", name: "Bank Transfer", count: "200+", description: "ACH, SEPA, Wire Transfer, SWIFT transfers", route: "/p2p" },
   { icon: "card", color: "#EC4899", name: "Credit/Debit Cards", count: "80+", description: "Visa, Mastercard, Amex, Discover", route: "/p2p" },
   { icon: "explorer", color: "#14B8A6", name: "Explorer", count: "150+", description: "A web tool that lets you view and verify transactions", route: "/explorer" },
-  { icon: "wallet", color: "#F97316", name: "E-Wallets", count: "100+", description: "PayPal, Skrill, Neteller, Perfect Money", route: "/p2p" },
+  { icon: "utility", color: "#F97316", name: "Utility", count: "100+", description: "Pay utility bills anywhere in the world", route: "/utility" },
 ];
 
 const popularMethods = [
