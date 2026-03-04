@@ -129,23 +129,30 @@ export const shopifyService = {
     const cart = data?.data?.cart;
     if (!cart) return null;
 
-    // The cart query in the edge function only returns id and totalQuantity
-    // We need more details for the UI. However, the Edge Function ALLOWED_QUERIES 
-    // for cartQuery is: query cart($id: ID!) { cart(id: $id) { id totalQuantity } }
-    
-    // WAIT: I see the Edge Function source in attached_assets.
-    // It has:
-    // cartQuery: `query cart($id: ID!) { cart(id: $id) { id totalQuantity } }`
-    // This is very limited. I should probably update the Edge Function if I could, 
-    // but I only have the client code.
-    
-    // Actually, looking at cartCreate and cartLinesAdd, they return:
-    // lines(first: 100) { edges { node { id merchandise { ... on ProductVariant { id } } } } }
-    
-    // If I can't change the Edge Function, I have to work with what's there.
-    // But the CartSheet UI needs title, price, etc.
-    
-    return cart;
+    // Map the Shopify GraphQL response to our internal CartItem format
+    const lines = cart.lines?.edges || [];
+    const items = lines.map((edge: any) => {
+      const node = edge.node;
+      const variant = node.merchandise;
+      const product = variant.product;
+      
+      return {
+        id: node.id, // This is the line ID needed for updates/removals
+        variantId: variant.id,
+        title: product.title + (variant.title !== 'Default Title' ? ` - ${variant.title}` : ''),
+        price: parseFloat(variant.price.amount),
+        currency: variant.price.currencyCode,
+        quantity: node.quantity,
+        image: product.images?.edges[0]?.node?.url
+      };
+    });
+
+    return {
+      id: cart.id,
+      totalQuantity: cart.totalQuantity,
+      checkoutUrl: cart.checkoutUrl,
+      items
+    };
   },
 
   async createCart(item: { variantId: string; quantity: number }) {
