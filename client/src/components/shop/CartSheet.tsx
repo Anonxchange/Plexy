@@ -63,10 +63,7 @@ export function CartSheet() {
       console.log("Shopify cart update detected", event?.detail);
       // setIsOpen(true); // Open the cart sheet immediately - REMOVED per user request
       handleStorageChange();
-      const currentCartId = localStorage.getItem('shopify_cart_id');
-      if (currentCartId) {
-        fetchCart();
-      }
+      fetchCart(); // Always fetch fresh data from Shopify when updated
     };
     window.addEventListener('shopify-cart-updated', handleShopifyUpdate);
     window.addEventListener('cart-updated', handleShopifyUpdate);
