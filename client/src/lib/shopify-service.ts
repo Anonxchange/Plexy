@@ -131,16 +131,18 @@ export const shopifyService = {
     const items = lines.map((edge: any) => {
       const node = edge.node;
       const variant = node.merchandise;
+      // The edge function returns merchandise { ... on ProductVariant { id } }
+      // We need to ensure we handle cases where product/title might be missing from this specific fragment
       const product = variant?.product;
 
       return {
         id: node.id,
         variantId: variant?.id,
-        title: (product?.title || 'Product') + (variant?.title && variant.title !== 'Default Title' ? ` - ${variant.title}` : ''),
-        price: variant?.price?.amount ? parseFloat(variant.price.amount) : 0,
-        currency: variant?.price?.currencyCode || 'USD',
+        title: node.title || (product?.title || 'Product') + (variant?.title && variant.title !== 'Default Title' ? ` - ${variant.title}` : ''),
+        price: node.priceV2?.amount ? parseFloat(node.priceV2.amount) : (variant?.price?.amount ? parseFloat(variant.price.amount) : 0),
+        currency: node.priceV2?.currencyCode || variant?.price?.currencyCode || 'USD',
         quantity: node.quantity,
-        image: product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || ''
+        image: node.image?.url || product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || ''
       };
     });
 
