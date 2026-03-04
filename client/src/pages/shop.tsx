@@ -222,24 +222,55 @@ export function Shop() {
       let cartId = localStorage.getItem('shopify_cart_id');
       let result;
 
+      const cartItem = {
+        id: product.variantId,
+        variantId: product.variantId,
+        title: product.title,
+        price: product.price,
+        currency: product.currency,
+        quantity: 1,
+        image: product.images[0]
+      };
+
       if (!cartId) {
         result = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
         if (result) {
           localStorage.setItem('shopify_cart_id', result.cartId);
           localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
+          
+          const items = [{ ...cartItem, id: result.lineId }];
+          localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
+          
+          window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         }
       } else {
         result = await shopifyService.addLineToCart(cartId, { variantId: product.variantId, quantity: 1 });
         if (result.success) {
+          const storedItems = JSON.parse(localStorage.getItem(`cart_items_${cartId}`) || '[]');
+          const existing = storedItems.find((item: any) => item.variantId === product.variantId);
+          if (existing) {
+            existing.quantity += 1;
+          } else {
+            storedItems.push({ ...cartItem, id: result.lineId || product.variantId });
+          }
+          localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
+          
+          window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         } else if (result.cartNotFound) {
           // Retry once by creating new cart
           localStorage.removeItem('shopify_cart_id');
+          localStorage.removeItem(`cart_items_${cartId}`);
           const newResult = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
           if (newResult) {
             localStorage.setItem('shopify_cart_id', newResult.cartId);
             localStorage.setItem('shopify_checkout_url', newResult.checkoutUrl);
+            
+            const items = [{ ...cartItem, id: newResult.lineId }];
+            localStorage.setItem(`cart_items_${newResult.cartId}`, JSON.stringify(items));
+            
+            window.dispatchEvent(new Event('cart-updated'));
             toast.success("Added to cart!");
           }
         }
