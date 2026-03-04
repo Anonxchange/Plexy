@@ -107,12 +107,16 @@ function LazyRoute({ component: Component, skeleton = <PageSkeleton /> }: { comp
 }
 
 const Prediction = lazy(() => import("@/pages/prediction"));
+const Perpetual = lazy(() => import("@/pages/perpetual"));
+const Swap = lazy(() => import("@/pages/swap"));
 const PredictionDetail = lazy(() => import("@/pages/prediction-detail"));
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/perpetual">{() => <LazyRoute component={Perpetual} />}</Route>
+      <Route path="/swap">{() => <LazyRoute component={Swap} />}</Route>
       <Route path="/prediction">{() => <LazyRoute component={Prediction} />}</Route>
       <Route path="/prediction/:id">{() => <LazyRoute component={PredictionDetail} />}</Route>
       <Route path="/about">{() => <LazyRoute component={About} />}</Route>
@@ -137,7 +141,7 @@ function Router() {
       <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/stake">{() => <LazyRoute component={Stake} />}</Route>
       <Route path="/wallet/lightning">{() => <LazyRoute component={Lightning} />}</Route>
-      <Route path="/wallet/buy-crypto">{() => <LazyRoute component={BuyCrypto} />}</Route>
+      <Route path="/buy-crypto">{() => <LazyRoute component={BuyCrypto} />}</Route>
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCards} />}</Route>
       <Route path="/gift-cards/:id">{() => <LazyRoute component={GiftCardDetail} />}</Route>
       <Route path="/trade-history">{() => <LazyRoute component={TradeHistory} />}</Route>
