@@ -36,11 +36,29 @@ export function CartSheet() {
     const handleStorageChange = () => {
       setCartId(localStorage.getItem('shopify_cart_id'));
       setCheckoutUrl(localStorage.getItem('shopify_checkout_url'));
+      
+      // Update items from local storage if cartId is present
+      const currentCartId = localStorage.getItem('shopify_cart_id');
+      if (currentCartId) {
+        const storedItems = localStorage.getItem(`cart_items_${currentCartId}`);
+        if (storedItems) {
+          try {
+            setItems(JSON.parse(storedItems));
+          } catch (e) {
+            console.error("Error parsing stored items:", e);
+          }
+        }
+      } else {
+        setItems([]);
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
     // Also listen for custom event for same-window updates
     window.addEventListener('cart-updated', handleStorageChange);
+    
+    // Initial load
+    handleStorageChange();
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
