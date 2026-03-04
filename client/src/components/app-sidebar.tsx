@@ -98,9 +98,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/wallet/buy-crypto" onClick={handleLinkClick}>
+                <Link href="/buy-crypto" onClick={handleLinkClick}>
                   <Button
-                    variant={location === "/wallet/buy-crypto" ? "secondary" : "ghost"}
+                    variant={location === "/buy-crypto" ? "secondary" : "ghost"}
                     className="w-full justify-start"
                     size="sm"
                     data-testid="nav-wallet-buy-crypto-trade"
@@ -119,6 +119,26 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     Spot Trading
                   </Button>
                 </Link>
+                <Link href="/perpetual" onClick={handleLinkClick}>
+                  <Button
+                    variant={location === "/perpetual" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    size="sm"
+                    data-testid="nav-perpetual"
+                  >
+                    Perpetual Trading
+                  </Button>
+                </Link>
+                <Link href="/swap" onClick={handleLinkClick}>
+                  <Button
+                    variant={location === "/swap" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    size="sm"
+                    data-testid="nav-swap"
+                  >
+                    Swap
+                  </Button>
+                </Link>
                 <Link href="/prediction" onClick={handleLinkClick}>
                   <Button
                     variant={location === "/prediction" ? "secondary" : "ghost"}
@@ -126,7 +146,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     size="sm"
                     data-testid="nav-prediction"
                   >
-                    Prediction
+                    Predictions
                   </Button>
                 </Link>
               </CollapsibleContent>
