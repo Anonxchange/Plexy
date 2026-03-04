@@ -169,14 +169,13 @@ export function ProductDetail() {
           // Force fetch to sync with Shopify
           await shopifyService.getCart(result.cartId);
           
-          // Trigger storage event for other components
+          // Trigger events for other components
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         }
       } else {
         // First check if the cart actually belongs to this store/session
-        // If the checkout URL doesn't match our store domain, clear it
         const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
         if (currentCheckoutUrl && !currentCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
            localStorage.removeItem('shopify_cart_id');
@@ -218,6 +217,7 @@ export function ProductDetail() {
         } else if (result.cartNotFound) {
           // If cart not found, clear and retry once
           localStorage.removeItem('shopify_cart_id');
+          localStorage.removeItem('shopify_checkout_url');
           localStorage.removeItem(`cart_items_${cartId}`);
           const retryResult = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
           if (retryResult) {
