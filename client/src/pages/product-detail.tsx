@@ -166,6 +166,8 @@ export function ProductDetail() {
           const items = [{ ...cartItem, id: result.lineId }];
           localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
           
+          // Trigger storage event for other components
+          window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         }
@@ -184,6 +186,8 @@ export function ProductDetail() {
              localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
              const items = [{ ...cartItem, id: result.lineId }];
              localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
+             
+             window.dispatchEvent(new Event('storage'));
              window.dispatchEvent(new Event('cart-updated'));
              toast.success("Added to cart!");
            }
@@ -202,6 +206,7 @@ export function ProductDetail() {
           }
           localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
           
+          window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         } else if (result.cartNotFound) {
@@ -216,6 +221,7 @@ export function ProductDetail() {
             const items = [{ ...cartItem, id: retryResult.lineId }];
             localStorage.setItem(`cart_items_${retryResult.cartId}`, JSON.stringify(items));
 
+            window.dispatchEvent(new Event('storage'));
             window.dispatchEvent(new Event('cart-updated'));
             toast.success("Added to cart!");
           }
