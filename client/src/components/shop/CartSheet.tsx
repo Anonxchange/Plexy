@@ -67,10 +67,10 @@ export function CartSheet() {
   }, []);
 
   useEffect(() => {
-    if (isOpen && cartId) {
-      fetchCart();
-    }
-  }, [isOpen, cartId]);
+  if (cartId) {
+    fetchCart();
+  }
+}, [cartId]);
 
   const fetchCart = async () => {
     if (!cartId) return;
