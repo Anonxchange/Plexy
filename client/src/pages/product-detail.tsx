@@ -166,6 +166,9 @@ export function ProductDetail() {
           const items = [{ ...cartItem, id: result.lineId }];
           localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
           
+          // Force fetch to sync with Shopify
+          await shopifyService.getCart(result.cartId);
+          
           // Trigger storage event for other components
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
@@ -205,6 +208,9 @@ export function ProductDetail() {
             storedItems.push({ ...cartItem, id: result.lineId || product.variantId });
           }
           localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
+          
+          // Force fetch to sync with Shopify
+          await shopifyService.getCart(cartId);
           
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
