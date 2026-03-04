@@ -69,14 +69,14 @@ export function CartSheet() {
       }
     };
     window.addEventListener('shopify-cart-updated', handleShopifyUpdate);
+    window.addEventListener('cart-updated', handleShopifyUpdate);
     
     // Initial load
     handleStorageChange();
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('cart-updated', handleStorageChange);
-      window.removeEventListener('shopify-cart-updated', handleStorageChange);
+      window.removeEventListener('cart-updated', handleShopifyUpdate);
       window.removeEventListener('shopify-cart-updated', handleShopifyUpdate);
     };
   }, []);
