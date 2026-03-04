@@ -233,20 +233,13 @@ export function AppHeader() {
                 className="w-56"
                 onPointerEnter={() => setActiveDropdown('trade')}
               >
-                <DropdownMenuItem onClick={() => { navigate('/spot'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Spot Trading
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate('/swap'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Swap
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate('/prediction'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Prediction
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate('/wallet/buy-crypto'); setActiveDropdown(null); }} className="cursor-pointer">
                   <div className="flex items-center justify-between w-full">
                     <span>Buy Crypto</span>
                     <Badge variant="secondary" className="text-xs">LOW FEES</Badge>
                   </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/spot'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Spot Trading
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </div>
@@ -336,6 +329,13 @@ export function AppHeader() {
                   <div className="flex flex-col">
                     <span className="font-semibold">Mobile top-up</span>
                     <span className="text-xs text-muted-foreground">Recharge your phone using crypto</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/utility'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
+                  <Settings className="h-5 w-5 mr-3 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Utility</span>
+                    <span className="text-xs text-muted-foreground">Pay bills and other services</span>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
