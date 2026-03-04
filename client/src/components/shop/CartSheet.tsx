@@ -133,9 +133,17 @@ export function CartSheet() {
     setCartId(null);
     setCheckoutUrl(null);
     setItems([]);
-    toast.error("Cart expired or not found. Please add items again.");
+    toast.error("Cart cleared or expired. Please add items again.");
     window.dispatchEvent(new Event('cart-updated'));
   };
+
+  useEffect(() => {
+    // Safety check: if the checkout URL is from a different store, clear the cart
+    const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
+    if (currentCheckoutUrl && !currentCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
+      handleCartNotFound();
+    }
+  }, [cartId]);
 
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const currency = items[0]?.currency || "USD";
