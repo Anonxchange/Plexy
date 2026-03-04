@@ -8,7 +8,7 @@ export function PageNavigation() {
 
   const getActiveTab = () => {
     if (location === "/") return "home";
-    if (location === "/wallet/buy-crypto") return "buy-crypto";
+    if (location === "/buy-crypto") return "buy";
     if (location === "/shop") return "shop";
     if (location === "/swap") return "swap";
     if (location === "/wallet") return "wallet";
@@ -16,7 +16,7 @@ export function PageNavigation() {
   };
 
   const handleTabClick = (tab: string) => {
-    const targetPath = tab === "home" ? "/" : `/${tab}`;
+    const targetPath = tab === "home" ? "/" : tab === "buy" ? "/buy-crypto" : `/${tab}`;
     // Always navigate, even if already on the page
     navigate(targetPath, { replace: false });
   };
