@@ -151,12 +151,24 @@ export function ProductDetail() {
         if (result) {
           localStorage.setItem('shopify_cart_id', result.cartId);
           localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
+          window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         }
       } else {
         const result = await shopifyService.addLineToCart(cartId, { variantId: product.variantId, quantity: 1 });
         if (result.success) {
+          window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
+        } else if (result.cartNotFound) {
+          // If cart not found, clear and retry once
+          localStorage.removeItem('shopify_cart_id');
+          const retryResult = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
+          if (retryResult) {
+            localStorage.setItem('shopify_cart_id', retryResult.cartId);
+            localStorage.setItem('shopify_checkout_url', retryResult.checkoutUrl);
+            window.dispatchEvent(new Event('cart-updated'));
+            toast.success("Added to cart!");
+          }
         }
       }
     } catch (error) {
