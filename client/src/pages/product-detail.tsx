@@ -222,6 +222,7 @@ export function ProductDetail() {
           // Use a small delay to ensure storage is committed before event fires
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
+            window.dispatchEvent(new Event('cart-updated'));
           }, 100);
           toast.success("Added to cart!");
         }
@@ -240,6 +241,7 @@ export function ProductDetail() {
           // Use a small delay to ensure storage is committed before event fires
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: cartId } }));
+            window.dispatchEvent(new Event('cart-updated'));
           }, 100);
           toast.success("Added to cart!");
         } else if (result.cartNotFound) {
@@ -256,6 +258,7 @@ export function ProductDetail() {
             localStorage.setItem(`cart_items_${retryResult.cartId}`, JSON.stringify(items));
 
             window.dispatchEvent(new Event('shopify-cart-updated'));
+            window.dispatchEvent(new Event('cart-updated'));
             toast.success("Added to cart!");
           }
         }
