@@ -108,7 +108,6 @@ function LazyRoute({ component: Component, skeleton = <PageSkeleton /> }: { comp
 
 const Prediction = lazy(() => import("@/pages/prediction"));
 const Perpetual = lazy(() => import("@/pages/perpetual"));
-const Swap = lazy(() => import("@/pages/swap"));
 const PredictionDetail = lazy(() => import("@/pages/prediction-detail"));
 
 function Router() {
