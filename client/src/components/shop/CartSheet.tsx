@@ -61,6 +61,7 @@ export function CartSheet() {
     // Check for "shopify-cart-updated" from product detail
     const handleShopifyUpdate = () => {
       console.log("Shopify cart update detected");
+      setIsOpen(true); // Open the cart sheet immediately
       handleStorageChange();
       const currentCartId = localStorage.getItem('shopify_cart_id');
       if (currentCartId) {
