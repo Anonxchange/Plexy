@@ -260,7 +260,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     size="sm"
                     data-testid="nav-utility"
                   >
-                    <Settings className="h-5 w-5 flex-shrink-0" />
+                    <Receipt className="h-5 w-5 flex-shrink-0" />
                     <div className="flex flex-col items-start">
                       <span className="text-sm font-semibold">Utility</span>
                       <span className="text-xs text-muted-foreground leading-tight">Pay bills and other services</span>
