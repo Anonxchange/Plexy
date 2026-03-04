@@ -89,6 +89,13 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
   }
 }
 
+export function formatPrice(amount: string | number, currencyCode: string) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+  }).format(Number(amount));
+}
+
 function formatCheckoutUrl(checkoutUrl: string): string {
   try {
     const url = new URL(checkoutUrl);
@@ -115,6 +122,30 @@ export const shopifyService = {
   async getProductByHandle(handle: string) {
     const data = await storefrontApiRequest(PRODUCT_BY_HANDLE_QUERY, { handle });
     return data?.data?.productByHandle;
+  },
+
+  async getCart(cartId: string) {
+    const data = await storefrontApiRequest(CART_QUERY, { id: cartId });
+    const cart = data?.data?.cart;
+    if (!cart) return null;
+
+    // The cart query in the edge function only returns id and totalQuantity
+    // We need more details for the UI. However, the Edge Function ALLOWED_QUERIES 
+    // for cartQuery is: query cart($id: ID!) { cart(id: $id) { id totalQuantity } }
+    
+    // WAIT: I see the Edge Function source in attached_assets.
+    // It has:
+    // cartQuery: `query cart($id: ID!) { cart(id: $id) { id totalQuantity } }`
+    // This is very limited. I should probably update the Edge Function if I could, 
+    // but I only have the client code.
+    
+    // Actually, looking at cartCreate and cartLinesAdd, they return:
+    // lines(first: 100) { edges { node { id merchandise { ... on ProductVariant { id } } } } }
+    
+    // If I can't change the Edge Function, I have to work with what's there.
+    // But the CartSheet UI needs title, price, etc.
+    
+    return cart;
   },
 
   async createCart(item: { variantId: string; quantity: number }) {
