@@ -39,10 +39,11 @@ export function ProductDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState("L");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [availableSizes, setAvailableSizes] = useState<string[]>([]);
+  const [availableColors, setAvailableColors] = useState<string[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
-
-  const sizes = ["3XL", "L", "M", "S", "XL", "2XL"];
 
   useEffect(() => {
     if (id) {
@@ -61,6 +62,26 @@ export function ProductDetail() {
         
         if (found) {
           const p = found.node;
+          
+          // Extract options from product
+          const options = p.options || [];
+          const sizeOption = options.find((opt: any) => 
+            opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille'
+          );
+          
+          const colorOption = options.find((opt: any) => 
+            opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour'
+          );
+
+          const sizes = sizeOption?.values || [];
+          const colors = colorOption?.values || [];
+          
+          setAvailableSizes(sizes);
+          setAvailableColors(colors);
+          
+          if (sizes.length > 0) setSelectedSize(sizes[0]);
+          if (colors.length > 0) setSelectedColor(colors[0]);
+
           setProduct({
             id: p.id,
             title: p.title,
@@ -138,18 +159,51 @@ export function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (!product) return;
-    if (product.user_id !== 'shopify' || !product.variantId) {
+    if (product.user_id !== 'shopify') {
       toast.info("Marketplace checkout coming soon.");
+      return;
+    }
+
+    // Find the correct variant based on selected options
+    let targetVariantId = product.variantId;
+    
+    if (id?.includes('Product')) {
+      try {
+        const result = await shopifyService.getProducts(250);
+        const decodedId = decodeURIComponent(id);
+        const found = result.products.find((edge: any) => edge.node.id === decodedId);
+        if (found) {
+          const variant = found.node.variants.edges.find((edge: any) => {
+            const matchesSize = !selectedSize || edge.node.selectedOptions.some((opt: any) => 
+              (opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille') && opt.value === selectedSize
+            );
+            const matchesColor = !selectedColor || edge.node.selectedOptions.some((opt: any) => 
+              (opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour') && opt.value === selectedColor
+            );
+            return matchesSize && matchesColor;
+          });
+          if (variant) {
+            targetVariantId = variant.node.id;
+          }
+        }
+      } catch (e) {
+        console.error("Error finding variant for options:", e);
+      }
+    }
+
+    if (!targetVariantId) {
+      toast.error("Please select all required options");
       return;
     }
 
     setIsAddingToCart(true);
     try {
       let cartId = localStorage.getItem('shopify_cart_id');
+      const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
       const cartItem = {
-        id: product.variantId, // Fallback ID until we get line ID
-        variantId: product.variantId,
-        title: product.title,
+        id: targetVariantId, 
+        variantId: targetVariantId,
+        title: product.title + (optionLabel ? ` - ${optionLabel}` : ''),
         price: product.price,
         currency: product.currency,
         quantity: 1,
@@ -157,58 +211,32 @@ export function ProductDetail() {
       };
 
       if (!cartId) {
-        const result = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
+        const result = await shopifyService.createCart({ variantId: targetVariantId, quantity: 1 });
         if (result) {
           localStorage.setItem('shopify_cart_id', result.cartId);
           localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
           
-          // Store items locally to bridge the gap if the cart query is limited
           const items = [{ ...cartItem, id: result.lineId }];
           localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
           
-          // Force fetch to sync with Shopify
           await shopifyService.getCart(result.cartId);
           
-          // Trigger events for other components
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
         }
       } else {
-        // First check if the cart actually belongs to this store/session
-        const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
-        if (currentCheckoutUrl && !currentCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
-           localStorage.removeItem('shopify_cart_id');
-           localStorage.removeItem('shopify_checkout_url');
-           localStorage.removeItem(`cart_items_${cartId}`);
-           // Re-run the logic to create a new cart
-           const result = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
-           if (result) {
-             localStorage.setItem('shopify_cart_id', result.cartId);
-             localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
-             const items = [{ ...cartItem, id: result.lineId }];
-             localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
-             
-             window.dispatchEvent(new Event('storage'));
-             window.dispatchEvent(new Event('cart-updated'));
-             toast.success("Added to cart!");
-           }
-           return;
-        }
-
-        const result = await shopifyService.addLineToCart(cartId, { variantId: product.variantId, quantity: 1 });
+        const result = await shopifyService.addLineToCart(cartId, { variantId: targetVariantId, quantity: 1 });
         if (result.success) {
-          // Update local cache
           const storedItems = JSON.parse(localStorage.getItem(`cart_items_${cartId}`) || '[]');
-          const existing = storedItems.find((item: any) => item.variantId === product.variantId);
+          const existing = storedItems.find((item: any) => item.variantId === targetVariantId);
           if (existing) {
             existing.quantity += 1;
           } else {
-            storedItems.push({ ...cartItem, id: result.lineId || product.variantId });
+            storedItems.push({ ...cartItem, id: result.lineId || targetVariantId });
           }
           localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
           
-          // Force fetch to sync with Shopify
           await shopifyService.getCart(cartId);
           
           window.dispatchEvent(new Event('storage'));
@@ -340,27 +368,52 @@ export function ProductDetail() {
             </div>
 
             <div className="space-y-6">
-              {/* Size selection */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Size</h3>
-                  <button className="text-[10px] font-bold text-primary hover:underline">Size Guide</button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
-                        selectedSize === size 
-                          ? 'bg-foreground text-background border-foreground shadow-md' 
-                          : 'bg-background text-foreground border-border/40 hover:border-primary/50'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
+              {/* Options selection */}
+              <div className="space-y-6">
+                {availableSizes.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Size</h3>
+                      <button className="text-[10px] font-bold text-primary hover:underline">Size Guide</button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {availableSizes.map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setSelectedSize(size)}
+                          className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
+                            selectedSize === size 
+                              ? 'bg-foreground text-background border-foreground shadow-md' 
+                              : 'bg-background text-foreground border-border/40 hover:border-primary/50'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {availableColors.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Color</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {availableColors.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => setSelectedColor(color)}
+                          className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
+                            selectedColor === color 
+                              ? 'bg-foreground text-background border-foreground shadow-md' 
+                              : 'bg-background text-foreground border-border/40 hover:border-primary/50'
+                          }`}
+                        >
+                          {color}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 flex flex-col gap-3">
