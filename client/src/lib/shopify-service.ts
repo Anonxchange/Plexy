@@ -1,5 +1,8 @@
 import { toast } from "sonner";
-import { supabase } from "./supabase";
+
+const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SHOPIFY_PROXY_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/shopify-storefront`;
 
 export interface ShopifyProduct {
   node: {
@@ -84,12 +87,18 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
     }
 
     // Fallback to standard invoke if direct fetch fails or env vars missing
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      `https://${SUPABASE_PROJECT_ID}.supabase.co`,
+      SUPABASE_ANON_KEY
+    );
+    
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
       body: { queryName, variables }
     });
 
     if (error) {
-      if (error.status === 402) {
+      if ((error as any).status === 402) {
         toast.error("Shopify: Payment required", {
           description: "Your store needs an active billing plan. Visit https://admin.shopify.com to upgrade.",
         });
@@ -103,7 +112,7 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
     if (data?.errors) {
       throw new Error(`Error calling Shopify: ${data.errors.map((e: { message: string }) => e.message).join(', ')}`);
     }
-    
+
     if (data?.error) {
       throw new Error(data.error);
     }
@@ -155,15 +164,14 @@ export const shopifyService = {
     const cart = data?.data?.cart;
     if (!cart) return null;
 
-    // Map the Shopify GraphQL response to our internal CartItem format
     const lines = cart.lines?.edges || [];
     const items = lines.map((edge: any) => {
       const node = edge.node;
       const variant = node.merchandise;
       const product = variant.product;
-      
+
       return {
-        id: node.id, // This is the line ID needed for updates/removals
+        id: node.id,
         variantId: variant.id,
         title: product.title + (variant.title !== 'Default Title' ? ` - ${variant.title}` : ''),
         price: parseFloat(variant.price.amount),
@@ -239,3 +247,9 @@ export const shopifyService = {
     return { success: true };
   }
 };
+
+// Keep legacy named exports for backward compatibility with existing imports
+export const createShopifyCart = shopifyService.createCart;
+export const addLineToShopifyCart = shopifyService.addLineToCart;
+export const updateShopifyCartLine = shopifyService.updateCartLine;
+export const removeLineFromShopifyCart = shopifyService.removeLineFromCart;
