@@ -233,6 +233,7 @@ export function AppHeader() {
                 className="w-56"
                 onPointerEnter={() => setActiveDropdown('trade')}
               >
+                <DropdownMenuItem onClick={() => { navigate('/wallet/buy-crypto'); setActiveDropdown(null); }} className="cursor-pointer">
                   <div className="flex items-center justify-between w-full">
                     <span>Buy Crypto</span>
                     <Badge variant="secondary" className="text-xs">LOW FEES</Badge>
@@ -240,6 +241,12 @@ export function AppHeader() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/spot'); setActiveDropdown(null); }} className="cursor-pointer">
                   Spot Trading
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/swap'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Swap
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/prediction'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Prediction
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </div>
