@@ -1,10 +1,6 @@
 import { toast } from "sonner";
 import { supabase } from "./supabase";
 
-const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const SHOPIFY_PROXY_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/shopify-storefront`;
-
 export interface ShopifyProduct {
   node: {
     id: string;
