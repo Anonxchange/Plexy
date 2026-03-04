@@ -246,6 +246,7 @@ export function Shop() {
 
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
+          window.dispatchEvent(new Event('shopify-cart-updated'));
           toast.success("Added to cart!");
         }
       } else {
@@ -265,6 +266,7 @@ export function Shop() {
 
              window.dispatchEvent(new Event('storage'));
              window.dispatchEvent(new Event('cart-updated'));
+             window.dispatchEvent(new Event('shopify-cart-updated'));
              toast.success("Added to cart!");
            }
            return;
@@ -286,6 +288,7 @@ export function Shop() {
 
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
+          window.dispatchEvent(new Event('shopify-cart-updated'));
           toast.success("Added to cart!");
         } else if (result.cartNotFound) {
           // Retry once by creating new cart
@@ -302,6 +305,7 @@ export function Shop() {
             
             window.dispatchEvent(new Event('storage'));
             window.dispatchEvent(new Event('cart-updated'));
+            window.dispatchEvent(new Event('shopify-cart-updated'));
             toast.success("Added to cart!");
           }
         }
