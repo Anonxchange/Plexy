@@ -133,6 +133,7 @@ function Router() {
       <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
       <Route path="/wallet/visa-card/details">{() => <LazyRoute component={VisaCardDetails} />}</Route>
       <Route path="/wallet/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
+      <Route path="/utility">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/stake">{() => <LazyRoute component={Stake} />}</Route>
       <Route path="/wallet/lightning">{() => <LazyRoute component={Lightning} />}</Route>
@@ -197,7 +198,7 @@ function Router() {
 function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
-  const hideAppFooter = ["/spot", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer", "/shop/product"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
+  const hideAppFooter = ["/", "/spot", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer", "/shop/product"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
   const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
