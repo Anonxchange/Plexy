@@ -65,15 +65,8 @@ export function CartSheet() {
         return;
       }
 
-      // If we don't have line items from the API, we can't show them.
-      // But the user says "I don't see anything there".
-      // Let's check if the items are being stored in localStorage as a fallback 
-      // or if we can at least show a "Syncing..." state.
-      
-      const storedItems = localStorage.getItem(`cart_items_${cartId}`);
-      if (storedItems) {
-        setItems(JSON.parse(storedItems));
-      }
+      setItems(data.items);
+      localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(data.items));
     } catch (error) {
       console.error("Error fetching cart:", error);
     } finally {
