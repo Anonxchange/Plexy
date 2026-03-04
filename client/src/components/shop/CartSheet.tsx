@@ -59,9 +59,9 @@ export function CartSheet() {
     window.addEventListener('shopify-cart-updated', handleStorageChange);
     
     // Check for "shopify-cart-updated" from product detail
-    const handleShopifyUpdate = () => {
-      console.log("Shopify cart update detected");
-      setIsOpen(true); // Open the cart sheet immediately
+    const handleShopifyUpdate = (event?: any) => {
+      console.log("Shopify cart update detected", event?.detail);
+      // setIsOpen(true); // Open the cart sheet immediately - REMOVED per user request
       handleStorageChange();
       const currentCartId = localStorage.getItem('shopify_cart_id');
       if (currentCartId) {
