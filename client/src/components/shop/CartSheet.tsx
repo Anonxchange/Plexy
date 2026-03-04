@@ -58,6 +58,17 @@ export function CartSheet() {
     window.addEventListener('cart-updated', handleStorageChange);
     window.addEventListener('shopify-cart-updated', handleStorageChange);
     
+    // Check for "shopify-cart-updated" from product detail
+    const handleShopifyUpdate = () => {
+      console.log("Shopify cart update detected");
+      handleStorageChange();
+      const currentCartId = localStorage.getItem('shopify_cart_id');
+      if (currentCartId) {
+        fetchCart();
+      }
+    };
+    window.addEventListener('shopify-cart-updated', handleShopifyUpdate);
+    
     // Initial load
     handleStorageChange();
     
@@ -65,6 +76,7 @@ export function CartSheet() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('cart-updated', handleStorageChange);
       window.removeEventListener('shopify-cart-updated', handleStorageChange);
+      window.removeEventListener('shopify-cart-updated', handleShopifyUpdate);
     };
   }, []);
 
