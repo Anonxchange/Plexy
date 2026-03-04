@@ -170,6 +170,26 @@ export function ProductDetail() {
           toast.success("Added to cart!");
         }
       } else {
+        // First check if the cart actually belongs to this store/session
+        // If the checkout URL doesn't match our store domain, clear it
+        const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
+        if (currentCheckoutUrl && !currentCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
+           localStorage.removeItem('shopify_cart_id');
+           localStorage.removeItem('shopify_checkout_url');
+           localStorage.removeItem(`cart_items_${cartId}`);
+           // Re-run the logic to create a new cart
+           const result = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
+           if (result) {
+             localStorage.setItem('shopify_cart_id', result.cartId);
+             localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
+             const items = [{ ...cartItem, id: result.lineId }];
+             localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
+             window.dispatchEvent(new Event('cart-updated'));
+             toast.success("Added to cart!");
+           }
+           return;
+        }
+
         const result = await shopifyService.addLineToCart(cartId, { variantId: product.variantId, quantity: 1 });
         if (result.success) {
           // Update local cache
