@@ -131,16 +131,16 @@ export const shopifyService = {
     const items = lines.map((edge: any) => {
       const node = edge.node;
       const variant = node.merchandise;
-      const product = variant.product;
+      const product = variant?.product;
 
       return {
         id: node.id,
-        variantId: variant.id,
-        title: product.title + (variant.title !== 'Default Title' ? ` - ${variant.title}` : ''),
-        price: parseFloat(variant.price.amount),
-        currency: variant.price.currencyCode,
+        variantId: variant?.id,
+        title: (product?.title || 'Product') + (variant?.title && variant.title !== 'Default Title' ? ` - ${variant.title}` : ''),
+        price: variant?.price?.amount ? parseFloat(variant.price.amount) : 0,
+        currency: variant?.price?.currencyCode || 'USD',
         quantity: node.quantity,
-        image: product.images?.edges[0]?.node?.url
+        image: product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || ''
       };
     });
 
