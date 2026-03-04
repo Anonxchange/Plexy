@@ -245,6 +245,25 @@ export function Shop() {
           toast.success("Added to cart!");
         }
       } else {
+        // Check for mismatched store domain
+        const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
+        if (currentCheckoutUrl && !currentCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
+           localStorage.removeItem('shopify_cart_id');
+           localStorage.removeItem('shopify_checkout_url');
+           localStorage.removeItem(`cart_items_${cartId}`);
+           // Re-create cart
+           const newResult = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
+           if (newResult) {
+             localStorage.setItem('shopify_cart_id', newResult.cartId);
+             localStorage.setItem('shopify_checkout_url', newResult.checkoutUrl);
+             const items = [{ ...cartItem, id: newResult.lineId }];
+             localStorage.setItem(`cart_items_${newResult.cartId}`, JSON.stringify(items));
+             window.dispatchEvent(new Event('cart-updated'));
+             toast.success("Added to cart!");
+           }
+           return;
+        }
+
         result = await shopifyService.addLineToCart(cartId, { variantId: product.variantId, quantity: 1 });
         if (result.success) {
           const storedItems = JSON.parse(localStorage.getItem(`cart_items_${cartId}`) || '[]');
