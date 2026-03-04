@@ -56,6 +56,7 @@ export function CartSheet() {
     window.addEventListener('storage', handleStorageChange);
     // Also listen for custom event for same-window updates
     window.addEventListener('cart-updated', handleStorageChange);
+    window.addEventListener('shopify-cart-updated', handleStorageChange);
     
     // Initial load
     handleStorageChange();
@@ -63,6 +64,7 @@ export function CartSheet() {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('cart-updated', handleStorageChange);
+      window.removeEventListener('shopify-cart-updated', handleStorageChange);
     };
   }, []);
 
