@@ -224,6 +224,14 @@ export function ProductDetail() {
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
+          
+          // Open the cart sheet after adding
+          setTimeout(() => {
+            const cartButton = document.querySelector('button[aria-haspopup="dialog"]');
+            if (cartButton instanceof HTMLButtonElement) {
+              cartButton.click();
+            }
+          }, 500);
         }
       } else {
         const result = await shopifyService.addLineToCart(cartId, { variantId: targetVariantId, quantity: 1 });
@@ -242,6 +250,14 @@ export function ProductDetail() {
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
           toast.success("Added to cart!");
+
+          // Open the cart sheet after adding
+          setTimeout(() => {
+            const cartButton = document.querySelector('button[aria-haspopup="dialog"]');
+            if (cartButton instanceof HTMLButtonElement) {
+              cartButton.click();
+            }
+          }, 500);
         } else if (result.cartNotFound) {
           // If cart not found, clear and retry once
           localStorage.removeItem('shopify_cart_id');
