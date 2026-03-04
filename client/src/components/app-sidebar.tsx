@@ -17,7 +17,8 @@ import {
   ShoppingBag,
   Banknote,
   Globe,
-  Users
+  Users,
+  Receipt
 } from "lucide-react";
 import { SiApple, SiGoogleplay } from "react-icons/si";
 import { Link, useLocation } from "wouter";
