@@ -233,7 +233,7 @@ export function AppHeader() {
                 className="w-56"
                 onPointerEnter={() => setActiveDropdown('trade')}
               >
-                <DropdownMenuItem onClick={() => { navigate('/wallet/buy-crypto'); setActiveDropdown(null); }} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => { navigate('/buy-crypto'); setActiveDropdown(null); }} className="cursor-pointer">
                   <div className="flex items-center justify-between w-full">
                     <span>Buy Crypto</span>
                     <Badge variant="secondary" className="text-xs">LOW FEES</Badge>
