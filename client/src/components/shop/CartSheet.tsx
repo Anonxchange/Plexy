@@ -55,8 +55,30 @@ export function CartSheet() {
   }, [isOpen, cartId]);
 
   const fetchCart = async () => {
-    // In a full implementation, shopifyService would have a getCart method
-    // For now, we'll keep it simple as the user requested "proper modal" UI
+    if (!cartId) return;
+    
+    setIsLoading(true);
+    try {
+      const data = await shopifyService.getCart(cartId);
+      if (!data) {
+        handleCartNotFound();
+        return;
+      }
+
+      // If we don't have line items from the API, we can't show them.
+      // But the user says "I don't see anything there".
+      // Let's check if the items are being stored in localStorage as a fallback 
+      // or if we can at least show a "Syncing..." state.
+      
+      const storedItems = localStorage.getItem(`cart_items_${cartId}`);
+      if (storedItems) {
+        setItems(JSON.parse(storedItems));
+      }
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateQuantity = async (lineId: string, newQuantity: number) => {
@@ -66,9 +88,11 @@ export function CartSheet() {
     try {
       const result = await shopifyService.updateCartLine(cartId, lineId, newQuantity);
       if (result.success) {
-        setItems(prev => prev.map(item => 
+        const newItems = items.map(item => 
           item.id === lineId ? { ...item, quantity: newQuantity } : item
-        ));
+        );
+        setItems(newItems);
+        localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(newItems));
         window.dispatchEvent(new Event('cart-updated'));
       } else if (result.cartNotFound) {
         handleCartNotFound();
@@ -87,7 +111,9 @@ export function CartSheet() {
     try {
       const result = await shopifyService.removeLineFromCart(cartId, lineId);
       if (result.success) {
-        setItems(prev => prev.filter(item => item.id !== lineId));
+        const newItems = items.filter(item => item.id !== lineId);
+        setItems(newItems);
+        localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(newItems));
         toast.success("Item removed from cart");
         window.dispatchEvent(new Event('cart-updated'));
       } else if (result.cartNotFound) {
@@ -103,6 +129,7 @@ export function CartSheet() {
   const handleCartNotFound = () => {
     localStorage.removeItem('shopify_cart_id');
     localStorage.removeItem('shopify_checkout_url');
+    localStorage.removeItem(`cart_items_${cartId}`);
     setCartId(null);
     setCheckoutUrl(null);
     setItems([]);
