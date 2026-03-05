@@ -111,6 +111,7 @@ export function Shop() {
       const sortedCats = Array.from(cats).sort();
       console.log('Unique categories:', sortedCats);
       setShopifyCategories(sortedCats);
+      
       // If we are on shopify tab and current category is not in the new list, reset to All
       if (activeTab === "shopify" && selectedCategory !== "All" && !sortedCats.includes(selectedCategory)) {
         setSelectedCategory("All");
@@ -123,6 +124,9 @@ export function Shop() {
   // Reset category filter when switching tabs
   useEffect(() => {
     setSelectedCategory("All");
+    if (activeTab === "shopify") {
+      fetchShopifyCategories();
+    }
   }, [activeTab]);
 
   const fetchShopifyProducts = async (after?: string) => {
