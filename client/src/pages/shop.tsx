@@ -68,7 +68,6 @@ export function Shop() {
   const [shopifyCategories, setShopifyCategories] = useState<string[]>(["All"]);
   const [activeTab, setActiveTab] = useState("shopify");
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
