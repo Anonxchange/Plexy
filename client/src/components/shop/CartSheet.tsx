@@ -12,11 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCart } from "@/hooks/use-shopify-cart";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function CartSheet() {
   const [isOpen, setIsOpen] = useState(false);
-  const { items, cartId, checkoutUrl, isLoading, updateQuantity, removeItem } = useCart();
+  const { items, cartId, checkoutUrl, isLoading, updateQuantity, removeItem, refreshCart } = useCart();
+
+  useEffect(() => {
+    if (isOpen) {
+      refreshCart();
+    }
+  }, [isOpen, refreshCart]);
 
   const subtotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0);
   const currency = items[0]?.currency || "USD";
