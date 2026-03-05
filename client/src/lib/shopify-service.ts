@@ -48,7 +48,6 @@ export interface ShopifyProduct {
 
 // Query name constants matching server-side allowlist
 export const PRODUCTS_QUERY = 'getProducts';
-export const PRODUCT_TYPES_QUERY = 'getProductTypes';
 export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
 export const CART_QUERY = 'cartQuery';
 export const CART_CREATE_MUTATION = 'cartCreate';
@@ -58,7 +57,6 @@ export const CART_LINES_REMOVE_MUTATION = 'cartLinesRemove';
 
 export async function storefrontApiRequest(queryName: string, variables: Record<string, unknown> = {}) {
   try {
-    // Standard invoke via Supabase functions
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
       body: { queryName, variables }
     });
@@ -89,6 +87,13 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
   }
 }
 
+export function formatPrice(amount: string | number, currencyCode: string) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+  }).format(Number(amount));
+}
+
 function formatCheckoutUrl(checkoutUrl: string): string {
   try {
     const url = new URL(checkoutUrl);
@@ -110,11 +115,6 @@ export const shopifyService = {
       products: data?.data?.products?.edges || [],
       pageInfo: data?.data?.products?.pageInfo
     };
-  },
-
-  async getProductTypes() {
-    const data = await storefrontApiRequest(PRODUCT_TYPES_QUERY);
-    return data?.data?.productTypes?.edges?.map((edge: any) => edge.node) || [];
   },
 
   async getProductByHandle(handle: string) {
