@@ -232,12 +232,12 @@ export function ProductDetail() {
       if (!cartId) {
         console.log("No cartId found, creating new cart...");
         const result = await shopifyService.createCart({ variantId: targetVariantId, quantity: 1 });
-        if (result) {
+        if (result && result.cartId) {
           console.log("Cart created:", result.cartId);
           localStorage.setItem('shopify_cart_id', result.cartId);
-          localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
+          localStorage.setItem('shopify_checkout_url', result.checkoutUrl || '');
           
-          const items = [{ ...cartItem, id: result.lineId }];
+          const items = [{ ...cartItem, id: result.lineId || result.cartId }];
           localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
           
           // Force fetch to sync with Shopify
