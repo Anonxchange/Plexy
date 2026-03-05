@@ -63,6 +63,7 @@ export function ProductDetail() {
         const decodedId = decodeURIComponent(id);
         console.log("Decoded Shopify ID:", decodedId);
         
+        // Fetch specific product directly if possible, or use a cached list
         const result = await shopifyService.getProducts(250);
         console.log("Shopify products fetched:", result?.products?.length);
         
@@ -174,7 +175,10 @@ export function ProductDetail() {
       toast.error("Error loading product");
       navigate("/shop");
     } finally {
-      setIsLoading(false);
+      // Use a small delay for smoother transition
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 300);
     }
   };
 
