@@ -58,6 +58,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const isRefreshing = React.useRef(false);
 
   // Use a ref to store items and ensure listeners always have access to the latest state
   const itemsRef = React.useRef<CartItem[]>([]);
@@ -120,8 +121,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentCartId) return;
 
     // Use a flag to prevent multiple concurrent refreshes
-    if (isLoading) return;
+    if (isRefreshing.current) return;
 
+    isRefreshing.current = true;
     setIsLoading(true);
     try {
       console.log("useCart: refreshCart fetching...", currentCartId);
@@ -147,9 +149,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("useCart: Error refreshing cart (possibly network error, keeping existing state):", error);
     } finally {
       // Small delay to prevent rapid flicker if calls are close together
-      setTimeout(() => setIsLoading(false), 300);
+      setTimeout(() => {
+        setIsLoading(false);
+        isRefreshing.current = false;
+      }, 300);
     }
-  }, [clearCart, isLoading]);
+  }, [clearCart]);
 
   useEffect(() => {
     // Initial sync from storage happens immediately
