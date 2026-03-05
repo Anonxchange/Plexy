@@ -83,6 +83,13 @@ export function Shop() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch Shopify products when category changes
+  useEffect(() => {
+    if (activeTab === "shopify") {
+      fetchShopifyProducts();
+    }
+  }, [selectedCategory, activeTab]);
+
   // Update Marketplace categories
   useEffect(() => {
     const cats = new Set<string>(["All"]);
@@ -118,7 +125,11 @@ export function Shop() {
       setIsLoading(true);
     }
     try {
-      const result = await shopifyService.getProducts(35, after);
+      // Build query string for Shopify
+      // product_type:CategoryName
+      const shopifyQuery = selectedCategory !== "All" ? `product_type:${selectedCategory}` : undefined;
+      
+      const result = await shopifyService.getProducts(35, after, shopifyQuery);
       const transformed: Listing[] = result.products.map((edge: any) => {
         const p = edge.node;
         return {
