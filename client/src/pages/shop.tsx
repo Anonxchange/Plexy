@@ -51,7 +51,6 @@ interface Listing {
   variantId?: string;
 }
 
-const categories = ["All", "Services", "Digital", "Goods", "Domains", "Jobs", "Software", "Electronics", "Clothing", "Home & Garden", "Sports", "Other"];
 
 export function Shop() {
   const [, navigate] = useLocation();
@@ -61,6 +60,7 @@ export function Shop() {
   const [selectedProduct, setSelectedProduct] = useState<Listing | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
+  const [dynamicCategories, setDynamicCategories] = useState<string[]>(["All"]);
   const [activeTab, setActiveTab] = useState("shopify");
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -80,6 +80,18 @@ export function Shop() {
     return () => clearInterval(interval);
   }, []);
 
+  // Update dynamic categories whenever products change
+  useEffect(() => {
+    const allProducts = [...listings, ...shopifyProducts];
+    const cats = new Set<string>(["All"]);
+    allProducts.forEach(p => {
+      if (p.category) {
+        cats.add(p.category);
+      }
+    });
+    setDynamicCategories(Array.from(cats).sort());
+  }, [listings, shopifyProducts]);
+
   const fetchShopifyProducts = async (after?: string) => {
     if (after) {
       setIsLoadingMore(true);
@@ -96,7 +108,7 @@ export function Shop() {
           description: p.description,
           price: parseFloat(p.priceRange.minVariantPrice.amount),
           currency: p.priceRange.minVariantPrice.currencyCode,
-          category: "Shopify",
+          category: p.productType || "Shopify",
           images: p.images.edges.map((e: any) => e.node.url),
           location: "Online",
           user_id: "shopify",
@@ -365,7 +377,7 @@ export function Shop() {
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
+                {dynamicCategories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>
