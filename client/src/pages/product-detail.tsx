@@ -233,22 +233,28 @@ export function ProductDetail() {
         console.log("No cartId found, creating new cart...");
         const result = await shopifyService.createCart({ variantId: targetVariantId, quantity: 1 });
         if (result && result.cartId) {
-          console.log("Cart created:", result.cartId);
+          console.log("Cart created successfully:", result.cartId);
+          
+          // CRITICAL: Ensure localStorage is updated IMMEDIATELY
           localStorage.setItem('shopify_cart_id', result.cartId);
           localStorage.setItem('shopify_checkout_url', result.checkoutUrl || '');
           
           const items = [{ ...cartItem, id: result.lineId || result.cartId }];
           localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
           
+          console.log("Verified localStorage after creation:", {
+            cartId: localStorage.getItem('shopify_cart_id'),
+            items: localStorage.getItem(`cart_items_${result.cartId}`)
+          });
+
           // Force fetch to sync with Shopify
           await shopifyService.getCart(result.cartId);
 
-          // Use a small delay to ensure storage is committed before event fires
-          setTimeout(() => {
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new Event('cart-updated'));
-            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
-          }, 100);
+          // Dispatch multiple events to ensure all listeners catch the update
+          window.dispatchEvent(new Event('storage'));
+          window.dispatchEvent(new Event('cart-updated'));
+          window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
+          
           toast.success("Added to cart!");
         }
       } else {
