@@ -269,6 +269,7 @@ export function ProductDetail() {
               <Button 
                 size="icon" 
                 variant="ghost" 
+                type="button"
                 className="absolute top-4 right-4 bg-background/50 backdrop-blur-md rounded-full hover:bg-background/80"
               >
                 <Heart className="h-5 w-5" />
@@ -380,8 +381,13 @@ export function ProductDetail() {
               <div className="pt-2 flex flex-col gap-3">
                 <Button 
                   size="default"
+                  type="button"
                   className="w-full h-12 rounded-xl text-base font-bold bg-[#D3884D] hover:bg-[#C0783D] text-white transition-all active:scale-[0.98] gap-2 shadow-md shadow-[#D3884D]/20"
-                  onClick={handleAddToCart}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAddToCart();
+                  }}
                   disabled={isAddingToCart}
                 >
                   {isAddingToCart ? (
