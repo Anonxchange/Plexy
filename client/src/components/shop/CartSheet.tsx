@@ -112,7 +112,7 @@ export function CartSheet() {
           ) : (
             <ScrollArea className="h-full" key={`cart-scroll-${renderKey}-${items.length}`}>
               <div className="p-6 space-y-6">
-                {items.length > 0 ? items.map((item, index) => (
+                {items.map((item, index) => (
                   <div key={`${item.id || item.variantId}-${index}-${renderKey}`} className="group relative flex gap-4 bg-card p-3 rounded-xl border border-border/40 hover:border-primary/20 hover:shadow-sm transition-all">
                     <div className="h-24 w-24 rounded-lg bg-muted overflow-hidden flex-shrink-0 border border-border/20 shadow-inner">
                       {item.image ? (
