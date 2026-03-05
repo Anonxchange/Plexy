@@ -220,6 +220,7 @@ export function Shop() {
     setIsAddingToCart(true);
     try {
       let cartId = localStorage.getItem('shopify_cart_id');
+      console.log("Adding to cart. Current cartId:", cartId);
       let result;
 
       const cartItem = {
@@ -233,8 +234,10 @@ export function Shop() {
       };
 
       if (!cartId) {
+        console.log("No cartId found, creating new cart...");
         result = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
         if (result) {
+          console.log("Cart created:", result.cartId);
           localStorage.setItem('shopify_cart_id', result.cartId);
           localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
           
@@ -246,13 +249,14 @@ export function Shop() {
 
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
-          window.dispatchEvent(new Event('shopify-cart-updated'));
+          window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
           toast.success("Added to cart!");
         }
       } else {
         // Check for mismatched store domain
         const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
         if (currentCheckoutUrl && !currentCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
+           console.log("Store domain mismatch, clearing cart...");
            localStorage.removeItem('shopify_cart_id');
            localStorage.removeItem('shopify_checkout_url');
            localStorage.removeItem(`cart_items_${cartId}`);
@@ -266,14 +270,16 @@ export function Shop() {
 
              window.dispatchEvent(new Event('storage'));
              window.dispatchEvent(new Event('cart-updated'));
-             window.dispatchEvent(new Event('shopify-cart-updated'));
+             window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: newResult.cartId } }));
              toast.success("Added to cart!");
            }
            return;
         }
 
+        console.log("Adding line to existing cart...");
         result = await shopifyService.addLineToCart(cartId, { variantId: product.variantId, quantity: 1 });
         if (result.success) {
+          console.log("Line added successfully:", result.lineId);
           const storedItems = JSON.parse(localStorage.getItem(`cart_items_${cartId}`) || '[]');
           const existing = storedItems.find((item: any) => item.variantId === product.variantId);
           if (existing) {
@@ -288,9 +294,10 @@ export function Shop() {
 
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('cart-updated'));
-          window.dispatchEvent(new Event('shopify-cart-updated'));
+          window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: cartId } }));
           toast.success("Added to cart!");
         } else if (result.cartNotFound) {
+          console.warn("Cart not found on Shopify, creating new one...");
           // Retry once by creating new cart
           localStorage.removeItem('shopify_cart_id');
           localStorage.removeItem('shopify_checkout_url');
@@ -305,13 +312,16 @@ export function Shop() {
             
             window.dispatchEvent(new Event('storage'));
             window.dispatchEvent(new Event('cart-updated'));
-            window.dispatchEvent(new Event('shopify-cart-updated'));
+            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: newResult.cartId } }));
             toast.success("Added to cart!");
           }
+        } else {
+          console.error("Failed to add line to cart:", result);
         }
       }
       setSelectedProduct(null);
     } catch (error) {
+      console.error("Error in handleAddToCart:", error);
       toast.error("Failed to add to cart");
     } finally {
       setIsAddingToCart(false);
