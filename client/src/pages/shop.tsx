@@ -72,10 +72,12 @@ export function Shop() {
   useEffect(() => {
     fetchListings();
     fetchShopifyProducts();
+    fetchShopifyCategories();
     
     // Set up an interval to refresh products every 2 minutes
     const interval = setInterval(() => {
       fetchShopifyProducts();
+      fetchShopifyCategories();
     }, 120000);
     
     return () => clearInterval(interval);
@@ -90,14 +92,19 @@ export function Shop() {
     setMarketplaceCategories(Array.from(cats).sort());
   }, [listings]);
 
-  // Update Shopify categories from product types
-  useEffect(() => {
-    const cats = new Set<string>(["All"]);
-    shopifyProducts.forEach(p => {
-      if (p.category) cats.add(p.category);
-    });
-    setShopifyCategories(Array.from(cats).sort());
-  }, [shopifyProducts]);
+  // Fetch all Shopify categories (Product Types)
+  const fetchShopifyCategories = async () => {
+    try {
+      const types = await shopifyService.getProductTypes();
+      const cats = new Set<string>(["All"]);
+      types.forEach((type: string) => {
+        if (type) cats.add(type);
+      });
+      setShopifyCategories(Array.from(cats).sort());
+    } catch (error) {
+      console.error('Error fetching Shopify categories:', error);
+    }
+  };
 
   // Reset category filter when switching tabs
   useEffect(() => {
