@@ -59,6 +59,18 @@ export function CartSheet() {
       const newCartId = localStorage.getItem('shopify_cart_id');
       const newCheckoutUrl = localStorage.getItem('shopify_checkout_url');
       
+      // Update items from local storage if cartId is present
+      if (newCartId) {
+        const storedItems = localStorage.getItem(`cart_items_${newCartId}`);
+        if (storedItems) {
+          try {
+            setItems(JSON.parse(storedItems));
+          } catch (e) {
+            console.error("Error parsing stored items:", e);
+          }
+        }
+      }
+
       // Safety check: if the checkout URL is from a different store, clear the cart
       if (newCheckoutUrl && !newCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
         handleCartNotFound();
@@ -69,12 +81,6 @@ export function CartSheet() {
       setCheckoutUrl(newCheckoutUrl);
       
       if (newCartId) {
-        const storedItems = localStorage.getItem(`cart_items_${newCartId}`);
-        if (storedItems) {
-          try {
-            setItems(JSON.parse(storedItems));
-          } catch (e) {}
-        }
         // Force fresh fetch on any update event using the ID from storage directly
         fetchCart(newCartId);
       } else {
