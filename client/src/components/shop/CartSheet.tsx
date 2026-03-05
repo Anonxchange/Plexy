@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { ShoppingCart, Trash2, Plus, Minus, ExternalLink, Loader2, X } from "lucide-react";
 import {
   Sheet,
@@ -12,178 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { shopifyService } from "@/lib/shopify-service";
-import { toast } from "sonner";
-
-interface CartItem {
-  id: string; // shopify line id
-  variantId: string;
-  title: string;
-  price: number;
-  currency: string;
-  quantity: number;
-  image?: string;
-}
+import { useCart } from "@/hooks/use-shopify-cart";
+import { useState } from "react";
 
 export function CartSheet() {
   const [isOpen, setIsOpen] = useState(false);
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [cartId, setCartId] = useState<string | null>(localStorage.getItem('shopify_cart_id'));
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(localStorage.getItem('shopify_checkout_url'));
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setCartId(localStorage.getItem('shopify_cart_id'));
-      setCheckoutUrl(localStorage.getItem('shopify_checkout_url'));
-      
-      // Update items from local storage if cartId is present
-      const currentCartId = localStorage.getItem('shopify_cart_id');
-      if (currentCartId) {
-        const storedItems = localStorage.getItem(`cart_items_${currentCartId}`);
-        if (storedItems) {
-          try {
-            setItems(JSON.parse(storedItems));
-          } catch (e) {
-            console.error("Error parsing stored items:", e);
-          }
-        }
-      } else {
-        setItems([]);
-      }
-    };
-
-    const handleCartUpdate = (event?: any) => {
-      console.log("Cart update detected:", event?.type, event?.detail);
-      
-      const newCartId = localStorage.getItem('shopify_cart_id');
-      const newCheckoutUrl = localStorage.getItem('shopify_checkout_url');
-      
-      console.log("Syncing CartSheet state with localStorage:", { newCartId, newCheckoutUrl });
-
-      setCartId(newCartId);
-      setCheckoutUrl(newCheckoutUrl);
-
-      // Update items from local storage if cartId is present
-      if (newCartId) {
-        const storedItems = localStorage.getItem(`cart_items_${newCartId}`);
-        if (storedItems) {
-          try {
-            setItems(JSON.parse(storedItems));
-          } catch (e) {
-            console.error("Error parsing stored items:", e);
-          }
-        }
-        // Force fresh fetch on any update event using the ID from storage directly
-        fetchCart(newCartId);
-      } else {
-        setItems([]);
-      }
-
-      // Safety check: if the checkout URL is from a different store, clear the cart
-      if (newCheckoutUrl && !newCheckoutUrl.includes('pexly-2.myshopify.com')) {
-        handleCartNotFound();
-        return;
-      }
-    };
-
-    window.addEventListener('storage', handleCartUpdate);
-    window.addEventListener('cart-updated', handleCartUpdate);
-    window.addEventListener('shopify-cart-updated', handleCartUpdate);
-    
-    // Initial sync
-    handleCartUpdate({ type: 'initial' });
-    
-    return () => {
-      window.removeEventListener('storage', handleCartUpdate);
-      window.removeEventListener('cart-updated', handleCartUpdate);
-      window.removeEventListener('shopify-cart-updated', handleCartUpdate);
-    };
-  }, []);
-
-  const fetchCart = async (idToUse?: string) => {
-    const activeCartId = idToUse || cartId;
-    if (!activeCartId) return;
-    
-    setIsLoading(true);
-    try {
-      const data = await shopifyService.getCart(activeCartId);
-      if (!data) {
-        handleCartNotFound();
-        return;
-      }
-
-      setItems(data.items);
-      localStorage.setItem(`cart_items_${activeCartId}`, JSON.stringify(data.items));
-    } catch (error) {
-      console.error("Error fetching cart:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const updateQuantity = async (lineId: string, newQuantity: number) => {
-    if (!cartId || newQuantity < 1) return;
-    
-    setIsLoading(true);
-    try {
-      const result = await shopifyService.updateCartLine(cartId, lineId, newQuantity);
-      if (result.success) {
-        // Fetch fresh data from Shopify to ensure sync
-        fetchCart(cartId);
-        window.dispatchEvent(new Event('cart-updated'));
-      } else if (result.cartNotFound) {
-        handleCartNotFound();
-      }
-    } catch (error) {
-      toast.error("Failed to update quantity");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const removeItem = async (lineId: string) => {
-    if (!cartId) return;
-
-    setIsLoading(true);
-    try {
-      const result = await shopifyService.removeLineFromCart(cartId, lineId);
-      if (result.success) {
-        // Fetch fresh data from Shopify to ensure sync
-        fetchCart(cartId);
-        toast.success("Item removed from cart");
-        window.dispatchEvent(new Event('cart-updated'));
-      } else if (result.cartNotFound) {
-        handleCartNotFound();
-      }
-    } catch (error) {
-      toast.error("Failed to remove item");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCartNotFound = () => {
-    localStorage.removeItem('shopify_cart_id');
-    localStorage.removeItem('shopify_checkout_url');
-    localStorage.removeItem(`cart_items_${cartId}`);
-    setCartId(null);
-    setCheckoutUrl(null);
-    setItems([]);
-    toast.error("Cart cleared or expired. Please add items again.");
-    window.dispatchEvent(new Event('cart-updated'));
-  };
-
-  useEffect(() => {
-    // Safety check: if the checkout URL is from a different store, clear the cart
-    const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
-    if (currentCheckoutUrl && !currentCheckoutUrl.includes('pexly-2.myshopify.com')) {
-      handleCartNotFound();
-    }
-  }, [cartId]);
+  const { items, cartId, checkoutUrl, isLoading, updateQuantity, removeItem } = useCart();
 
   const subtotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0);
   const currency = items[0]?.currency || "USD";
+
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
