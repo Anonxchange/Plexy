@@ -18,14 +18,46 @@ export function CartSheet() {
   const [isOpen, setIsOpen] = useState(false);
   const { items, cartId, checkoutUrl, isLoading, updateQuantity, removeItem, refreshCart } = useCart();
 
+  // Refresh cart data when the sheet is opened to ensure accuracy
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && cartId) {
+      console.log("CartSheet: Refreshing cart on open", cartId);
       refreshCart();
     }
-  }, [isOpen, refreshCart]);
+  }, [isOpen, cartId, refreshCart]);
 
-  const subtotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0);
+  // Log items for debugging
+  useEffect(() => {
+    if (isOpen) {
+      console.log("CartSheet: Current items", items);
+    }
+  }, [isOpen, items]);
+
+  const subtotal = items.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.quantity) || 0)), 0);
   const currency = items[0]?.currency || "USD";
+
+  // Force a re-render when items change using a dedicated key
+  const [renderKey, setRenderKey] = useState(0);
+  useEffect(() => {
+    setRenderKey(prev => prev + 1);
+    console.log("CartSheet: Items changed, updated renderKey", { count: items.length });
+  }, [items, cartId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const storedCartId = localStorage.getItem('shopify_cart_id');
+      console.log("CartSheet Opened - Current State:", { 
+        itemsCount: items.length, 
+        cartId,
+        storedCartId,
+        isLoading,
+        renderKey,
+        itemsSample: items.slice(0, 1)
+      });
+      // Ensure we have latest data when opening
+      if (storedCartId) refreshCart();
+    }
+  }, [isOpen]);
 
 
   return (
@@ -57,8 +89,12 @@ export function CartSheet() {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-hidden relative">
-          {items.length === 0 ? (
+        <div className="flex-1 overflow-hidden relative min-h-[300px]">
+          {isLoading && items.length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
               <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-2 animate-pulse">
                 <ShoppingCart className="h-10 w-10 text-primary/40" />
@@ -74,10 +110,10 @@ export function CartSheet() {
               </Button>
             </div>
           ) : (
-            <ScrollArea className="h-full">
+            <ScrollArea className="h-full" key={`cart-scroll-${renderKey}-${items.length}`}>
               <div className="p-6 space-y-6">
-                {items.map((item) => (
-                  <div key={item.id} className="group relative flex gap-4 bg-card p-3 rounded-xl border border-border/40 hover:border-primary/20 hover:shadow-sm transition-all">
+                {items.length > 0 ? items.map((item, index) => (
+                  <div key={`${item.id || item.variantId}-${index}-${renderKey}`} className="group relative flex gap-4 bg-card p-3 rounded-xl border border-border/40 hover:border-primary/20 hover:shadow-sm transition-all">
                     <div className="h-24 w-24 rounded-lg bg-muted overflow-hidden flex-shrink-0 border border-border/20 shadow-inner">
                       {item.image ? (
                         <img src={item.image} alt={item.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
