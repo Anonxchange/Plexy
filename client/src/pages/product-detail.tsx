@@ -175,10 +175,7 @@ export function ProductDetail() {
       toast.error("Error loading product");
       navigate("/shop");
     } finally {
-      // Use a small delay for smoother transition
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
+      setIsLoading(false);
     }
   };
 
