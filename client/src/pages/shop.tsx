@@ -149,7 +149,7 @@ export function Shop() {
           description: p.description,
           price: parseFloat(p.priceRange.minVariantPrice.amount),
           currency: p.priceRange.minVariantPrice.currencyCode,
-          category: p.productType || "Shopify",
+          category: p.productType || "All",
           images: p.images.edges.map((e: any) => e.node.url),
           location: "Online",
           user_id: "shopify",
