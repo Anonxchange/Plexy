@@ -39,6 +39,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedCartId = localStorage.getItem(CART_ID_KEY);
     const storedCheckoutUrl = localStorage.getItem(CHECKOUT_URL_KEY);
     
+    console.log("useCart: syncFromStorage", { storedCartId, storedCheckoutUrl });
+    
     setCartId(storedCartId);
     setCheckoutUrl(storedCheckoutUrl);
 
@@ -46,10 +48,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedItems = localStorage.getItem(`${ITEMS_PREFIX}${storedCartId}`);
       if (storedItems) {
         try {
-          setItems(JSON.parse(storedItems));
+          const parsedItems = JSON.parse(storedItems);
+          console.log("useCart: Loaded items from storage", parsedItems.length);
+          setItems(parsedItems);
         } catch (e) {
           console.error("Error parsing stored items:", e);
         }
+      } else {
+        console.log("useCart: No items found in storage for cartId", storedCartId);
+        setItems([]);
       }
     } else {
       setItems([]);
@@ -62,18 +69,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsLoading(true);
     try {
+      console.log("useCart: refreshCart fetching...", currentCartId);
       const data = await shopifyService.getCart(currentCartId);
       if (data) {
+        console.log("useCart: refreshCart success", data.items.length, "items");
         setItems(data.items);
         setCheckoutUrl(data.checkoutUrl);
         localStorage.setItem(CHECKOUT_URL_KEY, data.checkoutUrl);
         localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(data.items));
       } else {
+        console.warn("useCart: refreshCart returned no data, clearing cart");
         // Cart not found or expired
         clearCart();
       }
     } catch (error) {
-      console.error("Error refreshing cart:", error);
+      console.error("useCart: Error refreshing cart:", error);
     } finally {
       setIsLoading(false);
     }
@@ -95,28 +105,39 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     syncFromStorage();
     
-    const handleUpdate = () => syncFromStorage();
+    const handleUpdate = (e: any) => {
+      console.log("Syncing cart from storage due to event:", e?.type);
+      syncFromStorage();
+    };
+    
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('cart-updated', handleUpdate);
     window.addEventListener('shopify-cart-updated', handleUpdate);
     
-    if (cartId) refreshCart();
+    // Initial fetch if we have a cartId
+    const initialCartId = localStorage.getItem(CART_ID_KEY);
+    if (initialCartId) {
+      refreshCart();
+    }
 
     return () => {
       window.removeEventListener('storage', handleUpdate);
       window.removeEventListener('cart-updated', handleUpdate);
       window.removeEventListener('shopify-cart-updated', handleUpdate);
     };
-  }, []);
+  }, [syncFromStorage, refreshCart]);
 
   const addToCart = async (variantId: string, itemData: Omit<CartItem, 'id' | 'quantity'>) => {
     setIsLoading(true);
     try {
       const currentCartId = localStorage.getItem(CART_ID_KEY);
+      console.log("useCart: Adding to cart. Current cartId:", currentCartId);
       
       if (!currentCartId) {
+        console.log("useCart: Creating new cart...");
         const result = await shopifyService.createCart({ variantId, quantity: 1 });
         if (result && result.cartId) {
+          console.log("useCart: Cart created successfully:", result.cartId);
           localStorage.setItem(CART_ID_KEY, result.cartId);
           localStorage.setItem(CHECKOUT_URL_KEY, result.checkoutUrl || '');
           
@@ -128,15 +149,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setItems([newItem]);
           
           toast.success("Added to cart!");
-          window.dispatchEvent(new Event('cart-updated'));
+          // Use a small delay before dispatching to ensure storage is settled
+          setTimeout(() => {
+            window.dispatchEvent(new Event('cart-updated'));
+          }, 50);
         }
       } else {
+        console.log("useCart: Adding line to existing cart:", currentCartId);
         const result = await shopifyService.addLineToCart(currentCartId, { variantId, quantity: 1 });
         if (result.success) {
+          console.log("useCart: Line added successfully, refreshing...");
           await refreshCart();
           toast.success("Added to cart!");
-          window.dispatchEvent(new Event('cart-updated'));
+          setTimeout(() => {
+            window.dispatchEvent(new Event('cart-updated'));
+          }, 50);
         } else if (result.cartNotFound) {
+          console.warn("useCart: Cart not found during add, clearing and retrying...");
           clearCart();
           // Retry once
           const retryResult = await shopifyService.createCart({ variantId, quantity: 1 });
@@ -149,11 +178,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCheckoutUrl(retryResult.checkoutUrl);
             setItems([newItem]);
             toast.success("Added to cart!");
-            window.dispatchEvent(new Event('cart-updated'));
+            setTimeout(() => {
+              window.dispatchEvent(new Event('cart-updated'));
+            }, 50);
           }
         }
       }
     } catch (error) {
+      console.error("useCart: Error in addToCart:", error);
       toast.error("Failed to add to cart");
     } finally {
       setIsLoading(false);
