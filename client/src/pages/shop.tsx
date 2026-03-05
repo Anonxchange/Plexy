@@ -34,6 +34,8 @@ import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 import { CartSheet } from "@/components/shop/CartSheet";
 import { toast } from "sonner";
 
+import { useCart } from "@/hooks/use-shopify-cart";
+
 const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m => ({ default: m.ShopItemCard })));
 
 interface Listing {
@@ -54,7 +56,9 @@ interface Listing {
 
 export function Shop() {
   const [, navigate] = useLocation();
+  const { addToCart, isLoading: isAddingToCart } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
+
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [selectedProduct, setSelectedProduct] = useState<Listing | null>(null);
@@ -261,116 +265,16 @@ export function Shop() {
       return;
     }
 
-    setIsAddingToCart(true);
-    try {
-      let cartId = localStorage.getItem('shopify_cart_id');
-      console.log("Adding to cart. Current cartId:", cartId);
-      let result;
-
-      const cartItem = {
-        id: product.variantId,
-        variantId: product.variantId,
-        title: product.title,
-        price: product.price,
-        currency: product.currency,
-        quantity: 1,
-        image: product.images[0]
-      };
-
-      if (!cartId) {
-        console.log("No cartId found, creating new cart...");
-        result = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
-        if (result && result.cartId) {
-          console.log("Cart created:", result.cartId);
-          localStorage.setItem('shopify_cart_id', result.cartId);
-          localStorage.setItem('shopify_checkout_url', result.checkoutUrl || '');
-          
-          const items = [{ ...cartItem, id: result.lineId || result.cartId }];
-          localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
-          
-          // Force fetch to sync with Shopify
-          await shopifyService.getCart(result.cartId);
-
-          window.dispatchEvent(new Event('storage'));
-          window.dispatchEvent(new Event('cart-updated'));
-          window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
-          toast.success("Added to cart!");
-        }
-      } else {
-        // Check for mismatched store domain
-        const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
-        if (currentCheckoutUrl && !currentCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
-           console.log("Store domain mismatch, clearing cart...");
-           localStorage.removeItem('shopify_cart_id');
-           localStorage.removeItem('shopify_checkout_url');
-           localStorage.removeItem(`cart_items_${cartId}`);
-           // Re-create cart
-           const newResult = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
-           if (newResult && newResult.cartId) {
-             localStorage.setItem('shopify_cart_id', newResult.cartId);
-             localStorage.setItem('shopify_checkout_url', newResult.checkoutUrl || '');
-             const items = [{ ...cartItem, id: newResult.lineId || newResult.cartId }];
-             localStorage.setItem(`cart_items_${newResult.cartId}`, JSON.stringify(items));
-
-             window.dispatchEvent(new Event('storage'));
-             window.dispatchEvent(new Event('cart-updated'));
-             window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: newResult.cartId } }));
-             toast.success("Added to cart!");
-           }
-           return;
-        }
-
-        console.log("Adding line to existing cart...");
-        result = await shopifyService.addLineToCart(cartId, { variantId: product.variantId, quantity: 1 });
-        if (result.success) {
-          console.log("Line added successfully:", result.lineId);
-          const storedItems = JSON.parse(localStorage.getItem(`cart_items_${cartId}`) || '[]');
-          const existing = storedItems.find((item: any) => item.variantId === product.variantId);
-          if (existing) {
-            existing.quantity += 1;
-          } else {
-            storedItems.push({ ...cartItem, id: result.lineId || product.variantId });
-          }
-          localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
-          
-          // Force fetch to sync with Shopify
-          await shopifyService.getCart(cartId);
-
-          window.dispatchEvent(new Event('storage'));
-          window.dispatchEvent(new Event('cart-updated'));
-          window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: cartId } }));
-          toast.success("Added to cart!");
-        } else if (result.cartNotFound) {
-          console.warn("Cart not found on Shopify, creating new one...");
-          // Retry once by creating new cart
-          localStorage.removeItem('shopify_cart_id');
-          localStorage.removeItem('shopify_checkout_url');
-          localStorage.removeItem(`cart_items_${cartId}`);
-          const newResult = await shopifyService.createCart({ variantId: product.variantId, quantity: 1 });
-          if (newResult && newResult.cartId) {
-            localStorage.setItem('shopify_cart_id', newResult.cartId);
-            localStorage.setItem('shopify_checkout_url', newResult.checkoutUrl || '');
-            
-            const items = [{ ...cartItem, id: newResult.lineId || newResult.cartId }];
-            localStorage.setItem(`cart_items_${newResult.cartId}`, JSON.stringify(items));
-            
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new Event('cart-updated'));
-            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: newResult.cartId } }));
-            toast.success("Added to cart!");
-          }
-        } else {
-          console.error("Failed to add line to cart:", result);
-        }
-      }
-      setSelectedProduct(null);
-    } catch (error) {
-      console.error("Error in handleAddToCart:", error);
-      toast.error("Failed to add to cart");
-    } finally {
-      setIsAddingToCart(false);
-    }
+    await addToCart(product.variantId, {
+      variantId: product.variantId,
+      title: product.title,
+      price: product.price,
+      currency: product.currency,
+      image: product.images[0]
+    });
+    setSelectedProduct(null);
   };
+
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
