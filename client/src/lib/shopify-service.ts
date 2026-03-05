@@ -44,10 +44,9 @@ export interface ShopifyProduct {
       values: string[];
     }>;
   };
-}
+};
 
 // Query name constants matching server-side allowlist
-export const PRODUCTS_QUERY = 'getProducts';
 export const PRODUCT_TYPES_QUERY = 'getProductTypes';
 export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
 export const CART_QUERY = 'cartQuery';
@@ -104,14 +103,6 @@ function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message
 }
 
 export const shopifyService = {
-  async getProducts(first: number = 250, after?: string, query?: string) {
-    const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, after, query });
-    return {
-      products: data?.data?.products?.edges || [],
-      pageInfo: data?.data?.products?.pageInfo
-    };
-  },
-
   async getProductTypes() {
     const data = await storefrontApiRequest(PRODUCT_TYPES_QUERY);
     return data?.data?.productTypes?.edges?.map((edge: any) => edge.node) || [];
