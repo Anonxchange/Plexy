@@ -142,6 +142,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setItems(newItems);
       } else if (data === null) {
         // Shopify service returns null if the cart is explicitly not found
+        // Only clear if we are certain the cart doesn't exist
         console.warn("useCart: refreshCart confirmed cart not found, clearing");
         clearCart();
       }
@@ -193,6 +194,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("useCart: handleUpdate syncing items:", freshItems.length);
       setItems([...freshItems]);
       
+      // If the event was internal (same tab), we've already refreshed or updated state
+      if (e?.detail?.source === 'internal') return;
+      
       if (e?.detail?.action === 'add' || e?.detail?.action === 'update' || e?.detail?.action === 'remove') {
         refreshCart();
       }
@@ -214,7 +218,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const initialCartId = localStorage.getItem(CART_ID_KEY);
       const storedItems = initialCartId ? localStorage.getItem(`${ITEMS_PREFIX}${initialCartId}`) : null;
       
-      if (initialCartId && (!storedItems || JSON.parse(storedItems).length === 0)) {
+      // Fix: Don't call refreshCart if we already have items to prevent race condition clearing local state
+      if (initialCartId && !storedItems) {
         refreshCart();
       }
     }, 500);
@@ -256,18 +261,49 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           toast.success("Added to cart!");
           setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { action: 'add', cartId: result.cartId } }));
+            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { 
+              detail: { action: 'add', cartId: result.cartId, source: 'internal' } 
+            }));
           }, 50);
         }
       } else {
         console.log("useCart: Adding line to existing cart:", currentCartId);
         const result = await shopifyService.addLineToCart(currentCartId, { variantId, quantity: 1 });
         if (result.success) {
-          console.log("useCart: Line added successfully, refreshing...");
-          await refreshCart();
+          console.log("useCart: Line added successfully, updating local state...");
+          
+          // Optimistic update of local storage and state
+          const newItem: CartItem = { 
+            ...itemData, 
+            id: result.lineId || `temp_${Date.now()}`, 
+            variantId, 
+            quantity: 1 
+          };
+          
+          const currentItems = [...itemsRef.current];
+          const existingItemIndex = currentItems.findIndex(item => item.variantId === variantId);
+          
+          let updatedItems;
+          if (existingItemIndex > -1) {
+            updatedItems = currentItems.map((item, idx) => 
+              idx === existingItemIndex ? { ...item, quantity: item.quantity + 1 } : item
+            );
+          } else {
+            updatedItems = [...currentItems, newItem];
+          }
+          
+          localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(updatedItems));
+          setItems(updatedItems);
+          
           toast.success("Added to cart!");
+          
+          // Still refresh to stay in sync with Shopify's calculated state
+          await refreshCart();
+          
           setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { action: 'add', cartId: currentCartId } }));
+            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { 
+              detail: { action: 'add', cartId: currentCartId, source: 'internal' } 
+            }));
           }, 50);
         } else if (result.cartNotFound) {
           console.warn("useCart: Cart not found during add, clearing and retrying...");
