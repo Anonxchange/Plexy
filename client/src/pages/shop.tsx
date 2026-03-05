@@ -60,7 +60,8 @@ export function Shop() {
   const [selectedProduct, setSelectedProduct] = useState<Listing | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
-  const [dynamicCategories, setDynamicCategories] = useState<string[]>(["All"]);
+  const [marketplaceCategories, setMarketplaceCategories] = useState<string[]>(["All"]);
+  const [shopifyCategories, setShopifyCategories] = useState<string[]>(["All"]);
   const [activeTab, setActiveTab] = useState("shopify");
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -80,17 +81,28 @@ export function Shop() {
     return () => clearInterval(interval);
   }, []);
 
-  // Update dynamic categories whenever products change
+  // Update Marketplace categories
   useEffect(() => {
-    const allProducts = [...listings, ...shopifyProducts];
     const cats = new Set<string>(["All"]);
-    allProducts.forEach(p => {
-      if (p.category) {
-        cats.add(p.category);
-      }
+    listings.forEach(p => {
+      if (p.category) cats.add(p.category);
     });
-    setDynamicCategories(Array.from(cats).sort());
-  }, [listings, shopifyProducts]);
+    setMarketplaceCategories(Array.from(cats).sort());
+  }, [listings]);
+
+  // Update Shopify categories from product types
+  useEffect(() => {
+    const cats = new Set<string>(["All"]);
+    shopifyProducts.forEach(p => {
+      if (p.category) cats.add(p.category);
+    });
+    setShopifyCategories(Array.from(cats).sort());
+  }, [shopifyProducts]);
+
+  // Reset category filter when switching tabs
+  useEffect(() => {
+    setSelectedCategory("All");
+  }, [activeTab]);
 
   const fetchShopifyProducts = async (after?: string) => {
     if (after) {
@@ -377,7 +389,7 @@ export function Shop() {
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                {dynamicCategories.map((category) => (
+                {(activeTab === "marketplace" ? marketplaceCategories : shopifyCategories).map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>
