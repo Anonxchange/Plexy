@@ -14,7 +14,10 @@ import {
   Heart
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { shopifyService } from "@/lib/shopify-service";
 import { useCart } from "@/hooks/use-shopify-cart";
+import { toast } from "sonner";
+import { PexlyFooter } from "@/components/pexly-footer";
 
 interface Listing {
   id: string;
