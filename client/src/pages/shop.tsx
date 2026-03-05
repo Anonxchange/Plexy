@@ -72,12 +72,10 @@ export function Shop() {
   useEffect(() => {
     fetchListings();
     fetchShopifyProducts();
-    fetchShopifyCategories();
     
     // Set up an interval to refresh products every 2 minutes
     const interval = setInterval(() => {
       fetchShopifyProducts();
-      fetchShopifyCategories();
     }, 120000);
     
     return () => clearInterval(interval);
@@ -101,32 +99,12 @@ export function Shop() {
 
   // Fetch all Shopify categories (Product Types)
   const fetchShopifyCategories = async () => {
-    try {
-      const types = await shopifyService.getProductTypes();
-      console.log('Fetched Shopify product types:', types);
-      const cats = new Set<string>(["All"]);
-      types.forEach((type: string) => {
-        if (type) cats.add(type);
-      });
-      const sortedCats = Array.from(cats).sort();
-      console.log('Unique categories:', sortedCats);
-      setShopifyCategories(sortedCats);
-      
-      // If we are on shopify tab and current category is not in the new list, reset to All
-      if (activeTab === "shopify" && selectedCategory !== "All" && !sortedCats.includes(selectedCategory)) {
-        setSelectedCategory("All");
-      }
-    } catch (error) {
-      console.error('Error fetching Shopify categories:', error);
-    }
+    // Removed
   };
 
   // Reset category filter when switching tabs
   useEffect(() => {
     setSelectedCategory("All");
-    if (activeTab === "shopify") {
-      fetchShopifyCategories();
-    }
   }, [activeTab]);
 
   const fetchShopifyProducts = async (after?: string) => {
