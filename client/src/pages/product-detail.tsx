@@ -54,14 +54,20 @@ export function ProductDetail() {
   const fetchProduct = async () => {
     setIsLoading(true);
     try {
+      console.log("Fetching product with ID:", id);
       // First try Shopify if the ID looks like a Shopify ID (contains 'Product')
-      if (id?.includes('Product')) {
-        const result = await shopifyService.getProducts(250); // Get all to find the one
+      if (id?.includes('Product') || id?.startsWith('gid://shopify/Product/')) {
         const decodedId = decodeURIComponent(id);
+        console.log("Decoded Shopify ID:", decodedId);
+        
+        const result = await shopifyService.getProducts(250);
+        console.log("Shopify products fetched:", result?.products?.length);
+        
         const found = result.products.find((edge: any) => edge.node.id === decodedId);
         
         if (found) {
           const p = found.node;
+          console.log("Found Shopify product:", p.title);
           
           // Extract options from product
           const options = p.options || [];
@@ -119,18 +125,26 @@ export function ProductDetail() {
           setRelatedProducts(related);
           setIsLoading(false);
           return;
+        } else {
+          console.warn("Product not found in Shopify list:", decodedId);
         }
       }
 
+      console.log("Checking marketplace for product:", id);
       // Then try Marketplace
       const { data, error } = await supabase
         .from('shop_listings')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
+      
       if (data) {
+        console.log("Found marketplace product:", data.title);
         let imageUrls: string[] = [];
         if (Array.isArray(data.images)) {
           imageUrls = data.images.filter(img => typeof img === 'string' && img.startsWith('http'));
@@ -147,10 +161,14 @@ export function ProductDetail() {
           ...data,
           images: imageUrls
         });
+      } else {
+        console.error("Product not found anywhere:", id);
+        toast.error("Product not found");
+        navigate("/shop");
       }
     } catch (error) {
       console.error('Error fetching product:', error);
-      toast.error("Product not found");
+      toast.error("Error loading product");
       navigate("/shop");
     } finally {
       setIsLoading(false);
@@ -199,6 +217,7 @@ export function ProductDetail() {
     setIsAddingToCart(true);
     try {
       const cartId = localStorage.getItem('shopify_cart_id');
+      console.log("Adding to cart. Current cartId:", cartId);
       const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
       const cartItem = {
         id: targetVariantId, 
@@ -211,24 +230,32 @@ export function ProductDetail() {
       };
 
       if (!cartId) {
+        console.log("No cartId found, creating new cart...");
         const result = await shopifyService.createCart({ variantId: targetVariantId, quantity: 1 });
         if (result) {
+          console.log("Cart created:", result.cartId);
           localStorage.setItem('shopify_cart_id', result.cartId);
           localStorage.setItem('shopify_checkout_url', result.checkoutUrl);
           
           const items = [{ ...cartItem, id: result.lineId }];
           localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
           
+          // Force fetch to sync with Shopify
+          await shopifyService.getCart(result.cartId);
+
           // Use a small delay to ensure storage is committed before event fires
           setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
+            window.dispatchEvent(new Event('storage'));
             window.dispatchEvent(new Event('cart-updated'));
+            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
           }, 100);
           toast.success("Added to cart!");
         }
       } else {
+        console.log("Adding line to existing cart...");
         const result = await shopifyService.addLineToCart(cartId, { variantId: targetVariantId, quantity: 1 });
         if (result.success) {
+          console.log("Line added successfully:", result.lineId);
           const storedItems = JSON.parse(localStorage.getItem(`cart_items_${cartId}`) || '[]');
           const existing = storedItems.find((item: any) => item.variantId === targetVariantId);
           if (existing) {
@@ -238,13 +265,18 @@ export function ProductDetail() {
           }
           localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
           
+          // Force fetch to sync with Shopify
+          await shopifyService.getCart(cartId);
+
           // Use a small delay to ensure storage is committed before event fires
           setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: cartId } }));
+            window.dispatchEvent(new Event('storage'));
             window.dispatchEvent(new Event('cart-updated'));
+            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: cartId } }));
           }, 100);
           toast.success("Added to cart!");
         } else if (result.cartNotFound) {
+          console.warn("Cart not found on Shopify, creating new one...");
           // If cart not found, clear and retry once
           localStorage.removeItem('shopify_cart_id');
           localStorage.removeItem('shopify_checkout_url');
@@ -257,13 +289,20 @@ export function ProductDetail() {
             const items = [{ ...cartItem, id: retryResult.lineId }];
             localStorage.setItem(`cart_items_${retryResult.cartId}`, JSON.stringify(items));
 
-            window.dispatchEvent(new Event('shopify-cart-updated'));
+            // Force fetch to sync with Shopify
+            await shopifyService.getCart(retryResult.cartId);
+
+            window.dispatchEvent(new Event('storage'));
             window.dispatchEvent(new Event('cart-updated'));
+            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: retryResult.cartId } }));
             toast.success("Added to cart!");
           }
+        } else {
+          console.error("Failed to add line to cart:", result);
         }
       }
     } catch (error) {
+      console.error("Error in handleAddToCart:", error);
       toast.error("Failed to add to cart");
     } finally {
       setIsAddingToCart(false);
