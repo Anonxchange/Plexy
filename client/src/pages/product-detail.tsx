@@ -14,9 +14,7 @@ import {
   Heart
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { shopifyService } from "@/lib/shopify-service";
-import { toast } from "sonner";
-import { PexlyFooter } from "@/components/pexly-footer";
+import { useCart } from "@/hooks/use-shopify-cart";
 
 interface Listing {
   id: string;
@@ -37,13 +35,15 @@ export function ProductDetail() {
   const [, navigate] = useLocation();
   const [product, setProduct] = useState<Listing | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
   const [availableColors, setAvailableColors] = useState<string[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
+  
+  const { addToCart, isLoading: isAddingToCart } = useCart();
+
 
   useEffect(() => {
     if (id) {
@@ -214,106 +214,16 @@ export function ProductDetail() {
       return;
     }
 
-    setIsAddingToCart(true);
-    try {
-      const cartId = localStorage.getItem('shopify_cart_id');
-      console.log("Adding to cart. Current cartId:", cartId);
-      const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
-      const cartItem = {
-        id: targetVariantId, 
-        variantId: targetVariantId,
-        title: product.title + (optionLabel ? ` - ${optionLabel}` : ''),
-        price: product.price,
-        currency: product.currency,
-        quantity: 1,
-        image: product.images[0]
-      };
-
-      if (!cartId) {
-        console.log("No cartId found, creating new cart...");
-        const result = await shopifyService.createCart({ variantId: targetVariantId, quantity: 1 });
-        if (result && result.cartId) {
-          console.log("Cart created successfully:", result.cartId);
-          
-          // CRITICAL: Ensure localStorage is updated IMMEDIATELY
-          localStorage.setItem('shopify_cart_id', result.cartId);
-          localStorage.setItem('shopify_checkout_url', result.checkoutUrl || '');
-          
-          const items = [{ ...cartItem, id: result.lineId || result.cartId }];
-          localStorage.setItem(`cart_items_${result.cartId}`, JSON.stringify(items));
-          
-          console.log("Verified localStorage after creation:", {
-            cartId: localStorage.getItem('shopify_cart_id'),
-            items: localStorage.getItem(`cart_items_${result.cartId}`)
-          });
-
-          // Force fetch to sync with Shopify
-          await shopifyService.getCart(result.cartId);
-
-          // Dispatch multiple events to ensure all listeners catch the update
-          window.dispatchEvent(new Event('storage'));
-          window.dispatchEvent(new Event('cart-updated'));
-          window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: result.cartId } }));
-          
-          toast.success("Added to cart!");
-        }
-      } else {
-        console.log("Adding line to existing cart...");
-        const result = await shopifyService.addLineToCart(cartId, { variantId: targetVariantId, quantity: 1 });
-        if (result.success) {
-          console.log("Line added successfully:", result.lineId);
-          const storedItems = JSON.parse(localStorage.getItem(`cart_items_${cartId}`) || '[]');
-          const existing = storedItems.find((item: any) => item.variantId === targetVariantId);
-          if (existing) {
-            existing.quantity += 1;
-          } else {
-            storedItems.push({ ...cartItem, id: result.lineId || targetVariantId });
-          }
-          localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(storedItems));
-          
-          // Force fetch to sync with Shopify
-          await shopifyService.getCart(cartId);
-
-          // Use a small delay to ensure storage is committed before event fires
-          setTimeout(() => {
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new Event('cart-updated'));
-            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: cartId } }));
-          }, 100);
-          toast.success("Added to cart!");
-        } else if (result.cartNotFound) {
-          console.warn("Cart not found on Shopify, creating new one...");
-          // If cart not found, clear and retry once
-          localStorage.removeItem('shopify_cart_id');
-          localStorage.removeItem('shopify_checkout_url');
-          localStorage.removeItem(`cart_items_${cartId}`);
-          const retryResult = await shopifyService.createCart({ variantId: targetVariantId, quantity: 1 });
-          if (retryResult) {
-            localStorage.setItem('shopify_cart_id', retryResult.cartId);
-            localStorage.setItem('shopify_checkout_url', retryResult.checkoutUrl);
-            
-            const items = [{ ...cartItem, id: retryResult.lineId }];
-            localStorage.setItem(`cart_items_${retryResult.cartId}`, JSON.stringify(items));
-
-            // Force fetch to sync with Shopify
-            await shopifyService.getCart(retryResult.cartId);
-
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new Event('cart-updated'));
-            window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { cartId: retryResult.cartId } }));
-            toast.success("Added to cart!");
-          }
-        } else {
-          console.error("Failed to add line to cart:", result);
-        }
-      }
-    } catch (error) {
-      console.error("Error in handleAddToCart:", error);
-      toast.error("Failed to add to cart");
-    } finally {
-      setIsAddingToCart(false);
-    }
+    const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+    await addToCart(targetVariantId, {
+      variantId: targetVariantId,
+      title: product.title + (optionLabel ? ` - ${optionLabel}` : ''),
+      price: product.price,
+      currency: product.currency,
+      image: product.images[0]
+    });
   };
+
 
   if (isLoading) {
     return (
