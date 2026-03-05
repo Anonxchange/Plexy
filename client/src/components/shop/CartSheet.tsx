@@ -53,50 +53,63 @@ export function CartSheet() {
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    // Also listen for custom event for same-window updates
-    window.addEventListener('cart-updated', handleStorageChange);
-    window.addEventListener('shopify-cart-updated', handleStorageChange);
-    
-    // Check for "shopify-cart-updated" from product detail
-    const handleShopifyUpdate = (event?: any) => {
-      console.log("Shopify cart update detected", event?.detail);
-      // setIsOpen(true); // Open the cart sheet immediately - REMOVED per user request
-      handleStorageChange();
-      fetchCart(); // Always fetch fresh data from Shopify when updated
+    const handleCartUpdate = (event?: any) => {
+      console.log("Cart update detected:", event?.type, event?.detail);
+      
+      const newCartId = localStorage.getItem('shopify_cart_id');
+      const newCheckoutUrl = localStorage.getItem('shopify_checkout_url');
+      
+      // Safety check: if the checkout URL is from a different store, clear the cart
+      if (newCheckoutUrl && !newCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
+        handleCartNotFound();
+        return;
+      }
+
+      setCartId(newCartId);
+      setCheckoutUrl(newCheckoutUrl);
+      
+      if (newCartId) {
+        const storedItems = localStorage.getItem(`cart_items_${newCartId}`);
+        if (storedItems) {
+          try {
+            setItems(JSON.parse(storedItems));
+          } catch (e) {}
+        }
+        // Force fresh fetch on any update event using the ID from storage directly
+        fetchCart(newCartId);
+      } else {
+        setItems([]);
+      }
     };
-    window.addEventListener('shopify-cart-updated', handleShopifyUpdate);
-    window.addEventListener('cart-updated', handleShopifyUpdate);
+
+    window.addEventListener('storage', handleCartUpdate);
+    window.addEventListener('cart-updated', handleCartUpdate);
+    window.addEventListener('shopify-cart-updated', handleCartUpdate);
     
-    // Initial load
-    handleStorageChange();
+    // Initial sync
+    handleCartUpdate({ type: 'initial' });
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('cart-updated', handleShopifyUpdate);
-      window.removeEventListener('shopify-cart-updated', handleShopifyUpdate);
+      window.removeEventListener('storage', handleCartUpdate);
+      window.removeEventListener('cart-updated', handleCartUpdate);
+      window.removeEventListener('shopify-cart-updated', handleCartUpdate);
     };
   }, []);
 
-  useEffect(() => {
-  if (cartId) {
-    fetchCart();
-  }
-}, [cartId]);
-
-  const fetchCart = async () => {
-    if (!cartId) return;
+  const fetchCart = async (idToUse?: string) => {
+    const activeCartId = idToUse || cartId;
+    if (!activeCartId) return;
     
     setIsLoading(true);
     try {
-      const data = await shopifyService.getCart(cartId);
+      const data = await shopifyService.getCart(activeCartId);
       if (!data) {
         handleCartNotFound();
         return;
       }
 
       setItems(data.items);
-      localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(data.items));
+      localStorage.setItem(`cart_items_${activeCartId}`, JSON.stringify(data.items));
     } catch (error) {
       console.error("Error fetching cart:", error);
     } finally {
@@ -111,11 +124,8 @@ export function CartSheet() {
     try {
       const result = await shopifyService.updateCartLine(cartId, lineId, newQuantity);
       if (result.success) {
-        const newItems = items.map(item => 
-          item.id === lineId ? { ...item, quantity: newQuantity } : item
-        );
-        setItems(newItems);
-        localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(newItems));
+        // Fetch fresh data from Shopify to ensure sync
+        fetchCart(cartId);
         window.dispatchEvent(new Event('cart-updated'));
       } else if (result.cartNotFound) {
         handleCartNotFound();
@@ -134,9 +144,8 @@ export function CartSheet() {
     try {
       const result = await shopifyService.removeLineFromCart(cartId, lineId);
       if (result.success) {
-        const newItems = items.filter(item => item.id !== lineId);
-        setItems(newItems);
-        localStorage.setItem(`cart_items_${cartId}`, JSON.stringify(newItems));
+        // Fetch fresh data from Shopify to ensure sync
+        fetchCart(cartId);
         toast.success("Item removed from cart");
         window.dispatchEvent(new Event('cart-updated'));
       } else if (result.cartNotFound) {
