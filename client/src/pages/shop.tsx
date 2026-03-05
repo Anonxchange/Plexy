@@ -103,11 +103,18 @@ export function Shop() {
   const fetchShopifyCategories = async () => {
     try {
       const types = await shopifyService.getProductTypes();
+      console.log('Fetched Shopify product types:', types);
       const cats = new Set<string>(["All"]);
       types.forEach((type: string) => {
         if (type) cats.add(type);
       });
-      setShopifyCategories(Array.from(cats).sort());
+      const sortedCats = Array.from(cats).sort();
+      console.log('Unique categories:', sortedCats);
+      setShopifyCategories(sortedCats);
+      // If we are on shopify tab and current category is not in the new list, reset to All
+      if (activeTab === "shopify" && selectedCategory !== "All" && !sortedCats.includes(selectedCategory)) {
+        setSelectedCategory("All");
+      }
     } catch (error) {
       console.error('Error fetching Shopify categories:', error);
     }
@@ -407,11 +414,18 @@ export function Shop() {
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                {(activeTab === "marketplace" ? marketplaceCategories : shopifyCategories).map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
+                {activeTab === "marketplace" 
+                  ? marketplaceCategories.map((category) => (
+                      <SelectItem key={`market-${category}`} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))
+                  : shopifyCategories.map((category) => (
+                      <SelectItem key={`shop-${category}`} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))
+                }
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
