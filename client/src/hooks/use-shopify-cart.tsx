@@ -119,6 +119,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentCartId = localStorage.getItem(CART_ID_KEY);
     if (!currentCartId) return;
 
+    // Use a flag to prevent multiple concurrent refreshes
+    if (isLoading) return;
+
     setIsLoading(true);
     try {
       console.log("useCart: refreshCart fetching...", currentCartId);
@@ -145,9 +148,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [clearCart]);
+  }, [clearCart, isLoading]);
 
   useEffect(() => {
+    // Initial sync from storage happens immediately
     syncFromStorage();
     
     const handleUpdate = (e: any) => {
@@ -198,13 +202,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener('cart-updated', handleUpdate);
     window.addEventListener('shopify-cart-updated', handleUpdate);
     
-    // Initial sync
-    syncFromStorage();
-
     // Initial fetch if we have a cartId - Use a small delay to ensure providers are ready
+    // Only fetch if we don't already have items to avoid clearing local state on startup
     const timer = setTimeout(() => {
       const initialCartId = localStorage.getItem(CART_ID_KEY);
-      if (initialCartId) {
+      const storedItems = initialCartId ? localStorage.getItem(`${ITEMS_PREFIX}${initialCartId}`) : null;
+      
+      if (initialCartId && (!storedItems || JSON.parse(storedItems).length === 0)) {
         refreshCart();
       }
     }, 100);
