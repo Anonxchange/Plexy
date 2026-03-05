@@ -146,7 +146,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("useCart: Error refreshing cart (possibly network error, keeping existing state):", error);
     } finally {
-      setIsLoading(false);
+      // Small delay to prevent rapid flicker if calls are close together
+      setTimeout(() => setIsLoading(false), 300);
     }
   }, [clearCart, isLoading]);
 
@@ -211,7 +212,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (initialCartId && (!storedItems || JSON.parse(storedItems).length === 0)) {
         refreshCart();
       }
-    }, 100);
+    }, 500);
 
     return () => {
       clearTimeout(timer);
