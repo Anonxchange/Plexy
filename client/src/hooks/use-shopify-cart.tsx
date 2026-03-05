@@ -30,36 +30,32 @@ const CHECKOUT_URL_KEY = 'shopify_checkout_url';
 const ITEMS_PREFIX = 'cart_items_';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [cartId, setCartId] = useState<string | null>(localStorage.getItem(CART_ID_KEY));
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(localStorage.getItem(CHECKOUT_URL_KEY));
+  const [cartId, setCartId] = useState<string | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const syncFromStorage = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    
     const storedCartId = localStorage.getItem(CART_ID_KEY);
     const storedCheckoutUrl = localStorage.getItem(CHECKOUT_URL_KEY);
     
     console.log("useCart: syncFromStorage", { storedCartId, storedCheckoutUrl });
     
-    setCartId(storedCartId);
-    setCheckoutUrl(storedCheckoutUrl);
-
     if (storedCartId) {
+      setCartId(storedCartId);
+      setCheckoutUrl(storedCheckoutUrl);
+
       const storedItems = localStorage.getItem(`${ITEMS_PREFIX}${storedCartId}`);
       if (storedItems) {
         try {
           const parsedItems = JSON.parse(storedItems);
-          console.log("useCart: Loaded items from storage", parsedItems.length);
           setItems(parsedItems);
         } catch (e) {
           console.error("Error parsing stored items:", e);
         }
-      } else {
-        console.log("useCart: No items found in storage for cartId", storedCartId);
-        setItems([]);
       }
-    } else {
-      setItems([]);
     }
   }, []);
 
@@ -73,13 +69,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await shopifyService.getCart(currentCartId);
       if (data) {
         console.log("useCart: refreshCart success", data.items.length, "items");
-        setItems(data.items);
-        setCheckoutUrl(data.checkoutUrl);
+        
+        // Update localStorage first
         localStorage.setItem(CHECKOUT_URL_KEY, data.checkoutUrl);
         localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(data.items));
+        
+        // Then update state
+        setItems(data.items);
+        setCheckoutUrl(data.checkoutUrl);
+        setCartId(currentCartId);
       } else {
         console.warn("useCart: refreshCart returned no data, clearing cart");
-        // Cart not found or expired
         clearCart();
       }
     } catch (error) {
@@ -99,21 +99,39 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCheckoutUrl(null);
     setItems([]);
     
-    window.dispatchEvent(new Event('cart-updated'));
+    // Explicitly notify other components that cart is cleared
+    window.dispatchEvent(new CustomEvent('cart-updated', { detail: { action: 'clear' } }));
   }, []);
 
   useEffect(() => {
     syncFromStorage();
     
     const handleUpdate = (e: any) => {
-      console.log("Syncing cart from storage due to event:", e?.type);
+      console.log("Syncing cart from storage due to event:", e?.type || 'manual');
+      
+      // If it's a storage event from another tab, only sync if it's our keys
+      if (e?.type === 'storage') {
+        if (e.key && !e.key.includes('shopify') && !e.key.includes('cart_items_')) {
+          return;
+        }
+      }
+      
       syncFromStorage();
     };
+
+    const storageListener = (e: StorageEvent) => {
+      if (e.key === CART_ID_KEY || e.key === CHECKOUT_URL_KEY || (e.key && e.key.startsWith(ITEMS_PREFIX))) {
+        handleUpdate(e);
+      }
+    };
     
-    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('storage', storageListener);
     window.addEventListener('cart-updated', handleUpdate);
     window.addEventListener('shopify-cart-updated', handleUpdate);
     
+    // Initial sync
+    syncFromStorage();
+
     // Initial fetch if we have a cartId
     const initialCartId = localStorage.getItem(CART_ID_KEY);
     if (initialCartId) {
@@ -121,7 +139,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return () => {
-      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('storage', storageListener);
       window.removeEventListener('cart-updated', handleUpdate);
       window.removeEventListener('shopify-cart-updated', handleUpdate);
     };
@@ -151,7 +169,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast.success("Added to cart!");
           // Use a small delay before dispatching to ensure storage is settled
           setTimeout(() => {
-            window.dispatchEvent(new Event('cart-updated'));
+            window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
           }, 50);
         }
       } else {
@@ -162,7 +180,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await refreshCart();
           toast.success("Added to cart!");
           setTimeout(() => {
-            window.dispatchEvent(new Event('cart-updated'));
+            window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
           }, 50);
         } else if (result.cartNotFound) {
           console.warn("useCart: Cart not found during add, clearing and retrying...");
@@ -179,7 +197,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setItems([newItem]);
             toast.success("Added to cart!");
             setTimeout(() => {
-              window.dispatchEvent(new Event('cart-updated'));
+              window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
             }, 50);
           }
         }
@@ -193,13 +211,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateQuantity = async (lineId: string, quantity: number) => {
-    if (!cartId) return;
+    const currentCartId = localStorage.getItem(CART_ID_KEY);
+    if (!currentCartId) return;
     setIsLoading(true);
     try {
-      const result = await shopifyService.updateCartLine(cartId, lineId, quantity);
+      const result = await shopifyService.updateCartLine(currentCartId, lineId, quantity);
       if (result.success) {
         await refreshCart();
-        window.dispatchEvent(new Event('cart-updated'));
+        window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
       } else if (result.cartNotFound) {
         clearCart();
       }
@@ -211,14 +230,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeItem = async (lineId: string) => {
-    if (!cartId) return;
+    const currentCartId = localStorage.getItem(CART_ID_KEY);
+    if (!currentCartId) return;
     setIsLoading(true);
     try {
-      const result = await shopifyService.removeLineFromCart(cartId, lineId);
+      const result = await shopifyService.removeLineFromCart(currentCartId, lineId);
       if (result.success) {
         await refreshCart();
         toast.success("Item removed from cart");
-        window.dispatchEvent(new Event('cart-updated'));
+        window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
       } else if (result.cartNotFound) {
         clearCart();
       }
