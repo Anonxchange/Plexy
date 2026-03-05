@@ -74,14 +74,18 @@ export function Shop() {
 
   useEffect(() => {
     fetchListings();
-    fetchShopifyProducts();
-    fetchShopifyCategories();
     
-    // Set up an interval to refresh products every 2 minutes
-    const interval = setInterval(() => {
+    // Only fetch if we don't have products yet to prevent refresh on mount
+    if (shopifyProducts.length === 0) {
       fetchShopifyProducts();
       fetchShopifyCategories();
-    }, 120000);
+    }
+    
+    // Set up an interval to refresh products in the background every 5 minutes
+    const interval = setInterval(() => {
+      fetchShopifyProducts(undefined, true); // true for background fetch
+      fetchShopifyCategories();
+    }, 300000);
     
     return () => clearInterval(interval);
   }, []);
@@ -123,10 +127,10 @@ export function Shop() {
     setSelectedCategory("All");
   }, [activeTab]);
 
-  const fetchShopifyProducts = async (after?: string) => {
+  const fetchShopifyProducts = async (after?: string, isBackground = false) => {
     if (after) {
       setIsLoadingMore(true);
-    } else {
+    } else if (!isBackground) {
       setIsLoading(true);
     }
     try {
@@ -164,11 +168,13 @@ export function Shop() {
     } catch (error) {
       console.error('Error fetching Shopify products:', error);
     } finally {
-      // Simulate a small delay to make skeleton visible as requested
-      setTimeout(() => {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-      }, 800);
+      if (!isBackground) {
+        // Simulate a small delay to make skeleton visible as requested
+        setTimeout(() => {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }, 800);
+      }
     }
   };
 
