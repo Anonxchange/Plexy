@@ -131,7 +131,10 @@ export function Shop() {
     if (after) {
       setIsLoadingMore(true);
     } else if (!isBackground) {
-      setIsLoading(true);
+      // Only set main loading if we don't have items to avoid flicker
+      if (shopifyProducts.length === 0) {
+        setIsLoading(true);
+      }
     }
     try {
       // Build query string for Shopify
@@ -168,12 +171,10 @@ export function Shop() {
     } catch (error) {
       console.error('Error fetching Shopify products:', error);
     } finally {
-      if (!isBackground) {
-        // Simulate a small delay to make skeleton visible as requested
-        setTimeout(() => {
-          setIsLoading(false);
-          setIsLoadingMore(false);
-        }, 800);
+      if (after) {
+        setIsLoadingMore(false);
+      } else if (!isBackground) {
+        setIsLoading(false);
       }
     }
   };
