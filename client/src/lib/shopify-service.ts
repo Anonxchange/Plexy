@@ -48,7 +48,6 @@ export interface ShopifyProduct {
 
 // Query name constants matching server-side allowlist
 export const PRODUCTS_QUERY = 'getProducts';
-export const PRODUCT_TYPES_QUERY = 'getProductTypes';
 export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
 export const CART_QUERY = 'cartQuery';
 export const CART_CREATE_MUTATION = 'cartCreate';
@@ -58,7 +57,6 @@ export const CART_LINES_REMOVE_MUTATION = 'cartLinesRemove';
 
 export async function storefrontApiRequest(queryName: string, variables: Record<string, unknown> = {}) {
   try {
-    // Standard invoke via Supabase functions
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
       body: { queryName, variables }
     });
@@ -89,6 +87,13 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
   }
 }
 
+export function formatPrice(amount: string | number, currencyCode: string) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+  }).format(Number(amount));
+}
+
 function formatCheckoutUrl(checkoutUrl: string): string {
   try {
     const url = new URL(checkoutUrl);
@@ -110,11 +115,6 @@ export const shopifyService = {
       products: data?.data?.products?.edges || [],
       pageInfo: data?.data?.products?.pageInfo
     };
-  },
-
-  async getProductTypes() {
-    const data = await storefrontApiRequest(PRODUCT_TYPES_QUERY);
-    return data?.data?.productTypes?.edges?.map((edge: any) => edge.node) || [];
   },
 
   async getProductByHandle(handle: string) {
@@ -140,7 +140,7 @@ export const shopifyService = {
         price: node.priceV2?.amount ? parseFloat(node.priceV2.amount) : (variant?.price?.amount ? parseFloat(variant.price.amount) : 0),
         currency: node.priceV2?.currencyCode || variant?.price?.currencyCode || 'USD',
         quantity: node.quantity,
-        image: node.image?.url || product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || product?.images?.[0] || ''
+        image: node.image?.url || product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || ''
       };
     });
 
@@ -165,7 +165,7 @@ export const shopifyService = {
     const cart = data?.data?.cartCreate?.cart;
     if (!cart?.checkoutUrl) return null;
 
-    const lineId = cart.lines?.edges?.[0]?.node?.id || cart.lines?.[0]?.id;
+    const lineId = cart.lines.edges[0]?.node?.id;
     if (!lineId) return null;
 
     return { cartId: cart.id, checkoutUrl: formatCheckoutUrl(cart.checkoutUrl), lineId };
@@ -215,4 +215,4 @@ export const shopifyService = {
 export const createShopifyCart = shopifyService.createCart;
 export const addLineToShopifyCart = shopifyService.addLineToCart;
 export const updateShopifyCartLine = shopifyService.updateCartLine;
-export const removeLineFromShopifyCart = shopifyService.removeLineFromCart; 
+export const removeLineFromShopifyCart = shopifyService.removeLineFromCart;
