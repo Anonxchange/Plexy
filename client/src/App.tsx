@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { CartProvider } from "@/hooks/use-shopify-cart";
 import { GlobalNotificationListener } from "@/components/global-notification-listener";
 import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
@@ -237,18 +238,20 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <TooltipProvider>
-            {isHelp ? (
-              <Suspense fallback={<PageSkeleton />}>
-                <Support />
-              </Suspense>
-            ) : (
-              <>
-                <GlobalNotificationListener />
-                <AppContent />
-              </>
-            )}
-          </TooltipProvider>
+          <CartProvider>
+            <TooltipProvider>
+              {isHelp ? (
+                <Suspense fallback={<PageSkeleton />}>
+                  <Support />
+                </Suspense>
+              ) : (
+                <>
+                  <GlobalNotificationListener />
+                  <AppContent />
+                </>
+              )}
+            </TooltipProvider>
+          </CartProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
