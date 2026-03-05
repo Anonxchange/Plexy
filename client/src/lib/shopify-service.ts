@@ -165,10 +165,16 @@ export const shopifyService = {
     const cart = data?.data?.cartCreate?.cart;
     if (!cart?.checkoutUrl) return null;
 
-    const lineId = cart.lines.edges[0]?.node?.id;
-    if (!lineId) return null;
+    const lineId = cart.lines?.edges?.[0]?.node?.id;
+    if (!lineId) {
+      console.warn('Cart created but no line ID found in response');
+    }
 
-    return { cartId: cart.id, checkoutUrl: formatCheckoutUrl(cart.checkoutUrl), lineId };
+    return { 
+      cartId: cart.id, 
+      checkoutUrl: formatCheckoutUrl(cart.checkoutUrl), 
+      lineId: lineId || cart.id // Fallback to cart ID if line ID is missing
+    };
   },
 
   async addLineToCart(cartId: string, item: { variantId: string; quantity: number }) {
