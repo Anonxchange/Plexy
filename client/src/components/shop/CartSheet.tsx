@@ -81,7 +81,7 @@ export function CartSheet() {
       }
 
       // Safety check: if the checkout URL is from a different store, clear the cart
-      if (newCheckoutUrl && !newCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
+      if (newCheckoutUrl && !newCheckoutUrl.includes('pexly-2.myshopify.com')) {
         handleCartNotFound();
         return;
       }
