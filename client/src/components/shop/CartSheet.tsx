@@ -177,7 +177,7 @@ export function CartSheet() {
   useEffect(() => {
     // Safety check: if the checkout URL is from a different store, clear the cart
     const currentCheckoutUrl = localStorage.getItem('shopify_checkout_url');
-    if (currentCheckoutUrl && !currentCheckoutUrl.includes('qm0yih-vd.myshopify.com')) {
+    if (currentCheckoutUrl && !currentCheckoutUrl.includes('pexly-2.myshopify.com')) {
       handleCartNotFound();
     }
   }, [cartId]);
