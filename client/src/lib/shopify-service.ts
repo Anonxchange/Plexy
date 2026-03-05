@@ -140,7 +140,7 @@ export const shopifyService = {
         price: node.priceV2?.amount ? parseFloat(node.priceV2.amount) : (variant?.price?.amount ? parseFloat(variant.price.amount) : 0),
         currency: node.priceV2?.currencyCode || variant?.price?.currencyCode || 'USD',
         quantity: node.quantity,
-        image: node.image?.url || product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || ''
+        image: node.image?.url || product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || product?.images?.[0] || ''
       };
     });
 
@@ -165,7 +165,7 @@ export const shopifyService = {
     const cart = data?.data?.cartCreate?.cart;
     if (!cart?.checkoutUrl) return null;
 
-    const lineId = cart.lines.edges[0]?.node?.id;
+    const lineId = cart.lines?.edges?.[0]?.node?.id || cart.lines?.[0]?.id;
     if (!lineId) return null;
 
     return { cartId: cart.id, checkoutUrl: formatCheckoutUrl(cart.checkoutUrl), lineId };
