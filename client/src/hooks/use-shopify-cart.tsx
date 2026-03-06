@@ -10,6 +10,7 @@ interface CartItem {
   currency: string;
   quantity: number;
   image?: string;
+  availableForSale?: boolean;
 }
 
 interface CartContextType {
@@ -139,6 +140,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("useCart: refreshCart success", data.items.length, "items");
         const newItems = Array.isArray(data.items) ? [...data.items] : [];
         
+        // Ensure items have necessary inventory info if available from refresh
+        const itemsWithInventory = newItems.map(item => {
+          // If the incoming item doesn't have availableForSale, try to preserve it from local state
+          const localItem = itemsRef.current.find(li => li.id === item.id);
+          return {
+            ...item,
+            availableForSale: item.availableForSale ?? localItem?.availableForSale ?? true
+          };
+        });
+
         // CRITICAL FIX: If Shopify returns an empty cart but we have items locally,
         // it's extremely likely to be a race condition or stale cache on Shopify's CDN/API.
         // We should NEVER let an empty response from the server wipe out a non-empty local cart
@@ -154,11 +165,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (isDifferent || hasNewCheckoutUrl) {
           localStorage.setItem(CHECKOUT_URL_KEY, data.checkoutUrl || '');
-          localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(newItems));
+          localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(itemsWithInventory));
           
           setCartId(currentCartId);
           setCheckoutUrl(data.checkoutUrl);
-          setItems(newItems);
+          setItems(itemsWithInventory);
         }
       } else if (data === null) {
         console.warn("useCart: refreshCart confirmed cart not found");
@@ -262,7 +273,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...itemData, 
             id: result.lineId || `temp_${Date.now()}`, 
             variantId, 
-            quantity: 1 
+            quantity: 1,
+            availableForSale: true
           };
           
           localStorage.setItem(CART_ID_KEY, result.cartId);
@@ -292,7 +304,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...itemData, 
             id: result.lineId || `temp_${Date.now()}`, 
             variantId, 
-            quantity: 1 
+            quantity: 1,
+            availableForSale: true
           };
           
           const currentItems = [...itemsRef.current];
