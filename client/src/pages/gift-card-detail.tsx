@@ -433,7 +433,7 @@ export function GiftCardDetail() {
             <div className="mt-4 pb-8 border-b border-border">
               <h4 className="font-semibold text-foreground mb-2">How to redeem?</h4>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                {card.redeemInfo}
+                {card.redeemInstruction?.verbose || card.redeemInstruction?.concise || "Instructions will be provided after purchase."}
               </p>
             </div>
 
@@ -511,7 +511,7 @@ export function GiftCardDetail() {
           <SheetHeader>
             <SheetTitle className="text-2xl">Email & network</SheetTitle>
             <SheetDescription>
-              Please enter your email below to proceed with purchasing ${cardValue} {card?.name} for {priceInCrypto} USDT
+              Please enter your email below to proceed with purchasing ${cardValue} {card?.productName} for {priceInCrypto} USDT
             </SheetDescription>
           </SheetHeader>
 
