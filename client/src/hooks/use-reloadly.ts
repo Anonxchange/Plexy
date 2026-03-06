@@ -69,14 +69,9 @@ export function useGiftCardProduct(productId: string | undefined) {
     queryKey: ["gift-card-product", productId],
     enabled: !!productId,
     queryFn: async () => {
-      const url = new URL(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products`
-      );
-      url.searchParams.set("productId", productId!);
-
       const { data: { session } } = await supabase.auth.getSession();
-
-      const res = await fetch(url.toString(), {
+      
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products?productId=${productId}`, {
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -85,7 +80,9 @@ export function useGiftCardProduct(productId: string | undefined) {
       });
 
       if (!res.ok) throw new Error("Failed to fetch product");
-      return res.json();
+      const data = await res.json();
+      // If it's a single product request, it might return the object directly or in an array
+      return Array.isArray(data) ? data[0] : data;
     },
   });
 }
