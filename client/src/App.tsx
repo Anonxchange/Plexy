@@ -111,6 +111,8 @@ const Prediction = lazy(() => import("@/pages/prediction"));
 const Perpetual = lazy(() => import("@/pages/perpetual"));
 const PredictionDetail = lazy(() => import("@/pages/prediction-detail"));
 
+import { GiftCardCartProvider } from "@/hooks/use-gift-card-cart";
+
 function Router() {
   return (
     <Switch>
@@ -238,20 +240,22 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <CartProvider>
-            <TooltipProvider>
-              {isHelp ? (
-                <Suspense fallback={<PageSkeleton />}>
-                  <Support />
-                </Suspense>
-              ) : (
-                <>
-                  <GlobalNotificationListener />
-                  <AppContent />
-                </>
-              )}
-            </TooltipProvider>
-          </CartProvider>
+          <GiftCardCartProvider>
+            <CartProvider>
+              <TooltipProvider>
+                {isHelp ? (
+                  <Suspense fallback={<PageSkeleton />}>
+                    <Support />
+                  </Suspense>
+                ) : (
+                  <>
+                    <GlobalNotificationListener />
+                    <AppContent />
+                  </>
+                )}
+              </TooltipProvider>
+            </CartProvider>
+          </GiftCardCartProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
