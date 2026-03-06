@@ -143,8 +143,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (data === null) {
         // Shopify service returns null if the cart is explicitly not found
         // Only clear if we are certain the cart doesn't exist
-        console.warn("useCart: refreshCart confirmed cart not found, clearing");
-        clearCart();
+        console.warn("useCart: refreshCart confirmed cart not found, NOT clearing to prevent accidental data loss");
+        // clearCart(); // Commented out to prevent accidental clearing
       }
     } catch (error) {
       console.error("useCart: Error refreshing cart (possibly network error, keeping existing state):", error);
@@ -219,7 +219,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedItems = initialCartId ? localStorage.getItem(`${ITEMS_PREFIX}${initialCartId}`) : null;
       
       // Fix: Don't call refreshCart if we already have items to prevent race condition clearing local state
-      if (initialCartId && !storedItems) {
+      // Even if storedItems is null, we might have items in memory from a previous add
+      if (initialCartId && !storedItems && itemsRef.current.length === 0) {
         refreshCart();
       }
     }, 500);
@@ -298,7 +299,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast.success("Added to cart!");
           
           // Still refresh to stay in sync with Shopify's calculated state
-          await refreshCart();
+          // Commented out to prevent race condition clearing local state
+          // await refreshCart();
           
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('shopify-cart-updated', { 
@@ -355,7 +357,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await refreshCart();
         window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { action: 'update', lineId, quantity } }));
       } else if (result.cartNotFound) {
-        clearCart();
+        console.warn("useCart: updateQuantity/removeItem cart not found, NOT clearing");
+        // clearCart();
       } else {
         setItems(previousItems);
       }
@@ -383,7 +386,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.success("Item removed from cart");
         window.dispatchEvent(new CustomEvent('shopify-cart-updated', { detail: { action: 'remove', lineId } }));
       } else if (result.cartNotFound) {
-        clearCart();
+        console.warn("useCart: updateQuantity/removeItem cart not found, NOT clearing");
+        // clearCart();
       } else {
         setItems(previousItems);
       }
