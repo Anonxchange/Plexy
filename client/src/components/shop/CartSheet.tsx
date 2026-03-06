@@ -63,7 +63,8 @@ export function CartSheet() {
       });
       
       // If we have a cart but no checkout URL, we MUST refresh to get it
-      if (storedCartId && (!checkoutUrl || !storedCheckoutUrl)) {
+      // But only if we aren't already loading to prevent duplication
+      if (storedCartId && (!checkoutUrl || !storedCheckoutUrl) && !isLoading) {
         console.log("CartSheet: Missing checkout URL, triggering refresh");
         refreshCart();
       }
