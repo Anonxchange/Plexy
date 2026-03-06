@@ -235,8 +235,8 @@ export function GiftCardDetail() {
     );
   }
 
-  const value = parseFloat(cardValue) || 0;
-  const discountAmount = value * (card.discountPercentage / 100);
+  const discountPercentage = card.discountPercentage || 0;
+  const discountAmount = value * (discountPercentage / 100);
   const finalPrice = value - discountAmount;
   const priceInCrypto = (finalPrice * 0.9985).toFixed(4);
 
@@ -336,9 +336,9 @@ export function GiftCardDetail() {
                 <p className="text-sm text-muted-foreground">
                   Price for {card.brand?.brandName || card.productName || "Gift Card"}:
                 </p>
-                {card.discountPercentage > 0 && (
+                {discountPercentage > 0 && (
                   <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-none">
-                    Save {card.discountPercentage}%
+                    Save {discountPercentage}%
                   </Badge>
                 )}
               </div>
@@ -353,7 +353,7 @@ export function GiftCardDetail() {
                     {priceInCrypto} USDT
                   </span>
                 </div>
-                {card.discountPercentage > 0 && (
+                {discountPercentage > 0 && (
                   <span className="text-sm text-muted-foreground line-through opacity-50">
                     {(value * 0.9985).toFixed(2)} USDT
                   </span>
