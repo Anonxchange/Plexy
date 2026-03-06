@@ -83,6 +83,8 @@ export function GiftCardDetail() {
   const cardId = params?.id;
   const { data: card, isLoading, error } = useGiftCardProduct(cardId);
   const { mutate: createOrder, isPending: isOrdering } = useCreateGiftCardOrder();
+  const { addToCart, isLoading: isAddingToCart } = useGiftCardCart();
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     if (card && !cardValue) {
@@ -162,6 +164,8 @@ export function GiftCardDetail() {
     });
     setCartOpen(true);
   };
+
+  const [quantity, setQuantity] = useState(1); // Added missing quantity state
 
   return (
     <div className="min-h-screen bg-background">
