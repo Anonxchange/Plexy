@@ -19,12 +19,15 @@ export function CartSheet() {
   const { items, cartId, checkoutUrl, isLoading, updateQuantity, removeItem, refreshCart } = useCart();
 
   // Refresh cart data when the sheet is opened to ensure accuracy
+  // DISABLED: Immediate refresh on open can cause race conditions that clear local state
+  /*
   useEffect(() => {
     if (isOpen && cartId) {
       console.log("CartSheet: Refreshing cart on open", cartId);
       refreshCart();
     }
   }, [isOpen, cartId, refreshCart]);
+  */
 
   // Log items for debugging
   useEffect(() => {
@@ -54,8 +57,8 @@ export function CartSheet() {
         renderKey,
         itemsSample: items.slice(0, 1)
       });
-      // Ensure we have latest data when opening
-      if (storedCartId) refreshCart();
+      // Ensure we have latest data when opening - DISABLED to prevent clearing
+      // if (storedCartId) refreshCart();
     }
   }, [isOpen]);
 
