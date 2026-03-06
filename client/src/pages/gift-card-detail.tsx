@@ -145,7 +145,7 @@ export function GiftCardDetail() {
   const value = parseFloat(cardValue) || 0;
   const discountAmount = value * (discountPercentage / 100);
   const finalPrice = value - discountAmount;
-  const priceInCrypto = (finalPrice * 0.9985).toFixed(4);
+  const priceInCrypto = (finalPrice * 1.00).toFixed(4);
 
   const handleAddToCart = async () => {
     if (!card) return;
@@ -229,7 +229,7 @@ export function GiftCardDetail() {
             <div className="bg-card border border-border rounded-xl p-4 mb-4">
               <div className="flex justify-between items-center mb-2">
                 <p className="text-sm text-muted-foreground">
-                  Price for {card.brand?.brandName || card.productName || "Gift Card"}:
+                  Price for {card.productName || "Gift Card"}:
                 </p>
                 {discountPercentage > 0 && (
                   <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-none">
@@ -245,12 +245,12 @@ export function GiftCardDetail() {
                     className="h-6 w-6 rounded-full"
                   />
                   <span className="text-2xl font-bold text-foreground">
-                    {priceInCrypto} USDT
+                    {(finalPrice * (parseInt(numberOfCards) || 1)).toFixed(4)} USDT
                   </span>
                 </div>
                 {discountPercentage > 0 && (
                   <span className="text-sm text-muted-foreground line-through opacity-50">
-                    {(value * 0.9985).toFixed(2)} USDT
+                    {(value * (parseInt(numberOfCards) || 1)).toFixed(2)} USDT
                   </span>
                 )}
               </div>
@@ -281,7 +281,7 @@ export function GiftCardDetail() {
               <Button 
                 onClick={handleAddToCart}
                 disabled={isAddingToCart}
-                className="flex-1 h-12 font-bold bg-gradient-to-r from-orange-400 to-yellow-500 text-white hover:opacity-90 shadow-lg shadow-orange-500/20 rounded-xl"
+                className="flex-1 h-12 font-bold bg-[#B4F22E] text-black hover:opacity-90 shadow-lg shadow-[#B4F22E]/20 rounded-xl"
               >
                 {isAddingToCart ? "Adding..." : "Add to Cart"}
               </Button>
