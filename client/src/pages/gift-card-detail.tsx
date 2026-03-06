@@ -158,6 +158,8 @@ const networkOptions = [
 
 import { useGiftCardProduct, useCreateGiftCardOrder } from "@/hooks/use-reloadly";
 import { toast } from "sonner";
+import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
 
 export function GiftCardDetail() {
   const { user } = useAuth();
@@ -231,8 +233,25 @@ export function GiftCardDetail() {
     );
   }
 
-  const value = parseFloat(cardValue) || card.minRecipientDenomination;
-  const priceInCrypto = (value * 0.9985).toFixed(4);
+  const discountAmount = value * (card.discountPercentage / 100);
+  const finalPrice = value - discountAmount;
+  const priceInCrypto = (finalPrice * 0.9985).toFixed(4);
+
+  const { addToCart, isLoading: isAddingToCart } = useGiftCardCart();
+  const [cartOpen, setCartOpen] = useState(false);
+
+  const handleAddToCart = async () => {
+    if (!card) return;
+    
+    addToCart({
+      productId: String(card.productId),
+      title: card.productName,
+      price: finalPrice,
+      currency: card.recipientCurrencyCode,
+      image: card.logoUrls?.[0]
+    });
+    setCartOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -310,29 +329,74 @@ export function GiftCardDetail() {
             </div>
 
             <div className="bg-card border border-border rounded-xl p-4 mb-4">
-              <p className="text-sm text-muted-foreground mb-2">
-                Price for {card.brand?.brandName || card.productName || "Gift Card"}: {value}
-              </p>
-              <div className="flex items-center gap-2">
-                <img
-                  src={cryptoIconUrls.USDT}
-                  alt="USDT"
-                  className="h-6 w-6 rounded-full"
-                />
-                <span className="text-2xl font-bold text-foreground">
-                  {priceInCrypto} USDT
-                </span>
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-sm text-muted-foreground">
+                  Price for {card.brand?.brandName || card.productName || "Gift Card"}:
+                </p>
+                {card.discountPercentage > 0 && (
+                  <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-none">
+                    Save {card.discountPercentage}%
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={cryptoIconUrls.USDT}
+                    alt="USDT"
+                    className="h-6 w-6 rounded-full"
+                  />
+                  <span className="text-2xl font-bold text-foreground">
+                    {priceInCrypto} USDT
+                  </span>
+                </div>
+                {card.discountPercentage > 0 && (
+                  <span className="text-sm text-muted-foreground line-through opacity-50">
+                    {(value * 0.9985).toFixed(2)} USDT
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Buy Button */}
-            <Button 
-              onClick={handleBuyCard}
-              className="w-full h-12 font-semibold mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              Buy card
-            </Button>
+            {/* Quantity Selector & Add to Cart */}
+            <div className="flex gap-3 mb-4">
+              <div className="flex items-center bg-background border border-border rounded-xl px-2 h-12">
+                <button 
+                  onClick={() => setNumberOfCards(prev => String(Math.max(1, parseInt(prev) - 1)))}
+                  className="p-2 text-blue-500 hover:bg-secondary rounded-lg transition-colors"
+                >
+                  −
+                </button>
+                <input 
+                  type="number" 
+                  value={numberOfCards}
+                  onChange={(e) => setNumberOfCards(e.target.value)}
+                  className="w-10 text-center bg-transparent border-none focus:ring-0 font-medium"
+                />
+                <button 
+                  onClick={() => setNumberOfCards(prev => String(parseInt(prev) + 1))}
+                  className="p-2 text-blue-500 hover:bg-secondary rounded-lg transition-colors"
+                >
+                  +
+                </button>
+              </div>
+
+              <Button 
+                onClick={handleAddToCart}
+                disabled={isAddingToCart}
+                className="flex-1 h-12 font-bold bg-gradient-to-r from-orange-400 to-yellow-500 text-white hover:opacity-90 shadow-lg shadow-orange-500/20 rounded-xl"
+              >
+                {isAddingToCart ? "Adding..." : "Add to Cart"}
+              </Button>
+
+              <Button 
+                variant="outline"
+                className="h-12 w-24 rounded-xl border-border bg-card/50 hover:bg-secondary flex gap-2"
+              >
+                <span role="img" aria-label="gift">🎁</span>
+                <span className="font-bold">Gift</span>
+              </Button>
+            </div>
 
 
             {/* Accepted Networks */}
@@ -369,6 +433,8 @@ export function GiftCardDetail() {
                 {card.redeemInfo}
               </p>
             </div>
+
+            <GiftCardCartSheet open={cartOpen} onOpenChange={setCartOpen} />
 
             {/* FAQ Section */}
             <div className="pt-8">
