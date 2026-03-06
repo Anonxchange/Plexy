@@ -49,18 +49,26 @@ export function CartSheet() {
   useEffect(() => {
     if (isOpen) {
       const storedCartId = localStorage.getItem('shopify_cart_id');
+      const storedCheckoutUrl = localStorage.getItem('shopify_checkout_url');
+      
       console.log("CartSheet Opened - Current State:", { 
         itemsCount: items.length, 
         cartId,
         storedCartId,
+        checkoutUrl,
+        storedCheckoutUrl,
         isLoading,
         renderKey,
         itemsSample: items.slice(0, 1)
       });
-      // Ensure we have latest data when opening - DISABLED to prevent clearing
-      // if (storedCartId) refreshCart();
+      
+      // If we have a cart but no checkout URL, we MUST refresh to get it
+      if (storedCartId && (!checkoutUrl || !storedCheckoutUrl)) {
+        console.log("CartSheet: Missing checkout URL, triggering refresh");
+        refreshCart();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, cartId, checkoutUrl]);
 
 
   return (
