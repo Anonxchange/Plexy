@@ -122,12 +122,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Use a flag to prevent multiple concurrent refreshes
     if (isRefreshing.current) {
-      console.log("useCart: Refresh already in progress, skipping");
       return;
     }
 
     isRefreshing.current = true;
-    setIsLoading(true);
+    // Only set loading if we don't have items to prevent UI flicker
+    if (itemsRef.current.length === 0) {
+      setIsLoading(true);
+    }
     try {
       console.log("useCart: refreshCart fetching...", currentCartId);
       const data = await shopifyService.getCart(currentCartId);
@@ -173,40 +175,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     syncFromStorage();
     
     const handleUpdate = (e: any) => {
+      // If the event was internal (same tab), we've already updated state
+      if (e?.detail?.source === 'internal') {
+        return;
+      }
+
       console.log("Syncing cart from storage due to event:", e?.type || 'manual', e?.detail);
       
-      if (e?.type === 'storage') {
-        if (e.key && !e.key.includes('shopify') && !e.key.includes('cart_items_')) {
-          return;
-        }
-      }
-      
-      // Update basic state from storage
       const storedCartId = localStorage.getItem(CART_ID_KEY);
       const storedCheckoutUrl = localStorage.getItem(CHECKOUT_URL_KEY);
       
-      setCartId(storedCartId);
-      setCheckoutUrl(storedCheckoutUrl);
+      if (storedCartId !== cartId) setCartId(storedCartId);
+      if (storedCheckoutUrl !== checkoutUrl) setCheckoutUrl(storedCheckoutUrl);
       
-      // Force a re-render by reading directly from storage into state with a fresh array reference
-      let freshItems: CartItem[] = [];
       if (storedCartId) {
         const storedItems = localStorage.getItem(`${ITEMS_PREFIX}${storedCartId}`);
         if (storedItems) {
           try {
             const parsed = JSON.parse(storedItems);
-            freshItems = Array.isArray(parsed) ? [...parsed] : [];
+            const freshItems = Array.isArray(parsed) ? parsed : [];
+            // Only update if actually different to prevent render loops
+            if (JSON.stringify(freshItems) !== JSON.stringify(itemsRef.current)) {
+              setItems([...freshItems]);
+            }
           } catch (err) {
             console.error("useCart: handleUpdate parse error", err);
           }
         }
       }
-      
-      console.log("useCart: handleUpdate syncing items:", freshItems.length);
-      setItems([...freshItems]);
-      
-      // If the event was internal (same tab), we've already refreshed or updated state
-      if (e?.detail?.source === 'internal') return;
       
       if (e?.detail?.action === 'add' || e?.detail?.action === 'update' || e?.detail?.action === 'remove') {
         refreshCart();
