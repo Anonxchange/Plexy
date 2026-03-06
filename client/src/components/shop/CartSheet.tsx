@@ -85,7 +85,7 @@ export function CartSheet() {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-md flex flex-col p-0 border-l border-border/40 shadow-2xl">
+      <SheetContent className="w-full sm:max-w-md flex flex-col p-0 border-l border-border/40 shadow-2xl overflow-y-auto">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-border/40 bg-muted/30">
           <div>
             <SheetTitle className="text-xl font-bold flex items-center gap-2">
@@ -208,10 +208,23 @@ export function CartSheet() {
               </div>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 pb-8 md:pb-0">
               <Button 
-                className="w-full h-14 gap-2 text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-[0.98]" 
-                onClick={() => checkoutUrl && (window.location.href = checkoutUrl)}
+                className="w-full h-14 gap-2 text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-[0.95] touch-manipulation relative z-50" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("Checkout button clicked, URL:", checkoutUrl);
+                  if (checkoutUrl) {
+                    // Use a slightly different approach for mobile redirect
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    if (isMobile) {
+                      window.location.assign(checkoutUrl);
+                    } else {
+                      window.location.href = checkoutUrl;
+                    }
+                  }
+                }}
                 disabled={isLoading || !checkoutUrl}
               >
                 {isLoading ? (
