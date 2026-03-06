@@ -159,6 +159,7 @@ const networkOptions = [
 import { useGiftCardProduct, useCreateGiftCardOrder } from "@/hooks/use-reloadly";
 import { toast } from "sonner";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { Badge } from "@/components/ui/badge";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
 
 export function GiftCardDetail() {
@@ -173,7 +174,7 @@ export function GiftCardDetail() {
   const [selectedNetwork, setSelectedNetwork] = useState("usdt-tron");
 
   const cardId = params?.id;
-  const { data: card, isLoading } = useGiftCardProduct(cardId);
+  const { data: card, isLoading, error } = useGiftCardProduct(cardId);
   const { mutate: createOrder, isPending: isOrdering } = useCreateGiftCardOrder();
 
   useEffect(() => {
@@ -220,11 +221,12 @@ export function GiftCardDetail() {
     );
   }
 
-  if (!card) {
+  if (error || !card) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Gift Card Not Found</h1>
+          <p className="text-muted-foreground mb-4">{error ? (error as Error).message : "The requested gift card could not be found."}</p>
           <Button onClick={() => setLocation("/gift-cards")}>
             Back to Gift Cards
           </Button>
@@ -233,6 +235,7 @@ export function GiftCardDetail() {
     );
   }
 
+  const value = parseFloat(cardValue) || 0;
   const discountAmount = value * (card.discountPercentage / 100);
   const finalPrice = value - discountAmount;
   const priceInCrypto = (finalPrice * 0.9985).toFixed(4);
@@ -271,12 +274,12 @@ export function GiftCardDetail() {
           {/* Left: Image and Info */}
           <div className="lg:order-1">
             <div
-              className={`h-80 bg-gradient-to-br from-gray-100 to-white rounded-2xl overflow-hidden shadow-lg mb-4`}
+              className={`h-80 bg-secondary/30 border border-border rounded-2xl overflow-hidden flex items-center justify-center p-8 shadow-lg mb-4`}
             >
               <img
                 src={card.logoUrls?.[0] || ""}
                 alt={card.productName}
-                className="w-full h-full object-cover"
+                className="max-w-full max-h-full object-contain"
               />
             </div>
 
