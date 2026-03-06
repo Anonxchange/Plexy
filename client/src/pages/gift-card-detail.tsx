@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase";
-import { ArrowLeft, ChevronDown, ShoppingCart, Wallet, Building2 } from "lucide-react";
+import { ArrowLeft, Wallet, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,6 +26,11 @@ import {
 } from "@/components/ui/sheet";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { useGiftCardProduct, useCreateGiftCardOrder } from "@/hooks/use-reloadly";
+import { toast } from "sonner";
+import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { Badge } from "@/components/ui/badge";
+import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
 
 const faqs = [
   {
@@ -63,16 +67,10 @@ const networkOptions = [
   { id: "eth", name: "Ethereum", symbol: "ETH", network: "Ethereum" },
 ];
 
-import { useGiftCardProduct, useCreateGiftCardOrder } from "@/hooks/use-reloadly";
-import { toast } from "sonner";
-import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
-import { Badge } from "@/components/ui/badge";
-import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
-
 export function GiftCardDetail() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [match, params] = useRoute("/gift-cards/:id");
+  const [, params] = useRoute("/gift-cards/:id");
   const [cardValue, setCardValue] = useState("");
   const [numberOfCards, setNumberOfCards] = useState("1");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -109,7 +107,7 @@ export function GiftCardDetail() {
       quantity: parseInt(numberOfCards),
       recipientEmail: email,
     }, {
-      onSuccess: (data) => {
+      onSuccess: () => {
         toast.success("Order placed successfully!");
         setShowExternalWalletDialog(false);
       },
@@ -149,9 +147,6 @@ export function GiftCardDetail() {
   const finalPrice = value - discountAmount;
   const priceInCrypto = (finalPrice * 0.9985).toFixed(4);
 
-  const { addToCart, isLoading: isAddingToCart } = useGiftCardCart();
-  const [cartOpen, setCartOpen] = useState(false);
-
   const handleAddToCart = async () => {
     if (!card) return;
     
@@ -165,12 +160,9 @@ export function GiftCardDetail() {
     setCartOpen(true);
   };
 
-  const [quantity, setQuantity] = useState(1); // Added missing quantity state
-
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-7xl mx-auto px-4 py-4">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => setLocation("/gift-cards")}
@@ -182,19 +174,14 @@ export function GiftCardDetail() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: Image and Info */}
           <div className="lg:order-1">
-            <div
-              className={`h-80 bg-secondary/30 border border-border rounded-2xl overflow-hidden flex items-center justify-center p-8 shadow-lg mb-4`}
-            >
+            <div className="h-80 bg-secondary/30 border border-border rounded-2xl overflow-hidden flex items-center justify-center p-8 shadow-lg mb-4">
               <img
                 src={card.logoUrls?.[0] || ""}
                 alt={card.productName}
                 className="max-w-full max-h-full object-contain"
               />
             </div>
-
-            {/* Description */}
             <div>
               <h3 className="font-semibold text-foreground mb-2">About</h3>
               <p className="text-muted-foreground leading-relaxed">
@@ -203,9 +190,7 @@ export function GiftCardDetail() {
             </div>
           </div>
 
-          {/* Right: Purchase Form */}
           <div className="lg:order-2">
-            {/* Enter Card Value */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Enter card value
@@ -223,7 +208,6 @@ export function GiftCardDetail() {
               </p>
             </div>
 
-            {/* Number of Cards */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Number of cards
@@ -272,7 +256,6 @@ export function GiftCardDetail() {
               </div>
             </div>
 
-            {/* Quantity Selector & Add to Cart */}
             <div className="flex gap-3 mb-4">
               <div className="flex items-center bg-background border border-border rounded-xl px-2 h-12">
                 <button 
@@ -306,41 +289,25 @@ export function GiftCardDetail() {
               <Button 
                 variant="outline"
                 className="h-12 w-24 rounded-xl border-border bg-card/50 hover:bg-secondary flex gap-2"
+                onClick={handleBuyCard}
               >
                 <span role="img" aria-label="gift">🎁</span>
-                <span className="font-bold">Gift</span>
+                <span className="font-bold">Buy</span>
               </Button>
             </div>
 
-
-            {/* Accepted Networks */}
             <div className="mb-4">
               <h4 className="font-semibold text-foreground mb-3">
                 Accepted networks
               </h4>
               <div className="flex gap-3">
-                <img
-                  src={cryptoIconUrls.BTC}
-                  alt="Bitcoin"
-                  className="h-8 w-8 rounded-full"
-                />
-                <img
-                  src={cryptoIconUrls.ETH}
-                  alt="Ethereum"
-                  className="h-8 w-8 rounded-full"
-                />
-                <img
-                  src={cryptoIconUrls.USDT}
-                  alt="USDT"
-                  className="h-8 w-8 rounded-full"
-                />
-                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold">
-                  +
-                </div>
+                <img src={cryptoIconUrls.BTC} alt="Bitcoin" className="h-8 w-8 rounded-full" />
+                <img src={cryptoIconUrls.ETH} alt="Ethereum" className="h-8 w-8 rounded-full" />
+                <img src={cryptoIconUrls.USDT} alt="USDT" className="h-8 w-8 rounded-full" />
+                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold">+</div>
               </div>
             </div>
 
-            {/* How to Redeem */}
             <div className="mt-4 pb-8 border-b border-border">
               <h4 className="font-semibold text-foreground mb-2">How to redeem?</h4>
               <p className="text-muted-foreground text-sm leading-relaxed">
@@ -350,18 +317,13 @@ export function GiftCardDetail() {
 
             <GiftCardCartSheet open={cartOpen} onOpenChange={setCartOpen} />
 
-            {/* FAQ Section */}
             <div className="pt-8">
               <h3 className="text-lg font-semibold text-foreground mb-6">Frequently asked questions</h3>
               <Accordion type="single" collapsible className="w-full">
                 {faqs.map((faq, index) => (
                   <AccordionItem key={index} value={`item-${index}`}>
-                    <AccordionTrigger className="text-left text-sm">
-                      {faq.question}
-                    </AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground text-sm">
-                      {faq.answer}
-                    </AccordionContent>
+                    <AccordionTrigger className="text-left text-sm">{faq.question}</AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground text-sm">{faq.answer}</AccordionContent>
                   </AccordionItem>
                 ))}
               </Accordion>
@@ -370,7 +332,6 @@ export function GiftCardDetail() {
         </div>
       </main>
 
-      {/* Payment Source Sheet */}
       <Sheet open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <SheetContent side="bottom" className="rounded-t-2xl">
           <SheetHeader className="text-center">
@@ -384,7 +345,6 @@ export function GiftCardDetail() {
               Would you like to purchase the gift card using your Pexly balance or by depositing funds from an external wallet?
             </SheetDescription>
           </SheetHeader>
-
           <div className="space-y-3 mt-6">
             <Button
               variant="outline"
@@ -397,26 +357,20 @@ export function GiftCardDetail() {
               <Building2 className="h-5 w-5 mr-3" />
               <span className="flex-1 text-left">External wallet</span>
             </Button>
-
             <Button
               className="w-full h-12 justify-start px-4 bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => {
                 setShowPaymentDialog(false);
-                // Handle Pexly balance flow
+                handleContinueOrder();
               }}
             >
               <Wallet className="h-5 w-5 mr-3" />
               <span className="flex-1 text-left">Pexly balance</span>
             </Button>
           </div>
-
-          <p className="text-xs text-muted-foreground text-center mt-4">
-            *Use your Pexly balance to save on transaction fees
-          </p>
         </SheetContent>
       </Sheet>
 
-      {/* External Wallet Payment Sheet */}
       <Sheet open={showExternalWalletDialog} onOpenChange={setShowExternalWalletDialog}>
         <SheetContent side="bottom" className="rounded-t-2xl">
           <SheetHeader>
@@ -425,9 +379,7 @@ export function GiftCardDetail() {
               Please enter your email below to proceed with purchasing ${cardValue} {card?.productName} for {priceInCrypto} USDT
             </SheetDescription>
           </SheetHeader>
-
           <div className="space-y-4 mt-6">
-            {/* Email Input */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-foreground">Email</label>
               <Input
@@ -437,12 +389,7 @@ export function GiftCardDetail() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-12 text-base"
               />
-              <p className="text-xs text-muted-foreground">
-                An email address is mandatory; we will send the activation code for the selected gift card to this address
-              </p>
             </div>
-
-            {/* Network Selection */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-foreground">Network</label>
               <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
@@ -457,32 +404,16 @@ export function GiftCardDetail() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Make sure to choose right network for your deposit
-              </p>
             </div>
-
-            {/* Action Buttons */}
             <div className="flex gap-3 mt-8">
-              <Button
-                variant="outline"
-                className="flex-1 h-12"
-                onClick={() => setShowExternalWalletDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 h-12 bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={!email || isOrdering}
-                onClick={handleContinueOrder}
-              >
+              <Button variant="outline" className="flex-1 h-12" onClick={() => setShowExternalWalletDialog(false)}>Cancel</Button>
+              <Button className="flex-1 h-12 bg-primary text-primary-foreground hover:bg-primary/90" disabled={!email || isOrdering} onClick={handleContinueOrder}>
                 {isOrdering ? "Processing..." : "Continue"}
               </Button>
             </div>
           </div>
         </SheetContent>
       </Sheet>
-
       <PexlyFooter />
     </div>
   );
