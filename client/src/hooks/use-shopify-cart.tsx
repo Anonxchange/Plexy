@@ -139,26 +139,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("useCart: refreshCart success", data.items.length, "items");
         const newItems = Array.isArray(data.items) ? [...data.items] : [];
         
-        // CRITICAL FIX: If Shopify returns an empty cart but we just added something locally
-        // or have a different count, it's likely a race condition on Shopify's side.
-        // We trust our local state if it's "fresher" (has items) than a null/empty response
-        // during active transitions.
+        // CRITICAL FIX: If Shopify returns an empty cart but we have items locally,
+        // it's extremely likely to be a race condition or stale cache on Shopify's CDN/API.
+        // We should NEVER let an empty response from the server wipe out a non-empty local cart
+        // unless the server explicitly confirms the cart was deleted or emptied (which getCart doesn't do).
         if (newItems.length === 0 && itemsRef.current.length > 0) {
-          const lastUpdate = localStorage.getItem('last_cart_update');
-          const now = Date.now();
-          // If we updated in the last 5 seconds, don't let a null response wipe us out
-          if (lastUpdate && (now - parseInt(lastUpdate)) < 5000) {
-            console.warn("useCart: Shopify returned empty cart immediately after local update. Preserving local state.");
-            return;
-          }
+          console.warn("useCart: Shopify returned empty cart but local state has items. Preserving local state to prevent vanishing.");
+          return;
         }
 
-        localStorage.setItem(CHECKOUT_URL_KEY, data.checkoutUrl || '');
-        localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(newItems));
-        
-        setCartId(currentCartId);
-        setCheckoutUrl(data.checkoutUrl);
-        setItems(newItems);
+        // Only update if the data is actually different or we were empty
+        const isDifferent = JSON.stringify(newItems) !== JSON.stringify(itemsRef.current);
+        const hasNewCheckoutUrl = data.checkoutUrl && data.checkoutUrl !== checkoutUrl;
+
+        if (isDifferent || hasNewCheckoutUrl) {
+          localStorage.setItem(CHECKOUT_URL_KEY, data.checkoutUrl || '');
+          localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(newItems));
+          
+          setCartId(currentCartId);
+          setCheckoutUrl(data.checkoutUrl);
+          setItems(newItems);
+        }
       } else if (data === null) {
         console.warn("useCart: refreshCart confirmed cart not found");
       }
