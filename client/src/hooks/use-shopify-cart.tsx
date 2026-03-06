@@ -377,9 +377,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Optimistic update using ref-safe approach
     const previousItems = [...itemsRef.current];
-    setItems(prev => prev.map(item => 
+    const updatedItems = itemsRef.current.map(item => 
       item.id === lineId ? { ...item, quantity } : item
-    ));
+    );
+    setItems(updatedItems);
+    localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(updatedItems));
 
     setIsLoading(true);
     try {
@@ -407,7 +409,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Optimistic update using ref-safe approach
     const previousItems = [...itemsRef.current];
-    setItems(prev => prev.filter(item => item.id !== lineId));
+    const updatedItems = itemsRef.current.filter(item => item.id !== lineId);
+    setItems(updatedItems);
+    localStorage.setItem(`${ITEMS_PREFIX}${currentCartId}`, JSON.stringify(updatedItems));
 
     setIsLoading(true);
     try {
