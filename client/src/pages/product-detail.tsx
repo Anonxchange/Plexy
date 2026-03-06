@@ -31,6 +31,8 @@ interface Listing {
   user_id: string;
   status: string;
   variantId?: string;
+  availableForSale?: boolean;
+  inventoryQuantity?: number;
 }
 
 export function ProductDetail() {
@@ -103,7 +105,9 @@ export function ProductDetail() {
             location: "Online",
             user_id: "shopify",
             status: "active",
-            variantId: p.variants.edges[0]?.node?.id
+            variantId: p.variants.edges[0]?.node?.id,
+            availableForSale: p.variants.edges[0]?.node?.availableForSale,
+            inventoryQuantity: p.variants.edges[0]?.node?.inventoryQuantity
           });
 
           // Fetch related products (same category or just others from Shopify)
@@ -219,6 +223,27 @@ export function ProductDetail() {
     }
 
     const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+    
+    // Check if variant is in stock
+    const selectedVariant = product.user_id === 'shopify' ? await (async () => {
+      try {
+        const result = await shopifyService.getProducts(250);
+        const decodedId = decodeURIComponent(id || "");
+        const found = result.products.find((edge: any) => edge.node.id === decodedId);
+        if (found) {
+          return found.node.variants.edges.find((edge: any) => edge.node.id === targetVariantId)?.node;
+        }
+      } catch (e) {
+        console.error("Error checking inventory:", e);
+      }
+      return null;
+    })() : null;
+
+    if (selectedVariant && !selectedVariant.availableForSale) {
+      toast.error("This item is currently out of stock");
+      return;
+    }
+
     await addToCart(targetVariantId, {
       variantId: targetVariantId,
       title: product.title + (optionLabel ? ` - ${optionLabel}` : ''),
@@ -388,10 +413,12 @@ export function ProductDetail() {
                     e.stopPropagation();
                     handleAddToCart();
                   }}
-                  disabled={isAddingToCart}
+                  disabled={isAddingToCart || (product.user_id === 'shopify' && product.availableForSale === false)}
                 >
                   {isAddingToCart ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : product.user_id === 'shopify' && product.availableForSale === false ? (
+                    "Out of Stock"
                   ) : (
                     <>
                       <ShoppingCart className="h-5 w-5" />
@@ -401,8 +428,10 @@ export function ProductDetail() {
                 </Button>
                 
                 <div className="flex items-center gap-2 justify-center py-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-xs text-green-500 font-bold">In Stock & Ready to Deliver</span>
+                  <div className={`h-1.5 w-1.5 rounded-full ${product.availableForSale ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                  <span className={`text-xs font-bold ${product.availableForSale ? 'text-green-500' : 'text-red-500'}`}>
+                    {product.availableForSale ? 'In Stock & Ready to Deliver' : 'Out of Stock'}
+                  </span>
                 </div>
               </div>
 
