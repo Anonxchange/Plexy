@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { createNowPayment, getNowPaymentsEstimate, getNowPaymentStatus } from "@/hooks/use-nowpayments";
-import { Loader2, Bitcoin, Copy, RefreshCw, ArrowLeft } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { createNowPayment, getNowPaymentsEstimate, getNowPaymentStatus } from "@/hooks/useNowPayments";
+import { Loader2, Bitcoin, Copy, ExternalLink, RefreshCw } from "lucide-react";
 
 interface NowPaymentsCheckoutProps {
   amount: number;
@@ -15,6 +15,7 @@ interface NowPaymentsCheckoutProps {
   onPaymentClose?: () => void;
   disabled?: boolean;
   metadata?: Record<string, unknown>;
+  buttonLabel?: string;
 }
 
 const POPULAR_CRYPTOS = [
@@ -38,6 +39,7 @@ const NowPaymentsCheckout = ({
   onPaymentClose,
   disabled,
   metadata,
+  buttonLabel = "Pay with Crypto",
 }: NowPaymentsCheckoutProps) => {
   const [showForm, setShowForm] = useState(false);
   const [selectedCrypto, setSelectedCrypto] = useState("btc");
@@ -48,40 +50,35 @@ const NowPaymentsCheckout = ({
   const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
-    if (!showForm || paymentData) return;
+    if (!showForm) return;
     let cancelled = false;
 
     const fetchEstimate = async () => {
       setEstimating(true);
       try {
         const data = await getNowPaymentsEstimate(amount, currency, selectedCrypto);
-        if (!cancelled) {
-          setEstimatedAmount(data.estimated_amount || null);
-        }
-      } catch (err: any) {
-        console.error("Estimate error:", err);
+        if (!cancelled) setEstimatedAmount(data.estimated_amount);
+      } catch {
         if (!cancelled) setEstimatedAmount(null);
       } finally {
         if (!cancelled) setEstimating(false);
       }
     };
 
-    const timer = setTimeout(fetchEstimate, 300);
-    return () => { 
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [showForm, selectedCrypto, amount, currency, paymentData]);
+    fetchEstimate();
+    return () => { cancelled = true; };
+  }, [showForm, selectedCrypto, amount, currency]);
 
   const handleCreatePayment = async () => {
     setProcessing(true);
     try {
+      // Encode service metadata in order_id for webhook fulfillment
       const serviceMetadata = metadata ? { ...metadata } : {};
       const service = serviceMetadata.service as string || "";
       delete serviceMetadata.service;
       const structuredOrderId = service
         ? `${service}:${JSON.stringify(serviceMetadata)}`
-        : `order_${Date.now()}`;
+        : metadata?.orderId as string || `order_${Date.now()}`;
 
       const ipnUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://hvpeycnedmzrjshmvgri.supabase.co"}/functions/v1/nowpayments-webhook`;
 
@@ -94,17 +91,14 @@ const NowPaymentsCheckout = ({
         ipnCallbackUrl: ipnUrl,
       });
 
-      console.log("Payment response:", data);
-
-      if (data.error || data.message || !data.pay_address) {
-        throw new Error(data.message || data.error || "Payment creation failed - no address returned");
+      if (data.error || data.message) {
+        throw new Error(data.message || data.error || "Payment creation failed");
       }
 
       setPaymentData(data);
-      toast.success("Payment created!", { description: "Send the exact amount to the address below" });
+      toast({ title: "Payment created", description: "Send crypto to the address shown below" });
     } catch (err: any) {
-      console.error("Payment creation error:", err);
-      toast.error("Payment error", { description: err.message || "Failed to create payment" });
+      toast({ title: "Payment error", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -116,148 +110,92 @@ const NowPaymentsCheckout = ({
     try {
       const status = await getNowPaymentStatus(paymentData.payment_id);
       if (["finished", "confirmed"].includes(status.payment_status)) {
-        toast.success("Payment confirmed!", { description: `Status: ${status.payment_status}` });
+        toast({ title: "Payment confirmed!", description: `Status: ${status.payment_status}` });
         onPaymentSuccess?.(status);
       } else if (["waiting", "confirming", "sending"].includes(status.payment_status)) {
-        toast.info("Payment pending", { description: `Status: ${status.payment_status}` });
+        toast({ title: "Payment pending", description: `Status: ${status.payment_status}. Please wait.` });
       } else {
-        toast.warning("Payment status", { description: `Status: ${status.payment_status}` });
+        toast({ title: "Payment status", description: `Status: ${status.payment_status}`, variant: "destructive" });
       }
-    } catch (err: any) {
-      console.error("Status check error:", err);
-      toast.error("Status check failed", { description: err.message });
+    } catch {
+      toast({ title: "Status check failed", variant: "destructive" });
     } finally {
       setCheckingStatus(false);
     }
   };
 
-  const copyToClipboard = (text: string, label: string = "text") => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied!", { description: `${label} copied to clipboard` });
+    toast({ title: "Copied!", description: "Address copied to clipboard" });
   };
 
-  // Initial state - show description and button like PayPal
-  if (!showForm && !paymentData) {
+  if (!showForm) {
     return (
-      <div className="text-center space-y-6">
-        <p className="text-muted-foreground">
-          Pay with Bitcoin, Ethereum, USDT, TRON, and 6+ more cryptocurrencies instantly. Secure and fast.
-        </p>
-        <Button 
-          className="w-full h-14 bg-black text-white hover:bg-gray-900 font-bold text-lg rounded-xl gap-2"
-          onClick={() => setShowForm(true)}
-          disabled={disabled}
-        >
-          <Bitcoin className="h-5 w-5" />
-          Continue to Crypto
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        className="w-full border-primary/30 hover:bg-primary/5"
+        size="lg"
+        onClick={() => setShowForm(true)}
+        disabled={disabled}
+      >
+        <Bitcoin className="mr-2 h-4 w-4" />
+        {buttonLabel}
+        <Badge variant="secondary" className="ml-2 text-xs">Crypto</Badge>
+      </Button>
     );
   }
 
-  // Payment created state - show address and amount
   if (paymentData) {
     return (
       <Card className="border-primary/20">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Bitcoin className="h-4 w-4 text-primary" />
-              Send {paymentData.pay_currency?.toUpperCase()} Payment
-            </CardTitle>
-            <button 
-              onClick={() => { 
-                setPaymentData(null); 
-                setShowForm(false); 
-                setEstimatedAmount(null);
-                onPaymentClose?.(); 
-              }}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-          </div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bitcoin className="h-4 w-4 text-primary" />
+            Send Crypto Payment
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Amount to send */}
-          <div className="bg-muted/50 rounded-lg p-4 border border-border">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-sm text-muted-foreground">Amount to send</span>
-              <span className="text-lg font-bold">{paymentData.pay_amount} {paymentData.pay_currency?.toUpperCase()}</span>
+        <CardContent className="space-y-3">
+          <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Amount</span>
+              <span className="font-mono font-semibold">
+                {paymentData.pay_amount} {paymentData.pay_currency?.toUpperCase()}
+              </span>
             </div>
-            <div className="text-xs text-muted-foreground">
-              Original: {currency.toUpperCase()} {amount.toFixed(2)}
-            </div>
-          </div>
-
-          {/* Payment address */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold block">Send to this address</label>
-            <div className="bg-background border border-border rounded-lg p-3 flex items-stretch gap-2">
-              <code className="text-xs font-mono flex-1 break-all text-foreground self-center">
-                {paymentData.pay_address}
-              </code>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="shrink-0 hover:bg-secondary" 
-                onClick={() => copyToClipboard(paymentData.pay_address, "Address")}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Memo/Tag if present */}
-          {paymentData.payin_extra_id && (
-            <div className="space-y-2">
-              <label className="text-sm font-semibold block">Memo / Payment ID</label>
-              <div className="bg-background border border-border rounded-lg p-3 flex items-stretch gap-2">
-                <code className="text-xs font-mono flex-1 break-all text-foreground self-center">
-                  {paymentData.payin_extra_id}
+            <div className="text-sm">
+              <span className="text-muted-foreground block mb-1">Send to address:</span>
+              <div className="flex items-center gap-2">
+                <code className="text-xs bg-background p-2 rounded flex-1 break-all border border-border">
+                  {paymentData.pay_address}
                 </code>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="shrink-0 hover:bg-secondary" 
-                  onClick={() => copyToClipboard(paymentData.payin_extra_id, "Memo")}
-                >
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => copyToClipboard(paymentData.pay_address)}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Include this memo with your payment</p>
             </div>
-          )}
-
-          {/* Status badge */}
-          <div className="flex items-center justify-between py-2 border-t border-border pt-3">
-            <span className="text-sm text-muted-foreground">Payment Status</span>
+            {paymentData.payin_extra_id && (
+              <div className="text-sm">
+                <span className="text-muted-foreground block mb-1">Memo / Tag:</span>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs bg-background p-2 rounded flex-1 break-all border border-border">
+                    {paymentData.payin_extra_id}
+                  </code>
+                  <Button variant="ghost" size="icon" className="shrink-0" onClick={() => copyToClipboard(paymentData.payin_extra_id)}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
             <Badge variant="outline" className="text-xs">
-              {paymentData.payment_status || "waiting"}
+              Status: {paymentData.payment_status || "waiting"}
             </Badge>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => { 
-                setPaymentData(null); 
-                setShowForm(false); 
-                setEstimatedAmount(null);
-                onPaymentClose?.(); 
-              }}
-            >
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setPaymentData(null); setShowForm(false); onPaymentClose?.(); }}>
               Cancel
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleCheckStatus} 
-              disabled={checkingStatus} 
-              className="flex-1"
-            >
+            <Button variant="outline" size="sm" onClick={handleCheckStatus} disabled={checkingStatus} className="flex-1">
               {checkingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Check Status
             </Button>
@@ -267,28 +205,19 @@ const NowPaymentsCheckout = ({
     );
   }
 
-  // Crypto selection form
   return (
     <Card className="border-primary/20">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Bitcoin className="h-4 w-4 text-primary" />
-            Select Cryptocurrency
-          </CardTitle>
-          <button 
-            onClick={() => setShowForm(false)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-        </div>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Bitcoin className="h-4 w-4 text-primary" />
+          Pay with Crypto
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         <div>
-          <label className="text-sm font-semibold mb-2 block">Choose crypto to pay with</label>
+          <label className="text-xs text-muted-foreground mb-1 block">Select cryptocurrency</label>
           <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-            <SelectTrigger className="h-11">
+            <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -299,45 +228,35 @@ const NowPaymentsCheckout = ({
           </Select>
         </div>
 
-        {/* Price summary */}
-        <div className="bg-muted/50 rounded-lg p-4 border border-border space-y-2">
+        <div className="bg-muted/50 rounded-lg p-3 space-y-1">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Fiat Amount</span>
-            <span className="font-semibold">{currency.toUpperCase()} {amount.toFixed(2)}</span>
+            <span className="text-muted-foreground">Amount</span>
+            <span>{currency.toUpperCase()} {amount.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-sm font-bold border-t border-border pt-2">
-            <span>You'll send</span>
-            <span className="flex items-center gap-1">
+          <div className="flex justify-between text-sm font-semibold border-t border-border pt-1">
+            <span>Estimated crypto</span>
+            <span>
               {estimating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin inline" />
               ) : estimatedAmount ? (
-                <>≈ {estimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</>
+                `≈ ${estimatedAmount} ${selectedCrypto.toUpperCase()}`
               ) : (
                 "—"
               )}
             </span>
           </div>
+          <p className="text-xs text-muted-foreground mt-1">{description}</p>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowForm(false)} 
-            disabled={processing}
-          >
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setShowForm(false)} disabled={processing}>
             Cancel
           </Button>
-          <Button 
-            className="flex-1 bg-primary hover:bg-primary/90" 
-            onClick={handleCreatePayment} 
-            disabled={processing || !estimatedAmount}
-          >
+          <Button className="flex-1" onClick={handleCreatePayment} disabled={processing || !estimatedAmount}>
             {processing ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
             ) : (
-              <><Bitcoin className="mr-2 h-4 w-4" /> Get Payment Address</>
+              <><Bitcoin className="mr-2 h-4 w-4" /> Pay with {selectedCrypto.toUpperCase()}</>
             )}
           </Button>
         </div>
