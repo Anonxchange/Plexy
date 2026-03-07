@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,50 +47,92 @@ export function ProductDetail() {
   const [availableColors, setAvailableColors] = useState<string[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
   
+  // Store the raw Shopify product data so we don't re-fetch on add-to-cart
+  const shopifyDataRef = useRef<any>(null);
+  
   const { addToCart, isLoading: isAddingToCart } = useCart();
-
 
   useEffect(() => {
     if (id) {
       fetchProduct();
     }
+    // Cleanup: if id changes mid-fetch, the stale flag prevents state updates
+    return () => {
+      shopifyDataRef.current = null;
+    };
   }, [id]);
+
+  // Derive the selected variant from cached Shopify data + selected options
+  const selectedVariant = useMemo(() => {
+    const shopifyProduct = shopifyDataRef.current;
+    if (!shopifyProduct) return null;
+
+    const variants = shopifyProduct.variants?.edges || [];
+    
+    // If no options to select, return first variant
+    if (availableSizes.length === 0 && availableColors.length === 0) {
+      return variants[0]?.node || null;
+    }
+
+    const match = variants.find((edge: any) => {
+      const opts = edge.node.selectedOptions || [];
+      const matchesSize = !selectedSize || opts.some((opt: any) =>
+        (opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille') && opt.value === selectedSize
+      );
+      const matchesColor = !selectedColor || opts.some((opt: any) =>
+        (opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour') && opt.value === selectedColor
+      );
+      return matchesSize && matchesColor;
+    });
+
+    return match?.node || null;
+  }, [selectedSize, selectedColor, availableSizes, availableColors]);
+
+  // Update price and availability when variant changes
+  const currentPrice = selectedVariant
+    ? parseFloat(selectedVariant.price.amount)
+    : product?.price ?? 0;
+  const currentCurrency = selectedVariant
+    ? selectedVariant.price.currencyCode
+    : product?.currency ?? 'USD';
+  const isAvailable = selectedVariant
+    ? selectedVariant.availableForSale
+    : product?.availableForSale ?? true;
 
   const fetchProduct = async () => {
     setIsLoading(true);
+    shopifyDataRef.current = null;
+    
+    // Stale closure guard
+    const fetchId = id;
+
     try {
-      console.log("Fetching product with ID:", id);
-      // First try Shopify if the ID looks like a Shopify ID (contains 'Product')
-      if (id?.includes('Product') || id?.startsWith('gid://shopify/Product/')) {
-        const decodedId = decodeURIComponent(id);
-        console.log("Decoded Shopify ID:", decodedId);
-        
-        // Fetch specific product directly if possible, or use a cached list
+      if (fetchId?.includes('Product') || fetchId?.startsWith('gid://shopify/Product/')) {
+        const decodedId = decodeURIComponent(fetchId);
         const result = await shopifyService.getProducts(250);
-        console.log("Shopify products fetched:", result?.products?.length);
-        
+
+        // Guard against stale fetch
+        if (fetchId !== id) return;
+
         const found = result.products.find((edge: any) => edge.node.id === decodedId);
-        
+
         if (found) {
           const p = found.node;
-          console.log("Found Shopify product:", p.title);
-          
-          // Extract options from product
+          shopifyDataRef.current = p;
+
           const options = p.options || [];
-          const sizeOption = options.find((opt: any) => 
+          const sizeOption = options.find((opt: any) =>
             opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille'
           );
-          
-          const colorOption = options.find((opt: any) => 
+          const colorOption = options.find((opt: any) =>
             opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour'
           );
 
           const sizes = sizeOption?.values || [];
           const colors = colorOption?.values || [];
-          
+
           setAvailableSizes(sizes);
           setAvailableColors(colors);
-          
           if (sizes.length > 0) setSelectedSize(sizes[0]);
           if (colors.length > 0) setSelectedColor(colors[0]);
 
@@ -107,10 +149,8 @@ export function ProductDetail() {
             status: "active",
             variantId: p.variants.edges[0]?.node?.id,
             availableForSale: p.variants.edges[0]?.node?.availableForSale,
-            inventoryQuantity: p.variants.edges[0]?.node?.inventoryQuantity
           });
 
-          // Fetch related products (same category or just others from Shopify)
           const related = result.products
             .filter((edge: any) => edge.node.id !== decodedId)
             .slice(0, 4)
@@ -127,59 +167,53 @@ export function ProductDetail() {
                 location: "Online",
                 user_id: "shopify",
                 status: "active",
-                variantId: rp.variants.edges[0]?.node?.id
+                variantId: rp.variants.edges[0]?.node?.id,
               };
             });
           setRelatedProducts(related);
           setIsLoading(false);
           return;
-        } else {
-          console.warn("Product not found in Shopify list:", decodedId);
         }
       }
 
-      console.log("Checking marketplace for product:", id);
-      // Then try Marketplace
+      if (fetchId !== id) return;
+
       const { data, error } = await supabase
         .from('shop_listings')
         .select('*')
-        .eq('id', id)
+        .eq('id', fetchId)
         .maybeSingle();
 
-      if (error) {
-        console.error("Supabase error:", error);
-        throw error;
-      }
-      
+      if (fetchId !== id) return;
+      if (error) throw error;
+
       if (data) {
-        console.log("Found marketplace product:", data.title);
         let imageUrls: string[] = [];
         if (Array.isArray(data.images)) {
-          imageUrls = data.images.filter(img => typeof img === 'string' && img.startsWith('http'));
+          imageUrls = data.images.filter((img: any) => typeof img === 'string' && img.startsWith('http'));
         } else if (typeof data.images === 'string') {
-           try {
-             const parsed = JSON.parse(data.images);
-             imageUrls = Array.isArray(parsed) ? parsed : [data.images];
-           } catch(e) {
-             imageUrls = [data.images];
-           }
+          try {
+            const parsed = JSON.parse(data.images);
+            imageUrls = Array.isArray(parsed) ? parsed : [data.images];
+          } catch {
+            imageUrls = [data.images];
+          }
         }
-
-        setProduct({
-          ...data,
-          images: imageUrls
-        });
+        setProduct({ ...data, images: imageUrls });
       } else {
-        console.error("Product not found anywhere:", id);
         toast.error("Product not found");
         navigate("/shop");
       }
     } catch (error) {
       console.error('Error fetching product:', error);
-      toast.error("Error loading product");
-      navigate("/shop");
+      if (fetchId === id) {
+        toast.error("Error loading product");
+        navigate("/shop");
+      }
     } finally {
-      setIsLoading(false);
+      if (fetchId === id) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -190,74 +224,34 @@ export function ProductDetail() {
       return;
     }
 
-    // Find the correct variant based on selected options
-    let targetVariantId = product.variantId;
-    
-    if (id?.includes('Product')) {
-      try {
-        const result = await shopifyService.getProducts(250);
-        const decodedId = decodeURIComponent(id);
-        const found = result.products.find((edge: any) => edge.node.id === decodedId);
-        if (found) {
-          const variant = found.node.variants.edges.find((edge: any) => {
-            const matchesSize = !selectedSize || edge.node.selectedOptions.some((opt: any) => 
-              (opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille') && opt.value === selectedSize
-            );
-            const matchesColor = !selectedColor || edge.node.selectedOptions.some((opt: any) => 
-              (opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour') && opt.value === selectedColor
-            );
-            return matchesSize && matchesColor;
-          });
-          if (variant) {
-            targetVariantId = variant.node.id;
-          }
-        }
-      } catch (e) {
-        console.error("Error finding variant for options:", e);
-      }
-    }
+    // Use cached variant data instead of re-fetching
+    const targetVariantId = selectedVariant?.id || product.variantId;
 
     if (!targetVariantId) {
       toast.error("Please select all required options");
       return;
     }
 
-    const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
-    
-    // Check if variant is in stock
-    const selectedVariant = product.user_id === 'shopify' ? await (async () => {
-      try {
-        const result = await shopifyService.getProducts(250);
-        const decodedId = decodeURIComponent(id || "");
-        const found = result.products.find((edge: any) => edge.node.id === decodedId);
-        if (found) {
-          return found.node.variants.edges.find((edge: any) => edge.node.id === targetVariantId)?.node;
-        }
-      } catch (e) {
-        console.error("Error checking inventory:", e);
-      }
-      return null;
-    })() : null;
-
     if (selectedVariant && !selectedVariant.availableForSale) {
       toast.error("This item is currently out of stock");
       return;
     }
 
+    const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+
     await addToCart(targetVariantId, {
       variantId: targetVariantId,
       title: product.title + (optionLabel ? ` - ${optionLabel}` : ''),
-      price: product.price,
-      currency: product.currency,
-      image: product.images[0]
+      price: currentPrice,
+      currency: currentCurrency,
+      image: product.images[0],
     });
   };
 
-
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -265,13 +259,9 @@ export function ProductDetail() {
   if (!product) return null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-5xl">
-        <Button 
-          variant="ghost" 
-          className="mb-6 -ml-2 text-muted-foreground hover:text-foreground"
-          onClick={() => navigate("/shop")}
-        >
+    <div>
+      <div className="container py-8 max-w-6xl">
+        <Button variant="ghost" className="mb-6" onClick={() => navigate("/shop")}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back to Shop
         </Button>
@@ -279,7 +269,7 @@ export function ProductDetail() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
           {/* Left: Images */}
           <div className="space-y-4">
-            <div className="aspect-[4/5] bg-muted rounded-2xl overflow-hidden border border-border/40 relative">
+            <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
               {product.images.length > 0 ? (
                 <img
                   src={product.images[selectedImage]}
@@ -287,22 +277,17 @@ export function ProductDetail() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
-                  <Package className="h-20 w-20" />
+                <div className="w-full h-full flex items-center justify-center">
+                  <Package className="h-16 w-16 text-muted-foreground" />
                 </div>
               )}
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                type="button"
-                className="absolute top-4 right-4 bg-background/50 backdrop-blur-md rounded-full hover:bg-background/80"
-              >
-                <Heart className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm">
+                <Share2 className="h-4 w-4" />
               </Button>
             </div>
-            
+
             {product.images.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              <div className="flex gap-2 overflow-x-auto pb-2">
                 {product.images.map((img, idx) => (
                   <button
                     key={idx}
@@ -319,49 +304,45 @@ export function ProductDetail() {
           </div>
 
           {/* Right: Info */}
-          <div className="flex flex-col">
-            <div className="space-y-4 mb-8">
+          <div className="space-y-6">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border-primary/30 text-primary">
-                  {product.category}
-                </Badge>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                  <Share2 className="h-4 w-4" />
+                <Badge variant="secondary">{product.category}</Badge>
+                <Button variant="ghost" size="icon">
+                  <Heart className="h-4 w-4" />
                 </Button>
               </div>
 
-              <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground leading-tight">
-                {product.title}
-              </h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{product.title}</h1>
 
-              <div className="flex items-center gap-4">
-                <div className="flex text-yellow-500">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} className="h-3 w-3 fill-current" />
-                  ))}
-                </div>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                ))}
               </div>
 
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-serif font-bold text-[#C58E58]">
-                  {product.currency} {product.price.toLocaleString()}
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold">
+                  {currentCurrency} {currentPrice.toLocaleString()}
                 </span>
                 {product.user_id === 'shopify' && (
-                  <span className="text-xs text-muted-foreground line-through opacity-50">
-                    {product.currency} {(product.price * 1.2).toLocaleString()}
+                  <span className="text-lg text-muted-foreground line-through">
+                    {currentCurrency} {(currentPrice * 1.2).toLocaleString()}
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="space-y-6">
+            <Separator />
+
+            <div className="space-y-5">
               {/* Options selection */}
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {availableSizes.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Size</h3>
-                      <button className="text-[10px] font-bold text-primary hover:underline">Size Guide</button>
+                      <p className="text-sm font-semibold">Size</p>
+                      <span className="text-xs text-muted-foreground cursor-pointer hover:underline">Size Guide</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {availableSizes.map((size) => (
@@ -369,8 +350,8 @@ export function ProductDetail() {
                           key={size}
                           onClick={() => setSelectedSize(size)}
                           className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
-                            selectedSize === size 
-                              ? 'bg-foreground text-background border-foreground shadow-md' 
+                            selectedSize === size
+                              ? 'bg-foreground text-background border-foreground shadow-md'
                               : 'bg-background text-foreground border-border/40 hover:border-primary/50'
                           }`}
                         >
@@ -382,16 +363,16 @@ export function ProductDetail() {
                 )}
 
                 {availableColors.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Color</h3>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Color</p>
                     <div className="flex flex-wrap gap-2">
                       {availableColors.map((color) => (
                         <button
                           key={color}
                           onClick={() => setSelectedColor(color)}
                           className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
-                            selectedColor === color 
-                              ? 'bg-foreground text-background border-foreground shadow-md' 
+                            selectedColor === color
+                              ? 'bg-foreground text-background border-foreground shadow-md'
                               : 'bg-background text-foreground border-border/40 hover:border-primary/50'
                           }`}
                         >
@@ -403,90 +384,87 @@ export function ProductDetail() {
                 )}
               </div>
 
-              <div className="pt-2 flex flex-col gap-3">
-                <Button 
-                  size="default"
-                  type="button"
-                  className="w-full h-12 rounded-xl text-base font-bold bg-[#D3884D] hover:bg-[#C0783D] text-white transition-all active:scale-[0.98] gap-2 shadow-md shadow-[#D3884D]/20"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleAddToCart();
-                  }}
-                  disabled={isAddingToCart || (product.user_id === 'shopify' && product.availableForSale === false)}
+              <div className="space-y-3">
+                <Button
+                  className="w-full h-12 text-base"
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart || !isAvailable}
                 >
                   {isAddingToCart ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : product.user_id === 'shopify' && product.availableForSale === false ? (
+                  ) : !isAvailable ? (
                     "Out of Stock"
                   ) : (
                     <>
-                      <ShoppingCart className="h-5 w-5" />
+                      <ShoppingCart className="h-5 w-5 mr-2" />
                       Add to Cart
                     </>
                   )}
                 </Button>
-                
-                <div className="flex items-center gap-2 justify-center py-2">
-                  <div className={`h-1.5 w-1.5 rounded-full ${product.availableForSale ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                  <span className={`text-xs font-bold ${product.availableForSale ? 'text-green-500' : 'text-red-500'}`}>
-                    {product.availableForSale ? 'In Stock & Ready to Deliver' : 'Out of Stock'}
+
+                <div className="flex items-center gap-2 text-sm">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className={isAvailable ? 'text-green-600' : 'text-destructive'}>
+                    {isAvailable ? 'In Stock & Ready to Deliver' : 'Out of Stock'}
                   </span>
                 </div>
               </div>
 
-              <Separator className="bg-border/40" />
+              <Separator />
 
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Description</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground/80 font-medium whitespace-pre-line">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Description</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {product.description || "No description provided for this item."}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-muted/30 border border-border/40">
-                  <Store className="h-4 w-4 mb-2 text-primary" />
-                  <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">Store</p>
-                  <p className="text-sm font-bold">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Store className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Store</p>
+                    <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
+                  </div>
                 </div>
-                <div className="p-4 rounded-xl bg-muted/30 border border-border/40">
-                  <Package className="h-4 w-4 mb-2 text-primary" />
-                  <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">Shipping</p>
-                  <p className="text-sm font-bold">Fast Delivery</p>
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Shipping</p>
+                    <p className="text-muted-foreground">Fast Delivery</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Related Products Section */}
+        {/* Related Products */}
         {relatedProducts.length > 0 && (
-          <div className="mt-20 mb-12">
-            <h2 className="text-2xl font-serif font-bold mb-8">You may also like</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="mt-16 space-y-6">
+            <h2 className="text-xl font-bold">You may also like</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {relatedProducts.map((related) => (
-                <div 
-                  key={related.id} 
-                  className="group cursor-pointer"
+                <div
+                  key={related.id}
+                  className="cursor-pointer group"
                   onClick={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
                 >
-                  <div className="aspect-[4/5] bg-muted rounded-xl overflow-hidden mb-3 relative border border-border/40">
-                    <img 
-                      src={related.images[0]} 
+                  <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
+                    <img
+                      src={related.images[0]}
                       alt={related.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                     {related.status === 'sold_out' && (
-                      <Badge className="absolute top-2 right-2 bg-background/80 text-foreground backdrop-blur-sm border-none">
+                      <Badge variant="destructive" className="absolute top-2 left-2">
                         Sold out
                       </Badge>
                     )}
                   </div>
-                  <h3 className="text-sm font-bold line-clamp-2 mb-1 group-hover:text-primary transition-colors">
-                    {related.title}
-                  </h3>
-                  <p className="text-[#C58E58] font-bold text-sm">
+                  <p className="text-sm font-medium truncate">{related.title}</p>
+                  <p className="text-sm font-bold">
                     {related.currency} {related.price.toLocaleString()}
                   </p>
                 </div>
@@ -494,7 +472,7 @@ export function ProductDetail() {
             </div>
           </div>
         )}
-      </main>
+      </div>
       <PexlyFooter />
     </div>
   );
