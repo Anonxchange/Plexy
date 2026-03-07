@@ -36,22 +36,35 @@ export function Checkout() {
     }
   }, [user, loading, setLocation]);
 
-  if (loading || !user) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading checkout...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading checkout...</p>
+        </div>
       </div>
     );
   }
 
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">Redirecting to sign in...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const subtotal = items?.reduce((acc, item) => acc + (item?.price || 0) * (item?.quantity || 0), 0) || 0;
   const processingFee = 2.99;
   const total = subtotal + processingFee;
   const rewardPoints = Math.floor(subtotal * 10);
 
-  if (items.length === 0) {
+  if (!items || items.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
         <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
         <Button onClick={() => setLocation("/gift-cards")}>
           Browse Gift Cards
