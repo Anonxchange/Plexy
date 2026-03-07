@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +14,7 @@ interface NowPaymentsCheckoutProps {
   onPaymentSuccess?: (paymentData: any) => void;
   onPaymentClose?: () => void;
   disabled?: boolean;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
 }
 
 const POPULAR_CRYPTOS = [
@@ -49,51 +49,64 @@ const NowPaymentsCheckout = ({
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [prevEstimatedAmount, setPrevEstimatedAmount] = useState<number | null>(null);
 
+  // Ref-based guard against double-click race condition
+  const processingRef = useRef(false);
+  const checkingRef = useRef(false);
+
+  // Reset stale preview when crypto changes
+  useEffect(() => {
+    setPrevEstimatedAmount(null);
+  }, [selectedCrypto]);
+
   useEffect(() => {
     if (!showForm || paymentData) return;
-    let cancelled = false;
+
+    const abortController = new AbortController();
 
     const fetchEstimate = async () => {
       setEstimating(true);
       setEstimateError(null);
       try {
         const data = await getNowPaymentsEstimate(amount, currency, selectedCrypto);
-        if (!cancelled) {
-          if (data.error) {
-            setEstimateError(data.error);
-            setEstimatedAmount(null);
-          } else {
-            const newAmount = data.estimated_amount || null;
-            setEstimatedAmount(newAmount);
-            setEstimateError(null);
-            if (newAmount !== null) {
-              setPrevEstimatedAmount(newAmount);
-            }
+        if (abortController.signal.aborted) return;
+
+        if (data.error) {
+          setEstimateError(data.error);
+          setEstimatedAmount(null);
+        } else {
+          const newAmount = data.estimated_amount || null;
+          setEstimatedAmount(newAmount);
+          setEstimateError(null);
+          if (newAmount !== null) {
+            setPrevEstimatedAmount(newAmount);
           }
         }
       } catch (err: any) {
+        if (abortController.signal.aborted) return;
         console.error("Estimate error:", err);
-        if (!cancelled) {
-          setEstimateError(err.message || "Failed to fetch price estimate");
-          setEstimatedAmount(null);
-        }
+        setEstimateError(err.message || "Failed to fetch price estimate");
+        setEstimatedAmount(null);
       } finally {
-        if (!cancelled) setEstimating(false);
+        if (!abortController.signal.aborted) setEstimating(false);
       }
     };
 
     const timer = setTimeout(fetchEstimate, 300);
-    return () => { 
-      cancelled = true;
+    return () => {
+      abortController.abort();
       clearTimeout(timer);
     };
   }, [showForm, selectedCrypto, amount, currency, paymentData]);
 
   const handleCreatePayment = async () => {
+    // Ref guard: prevents double-fire before React re-renders
+    if (processingRef.current) return;
+    processingRef.current = true;
     setProcessing(true);
+
     try {
       const serviceMetadata = metadata ? { ...metadata } : {};
-      const service = serviceMetadata.service as string || "";
+      const service = (serviceMetadata.service as string) || "";
       delete serviceMetadata.service;
       const structuredOrderId = service
         ? `${service}:${JSON.stringify(serviceMetadata)}`
@@ -123,12 +136,16 @@ const NowPaymentsCheckout = ({
       toast.error("Payment error", { description: err.message || "Failed to create payment" });
     } finally {
       setProcessing(false);
+      processingRef.current = false;
     }
   };
 
   const handleCheckStatus = async () => {
     if (!paymentData?.payment_id) return;
+    if (checkingRef.current) return;
+    checkingRef.current = true;
     setCheckingStatus(true);
+
     try {
       const status = await getNowPaymentStatus(paymentData.payment_id);
       if (["finished", "confirmed"].includes(status.payment_status)) {
@@ -144,6 +161,7 @@ const NowPaymentsCheckout = ({
       toast.error("Status check failed", { description: err.message });
     } finally {
       setCheckingStatus(false);
+      checkingRef.current = false;
     }
   };
 
@@ -152,73 +170,66 @@ const NowPaymentsCheckout = ({
     toast.success("Copied!", { description: `${label} copied to clipboard` });
   };
 
-  // Initial state - show description and button like PayPal
+  // Initial state
   if (!showForm && !paymentData) {
     return (
-      <div className="text-center space-y-6">
-        <p className="text-muted-foreground">
+      <div>
+        <p className="text-sm text-muted-foreground mb-4">
           Pay with Bitcoin, Ethereum, USDT, TRON, and 6+ more cryptocurrencies instantly. Secure and fast.
         </p>
-        <Button 
-          className="w-full h-14 bg-black text-white hover:bg-gray-900 font-bold text-lg rounded-xl gap-2"
-          onClick={() => setShowForm(true)}
-          disabled={disabled}
-        >
-          <Bitcoin className="h-5 w-5" />
+        <Button onClick={() => setShowForm(true)} disabled={disabled}>
+          <Bitcoin className="mr-2 h-4 w-4" />
           Continue to Crypto
         </Button>
       </div>
     );
   }
 
-  // Payment created state - show address and amount
+  // Payment created state
   if (paymentData) {
     return (
-      <Card className="border-primary/20">
-        <CardHeader className="pb-3">
+      <Card>
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Bitcoin className="h-4 w-4 text-primary" />
+            <CardTitle className="flex items-center gap-2">
+              <Bitcoin className="h-5 w-5" />
               Send {paymentData.pay_currency?.toUpperCase()} Payment
             </CardTitle>
-            <button 
-              onClick={() => { 
-                setPaymentData(null); 
-                setShowForm(false); 
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setPaymentData(null);
+                setShowForm(false);
                 setEstimatedAmount(null);
-                onPaymentClose?.(); 
+                onPaymentClose?.();
               }}
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           {/* Amount to send */}
-          <div className="bg-muted/50 rounded-lg p-4 border border-border">
-            <div className="flex justify-between items-center mb-3">
+          <div className="mb-4">
+            <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Amount to send</span>
-              <span className="text-lg font-bold">{paymentData.pay_amount} {paymentData.pay_currency?.toUpperCase()}</span>
+              <span className="font-mono font-bold">{paymentData.pay_amount} {paymentData.pay_currency?.toUpperCase()}</span>
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground text-right">
               Original: {currency.toUpperCase()} {amount.toFixed(2)}
             </div>
           </div>
 
           {/* Payment address */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold block">Send to this address</label>
-            <div className="bg-background border border-border rounded-lg p-3 flex items-stretch gap-2">
-              <code className="text-xs font-mono flex-1 break-all text-foreground self-center">
+          <div className="mb-4">
+            <span className="text-sm text-muted-foreground">Send to this address</span>
+            <div className="flex items-center gap-2 mt-1">
+              <code className="text-xs bg-muted p-2 rounded flex-1 break-all">
                 {paymentData.pay_address}
               </code>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="shrink-0 hover:bg-secondary" 
-                onClick={() => copyToClipboard(paymentData.pay_address, "Address")}
-              >
+              <Button variant="ghost" size="icon" onClick={() => copyToClipboard(paymentData.pay_address, "Address")}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -226,54 +237,40 @@ const NowPaymentsCheckout = ({
 
           {/* Memo/Tag if present */}
           {paymentData.payin_extra_id && (
-            <div className="space-y-2">
-              <label className="text-sm font-semibold block">Memo / Payment ID</label>
-              <div className="bg-background border border-border rounded-lg p-3 flex items-stretch gap-2">
-                <code className="text-xs font-mono flex-1 break-all text-foreground self-center">
+            <div className="mb-4">
+              <span className="text-sm text-muted-foreground">Memo / Payment ID</span>
+              <div className="flex items-center gap-2 mt-1">
+                <code className="text-xs bg-muted p-2 rounded flex-1 break-all">
                   {paymentData.payin_extra_id}
                 </code>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="shrink-0 hover:bg-secondary" 
-                  onClick={() => copyToClipboard(paymentData.payin_extra_id, "Memo")}
-                >
+                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(paymentData.payin_extra_id, "Memo")}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Include this memo with your payment</p>
+              <p className="text-xs text-destructive mt-1">Include this memo with your payment</p>
             </div>
           )}
 
           {/* Status badge */}
-          <div className="flex items-center justify-between py-2 border-t border-border pt-3">
+          <div className="mb-4 flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Payment Status</span>
-            <Badge variant="outline" className="text-xs">
-              {paymentData.payment_status || "waiting"}
-            </Badge>
+            <Badge variant="outline">{paymentData.payment_status || "waiting"}</Badge>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => { 
-                setPaymentData(null); 
-                setShowForm(false); 
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPaymentData(null);
+                setShowForm(false);
                 setEstimatedAmount(null);
-                onPaymentClose?.(); 
+                onPaymentClose?.();
               }}
             >
               Cancel
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleCheckStatus} 
-              disabled={checkingStatus} 
-              className="flex-1"
-            >
+            <Button onClick={handleCheckStatus} disabled={checkingStatus}>
               {checkingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Check Status
             </Button>
@@ -285,26 +282,28 @@ const NowPaymentsCheckout = ({
 
   // Crypto selection form
   return (
-    <Card className="border-primary/20">
-      <CardHeader className="pb-3">
+    <Card>
+      <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Bitcoin className="h-4 w-4 text-primary" />
+          <CardTitle className="flex items-center gap-2">
+            <Bitcoin className="h-5 w-5" />
             Select Cryptocurrency
           </CardTitle>
-          <button 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setShowForm(false)}
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <label className="text-sm font-semibold mb-2 block">Choose crypto to pay with</label>
+      <CardContent>
+        <div className="mb-4">
+          <span className="text-sm text-muted-foreground">Choose crypto to pay with</span>
           <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-            <SelectTrigger className="h-11">
+            <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -316,21 +315,21 @@ const NowPaymentsCheckout = ({
         </div>
 
         {/* Price summary */}
-        <div className="bg-muted/50 rounded-lg p-4 border border-border space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Fiat Amount</span>
-            <span className="font-semibold">{currency.toUpperCase()} {amount.toFixed(2)}</span>
+        <div className="mb-4 space-y-2">
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Fiat Amount</span>
+            <span className="font-mono">{currency.toUpperCase()} {amount.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-sm font-bold border-t border-border pt-2">
-            <span>You'll send</span>
-            <span className="flex items-center gap-1">
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">You'll send</span>
+            <span className="font-mono">
               {estimating && !estimatedAmount ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {prevEstimatedAmount && <span className="opacity-50">≈ {prevEstimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</span>}
+                  <Loader2 className="inline h-3 w-3 animate-spin mr-1" />
+                  {prevEstimatedAmount && <span>≈ {prevEstimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</span>}
                 </>
               ) : estimateError ? (
-                <span className="text-xs text-red-500">{estimateError}</span>
+                <span className="text-destructive text-xs">{estimateError}</span>
               ) : estimatedAmount ? (
                 <>≈ {estimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</>
               ) : (
@@ -341,20 +340,11 @@ const NowPaymentsCheckout = ({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowForm(false)} 
-            disabled={processing}
-          >
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowForm(false)} disabled={processing}>
             Cancel
           </Button>
-          <Button 
-            className="flex-1 bg-primary hover:bg-primary/90" 
-            onClick={handleCreatePayment} 
-            disabled={processing || estimateError !== null || (estimating && !estimatedAmount && !prevEstimatedAmount)}
-          >
+          <Button onClick={handleCreatePayment} disabled={processing || !estimatedAmount || !!estimateError}>
             {processing ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
             ) : estimateError ? (
@@ -370,4 +360,3 @@ const NowPaymentsCheckout = ({
 };
 
 export default NowPaymentsCheckout;
- 
