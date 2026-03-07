@@ -46,6 +46,7 @@ const NowPaymentsCheckout = ({
   const [processing, setProcessing] = useState(false);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [prevEstimatedAmount, setPrevEstimatedAmount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!showForm || paymentData) return;
@@ -56,7 +57,11 @@ const NowPaymentsCheckout = ({
       try {
         const data = await getNowPaymentsEstimate(amount, currency, selectedCrypto);
         if (!cancelled) {
-          setEstimatedAmount(data.estimated_amount || null);
+          const newAmount = data.estimated_amount || null;
+          setEstimatedAmount(newAmount);
+          if (newAmount !== null) {
+            setPrevEstimatedAmount(newAmount);
+          }
         }
       } catch (err: any) {
         console.error("Estimate error:", err);
@@ -308,8 +313,11 @@ const NowPaymentsCheckout = ({
           <div className="flex justify-between text-sm font-bold border-t border-border pt-2">
             <span>You'll send</span>
             <span className="flex items-center gap-1">
-              {estimating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+              {estimating && !estimatedAmount ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {prevEstimatedAmount && <span className="opacity-50">≈ {prevEstimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</span>}
+                </>
               ) : estimatedAmount ? (
                 <>≈ {estimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</>
               ) : (
@@ -332,7 +340,7 @@ const NowPaymentsCheckout = ({
           <Button 
             className="flex-1 bg-primary hover:bg-primary/90" 
             onClick={handleCreatePayment} 
-            disabled={processing || !estimatedAmount}
+            disabled={processing || (!estimatedAmount && estimating)}
           >
             {processing ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
