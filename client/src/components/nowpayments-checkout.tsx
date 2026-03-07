@@ -43,6 +43,7 @@ const NowPaymentsCheckout = ({
   const [selectedCrypto, setSelectedCrypto] = useState("btc");
   const [estimatedAmount, setEstimatedAmount] = useState<number | null>(null);
   const [estimating, setEstimating] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
@@ -54,18 +55,28 @@ const NowPaymentsCheckout = ({
 
     const fetchEstimate = async () => {
       setEstimating(true);
+      setEstimateError(null);
       try {
         const data = await getNowPaymentsEstimate(amount, currency, selectedCrypto);
         if (!cancelled) {
-          const newAmount = data.estimated_amount || null;
-          setEstimatedAmount(newAmount);
-          if (newAmount !== null) {
-            setPrevEstimatedAmount(newAmount);
+          if (data.error) {
+            setEstimateError(data.error);
+            setEstimatedAmount(null);
+          } else {
+            const newAmount = data.estimated_amount || null;
+            setEstimatedAmount(newAmount);
+            setEstimateError(null);
+            if (newAmount !== null) {
+              setPrevEstimatedAmount(newAmount);
+            }
           }
         }
       } catch (err: any) {
         console.error("Estimate error:", err);
-        if (!cancelled) setEstimatedAmount(null);
+        if (!cancelled) {
+          setEstimateError(err.message || "Failed to fetch price estimate");
+          setEstimatedAmount(null);
+        }
       } finally {
         if (!cancelled) setEstimating(false);
       }
@@ -318,6 +329,8 @@ const NowPaymentsCheckout = ({
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {prevEstimatedAmount && <span className="opacity-50">≈ {prevEstimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</span>}
                 </>
+              ) : estimateError ? (
+                <span className="text-xs text-red-500">{estimateError}</span>
               ) : estimatedAmount ? (
                 <>≈ {estimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</>
               ) : (
@@ -340,10 +353,12 @@ const NowPaymentsCheckout = ({
           <Button 
             className="flex-1 bg-primary hover:bg-primary/90" 
             onClick={handleCreatePayment} 
-            disabled={processing || (!estimatedAmount && estimating)}
+            disabled={processing || estimateError !== null || (estimating && !estimatedAmount && !prevEstimatedAmount)}
           >
             {processing ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
+            ) : estimateError ? (
+              "Failed to load price"
             ) : (
               <><Bitcoin className="mr-2 h-4 w-4" /> Get Payment Address</>
             )}
