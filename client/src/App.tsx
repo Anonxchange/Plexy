@@ -39,6 +39,7 @@ const ProductDetail = lazy(() => import("@/pages/product-detail").then(m => ({ d
 const GiftCards = lazy(() => import("@/pages/gift-cards").then(m => ({ default: m.GiftCards })));
 const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => ({ default: m.GiftCardDetail })));
 const TradeHistory = lazy(() => import("@/pages/trade-history").then(m => ({ default: m.TradeHistory })));
+const Checkout = lazy(() => import("@/pages/checkout").then(m => ({ default: m.Checkout })));
 const VisaCard = lazy(() => import("@/pages/visa-card"));
 const VisaCardDetails = lazy(() => import("@/pages/visa-card-details"));
 const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
@@ -146,6 +147,7 @@ function Router() {
       <Route path="/buy-crypto">{() => <LazyRoute component={BuyCrypto} />}</Route>
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCards} />}</Route>
       <Route path="/gift-cards/:id">{() => <LazyRoute component={GiftCardDetail} />}</Route>
+      <Route path="/checkout">{() => <LazyRoute component={Checkout} />}</Route>
       <Route path="/trade-history">{() => <LazyRoute component={TradeHistory} />}</Route>
       <Route path="/account-settings">{() => <LazyRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/devices" component={DevicesPage} />
