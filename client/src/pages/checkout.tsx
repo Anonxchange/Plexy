@@ -257,12 +257,11 @@ export function Checkout() {
                 </Button>
               </TabsContent>
 
-              <TabsContent value="crypto" className="p-6 space-y-6">
+              <TabsContent value="crypto" className="p-6 text-center space-y-6">
                 <NowPaymentsCheckout
                   amount={total}
                   currency="usd"
                   description={`Gift card purchase - ${items.length} item(s)`}
-                  buttonLabel="Pay with Crypto"
                   metadata={{
                     service: "gift-cards",
                     orderId: `order_${Date.now()}`,
