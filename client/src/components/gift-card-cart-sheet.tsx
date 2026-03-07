@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Minus, Plus, Trash2, Lock, Star, ShoppingBag } from "lucide-react";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { useLocation } from "wouter";
 
 export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const { items, updateQuantity, removeItem } = useGiftCardCart();
 
   const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const [, setLocation] = useLocation();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -113,7 +115,13 @@ export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpe
             <span className="text-xl font-bold">${total.toFixed(2)}</span>
           </div>
 
-          <Button className="w-full h-14 bg-gradient-to-r from-orange-400 to-yellow-500 text-white font-bold text-lg rounded-xl shadow-lg shadow-orange-500/20 gap-2">
+          <Button 
+            onClick={() => {
+              onOpenChange(false);
+              setLocation("/checkout");
+            }}
+            className="w-full h-14 bg-gradient-to-r from-orange-400 to-yellow-500 text-white font-bold text-lg rounded-xl shadow-lg shadow-orange-500/20 gap-2"
+          >
             <Lock className="h-5 w-5" />
             Checkout
           </Button>
