@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import NowPaymentsCheckout from "@/components/nowpayments-checkout";
 import { 
   ArrowLeft, 
   Star, 
@@ -256,11 +257,24 @@ export function Checkout() {
                 </Button>
               </TabsContent>
 
-              <TabsContent value="crypto" className="p-6 text-center space-y-6">
-                <p className="text-muted-foreground">Pay with Bitcoin, Ethereum, or USDT instantly.</p>
-                <Button className="w-full h-14 bg-foreground text-background hover:opacity-90 font-bold text-lg rounded-xl gap-2">
-                  Pay with Crypto
-                </Button>
+              <TabsContent value="crypto" className="p-6 space-y-6">
+                <NowPaymentsCheckout
+                  amount={total}
+                  currency="usd"
+                  description={`Gift card purchase - ${items.length} item(s)`}
+                  buttonLabel="Pay with Crypto"
+                  metadata={{
+                    service: "gift-cards",
+                    orderId: `order_${Date.now()}`,
+                    items: items.length,
+                  }}
+                  onPaymentSuccess={(paymentData) => {
+                    console.log("Payment successful:", paymentData);
+                  }}
+                  onPaymentClose={() => {
+                    console.log("Payment cancelled");
+                  }}
+                />
               </TabsContent>
 
               <TabsContent value="oxxo" className="p-6 text-center space-y-6">
