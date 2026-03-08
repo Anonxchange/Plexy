@@ -39,6 +39,7 @@ const NowPaymentsCheckout = ({
   disabled,
   metadata,
 }: NowPaymentsCheckoutProps) => {
+  const numericAmount = typeof amount === "number" ? amount : parseFloat(String(amount) || "0");
   const [showForm, setShowForm] = useState(false);
   const [selectedCrypto, setSelectedCrypto] = useState("btc");
   const [estimatedAmount, setEstimatedAmount] = useState<number | null>(null);
@@ -57,7 +58,7 @@ const NowPaymentsCheckout = ({
       setEstimating(true);
       setEstimateError(null);
       try {
-        const data = await getNowPaymentsEstimate(amount, currency, selectedCrypto);
+        const data = await getNowPaymentsEstimate(numericAmount, currency, selectedCrypto);
         if (!cancelled) {
           if (data.error) {
             setEstimateError(data.error);
@@ -87,7 +88,7 @@ const NowPaymentsCheckout = ({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [showForm, selectedCrypto, amount, currency, paymentData]);
+  }, [showForm, selectedCrypto, numericAmount, currency, paymentData]);
 
   const handleCreatePayment = async () => {
     if (!estimatedAmount && !prevEstimatedAmount) {
@@ -107,7 +108,7 @@ const NowPaymentsCheckout = ({
       const ipnUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://hvpeycnedmzrjshmvgri.supabase.co"}/functions/v1/nowpayments-webhook`;
 
       const data = await createNowPayment({
-        priceAmount: amount,
+        priceAmount: numericAmount,
         priceCurrency: currency,
         payCurrency: selectedCrypto,
         orderId: structuredOrderId,
@@ -207,7 +208,7 @@ const NowPaymentsCheckout = ({
               <span className="text-lg font-bold">{paymentData.pay_amount} {paymentData.pay_currency?.toUpperCase()}</span>
             </div>
             <div className="text-xs text-muted-foreground">
-              Original: {currency.toUpperCase()} {amount.toFixed(2)}
+              Original: {currency.toUpperCase()} {numericAmount.toFixed(2)}
             </div>
           </div>
 
@@ -324,7 +325,7 @@ const NowPaymentsCheckout = ({
         <div className="bg-muted/50 rounded-lg p-4 border border-border space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Fiat Amount</span>
-            <span className="font-semibold">{currency.toUpperCase()} {amount.toFixed(2)}</span>
+            <span className="font-semibold">{currency.toUpperCase()} {numericAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm font-bold border-t border-border pt-2 min-h-6">
             <span>You'll send</span>
