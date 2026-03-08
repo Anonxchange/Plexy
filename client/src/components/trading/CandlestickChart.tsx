@@ -9,9 +9,21 @@ const CandlestickChart = () => {
     if (!containerRef.current) return;
     containerRef.current.innerHTML = "";
 
+    const widgetContainer = document.createElement("div");
+    widgetContainer.className = "tradingview-widget-container";
+    widgetContainer.style.height = "100%";
+    widgetContainer.style.width = "100%";
+
+    const innerDiv = document.createElement("div");
+    innerDiv.className = "tradingview-widget-container__widget";
+    innerDiv.style.height = "100%";
+    innerDiv.style.width = "100%";
+
+    widgetContainer.appendChild(innerDiv);
+    containerRef.current.appendChild(widgetContainer);
+
     const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    script.type = "application/json";
+    script.type = "text/x-tradingview-widget";
     script.async = true;
     script.textContent = JSON.stringify({
       autosize: true,
@@ -34,13 +46,12 @@ const CandlestickChart = () => {
       support_host: "https://www.tradingview.com",
     });
 
-    const widgetContainer = document.createElement("div");
-    widgetContainer.className = "tradingview-widget-container__widget";
-    widgetContainer.style.height = "100%";
-    widgetContainer.style.width = "100%";
-
-    containerRef.current.appendChild(widgetContainer);
     containerRef.current.appendChild(script);
+
+    const loaderScript = document.createElement("script");
+    loaderScript.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    loaderScript.async = true;
+    containerRef.current.appendChild(loaderScript);
 
     return () => {
       if (containerRef.current) {
