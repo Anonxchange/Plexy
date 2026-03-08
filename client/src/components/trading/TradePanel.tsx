@@ -359,7 +359,7 @@ const TradePanel = () => {
         </div>
 
         {/* Connect button */}
-        <button className="w-full py-3 rounded-lg bg-trading-amber text-primary-foreground text-sm font-semibold mt-2">
+        <button className="w-full py-3 rounded-lg bg-lime text-black text-sm font-semibold mt-2 hover:opacity-90">
           Connect
         </button>
       </div>
