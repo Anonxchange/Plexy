@@ -5,7 +5,7 @@ import BottomTabs from "@/components/trading/BottomTabs";
 import DesktopTradingLayout from "@/components/trading/DesktopTradingLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const spot = () => {
+const Spot = () => {
   const [chartVisible, setChartVisible] = useState(true);
   const isMobile = useIsMobile();
 
