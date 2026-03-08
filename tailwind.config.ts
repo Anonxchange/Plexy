@@ -93,6 +93,9 @@ export default {
         indigo: {
           deep: "#2E1A5E",
         },
+        "trading-green": "#4ADE80",
+        "trading-red": "#EF4444",
+        "trading-amber": "#F59E0B",
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
