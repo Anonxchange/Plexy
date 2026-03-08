@@ -9,9 +9,10 @@ const chartTabs = ["Chart", "Order book", "Trades", "Depth", "Info"];
 
 interface BottomTabsProps {
   chartVisible: boolean;
+  pair: string;
 }
 
-const BottomTabs = ({ chartVisible }: BottomTabsProps) => {
+const BottomTabs = ({ chartVisible, pair }: BottomTabsProps) => {
   const [viewMode, setViewMode] = useState<"list" | "chart">("list");
   const [activeOrderTab, setActiveOrderTab] = useState("Open orders");
   const [activeChartTab, setActiveChartTab] = useState("Chart");
@@ -27,7 +28,7 @@ const BottomTabs = ({ chartVisible }: BottomTabsProps) => {
         <>
           {chartVisible && (
             <div className="h-[350px] flex-shrink-0">
-              <CandlestickChart />
+              <CandlestickChart pair={pair} />
             </div>
           )}
           <div className="flex border-t border-border flex-shrink-0 w-full min-w-0">
@@ -75,7 +76,7 @@ const BottomTabs = ({ chartVisible }: BottomTabsProps) => {
           </div>
 
           <div className="h-[400px] flex-shrink-0">
-            <CandlestickChart />
+            <CandlestickChart pair={pair} />
           </div>
           <div className="flex items-center justify-center gap-3 px-4 py-2 text-xs text-muted-foreground border-t border-border">
             <span className="font-mono-num">17:14:08 (UTC+1)</span>
