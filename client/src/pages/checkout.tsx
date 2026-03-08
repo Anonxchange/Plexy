@@ -57,7 +57,11 @@ export function Checkout() {
     );
   }
 
-  const subtotal = items?.reduce((acc, item) => acc + (item?.price || 0) * (item?.quantity || 0), 0) || 0;
+  const subtotal = items?.reduce((acc, item) => {
+    const price = typeof item?.price === 'number' ? item.price : parseFloat(String(item?.price || 0));
+    const quantity = typeof item?.quantity === 'number' ? item.quantity : parseInt(String(item?.quantity || 0));
+    return acc + (price * quantity);
+  }, 0) || 0;
   const processingFee = 2.99;
   const total = subtotal + processingFee;
   const rewardPoints = Math.floor(subtotal * 10);
@@ -127,7 +131,7 @@ export function Checkout() {
                         <Trash2 className="h-5 w-5" />
                       </button>
                       <span className="text-lg font-bold">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        ${(((typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0))) * (typeof item.quantity === 'number' ? item.quantity : parseInt(String(item.quantity || 0))))).toFixed(2))}
                       </span>
                     </div>
                   </div>
