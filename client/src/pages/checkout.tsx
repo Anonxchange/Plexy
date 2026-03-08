@@ -131,8 +131,8 @@ export function Checkout() {
                         <Trash2 className="h-5 w-5" />
                       </button>
                       <span className="text-lg font-bold">
-                        ${(((typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0))) * (typeof item.quantity === 'number' ? item.quantity : parseInt(String(item.quantity || 0))))).toFixed(2))}
-                      </span>
+  {(Number(item.price) * Number(item.quantity || 0)).toFixed(2)}
+</span>
                     </div>
                   </div>
                 </div>
