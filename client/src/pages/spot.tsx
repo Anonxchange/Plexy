@@ -22,4 +22,4 @@ const spot = () => {
   );
 };
 
-export default spot;
+export default Spot;
