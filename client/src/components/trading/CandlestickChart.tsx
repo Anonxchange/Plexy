@@ -11,9 +11,9 @@ const CandlestickChart = () => {
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    script.type = "text/javascript";
+    script.type = "application/json";
     script.async = true;
-    script.innerHTML = JSON.stringify({
+    script.textContent = JSON.stringify({
       autosize: true,
       symbol: "BINANCE:BTCUSDT",
       interval: "D",
