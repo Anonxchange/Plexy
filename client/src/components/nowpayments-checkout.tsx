@@ -52,6 +52,11 @@ const NowPaymentsCheckout = ({
 
   useEffect(() => {
     if (!showForm || paymentData) return;
+    if (!numericAmount || numericAmount <= 0) {
+      setEstimateError("Invalid amount");
+      setEstimatedAmount(null);
+      return;
+    }
     let cancelled = false;
 
     const fetchEstimate = async () => {
@@ -61,14 +66,18 @@ const NowPaymentsCheckout = ({
         const data = await getNowPaymentsEstimate(numericAmount, currency, selectedCrypto);
         if (!cancelled) {
           if (data.error) {
-            setEstimateError(data.error);
+            setEstimateError(typeof data.error === "string" ? data.error : JSON.stringify(data.error));
             setEstimatedAmount(null);
           } else {
-            const newAmount = data.estimated_amount || null;
-            setEstimatedAmount(newAmount);
-            setEstimateError(null);
-            if (newAmount !== null) {
+            const raw = data.estimated_amount;
+            const newAmount = typeof raw === "number" ? raw : Number(raw);
+            if (!isNaN(newAmount) && newAmount > 0) {
+              setEstimatedAmount(newAmount);
               setPrevEstimatedAmount(newAmount);
+              setEstimateError(null);
+            } else {
+              setEstimatedAmount(null);
+              setEstimateError("Amount too small or unsupported pair");
             }
           }
         }
@@ -158,26 +167,33 @@ const NowPaymentsCheckout = ({
     toast.success("Copied!", { description: `${label} copied to clipboard` });
   };
 
-  // Initial state - show description and button like PayPal
+  const safeFixed = (val: number | null, digits: number) => {
+    if (val === null || val === undefined || isNaN(val)) return "—";
+    return Number(val).toFixed(digits);
+  };
+
+  // Initial state
   if (!showForm && !paymentData) {
     return (
-      <div className="text-center space-y-6">
-        <p className="text-muted-foreground">
+      <div>
+        <p className="text-sm text-muted-foreground mb-3">
           Pay with Bitcoin, Ethereum, USDT, TRON, and 6+ more cryptocurrencies instantly. Secure and fast.
         </p>
-        <Button 
-          className="w-full h-14 bg-black text-white hover:bg-gray-900 font-bold text-lg rounded-xl gap-2"
+        <Button
+          variant="outline"
+          className="w-full border-primary/30 hover:bg-primary/5"
+          size="lg"
           onClick={() => setShowForm(true)}
           disabled={disabled}
         >
-          <Bitcoin className="h-5 w-5" />
+          <Bitcoin className="mr-2 h-4 w-4" />
           Continue to Crypto
         </Button>
       </div>
     );
   }
 
-  // Payment created state - show address and amount
+  // Payment created state
   if (paymentData) {
     return (
       <Card className="border-primary/20">
@@ -187,7 +203,9 @@ const NowPaymentsCheckout = ({
               <Bitcoin className="h-4 w-4 text-primary" />
               Send {paymentData.pay_currency?.toUpperCase()} Payment
             </CardTitle>
-            <button 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => { 
                 setPaymentData(null); 
                 setShowForm(false); 
@@ -197,53 +215,40 @@ const NowPaymentsCheckout = ({
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Amount to send */}
-          <div className="bg-muted/50 rounded-lg p-4 border border-border">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-sm text-muted-foreground">Amount to send</span>
-              <span className="text-lg font-bold">{paymentData.pay_amount} {paymentData.pay_currency?.toUpperCase()}</span>
+        <CardContent className="space-y-3">
+          <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Amount to send</span>
+              <span className="font-mono font-semibold">{paymentData.pay_amount} {paymentData.pay_currency?.toUpperCase()}</span>
             </div>
             <div className="text-xs text-muted-foreground">
-              Original: {currency.toUpperCase()} {numericAmount.toFixed(2)}
+              Original: {currency.toUpperCase()} {safeFixed(numericAmount, 2)}
             </div>
           </div>
 
-          {/* Payment address */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold block">Send to this address</label>
-            <div className="bg-background border border-border rounded-lg p-3 flex items-stretch gap-2">
-              <code className="text-xs font-mono flex-1 break-all text-foreground self-center">
+          <div className="space-y-1">
+            <span className="text-xs text-muted-foreground">Send to this address</span>
+            <div className="flex items-center gap-2">
+              <code className="text-xs bg-background p-2 rounded flex-1 break-all border border-border">
                 {paymentData.pay_address}
               </code>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="shrink-0 hover:bg-secondary" 
-                onClick={() => copyToClipboard(paymentData.pay_address, "Address")}
-              >
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => copyToClipboard(paymentData.pay_address, "Address")}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          {/* Memo/Tag if present */}
           {paymentData.payin_extra_id && (
-            <div className="space-y-2">
-              <label className="text-sm font-semibold block">Memo / Payment ID</label>
-              <div className="bg-background border border-border rounded-lg p-3 flex items-stretch gap-2">
-                <code className="text-xs font-mono flex-1 break-all text-foreground self-center">
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Memo / Payment ID</span>
+              <div className="flex items-center gap-2">
+                <code className="text-xs bg-background p-2 rounded flex-1 break-all border border-border">
                   {paymentData.payin_extra_id}
                 </code>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="shrink-0 hover:bg-secondary" 
-                  onClick={() => copyToClipboard(paymentData.payin_extra_id, "Memo")}
-                >
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => copyToClipboard(paymentData.payin_extra_id, "Memo")}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
@@ -251,35 +256,23 @@ const NowPaymentsCheckout = ({
             </div>
           )}
 
-          {/* Status badge */}
-          <div className="flex items-center justify-between py-2 border-t border-border pt-3">
-            <span className="text-sm text-muted-foreground">Payment Status</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Payment Status</span>
             <Badge variant="outline" className="text-xs">
               {paymentData.payment_status || "waiting"}
             </Badge>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => { 
-                setPaymentData(null); 
-                setShowForm(false); 
-                setEstimatedAmount(null);
-                onPaymentClose?.(); 
-              }}
-            >
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { 
+              setPaymentData(null); 
+              setShowForm(false); 
+              setEstimatedAmount(null);
+              onPaymentClose?.(); 
+            }}>
               Cancel
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleCheckStatus} 
-              disabled={checkingStatus} 
-              className="flex-1"
-            >
+            <Button variant="outline" size="sm" onClick={handleCheckStatus} disabled={checkingStatus} className="flex-1">
               {checkingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Check Status
             </Button>
@@ -298,19 +291,21 @@ const NowPaymentsCheckout = ({
             <Bitcoin className="h-4 w-4 text-primary" />
             Select Cryptocurrency
           </CardTitle>
-          <button 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setShowForm(false)}
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         <div>
-          <label className="text-sm font-semibold mb-2 block">Choose crypto to pay with</label>
+          <label className="text-xs text-muted-foreground mb-1 block">Choose crypto to pay with</label>
           <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-            <SelectTrigger className="h-11">
+            <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -321,54 +316,43 @@ const NowPaymentsCheckout = ({
           </Select>
         </div>
 
-        {/* Price summary */}
-        <div className="bg-muted/50 rounded-lg p-4 border border-border space-y-2">
+        <div className="bg-muted/50 rounded-lg p-3 space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Fiat Amount</span>
-            <span className="font-semibold">{currency.toUpperCase()} {numericAmount.toFixed(2)}</span>
+            <span>{currency.toUpperCase()} {safeFixed(numericAmount, 2)}</span>
           </div>
-          <div className="flex justify-between text-sm font-bold border-t border-border pt-2 min-h-6">
+          <div className="flex justify-between text-sm font-semibold border-t border-border pt-1">
             <span>You'll send</span>
-            <span className="flex items-center gap-1 justify-end">
+            <span>
               {estimating ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
                   {prevEstimatedAmount ? (
-                    <span className="opacity-60">≈ {prevEstimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</span>
+                    <>≈ {safeFixed(prevEstimatedAmount, 8)} {selectedCrypto.toUpperCase()}</>
                   ) : (
-                    <span className="text-sm text-muted-foreground">Calculating...</span>
+                    <>Calculating...</>
                   )}
                 </>
               ) : estimateError ? (
-                <span className="text-xs text-red-500 text-right max-w-xs">{estimateError}</span>
+                <span className="text-destructive text-xs">{estimateError}</span>
               ) : estimatedAmount ? (
-                <span>≈ {estimatedAmount.toFixed(8)} {selectedCrypto.toUpperCase()}</span>
+                <>≈ {safeFixed(estimatedAmount, 8)} {selectedCrypto.toUpperCase()}</>
               ) : (
-                <span className="text-muted-foreground">—</span>
+                <>—</>
               )}
             </span>
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowForm(false)} 
-            disabled={processing}
-          >
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setShowForm(false)} disabled={processing}>
             Cancel
           </Button>
-          <Button 
-            className="flex-1 bg-primary hover:bg-primary/90" 
-            onClick={handleCreatePayment} 
-            disabled={processing || estimateError !== null || (estimating && !estimatedAmount && !prevEstimatedAmount)}
-          >
+          <Button className="flex-1" onClick={handleCreatePayment} disabled={processing || (!estimatedAmount && !prevEstimatedAmount) || !!estimateError}>
             {processing ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
             ) : estimateError ? (
-              "Failed to load price"
+              <>Failed to load price</>
             ) : (
               <><Bitcoin className="mr-2 h-4 w-4" /> Get Payment Address</>
             )}
@@ -380,4 +364,3 @@ const NowPaymentsCheckout = ({
 };
 
 export default NowPaymentsCheckout;
- 
