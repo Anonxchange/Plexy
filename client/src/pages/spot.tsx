@@ -10,14 +10,16 @@ export const Spot = () => {
   const isMobile = useIsMobile();
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-x-hidden w-full max-w-full">
+    <div className="flex flex-col h-screen bg-background overflow-hidden w-full max-w-full">
       <AccountBar />
       <PairInfo chartVisible={chartVisible} onToggleChart={() => setChartVisible(!chartVisible)} />
-      {isMobile ? (
-        <BottomTabs chartVisible={chartVisible} />
-      ) : (
-        <DesktopTradingLayout chartVisible={chartVisible} />
-      )}
+      <div className="flex-1 overflow-y-auto">
+        {isMobile ? (
+          <BottomTabs chartVisible={chartVisible} />
+        ) : (
+          <DesktopTradingLayout chartVisible={chartVisible} />
+        )}
+      </div>
     </div>
   );
 };
