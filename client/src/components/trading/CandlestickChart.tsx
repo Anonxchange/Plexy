@@ -20,12 +20,12 @@ const CandlestickChart = () => {
     innerDiv.style.width = "100%";
 
     widgetContainer.appendChild(innerDiv);
-    containerRef.current.appendChild(widgetContainer);
 
     const script = document.createElement("script");
-    script.type = "text/x-tradingview-widget";
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.type = "text/javascript";
     script.async = true;
-    script.textContent = JSON.stringify({
+    script.innerHTML = JSON.stringify({
       autosize: true,
       symbol: "BINANCE:BTCUSDT",
       interval: "D",
@@ -46,12 +46,8 @@ const CandlestickChart = () => {
       support_host: "https://www.tradingview.com",
     });
 
-    containerRef.current.appendChild(script);
-
-    const loaderScript = document.createElement("script");
-    loaderScript.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    loaderScript.async = true;
-    containerRef.current.appendChild(loaderScript);
+    widgetContainer.appendChild(script);
+    containerRef.current.appendChild(widgetContainer);
 
     return () => {
       if (containerRef.current) {
@@ -62,11 +58,10 @@ const CandlestickChart = () => {
 
   return (
     <div className="relative flex-1 min-h-0 h-full">
-      <div className="tradingview-widget-container h-full w-full" ref={containerRef} />
-      {/* Custom toggle arrow */}
+      <div ref={containerRef} className="h-full w-full" />
       <button
         onClick={() => setToolsVisible(!toolsVisible)}
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-card/90 border border-l-0 border-border rounded-r-md py-4 px-0.5 text-muted-foreground hover:text-foreground transition-colors"
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-card/90 border border-l-0 border-border rounded-r-md py-4 px-0.5 text-muted-foreground hover:text-foreground transition-colors"
       >
         {toolsVisible ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
       </button>
