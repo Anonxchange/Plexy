@@ -8,9 +8,10 @@ const orderTabs = ["Open orders", "Positions", "Assets", "TWAP"];
 
 interface DesktopTradingLayoutProps {
   chartVisible: boolean;
+  pair: string;
 }
 
-const DesktopTradingLayout = ({ chartVisible }: DesktopTradingLayoutProps) => {
+const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps) => {
   const [activeTab, setActiveTab] = useState("Open orders");
 
   return (
@@ -21,7 +22,7 @@ const DesktopTradingLayout = ({ chartVisible }: DesktopTradingLayoutProps) => {
         <div className="flex-1 min-w-0 flex flex-col">
           {chartVisible && (
             <div className="flex-1 min-h-[400px]">
-              <CandlestickChart />
+              <CandlestickChart pair={pair} />
             </div>
           )}
 
