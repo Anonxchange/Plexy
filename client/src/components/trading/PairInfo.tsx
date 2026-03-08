@@ -4,18 +4,19 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import SymbolSelector from "./SymbolSelector";
 
 interface PairInfoProps {
+  pair: string;
+  onPairChange: (pair: string) => void;
   chartVisible: boolean;
   onToggleChart: () => void;
 }
 
-const PairInfo = ({ chartVisible, onToggleChart }: PairInfoProps) => {
+const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoProps) => {
   const [selectorOpen, setSelectorOpen] = useState(false);
-  const [pair, setPair] = useState("ASTER/USDT");
   const isMobile = useIsMobile();
 
   return (
     <>
-      <div className="flex items-center gap-2 md:gap-4 h-16 md:h-[68px] px-3 md:px-5 border-b border-border bg-background">
+      <div className="flex items-center gap-2 md:gap-4 h-20 md:h-[84px] px-3 md:px-5 border-b border-border bg-background">
         {/* Clickable pair area */}
         <button
           onClick={() => setSelectorOpen(true)}
@@ -74,7 +75,7 @@ const PairInfo = ({ chartVisible, onToggleChart }: PairInfoProps) => {
       <SymbolSelector
         open={selectorOpen}
         onClose={() => setSelectorOpen(false)}
-        onSelect={(symbol) => setPair(symbol)}
+        onSelect={onPairChange}
       />
     </>
   );
