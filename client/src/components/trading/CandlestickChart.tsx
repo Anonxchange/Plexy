@@ -68,7 +68,7 @@ const CandlestickChart = () => {
         onClick={() => setToolsVisible(!toolsVisible)}
         className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-card/90 border border-l-0 border-border rounded-r-md py-4 px-0.5 text-muted-foreground hover:text-foreground transition-colors"
       >
-        {toolsVisible ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        {toolsVisible ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
     </div>
   );
