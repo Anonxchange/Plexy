@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const CandlestickChart = () => {
+interface CandlestickChartProps {
+  pair?: string;
+}
+
+const CandlestickChart = ({ pair = "BTC/USDT" }: CandlestickChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolsVisible, setToolsVisible] = useState(false);
 
@@ -27,7 +31,7 @@ const CandlestickChart = () => {
     script.async = true;
     script.innerHTML = JSON.stringify({
       autosize: true,
-      symbol: "BINANCE:BTCUSDT",
+      symbol: `BINANCE:${pair.replace("/", "")}`,
       interval: "D",
       timezone: "Etc/UTC",
       theme: "light",
@@ -36,7 +40,7 @@ const CandlestickChart = () => {
       backgroundColor: "rgba(255, 255, 255, 1)",
       gridColor: "rgba(240, 240, 240, 1)",
       hide_top_toolbar: false,
-      hide_legend: false,
+      hide_legend: true,
       hide_side_toolbar: !toolsVisible,
       allow_symbol_change: false,
       save_image: false,
@@ -54,7 +58,7 @@ const CandlestickChart = () => {
         containerRef.current.innerHTML = "";
       }
     };
-  }, [toolsVisible]);
+  }, [toolsVisible, pair]);
 
   return (
     <div className="relative flex-1 min-h-0 h-full">
