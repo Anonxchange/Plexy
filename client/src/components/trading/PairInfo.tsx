@@ -16,13 +16,14 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
 
   return (
     <>
-      <div className="flex items-center gap-2 md:gap-4 h-20 md:h-[84px] px-3 md:px-5 border-b border-border bg-background">
+      <div className="flex flex-wrap items-center gap-2 md:gap-4 px-3 md:px-5 py-3 border-b border-border bg-background">
+
         {/* Clickable pair area */}
         <button
           onClick={() => setSelectorOpen(true)}
-          className="flex items-center gap-2 md:gap-4"
+          className="flex items-center gap-2 md:gap-4 flex-shrink-0"
         >
-          <div className="w-8 md:w-10 h-8 md:h-10 rounded-full bg-trading-amber/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 md:w-10 h-8 md:h-10 rounded-full bg-trading-amber/20 flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="3" fill="hsl(36, 80%, 55%)" />
               <circle cx="12" cy="4" r="2" fill="hsl(36, 80%, 55%)" />
@@ -31,8 +32,15 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
               <circle cx="20" cy="12" r="2" fill="hsl(36, 80%, 55%)" />
             </svg>
           </div>
-          <span className="text-foreground font-bold text-base md:text-xl tracking-tight">{pair}</span>
-          <span className="text-[10px] md:text-xs px-1.5 md:px-2.5 py-0.5 md:py-1 rounded bg-secondary text-muted-foreground">Spot</span>
+
+          <span className="text-foreground font-bold text-base md:text-xl tracking-tight">
+            {pair}
+          </span>
+
+          <span className="text-[10px] md:text-xs px-1.5 md:px-2.5 py-0.5 md:py-1 rounded bg-secondary text-muted-foreground">
+            Spot
+          </span>
+
           {selectorOpen ? (
             <ChevronUp className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground" />
           ) : (
@@ -40,23 +48,28 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
           )}
         </button>
 
-        <span className="font-mono-num text-xs md:text-sm text-trading-amber ml-1 md:ml-3">-1.52%</span>
+        <span className="font-mono-num text-xs md:text-sm text-trading-amber ml-1 md:ml-3">
+          -1.52%
+        </span>
 
-        {/* Desktop: inline price stats */}
+        {/* Desktop stats */}
         {!isMobile && (
           <div className="hidden md:flex items-center gap-6 ml-4 text-xs">
             <div>
               <span className="text-muted-foreground">Last Price</span>
               <div className="font-mono-num text-trading-green">0.68251</div>
             </div>
+
             <div>
               <span className="text-muted-foreground">24h High</span>
               <div className="font-mono-num text-foreground">0.69546</div>
             </div>
+
             <div>
               <span className="text-muted-foreground">24h Low</span>
               <div className="font-mono-num text-foreground">0.67759</div>
             </div>
+
             <div>
               <span className="text-muted-foreground">24h Vol</span>
               <div className="font-mono-num text-foreground">5.71M</div>
@@ -64,18 +77,28 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
           </div>
         )}
 
+        {/* Right side actions */}
         <div className="ml-auto flex items-center gap-4">
-          <Star className="w-5 h-5 text-muted-foreground" />
+          <Star className="w-5 h-5 text-muted-foreground cursor-pointer" />
+
           <button onClick={onToggleChart}>
-            <BarChart3 className={`w-5 h-5 ${chartVisible ? "text-foreground" : "text-muted-foreground"}`} />
+            <BarChart3
+              className={`w-5 h-5 ${
+                chartVisible ? "text-foreground" : "text-muted-foreground"
+              }`}
+            />
           </button>
         </div>
+
       </div>
 
       <SymbolSelector
         open={selectorOpen}
         onClose={() => setSelectorOpen(false)}
-        onSelect={onPairChange}
+        onSelect={(selectedPair) => {
+          onPairChange(selectedPair);
+          setSelectorOpen(false);
+        }}
       />
     </>
   );
