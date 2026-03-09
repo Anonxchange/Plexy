@@ -3,6 +3,7 @@ import { ListFilter } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
 import OrderBook from "./OrderBook";
 import TradePanel from "./TradePanel";
+import AccountBar from "./AccountBar";
 
 const orderTabs = ["Open orders", "Positions", "Assets", "TWAP"];
 
@@ -16,9 +17,9 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      {/* Main trading area */}
-      <div className="flex flex-1 min-h-0 border-t border-border">
-        {/* Left: Chart */}
+      {/* Main trading area - 2 column layout */}
+      <div className="flex flex-1 min-h-0 border-t border-border gap-0">
+        {/* Left: Chart and bottom tabs */}
         <div className="flex-1 min-w-0 flex flex-col">
           {chartVisible && (
             <div className="flex-1 min-h-[400px]">
@@ -54,13 +55,21 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
           </div>
         </div>
 
-        {/* Right: Order Book + Trade Panel */}
-        <div className="w-[320px] xl:w-[360px] flex-shrink-0 border-l border-border flex flex-col overflow-y-auto">
-          <div className="border-b border-border">
+        {/* Right Column: Order Book + Trade Panel + Account stacked */}
+        <div className="w-[360px] flex-shrink-0 border-l border-border flex flex-col overflow-hidden">
+          {/* Order Book - Top */}
+          <div className="border-b border-border overflow-y-auto">
             <OrderBook />
           </div>
-          <div className="flex-1">
+          
+          {/* Trade Panel - Middle */}
+          <div className="border-b border-border flex-1 overflow-y-auto">
             <TradePanel />
+          </div>
+          
+          {/* Account Bar - Bottom */}
+          <div className="overflow-y-auto">
+            <AccountBar />
           </div>
         </div>
       </div>
