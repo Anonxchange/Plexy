@@ -40,7 +40,8 @@ const CandlestickChart = ({ pair = "BTC/USDT" }: CandlestickChartProps) => {
       backgroundColor: "rgba(255, 255, 255, 1)",
       gridColor: "rgba(240, 240, 240, 1)",
       hide_top_toolbar: false,
-      hide_legend: true,
+      // Show the legend with price info on the left
+      hide_legend: false,
       hide_side_toolbar: !toolsVisible,
       allow_symbol_change: false,
       save_image: false,
