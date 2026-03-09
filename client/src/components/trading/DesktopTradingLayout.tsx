@@ -19,10 +19,10 @@ const DesktopTradingLayout = ({ chartVisible, pair, onPairChange, onToggleChart 
   const [activeTab, setActiveTab] = useState("Open orders");
 
   return (
-    <div className="grid grid-cols-[1fr_240px_280px] grid-rows-[auto_1fr_auto] flex-1 min-h-0 overflow-hidden">
+    <div className="grid grid-cols-[1fr_240px_280px] grid-rows-[auto_minmax(200px,280px)_auto] flex-1 min-h-0 overflow-hidden">
 
       {/* PAIR INFO BAR (chart column only) */}
-      <div className="col-start-1 row-start-1 border-b border-border">
+      <div className="col-start-1 row-start-1 border-b border-border border-r">
         <PairInfo 
           pair={pair}
           onPairChange={onPairChange}
@@ -32,16 +32,16 @@ const DesktopTradingLayout = ({ chartVisible, pair, onPairChange, onToggleChart 
       </div>
 
       {/* CHART COLUMN */}
-      <div className="flex flex-col min-w-0 border-t border-border col-start-1 row-start-2">
+      <div className="flex flex-col min-w-0 col-start-1 row-start-2 border-r border-border overflow-hidden">
         {chartVisible && (
-          <div className="flex-1 min-h-[400px]">
+          <div className="flex-1 min-h-0">
             <CandlestickChart pair={pair} />
           </div>
         )}
       </div>
 
       {/* BOTTOM TABS (chart column only) */}
-      <div className="col-start-1 row-start-3 border-t border-border">
+      <div className="col-start-1 row-start-3 border-t border-border border-r">
         <div className="flex items-center px-4 pt-1">
           <div className="flex items-center gap-4 flex-1">
             {orderTabs.map((tab) => (
@@ -71,13 +71,16 @@ const DesktopTradingLayout = ({ chartVisible, pair, onPairChange, onToggleChart 
       </div>
 
       {/* ORDER BOOK (spans all rows, starts at row 1) */}
-      <div className="border-l border-border overflow-y-auto col-start-2 row-start-1 row-end-4">
-        <OrderBook />
+      <div className="border-l border-border flex flex-col col-start-2 row-start-1 row-end-4 overflow-hidden">
+        <div className="flex-1 border-b border-border overflow-y-auto">
+          <OrderBook />
+        </div>
+        <div className="border-b border-border h-0"></div>
       </div>
 
       {/* TRADE PANEL (spans all rows, starts at row 1) */}
-      <div className="border-l border-border flex flex-col overflow-hidden col-start-3 row-start-1 row-end-4">
-        <div className="flex-1 overflow-y-auto">
+      <div className="border-l border-border flex flex-col col-start-3 row-start-1 row-end-4 overflow-hidden">
+        <div className="flex-1 border-b border-border overflow-y-auto">
           <TradePanel />
         </div>
 
