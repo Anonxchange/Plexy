@@ -37,9 +37,9 @@ const DesktopTradingLayout = ({
       </div>
 
       {/* Chart */}
-      <div className="col-start-1 row-start-2 flex flex-col min-w-0">
+      <div className="col-start-1 row-start-2 flex flex-col min-w-0 min-h-0">
         {chartVisible && (
-          <div className="h-[420px]">
+          <div className="flex-1 min-h-0">
             <CandlestickChart pair={pair} />
           </div>
         )}
@@ -76,13 +76,13 @@ const DesktopTradingLayout = ({
         </div>
       </div>
 
-      {/* OrderBook (only rows 1-2) */}
-      <div className="border-l border-border overflow-y-auto col-start-2 row-start-1 row-end-3">
+      {/* OrderBook */}
+      <div className="border-l border-border overflow-y-auto col-start-2 row-start-1 row-end-3 min-h-0">
         <OrderBook />
       </div>
 
-      {/* TradePanel (only rows 1-2) */}
-      <div className="border-l border-border flex flex-col overflow-y-auto col-start-3 row-start-1 row-end-3">
+      {/* TradePanel */}
+      <div className="border-l border-border flex flex-col overflow-y-auto col-start-3 row-start-1 row-end-3 min-h-0">
         <TradePanel />
       </div>
 
