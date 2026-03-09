@@ -16,10 +16,10 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
   const [activeTab, setActiveTab] = useState("Open orders");
 
   return (
-    <div className="grid grid-cols-[1fr_240px_280px] flex-1 min-h-0 overflow-hidden">
+    <div className="grid grid-cols-[1fr_240px_280px] grid-rows-[auto_1fr] flex-1 min-h-0 overflow-hidden">
 
-      {/* LEFT COLUMN (chart + tabs) */}
-      <div className="flex flex-col min-w-0 border-t border-border">
+      {/* CHART COLUMN */}
+      <div className="flex flex-col min-w-0 border-t border-border row-start-2 col-start-1">
         {chartVisible && (
           <div className="flex-1 min-h-[400px]">
             <CandlestickChart pair={pair} />
@@ -44,7 +44,6 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
                 </button>
               ))}
             </div>
-
             <button className="p-1 text-muted-foreground">
               <ListFilter className="w-5 h-5" />
             </button>
@@ -58,13 +57,13 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
         </div>
       </div>
 
-      {/* ORDER BOOK */}
-      <div className="w-[240px] border-l border-border overflow-y-auto">
+      {/* ORDER BOOK (spans both rows) */}
+      <div className="border-l border-border overflow-y-auto col-start-2 row-span-2">
         <OrderBook />
       </div>
 
       {/* TRADE PANEL */}
-      <div className="w-[280px] border-l border-border flex flex-col overflow-hidden">
+      <div className="border-l border-border flex flex-col overflow-hidden col-start-3 row-span-2">
         <div className="flex-1 overflow-y-auto">
           <TradePanel />
         </div>
@@ -78,4 +77,4 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
   );
 };
 
-export default DesktopTradingLayout;
+export default DesktopTradingLayout; 
