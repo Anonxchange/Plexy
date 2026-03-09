@@ -3,9 +3,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface CandlestickChartProps {
   pair?: string;
+  className?: string;
 }
 
-const CandlestickChart = ({ pair = "BTC/USDT" }: CandlestickChartProps) => {
+const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolsVisible, setToolsVisible] = useState(false);
 
@@ -22,7 +23,6 @@ const CandlestickChart = ({ pair = "BTC/USDT" }: CandlestickChartProps) => {
     innerDiv.className = "tradingview-widget-container__widget";
     innerDiv.style.height = "100%";
     innerDiv.style.width = "100%";
-
     widgetContainer.appendChild(innerDiv);
 
     const script = document.createElement("script");
@@ -34,13 +34,12 @@ const CandlestickChart = ({ pair = "BTC/USDT" }: CandlestickChartProps) => {
       symbol: `BINANCE:${pair.replace("/", "")}`,
       interval: "D",
       timezone: "Etc/UTC",
-      theme: "light",
+      theme: "dark",
       style: "1",
       locale: "en",
-      backgroundColor: "rgba(255, 255, 255, 1)",
-      gridColor: "rgba(240, 240, 240, 1)",
+      backgroundColor: "rgba(18, 18, 18, 1)",
+      gridColor: "rgba(40, 40, 40, 1)",
       hide_top_toolbar: false,
-      // Show the legend with price info on the left
       hide_legend: false,
       hide_side_toolbar: !toolsVisible,
       allow_symbol_change: false,
@@ -50,7 +49,6 @@ const CandlestickChart = ({ pair = "BTC/USDT" }: CandlestickChartProps) => {
       studies: [],
       support_host: "https://www.tradingview.com",
     });
-
     widgetContainer.appendChild(script);
     containerRef.current.appendChild(widgetContainer);
 
@@ -62,7 +60,7 @@ const CandlestickChart = ({ pair = "BTC/USDT" }: CandlestickChartProps) => {
   }, [toolsVisible, pair]);
 
   return (
-    <div className="relative flex-1 min-h-0 h-full">
+    <div className={`relative flex-1 min-h-0 h-full ${className || ""}`}>
       <div ref={containerRef} className="h-full w-full" />
       <button
         onClick={() => setToolsVisible(!toolsVisible)}
