@@ -24,7 +24,7 @@ const DesktopTradingLayout = ({
   const [activeTab, setActiveTab] = useState("Open orders");
 
   return (
-    <div className="grid grid-cols-[1fr_240px_280px] grid-rows-[auto_1fr_auto] flex-1 min-h-0 overflow-hidden">
+    <div className="grid grid-cols-[1fr_240px_280px] grid-rows-[auto_1fr_auto_auto] flex-1 min-h-0 overflow-hidden">
       {/* Pair Info */}
       <div className="col-start-1 row-start-1 border-b border-border min-w-0">
         <PairInfo
@@ -42,7 +42,7 @@ const DesktopTradingLayout = ({
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs header */}
       <div className="col-start-1 row-start-3 border-t border-border">
         <div className="flex items-center px-4 pt-1">
           <div className="flex items-center gap-4 flex-1">
@@ -64,6 +64,10 @@ const DesktopTradingLayout = ({
             <ListFilter className="w-5 h-5" />
           </button>
         </div>
+      </div>
+
+      {/* Tab content */}
+      <div className="col-start-1 row-start-4">
         <div className="flex flex-col items-center py-4">
           <span className="text-sm text-muted-foreground">
             Please connect a wallet first
@@ -71,19 +75,19 @@ const DesktopTradingLayout = ({
         </div>
       </div>
 
-      {/* OrderBook — spans all rows top to bottom */}
-      <div className="col-start-2 row-start-1 row-end-4 border-l border-border overflow-y-auto min-h-0">
+      {/* OrderBook — spans all 4 rows */}
+      <div className="col-start-2 row-start-1 row-end-5 border-l border-border overflow-y-auto min-h-0">
         <OrderBook />
       </div>
 
-      {/* TradePanel + AccountBar — spans all rows, AccountBar pinned at bottom */}
-      <div className="col-start-3 row-start-1 row-end-4 border-l border-border flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto">
-          <TradePanel />
-        </div>
-        <div className="border-t border-border">
-          <AccountBar />
-        </div>
+      {/* TradePanel — spans rows 1-3 */}
+      <div className="col-start-3 row-start-1 row-end-4 border-l border-border overflow-y-auto min-h-0">
+        <TradePanel />
+      </div>
+
+      {/* AccountBar — row 4, aligned with tab content */}
+      <div className="col-start-3 row-start-4 border-l border-t border-border">
+        <AccountBar />
       </div>
     </div>
   );
