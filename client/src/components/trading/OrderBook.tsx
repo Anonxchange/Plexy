@@ -1,96 +1,95 @@
-import { useState } from "react";
-import { ListFilter } from "lucide-react";
-import CandlestickChart from "./CandlestickChart";
-import OrderBook from "./OrderBook";
-import TradePanel from "./TradePanel";
-import AccountBar from "./AccountBar";
-import PairInfo from "./PairInfo";
+import { ChevronDown, LayoutGrid } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-const orderTabs = ["Open orders", "Positions", "Assets", "TWAP"];
+const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) => {
+  const orders = [];
+  const sizes = side === "ask"
+    ? [93.04, 634.41, 1140, 1430, 2020, 2560, 3260, 3560, 997, 4770, 302, 577]
+    : [19.94, 564.67, 1260, 1270, 1720, 2300, 5170, 991, 166, 198, 5310, 4770];
 
-interface DesktopTradingLayoutProps {
-  chartVisible: boolean;
-  pair: string;
-  onPairChange: (pair: string) => void;
-  onToggleChart: () => void;
-}
+  let cumulativeTotal = 0;
 
-const DesktopTradingLayout = ({
-  chartVisible,
-  pair,
-  onPairChange,
-  onToggleChart,
-}: DesktopTradingLayoutProps) => {
-  const [activeTab, setActiveTab] = useState("Open orders");
+  for (let i = 0; i < count; i++) {
+    const offset = (i + 1) * 0.00001 * (side === "ask" ? 1 : -1);
+    const price = basePrice + offset;
+    const size = sizes[i] || Math.floor(Math.random() * 3000 + 500);
+    const maxSize = 5500;
+    
+    cumulativeTotal += size;
+
+    orders.push({
+      price: price.toFixed(5),
+      size: size >= 1000 ? (size / 1000).toFixed(2) + "K" : size.toFixed(2),
+      total: cumulativeTotal >= 1000 ? (cumulativeTotal / 1000).toFixed(2) + "K" : cumulativeTotal.toFixed(2),
+      sizeRaw: size,
+      percent: Math.min((size / maxSize) * 100, 100),
+    });
+  }
+  return side === "ask" ? orders.reverse() : orders;
+};
+
+const basePrice = 0.68270;
+
+const OrderBook = () => {
+  const isMobile = useIsMobile();
+  const count = isMobile ? 6 : 12;
+  const asks = generateOrders(basePrice, "ask", count);
+  const bids = generateOrders(basePrice, "bid", count);
 
   return (
-    <div className="grid grid-cols-[1fr_1fr_1fr] grid-rows-[auto_1fr_auto_auto] flex-1 min-h-0 overflow-hidden">
-      {/* Pair Info */}
-      <div className="col-start-1 row-start-1 border-b border-border min-w-0">
-        <PairInfo
-          pair={pair}
-          onPairChange={onPairChange}
-          chartVisible={chartVisible}
-          onToggleChart={onToggleChart}
-        />
+    <div className="flex flex-col bg-background">
+      {/* Column headers */}
+      <div className="grid grid-cols-2 md:grid-cols-3 px-3 py-2 text-xs text-muted-foreground">
+        <span>Price<br />(USDT)</span>
+        <span className="text-right">Size<br />(USDT)</span>
+        <span className="text-right hidden md:block">Total<br />(USDT)</span>
       </div>
 
-      {/* Chart */}
-      {chartVisible && (
-        <div className="col-start-1 row-start-2 h-[550px] min-w-0">
-          <CandlestickChart pair={pair} className="h-full w-full" />
-        </div>
-      )}
-
-      {/* Tabs header */}
-      <div className="col-start-1 row-start-3 border-t border-border">
-        <div className="flex items-center px-4 pt-1">
-          <div className="flex items-center gap-4 flex-1">
-            {orderTabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-2 text-sm transition-colors ${
-                  activeTab === tab
-                    ? "text-foreground font-semibold"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+      {/* Asks (sells) - red */}
+      <div className="flex flex-col">
+        {asks.map((order, i) => (
+          <div key={`ask-${i}`} className="relative grid grid-cols-2 md:grid-cols-3 px-3 py-[3px] text-xs">
+            <div
+              className="absolute right-0 top-0 bottom-0 bg-trading-red/15"
+              style={{ width: `${order.percent}%` }}
+            />
+            <span className="relative font-mono-num text-trading-red">{order.price}</span>
+            <span className="relative font-mono-num text-foreground text-right">{order.size}</span>
+            <span className="relative font-mono-num text-foreground text-right hidden md:block">{order.total}</span>
           </div>
-          <button className="p-1 text-muted-foreground">
-            <ListFilter className="w-5 h-5" />
-          </button>
-        </div>
+        ))}
       </div>
 
-      {/* Tab content */}
-      <div className="col-start-1 row-start-4">
-        <div className="flex flex-col items-center py-4">
-          <span className="text-sm text-muted-foreground">
-            Please connect a wallet first
-          </span>
-        </div>
+      {/* Spread / current price */}
+      <div className="flex flex-col items-center py-2">
+        <span className="font-mono-num text-lg font-bold text-foreground">{basePrice.toFixed(5)}</span>
+        <span className="text-xs text-muted-foreground">${basePrice.toFixed(4)}</span>
       </div>
 
-      {/* OrderBook — spans all 4 rows */}
-      <div className="col-start-2 row-start-1 row-end-5 border-l border-border overflow-y-auto min-h-0">
-        <OrderBook />
+      {/* Bids (buys) - green */}
+      <div className="flex flex-col">
+        {bids.map((order, i) => (
+          <div key={`bid-${i}`} className="relative grid grid-cols-2 md:grid-cols-3 px-3 py-[3px] text-xs">
+            <div
+              className="absolute right-0 top-0 bottom-0 bg-trading-green/15"
+              style={{ width: `${order.percent}%` }}
+            />
+            <span className="relative font-mono-num text-trading-green">{order.price}</span>
+            <span className="relative font-mono-num text-foreground text-right">{order.size}</span>
+            <span className="relative font-mono-num text-foreground text-right hidden md:block">{order.total}</span>
+          </div>
+        ))}
       </div>
 
-      {/* TradePanel — spans rows 1-3 */}
-      <div className="col-start-3 row-start-1 row-end-4 border-l border-border overflow-y-auto min-h-0">
-        <TradePanel />
-      </div>
-
-      {/* AccountBar — row 4, aligned with tab content */}
-      <div className="col-start-3 row-start-4 border-l border-t border-border">
-        <AccountBar />
+      {/* Tick size */}
+      <div className="flex items-center justify-between px-3 py-2 border-t border-border mt-auto">
+        <LayoutGrid className="w-4 h-4 text-muted-foreground" />
+        <button className="flex items-center gap-1 text-xs text-foreground font-mono-num">
+          0.00001 <ChevronDown className="w-3 h-3" />
+        </button>
       </div>
     </div>
   );
 };
 
-export default DesktopTradingLayout;
+export default OrderBook;
