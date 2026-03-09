@@ -7,19 +7,23 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Spot = () => {
   const [chartVisible, setChartVisible] = useState(true);
+  const [pair, setPair] = useState("ASTER/USDT");
   const isMobile = useIsMobile();
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden w-full max-w-full">
+    <div className="flex flex-col h-screen bg-background overflow-x-hidden w-full max-w-full">
       <AccountBar />
-      <PairInfo chartVisible={chartVisible} onToggleChart={() => setChartVisible(!chartVisible)} />
-      <div className="flex-1 overflow-y-auto">
-        {isMobile ? (
-          <BottomTabs chartVisible={chartVisible} />
-        ) : (
-          <DesktopTradingLayout chartVisible={chartVisible} />
-        )}
-      </div>
+      <PairInfo 
+        pair={pair}
+        onPairChange={setPair}
+        chartVisible={chartVisible} 
+        onToggleChart={() => setChartVisible(!chartVisible)} 
+      />
+      {isMobile ? (
+        <BottomTabs chartVisible={chartVisible} pair={pair} />
+      ) : (
+        <DesktopTradingLayout chartVisible={chartVisible} pair={pair} />
+      )}
     </div>
   );
 };
