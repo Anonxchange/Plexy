@@ -1,4 +1,4 @@
-```tsx
+
 import { useState } from "react";
 import { ListFilter } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
@@ -38,9 +38,9 @@ const DesktopTradingLayout = ({
       </div>
 
       {/* Chart */}
-      <div className="col-start-1 row-start-2 flex flex-col min-w-0 min-h-0">
+      <div className="col-start-1 row-start-2 flex flex-col min-w-0">
         {chartVisible && (
-          <div className="flex-1 min-h-0">
+          <div className="h-[520px]">
             <CandlestickChart pair={pair} />
           </div>
         )}
@@ -77,12 +77,12 @@ const DesktopTradingLayout = ({
         </div>
       </div>
 
-      {/* OrderBook (aligned with PairInfo + Chart) */}
+      {/* OrderBook */}
       <div className="col-start-2 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
         <OrderBook />
       </div>
 
-      {/* TradePanel (aligned with PairInfo + Chart) */}
+      {/* TradePanel */}
       <div className="col-start-3 row-start-1 row-end-3 border-l border-border flex flex-col overflow-y-auto min-h-0">
         <TradePanel />
       </div>
