@@ -12,7 +12,7 @@ export const Spot = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-x-hidden w-full max-w-full">
-      <AccountBar />
+      {isMobile && <AccountBar />}
       <PairInfo 
         pair={pair}
         onPairChange={setPair}
