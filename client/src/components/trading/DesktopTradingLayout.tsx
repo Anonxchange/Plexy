@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ListFilter } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
@@ -40,7 +39,7 @@ const DesktopTradingLayout = ({
       {/* Chart */}
       <div className="col-start-1 row-start-2 flex flex-col min-w-0">
         {chartVisible && (
-          <div className="h-[570px]">
+          <div className="h-[550px]">
             <CandlestickChart pair={pair} />
           </div>
         )}
@@ -70,7 +69,7 @@ const DesktopTradingLayout = ({
           </button>
         </div>
 
-        <div className="flex flex-col items-center py-8">
+        <div className="flex flex-col items-center py-4">
           <span className="text-sm text-muted-foreground">
             Please connect a wallet first
           </span>
@@ -97,4 +96,3 @@ const DesktopTradingLayout = ({
 };
 
 export default DesktopTradingLayout;
-
