@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 
 interface CandlestickChartProps {
   pair?: string;
@@ -7,6 +8,7 @@ interface CandlestickChartProps {
 }
 
 const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProps) => {
+  const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolsVisible, setToolsVisible] = useState(false);
 
@@ -25,6 +27,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProp
     innerDiv.style.width = "100%";
     widgetContainer.appendChild(innerDiv);
 
+    const isDark = theme === "dark";
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
     script.type = "text/javascript";
@@ -34,11 +37,11 @@ const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProp
       symbol: `BINANCE:${pair.replace("/", "")}`,
       interval: "D",
       timezone: "Etc/UTC",
-      theme: "dark",
+      theme: isDark ? "dark" : "light",
       style: "1",
       locale: "en",
-      backgroundColor: "rgba(18, 18, 18, 1)",
-      gridColor: "rgba(40, 40, 40, 1)",
+      backgroundColor: isDark ? "rgba(18, 18, 18, 1)" : "rgba(255, 255, 255, 1)",
+      gridColor: isDark ? "rgba(40, 40, 40, 1)" : "rgba(230, 230, 230, 1)",
       hide_top_toolbar: false,
       hide_legend: false,
       hide_side_toolbar: !toolsVisible,
@@ -57,7 +60,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProp
         containerRef.current.innerHTML = "";
       }
     };
-  }, [toolsVisible, pair]);
+  }, [toolsVisible, pair, theme]);
 
   return (
     <div className={`relative flex-1 min-h-0 h-full ${className || ""}`}>
