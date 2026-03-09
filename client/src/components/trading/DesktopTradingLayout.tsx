@@ -37,13 +37,11 @@ const DesktopTradingLayout = ({
       </div>
 
       {/* Chart */}
-      <div className="col-start-1 row-start-2 flex flex-col min-w-0">
-        {chartVisible && (
-          <div className="h-[550px]">
-            <CandlestickChart pair={pair} />
-          </div>
-        )}
-      </div>
+      {chartVisible && (
+        <div className="col-start-1 row-start-2 h-[550px] min-w-0">
+          <CandlestickChart pair={pair} className="h-full w-full" />
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="col-start-1 row-start-3 border-t border-border">
