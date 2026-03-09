@@ -18,10 +18,10 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
 
-      <div className="flex flex-1 min-h-0 border-t border-border gap-0">
+      <div className="flex flex-1 min-h-0 border-t border-border gap-0 items-start">
 
         {/* LEFT: Chart column (same width as pair info) */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col h-full">
           {chartVisible && (
             <div className="flex-1 min-h-[400px]">
               <CandlestickChart pair={pair} />
@@ -60,12 +60,12 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
         </div>
 
         {/* Middle: Order Book */}
-        <div className="w-[240px] flex-shrink-0 border-l border-border overflow-y-auto">
+        <div className="w-[240px] flex-shrink-0 border-l border-border h-full overflow-y-auto">
           <OrderBook />
         </div>
 
         {/* Right: Trade Panel + Account */}
-        <div className="w-[280px] flex-shrink-0 border-l border-border flex flex-col overflow-hidden">
+        <div className="w-[280px] flex-shrink-0 border-l border-border flex flex-col h-full overflow-hidden">
           <div className="flex-1 overflow-y-auto">
             <TradePanel />
           </div>
