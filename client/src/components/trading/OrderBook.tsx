@@ -1,4 +1,5 @@
 import { ChevronDown, LayoutGrid } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) => {
   const orders = [];
@@ -22,10 +23,13 @@ const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) =
 };
 
 const basePrice = 0.68270;
-const asks = generateOrders(basePrice, "ask", 12);
-const bids = generateOrders(basePrice, "bid", 12);
 
 const OrderBook = () => {
+  const isMobile = useIsMobile();
+  const count = isMobile ? 6 : 12;
+  const asks = generateOrders(basePrice, "ask", count);
+  const bids = generateOrders(basePrice, "bid", count);
+
   return (
     <div className="flex flex-col bg-background">
       {/* Column headers */}
