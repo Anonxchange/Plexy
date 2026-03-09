@@ -21,12 +21,12 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
         {/* Left: Chart + Bottom tabs */}
         <div className="flex-1 min-w-0 flex flex-col">
           {chartVisible && (
-            <div className="flex-1 min-h-[400px]">
+            <div className="h-[55vh] min-h-[320px] max-h-[520px]">
               <CandlestickChart pair={pair} />
             </div>
           )}
           {/* Bottom tabs area */}
-          <div className="border-t border-border">
+          <div className="border-t border-border flex-1">
             <div className="flex items-center px-4 pt-1">
               <div className="flex items-center gap-4 flex-1">
                 {orderTabs.map((tab) => (
@@ -60,10 +60,10 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
 
         {/* Right: Trade Panel + Account */}
         <div className="w-[280px] flex-shrink-0 border-l border-border flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <TradePanel />
           </div>
-          <div className="border-t border-border overflow-y-auto">
+          <div className="border-t border-border shrink-0 max-h-[40%] overflow-y-auto">
             <AccountBar />
           </div>
         </div>
