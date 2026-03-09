@@ -40,7 +40,7 @@ const DesktopTradingLayout = ({
       {/* Chart */}
       <div className="col-start-1 row-start-2 flex flex-col min-w-0">
         {chartVisible && (
-          <div className="h-[520px]">
+          <div className="h-[570px]">
             <CandlestickChart pair={pair} />
           </div>
         )}
