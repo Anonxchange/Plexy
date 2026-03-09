@@ -17,56 +17,51 @@ const DesktopTradingLayout = ({ chartVisible, pair }: DesktopTradingLayoutProps)
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      {/* Main Row */}
+
       <div className="flex flex-1 min-h-0 border-t border-border gap-0">
 
-        {/* LEFT SIDE WRAPPER */}
-        <div className="flex flex-1 min-w-0">
+        {/* LEFT: Chart column (same width as pair info) */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {chartVisible && (
+            <div className="flex-1 min-h-[400px]">
+              <CandlestickChart pair={pair} />
+            </div>
+          )}
 
-          {/* Left: Chart + Bottom tabs */}
-          <div className="flex-1 min-w-0 flex flex-col">
-            {chartVisible && (
-              <div className="flex-1 min-h-[400px]">
-                <CandlestickChart pair={pair} />
+          {/* Bottom tabs area */}
+          <div className="border-t border-border">
+            <div className="flex items-center px-4 pt-1">
+              <div className="flex items-center gap-4 flex-1">
+                {orderTabs.map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`py-2 text-sm transition-colors ${
+                      activeTab === tab
+                        ? "text-foreground font-semibold"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
-            )}
+              <button className="p-1 text-muted-foreground">
+                <ListFilter className="w-5 h-5" />
+              </button>
+            </div>
 
-            {/* Bottom tabs area */}
-            <div className="border-t border-border">
-              <div className="flex items-center px-4 pt-1">
-                <div className="flex items-center gap-4 flex-1">
-                  {orderTabs.map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`py-2 text-sm transition-colors ${
-                        activeTab === tab
-                          ? "text-foreground font-semibold"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-                <button className="p-1 text-muted-foreground">
-                  <ListFilter className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="flex flex-col items-center py-8">
-                <span className="text-sm text-muted-foreground">
-                  Please connect a wallet first
-                </span>
-              </div>
+            <div className="flex flex-col items-center py-8">
+              <span className="text-sm text-muted-foreground">
+                Please connect a wallet first
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* Middle: Order Book (now aligned to top like pair info) */}
-          <div className="w-[240px] flex-shrink-0 border-l border-border overflow-y-auto">
-            <OrderBook />
-          </div>
-
+        {/* Middle: Order Book */}
+        <div className="w-[240px] flex-shrink-0 border-l border-border overflow-y-auto">
+          <OrderBook />
         </div>
 
         {/* Right: Trade Panel + Account */}
