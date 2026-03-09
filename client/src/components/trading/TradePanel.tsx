@@ -21,6 +21,7 @@ const TradePanel = () => {
   const [priceUnitDropdownOpen, setPriceUnitDropdownOpen] = useState(false);
   const [timeInForce, setTimeInForce] = useState("GTC");
   const [tifDropdownOpen, setTifDropdownOpen] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const unitDropdownRef = useRef<HTMLDivElement>(null);
   const stopUnitRef = useRef<HTMLDivElement>(null);
@@ -46,11 +47,9 @@ const TradePanel = () => {
   const isStopLimit = orderType === "Stop Limit";
   const isStopMarket = orderType === "Stop Market";
   const isMakerOnly = orderType === "Maker Only";
-
   const showPriceField = isLimit || isMakerOnly;
   const showStopPrice = isStopLimit || isStopMarket;
   const showAmountField = isMarket || isLimit;
-  const showAmountInAsset = isLimit;
   const showHiddenOrder = isLimit;
   const showTotalValue = !isMarket;
 
@@ -268,14 +267,14 @@ const TradePanel = () => {
                   backgroundColor:
                     sliderValue >= pct
                       ? side === "buy"
-                        ? "hsl(170, 55%, 42%)"
-                        : "hsl(0, 65%, 55%)"
+                        ? "hsl(var(--trading-green))"
+                        : "hsl(var(--trading-red))"
                       : "hsl(0, 0%, 14%)",
                   borderColor:
                     sliderValue >= pct
                       ? side === "buy"
-                        ? "hsl(170, 55%, 42%)"
-                        : "hsl(0, 65%, 55%)"
+                        ? "hsl(var(--trading-green))"
+                        : "hsl(var(--trading-red))"
                       : "hsl(0, 0%, 20%)",
                 }}
               />
