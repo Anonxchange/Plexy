@@ -25,7 +25,6 @@ const DesktopTradingLayout = ({
 
   return (
     <div className="grid grid-cols-[1fr_240px_280px] grid-rows-[auto_1fr_auto] flex-1 min-h-0 overflow-hidden">
-
       {/* Pair Info */}
       <div className="col-start-1 row-start-1 border-b border-border min-w-0">
         <PairInfo
@@ -61,12 +60,10 @@ const DesktopTradingLayout = ({
               </button>
             ))}
           </div>
-
           <button className="p-1 text-muted-foreground">
             <ListFilter className="w-5 h-5" />
           </button>
         </div>
-
         <div className="flex flex-col items-center py-4">
           <span className="text-sm text-muted-foreground">
             Please connect a wallet first
@@ -74,21 +71,20 @@ const DesktopTradingLayout = ({
         </div>
       </div>
 
-      {/* OrderBook */}
-      <div className="col-start-2 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
+      {/* OrderBook — spans all rows top to bottom */}
+      <div className="col-start-2 row-start-1 row-end-4 border-l border-border overflow-y-auto min-h-0">
         <OrderBook />
       </div>
 
-      {/* TradePanel */}
-      <div className="col-start-3 row-start-1 row-end-3 border-l border-border flex flex-col overflow-y-auto min-h-0">
-        <TradePanel />
+      {/* TradePanel + AccountBar — spans all rows, AccountBar pinned at bottom */}
+      <div className="col-start-3 row-start-1 row-end-4 border-l border-border flex flex-col min-h-0">
+        <div className="flex-1 overflow-y-auto">
+          <TradePanel />
+        </div>
+        <div className="border-t border-border">
+          <AccountBar />
+        </div>
       </div>
-
-      {/* AccountBar aligned with tabs */}
-      <div className="col-start-3 row-start-3 border-l border-border">
-        <AccountBar />
-      </div>
-
     </div>
   );
 };
