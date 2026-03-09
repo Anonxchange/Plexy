@@ -1,3 +1,4 @@
+```tsx
 import { useState } from "react";
 import { ListFilter } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
@@ -27,7 +28,7 @@ const DesktopTradingLayout = ({
     <div className="grid grid-cols-[1fr_240px_280px] grid-rows-[auto_1fr_auto] flex-1 min-h-0 overflow-hidden">
 
       {/* Pair Info */}
-      <div className="col-start-1 row-start-1 border-b border-border">
+      <div className="col-start-1 row-start-1 border-b border-border min-w-0">
         <PairInfo
           pair={pair}
           onPairChange={onPairChange}
@@ -76,18 +77,18 @@ const DesktopTradingLayout = ({
         </div>
       </div>
 
-      {/* OrderBook */}
-      <div className="border-l border-border overflow-y-auto col-start-2 row-start-1 row-end-3 min-h-0">
+      {/* OrderBook (aligned with PairInfo + Chart) */}
+      <div className="col-start-2 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
         <OrderBook />
       </div>
 
-      {/* TradePanel */}
-      <div className="border-l border-border flex flex-col overflow-y-auto col-start-3 row-start-1 row-end-3 min-h-0">
+      {/* TradePanel (aligned with PairInfo + Chart) */}
+      <div className="col-start-3 row-start-1 row-end-3 border-l border-border flex flex-col overflow-y-auto min-h-0">
         <TradePanel />
       </div>
 
       {/* AccountBar aligned with tabs */}
-      <div className="border-l border-border col-start-3 row-start-3">
+      <div className="col-start-3 row-start-3 border-l border-border">
         <AccountBar />
       </div>
 
@@ -96,3 +97,4 @@ const DesktopTradingLayout = ({
 };
 
 export default DesktopTradingLayout;
+
