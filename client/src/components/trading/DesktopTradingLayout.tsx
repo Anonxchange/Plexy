@@ -37,14 +37,14 @@ const DesktopTradingLayout = ({
 
       {/* Chart */}
       {chartVisible && (
-        <div className="col-start-1 row-start-2 h-[550px] min-w-0">
+        <div className="col-start-1 row-start-2 h-[600px] min-w-0">
           <CandlestickChart pair={pair} className="h-full w-full" />
         </div>
       )}
 
       {/* Tabs header */}
-      <div className="col-start-1 row-start-3 border-t border-border">
-        <div className="flex items-center px-4 pt-1">
+      <div className="col-start-1 row-start-3 border-t border-border mt-[-1px]">
+        <div className="flex items-center px-4">
           <div className="flex items-center gap-4 flex-1">
             {orderTabs.map((tab) => (
               <button
