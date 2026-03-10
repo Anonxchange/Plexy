@@ -24,7 +24,7 @@ const DesktopTradingLayout = ({
   const [activeTab, setActiveTab] = useState("Open orders");
 
   return (
-    <div className="grid grid-cols-[1.5fr_0.8fr_0.8fr] grid-rows-[auto_1fr_auto_auto] flex-1 min-h-0 overflow-hidden">
+    <div className="grid grid-cols-[1.7fr_0.7fr_0.7fr] grid-rows-[auto_1fr_auto_auto] flex-1 min-h-0 overflow-hidden">
       {/* Pair Info */}
       <div className="col-start-1 row-start-1 border-b border-border min-w-0">
         <PairInfo
