@@ -37,23 +37,23 @@ const DesktopTradingLayout = ({
 
       {/* Chart */}
       {chartVisible && (
-        <div className="col-start-1 row-start-2 h-[600px] min-w-0">
+        <div className="col-start-1 row-start-2 h-[calc(100vh-280px)] min-h-[500px] min-w-0">
           <CandlestickChart pair={pair} className="h-full w-full" />
         </div>
       )}
 
       {/* Tabs header */}
-      <div className="col-start-1 row-start-3 border-t border-border mt-[-1px]">
-        <div className="flex items-center px-4">
-          <div className="flex items-center gap-4 flex-1">
+      <div className="col-start-1 row-start-3 border-t border-border">
+        <div className="flex items-center px-4 h-9">
+          <div className="flex items-center gap-4 flex-1 h-full">
             {orderTabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-2 text-sm transition-colors ${
+                className={`h-full text-sm transition-colors border-b-2 px-1 ${
                   activeTab === tab
-                    ? "text-foreground font-semibold"
-                    : "text-muted-foreground"
+                    ? "text-foreground font-semibold border-primary"
+                    : "text-muted-foreground border-transparent hover:text-foreground"
                 }`}
               >
                 {tab}
