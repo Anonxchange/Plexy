@@ -1,4 +1,4 @@
-import { ChevronDown, LayoutGrid, Rows3, Rows4, Rows2 } from "lucide-react";
+import { ChevronDown, LayoutGrid, Rows3, Rows4 } from "lucide-react";
 import { useState } from "react";
 
 const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) => {
@@ -14,21 +14,27 @@ const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) =
   let cumulativeTotal = 0;
 
   for (let i = 0; i < count; i++) {
-    const price = parseFloat(prices[i]?.toString() || (basePrice + (i + 1) * 0.00001 * (side === "ask" ? 1 : -1)).toFixed(5));
+    const price = parseFloat(
+      prices[i]?.toString() ||
+        (basePrice + (i + 1) * 0.00001 * (side === "ask" ? 1 : -1)).toFixed(5)
+    );
+
     const size = sizes[i] || Math.floor(Math.random() * 3000 + 500);
     const maxSize = 5500;
-    
+
     cumulativeTotal += size;
 
     orders.push({
       price: price.toFixed(5),
       size: size >= 1000 ? (size / 1000).toFixed(2) + "K" : size.toFixed(2),
-      total: cumulativeTotal >= 1000 ? (cumulativeTotal / 1000).toFixed(2) + "K" : cumulativeTotal.toFixed(2),
-      sizeRaw: size,
-      totalRaw: cumulativeTotal,
+      total:
+        cumulativeTotal >= 1000
+          ? (cumulativeTotal / 1000).toFixed(2) + "K"
+          : cumulativeTotal.toFixed(2),
       percent: Math.min((size / maxSize) * 100, 100),
     });
   }
+
   return side === "ask" ? orders.reverse() : orders;
 };
 
@@ -37,7 +43,7 @@ const basePrice = 0.69699;
 const DesktopOrderBook = () => {
   const [activeTab, setActiveTab] = useState("orderbook");
   const [viewMode, setViewMode] = useState<"grid" | "rows4" | "rows3">("grid");
-  const [currency, setCurrency] = useState("USDT");
+  const [currency] = useState("USDT");
   const [tickSize] = useState("0.00001");
 
   const asks = generateOrders(basePrice, "ask", 12);
@@ -57,14 +63,16 @@ const DesktopOrderBook = () => {
   );
 
   return (
-    <div className="flex flex-col h-full bg-background border-l border-border">
+    <div className="flex flex-col h-[550px] bg-background border-l border-border">
+
       {/* Header */}
       <div className="border-b border-border">
+
         {/* Tabs */}
         <div className="flex items-center gap-6 px-4 h-10 border-b border-border">
           <button
             onClick={() => setActiveTab("orderbook")}
-            className={`text-xs font-medium transition-colors pb-2 border-b-2 ${
+            className={`text-xs font-medium pb-2 border-b-2 ${
               activeTab === "orderbook"
                 ? "text-foreground border-primary"
                 : "text-muted-foreground border-transparent"
@@ -72,9 +80,10 @@ const DesktopOrderBook = () => {
           >
             Order book
           </button>
+
           <button
             onClick={() => setActiveTab("trades")}
-            className={`text-xs font-medium transition-colors pb-2 border-b-2 ${
+            className={`text-xs font-medium pb-2 border-b-2 ${
               activeTab === "trades"
                 ? "text-foreground border-primary"
                 : "text-muted-foreground border-transparent"
@@ -85,31 +94,20 @@ const DesktopOrderBook = () => {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-between px-3 py-2 gap-2">
+        <div className="flex items-center justify-between px-3 py-2">
           <div className="flex items-center gap-1">
-            <ViewModeButton
-              mode="grid"
-              icon={LayoutGrid}
-              isActive={viewMode === "grid"}
-            />
-            <ViewModeButton
-              mode="rows4"
-              icon={Rows4}
-              isActive={viewMode === "rows4"}
-            />
-            <ViewModeButton
-              mode="rows3"
-              icon={Rows3}
-              isActive={viewMode === "rows3"}
-            />
+            <ViewModeButton mode="grid" icon={LayoutGrid} isActive={viewMode === "grid"} />
+            <ViewModeButton mode="rows4" icon={Rows4} isActive={viewMode === "rows4"} />
+            <ViewModeButton mode="rows3" icon={Rows3} isActive={viewMode === "rows3"} />
           </div>
 
-          <div className="flex items-center gap-1 ml-auto">
-            <button className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono-num text-foreground hover:bg-muted transition-colors">
+          <div className="flex items-center gap-1">
+            <button className="flex items-center gap-1 px-2 py-1 text-xs hover:bg-muted rounded">
               {tickSize}
               <ChevronDown className="w-3 h-3" />
             </button>
-            <button className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono-num text-foreground hover:bg-muted transition-colors">
+
+            <button className="flex items-center gap-1 px-2 py-1 text-xs hover:bg-muted rounded">
               {currency}
               <ChevronDown className="w-3 h-3" />
             </button>
@@ -117,81 +115,66 @@ const DesktopOrderBook = () => {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Orderbook */}
       {activeTab === "orderbook" && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Column Headers */}
-          <div className="grid grid-cols-3 gap-0 px-2.5 py-2 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground sticky top-0 z-10">
-            <div className="text-left truncate">Price</div>
-            <div className="text-right truncate">Size</div>
-            <div className="text-right truncate">Total</div>
+        <div className="flex flex-col flex-1 overflow-hidden">
+
+          {/* Column headers */}
+          <div className="grid grid-cols-3 px-2.5 py-2 bg-muted/30 border-b text-xs text-muted-foreground">
+            <div>Price</div>
+            <div className="text-right">Size</div>
+            <div className="text-right">Total</div>
           </div>
 
-          {/* Scrollable Orders */}
+          {/* Scroll area */}
           <div className="flex-1 overflow-y-auto">
-            {/* Asks (Sell orders) - Red */}
-            <div className="flex flex-col">
-              {asks.map((order, i) => (
+
+            {/* Asks */}
+            {asks.map((order, i) => (
+              <div
+                key={`ask-${i}`}
+                className="relative grid grid-cols-3 px-2.5 py-1.5 text-xs border-b border-border/30"
+              >
                 <div
-                  key={`ask-${i}`}
-                  className="relative grid grid-cols-3 gap-0 px-2.5 py-1.5 text-xs border-b border-border/30 hover:bg-muted/20 transition-colors group"
-                >
-                  <div
-                    className="absolute inset-0 bg-trading-red/5 pointer-events-none"
-                    style={{ width: `${order.percent}%`, marginLeft: "auto" }}
-                  />
-                  <span className="relative font-mono-num text-trading-red font-medium truncate">
-                    {order.price}
-                  </span>
-                  <span className="relative font-mono-num text-foreground text-right truncate">
-                    {order.size}
-                  </span>
-                  <span className="relative font-mono-num text-foreground text-right text-muted-foreground group-hover:text-foreground transition-colors truncate">
-                    {order.total}
-                  </span>
-                </div>
-              ))}
+                  className="absolute inset-0 bg-red-500/5"
+                  style={{ width: `${order.percent}%`, marginLeft: "auto" }}
+                />
+
+                <span className="text-red-500 font-mono">{order.price}</span>
+                <span className="text-right font-mono">{order.size}</span>
+                <span className="text-right font-mono text-muted-foreground">{order.total}</span>
+              </div>
+            ))}
+
+            {/* Mid price */}
+            <div className="text-center py-2 border-y bg-muted/40">
+              <div className="font-bold">{basePrice.toFixed(5)}</div>
+              <div className="text-xs text-muted-foreground">${basePrice.toFixed(5)}</div>
             </div>
 
-            {/* Current Price / Spread */}
-            <div className="flex flex-col items-center py-2.5 px-2.5 bg-muted/40 border-y border-border">
-              <div className="text-sm font-mono-num font-bold text-foreground">
-                {basePrice.toFixed(5)}
-              </div>
-              <div className="text-xs font-mono-num text-muted-foreground">
-                ${basePrice.toFixed(5)}
-              </div>
-            </div>
-
-            {/* Bids (Buy orders) - Teal/Cyan */}
-            <div className="flex flex-col">
-              {bids.map((order, i) => (
+            {/* Bids */}
+            {bids.map((order, i) => (
+              <div
+                key={`bid-${i}`}
+                className="relative grid grid-cols-3 px-2.5 py-1.5 text-xs border-b border-border/30"
+              >
                 <div
-                  key={`bid-${i}`}
-                  className="relative grid grid-cols-3 gap-0 px-2.5 py-1.5 text-xs border-b border-border/30 hover:bg-muted/20 transition-colors group"
-                >
-                  <div
-                    className="absolute inset-0 bg-trading-green/5 pointer-events-none"
-                    style={{ width: `${order.percent}%`, marginLeft: "auto" }}
-                  />
-                  <span className="relative font-mono-num text-trading-green font-medium truncate">
-                    {order.price}
-                  </span>
-                  <span className="relative font-mono-num text-foreground text-right truncate">
-                    {order.size}
-                  </span>
-                  <span className="relative font-mono-num text-foreground text-right text-muted-foreground group-hover:text-foreground transition-colors truncate">
-                    {order.total}
-                  </span>
-                </div>
-              ))}
-            </div>
+                  className="absolute inset-0 bg-green-500/5"
+                  style={{ width: `${order.percent}%`, marginLeft: "auto" }}
+                />
+
+                <span className="text-green-500 font-mono">{order.price}</span>
+                <span className="text-right font-mono">{order.size}</span>
+                <span className="text-right font-mono text-muted-foreground">{order.total}</span>
+              </div>
+            ))}
+
           </div>
         </div>
       )}
 
       {activeTab === "trades" && (
-        <div className="flex items-center justify-center flex-1 text-muted-foreground text-sm">
+        <div className="flex items-center justify-center flex-1 text-sm text-muted-foreground">
           No recent trades
         </div>
       )}
