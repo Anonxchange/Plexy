@@ -6,13 +6,13 @@ const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) =
 
   const sizes =
     side === "ask"
-      ? [997.85, 552.5, 4.77, 302.03, 101.06, 4.77, 109.08, 301.94]
-      : [991.81, 166.65, 198.94, 5.31, 4.77, 301.67, 499.93, 301.63];
+      ? [997.85, 552.5, 4.77, 302.03, 101.06, 4.77, 109.08, 301.94, 562.58, 4.77, 577.07, 2.66]
+      : [991.81, 166.65, 198.94, 5.31, 4.77, 301.67, 499.93, 301.63, 2.86, 4.77, 2.03, 859.98];
 
   const prices =
     side === "ask"
-      ? [0.69743, 0.69742, 0.69741, 0.6974, 0.69738, 0.69727, 0.69725, 0.69719]
-      : [0.69683, 0.69682, 0.69676, 0.69674, 0.6966, 0.69658, 0.69657, 0.69648];
+      ? [0.69743, 0.69742, 0.69741, 0.6974, 0.69738, 0.69727, 0.69725, 0.69719, 0.69712, 0.69710, 0.69709, 0.69704]
+      : [0.69683, 0.69682, 0.69676, 0.69674, 0.6966, 0.69658, 0.69657, 0.69648, 0.69647, 0.69646, 0.69645, 0.69640];
 
   let cumulativeTotal = 0;
 
@@ -49,9 +49,9 @@ const DesktopOrderBook = () => {
   const [currency] = useState("USDT");
   const [tickSize] = useState("0.00001");
 
-  // ✅ reduced from 12 to 8
-  const asks = generateOrders(basePrice, "ask", 8);
-  const bids = generateOrders(basePrice, "bid", 8);
+  // ✅ back to 12 orders
+  const asks = generateOrders(basePrice, "ask", 12);
+  const bids = generateOrders(basePrice, "bid", 12);
 
   const ViewModeButton = ({ mode, icon: Icon, isActive }: any) => (
     <button
@@ -67,7 +67,6 @@ const DesktopOrderBook = () => {
   );
 
   return (
-    // ✅ full height
     <div className="flex flex-col h-full bg-background border-l border-border">
       {/* Header */}
       <div className="border-b border-border">
@@ -140,18 +139,14 @@ const DesktopOrderBook = () => {
               />
               <span className="text-red-500 font-mono">{order.price}</span>
               <span className="text-right font-mono">{order.size}</span>
-              <span className="text-right font-mono text-muted-foreground">
-                {order.total}
-              </span>
+              <span className="text-right font-mono text-muted-foreground">{order.total}</span>
             </div>
           ))}
 
           {/* Mid price */}
           <div className="text-center py-2 border-y bg-muted/40">
             <div className="font-bold">{basePrice.toFixed(5)}</div>
-            <div className="text-xs text-muted-foreground">
-              ${basePrice.toFixed(5)}
-            </div>
+            <div className="text-xs text-muted-foreground">${basePrice.toFixed(5)}</div>
           </div>
 
           {/* Bids */}
@@ -166,9 +161,7 @@ const DesktopOrderBook = () => {
               />
               <span className="text-green-500 font-mono">{order.price}</span>
               <span className="text-right font-mono">{order.size}</span>
-              <span className="text-right font-mono text-muted-foreground">
-                {order.total}
-              </span>
+              <span className="text-right font-mono text-muted-foreground">{order.total}</span>
             </div>
           ))}
         </div>
