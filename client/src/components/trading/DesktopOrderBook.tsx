@@ -1,5 +1,5 @@
-import { ChevronDown, LayoutGrid, Rows3, Rows4 } from “lucide-react”;
-import { useState } from “react”;
+import { ChevronDown, LayoutGrid, Rows3, Rows4 } from "lucide-react";
+import { useState } from "react";
 
 const generateOrders = (basePrice: number, side: “ask” | “bid”, count: number) => {
 const orders = [];
