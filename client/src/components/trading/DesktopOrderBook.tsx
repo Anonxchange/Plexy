@@ -38,7 +38,7 @@ const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) =
     });
   }
 
-  return side === "ask" ? orders.reverse() : orders;
+  return side === "ask" ? orders.reverse().slice(0, 10) : orders.slice(0, 10);
 };
 
 const basePrice = 0.69699;
@@ -49,9 +49,9 @@ const DesktopOrderBook = () => {
   const [currency] = useState("USDT");
   const [tickSize] = useState("0.00001");
 
-  // ✅ 12 orders now
-  const asks = generateOrders(basePrice, "ask", 12);
-  const bids = generateOrders(basePrice, "bid", 12);
+  // ✅ 10 orders now
+  const asks = generateOrders(basePrice, "ask", 10);
+  const bids = generateOrders(basePrice, "bid", 10);
 
   const ViewModeButton = ({ mode, icon: Icon, isActive }: any) => (
     <button
@@ -119,7 +119,7 @@ const DesktopOrderBook = () => {
 
       {/* Orderbook */}
       {activeTab === "orderbook" && (
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col">
           {/* Headers */}
           <div className="grid grid-cols-3 px-2.5 py-2 bg-muted/30 border-b text-xs text-muted-foreground">
             <div>Price</div>
@@ -128,11 +128,11 @@ const DesktopOrderBook = () => {
           </div>
 
           {/* Asks */}
-          <div className="flex flex-col flex-1 justify-between">
+          <div className="flex flex-col gap-1 my-1">
             {asks.map((order, i) => (
               <div
                 key={`ask-${i}`}
-                className="relative grid grid-cols-3 px-2.5 text-xs flex-1"
+                className="relative grid grid-cols-3 px-2.5 py-1 text-xs"
               >
                 <div
                   className="absolute inset-0 bg-red-500/5"
@@ -154,11 +154,11 @@ const DesktopOrderBook = () => {
           </div>
 
           {/* Bids */}
-          <div className="flex flex-col flex-1 justify-between">
+          <div className="flex flex-col gap-1 my-1">
             {bids.map((order, i) => (
               <div
                 key={`bid-${i}`}
-                className="relative grid grid-cols-3 px-2.5 text-xs flex-1"
+                className="relative grid grid-cols-3 px-2.5 py-1 text-xs"
               >
                 <div
                   className="absolute inset-0 bg-green-500/5"
