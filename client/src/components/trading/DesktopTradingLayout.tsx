@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ListFilter } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
-import OrderBook from "./OrderBook";
+import DesktopOrderBook from "./DesktopOrderBook";
 import TradePanel from "./TradePanel";
 import PairInfo from "./PairInfo";
 
@@ -80,8 +80,8 @@ const DesktopTradingLayout = ({
       </div>
 
       {/* OrderBook — spans rows 1-4, no vertical border */}
-      <div className="col-start-2 row-start-1 row-end-5 overflow-y-auto min-h-0">
-        <OrderBook />
+      <div className="col-start-2 row-start-1 row-end-5 overflow-hidden min-h-0 border-l border-r border-border">
+        <DesktopOrderBook />
       </div>
 
       {/* TradePanel — spans rows 1-3, no vertical border */}
