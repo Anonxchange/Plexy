@@ -3,20 +3,21 @@ import { useState } from "react";
 
 const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) => {
   const orders = [];
+
   const sizes = side === "ask"
     ? [997.85, 552.50, 4.77, 302.03, 101.06, 4.77, 109.08, 301.94, 562.58, 4.77, 577.07, 2.66]
     : [991.81, 166.65, 198.94, 5.31, 4.77, 301.67, 499.93, 301.63, 2.86, 4.77, 2.03, 859.98];
 
   const prices = side === "ask"
-    ? [0.69743, 0.69742, 0.69741, 0.69740, 0.69738, 0.69727, 0.69725, 0.69719, 0.69712, 0.69710, 0.69709, 0.69704]
-    : [0.69683, 0.69682, 0.69676, 0.69674, 0.69660, 0.69658, 0.69657, 0.69648, 0.69647, 0.69646, 0.69645, 0.69640];
+    ? [0.69743,0.69742,0.69741,0.69740,0.69738,0.69727,0.69725,0.69719,0.69712,0.69710,0.69709,0.69704]
+    : [0.69683,0.69682,0.69676,0.69674,0.69660,0.69658,0.69657,0.69648,0.69647,0.69646,0.69645,0.69640];
 
   let cumulativeTotal = 0;
 
   for (let i = 0; i < count; i++) {
     const price = parseFloat(
       prices[i]?.toString() ||
-        (basePrice + (i + 1) * 0.00001 * (side === "ask" ? 1 : -1)).toFixed(5)
+      (basePrice + (i + 1) * 0.00001 * (side === "ask" ? 1 : -1)).toFixed(5)
     );
 
     const size = sizes[i] || Math.floor(Math.random() * 3000 + 500);
@@ -63,7 +64,7 @@ const DesktopOrderBook = () => {
   );
 
   return (
-    <div className="flex flex-col h-[550px] bg-background border-l border-border">
+    <div className="flex flex-col h-[500px] bg-background border-l border-border">
 
       {/* Header */}
       <div className="border-b border-border">
@@ -117,59 +118,53 @@ const DesktopOrderBook = () => {
 
       {/* Orderbook */}
       {activeTab === "orderbook" && (
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col">
 
-          {/* Column headers */}
+          {/* Headers */}
           <div className="grid grid-cols-3 px-2.5 py-2 bg-muted/30 border-b text-xs text-muted-foreground">
             <div>Price</div>
             <div className="text-right">Size</div>
             <div className="text-right">Total</div>
           </div>
 
-          {/* Scroll area */}
-          <div className="flex-1 overflow-y-auto">
-
-            {/* Asks */}
-            {asks.map((order, i) => (
+          {/* Asks */}
+          {asks.map((order, i) => (
+            <div
+              key={`ask-${i}`}
+              className="relative grid grid-cols-3 px-2.5 py-1 text-xs border-b border-border/30"
+            >
               <div
-                key={`ask-${i}`}
-                className="relative grid grid-cols-3 px-2.5 py-1.5 text-xs border-b border-border/30"
-              >
-                <div
-                  className="absolute inset-0 bg-red-500/5"
-                  style={{ width: `${order.percent}%`, marginLeft: "auto" }}
-                />
-
-                <span className="text-red-500 font-mono">{order.price}</span>
-                <span className="text-right font-mono">{order.size}</span>
-                <span className="text-right font-mono text-muted-foreground">{order.total}</span>
-              </div>
-            ))}
-
-            {/* Mid price */}
-            <div className="text-center py-2 border-y bg-muted/40">
-              <div className="font-bold">{basePrice.toFixed(5)}</div>
-              <div className="text-xs text-muted-foreground">${basePrice.toFixed(5)}</div>
+                className="absolute inset-0 bg-red-500/5"
+                style={{ width: `${order.percent}%`, marginLeft: "auto" }}
+              />
+              <span className="text-red-500 font-mono">{order.price}</span>
+              <span className="text-right font-mono">{order.size}</span>
+              <span className="text-right font-mono text-muted-foreground">{order.total}</span>
             </div>
+          ))}
 
-            {/* Bids */}
-            {bids.map((order, i) => (
-              <div
-                key={`bid-${i}`}
-                className="relative grid grid-cols-3 px-2.5 py-1.5 text-xs border-b border-border/30"
-              >
-                <div
-                  className="absolute inset-0 bg-green-500/5"
-                  style={{ width: `${order.percent}%`, marginLeft: "auto" }}
-                />
-
-                <span className="text-green-500 font-mono">{order.price}</span>
-                <span className="text-right font-mono">{order.size}</span>
-                <span className="text-right font-mono text-muted-foreground">{order.total}</span>
-              </div>
-            ))}
-
+          {/* Mid price */}
+          <div className="text-center py-2 border-y bg-muted/40">
+            <div className="font-bold">{basePrice.toFixed(5)}</div>
+            <div className="text-xs text-muted-foreground">${basePrice.toFixed(5)}</div>
           </div>
+
+          {/* Bids */}
+          {bids.map((order, i) => (
+            <div
+              key={`bid-${i}`}
+              className="relative grid grid-cols-3 px-2.5 py-1 text-xs border-b border-border/30"
+            >
+              <div
+                className="absolute inset-0 bg-green-500/5"
+                style={{ width: `${order.percent}%`, marginLeft: "auto" }}
+              />
+              <span className="text-green-500 font-mono">{order.price}</span>
+              <span className="text-right font-mono">{order.size}</span>
+              <span className="text-right font-mono text-muted-foreground">{order.total}</span>
+            </div>
+          ))}
+
         </div>
       )}
 
