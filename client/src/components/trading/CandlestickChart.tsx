@@ -48,8 +48,8 @@ const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProp
       allow_symbol_change: false,
       save_image: false,
       calendar: false,
-      hide_volume: true,
-      studies: [],
+      hide_volume: false,
+      studies: ["Volume@tv-basicstudies"],
       support_host: "https://www.tradingview.com",
     });
     widgetContainer.appendChild(script);
