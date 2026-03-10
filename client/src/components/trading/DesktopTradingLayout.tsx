@@ -133,7 +133,6 @@ return ( <div className="grid grid-cols-[1.7fr_0.6fr_0.6fr] grid-rows-[auto_minm
   </div>
 
 </div>
-```
 
 );
 };
