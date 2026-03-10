@@ -64,7 +64,7 @@ const DesktopOrderBook = () => {
   );
 
   return (
-    <div className="flex flex-col h-[460px] bg-background border-l border-border">
+    <div className="flex flex-col h-[430px] bg-background border-l border-border">
 
       {/* Header */}
       <div className="border-b border-border">
