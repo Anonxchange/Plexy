@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface CandlestickChartProps {
   pair?: string;
@@ -9,6 +10,7 @@ interface CandlestickChartProps {
 
 const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProps) => {
   const { theme } = useTheme();
+  const isMobile = useMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolsVisible, setToolsVisible] = useState(false);
 
@@ -48,8 +50,8 @@ const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProp
       allow_symbol_change: false,
       save_image: false,
       calendar: false,
-      hide_volume: false,
-      studies: ["Volume@tv-basicstudies"],
+      hide_volume: isMobile,
+      studies: isMobile ? [] : ["Volume@tv-basicstudies"],
       support_host: "https://www.tradingview.com",
     });
     widgetContainer.appendChild(script);
@@ -60,7 +62,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProp
         containerRef.current.innerHTML = "";
       }
     };
-  }, [toolsVisible, pair, theme]);
+  }, [toolsVisible, pair, theme, isMobile]);
 
   return (
     <div className={`relative flex-1 min-h-0 h-full ${className || ""}`}>
