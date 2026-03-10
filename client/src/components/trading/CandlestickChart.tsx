@@ -10,7 +10,7 @@ interface CandlestickChartProps {
 
 const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProps) => {
   const { theme } = useTheme();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolsVisible, setToolsVisible] = useState(false);
 
