@@ -49,7 +49,7 @@ const DesktopOrderBook = () => {
   const [currency] = useState("USDT");
   const [tickSize] = useState("0.00001");
 
-  // ✅ back to 12 orders
+  // ✅ 12 orders now
   const asks = generateOrders(basePrice, "ask", 12);
   const bids = generateOrders(basePrice, "bid", 12);
 
@@ -128,20 +128,24 @@ const DesktopOrderBook = () => {
           </div>
 
           {/* Asks */}
-          {asks.map((order, i) => (
-            <div
-              key={`ask-${i}`}
-              className="relative grid grid-cols-3 px-2.5 py-1 text-xs border-b border-border/30"
-            >
+          <div className="flex flex-col flex-1 justify-between">
+            {asks.map((order, i) => (
               <div
-                className="absolute inset-0 bg-red-500/5"
-                style={{ width: `${order.percent}%`, marginLeft: "auto" }}
-              />
-              <span className="text-red-500 font-mono">{order.price}</span>
-              <span className="text-right font-mono">{order.size}</span>
-              <span className="text-right font-mono text-muted-foreground">{order.total}</span>
-            </div>
-          ))}
+                key={`ask-${i}`}
+                className="relative grid grid-cols-3 px-2.5 text-xs flex-1"
+              >
+                <div
+                  className="absolute inset-0 bg-red-500/5"
+                  style={{ width: `${order.percent}%`, marginLeft: "auto" }}
+                />
+                <span className="text-red-500 font-mono">{order.price}</span>
+                <span className="text-right font-mono">{order.size}</span>
+                <span className="text-right font-mono text-muted-foreground">
+                  {order.total}
+                </span>
+              </div>
+            ))}
+          </div>
 
           {/* Mid price */}
           <div className="text-center py-2 border-y bg-muted/40">
@@ -150,20 +154,24 @@ const DesktopOrderBook = () => {
           </div>
 
           {/* Bids */}
-          {bids.map((order, i) => (
-            <div
-              key={`bid-${i}`}
-              className="relative grid grid-cols-3 px-2.5 py-1 text-xs border-b border-border/30"
-            >
+          <div className="flex flex-col flex-1 justify-between">
+            {bids.map((order, i) => (
               <div
-                className="absolute inset-0 bg-green-500/5"
-                style={{ width: `${order.percent}%`, marginLeft: "auto" }}
-              />
-              <span className="text-green-500 font-mono">{order.price}</span>
-              <span className="text-right font-mono">{order.size}</span>
-              <span className="text-right font-mono text-muted-foreground">{order.total}</span>
-            </div>
-          ))}
+                key={`bid-${i}`}
+                className="relative grid grid-cols-3 px-2.5 text-xs flex-1"
+              >
+                <div
+                  className="absolute inset-0 bg-green-500/5"
+                  style={{ width: `${order.percent}%`, marginLeft: "auto" }}
+                />
+                <span className="text-green-500 font-mono">{order.price}</span>
+                <span className="text-right font-mono">{order.size}</span>
+                <span className="text-right font-mono text-muted-foreground">
+                  {order.total}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
