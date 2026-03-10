@@ -64,7 +64,7 @@ const DesktopOrderBook = () => {
         <div className="flex items-center gap-6 px-4 h-10 border-b border-border">
           <button
             onClick={() => setActiveTab("orderbook")}
-            className={`text-sm font-medium transition-colors pb-2 border-b-2 ${
+            className={`text-xs font-medium transition-colors pb-2 border-b-2 ${
               activeTab === "orderbook"
                 ? "text-foreground border-primary"
                 : "text-muted-foreground border-transparent"
@@ -74,7 +74,7 @@ const DesktopOrderBook = () => {
           </button>
           <button
             onClick={() => setActiveTab("trades")}
-            className={`text-sm font-medium transition-colors pb-2 border-b-2 ${
+            className={`text-xs font-medium transition-colors pb-2 border-b-2 ${
               activeTab === "trades"
                 ? "text-foreground border-primary"
                 : "text-muted-foreground border-transparent"
@@ -85,8 +85,8 @@ const DesktopOrderBook = () => {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-between px-4 py-3 gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-3 py-2 gap-2">
+          <div className="flex items-center gap-1">
             <ViewModeButton
               mode="grid"
               icon={LayoutGrid}
@@ -104,14 +104,14 @@ const DesktopOrderBook = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <button className="flex items-center gap-1.5 px-2.5 py-1 rounded text-sm font-mono text-foreground hover:bg-muted transition-colors">
+          <div className="flex items-center gap-1 ml-auto">
+            <button className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono-num text-foreground hover:bg-muted transition-colors">
               {tickSize}
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3 h-3" />
             </button>
-            <button className="flex items-center gap-1.5 px-2.5 py-1 rounded text-sm font-mono text-foreground hover:bg-muted transition-colors">
+            <button className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono-num text-foreground hover:bg-muted transition-colors">
               {currency}
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -121,10 +121,10 @@ const DesktopOrderBook = () => {
       {activeTab === "orderbook" && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Column Headers */}
-          <div className="grid grid-cols-3 gap-0 px-4 py-2 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground sticky top-0 z-10">
-            <div className="text-left">Price ({currency})</div>
-            <div className="text-right">Size ({currency})</div>
-            <div className="text-right">Total ({currency})</div>
+          <div className="grid grid-cols-3 gap-0 px-2.5 py-2 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground sticky top-0 z-10">
+            <div className="text-left truncate">Price</div>
+            <div className="text-right truncate">Size</div>
+            <div className="text-right truncate">Total</div>
           </div>
 
           {/* Scrollable Orders */}
@@ -134,19 +134,19 @@ const DesktopOrderBook = () => {
               {asks.map((order, i) => (
                 <div
                   key={`ask-${i}`}
-                  className="relative grid grid-cols-3 gap-0 px-4 py-2 text-xs border-b border-border/30 hover:bg-muted/20 transition-colors group"
+                  className="relative grid grid-cols-3 gap-0 px-2.5 py-1.5 text-xs border-b border-border/30 hover:bg-muted/20 transition-colors group"
                 >
                   <div
                     className="absolute inset-0 bg-trading-red/5 pointer-events-none"
                     style={{ width: `${order.percent}%`, marginLeft: "auto" }}
                   />
-                  <span className="relative font-mono text-trading-red font-semibold">
+                  <span className="relative font-mono-num text-trading-red font-medium truncate">
                     {order.price}
                   </span>
-                  <span className="relative font-mono text-foreground text-right">
+                  <span className="relative font-mono-num text-foreground text-right truncate">
                     {order.size}
                   </span>
-                  <span className="relative font-mono text-foreground text-right text-muted-foreground group-hover:text-foreground transition-colors">
+                  <span className="relative font-mono-num text-foreground text-right text-muted-foreground group-hover:text-foreground transition-colors truncate">
                     {order.total}
                   </span>
                 </div>
@@ -154,11 +154,11 @@ const DesktopOrderBook = () => {
             </div>
 
             {/* Current Price / Spread */}
-            <div className="flex flex-col items-center py-3 px-4 bg-muted/40 border-y border-border">
-              <div className="text-sm font-mono font-bold text-foreground">
+            <div className="flex flex-col items-center py-2.5 px-2.5 bg-muted/40 border-y border-border">
+              <div className="text-sm font-mono-num font-bold text-foreground">
                 {basePrice.toFixed(5)}
               </div>
-              <div className="text-xs font-mono text-muted-foreground">
+              <div className="text-xs font-mono-num text-muted-foreground">
                 ${basePrice.toFixed(5)}
               </div>
             </div>
@@ -168,19 +168,19 @@ const DesktopOrderBook = () => {
               {bids.map((order, i) => (
                 <div
                   key={`bid-${i}`}
-                  className="relative grid grid-cols-3 gap-0 px-4 py-2 text-xs border-b border-border/30 hover:bg-muted/20 transition-colors group"
+                  className="relative grid grid-cols-3 gap-0 px-2.5 py-1.5 text-xs border-b border-border/30 hover:bg-muted/20 transition-colors group"
                 >
                   <div
                     className="absolute inset-0 bg-trading-green/5 pointer-events-none"
                     style={{ width: `${order.percent}%`, marginLeft: "auto" }}
                   />
-                  <span className="relative font-mono text-trading-green font-semibold">
+                  <span className="relative font-mono-num text-trading-green font-medium truncate">
                     {order.price}
                   </span>
-                  <span className="relative font-mono text-foreground text-right">
+                  <span className="relative font-mono-num text-foreground text-right truncate">
                     {order.size}
                   </span>
-                  <span className="relative font-mono text-foreground text-right text-muted-foreground group-hover:text-foreground transition-colors">
+                  <span className="relative font-mono-num text-foreground text-right text-muted-foreground group-hover:text-foreground transition-colors truncate">
                     {order.total}
                   </span>
                 </div>
