@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { getCryptoPrices } from '@/lib/crypto-prices';
 import { getRocketxRate, type RocketXQuote } from '@/lib/rocketx-api';
 import { nonCustodialWalletManager } from '@/lib/non-custodial-wallet';
 import { useAuth } from '@/lib/auth-context';
@@ -13,20 +12,18 @@ interface SwapPriceData {
   bestQuote: RocketXQuote | null;
 }
 
-// Platform spread percentage (how much above/below market rate)
-const SWAP_SPREAD_PERCENTAGE = 0; // 0% spread - direct RocketX rates
-
 // Cache for prices to avoid unnecessary re-fetching and provide instant UI
 const priceCache: Record<string, { data: SwapPriceData; timestamp: number }> = {};
 const CACHE_TTL = 30000; // 30 seconds cache
 
 export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: string, toNetwork: string, amount: number = 1) {
   const { user } = useAuth();
-  const cacheKey = `${fromCrypto}-${fromNetwork}-${toCrypto}-${toNetwork}-${amount}-${user?.id || 'anon'}`;
-  
+  // Use raw amount only for initial cache warm-up; all subsequent logic uses debouncedAmount
+  const initialCacheKey = `${fromCrypto}-${fromNetwork}-${toCrypto}-${toNetwork}-${amount}-${user?.id || 'anon'}`;
+
   const [priceData, setPriceData] = useState<SwapPriceData>(() => {
     // Initialize from cache if available
-    const cached = priceCache[cacheKey];
+    const cached = priceCache[initialCacheKey];
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return { ...cached.data, isLoading: false };
     }
@@ -40,13 +37,13 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
     };
   });
 
-  // Add a separate state for debounced amount to avoid constant API calls while typing
+  // Debounce amount to avoid API calls on every keystroke
   const [debouncedAmount, setDebouncedAmount] = useState(amount);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedAmount(amount);
-    }, 500); // 500ms debounce
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [amount]);
@@ -55,7 +52,13 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
     let isMounted = true;
     let intervalId: NodeJS.Timeout;
 
+    // cacheKey is derived from debounced amount so the effect only re-runs when
+    // typing has settled, not on every individual keystroke
+    const cacheKey = `${fromCrypto}-${fromNetwork}-${toCrypto}-${toNetwork}-${debouncedAmount}-${user?.id || 'anon'}`;
+
     const fetchPrices = async (showLoading = false) => {
+      if (!isMounted) return;
+
       // Don't fetch if amount is 0 or invalid
       if (debouncedAmount <= 0 || isNaN(debouncedAmount)) {
         if (isMounted) {
@@ -75,12 +78,12 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
       if (showLoading && isMounted && !cached) {
         setPriceData(prev => ({ ...prev, isLoading: true }));
       }
-      
+
       try {
-        // Prevent repeated tokens calls if we already have the tokens for these networks
-        // Or if we just fetched them
-        if (isMounted && cached && Date.now() - cached.timestamp < 10000) {
-           return;
+        // Skip if cache is still very fresh (within 10s) — avoids redundant calls
+        // from the background interval landing right after a manual fetch
+        if (cached && Date.now() - cached.timestamp < 10000) {
+          return;
         }
 
         // For stablecoins to stablecoins, rate is 1:1
@@ -208,8 +211,10 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           bestQuote: rocketxQuote,
         };
 
-        setPriceData(data);
-        priceCache[cacheKey] = { data, timestamp: Date.now() };
+        if (isMounted) {
+          setPriceData(data);
+          priceCache[cacheKey] = { data, timestamp: Date.now() };
+        }
       } catch (error) {
         console.error('Error fetching swap prices:', error);
         if (isMounted) {
@@ -245,7 +250,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [fromCrypto, toCrypto, fromNetwork, toNetwork, debouncedAmount, cacheKey]);
+  }, [fromCrypto, toCrypto, fromNetwork, toNetwork, debouncedAmount, user?.id]);
 
   return priceData;
 }
