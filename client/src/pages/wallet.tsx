@@ -28,8 +28,9 @@ export default function WalletPage() {
   const { data: wallet, isLoading: isWalletLoading, isError: isWalletError, isRefetching } = useWalletData();
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
 
-  // showSkeleton should be true whenever we are loading the first time OR refreshing/fetching without data
-  const showSkeleton = isWalletLoading || (isRefetching && !wallet) || isWalletError;
+  // showSkeleton is true while loading (includes live balance fetch) or fetching without existing data.
+  // Only show skeleton on error when there's no cached data to fall back to.
+  const showSkeleton = isWalletLoading || (isRefetching && !wallet) || (isWalletError && !wallet);
 
   useEffect(() => {
     if (!loading && !user) {
