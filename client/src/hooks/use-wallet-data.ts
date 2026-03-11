@@ -90,9 +90,17 @@ export function useWalletData() {
     // This prevents the hook from falling back to stale local data (balance=0)
     // before the edge-function response arrives.
     enabled: !!user?.id && !balancesLoading && balancesKey !== null,
-    staleTime: 30_000,
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
+    // Cache the computed result for the full balance-poll window.
+    // The query key already changes whenever live balances change (via balancesKey),
+    // so there is no need for an independent price-refresh timer — that would cause
+    // the displayed balance to jump every 15 s even when holdings haven't changed.
+    staleTime: 60_000,
+    // Do not poll on a separate timer. Let useWalletBalances drive updates:
+    // when its 60 s poll returns new on-chain data, balancesKey changes, this
+    // query fires automatically with the fresh numbers.
+    refetchInterval: false,
+    // Skip the extra network call on tab focus — the 60 s cycle is frequent enough.
+    refetchOnWindowFocus: false,
     // Keep previous data visible while a new key's query is in-flight,
     // preventing a flash of zero balances between refetches.
     placeholderData: keepPreviousData,
