@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/auth-context";
-import { ArrowLeft, Wallet, Building2 } from "lucide-react";
+import { ArrowLeft, Wallet, Building2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -81,7 +81,8 @@ export function GiftCardDetail() {
   const cardId = params?.id;
   const { data: card, isLoading, error } = useGiftCardProduct(cardId);
   const { mutate: createOrder, isPending: isOrdering } = useCreateGiftCardOrder();
-  const { addToCart, isLoading: isAddingToCart } = useGiftCardCart();
+  const { items: cartItems, addToCart, isLoading: isAddingToCart } = useGiftCardCart();
+  const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
   const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
@@ -170,7 +171,18 @@ export function GiftCardDetail() {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-2xl font-bold text-foreground">{card.productName}</h1>
+          <h1 className="text-2xl font-bold text-foreground flex-1">{card.productName}</h1>
+          <button
+            onClick={() => setCartOpen(true)}
+            className="relative p-2 hover:bg-secondary rounded-lg transition-colors"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
