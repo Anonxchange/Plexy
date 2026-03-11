@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
-import { getUserWallets } from "@/lib/wallet-api";
 import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 import { useWalletBalances } from "./use-wallet-balances";
 import { useState, useEffect, useMemo } from "react";
@@ -52,7 +51,14 @@ const SORT_ORDER: Record<string, number> = {
 
 export function useWalletData() {
   const { user } = useAuth();
-  const { data: monitoredBalances } = useWalletBalances();
+
+  // Pull live balances from the edge function.
+  // isLoading is true on the very first fetch (no cached data yet).
+  const {
+    data: monitoredBalances,
+    isLoading: balancesLoading,
+  } = useWalletBalances();
+
   const [preferredCurrency, setPreferredCurrency] = useState<string>(() => {
     if (typeof window !== "undefined" && user?.id) {
       return (localStorage.getItem(`pexly_currency_${user.id}`) || "USD").toUpperCase();
@@ -61,7 +67,6 @@ export function useWalletData() {
   });
   const [isConverting, setIsConverting] = useState(false);
 
-  // Prefer context/state over polling for currency preference
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (!user?.id) return;
@@ -73,27 +78,35 @@ export function useWalletData() {
     return () => window.removeEventListener("storage", handleStorage);
   }, [user?.id]);
 
-  // Memoize monitored balances signature to avoid triggering refetch too often
+  // Stable key derived from live balances — only changes when actual data changes.
   const balancesKey = useMemo(() => {
-    if (!monitoredBalances) return "";
+    if (!monitoredBalances) return null;
     return monitoredBalances.map(b => `${b.crypto_symbol}:${b.balance}`).join(",");
   }, [monitoredBalances]);
 
   const query = useQuery<WalletData>({
     queryKey: ["wallet-data", user?.id, balancesKey, preferredCurrency],
-    enabled: !!user?.id,
-    staleTime: 30_000, // cache data for 30s before refetch
-    refetchInterval: 15_000, // poll every 15s
+    // Only run after the live balance fetch has settled.
+    // This prevents the hook from falling back to stale local data (balance=0)
+    // before the edge-function response arrives.
+    enabled: !!user?.id && !balancesLoading && balancesKey !== null,
+    staleTime: 30_000,
+    refetchInterval: 15_000,
     refetchOnWindowFocus: true,
+    // Keep previous data visible while a new key's query is in-flight,
+    // preventing a flash of zero balances between refetches.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       if (!user?.id) throw new Error("User not authenticated");
 
-      // Use monitored balances if available
-      const wallets = monitoredBalances && monitoredBalances.length > 0
-        ? monitoredBalances.map((mb: any) => ({ crypto_symbol: mb.crypto_symbol, balance: Number(mb.balance) || 0 }))
-        : await getUserWallets(user.id);
+      // monitoredBalances is guaranteed to be defined here (enabled gate above).
+      // Map to the shape the rest of the pipeline expects.
+      const wallets = (monitoredBalances ?? []).map((mb: any) => ({
+        crypto_symbol: mb.crypto_symbol,
+        balance: Number(mb.balance) || 0,
+      }));
 
-      // Normalize & filter
+      // Normalize & filter to known symbols
       const normalizedWallets = wallets
         .map(w => {
           const raw = (w.crypto_symbol || "").toUpperCase();
@@ -122,7 +135,7 @@ export function useWalletData() {
         });
       }
 
-      // Aggregate assets
+      // Aggregate by symbol
       const assetMap = new Map<string, WalletData["assets"][number]>();
       normalizedWallets.forEach(({ symbol, balance }) => {
         const priceInfo = prices[symbol] || { price: 0, change24h: 0 };
@@ -132,38 +145,36 @@ export function useWalletData() {
           existing.balance += balance;
           existing.value += value;
         } else {
-          assetMap.set(symbol, { 
-            symbol, 
-            name: ASSET_NAMES[symbol] || symbol, 
-            balance, 
+          assetMap.set(symbol, {
+            symbol,
+            name: ASSET_NAMES[symbol] || symbol,
+            balance,
             price: priceInfo.price,
-            value, 
-            change24h: priceInfo.change24h 
+            value,
+            change24h: priceInfo.change24h,
           });
         }
       });
 
-      // Ensure all assets exist
+      // Ensure all known assets appear in the list (with zero balance when absent)
       VALID_CRYPTO_SYMBOLS.forEach(symbol => {
         if (!assetMap.has(symbol)) {
           const priceInfo = prices[symbol] || { price: 0, change24h: 0 };
-          assetMap.set(symbol, { 
-            symbol, 
-            name: ASSET_NAMES[symbol], 
-            balance: 0, 
+          assetMap.set(symbol, {
+            symbol,
+            name: ASSET_NAMES[symbol],
+            balance: 0,
             price: priceInfo.price,
-            value: 0, 
-            change24h: priceInfo.change24h
+            value: 0,
+            change24h: priceInfo.change24h,
           });
         }
       });
 
       const assets = Array.from(assetMap.values());
       let totalBalanceUSD = assets.reduce((sum, asset) => sum + asset.value, 0);
-
       let finalTotalBalance = totalBalanceUSD;
 
-      // Handle conversion
       if (preferredCurrency !== "USD") {
         setIsConverting(true);
         try {
@@ -175,7 +186,6 @@ export function useWalletData() {
         }
       }
 
-      // Sort assets
       assets.sort((a, b) => {
         if (b.value !== a.value) return b.value - a.value;
         const orderA = SORT_ORDER[a.symbol] ?? 99;
@@ -187,6 +197,15 @@ export function useWalletData() {
     },
   });
 
-  // Return query with the converting state (from local state)
-  return { ...query, data: query.data ? { ...query.data, isConverting } : undefined };
+  // Unified loading flag:
+  // - true while the live balance fetch hasn't completed yet (balancesLoading)
+  // - true while wallet-data is fetching for the first time with no cached result
+  // This ensures all consumers show a skeleton until real data is ready.
+  const isLoading = balancesLoading || query.isLoading || (query.isFetching && !query.data);
+
+  return {
+    ...query,
+    isLoading,
+    data: query.data ? { ...query.data, isConverting } : undefined,
+  };
 }
