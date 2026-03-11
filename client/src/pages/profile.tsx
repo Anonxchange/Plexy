@@ -318,7 +318,7 @@ function ProductCarousel() {
       
       <div className="text-center mb-4">
         <h4 className="text-lg font-semibold text-foreground line-clamp-2">{currentProduct.title}</h4>
-        <p className="text-primary font-bold text-xl mt-1">${currentProduct.price.toFixed(2)} {currentProduct.currency}</p>
+        <p className="text-primary font-bold text-xl mt-1">{currentProduct.price.toFixed(2)} {currentProduct.currency}</p>
       </div>
 
       <div className="flex justify-center gap-1.5">
@@ -1221,6 +1221,20 @@ export function Profile() {
             <Card className="bg-card border-border overflow-hidden">
           <CardContent className="p-0">
             <div className="bg-elevate-1 p-4 sm:p-6">
+              {/* Share Button - Top Right */}
+              {isOwnProfile && (
+                <div className="flex justify-end mb-4">
+                  <Button 
+                    variant="ghost" 
+                    className="text-primary hover:text-primary/80 font-medium"
+                    onClick={handleShareProfile}
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                </div>
+              )}
+
               {/* Medals Row */}
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center gap-2 text-primary">
