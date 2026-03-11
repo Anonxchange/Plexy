@@ -109,10 +109,15 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
 }
 
 export async function getWalletTransactions(userId: string, limit: number = 29): Promise<WalletTransaction[]> {
-  // Fetch transactions where the user is the owner (custodial/recorded)
-  // OR where their address matches from/to (non-custodial/blockchain)
-  const wallets = await getUserWallets(userId);
-  const addresses = wallets.map(w => w.deposit_address).filter(Boolean);
+  // Resolve wallet addresses directly from Supabase so this works on any
+  // browser — even before the local IndexedDB cache has been populated.
+  const { data: walletRows } = await supabase
+    .from('user_wallets')
+    .select('address')
+    .eq('user_id', userId)
+    .eq('is_active', 'true');
+
+  const addresses = (walletRows ?? []).map((w: any) => w.address).filter(Boolean) as string[];
 
   console.log(`[getWalletTransactions] Fetching for user ${userId} and addresses:`, addresses);
 
@@ -121,9 +126,9 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
     .select('*');
 
   if (addresses.length > 0) {
-    // Search by user_id OR from_address OR to_address
-    const addressFilter = addresses.map(addr => `from_address.eq."${addr}",to_address.eq."${addr}"`).join(',');
-    query = query.or(`user_id.eq."${userId}",${addressFilter}`);
+    // PostgREST or() syntax: values are unquoted plain strings/UUIDs.
+    const addressFilter = addresses.map(addr => `from_address.eq.${addr},to_address.eq.${addr}`).join(',');
+    query = query.or(`user_id.eq.${userId},${addressFilter}`);
   } else {
     query = query.eq('user_id', userId);
   }
@@ -134,13 +139,15 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
 
   if (error) {
     console.error("[getWalletTransactions] wallet_transactions error:", error);
+    // Throw so React Query callers can show a proper error state.
+    throw new Error(error.message);
   }
 
   // Also fetch from pexly_transactions for internal transfers
   const { data: pexlyData, error: pexlyError } = await supabase
     .from('pexly_transactions')
     .select('*')
-    .or(`sender_id.eq."${userId}",receiver_id.eq."${userId}"`)
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order('created_at', { ascending: false })
     .limit(limit);
 
