@@ -1,6 +1,6 @@
 import { openDB, IDBPDatabase } from 'idb';
 
-const DB_NAME = 'pexly_storage';
+export const DB_NAME = 'pexly_storage';
 const DB_VERSION = 1;
 
 export interface PexlyDB {
@@ -57,4 +57,12 @@ export async function deleteValue(store: keyof PexlyDB, key: string) {
 export async function getAllValues(store: keyof PexlyDB) {
   const db = await getDB();
   return db.getAll(store);
+}
+
+/**
+ * Resets the cached IDB connection so a fresh one is opened on next access.
+ * Call this after deleting the database (e.g. on logout).
+ */
+export function resetDBConnection(): void {
+  dbPromise = null;
 }
