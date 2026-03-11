@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OfferCard, type OfferCardProps } from "@/components/offer-card";
 import { getCountryFlag } from "@/lib/localization";
 import { useMarkets, type PolymarketMarket } from "@/hooks/use-polymarket";
+import { shopifyService } from "@/lib/shopify-service";
 import { cn } from "@/lib/utils";
 import DOMPurify from "dompurify";
 import { 
@@ -242,56 +243,86 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
   );
 };
 
-const mockProducts = [
-  { id: 1, name: "Premium Wireless Headphones", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop", price: "$199.99" },
-  { id: 2, name: "Smart Watch Pro", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop", price: "$299.99" },
-  { id: 3, name: "Ultra Gaming Mouse", image: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=400&h=400&fit=crop", price: "$79.99" },
-  { id: 4, name: "Mechanical Keyboard RGB", image: "https://images.unsplash.com/photo-1587829191301-dc798b83add3?w=400&h=400&fit=crop", price: "$159.99" },
-  { id: 5, name: "4K Webcam Studio", image: "https://images.unsplash.com/photo-1598933473309-ce030f893713?w=400&h=400&fit=crop", price: "$249.99" },
-];
+interface ShopProduct {
+  id: string;
+  title: string;
+  images: string[];
+  price: number;
+  currency: string;
+}
 
 function ProductCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [products, setProducts] = useState<ShopProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const activeProducts = useMemo(() => {
-    if (!mockProducts) return [];
-    return mockProducts;
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const result = await shopifyService.getProducts(10);
+        const transformed: ShopProduct[] = result.products.map((edge: any) => {
+          const p = edge.node;
+          return {
+            id: p.id,
+            title: p.title,
+            images: p.images.edges.map((e: any) => e.node.url),
+            price: parseFloat(p.priceRange.minVariantPrice.amount),
+            currency: p.priceRange.minVariantPrice.currencyCode,
+          };
+        });
+        setProducts(transformed);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProducts();
   }, []);
 
   useEffect(() => {
-    if (activeProducts.length <= 1) return;
+    if (products.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % activeProducts.length);
+      setCurrentIndex((prev) => (prev + 1) % products.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [activeProducts.length]);
+  }, [products.length]);
 
-  if (activeProducts.length === 0) return null;
+  if (isLoading) {
+    return (
+      <div className="bg-card border border-border rounded-2xl p-6">
+        <h3 className="text-xl font-bold mb-4">Trending Products</h3>
+        <div className="relative h-[300px] sm:h-[400px] bg-muted rounded-xl flex items-center justify-center animate-pulse">
+          <div className="h-8 w-8 border-b-2 border-primary rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
 
-  const currentProduct = activeProducts[currentIndex];
+  if (products.length === 0) return null;
+
+  const currentProduct = products[currentIndex];
+  const imageUrl = currentProduct.images?.[0] || '';
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6 overflow-hidden">
       <h3 className="text-xl font-bold mb-4">Trending Products</h3>
       <div className="relative h-[300px] sm:h-[400px] flex items-center justify-center bg-muted rounded-xl overflow-hidden mb-4 transition-all duration-500">
         <img 
-          src={currentProduct.image} 
-          alt={currentProduct.name}
+          src={imageUrl} 
+          alt={currentProduct.title}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
-          }}
         />
       </div>
       
       <div className="text-center mb-4">
-        <h4 className="text-lg font-semibold text-foreground">{currentProduct.name}</h4>
-        <p className="text-primary font-bold text-xl mt-1">{currentProduct.price}</p>
+        <h4 className="text-lg font-semibold text-foreground line-clamp-2">{currentProduct.title}</h4>
+        <p className="text-primary font-bold text-xl mt-1">${currentProduct.price.toFixed(2)} {currentProduct.currency}</p>
       </div>
 
       <div className="flex justify-center gap-1.5">
-        {activeProducts.map((_, i) => (
+        {products.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrentIndex(i)}
