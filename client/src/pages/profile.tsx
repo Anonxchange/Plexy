@@ -255,6 +255,7 @@ function ProductCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -289,6 +290,10 @@ function ProductCarousel() {
     return () => clearInterval(timer);
   }, [products.length]);
 
+  const handleProductClick = (productId: string) => {
+    setLocation(`/shop/product/${encodeURIComponent(productId)}`);
+  };
+
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6">
@@ -308,17 +313,25 @@ function ProductCarousel() {
   return (
     <div className="bg-card border border-border rounded-2xl p-6 overflow-hidden">
       <h3 className="text-xl font-bold mb-4">Trending Products</h3>
-      <div className="relative h-[300px] sm:h-[400px] flex items-center justify-center bg-muted rounded-xl overflow-hidden mb-4 transition-all duration-500">
+      <button 
+        onClick={() => handleProductClick(currentProduct.id)}
+        className="relative h-[300px] sm:h-[400px] flex items-center justify-center bg-muted rounded-xl overflow-hidden mb-4 transition-all duration-500 hover:opacity-80 cursor-pointer w-full"
+      >
         <img 
           src={imageUrl} 
           alt={currentProduct.title}
           className="w-full h-full object-cover"
         />
-      </div>
+      </button>
       
       <div className="text-center mb-4">
-        <h4 className="text-lg font-semibold text-foreground line-clamp-2">{currentProduct.title}</h4>
-        <p className="text-primary font-bold text-xl mt-1">{currentProduct.price.toFixed(2)} {currentProduct.currency}</p>
+        <button
+          onClick={() => handleProductClick(currentProduct.id)}
+          className="hover:text-primary/80 transition-colors w-full"
+        >
+          <h4 className="text-lg font-semibold text-foreground line-clamp-2">{currentProduct.title}</h4>
+          <p className="text-primary font-bold text-xl mt-1">{currentProduct.price.toFixed(2)} {currentProduct.currency}</p>
+        </button>
       </div>
 
       <div className="flex justify-center gap-1.5">
