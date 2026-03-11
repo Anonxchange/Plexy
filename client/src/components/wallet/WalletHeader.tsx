@@ -27,8 +27,9 @@ export function WalletHeader({
   const { data: wallet, isLoading, isError, isRefetching } = useWalletData();
   const [showBalance, setShowBalance] = useState(true);
 
-  // Show skeleton on initial load, refresh/refetch (if no data), or error
-  const loading = isLoading || (isRefetching && !wallet) || isError || wallet?.isConverting;
+  // Show skeleton while loading (includes live balance fetch) or converting currency.
+  // Only fall back to skeleton on error when there's no cached data to show.
+  const loading = isLoading || (isRefetching && !wallet) || (isError && !wallet) || wallet?.isConverting;
   const preferredCurrency = wallet?.preferredCurrency || "USD";
 
   const hasAssets =
