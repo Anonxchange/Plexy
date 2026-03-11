@@ -242,6 +242,70 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
   );
 };
 
+const mockProducts = [
+  { id: 1, name: "Premium Wireless Headphones", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop", price: "$199.99" },
+  { id: 2, name: "Smart Watch Pro", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop", price: "$299.99" },
+  { id: 3, name: "Ultra Gaming Mouse", image: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=400&h=400&fit=crop", price: "$79.99" },
+  { id: 4, name: "Mechanical Keyboard RGB", image: "https://images.unsplash.com/photo-1587829191301-dc798b83add3?w=400&h=400&fit=crop", price: "$159.99" },
+  { id: 5, name: "4K Webcam Studio", image: "https://images.unsplash.com/photo-1598933473309-ce030f893713?w=400&h=400&fit=crop", price: "$249.99" },
+];
+
+function ProductCarousel() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const activeProducts = useMemo(() => {
+    if (!mockProducts) return [];
+    return mockProducts;
+  }, []);
+
+  useEffect(() => {
+    if (activeProducts.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % activeProducts.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [activeProducts.length]);
+
+  if (activeProducts.length === 0) return null;
+
+  const currentProduct = activeProducts[currentIndex];
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-6 overflow-hidden">
+      <h3 className="text-xl font-bold mb-4">Trending Products</h3>
+      <div className="relative h-[300px] sm:h-[400px] flex items-center justify-center bg-muted rounded-xl overflow-hidden mb-4 transition-all duration-500">
+        <img 
+          src={currentProduct.image} 
+          alt={currentProduct.name}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
+          }}
+        />
+      </div>
+      
+      <div className="text-center mb-4">
+        <h4 className="text-lg font-semibold text-foreground">{currentProduct.name}</h4>
+        <p className="text-primary font-bold text-xl mt-1">{currentProduct.price}</p>
+      </div>
+
+      <div className="flex justify-center gap-1.5">
+        {activeProducts.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              currentIndex === i ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProfilePredictionSection() {
   const { data: predictionMarkets } = useMarkets({ limit: 10 });
   
@@ -250,7 +314,7 @@ function ProfilePredictionSection() {
   }
   
   return (
-    <div className="mt-6">
+    <div className="mt-2">
       <PredictionEventSlider markets={predictionMarkets} />
     </div>
   );
@@ -1120,7 +1184,7 @@ export function Profile() {
         </div>
 
         {/* Desktop: 3-column layout (Profile + Stats), Mobile: stacked */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           {/* Column 1: Profile Card + Share/Send Button */}
           <div className="lg:col-span-1 space-y-6">
             <Card className="bg-card border-border overflow-hidden">
@@ -1412,6 +1476,11 @@ export function Profile() {
             </CardContent>
           </Card>
         </div>
+
+      {/* Product Carousel Section */}
+      <div className="mt-8">
+        <ProductCarousel />
+      </div>
 
       {/* Trade History Section - Only shown when viewing another user's profile */}
       {!isOwnProfile && user?.id && (
