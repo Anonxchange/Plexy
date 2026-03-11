@@ -123,9 +123,10 @@ const NowPaymentsCheckout = ({
         payCurrency: selectedCrypto,
         orderId: structuredOrderId,
         orderDescription: description,
-        ipnCallbackUrl: `${supabase.supabaseUrl}/functions/v1/nowpayments-webhook`,
+        ipnCallbackUrl: `${(supabase.supabaseUrl || "https://hvpeycnedmzrjshmvgri.supabase.co").replace(/\/$/, "")}/functions/v1/nowpayments-webhook`,
       });
 
+      console.log("IPN URL:", `${(supabase.supabaseUrl || "https://hvpeycnedmzrjshmvgri.supabase.co").replace(/\/$/, "")}/functions/v1/nowpayments-webhook`);
       console.log("Payment response:", data);
 
       if (!data || !data.pay_address) {
