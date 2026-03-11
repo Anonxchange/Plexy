@@ -107,3 +107,32 @@ export function useCreateGiftCardOrder() {
     },
   });
 }
+
+export interface ReloadlyCategory {
+  id: number;
+  name: string;
+}
+
+export function useGiftCardCategories() {
+  return useQuery<ReloadlyCategory[]>({
+    queryKey: ["gift-card-categories"],
+    staleTime: 1000 * 60 * 60,
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-categories`,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to fetch categories");
+      return res.json();
+    },
+  });
+}
