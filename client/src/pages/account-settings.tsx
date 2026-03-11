@@ -57,8 +57,6 @@ import {
   Bell,
   Shield,
   Smartphone,
-  Building2,
-  Code,
   CheckCircle2,
   Link2,
   Info,
@@ -96,8 +94,6 @@ const settingsSections = [
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "security", label: "Security", icon: Shield },
   { id: "devices", label: "Devices", icon: Smartphone },
-  { id: "payment", label: "Payment Accounts", icon: Building2 },
-  { id: "developer", label: "Developer", icon: Code },
   { id: "verification", label: "Verification", icon: CheckCircle2 },
   { id: "connected", label: "Connected Apps & Websites", icon: Link2 },
   { id: "security-questions", label: "Security Questions", icon: Info },
@@ -3816,8 +3812,6 @@ export default function AccountSettings() {
         return <SecuritySection />;
       case "notifications":
         return <NotificationsSection />;
-      case "payment":
-        return <PaymentSection />;
       case "devices":
         setLocation('/devices');
         return null;
@@ -3825,9 +3819,6 @@ export default function AccountSettings() {
         return <VerificationSection />;
       case "connected":
         return <ConnectedAppsSection />;
-      case "developer":
-        setLocation('/developer');
-        return null;
       default:
         return (
           <Card>
