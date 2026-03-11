@@ -6,6 +6,7 @@ import { PaymentMethods } from "@/components/payment-methods";
 import { TrustStats } from "@/components/trust-stats";
 import { Testimonials } from "@/components/testimonials";
 import { CTASection } from "@/components/cta-section";
+import { AppFooter } from "@/components/app-footer";
 import { useSchema, homePageSchema } from "@/hooks/use-schema";
 
 export default function Home() {
@@ -21,6 +22,7 @@ export default function Home() {
       <TrustStats />
       <Testimonials />
       <CTASection />
+      <AppFooter />
     </div>
   );
 }
