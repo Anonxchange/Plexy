@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 import { createNowPayment, getNowPaymentsEstimate, getNowPaymentStatus } from "@/hooks/use-nowpayments";
 import { Loader2, Bitcoin, Copy, RefreshCw, ArrowLeft } from "lucide-react";
 
@@ -116,15 +117,13 @@ const NowPaymentsCheckout = ({
         ? `${service}:${JSON.stringify(serviceMetadata)}`
         : `order_${Date.now()}`;
 
-      const ipnUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://hvpeycnedmzrjshmvgri.supabase.co"}/functions/v1/nowpayments-webhook`;
-
       const data = await createNowPayment({
         priceAmount: numericAmount,
         priceCurrency: currency,
         payCurrency: selectedCrypto,
         orderId: structuredOrderId,
         orderDescription: description,
-        ipnCallbackUrl: ipnUrl,
+        ipnCallbackUrl: `${supabase.supabaseUrl}/functions/v1/nowpayments-webhook`,
       });
 
       console.log("Payment response:", data);
