@@ -1227,10 +1227,10 @@ export function Profile() {
           </h1>
         </div>
 
-        {/* Desktop: 3-column layout (Profile + Stats), Mobile: stacked */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+        {/* Desktop: 2-column layout (Profile + Stats), Mobile: stacked */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Column 1: Profile Card + Share/Send Button */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="space-y-6">
             <Card className="bg-card border-border overflow-hidden">
           <CardContent className="p-0">
             <div className="bg-elevate-1 p-4 sm:p-6">
@@ -1430,13 +1430,8 @@ export function Profile() {
 
           </div>
 
-          {/* Prediction Market Slider - Between profile and stats */}
-          <div className="lg:col-span-3">
-            <ProfilePredictionSection />
-          </div>
-
           {/* Column 2: Trades, Verifications, Trade Volumes, Trusted By */}
-          <Card className="lg:col-span-1 bg-card border-border">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-elevate-1 rounded-lg p-4 text-center">
@@ -1533,6 +1528,11 @@ export function Profile() {
 
             </CardContent>
           </Card>
+        </div>
+
+        {/* Prediction Market Slider - Full width below columns */}
+        <div className="mt-6">
+          <ProfilePredictionSection />
         </div>
 
       {/* Product Carousel Section */}
