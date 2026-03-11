@@ -127,8 +127,8 @@ const NowPaymentsCheckout = ({
 
       console.log("Payment response:", data);
 
-      if (data.error || data.message || !data.pay_address) {
-        throw new Error(data.message || data.error || "Payment creation failed - no address returned");
+      if (!data || !data.pay_address) {
+        throw new Error(data?.message || data?.error || "Payment creation failed - no address returned");
       }
 
       setPaymentData(data);
