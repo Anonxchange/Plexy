@@ -92,30 +92,6 @@ function GiftCardSkeleton() {
   );
 }
 
-const sidebarCategories = [
-  { name: "All Categories", icon: LayoutGrid },
-  { name: "Travel", icon: Globe },
-  { name: "Food & Groceries", icon: Coffee },
-  { name: "Gaming", icon: Gamepad2 },
-  { name: "Transportation", icon: Smartphone },
-  { name: "Electronics", icon: Lightbulb },
-  { name: "Fashion", icon: ShoppingBag },
-  { name: "Privacy & Tools", icon: Lock },
-  { name: "Department Stores", icon: ShoppingBag },
-  { name: "Multi-Brand", icon: ShoppingBag },
-  { name: "Entertainment", icon: Music },
-  { name: "Home & DIY", icon: Home },
-  { name: "Health & Beauty", icon: Heart },
-  { name: "Sports & Outdoors", icon: Dumbbell },
-  { name: "Gifts", icon: Gift },
-  { name: "Kids", icon: Gift },
-  { name: "VoIP", icon: Smartphone },
-  { name: "Crypto", icon: Coins },
-  { name: "Prepaid phones", icon: Smartphone },
-  { name: "Phone Codes", icon: Smartphone },
-  { name: "Other bundles", icon: Package },
-  { name: "eSIMs", icon: Smartphone },
-];
 
 const allCategories = [
   { icon: LayoutGrid, label: "All categories" },
@@ -241,15 +217,51 @@ const faqs = [
   }
 ];
 
-import { useGiftCardProducts } from "@/hooks/use-reloadly";
+import { useGiftCardProducts, useGiftCardCategories } from "@/hooks/use-reloadly";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
+
+const CATEGORY_ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
+  "gaming": Gamepad2,
+  "entertainment": Music,
+  "food": Coffee,
+  "food & groceries": Coffee,
+  "groceries": Coffee,
+  "travel": Globe,
+  "transportation": Smartphone,
+  "shopping": ShoppingBag,
+  "fashion": ShoppingBag,
+  "department stores": ShoppingBag,
+  "multi-brand": ShoppingBag,
+  "electronics": Lightbulb,
+  "home": Home,
+  "home & diy": Home,
+  "health": Heart,
+  "health & beauty": Heart,
+  "beauty": Heart,
+  "sports": Dumbbell,
+  "sports & outdoors": Dumbbell,
+  "gifts": Gift,
+  "kids": Gift,
+  "crypto": Coins,
+  "voip": Smartphone,
+  "prepaid phones": Smartphone,
+  "phone codes": Smartphone,
+  "esims": Smartphone,
+  "privacy & tools": Lock,
+  "other bundles": Package,
+};
+
+function getCategoryIcon(name: string): ComponentType<{ className?: string }> {
+  return CATEGORY_ICON_MAP[name.toLowerCase()] ?? Package;
+}
 
 export function GiftCards() {
   const [, setLocation] = useLocation();
   const [cartOpen, setCartOpen] = useState(false);
   const { items: cartItems } = useGiftCardCart();
   const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const { data: reloadlyCategories } = useGiftCardCategories();
   const [currency, setCurrency] = useState("USD");
   const [openCurrency, setOpenCurrency] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -295,20 +307,24 @@ export function GiftCards() {
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
         <aside className="hidden lg:block lg:col-span-1 bg-card rounded-3xl p-6 border border-border/50 h-fit lg:sticky lg:top-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">Categories</h3>
-          <div className="space-y-2">
-            {sidebarCategories.map((category, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedSidebarCategory(category.name)}
-                className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedSidebarCategory === category.name
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-secondary"
-                }`}
-              >
-                {category.name}
-              </button>
-            ))}
+          <div className="space-y-1">
+            {[{ name: "All Categories", icon: LayoutGrid }, ...(reloadlyCategories || []).map(c => ({ name: c.name, icon: getCategoryIcon(c.name) }))].map((category, index) => {
+              const IconComponent = category.icon;
+              return (
+                <button
+                  key={index}
+                  onClick={() => setSelectedSidebarCategory(category.name)}
+                  className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedSidebarCategory === category.name
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  <IconComponent className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{category.name}</span>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
@@ -446,7 +462,7 @@ export function GiftCards() {
 
           <div className="lg:hidden">
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {sidebarCategories.map((category, index) => {
+              {[{ name: "All Categories", icon: LayoutGrid }, ...(reloadlyCategories || []).map(c => ({ name: c.name, icon: getCategoryIcon(c.name) }))].map((category, index) => {
                 const IconComponent = category.icon;
                 return (
                   <button
