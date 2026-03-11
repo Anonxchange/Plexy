@@ -77,7 +77,6 @@ export function Swap() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
 
-  const [lastQuoteFetchTime, setLastQuoteFetchTime] = useState<number>(0);
   const isMountedRef = useRef(true);
   useEffect(() => {
     isMountedRef.current = true;
@@ -132,7 +131,6 @@ export function Swap() {
   useEffect(() => {
     if (bestQuote) {
       setActiveQuote(bestQuote);
-      setLastQuoteFetchTime(Date.now());
       if (bestQuote.gasFee) {
         const feeStr = `$${bestQuote.gasFee.toFixed(2)}`;
         setEstFees(prev => ({ ...prev, [fromNetwork]: feeStr }));
@@ -365,18 +363,6 @@ export function Swap() {
       return;
     }
 
-    // Check if quote is expired (30s — matches the price hook's cache TTL)
-    const isQuoteExpired = Date.now() - lastQuoteFetchTime > 30000;
-    if (isQuoteExpired) {
-      toast({
-        title: "Quote Expired",
-        description: "Please wait for the quote to refresh.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Refresh quote one last time before execution to be safe
     const finalQuote = activeQuote || bestQuote;
 
     if (!finalQuote) {
