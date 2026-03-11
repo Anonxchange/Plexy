@@ -13,7 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe, Smartphone, Coins, Gift, Heart, Dumbbell, Lightbulb, Lock, Package } from "lucide-react";
+import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe, Smartphone, Coins, Gift, Heart, Dumbbell, Lightbulb, Lock, Package, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -242,9 +242,14 @@ const faqs = [
 ];
 
 import { useGiftCardProducts } from "@/hooks/use-reloadly";
+import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
 
 export function GiftCards() {
   const [, setLocation] = useLocation();
+  const [cartOpen, setCartOpen] = useState(false);
+  const { items: cartItems } = useGiftCardCart();
+  const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
   const [currency, setCurrency] = useState("USD");
   const [openCurrency, setOpenCurrency] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -316,10 +321,23 @@ export function GiftCards() {
             </div>
 
             <div className="relative">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 animate-fade-in">
-                Buy gift cards with up to{" "}
-                <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent font-extrabold">20% discount</span>
-              </h1>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground animate-fade-in">
+                  Buy gift cards with up to{" "}
+                  <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent font-extrabold">20% discount</span>
+                </h1>
+                <button
+                  onClick={() => setCartOpen(true)}
+                  className="relative flex-shrink-0 mt-1 p-2.5 bg-white/50 dark:bg-white/10 hover:bg-white/70 dark:hover:bg-white/20 backdrop-blur-sm border border-white/60 dark:border-white/20 rounded-xl transition-colors shadow-sm"
+                >
+                  <ShoppingCart className="h-5 w-5 text-foreground" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+              </div>
 
               <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-3 border border-white/60 dark:border-white/20 shadow-lg flex items-center gap-3 animate-fade-in">
                 <div className="w-10 h-10 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
@@ -512,6 +530,8 @@ export function GiftCards() {
           </div>
         </div>
       </div>
+
+      <GiftCardCartSheet open={cartOpen} onOpenChange={setCartOpen} />
 
       <Sheet open={showCategoryModal} onOpenChange={setShowCategoryModal}>
         <SheetContent side="bottom" className="rounded-t-2xl">
