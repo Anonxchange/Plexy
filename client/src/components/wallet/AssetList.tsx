@@ -105,8 +105,9 @@ export function AssetList({
   const [hideZero, setHideZero] = useState(false);
   const [activeTab, setActiveTab] = useState("assets");
 
-  // Show skeleton on initial load, refresh/refetch (if no data), or error
-  const loading = isLoading || (isRefetching && !wallet) || isError || (wallet && 'isConverting' in (wallet as any) && (wallet as any).isConverting);
+  // Show skeleton while loading (includes live balance fetch) or converting currency.
+  // Only fall back to skeleton on error when there's no cached data to show.
+  const loading = isLoading || (isRefetching && !wallet) || (isError && !wallet) || (wallet && 'isConverting' in (wallet as any) && (wallet as any).isConverting);
   const preferredCurrency = (wallet as any)?.preferredCurrency || "USD";
 
   const assets = useMemo(() => {
