@@ -49,6 +49,7 @@ const NowPaymentsCheckout = ({
   const [paymentData, setPaymentData] = useState<any>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [prevEstimatedAmount, setPrevEstimatedAmount] = useState<number | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showForm || paymentData) return;
@@ -106,6 +107,7 @@ const NowPaymentsCheckout = ({
     }
 
     setProcessing(true);
+    setPaymentError(null);
     try {
       const serviceMetadata = metadata ? { ...metadata } : {};
       const service = serviceMetadata.service as string || "";
@@ -135,7 +137,9 @@ const NowPaymentsCheckout = ({
       toast.success("Payment created!", { description: "Send the exact amount to the address below" });
     } catch (err: any) {
       console.error("Payment creation error:", err);
-      toast.error("Payment error", { description: err.message || "Failed to create payment" });
+      const msg = err.message || "Failed to create payment";
+      setPaymentError(msg);
+      toast.error("Payment error", { description: msg });
     } finally {
       setProcessing(false);
     }
@@ -304,7 +308,7 @@ const NowPaymentsCheckout = ({
       <CardContent className="space-y-3">
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Choose crypto to pay with</label>
-          <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+          <Select value={selectedCrypto} onValueChange={(v) => { setSelectedCrypto(v); setPaymentError(null); }}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -343,6 +347,12 @@ const NowPaymentsCheckout = ({
             </span>
           </div>
         </div>
+
+        {paymentError && (
+          <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+            {paymentError}
+          </div>
+        )}
 
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={() => setShowForm(false)} disabled={processing}>
