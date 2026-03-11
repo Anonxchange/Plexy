@@ -189,17 +189,15 @@ export function AppHeader() {
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border bg-[#f2f2f2]/60 dark:bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-[#f2f2f2]/60 dark:supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          {user && (
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setMobileMenuOpen(true)}
-              data-testid="button-sidebar-toggle"
-              className="border-border lg:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => setMobileMenuOpen(true)}
+            data-testid="button-sidebar-toggle"
+            className="border-border lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
           <Link href="/" className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-lg px-2 py-1" data-testid="link-home-header">
             <div className="relative w-8 h-8">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -589,6 +587,7 @@ export function AppHeader() {
               <Button 
                 size="sm" 
                 onClick={() => navigate("/signup")}
+                className="hidden sm:inline-flex"
               >
                 Get Started
               </Button>
