@@ -127,6 +127,11 @@ export function Swap() {
   const [history, setHistory] = useState<any[]>([]);
   const [estFees, setEstFees] = useState<Record<string, string>>({});
 
+  // Clear stale quote immediately when the pair or network changes
+  useEffect(() => {
+    setActiveQuote(null);
+  }, [fromCurrency, toCurrency, fromNetwork, toNetwork]);
+
   // Automatically sync activeQuote with bestQuote from the hook
   useEffect(() => {
     if (bestQuote) {
@@ -193,6 +198,8 @@ export function Swap() {
   }, [user, fromCurrency, fromNetwork, monitoredBalances]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchFees = async () => {
       try {
         if (bestQuote && bestQuote.gasFee) {
@@ -202,24 +209,23 @@ export function Swap() {
 
         // Fallback to manual fetch if no quote
         const btcRes = await fetch('https://mempool.space/api/v1/fees/recommended');
-        if (btcRes.ok) {
+        if (btcRes.ok && isMounted) {
           const btcData = await btcRes.json();
           // Average tx is ~140 vBytes, convert sat/vB to BTC
           const btcFee = (btcData.hourFee * 140) / 1e8;
-          // Get BTC price to show in USD
           try {
             const prices = await getCryptoPrices(['BTC']);
             const btcPrice = prices.BTC?.current_price || 0;
             const feeInUsd = btcFee * btcPrice;
-            setEstFees(prev => ({ ...prev, BTC: `$${feeInUsd.toFixed(2)}` }));
+            if (isMounted) setEstFees(prev => ({ ...prev, BTC: `$${feeInUsd.toFixed(2)}` }));
           } catch {
-            setEstFees(prev => ({ ...prev, BTC: `${btcFee.toFixed(6)} BTC` }));
+            if (isMounted) setEstFees(prev => ({ ...prev, BTC: `${btcFee.toFixed(6)} BTC` }));
           }
         }
 
         // Fetch Ethereum Gas Price
         const ethRes = await fetch('https://api.etherscan.io/api?module=proxy&action=eth_gasPrice');
-        if (ethRes.ok) {
+        if (ethRes.ok && isMounted) {
           const ethData = await ethRes.json();
           if (ethData && ethData.result) {
             const gasPrice = parseInt(ethData.result, 16);
@@ -229,9 +235,9 @@ export function Swap() {
               const prices = await getCryptoPrices(['ETH']);
               const ethPrice = prices.ETH?.current_price || 0;
               const feeInUsd = ethFee * ethPrice;
-              setEstFees(prev => ({ ...prev, ETH: `$${feeInUsd.toFixed(2)}` }));
+              if (isMounted) setEstFees(prev => ({ ...prev, ETH: `$${feeInUsd.toFixed(2)}` }));
             } catch {
-              setEstFees(prev => ({ ...prev, ETH: `${ethFee.toFixed(5)} ETH` }));
+              if (isMounted) setEstFees(prev => ({ ...prev, ETH: `${ethFee.toFixed(5)} ETH` }));
             }
           }
         }
@@ -241,7 +247,7 @@ export function Swap() {
     };
 
     fetchFees();
-    // setHistory(swapExecutionService.getOrderHistory());
+    return () => { isMounted = false; };
   }, []);
 
   // Auto-update toAmount when prices change or fromAmount changes
@@ -383,145 +389,126 @@ export function Swap() {
   };
 
   const performSwap = async (password: string, quoteOverride?: any) => {
-  const fromAmountNum = parseFloat(fromAmount);
-  const toAmountNum = parseFloat(toAmount);
-  const activeQuoteToUse = quoteOverride || activeQuote || bestQuote;
+    const fromAmountNum = parseFloat(fromAmount);
+    const toAmountNum = parseFloat(toAmount);
+    const activeQuoteToUse = quoteOverride || activeQuote || bestQuote;
 
-  setIsSwapping(true);
+    setIsSwapping(true);
 
-  try {
-    const fromCurrObj = currencies.find(c => c.symbol === fromCurrency);
-    const toCurrObj = currencies.find(c => c.symbol === toCurrency);
+    try {
+      // STEP 1: Get wallet addresses
+      console.log("Fetching non-custodial wallets for user:", user!.id);
+      const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user!.id);
+      console.log("Found wallets:", wallets.map(w => ({ chainId: w.chainId, address: w.address, walletType: w.walletType })));
 
-    const fromNetObj = fromCurrObj?.networks?.find(n => n.chain === fromNetwork);
-    const toNetObj = toCurrObj?.networks?.find(n => n.chain === toNetwork);
+      const findCorrectWallet = (targetNetwork: string, _targetSymbol: string) => {
+        const net = targetNetwork.toLowerCase();
+        return wallets.find(w => {
+          const wChainId = (w.chainId || "").toLowerCase();
+          const wWalletType = (w.walletType || "").toLowerCase();
+          if (wChainId === net || wWalletType === net) return true;
+          if (net === 'btc' || net === 'bitcoin') return wWalletType === 'bitcoin' || wChainId.includes('bitcoin');
+          if (net === 'eth' || net === 'ethereum') return wWalletType === 'ethereum' || wChainId.includes('ethereum');
+          if (net === 'bsc' || net === 'binance') return wWalletType === 'binance' || wChainId.includes('binance') || wChainId === 'bsc';
+          if (net === 'trx' || net === 'tron') return wWalletType === 'tron' || wChainId.includes('tron');
+          if (net === 'sol' || net === 'solana') return wWalletType === 'solana' || wChainId.includes('solana');
+          if (net === 'polygon' || net === 'matic') return wWalletType === 'polygon' || wChainId.includes('polygon');
+          return false;
+        });
+      };
 
-    // STEP 1: Get wallet addresses
-    console.log("Fetching non-custodial wallets for user:", user!.id);
-    const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user!.id);
-    console.log("Found wallets:", wallets.map(w => ({ chainId: w.chainId, address: w.address, walletType: w.walletType })));
-    
-    // Normalize networks/currencies for comparison
-    const fromTarget = fromNetwork.toLowerCase();
-    const fromSymbolTarget = fromCurrency.toLowerCase();
-    const toTarget = toNetwork.toLowerCase();
-    const toSymbolTarget = toCurrency.toLowerCase();
+      const fromWallet = findCorrectWallet(fromNetwork, fromCurrency);
+      const toWallet = findCorrectWallet(toNetwork, toCurrency);
 
-    // Improved matching logic to find correct wallet
-    const findCorrectWallet = (targetNetwork: string, targetSymbol: string) => {
-      const net = targetNetwork.toLowerCase();
-      const sym = targetSymbol.toLowerCase();
-      
-      return wallets.find(w => {
-        const wChainId = (w.chainId || "").toLowerCase();
-        const wWalletType = (w.walletType || "").toLowerCase();
-        
-        if (wChainId === net || wWalletType === net) return true;
-        
-        if (net === 'btc' || net === 'bitcoin') return wWalletType === 'bitcoin' || wChainId.includes('bitcoin');
-        if (net === 'eth' || net === 'ethereum') return wWalletType === 'ethereum' || wChainId.includes('ethereum');
-        if (net === 'bsc' || net === 'binance') return wWalletType === 'binance' || wChainId.includes('binance') || wChainId === 'bsc';
-        if (net === 'trx' || net === 'tron') return wWalletType === 'tron' || wChainId.includes('tron');
-        if (net === 'sol' || net === 'solana') return wWalletType === 'solana' || wChainId.includes('solana');
-        if (net === 'polygon' || net === 'matic') return wWalletType === 'polygon' || wChainId.includes('polygon');
-        
-        return false;
-      });
-    };
+      console.log("Selected fromWallet:", fromWallet?.address, "for target:", fromNetwork);
+      console.log("Selected toWallet:", toWallet?.address, "for target:", toNetwork);
 
-    const fromWallet = findCorrectWallet(fromNetwork, fromCurrency);
-    const toWallet = findCorrectWallet(toNetwork, toCurrency);
-
-    console.log("Selected fromWallet:", fromWallet?.address, "for target:", fromNetwork);
-    console.log("Selected toWallet:", toWallet?.address, "for target:", toNetwork);
-
-    if (!fromWallet?.address || !toWallet?.address) {
-      console.error("Wallet missing. From:", fromWallet?.address, "To:", toWallet?.address);
-      const missing = !fromWallet?.address ? fromCurrency : toCurrency;
-      throw new Error(`Please generate a ${missing} wallet first. Go to the Assets page to create it.`);
-    }
-
-    // STEP 2: Create swap
-    const swapResponse = await rocketXApi.executeSwap({
-      userId: user!.id,
-      fromToken: activeQuoteToUse?.fromToken,
-      fromNetwork,
-      fromAmount: activeQuoteToUse?.fromAmount || fromAmountNum,
-      fromAddress: fromWallet.address,
-      toToken: activeQuoteToUse?.toToken,
-      toNetwork,
-      toAmount: activeQuoteToUse?.toAmount || toAmountNum,
-      toAddress: toWallet.address,
-      slippage: 1,
-      quoteId: activeQuoteToUse?.id // Pass quote ID if available
-    });
-
-    if (!swapResponse?.id) {
-      throw new Error("Swap creation failed");
-    }
-
-    const swapId = swapResponse.id;
-
-    if (isMountedRef.current) {
-      toast({
-        title: "Swap Initiated",
-        description: "Waiting for blockchain confirmation...",
-      });
-    }
-
-    // STEP 2: Poll status
-    let attempts = 0;
-    let completed = false;
-
-    while (attempts < 30 && isMountedRef.current) {
-      await new Promise(r => setTimeout(r, 3000));
-
-      const statusRes = await rocketXApi.getStatus(swapId);
-      const status = statusRes?.status;
-
-      if (status === "completed") {
-        completed = true;
-        break;
+      if (!fromWallet?.address || !toWallet?.address) {
+        console.error("Wallet missing. From:", fromWallet?.address, "To:", toWallet?.address);
+        const missing = !fromWallet?.address ? fromCurrency : toCurrency;
+        throw new Error(`Please generate a ${missing} wallet first. Go to the Assets page to create it.`);
       }
 
-      if (status === "failed") {
-        throw new Error("Swap failed (insufficient balance or rejected)");
+      // STEP 2: Create swap
+      const swapResponse = await rocketXApi.executeSwap({
+        userId: user!.id,
+        fromToken: activeQuoteToUse?.fromToken,
+        fromNetwork,
+        fromAmount: activeQuoteToUse?.fromAmount || fromAmountNum,
+        fromAddress: fromWallet.address,
+        toToken: activeQuoteToUse?.toToken,
+        toNetwork,
+        toAmount: activeQuoteToUse?.toAmount || toAmountNum,
+        toAddress: toWallet.address,
+        slippage: 1,
+        quoteId: activeQuoteToUse?.id,
+      });
+
+      if (!swapResponse?.id) {
+        throw new Error("Swap creation failed");
       }
 
-      attempts++;
-    }
+      const swapId = swapResponse.id;
 
-    if (!completed && isMountedRef.current) {
-      throw new Error("Swap timeout: The transaction is taking longer than expected. Please check your wallet history.");
-    }
+      if (isMountedRef.current) {
+        toast({
+          title: "Swap Initiated",
+          description: "Waiting for blockchain confirmation...",
+        });
+      }
 
-    if (isMountedRef.current) {
-      toast({
-        title: "Swap Successful!",
-        description: `Successfully swapped ${fromAmountNum} ${fromCurrency} → ${toCurrency}`,
-      });
-    }
+      // STEP 3: Poll status
+      let attempts = 0;
+      let completed = false;
 
-  } catch (error: any) {
-    console.error("Swap execution failed:", error);
-    if (isMountedRef.current) {
-      toast({
-        title: "Swap Failed",
-        description: error.message || "Transaction failed. Please ensure your wallet has sufficient balance and the swap service is available.",
-        variant: "destructive",
-      });
-    }
-  } finally {
-    if (isMountedRef.current) {
-      setIsSwapping(false);
-    }
-  }
-};
+      while (attempts < 30 && isMountedRef.current) {
+        await new Promise(r => setTimeout(r, 3000));
 
-  const handlePasswordSubmit = () => {
+        const statusRes = await rocketXApi.getStatus(swapId);
+        const status = statusRes?.status;
+
+        if (status === "completed") {
+          completed = true;
+          break;
+        }
+
+        if (status === "failed") {
+          throw new Error("Swap failed (insufficient balance or rejected)");
+        }
+
+        attempts++;
+      }
+
+      if (!completed && isMountedRef.current) {
+        throw new Error("Swap timeout: The transaction is taking longer than expected. Please check your wallet history.");
+      }
+
+      if (isMountedRef.current) {
+        toast({
+          title: "Swap Successful!",
+          description: `Successfully swapped ${fromAmountNum} ${fromCurrency} → ${toCurrency}`,
+        });
+      }
+    } catch (error: any) {
+      console.error("Swap execution failed:", error);
+      if (isMountedRef.current) {
+        toast({
+          title: "Swap Failed",
+          description: error.message || "Transaction failed. Please ensure your wallet has sufficient balance and the swap service is available.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsSwapping(false);
+      }
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
     if (walletPassword.length > 0) {
       setSessionPassword(walletPassword);
-      performSwap(walletPassword);
+      await performSwap(walletPassword);
     }
   };
 
