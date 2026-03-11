@@ -1410,7 +1410,6 @@ export function Profile() {
 
         {/* Prediction Market Slider */}
       <ProfilePredictionSection />
-      </div>
 
       {/* Trade History Section - Only shown when viewing another user's profile */}
       {!isOwnProfile && user?.id && (
