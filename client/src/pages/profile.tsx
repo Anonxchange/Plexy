@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OfferCard, type OfferCardProps } from "@/components/offer-card";
 import { getCountryFlag } from "@/lib/localization";
+import { useMarkets, type PolymarketMarket } from "@/hooks/use-polymarket";
+import { cn } from "@/lib/utils";
+import DOMPurify from "dompurify";
 import { 
   User, 
   Copy,
@@ -23,7 +26,9 @@ import {
   Flag,
   Wallet,
   Send,
-  FilterIcon, // Added FilterIcon for the filter button
+  FilterIcon,
+  TrendingUp,
+  ArrowRight,
 } from "lucide-react";
 import medalTheOg from '@assets/generated_images/IMG_1432.png';
 import medalInitiate from '@assets/generated_images/IMG_1430.png';
@@ -144,6 +149,111 @@ interface TradeHistory {
   status: string;
   created_at: string;
   payment_method?: string;
+}
+
+const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [, setLocation] = useLocation();
+
+  const activeMarkets = useMemo(() => {
+    if (!markets) return [];
+    return [...markets]
+      .sort((a, b) => (b.volumeNum || 0) - (a.volumeNum || 0))
+      .slice(0, 4);
+  }, [markets]);
+
+  useEffect(() => {
+    if (activeMarkets.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % activeMarkets.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [activeMarkets.length]);
+
+  if (activeMarkets.length === 0) return null;
+
+  const currentMarket = activeMarkets[currentIndex];
+  const prices = JSON.parse(currentMarket.outcomePrices || "[]");
+  const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
+  const imageSrc = currentMarket.image ? DOMPurify.sanitize(currentMarket.image) : null;
+
+  return (
+    <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-secondary rounded-2xl p-4 border border-primary/20 relative overflow-hidden h-[140px] flex flex-col justify-between transition-all duration-500">
+      <div className="absolute right-0 top-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+      
+      <div className="relative flex items-center gap-4">
+        <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {imageSrc ? (
+            <img 
+              src={imageSrc} 
+              alt="" 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.classList.add('flex', 'items-center', 'justify-center');
+                  if (!parent.querySelector('.fallback-icon')) {
+                    const iconContainer = document.createElement('div');
+                    iconContainer.className = 'fallback-icon';
+                    iconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-6 w-6 text-primary"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>';
+                    parent.appendChild(iconContainer);
+                  }
+                }
+              }}
+            />
+          ) : (
+            <TrendingUp className="h-6 w-6 text-primary" />
+          )}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Prediction Market</span>
+            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{price}% Yes</span>
+          </div>
+          <h3 className="text-foreground font-semibold mt-1 line-clamp-2 text-sm sm:text-base leading-tight">
+            {currentMarket.question}
+          </h3>
+          <button 
+            onClick={() => setLocation(`/prediction/${currentMarket.conditionId}`)}
+            className="flex items-center gap-1 text-primary font-medium text-sm mt-2 hover:gap-2 transition-all"
+          >
+            Predict Now
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex justify-center gap-1.5 mt-2">
+        {activeMarkets.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              currentIndex === i ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+function ProfilePredictionSection() {
+  const { data: predictionMarkets } = useMarkets({ limit: 10 });
+  
+  if (!predictionMarkets || predictionMarkets.length === 0) {
+    return null;
+  }
+  
+  return (
+    <div className="mt-6">
+      <PredictionEventSlider markets={predictionMarkets} />
+    </div>
+  );
 }
 
 export function Profile() {
@@ -1196,15 +1306,6 @@ export function Profile() {
           </Button>
         )}
 
-        {isOwnProfile && (
-          <Button 
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6"
-            onClick={handleShareProfile}
-          >
-            <Share2 className="h-5 w-5 mr-2" />
-            Share Profile
-          </Button>
-        )}
           </div>
 
           {/* Column 2: Trades, Verifications, Trade Volumes, Trusted By */}
@@ -1303,215 +1404,12 @@ export function Profile() {
                 </div>
               </div>
 
-              <div>
-                <p className="text-muted-foreground uppercase text-xs mb-2">Trusted By</p>
-                <div className="flex items-center gap-2 text-primary">
-                  <Users className="h-5 w-5" />
-                  <span className="font-bold text-lg">{profileStats.trustedByCount} USER{profileStats.trustedByCount !== 1 ? 'S' : ''}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Card 3: Block Stats & 30 Day Stats */}
-          <Card className="bg-card border-border">
-            <CardContent className="p-6">
-              <div className="space-y-4 mb-4">
-                <div>
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Blocked By</p>
-                  <div className="flex items-center gap-2 text-primary">
-                    <Users className="h-5 w-5" />
-                    <span className="font-bold">{profileStats.blockedByCount} USER{profileStats.blockedByCount !== 1 ? 'S' : ''}</span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Has Blocked</p>
-                  <div className="flex items-center gap-2 text-primary">
-                    <Users className="h-5 w-5" />
-                    <span className="font-bold">{profileStats.hasBlockedCount} USER{profileStats.hasBlockedCount !== 1 ? 'S' : ''}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-muted text-foreground text-center py-3 rounded mb-4">
-                For 30 days range
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="text-center">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Trades Success</p>
-                  <p className="text-xl">{profileStats.thirtyDayStats.tradesSuccess !== null ? `${profileStats.thirtyDayStats.tradesSuccess}%` : '—'}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Payment</p>
-                  <p className="text-xl">{profileStats.thirtyDayStats.avgTimeToPayment !== null ? `${profileStats.thirtyDayStats.avgTimeToPayment} min` : '—'}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Avg. Time to Release</p>
-                  <p className="text-xl">{profileStats.thirtyDayStats.avgTimeToRelease !== null ? `${profileStats.thirtyDayStats.avgTimeToRelease} min` : '—'}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Trades Volume</p>
-                  <p className="text-xl">{profileStats.thirtyDayStats.tradesVolume > 0 ? `$${profileStats.thirtyDayStats.tradesVolume.toLocaleString()}` : '< $100'}</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Full-width sections below the grid - Active Offers and Feedback */}
-      {/* Active Offers Section */}
-      <div className="mt-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">Active Offers</h3>
-          <Select value={offerFilter} onValueChange={setOfferFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="buying">Buying Crypto</SelectItem>
-              <SelectItem value="selling">Selling Crypto</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {offers.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No active {offerFilter} offers</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {offers.map((offer) => (
-              <OfferCard
-                key={offer.id}
-                id={offer.id}
-                vendor={{
-                  name: profileData?.username || 'User',
-                  avatar: profileData?.avatar_url || undefined,
-                  isVerified: profileData?.is_verified || false,
-                  trades: profileData?.total_trades || 0,
-                  responseTime: "< 5 min",
-                  id: viewingUserId,
-                  country: profileData?.country || undefined,
-                }}
-                paymentMethod={offer.payment_method}
-                pricePerBTC={offer.price}
-                currency={offer.fiat_currency}
-                availableRange={{ min: offer.min_amount, max: offer.max_amount }}
-                limits={{ min: offer.min_amount, max: offer.max_amount }}
-                type={offerFilter === "buying" ? "buy" : "sell"}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-        {/* Feedback Section */}
-      <div className="mt-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">Feedback</h3>
-          <div className="flex items-center gap-2">
-            <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by"/>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="buyers">From Buyers</SelectItem>
-                <SelectItem value="sellers">From Sellers</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        {feedbacks.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No feedback yet</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {feedbacks.map((feedback) => (
-              <Card key={feedback.id} className="bg-card border-border shadow-sm">
-                <CardContent className="p-6">
-                  {/* Header with username, flag, and date */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-bold">
-                        @{feedback.from_user_profile?.username || feedback.from_user || 'Anonymous'}
-                      </h3>
-                      {feedback.from_user_profile?.country && (
-                        <span className="text-2xl">{getCountryFlag(feedback.from_user_profile?.country)}</span>
-                      )}
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(feedback.created_at).toLocaleDateString('en-US', { 
-                        month: 'long', 
-                        day: '2-digit', 
-                        year: 'numeric' 
-                      })}
-                    </span>
-                  </div>
-
-                  {/* Rating indicator */}
-                  <div className="flex items-center gap-2 mb-4">
-                    {feedback.rating === 'positive' ? (
-                      <>
-                        <ThumbsUp className="h-5 w-5 text-primary fill-primary" />
-                        <span className="text-primary font-semibold">Positive</span>
-                      </>
-                    ) : (
-                      <>
-                        <ThumbsDown className="h-5 w-5 text-destructive fill-destructive" />
-                        <span className="text-destructive font-semibold">Negative</span>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Payment method badge */}
-                  <div className="mb-4">
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm font-medium">
-                      {feedback.payment_method}
-                      <span className="text-xs bg-background px-2 py-0.5 rounded">
-                        {feedback.currency || 'NGN'}
-                      </span>
-                    </span>
-                  </div>
-
-                  {/* Comment */}
-                  {feedback.comment && (
-                    <div className="mb-4">
-                      <p className="text-lg">"{feedback.comment}"</p>
-                    </div>
-                  )}
-
-                  {/* Trade count */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Trades:</span>
-                      <span className="bg-primary text-primary-foreground px-3 py-1 rounded-md font-semibold">
-                        {feedback.trade_count || 1}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* View offer details button */}
-                  <Button 
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-xl"
-                    onClick={() => {
-                      if (feedback.offer_id) {
-                        setLocation(`/offers/${feedback.offer_id}`);
-                      } else {
-                        toast({
-                          title: "Offer details",
-                          description: "This offer is no longer available",
-                        });
-                      }
-                    }}
-                  >
-                    View offer details →
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        {/* Prediction Market Slider */}
+      <ProfilePredictionSection />
       </div>
 
       {/* Trade History Section - Only shown when viewing another user's profile */}
