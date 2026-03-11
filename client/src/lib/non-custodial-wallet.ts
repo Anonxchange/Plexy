@@ -120,6 +120,26 @@ export interface NonCustodialWallet {
 
 const STORAGE_KEY_PREFIX = "pexly_non_custodial_wallets";
 
+/**
+ * Normalises a vault field that may arrive from the DB as a JSON string.
+ *
+ * Supabase can return `encrypted_private_key` / `encrypted_mnemonic` as a plain
+ * string when the column type is `text`, or when an older code path stored the
+ * object via JSON.stringify. This helper tries to parse the string into an
+ * EncryptedVault object so the rest of the decryption pipeline works correctly.
+ *
+ * If the value is already an object (jsonb column), it is returned as-is.
+ * If the value is null/undefined, it is returned unchanged.
+ */
+function parseVaultField(value: any): any {
+  if (!value || typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 class NonCustodialWalletManager {
   private getStorageKey(userId?: string): string {
     if (!userId) throw new Error("userId is required");
@@ -310,8 +330,8 @@ class NonCustodialWalletManager {
         chainId: w.chain_id,
         address: w.address,
         walletType: w.wallet_type,
-        encryptedPrivateKey: w.encrypted_private_key,
-        encryptedMnemonic: w.encrypted_mnemonic,
+        encryptedPrivateKey: parseVaultField(w.encrypted_private_key),
+        encryptedMnemonic: parseVaultField(w.encrypted_mnemonic),
         isActive: w.is_active === 'true',
         isBacked_up: w.is_backed_up === 'true',
         createdAt: w.created_at,
@@ -361,8 +381,12 @@ class NonCustodialWalletManager {
 
   async decryptPrivateKey(vault: string | EncryptedVault, password: string): Promise<string> {
     if (typeof vault === "string") {
-      // This is a legacy vault, but we need userId for the old salt.
-      // Since our decryptPrivateKey doesn't take userId, we might need a workaround or migration during load.
+      // The vault arrived as a JSON string (e.g. text DB column or old serialisation path).
+      // Try to parse it into an EncryptedVault object before giving up.
+      const parsed = parseVaultField(vault);
+      if (parsed && typeof parsed === "object" && "ciphertext" in parsed) {
+        return decryptVault(parsed as EncryptedVault, password);
+      }
       throw new Error("Legacy vault string found. Please migrate your wallet.");
     }
     return decryptVault(vault, password);
