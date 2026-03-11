@@ -1308,6 +1308,11 @@ export function Profile() {
 
           </div>
 
+          {/* Prediction Market Slider - Between profile and stats */}
+          <div className="lg:col-span-3">
+            <ProfilePredictionSection />
+          </div>
+
           {/* Column 2: Trades, Verifications, Trade Volumes, Trusted By */}
           <Card className="lg:col-span-1 bg-card border-border">
             <CardContent className="p-6">
@@ -1407,9 +1412,6 @@ export function Profile() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Prediction Market Slider */}
-      <ProfilePredictionSection />
 
       {/* Trade History Section - Only shown when viewing another user's profile */}
       {!isOwnProfile && user?.id && (
