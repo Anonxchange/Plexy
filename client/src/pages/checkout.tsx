@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { usePayPal } from "@/hooks/usePaypal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
@@ -29,6 +30,7 @@ export function Checkout() {
   const [, setLocation] = useLocation();
   const { items, updateQuantity, removeItem } = useGiftCardCart();
   const [isProcessing, setIsProcessing] = useState(false);
+  const { createAndCaptureOrder, loading: paypalLoading } = usePayPal();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -269,8 +271,22 @@ export function Checkout() {
 
               <TabsContent value="paypal" className="p-6 text-center space-y-6">
                 <p className="text-muted-foreground">You will be redirected to PayPal to complete your purchase securely.</p>
-                <Button className="w-full h-14 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold text-lg rounded-xl gap-2">
-                  Continue to PayPal
+                <Button
+                  className="w-full h-14 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold text-lg rounded-xl gap-2"
+                  disabled={paypalLoading}
+                  onClick={() => createAndCaptureOrder(total)}
+                >
+                  {paypalLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-5" alt="" />
+                      Continue to PayPal
+                    </>
+                  )}
                 </Button>
               </TabsContent>
 
