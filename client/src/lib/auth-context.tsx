@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import { useLocation } from "wouter";
 import { supabase } from "./supabase";
 import { presenceTracker } from './presence';
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
+import { wipeSecureStorage } from "./secure-storage-wiper";
 
 interface PendingAuth {
   userId: string;
@@ -251,6 +253,7 @@ function hasPendingOTP(): boolean {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [, navigate] = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -298,13 +301,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const lockWalletDueToInactivity = useCallback(() => {
+    setSessionPasswordState(null);
+    setIsWalletUnlocked(false);
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    navigate('/signin?reason=timeout');
+  }, [navigate]);
+
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-    // 30 minutes of inactivity
-    inactivityTimerRef.current = setTimeout(lockWallet, 30 * 60 * 1000);
-  }, [lockWallet]);
+    // 15 minutes of inactivity triggers auto-lock
+    inactivityTimerRef.current = setTimeout(lockWalletDueToInactivity, 15 * 60 * 1000);
+  }, [lockWalletDueToInactivity]);
 
   const unlockWallet = useCallback((password: string) => {
     setSessionPasswordState(password);
@@ -341,48 +353,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       checkedUsersRef.current.add(userId);
       
       // DECISION FLOW:
-      // 1. Is there a decrypted key in memory? -> Wallet Ready
-      // 2. Is there an encrypted blob in localStorage? -> Password Required (to decrypt)
-      // 3. Is there an encrypted blob in Cloud? -> Restore Required (Sync to local)
-      // 4. Is there a wallet address in Profile/Metadata? -> Import Required (Missing blob)
-      // 5. No address at all? -> Create Required
+      // 1. Fetch authoritative encrypted blobs from Supabase (source of truth).
+      //    Cache them in IndexedDB for offline fallback. Never store decrypted keys.
+      // 2. If wallet is already unlocked in memory -> Wallet Ready
+      // 3. If encrypted blobs exist (Supabase or IDB cache) -> Password Required
+      // 4. If wallet address exists in profile but no blob -> Import Required
+      // 5. No address at all -> Create Required
 
-      // 1. Is there a decrypted key in memory? -> Wallet Ready
-      const localWallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
-      const isUnlocked = isWalletUnlocked;
-
-      if (localWallets.length > 0 && isUnlocked) {
-        // WALLET READY: Private keys can be derived in memory when needed
-        setWalletImportState({ required: false, expectedAddress: null });
-        return;
-      }
-
-      // 2. Check Local Storage Blobs
-      if (localWallets.length > 0) {
-        // PASSWORD REQUIRED: Wallet exists locally but we don't have the password to use it
-        // We don't pop up the setup dialog here, we just wait for a transaction to ask for password
-        setWalletImportState({ required: false, expectedAddress: null });
-        return;
-      }
-
-      // 3. Check Cloud Blobs (Supabase) FIRST before deciding on setup
+      // 1. Always sync encrypted blobs from Supabase first.
+      //    This ensures we never rely solely on potentially stale IDB data.
+      let wallets: any[] = [];
       try {
-        const persistedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
-        if (persistedWallets && persistedWallets.length > 0) {
-          // RESTORE SUCCESSFUL: Local storage is now synced with backend blob
-          setWalletImportState({ required: false, expectedAddress: null });
-          localStorage.setItem(`wallet_setup_done_${userId}`, 'true');
-          return;
+        const supabaseWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+        if (supabaseWallets && supabaseWallets.length > 0) {
+          wallets = supabaseWallets;
         }
       } catch (err) {
-        console.error("Cloud check failed:", err);
+        console.error("Supabase wallet sync failed, falling back to IDB cache:", err);
+        // Fallback: read from IDB cache if Supabase is unreachable
+        wallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
       }
 
-      // Re-check local wallets to ensure state is updated after cloud sync attempt
-      const syncedWallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
-      if (syncedWallets.length > 0) {
+      // 2. If wallet is already unlocked in memory -> Wallet Ready
+      if (wallets.length > 0 && isWalletUnlocked) {
         setWalletImportState({ required: false, expectedAddress: null });
-        return; 
+        return;
+      }
+
+      // 3. Encrypted blobs exist -> password required to use them
+      if (wallets.length > 0) {
+        setWalletImportState({ required: false, expectedAddress: null });
+        return;
       }
 
       // 4. Check Wallet Address (Ownership check)
@@ -663,20 +664,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     presenceTracker.stopTracking();
+
+    // Clear sensitive in-memory state immediately
     setSessionPassword(null);
     setWalletImportState({ required: false, expectedAddress: null });
     checkedUsersRef.current.clear();
     isTrackingRef.current = false;
     setPendingOTPWithTimestamp(null);
     setPendingSession(null);
-    
-    try {
-      sessionStorage.removeItem('walletPassword');
-      sessionStorage.removeItem('pendingOTP_data');
-      sessionStorage.removeItem('pendingOTP_session');
-    } catch { /* silent */ }
-    
+
+    // Sign out from Supabase first so the server-side session is revoked
     await supabase.auth.signOut();
+
+    // Wipe all browser storage: localStorage, sessionStorage, and IndexedDB.
+    // This ensures no decrypted wallet data, cached keys, or session tokens remain.
+    await wipeSecureStorage();
   }, [setSessionPassword, setPendingOTPWithTimestamp]);
 
   const value = {
