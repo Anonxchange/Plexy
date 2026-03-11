@@ -1,6 +1,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +78,11 @@ export function Swap() {
   const [walletPassword, setWalletPassword] = useState("");
 
   const [lastQuoteFetchTime, setLastQuoteFetchTime] = useState<number>(0);
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   // Helper to get currency object
   const getCurrency = (symbol: string) => currencies.find(c => c.symbol === symbol);
@@ -245,7 +250,10 @@ export function Swap() {
   useEffect(() => {
     const fromAmtNum = parseFloat(fromAmount);
     if (fromAmtNum === 0 || isNaN(fromAmtNum)) {
-      setToAmount("0.00");
+      // Only reset toAmount when the user is editing the from field, not the to field
+      if (isUpdatingFromInput) {
+        setToAmount("0.00");
+      }
       return;
     }
 
@@ -311,23 +319,13 @@ export function Swap() {
     
     setFromCurrency(toCurrency);
     setToCurrency(tempCurrency);
-    
-    // Swap the amounts and keep the update flag consistent
-    if (isUpdatingFromInput) {
-      setFromAmount(tempToAmount);
-      setToAmount(tempFromAmount);
-    } else {
-      setFromAmount(tempToAmount);
-      setToAmount(tempFromAmount);
-    }
+    setFromAmount(tempToAmount);
+    setToAmount(tempFromAmount);
   };
 
   const handleFromAmountChange = (value: string) => {
     setIsUpdatingFromInput(true);
     setFromAmount(value);
-    if (parseFloat(value) <= 0 || isNaN(parseFloat(value))) {
-      setToAmount("0.00");
-    }
   };
 
   const handleToAmountChange = (value: string) => {
@@ -349,11 +347,6 @@ export function Swap() {
     }
   };
 
-  const handleGetQuote = async () => {
-    // This is now redundant as hook fetches it, but keeping signature for handleSwap
-    return bestQuote;
-  };
-
   const handleSwap = async () => {
     if (!user) {
       setLocation("/signin");
@@ -372,8 +365,8 @@ export function Swap() {
       return;
     }
 
-    // Check if quote is expired (20 seconds)
-    const isQuoteExpired = Date.now() - lastQuoteFetchTime > 20000;
+    // Check if quote is expired (30s — matches the price hook's cache TTL)
+    const isQuoteExpired = Date.now() - lastQuoteFetchTime > 30000;
     if (isQuoteExpired) {
       toast({
         title: "Quote Expired",
@@ -483,21 +476,21 @@ export function Swap() {
 
     const swapId = swapResponse.id;
 
-    toast({
-      title: "Swap Initiated",
-      description: "Waiting for blockchain confirmation...",
-    });
+    if (isMountedRef.current) {
+      toast({
+        title: "Swap Initiated",
+        description: "Waiting for blockchain confirmation...",
+      });
+    }
 
     // STEP 2: Poll status
     let attempts = 0;
     let completed = false;
 
-    while (attempts < 30) {
-
+    while (attempts < 30 && isMountedRef.current) {
       await new Promise(r => setTimeout(r, 3000));
 
       const statusRes = await rocketXApi.getStatus(swapId);
-
       const status = statusRes?.status;
 
       if (status === "completed") {
@@ -512,24 +505,30 @@ export function Swap() {
       attempts++;
     }
 
-    if (!completed) {
+    if (!completed && isMountedRef.current) {
       throw new Error("Swap timeout: The transaction is taking longer than expected. Please check your wallet history.");
     }
 
-    toast({
-      title: "Swap Successful!",
-      description: `Successfully swapped ${fromAmountNum} ${fromCurrency} → ${toCurrency}`,
-    });
+    if (isMountedRef.current) {
+      toast({
+        title: "Swap Successful!",
+        description: `Successfully swapped ${fromAmountNum} ${fromCurrency} → ${toCurrency}`,
+      });
+    }
 
   } catch (error: any) {
     console.error("Swap execution failed:", error);
-    toast({
-      title: "Swap Failed",
-      description: error.message || "Transaction failed. Please ensure your wallet has sufficient balance and the swap service is available.",
-      variant: "destructive",
-    });
+    if (isMountedRef.current) {
+      toast({
+        title: "Swap Failed",
+        description: error.message || "Transaction failed. Please ensure your wallet has sufficient balance and the swap service is available.",
+        variant: "destructive",
+      });
+    }
   } finally {
-    setIsSwapping(false);
+    if (isMountedRef.current) {
+      setIsSwapping(false);
+    }
   }
 };
 
@@ -1186,7 +1185,7 @@ export function Swap() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {formatDistanceToNow(order.createdAt)} ago
+                            {formatDistanceToNow(order.createdAt)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <Badge variant={order.status === 'submitted' ? 'default' : 'secondary'} className="bg-[#58B383]/10 text-[#58B383] border-none text-[10px] px-2 py-0.5 uppercase font-bold">
