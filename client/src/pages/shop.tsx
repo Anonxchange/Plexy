@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,35 +67,34 @@ export function Shop() {
   const [marketplaceCategories, setMarketplaceCategories] = useState<string[]>(["All"]);
   const [shopifyCategories, setShopifyCategories] = useState<string[]>(["All"]);
   const [activeTab, setActiveTab] = useState("shopify");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isShopifyLoading, setIsShopifyLoading] = useState(true);
+  const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(true);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  // Ref to cancel stale Shopify fetches when a newer one starts
+  const shopifyFetchIdRef = useRef(0);
+
+  // On mount: fetch marketplace listings once
   useEffect(() => {
     fetchListings();
-    
-    // Only fetch if we don't have products yet to prevent refresh on mount
-    if (shopifyProducts.length === 0) {
-      fetchShopifyProducts();
-      fetchShopifyCategories();
-    }
-    
-    // Set up an interval to refresh products in the background every 5 minutes
-    const interval = setInterval(() => {
-      fetchShopifyProducts(undefined, true); // true for background fetch
-      fetchShopifyCategories();
-    }, 300000);
-    
-    return () => clearInterval(interval);
   }, []);
 
-  // Fetch Shopify products when category changes
+  // Fetch Shopify products when category or tab changes (covers initial mount too)
   useEffect(() => {
     if (activeTab === "shopify") {
       fetchShopifyProducts();
     }
   }, [selectedCategory, activeTab]);
+
+  // Background refresh every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchShopifyProducts(undefined, true);
+    }, 300000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Update Marketplace categories
   useEffect(() => {
@@ -106,42 +105,29 @@ export function Shop() {
     setMarketplaceCategories(Array.from(cats).sort());
   }, [listings]);
 
-  // Fetch all Shopify categories (Product Types)
-  const fetchShopifyCategories = async () => {
-    try {
-      const result = await shopifyService.getProducts(250);
-      const types = new Set<string>(["All"]);
-      result.products.forEach((edge: any) => {
-        if (edge.node.productType) {
-          types.add(edge.node.productType);
-        }
-      });
-      setShopifyCategories(Array.from(types).sort());
-    } catch (error) {
-      console.error('Error fetching Shopify categories:', error);
-    }
-  };
-
   // Reset category filter when switching tabs
   useEffect(() => {
     setSelectedCategory("All");
   }, [activeTab]);
 
   const fetchShopifyProducts = async (after?: string, isBackground = false) => {
+    // Increment fetch ID so any in-flight stale fetch knows to discard its result
+    const fetchId = ++shopifyFetchIdRef.current;
+
     if (after) {
       setIsLoadingMore(true);
     } else if (!isBackground) {
-      // Only set main loading if we don't have items to avoid flicker
       if (shopifyProducts.length === 0) {
-        setIsLoading(true);
+        setIsShopifyLoading(true);
       }
     }
     try {
-      // Build query string for Shopify
-      // product_type:CategoryName
       const shopifyQuery = selectedCategory !== "All" ? `product_type:${selectedCategory}` : undefined;
-      
       const result = await shopifyService.getProducts(35, after, shopifyQuery);
+
+      // Discard result if a newer fetch has already started
+      if (fetchId !== shopifyFetchIdRef.current) return;
+
       const transformed: Listing[] = result.products.map((edge: any) => {
         const p = edge.node;
         return {
@@ -159,22 +145,37 @@ export function Shop() {
           variantId: p.variants.edges[0]?.node?.id
         };
       });
-      
+
       if (after) {
-        setShopifyProducts(prev => [...prev, ...transformed]);
+        setShopifyProducts(prev => {
+          const merged = [...prev, ...transformed];
+          // Derive categories from full merged list
+          const types = new Set<string>(["All"]);
+          merged.forEach(p => { if (p.category) types.add(p.category); });
+          setShopifyCategories(Array.from(types).sort());
+          return merged;
+        });
       } else {
         setShopifyProducts(transformed);
+        // Derive categories from fresh product list
+        const types = new Set<string>(["All"]);
+        transformed.forEach(p => { if (p.category) types.add(p.category); });
+        setShopifyCategories(Array.from(types).sort());
       }
-      
+
       setCursor(result.pageInfo?.endCursor || null);
       setHasNextPage(result.pageInfo?.hasNextPage || false);
     } catch (error) {
-      console.error('Error fetching Shopify products:', error);
+      if (fetchId === shopifyFetchIdRef.current) {
+        console.error('Error fetching Shopify products:', error);
+      }
     } finally {
-      if (after) {
-        setIsLoadingMore(false);
-      } else if (!isBackground) {
-        setIsLoading(false);
+      if (fetchId === shopifyFetchIdRef.current) {
+        if (after) {
+          setIsLoadingMore(false);
+        } else if (!isBackground) {
+          setIsShopifyLoading(false);
+        }
       }
     }
   };
@@ -186,7 +187,7 @@ export function Shop() {
   };
 
   const fetchListings = async () => {
-    setIsLoading(true);
+    setIsMarketplaceLoading(true);
     try {
       const { data, error } = await supabase
         .from('shop_listings')
@@ -234,7 +235,7 @@ export function Shop() {
     } catch (error) {
       console.error('Error fetching listings:', error);
     } finally {
-      setIsLoading(false);
+      setIsMarketplaceLoading(false);
     }
   };
 
@@ -360,7 +361,7 @@ export function Shop() {
             </TabsList>
           </Tabs>
 
-          {isLoading ? (
+          {(activeTab === "shopify" ? isShopifyLoading : isMarketplaceLoading) ? (
             <ShopSkeleton />
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-24 bg-card/30 rounded-3xl border border-dashed border-border/60">
