@@ -20,7 +20,17 @@ import {
 } from "@/hooks/use-bybit-earn";
 import { ShieldCheck, Layers, BarChart3, AlertCircle, Loader2 } from "lucide-react";
 
-const CATEGORIES = ["All", "Flexible", "Fixed", "OnChain"];
+const CATEGORIES: { label: string; value: string | undefined }[] = [
+  { label: "Flexible Saving", value: "FlexibleSaving" },
+  { label: "On-Chain", value: "OnChain" },
+];
+
+function formatCategory(cat?: string) {
+  if (!cat) return "";
+  if (cat === "FlexibleSaving") return "Flexible";
+  if (cat === "OnChain") return "On-Chain";
+  return cat;
+}
 
 function ProductCardSkeleton() {
   return (
@@ -102,7 +112,7 @@ function SubscribeDialog({
     }
   };
 
-  const apy = product?.apy ?? product?.rate ?? "—";
+  const apr = product?.estimatedApr ?? product?.apy ?? product?.rate ?? "—";
   const min = product?.minStakingAmount;
   const max = product?.maxStakingAmount;
 
@@ -115,12 +125,12 @@ function SubscribeDialog({
         <div className="flex flex-col gap-4 pt-2">
           <div className="rounded-lg bg-secondary p-3 text-sm flex flex-col gap-1.5">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">APY</span>
-              <span className="text-lime font-semibold">{apy}%</span>
+              <span className="text-muted-foreground">APR</span>
+              <span className="text-lime font-semibold">{apr}%</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Category</span>
-              <span className="text-foreground capitalize">{product?.category ?? "—"}</span>
+              <span className="text-foreground">{formatCategory(product?.category as string)}</span>
             </div>
             {min && (
               <div className="flex justify-between">
@@ -257,12 +267,11 @@ function RedeemDialog({
 }
 
 export default function Stake() {
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState<string | undefined>("FlexibleSaving");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
 
-  const categoryParam = activeCategory === "All" ? undefined : activeCategory.toLowerCase();
-  const { data: productsData, isLoading: productsLoading, isError: productsError } = useEarnProducts(categoryParam);
+  const { data: productsData, isLoading: productsLoading, isError: productsError } = useEarnProducts(activeCategory);
   const { data: positionData, isLoading: positionLoading, isError: positionError } = useEarnPosition();
 
   const products: Product[] = Array.isArray(productsData) ? productsData : (productsData?.list ?? []);
@@ -304,15 +313,15 @@ export default function Stake() {
             <div className="flex gap-2 flex-wrap mb-5">
               {CATEGORIES.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  key={cat.value}
+                  onClick={() => setActiveCategory(cat.value)}
                   className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                    activeCategory === cat
+                    activeCategory === cat.value
                       ? "bg-lime text-black"
                       : "bg-secondary text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {cat}
+                  {cat.label}
                 </button>
               ))}
             </div>
@@ -345,7 +354,7 @@ export default function Stake() {
             {!productsLoading && !productsError && products.length > 0 && (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {products.map((product) => {
-                  const apy = product.apy ?? product.rate;
+                  const apr = product.estimatedApr ?? product.apy ?? product.rate;
                   return (
                     <Card key={product.productId} className="border border-border bg-card hover:border-lime/40 transition-colors">
                       <CardContent className="p-4 flex flex-col gap-3">
@@ -357,16 +366,16 @@ export default function Stake() {
                             <span className="font-semibold text-sm">{product.coin}</span>
                           </div>
                           {product.category && (
-                            <Badge variant="secondary" className="text-[10px] capitalize">
-                              {product.category}
+                            <Badge variant="secondary" className="text-[10px]">
+                              {formatCategory(product.category as string)}
                             </Badge>
                           )}
                         </div>
 
                         <div>
-                          <p className="text-xs text-muted-foreground mb-0.5">APY</p>
+                          <p className="text-xs text-muted-foreground mb-0.5">APR</p>
                           <p className="text-2xl font-bold text-lime">
-                            {apy ? `${apy}%` : "—"}
+                            {apr ? `${apr}%` : "—"}
                           </p>
                         </div>
 
@@ -429,8 +438,8 @@ export default function Stake() {
                             <span className="font-semibold text-sm">{pos.coin}</span>
                           </div>
                           {pos.category && (
-                            <Badge variant="secondary" className="text-[10px] capitalize">
-                              {pos.category}
+                            <Badge variant="secondary" className="text-[10px]">
+                              {formatCategory(pos.category as string)}
                             </Badge>
                           )}
                         </div>
