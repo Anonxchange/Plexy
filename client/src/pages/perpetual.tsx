@@ -1,5 +1,5 @@
 import { useState } from "react";
-import AccountBar from "@/components/trading/AccountBar";
+import PerpetualAccountBar from "@/components/trading/PerpetualAccountBar";
 import PerpetualPairInfo from "@/components/trading/PerpetualPairInfo";
 import MobilePerpetualTabs from "@/components/trading/MobilePerpetualTabs";
 import DesktopPerpetualLayout from "@/components/trading/DesktopPerpetualLayout";
@@ -12,7 +12,7 @@ export default function PerpetualPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-x-hidden w-full max-w-full">
-      {isMobile && <AccountBar />}
+      {isMobile && <PerpetualAccountBar />}
       {isMobile && (
         <PerpetualPairInfo
           pair={pair}
