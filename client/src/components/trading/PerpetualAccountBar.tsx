@@ -4,9 +4,9 @@ import { X, ChevronDown, ClipboardList } from "lucide-react";
 
 const PerpetualAccountBar = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"transfer-in" | "transfer-out" | "history">("transfer-in");
+  const [activeTab, setActiveTab] = useState<"deposit" | "withdraw" | "history">("deposit");
 
-  const openSheet = (tab: "transfer-in" | "transfer-out") => {
+  const openSheet = (tab: "deposit" | "withdraw") => {
     setActiveTab(tab);
     setSheetOpen(true);
   };
@@ -20,16 +20,16 @@ const PerpetualAccountBar = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => openSheet("transfer-in")}
-            className="px-4 py-1.5 rounded text-sm text-trading-green border border-trading-green/40 bg-trading-green/10 hover:bg-trading-green/15"
-          >
-            Transfer In
-          </button>
-          <button
-            onClick={() => openSheet("transfer-out")}
+            onClick={() => openSheet("deposit")}
             className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
           >
-            Transfer Out
+            Deposit
+          </button>
+          <button
+            onClick={() => openSheet("withdraw")}
+            className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
+          >
+            Withdraw
           </button>
         </div>
       </div>
@@ -46,7 +46,7 @@ const PerpetualAccountBar = () => {
           {/* Tabs */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-1 text-sm">
-              {(["transfer-in", "transfer-out", "history"] as const).map((tab, i) => (
+              {(["deposit", "withdraw", "history"] as const).map((tab, i) => (
                 <div key={tab} className="flex items-center">
                   {i > 0 && <span className="text-muted-foreground/40 mx-2">|</span>}
                   <button
@@ -55,7 +55,7 @@ const PerpetualAccountBar = () => {
                       activeTab === tab ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
-                    {tab === "transfer-in" ? "Transfer In" : tab === "transfer-out" ? "Transfer Out" : "History"}
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
                   </button>
                 </div>
               ))}
@@ -73,7 +73,7 @@ const PerpetualAccountBar = () => {
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 border border-border rounded-lg px-4 py-3">
                   <div className="text-[10px] text-muted-foreground mb-0.5">
-                    {activeTab === "transfer-in" ? "From" : "To"}
+                    {activeTab === "deposit" ? "From" : "To"}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-foreground">Spot account</span>
@@ -82,7 +82,7 @@ const PerpetualAccountBar = () => {
                 </div>
                 <div className="flex-1 border border-border rounded-lg px-4 py-3">
                   <div className="text-[10px] text-muted-foreground mb-0.5">
-                    {activeTab === "transfer-in" ? "To" : "From"}
+                    {activeTab === "deposit" ? "To" : "From"}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-foreground">Futures account</span>
@@ -116,7 +116,7 @@ const PerpetualAccountBar = () => {
               {/* Balance row */}
               <div className="flex items-center justify-between mb-4 px-1">
                 <span className="text-xs text-muted-foreground">
-                  Available ({activeTab === "transfer-in" ? "Spot" : "Futures"})
+                  Available ({activeTab === "deposit" ? "Spot" : "Futures"})
                 </span>
                 <span className="text-xs text-foreground font-mono-num">0.00 USDT</span>
               </div>
