@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LayoutList, SlidersVertical, ListFilter } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
-import OrderBook from "./OrderBook";
+import PerpetualOrderBook from "./PerpetualOrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";
 
 const orderTabs = ["Open orders", "Positions", "Assets", "TWAP"];
@@ -33,7 +33,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair }: MobilePerpetualTabsProps) =
           )}
           <div className="flex border-t border-border flex-shrink-0 w-full min-w-0">
             <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
-              <OrderBook />
+              <PerpetualOrderBook />
             </div>
             <div className="w-[60%] min-w-0 overflow-hidden">
               <FuturesTradePanel />
@@ -73,53 +73,61 @@ const MobilePerpetualTabs = ({ chartVisible, pair }: MobilePerpetualTabsProps) =
               </div>
             </div>
           </div>
-          {chartVisible && (
-            <div className="h-[350px] flex-shrink-0">
-              <CandlestickChart pair={pair} />
-            </div>
-          )}
+          <div className="h-[400px] flex-shrink-0">
+            <CandlestickChart pair={pair} />
+          </div>
         </>
       )}
 
-      {/* Tab bar */}
-      <div className="flex items-center border-t border-border h-10 flex-shrink-0">
-        <div className="flex items-center flex-1 h-full overflow-x-auto px-2 gap-3">
+      {/* Tab headers — icons removed, only tabs + filter */}
+      <div className="flex items-center px-4 pt-1 border-t border-border">
+        <div className="flex items-center gap-4 flex-1">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`h-full text-xs whitespace-nowrap border-b-2 px-1 transition-colors ${
+              className={`py-2 text-sm transition-colors ${
                 activeTab === tab
-                  ? "text-foreground font-semibold border-primary"
-                  : "text-muted-foreground border-transparent"
+                  ? "text-foreground font-semibold"
+                  : "text-muted-foreground"
               }`}
             >
               {tab}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 px-2 border-l border-border h-full">
+        {viewMode === "list" && (
+          <button className="p-1 text-muted-foreground">
+            <ListFilter className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Tab content placeholder */}
+      <div className="flex flex-col items-center py-10 gap-6">
+        <span className="text-sm text-muted-foreground">Please connect a wallet first</span>
+      </div>
+
+      {/* View mode toggle pill — at the bottom, matching spot */}
+      <div className="flex justify-center py-4">
+        <div className="flex items-center bg-secondary rounded-full p-1">
           <button
             onClick={() => setViewMode("list")}
-            className={`p-1 transition-colors ${viewMode === "list" ? "text-foreground" : "text-muted-foreground"}`}
+            className={`p-2 rounded-full transition-colors ${
+              viewMode === "list" ? "bg-accent text-foreground" : "text-muted-foreground"
+            }`}
           >
             <LayoutList className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode("chart")}
-            className={`p-1 transition-colors ${viewMode === "chart" ? "text-foreground" : "text-muted-foreground"}`}
+            className={`p-2 rounded-full transition-colors ${
+              viewMode === "chart" ? "bg-accent text-foreground" : "text-muted-foreground"
+            }`}
           >
             <SlidersVertical className="w-4 h-4" />
           </button>
-          <button className="p-1 text-muted-foreground">
-            <ListFilter className="w-4 h-4" />
-          </button>
         </div>
-      </div>
-
-      {/* Tab content placeholder */}
-      <div className="flex flex-col items-center py-6 flex-1">
-        <span className="text-sm text-muted-foreground">Please connect a wallet first</span>
       </div>
     </div>
   );
