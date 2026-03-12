@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ListFilter } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
-import DesktopOrderBook from "./DesktopOrderBook";
+import PerpetualOrderBook from "./PerpetualOrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";
 import PerpetualPairInfo from "./PerpetualPairInfo";
 
@@ -43,7 +43,7 @@ const DesktopPerpetualLayout = ({
 
       {/* OrderBook — spans rows 1-2 */}
       <div className="col-start-2 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
-        <DesktopOrderBook />
+        <PerpetualOrderBook />
       </div>
 
       {/* FuturesTradePanel — spans rows 1-2 */}
