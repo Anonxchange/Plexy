@@ -109,29 +109,6 @@ const FuturesTradePanel = () => {
         </div>
       </div>
 
-      {/* Buy/Long + Sell/Short toggle */}
-      <div className="flex mx-4 mt-2">
-        <button
-          onClick={() => setSide("buy")}
-          className={`flex-1 py-2.5 text-sm font-semibold rounded-none transition-colors ${
-            side === "buy"
-              ? "bg-trading-green text-foreground"
-              : "bg-secondary text-muted-foreground"
-          }`}
-        >
-          Buy/Long
-        </button>
-        <button
-          onClick={() => setSide("sell")}
-          className={`flex-1 py-2.5 text-sm font-semibold rounded-none transition-colors ${
-            side === "sell"
-              ? "bg-trading-red text-foreground"
-              : "bg-secondary text-muted-foreground"
-          }`}
-        >
-          Sell/Short
-        </button>
-      </div>
 
       <div className="flex flex-col gap-3 p-4">
         {/* Order type dropdown with info icon */}
@@ -425,7 +402,7 @@ const FuturesTradePanel = () => {
         </div>
 
         {/* Connect button only */}
-        <button className="w-full py-3 rounded-lg bg-trading-amber text-black text-sm font-semibold mt-1 hover:opacity-90">
+        <button className="w-full py-3 rounded-lg bg-lime text-black text-sm font-semibold mt-1 hover:opacity-90">
           Connect
         </button>
       </div>
