@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Search, Star } from "lucide-react";
 
 const categories = ["Favorites", "Futures", "Spot"];
@@ -13,24 +13,45 @@ const markets = [
   { symbol: "BNB/USDT", volume: "$186,359", price: "614.07", change: "-1.72%", tags: ["Spot"], negative: true },
   { symbol: "USDC/USDT", volume: "$288,446", price: "0.9999", change: "+0.00%", tags: ["Spot"], negative: false },
   { symbol: "B/USD1", volume: "$58,287", price: "0.20715", change: "-2.55%", tags: ["Spot"], negative: true },
+  { symbol: "ASTER/USDT", volume: "$12,432,100", price: "0.68251", change: "-1.52%", tags: ["Futures", "Hot"], negative: true },
+  { symbol: "BTC/USDT", volume: "$8,914,500", price: "67,098.00", change: "-0.89%", tags: ["Futures", "Hot"], negative: true },
+  { symbol: "ETH/USDT", volume: "$5,671,200", price: "1,938.50", change: "-2.11%", tags: ["Futures", "Hot"], negative: true },
+  { symbol: "SOL/USDT", volume: "$3,204,800", price: "148.32", change: "+1.44%", tags: ["Futures"], negative: false },
+  { symbol: "BNB/USDT", volume: "$2,188,900", price: "612.40", change: "-1.90%", tags: ["Futures"], negative: true },
+  { symbol: "XRP/USDT", volume: "$1,894,300", price: "0.5241", change: "+0.73%", tags: ["Futures"], negative: false },
+  { symbol: "DOGE/USDT", volume: "$1,345,600", price: "0.1382", change: "-3.12%", tags: ["Futures"], negative: true },
+  { symbol: "AVAX/USDT", volume: "$987,400", price: "28.74", change: "+2.05%", tags: ["Futures"], negative: false },
 ];
 
 interface SymbolSelectorProps {
   open: boolean;
   onClose: () => void;
   onSelect: (symbol: string) => void;
+  defaultCategory?: "Spot" | "Futures" | "Favorites";
 }
 
-const SymbolSelector = ({ open, onClose, onSelect }: SymbolSelectorProps) => {
+const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: SymbolSelectorProps) => {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("Spot");
+  const [activeCategory, setActiveCategory] = useState(defaultCategory);
   const [activeFilter, setActiveFilter] = useState("All markets");
+
+  useEffect(() => {
+    if (open) {
+      setActiveCategory(defaultCategory);
+      setSearch("");
+    }
+  }, [open, defaultCategory]);
 
   if (!open) return null;
 
-  const filtered = markets.filter((m) =>
-    m.symbol.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = markets.filter((m) => {
+    const matchesSearch = m.symbol.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory =
+      activeCategory === "Favorites"
+        ? false
+        : m.tags.includes(activeCategory);
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
