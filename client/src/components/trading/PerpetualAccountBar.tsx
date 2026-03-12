@@ -15,7 +15,7 @@ const PerpetualAccountBar = () => {
     <>
       <div className="flex items-center justify-between h-12 px-4 border-y border-border bg-card">
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Futures Acct.</span>
+          <span className="text-muted-foreground">Perpetual Acct.</span>
           <span className="text-foreground">--</span>
         </div>
         <div className="flex items-center gap-3">
@@ -37,7 +37,7 @@ const PerpetualAccountBar = () => {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" className="bg-card border-t border-border rounded-t-2xl px-5 pb-8 pt-5 max-h-[85vh]">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-foreground">Futures Account</h2>
+            <h2 className="text-lg font-semibold text-foreground">Perpetual Account</h2>
             <button onClick={() => setSheetOpen(false)} className="text-muted-foreground hover:text-foreground">
               <X className="h-5 w-5" />
             </button>
@@ -85,7 +85,7 @@ const PerpetualAccountBar = () => {
                     {activeTab === "deposit" ? "To" : "From"}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-foreground">Futures account</span>
+                    <span className="text-sm text-foreground">Perpetual account</span>
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>
@@ -116,14 +116,14 @@ const PerpetualAccountBar = () => {
               {/* Balance row */}
               <div className="flex items-center justify-between mb-4 px-1">
                 <span className="text-xs text-muted-foreground">
-                  Available ({activeTab === "deposit" ? "Spot" : "Futures"})
+                  Available ({activeTab === "deposit" ? "Spot" : "Perpetual"})
                 </span>
                 <span className="text-xs text-foreground font-mono-num">0.00 USDT</span>
               </div>
 
               {/* Futures account overview */}
               <div className="bg-secondary rounded-lg p-3 mb-5">
-                <div className="text-xs text-muted-foreground font-medium mb-2">Futures overview</div>
+                <div className="text-xs text-muted-foreground font-medium mb-2">Perpetual overview</div>
                 <div className="grid grid-cols-2 gap-y-1.5 text-xs">
                   <span className="text-muted-foreground">Margin Balance</span>
                   <span className="text-foreground font-mono-num text-right">0.00 USDT</span>
