@@ -1,0 +1,151 @@
+import { useState } from "react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { X, ChevronDown, ClipboardList } from "lucide-react";
+
+const PerpetualAccountBar = () => {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"transfer-in" | "transfer-out" | "history">("transfer-in");
+
+  const openSheet = (tab: "transfer-in" | "transfer-out") => {
+    setActiveTab(tab);
+    setSheetOpen(true);
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between h-12 px-4 border-y border-border bg-card">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Futures Acct.</span>
+          <span className="text-foreground">--</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => openSheet("transfer-in")}
+            className="px-4 py-1.5 rounded text-sm text-trading-green border border-trading-green/40 bg-trading-green/10 hover:bg-trading-green/15"
+          >
+            Transfer In
+          </button>
+          <button
+            onClick={() => openSheet("transfer-out")}
+            className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
+          >
+            Transfer Out
+          </button>
+        </div>
+      </div>
+
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="bg-card border-t border-border rounded-t-2xl px-5 pb-8 pt-5 max-h-[85vh]">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-semibold text-foreground">Futures Account</h2>
+            <button onClick={() => setSheetOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-1 text-sm">
+              {(["transfer-in", "transfer-out", "history"] as const).map((tab, i) => (
+                <div key={tab} className="flex items-center">
+                  {i > 0 && <span className="text-muted-foreground/40 mx-2">|</span>}
+                  <button
+                    onClick={() => setActiveTab(tab)}
+                    className={`font-medium capitalize ${
+                      activeTab === tab ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {tab === "transfer-in" ? "Transfer In" : tab === "transfer-out" ? "Transfer Out" : "History"}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <ClipboardList className="h-5 w-5 text-muted-foreground" />
+          </div>
+
+          {activeTab === "history" ? (
+            <div className="flex flex-col items-center py-10">
+              <span className="text-sm text-muted-foreground">No transfer history</span>
+            </div>
+          ) : (
+            <>
+              {/* From / To accounts */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 border border-border rounded-lg px-4 py-3">
+                  <div className="text-[10px] text-muted-foreground mb-0.5">
+                    {activeTab === "transfer-in" ? "From" : "To"}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">Spot account</span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="flex-1 border border-border rounded-lg px-4 py-3">
+                  <div className="text-[10px] text-muted-foreground mb-0.5">
+                    {activeTab === "transfer-in" ? "To" : "From"}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">Futures account</span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Asset selector */}
+              <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-4">
+                <span className="text-sm text-muted-foreground">Asset</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-foreground">₮</span>
+                  </div>
+                  <span className="text-sm text-foreground">USDT</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              {/* Amount input */}
+              <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-2">
+                <input
+                  type="text"
+                  placeholder="Amount"
+                  className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <button className="text-xs text-trading-amber font-semibold ml-2 shrink-0">MAX</button>
+              </div>
+
+              {/* Balance row */}
+              <div className="flex items-center justify-between mb-4 px-1">
+                <span className="text-xs text-muted-foreground">
+                  Available ({activeTab === "transfer-in" ? "Spot" : "Futures"})
+                </span>
+                <span className="text-xs text-foreground font-mono-num">0.00 USDT</span>
+              </div>
+
+              {/* Futures account overview */}
+              <div className="bg-secondary rounded-lg p-3 mb-5">
+                <div className="text-xs text-muted-foreground font-medium mb-2">Futures overview</div>
+                <div className="grid grid-cols-2 gap-y-1.5 text-xs">
+                  <span className="text-muted-foreground">Margin Balance</span>
+                  <span className="text-foreground font-mono-num text-right">0.00 USDT</span>
+                  <span className="text-muted-foreground">Unrealized PnL</span>
+                  <span className="text-foreground font-mono-num text-right">0.00 USDT</span>
+                  <span className="text-muted-foreground">Available Margin</span>
+                  <span className="text-foreground font-mono-num text-right">0.00 USDT</span>
+                  <span className="text-muted-foreground">Margin Ratio</span>
+                  <span className="text-foreground font-mono-num text-right">--%</span>
+                </div>
+              </div>
+
+              {/* CTA button */}
+              <button className="w-full py-3.5 rounded-lg text-sm font-medium bg-trading-amber text-background hover:bg-trading-amber/90">
+                Connect
+              </button>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+};
+
+export default PerpetualAccountBar;
