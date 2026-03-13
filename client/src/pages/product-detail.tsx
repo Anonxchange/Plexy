@@ -50,7 +50,7 @@ export function ProductDetail() {
   // Store the raw Shopify product data so we don't re-fetch on add-to-cart
   const shopifyDataRef = useRef<any>(null);
   
-  const { addToCart, isLoading: isAddingToCart } = useCart();
+  const { addToCart, isLoading: isAddingToCart, items: cartItems } = useCart();
 
   useEffect(() => {
     if (id) {
@@ -248,25 +248,40 @@ export function ProductDetail() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!product) return null;
+  const cartCount = cartItems.length;
 
   return (
     <div>
       <div className="container py-8 max-w-6xl">
-        <Button variant="ghost" className="mb-6" onClick={() => navigate("/shop")}>
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back to Shop
-        </Button>
+        {/* Top bar — always visible */}
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" onClick={() => navigate("/shop")}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Shop
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => navigate("/checkout")}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lime text-black text-[10px] font-bold flex items-center justify-center leading-none">
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
+          </Button>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {!isLoading && product && <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
           {/* Left: Images */}
           <div className="space-y-4">
             <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
@@ -438,7 +453,7 @@ export function ProductDetail() {
               </div>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
