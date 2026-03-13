@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Banknote, Smartphone, HelpCircle, MessageSquare, Users } from "lucide-react";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Smartphone, HelpCircle, MessageSquare, Users } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -242,6 +242,9 @@ export function AppHeader() {
                 <DropdownMenuItem onClick={() => { navigate('/spot'); setActiveDropdown(null); }} className="cursor-pointer">
                   Spot Trading
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate('/perpetual'); setActiveDropdown(null); }} className="cursor-pointer">
+                  Perpetual Trade
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/swap'); setActiveDropdown(null); }} className="cursor-pointer">
                   Swap
                 </DropdownMenuItem>
@@ -315,13 +318,6 @@ export function AppHeader() {
                   <div className="flex flex-col">
                     <span className="font-semibold">Visa card</span>
                     <span className="text-xs text-muted-foreground">Spend your crypto</span>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate('/wallet/crypto-to-bank'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
-                  <Banknote className="h-5 w-5 mr-3 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold">Crypto to Bank</span>
-                    <span className="text-xs text-muted-foreground">Cash out to bank or MoMo wallet</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/wallet/lightning'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
