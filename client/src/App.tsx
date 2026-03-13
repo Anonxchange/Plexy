@@ -208,14 +208,14 @@ function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
   const hideAppFooter = ["/", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer", "/shop/product"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
-  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer", "/spot", "/perpetual"].includes(location) || location.startsWith("/explorer/");
+  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
   const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
   return (
     <div className={`flex min-h-screen w-full flex-col ${!hideHeaderAndNav ? 'pt-16' : ''}`}>
       {!hideHeaderAndNav && <AppHeader />}
       {!hideHeaderAndNav && !hidePageNav && <PageNavigation />}
-      <main className="flex-1">
+      <main className="flex-1 flex flex-col">
         <Router />
       </main>
       {!hideAppFooter && <AppFooter />}
