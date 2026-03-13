@@ -51,7 +51,7 @@ export function ProductDetail() {
   // Store the raw Shopify product data so we don't re-fetch on add-to-cart
   const shopifyDataRef = useRef<any>(null);
   
-  const { addToCart, isLoading: isAddingToCart } = useCart();
+  const { addToCart, isLoading: isAddingToCart, items: cartItems } = useCart();
 
   useEffect(() => {
     if (id) {
@@ -258,7 +258,14 @@ export function ProductDetail() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back to Shop
           </Button>
-          <CartSheet />
+          <div className="relative inline-flex">
+            <CartSheet />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lime text-black text-[10px] font-bold flex items-center justify-center leading-none pointer-events-none">
+                {cartItems.reduce((a, i) => a + i.quantity, 0) > 9 ? "9+" : cartItems.reduce((a, i) => a + i.quantity, 0)}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Loading state */}
