@@ -1,51 +1,43 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
-async function callBybitEarn(action: string, params: Record<string, unknown> = {}) {
-  const { data, error } = await supabase.functions.invoke("bybit-earn", {
-    body: { action, ...params },
-  });
-  if (error) throw new Error(error.message);
-  if (!data.success) throw new Error(data.error || "Unknown error");
-  return data.data;
+export interface StaderPool {
+  pool: string;
+  chain: string;
+  symbol: string;
+  tvlUsd: number;
+  apy: number | null;
+  apyBase: number | null;
+  apyReward: number | null;
+  rewardTokens: string[] | null;
+  underlyingTokens: string[] | null;
+  poolMeta: string | null;
 }
 
-export function useEarnProducts(category?: string, coin?: string) {
-  return useQuery({
-    queryKey: ["bybit-earn-products", category, coin],
-    queryFn: () => callBybitEarn("get_products", { category, coin }),
-    staleTime: 60_000,
-  });
+const STADER_STAKE_URLS: Record<string, string> = {
+  Ethereum: 'https://www.staderlabs.com/eth/',
+  Polygon: 'https://www.staderlabs.com/polygon/',
+  BSC: 'https://www.staderlabs.com/bnb/',
+  Fantom: 'https://www.staderlabs.com/fantom/',
+  Hedera: 'https://www.staderlabs.com/hedera/',
+};
+
+export function getStakeUrl(chain: string): string {
+  return STADER_STAKE_URLS[chain] || 'https://www.staderlabs.com/';
 }
 
-export function useEarnPosition(coin?: string) {
-  return useQuery({
-    queryKey: ["bybit-earn-position", coin],
-    queryFn: () => callBybitEarn("get_position", { coin }),
-    staleTime: 30_000,
+export async function getStaderPools(): Promise<StaderPool[]> {
+  const { data, error } = await supabase.functions.invoke('bybit-earn', {
+    body: {},
   });
-}
 
-export function useSubscribeEarn() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (params: { productId: string; amount: string }) =>
-      callBybitEarn("subscribe", params),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["bybit-earn-products"] });
-      qc.invalidateQueries({ queryKey: ["bybit-earn-position"] });
-    },
-  });
-}
+  if (error) {
+    console.error('Error fetching staking pools:', error);
+    throw new Error(error.message || 'Failed to fetch staking pools');
+  }
 
-export function useRedeemEarn() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (params: { productId: string; amount: string }) =>
-      callBybitEarn("redeem", params),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["bybit-earn-products"] });
-      qc.invalidateQueries({ queryKey: ["bybit-earn-position"] });
-    },
-  });
+  if (!data?.success) {
+    throw new Error(data?.error || 'Failed to fetch staking pools');
+  }
+
+  return data.data || [];
 }
