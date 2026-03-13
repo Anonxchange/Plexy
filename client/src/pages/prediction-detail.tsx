@@ -1,601 +1,496 @@
-import { useMarketDetail, useOrderbook } from "@/hooks/use-polymarket";
-import { useRoute, useLocation } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Link2, Bookmark, Search, TrendingUp, Share2 } from "lucide-react";
-import { format } from "date-fns";
-import { useState, useMemo } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { 
+  ChevronLeft, 
+  ShoppingCart, 
+  Star, 
+  Package, 
+  Store, 
+  Loader2,
+  Share2,
+  Heart
+} from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { shopifyService } from "@/lib/shopify-service";
+import { useCart } from "@/hooks/use-shopify-cart";
+import { toast } from "sonner";
+import { PexlyFooter } from "@/components/pexly-footer";
 
-const QUICK_AMOUNTS = [1, 5, 10, 100];
+interface Listing {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  category: string;
+  images: string[];
+  location: string;
+  user_id: string;
+  status: string;
+  variantId?: string;
+  availableForSale?: boolean;
+  inventoryQuantity?: number;
+}
 
-const FIXED_CATEGORIES = [
-  "Trending", "Breaking", "New", "Politics", "Sports", 
-  "Crypto", "Iran", "Finance", "Geopolitics", "Tech", 
-  "Culture", "Economy"
-];
-
-export default function PredictionDetailPage() {
-  const [, params] = useRoute("/prediction/:id");
-  const [, setLocation] = useLocation();
-  const { data: market, isLoading: marketLoading, error: marketError } = useMarketDetail(params?.id);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("");
+export function ProductDetail() {
+  const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
+  const [product, setProduct] = useState<Listing | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [availableSizes, setAvailableSizes] = useState<string[]>([]);
+  const [availableColors, setAvailableColors] = useState<string[]>([]);
+  const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
   
-  if (marketError) {
-    console.error("Market fetch error:", marketError);
-  }
+  // Store the raw Shopify product data so we don't re-fetch on add-to-cart
+  const shopifyDataRef = useRef<any>(null);
+  
+  const { addToCart, isLoading: isAddingToCart, items: cartItems } = useCart();
 
-  const outcomes = useMemo(() => {
+  useEffect(() => {
+    if (id) {
+      fetchProduct();
+    }
+    // Cleanup: if id changes mid-fetch, the stale flag prevents state updates
+    return () => {
+      shopifyDataRef.current = null;
+    };
+  }, [id]);
+
+  // Derive the selected variant from cached Shopify data + selected options
+  const selectedVariant = useMemo(() => {
+    const shopifyProduct = shopifyDataRef.current;
+    if (!shopifyProduct) return null;
+
+    const variants = shopifyProduct.variants?.edges || [];
+    
+    // If no options to select, return first variant
+    if (availableSizes.length === 0 && availableColors.length === 0) {
+      return variants[0]?.node || null;
+    }
+
+    const match = variants.find((edge: any) => {
+      const opts = edge.node.selectedOptions || [];
+      const matchesSize = !selectedSize || opts.some((opt: any) =>
+        (opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille') && opt.value === selectedSize
+      );
+      const matchesColor = !selectedColor || opts.some((opt: any) =>
+        (opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour') && opt.value === selectedColor
+      );
+      return matchesSize && matchesColor;
+    });
+
+    return match?.node || null;
+  }, [selectedSize, selectedColor, availableSizes, availableColors]);
+
+  // Update price and availability when variant changes
+  const currentPrice = selectedVariant
+    ? parseFloat(selectedVariant.price.amount)
+    : product?.price ?? 0;
+  const currentCurrency = selectedVariant
+    ? selectedVariant.price.currencyCode
+    : product?.currency ?? 'USD';
+  const isAvailable = selectedVariant
+    ? selectedVariant.availableForSale
+    : product?.availableForSale ?? true;
+
+  const fetchProduct = async () => {
+    setIsLoading(true);
+    shopifyDataRef.current = null;
+    
+    // Stale closure guard
+    const fetchId = id;
+
     try {
-      if (!market) return [];
-      console.log("Processing market data:", market);
-      
-      const prices = (() => {
-        try { 
-          const p = JSON.parse(market.outcomePrices || "[]");
-          return Array.isArray(p) ? p : [];
-        }
-        catch (e) { return []; }
-      })();
-      const clobTokenIds = (() => {
-        try { 
-          const c = JSON.parse(market.clobTokenIds || "[]");
-          return Array.isArray(c) ? c : [];
-        }
-        catch (e) { return []; }
-      })();
-      const names = (() => {
-        try { 
-          const n = JSON.parse(market.outcomes || "[]");
-          return Array.isArray(n) ? n : [];
-        }
-        catch (e) { return []; }
-      })();
-      
-      // Ensure we have valid arrays before mapping
-      if (!Array.isArray(names)) return [];
+      if (fetchId?.includes('Product') || fetchId?.startsWith('gid://shopify/Product/')) {
+        const decodedId = decodeURIComponent(fetchId);
+        const result = await shopifyService.getProducts(250);
 
-      const res = names.map((name: string, i: number) => ({
-        name,
-        price: parseFloat(prices[i] || "0.5"),
-        tokenId: clobTokenIds[i]
-      }));
+        // Guard against stale fetch
+        if (fetchId !== id) return;
 
-      if (res.length === 2) {
-        const isYesNo = res.every(o => ['yes', 'no'].includes(o.name.toLowerCase()));
-        if (isYesNo && res[0].name.toLowerCase() === 'no') {
-          return [res[1], res[0]];
+        const found = result.products.find((edge: any) => edge.node.id === decodedId);
+
+        if (found) {
+          const p = found.node;
+          shopifyDataRef.current = p;
+
+          const options = p.options || [];
+          const sizeOption = options.find((opt: any) =>
+            opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille'
+          );
+          const colorOption = options.find((opt: any) =>
+            opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour'
+          );
+
+          const sizes = sizeOption?.values || [];
+          const colors = colorOption?.values || [];
+
+          setAvailableSizes(sizes);
+          setAvailableColors(colors);
+          if (sizes.length > 0) setSelectedSize(sizes[0]);
+          if (colors.length > 0) setSelectedColor(colors[0]);
+
+          setProduct({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            price: parseFloat(p.priceRange.minVariantPrice.amount),
+            currency: p.priceRange.minVariantPrice.currencyCode,
+            category: "Shopify",
+            images: p.images.edges.map((e: any) => e.node.url),
+            location: "Online",
+            user_id: "shopify",
+            status: "active",
+            variantId: p.variants.edges[0]?.node?.id,
+            availableForSale: p.variants.edges[0]?.node?.availableForSale,
+          });
+
+          const related = result.products
+            .filter((edge: any) => edge.node.id !== decodedId)
+            .slice(0, 4)
+            .map((edge: any) => {
+              const rp = edge.node;
+              return {
+                id: rp.id,
+                title: rp.title,
+                description: rp.description,
+                price: parseFloat(rp.priceRange.minVariantPrice.amount),
+                currency: rp.priceRange.minVariantPrice.currencyCode,
+                category: "Shopify",
+                images: rp.images.edges.map((e: any) => e.node.url),
+                location: "Online",
+                user_id: "shopify",
+                status: "active",
+                variantId: rp.variants.edges[0]?.node?.id,
+              };
+            });
+          setRelatedProducts(related);
+          setIsLoading(false);
+          return;
         }
       }
-      return res;
-    } catch (e) {
-      console.error("Error parsing outcomes:", e, market);
-      return [];
+
+      if (fetchId !== id) return;
+
+      const { data, error } = await supabase
+        .from('shop_listings')
+        .select('*')
+        .eq('id', fetchId)
+        .maybeSingle();
+
+      if (fetchId !== id) return;
+      if (error) throw error;
+
+      if (data) {
+        let imageUrls: string[] = [];
+        if (Array.isArray(data.images)) {
+          imageUrls = data.images.filter((img: any) => typeof img === 'string' && img.startsWith('http'));
+        } else if (typeof data.images === 'string') {
+          try {
+            const parsed = JSON.parse(data.images);
+            imageUrls = Array.isArray(parsed) ? parsed : [data.images];
+          } catch {
+            imageUrls = [data.images];
+          }
+        }
+        setProduct({ ...data, images: imageUrls });
+      } else {
+        toast.error("Product not found");
+        navigate("/shop");
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      if (fetchId === id) {
+        toast.error("Error loading product");
+        navigate("/shop");
+      }
+    } finally {
+      if (fetchId === id) {
+        setIsLoading(false);
+      }
     }
-  }, [market]);
+  };
 
-  const isBinary = useMemo(() => 
-    outcomes.length === 2 && outcomes.every(o => ['yes', 'no'].includes(o.name.toLowerCase())),
-    [outcomes]
-  );
-
-  const [selectedOutcomeIdx, setSelectedOutcomeIdx] = useState(0);
-  const [amount, setAmount] = useState('');
-  const [tradeTab, setTradeTab] = useState<'buy' | 'sell'>('buy');
-  const [orderbookOpen, setOrderbookOpen] = useState(true);
-  const [rulesTab, setRulesTab] = useState<'rules' | 'context'>('rules');
-
-  const selectedOutcome = outcomes[selectedOutcomeIdx];
-  const { data: orderbook, isLoading: orderbookLoading } = useOrderbook(selectedOutcome?.tokenId);
-
-  const isLoading = marketLoading || (orderbookLoading && !orderbook);
-
-  const endDate = market?.endDate ? format(new Date(market.endDate), 'MMM d, yyyy') : null;
-
-  const yesPrice = outcomes.find(o => o.name.toLowerCase() === 'yes')?.price ?? 0.5;
-  const noPrice = outcomes.find(o => o.name.toLowerCase() === 'no')?.price ?? 0.5;
-  const yesCents = Math.round(yesPrice * 100);
-  const noCents = Math.round(noPrice * 100);
-  const selectedPrice = selectedOutcome?.price ?? 0.5;
-  const selectedCents = Math.round(selectedPrice * 100);
-
-  const amountNum = Number(amount) || 0;
-  const estimatedShares = selectedPrice > 0 ? amountNum / selectedPrice : 0;
-  const potentialReturn = estimatedShares > 0 ? (estimatedShares - amountNum).toFixed(2) : '0.00';
-
-  const chartData = useMemo(() => {
-    // Generate some mock history if none exists for a better visual
-    const history = orderbook?.history || [];
-    if (history.length < 10) {
-      const basePrice = selectedCents;
-      return Array.from({ length: 40 }, (_, i) => ({
-        name: i,
-        value: Math.max(1, Math.min(99, basePrice + (Math.sin(i / 5) * 5) + (Math.random() - 0.5) * 3))
-      }));
+  const handleAddToCart = async () => {
+    if (!product) return;
+    if (product.user_id !== 'shopify') {
+      toast.info("Marketplace checkout coming soon.");
+      return;
     }
-    return history.map((h: any, i: number) => ({
-      name: i,
-      value: h.price * 100
-    }));
-  }, [orderbook, selectedCents]);
 
-  const handleTrade = async () => {
-    if (amountNum > 0) {
-      // Logic for trade
+    // Use cached variant data instead of re-fetching
+    const targetVariantId = selectedVariant?.id || product.variantId;
+
+    if (!targetVariantId) {
+      toast.error("Please select all required options");
+      return;
     }
+
+    if (selectedVariant && !selectedVariant.availableForSale) {
+      toast.error("This item is currently out of stock");
+      return;
+    }
+
+    const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+
+    await addToCart(targetVariantId, {
+      variantId: targetVariantId,
+      title: product.title + (optionLabel ? ` - ${optionLabel}` : ''),
+      price: currentPrice,
+      currency: currentCurrency,
+      image: product.images[0],
+    });
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] p-8 space-y-8">
-        <div className="container mx-auto max-w-6xl text-center py-20">
-          <div className="flex justify-center mb-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
-          <p className="text-muted-foreground font-medium">Loading market details...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (marketError) {
-    return (
-      <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] p-8">
-        <div className="container mx-auto max-w-6xl text-center py-20 bg-card rounded-xl border border-destructive/20">
-          <h2 className="text-2xl font-bold text-destructive mb-2">Error Loading Market</h2>
-          <p className="text-muted-foreground mb-6">{(marketError as Error)?.message || 'An unexpected error occurred'}</p>
-          <Button onClick={() => setLocation("/prediction")}>Back to Markets</Button>
-        </div>
-      </div>
-    );
-  }
+  if (!product) return null;
 
-  if (!market) return (
-    <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] p-8">
-      <div className="container mx-auto max-w-6xl text-center py-20 bg-card rounded-xl border">
-        <h2 className="text-2xl font-bold mb-2">Market Not Found</h2>
-        <p className="text-muted-foreground mb-6">The market you are looking for does not exist or has been removed.</p>
-        <Button onClick={() => setLocation("/prediction")}>Back to Markets</Button>
-      </div>
-    </div>
-  );
+  const cartCount = cartItems.length;
 
   return (
-    <div className="min-h-screen bg-[#F1F4F9] dark:bg-[#0B0E11] text-foreground font-sans">
-      {/* Prediction Market Header */}
-      <div className="bg-white dark:bg-[#12161C] border-b border-border/40 sticky top-0 z-50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center h-14 gap-8">
-            {/* Categories Bar in Header */}
-            <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-3 flex-1">
-              {FIXED_CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setActiveCategory(cat);
-                    setLocation("/prediction");
-                  }}
-                  className={cn(
-                    "text-sm font-semibold whitespace-nowrap transition-colors relative pb-1",
-                    activeCategory === cat 
-                      ? "text-primary border-b-2 border-primary" 
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {cat === "Trending" && <TrendingUp className="inline-block w-4 h-4 mr-1 mb-0.5" />}
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            <div className="hidden lg:flex items-center gap-4 text-sm font-medium text-muted-foreground ml-auto">
-              <span className="hover:text-primary cursor-pointer transition-colors">How it works</span>
-            </div>
-          </div>
+    <div>
+      <div className="container py-8 max-w-6xl">
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" onClick={() => navigate("/shop")}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Shop
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => navigate("/checkout")}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lime text-black text-[10px] font-bold flex items-center justify-center leading-none">
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
+          </Button>
         </div>
-      </div>
 
-      <main className="container mx-auto max-w-6xl py-6 px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-          {/* ===== LEFT COLUMN ===== */}
-          <div className="space-y-6 min-w-0">
-            {/* Market Header */}
-            <div className="flex items-start gap-4 mb-8">
-              {market.image ? (
-                <div className="flex-shrink-0">
-                  <img
-                    src={market.image}
-                    alt=""
-                    className="w-16 h-16 rounded-xl object-cover shadow-sm border border-border/50"
-                  />
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+          {/* Left: Images */}
+          <div className="space-y-4">
+            <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+              {product.images.length > 0 ? (
+                <img
+                  src={product.images[selectedImage]}
+                  alt={product.title}
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <div className="w-16 h-16 rounded-xl bg-[#F7931A] flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <span className="text-white font-bold text-2xl">₿</span>
+                <div className="w-full h-full flex items-center justify-center">
+                  <Package className="h-16 w-16 text-muted-foreground" />
                 </div>
               )}
-              <div className="flex-1 min-w-0 pt-1">
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-[1.1] mb-2">
-                  {market.question}
-                </h1>
-                <div className="flex items-center gap-2.5 text-xs font-bold text-muted-foreground">
-                  <span className="uppercase tracking-widest text-[#757575]">{endDate ? format(new Date(market.endDate), 'MMM d, h:mm a') : ''}</span>
-                  <span className="opacity-20 text-[#757575]">|</span>
-                  <span className="uppercase tracking-widest text-[#757575]">{market.tags?.[0] || 'Market'}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0 pt-1">
-                <button className="p-2.5 rounded-xl hover:bg-secondary text-muted-foreground transition-colors border border-border/60">
-                  <Share2 className="h-4 w-4" />
-                </button>
-                <button className="p-2.5 rounded-xl hover:bg-secondary text-muted-foreground transition-colors border border-border/60">
-                  <Bookmark className="h-4 w-4" />
-                </button>
-              </div>
+              <Button variant="ghost" size="icon" className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm">
+                <Share2 className="h-4 w-4" />
+              </Button>
             </div>
 
-            {/* Price Chart */}
-            <div className="rounded-xl border bg-card overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className={cn(
-                    "text-5xl font-black tracking-tight",
-                    selectedOutcome?.name.toLowerCase() === 'no' ? "text-rose-500" : "text-[#2563eb]"
-                  )}>
-                    {selectedCents}%
-                  </span>
-                  <span className="text-lg font-bold text-muted-foreground uppercase tracking-wider">chance</span>
-                </div>
-                <div className="flex items-center gap-2 mb-6 text-sm">
-                  <span className="flex items-center gap-1 text-emerald-500 font-bold">
-                    <TrendingUp className="h-3 w-3" />
-                    +2.4%
-                  </span>
-                  <span className="text-muted-foreground font-medium">Last 24h</span>
-                </div>
-
-                <div className="h-[300px] w-full relative mb-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorValue-blue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorValue-red" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15}/>
-                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
-                      <XAxis dataKey="name" hide />
-                      <YAxis 
-                        domain={[0, 100]} 
-                        orientation="right" 
-                        tick={{fontSize: 12, fontWeight: 'bold', fill: 'hsl(var(--muted-foreground))'}} 
-                        axisLine={false} 
-                        tickLine={false}
-                        tickFormatter={(v) => `${v}%`}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--background))', 
-                          borderColor: 'hsl(var(--border))', 
-                          borderRadius: '12px',
-                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                          fontWeight: 'bold'
-                        }}
-                        formatter={(value: any) => [`${Math.round(value)}%`, 'Chance']}
-                        labelStyle={{ display: 'none' }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke={selectedOutcome?.name.toLowerCase() === 'no' ? "#f43f5e" : "#2563eb"} 
-                        fillOpacity={1} 
-                        fill={`url(#colorValue-${selectedOutcome?.name.toLowerCase() === 'no' ? 'red' : 'blue'})`} 
-                        strokeWidth={3} 
-                        dot={false}
-                        activeDot={{ r: 6, fill: selectedOutcome?.name.toLowerCase() === 'no' ? "#f43f5e" : "#2563eb", stroke: "white", strokeWidth: 2 }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="flex items-center justify-between border-t pt-4">
-                  <div className="flex items-center gap-6">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Volume</span>
-                      <span className="text-sm font-bold">
-                        ${market.volumeNum ? market.volumeNum.toLocaleString() : "0"}
-                      </span>
-                    </div>
-                    {endDate && (
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Ends</span>
-                        <span className="text-sm font-bold flex items-center gap-1">
-                          {endDate}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {product.images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {product.images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImage(idx)}
+                    className={`relative w-20 aspect-square rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                      selectedImage === idx ? 'border-primary' : 'border-transparent opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
               </div>
-            </div>
-
-            {/* Order Book (collapsible) */}
-            <Collapsible open={orderbookOpen} onOpenChange={setOrderbookOpen}>
-              <CollapsibleTrigger className="w-full">
-                <div className="flex items-center justify-between rounded-xl border bg-card p-4 hover:bg-secondary/30 transition-colors">
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Order Book</span>
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 text-muted-foreground transition-transform",
-                      orderbookOpen && "rotate-180"
-                    )}
-                  />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="border border-t-0 rounded-b-xl bg-card p-6">
-                  {orderbook ? (
-                    <div className="grid grid-cols-2 gap-12 text-[10px] font-black uppercase tracking-widest">
-                      <div>
-                        <div className="flex justify-between text-emerald-500 mb-4">
-                          <span>Price</span>
-                          <span>Qty</span>
-                        </div>
-                        <div className="space-y-1">
-                          {(orderbook.bids || []).slice(0, 8).map((bid: any, i: number) => (
-                            <div key={i} className="flex justify-between font-bold normal-case tracking-normal text-sm">
-                              <span className="text-emerald-500">{(Number(bid.price) * 100).toFixed(1)}¢</span>
-                              <span className="text-muted-foreground">{Number(bid.size).toLocaleString()}</span>
-                            </div>
-                          ))}
-                          {(!orderbook.bids || orderbook.bids.length === 0) && (
-                            <p className="text-muted-foreground normal-case font-medium">No bids</p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-rose-500 mb-4">
-                          <span>Price</span>
-                          <span>Qty</span>
-                        </div>
-                        <div className="space-y-1">
-                          {(orderbook.asks || []).slice(0, 8).map((ask: any, i: number) => (
-                            <div key={i} className="flex justify-between font-bold normal-case tracking-normal text-sm">
-                              <span className="text-rose-500">{(Number(ask.price) * 100).toFixed(1)}¢</span>
-                              <span className="text-muted-foreground">{Number(ask.size).toLocaleString()}</span>
-                            </div>
-                          ))}
-                          {(!orderbook.asks || orderbook.asks.length === 0) && (
-                            <p className="text-muted-foreground normal-case font-medium">No asks</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs font-bold text-muted-foreground text-center py-4 uppercase tracking-widest">Loading orderbook…</p>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Rules / Market Context */}
-            <div className="rounded-xl border bg-card overflow-hidden">
-              <div className="flex border-b">
-                <button
-                  onClick={() => setRulesTab('rules')}
-                  className={cn(
-                    "px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-colors relative",
-                    rulesTab === 'rules'
-                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Rules
-                </button>
-                <button
-                  onClick={() => setRulesTab('context')}
-                  className={cn(
-                    "px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-colors relative",
-                    rulesTab === 'context'
-                      ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Market Context
-                </button>
-              </div>
-              <div className="p-6">
-                {rulesTab === 'rules' ? (
-                  <p className="text-sm font-medium text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                    {market.description || 'No rules specified for this market.'}
-                  </p>
-                ) : (
-                  <p className="text-sm font-medium text-muted-foreground leading-relaxed">
-                    This market tracks the probability of the stated outcome. Trade based on your own research and judgment.
-                  </p>
-                )}
-              </div>
-            </div>
-
-                {/* All Outcomes (for multi-outcome markets) */}
-                {!isBinary && outcomes.length > 2 && (
-                  <div className="rounded-xl border bg-card p-5">
-                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">All Outcomes</h3>
-                    <div className="space-y-2">
-                      {[...outcomes].sort((a, b) => b.price - a.price).map((o, i) => {
-                        const pct = Math.round(o.price * 100);
-                        const realIdx = outcomes.indexOf(o);
-                        const isSelected = realIdx === selectedOutcomeIdx;
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => setSelectedOutcomeIdx(realIdx)}
-                            className={cn(
-                              "w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
-                              isSelected
-                                ? "border-primary bg-primary/5"
-                                : "border-[#EBEBEB] dark:border-[#2B2E33] hover:border-muted"
-                            )}
-                          >
-                            <span className="font-bold text-sm">{o.name}</span>
-                            <div className="flex items-center gap-3">
-                              <div className="w-24 h-1.5 rounded-full bg-secondary overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-primary transition-all"
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                              <span className="font-black text-sm w-10 text-right">{pct}%</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+            )}
           </div>
 
-          {/* ===== RIGHT COLUMN — Trading Panel ===== */}
-          <div>
-            <Card className="sticky top-20 rounded-xl shadow-xl overflow-hidden bg-card">
-              <CardContent className="p-5 space-y-5">
-                {/* Buy / Sell tabs */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setTradeTab('buy')}
-                      className={cn(
-                        "pb-2 text-sm font-bold transition-colors relative",
-                        tradeTab === 'buy'
-                          ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      Buy
-                    </button>
-                    <button
-                      onClick={() => setTradeTab('sell')}
-                      className={cn(
-                        "pb-2 text-sm font-bold transition-colors relative",
-                        tradeTab === 'sell'
-                          ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      Sell
-                    </button>
-                  </div>
-                  <Badge variant="secondary" className="bg-[#F1F4F9] dark:bg-[#1E2329] border-none text-[10px] font-black uppercase tracking-widest">Market</Badge>
-                </div>
+          {/* Right: Info */}
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">{product.category}</Badge>
+                <Button variant="ghost" size="icon">
+                  <Heart className="h-4 w-4" />
+                </Button>
+              </div>
 
-                {/* Outcome selector */}
-                {isBinary && (
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                    <button
-                      onClick={() => setSelectedOutcomeIdx(0)}
-                      className={cn(
-                        "py-4 rounded-2xl font-black text-lg transition-all border-none",
-                        selectedOutcomeIdx === 0
-                          ? "bg-[#00BA71] text-white shadow-md shadow-emerald-500/20"
-                          : "bg-[#F0F0F0] dark:bg-[#2B2E33] text-muted-foreground hover:bg-[#E0E0E0]"
-                      )}
-                    >
-                      Yes {yesCents}¢
-                    </button>
-                    <button
-                      onClick={() => setSelectedOutcomeIdx(1)}
-                      className={cn(
-                        "py-4 rounded-2xl font-black text-lg transition-all border-none",
-                        selectedOutcomeIdx === 1
-                          ? "bg-[#F0F0F0] dark:bg-[#2B2E33] text-[#D93025] ring-2 ring-[#D93025]"
-                          : "bg-[#F0F0F0] dark:bg-[#2B2E33] text-muted-foreground hover:bg-[#E0E0E0]"
-                      )}
-                    >
-                      No {noCents}¢
-                    </button>
+              <h1 className="text-2xl md:text-3xl font-bold">{product.title}</h1>
+
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold">
+                  {currentCurrency} {currentPrice.toLocaleString()}
+                </span>
+                {product.user_id === 'shopify' && (
+                  <span className="text-lg text-muted-foreground line-through">
+                    {currentCurrency} {(currentPrice * 1.2).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-5">
+              {/* Options selection */}
+              <div className="space-y-4">
+                {availableSizes.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">Size</p>
+                      <span className="text-xs text-muted-foreground cursor-pointer hover:underline">Size Guide</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {availableSizes.map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setSelectedSize(size)}
+                          className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
+                            selectedSize === size
+                              ? 'bg-foreground text-background border-foreground shadow-md'
+                              : 'bg-background text-foreground border-border/40 hover:border-primary/50'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
-                {/* Amount */}
-                <div className="pt-2">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-bold text-muted-foreground">
-                      Amount
-                    </label>
+                {availableColors.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Color</p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableColors.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => setSelectedColor(color)}
+                          className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
+                            selectedColor === color
+                              ? 'bg-foreground text-background border-foreground shadow-md'
+                              : 'bg-background text-foreground border-border/40 hover:border-primary/50'
+                          }`}
+                        >
+                          {color}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="relative group">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-4xl font-bold text-[#ADADAD]">$</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0"
-                      className="pl-12 h-24 text-6xl font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] focus-visible:ring-0 focus-visible:border-muted rounded-2xl text-right pr-6"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center gap-2 mt-4 overflow-x-auto no-scrollbar pb-1">
-                    {QUICK_AMOUNTS.map(amt => (
-                      <Button
-                        key={amt}
-                        variant="outline"
-                        size="lg"
-                        onClick={() => setAmount(String((Number(amount) || 0) + Number(amt)))}
-                        className="h-12 px-6 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-2xl whitespace-nowrap"
-                      >
-                        +${amt}
-                      </Button>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => setAmount('1000')}
-                      className="h-12 px-6 text-sm font-bold bg-white dark:bg-[#12161C] border-[#EBEBEB] hover:bg-secondary transition-all rounded-2xl"
-                    >
-                      Max
-                    </Button>
-                  </div>
-                </div>
+                )}
+              </div>
 
-                <div className="space-y-4 pt-4">
-                  <div className="flex items-center justify-between text-xs font-bold px-1">
-                    <span className="text-muted-foreground uppercase tracking-wider">Shares</span>
-                    <span className="text-foreground">{estimatedShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-bold px-1">
-                    <span className="text-muted-foreground uppercase tracking-wider">Potential Return</span>
-                    <span className="text-emerald-500">${potentialReturn} ({((Number(potentialReturn) / (amountNum || 1)) * 100).toFixed(1)}%)</span>
-                  </div>
-                </div>
-
-                <Button 
-                  className={cn(
-                    "w-full h-20 text-2xl font-black rounded-2xl transition-all border-none bg-[#8E8E93] hover:bg-[#787880] text-white mt-4"
-                  )}
-                  onClick={handleTrade}
+              <div className="space-y-3">
+                <Button
+                  className="w-full h-12 text-base"
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart || !isAvailable}
                 >
-                  Buy {selectedOutcome?.name || 'Yes'}
+                  {isAddingToCart ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : !isAvailable ? (
+                    "Out of Stock"
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                      Add to Cart
+                    </>
+                  )}
                 </Button>
 
-                <p className="text-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                  By trading, you agree to the Terms of Use.
+                <div className="flex items-center gap-2 text-sm">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className={isAvailable ? 'text-green-600' : 'text-destructive'}>
+                    {isAvailable ? 'In Stock & Ready to Deliver' : 'Out of Stock'}
+                  </span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Description</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {product.description || "No description provided for this item."}
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Store className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Store</p>
+                    <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Shipping</p>
+                    <p className="text-muted-foreground">Fast Delivery</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-16 space-y-6">
+            <h2 className="text-xl font-bold">You may also like</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedProducts.map((related) => (
+                <div
+                  key={related.id}
+                  className="cursor-pointer group"
+                  onClick={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                >
+                  <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
+                    <img
+                      src={related.images[0]}
+                      alt={related.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    {related.status === 'sold_out' && (
+                      <Badge variant="destructive" className="absolute top-2 left-2">
+                        Sold out
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium truncate">{related.title}</p>
+                  <p className="text-sm font-bold">
+                    {related.currency} {related.price.toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <PexlyFooter />
     </div>
   );
 }
