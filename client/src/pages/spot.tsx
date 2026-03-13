@@ -11,7 +11,7 @@ export const Spot = () => {
   const isMobile = useIsMobile();
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-4rem)] bg-background overflow-hidden w-full max-w-full">
+    <div className="flex flex-col h-screen bg-background overflow-x-hidden w-full max-w-full">
       {isMobile && <AccountBar />}
       {isMobile && (
         <PairInfo 
