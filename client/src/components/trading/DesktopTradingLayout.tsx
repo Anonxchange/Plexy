@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ListFilter, ChevronDown, ClipboardList, Copy, Check, Loader2 } from "lucide-react";
+import { ListFilter, ChevronDown, ClipboardList, Copy, Check, Loader2, XCircle } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
 import DesktopOrderBook from "./DesktopOrderBook";
 import TradePanel from "./TradePanel";
@@ -7,7 +7,7 @@ import PairInfo from "./PairInfo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { asterTrading, asterWallet } from "@/lib/asterdex-service";
 import { useToast } from "@/hooks/use-toast";
 
@@ -96,6 +96,36 @@ const DesktopTradingLayout = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const queryClient = useQueryClient();
+  const apiSymbol = pair.replace("/", "");
+
+  const { data: openOrders, isLoading: ordersLoading } = useQuery({
+    queryKey: ["spot-open-orders", apiSymbol],
+    queryFn: () => asterTrading.spotOpenOrders(apiSymbol),
+    enabled: !!user && activeTab === "Open orders",
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+
+  const { data: allOrders, isLoading: allOrdersLoading } = useQuery({
+    queryKey: ["spot-all-orders", apiSymbol],
+    queryFn: () => asterTrading.spotAllOrders(apiSymbol),
+    enabled: !!user && activeTab === "Order history",
+    staleTime: 30_000,
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ symbol, orderId }: { symbol: string; orderId: string }) =>
+      asterTrading.spotCancelOrder(symbol, orderId),
+    onSuccess: () => {
+      toast({ title: "Order cancelled" });
+      queryClient.invalidateQueries({ queryKey: ["spot-open-orders"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Cancel failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   return (
     <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_minmax(120px,auto)] h-full min-h-0 overflow-hidden border-t border-border">
       {/* Pair Info */}
@@ -153,12 +183,107 @@ const DesktopTradingLayout = ({
       </div>
 
       {/* Tab content + Account row */}
-      <div className="col-start-1 col-end-3 row-start-4">
-        <div className="flex flex-col items-center py-4">
-          <span className="text-sm text-muted-foreground">
-            Please connect a wallet first
-          </span>
-        </div>
+      <div className="col-start-1 col-end-3 row-start-4 overflow-auto">
+        {!user ? (
+          <div className="flex items-center justify-center py-4">
+            <button onClick={() => navigate("/signin")} className="text-sm text-trading-amber hover:underline">
+              Sign in to view orders
+            </button>
+          </div>
+        ) : activeTab === "Open orders" ? (
+          ordersLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left px-4 py-2 font-normal">Symbol</th>
+                  <th className="text-left px-4 py-2 font-normal">Side</th>
+                  <th className="text-left px-4 py-2 font-normal">Type</th>
+                  <th className="text-right px-4 py-2 font-normal">Price</th>
+                  <th className="text-right px-4 py-2 font-normal">Amount</th>
+                  <th className="text-right px-4 py-2 font-normal">Filled</th>
+                  <th className="text-right px-4 py-2 font-normal">Cancel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(openOrders) && openOrders.length > 0 ? openOrders.map((o: any) => (
+                  <tr key={o.orderId} className="border-b border-border/50 hover:bg-accent/30">
+                    <td className="px-4 py-2 text-foreground">{o.symbol}</td>
+                    <td className={`px-4 py-2 font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{o.type}</td>
+                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.price).toFixed(4)}</td>
+                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.origQty).toFixed(4)}</td>
+                    <td className="px-4 py-2 text-right font-mono-num text-muted-foreground">{parseFloat(o.executedQty).toFixed(4)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <button onClick={() => cancelMutation.mutate({ symbol: o.symbol, orderId: String(o.orderId) })} disabled={cancelMutation.isPending} className="text-trading-red hover:opacity-70">
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">No open orders</td></tr>
+                )}
+              </tbody>
+            </table>
+          )
+        ) : activeTab === "Assets" ? (
+          balanceLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left px-4 py-2 font-normal">Asset</th>
+                  <th className="text-right px-4 py-2 font-normal">Available</th>
+                  <th className="text-right px-4 py-2 font-normal">In Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(spotAccount?.balances ?? []).filter((b: any) => parseFloat(b.free) > 0 || parseFloat(b.locked) > 0).map((b: any) => (
+                  <tr key={b.asset} className="border-b border-border/50 hover:bg-accent/30">
+                    <td className="px-4 py-2 font-medium text-foreground">{b.asset}</td>
+                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(b.free).toFixed(6)}</td>
+                    <td className="px-4 py-2 text-right font-mono-num text-muted-foreground">{parseFloat(b.locked).toFixed(6)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
+        ) : activeTab === "Order history" ? (
+          allOrdersLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left px-4 py-2 font-normal">Symbol</th>
+                  <th className="text-left px-4 py-2 font-normal">Side</th>
+                  <th className="text-left px-4 py-2 font-normal">Type</th>
+                  <th className="text-right px-4 py-2 font-normal">Price</th>
+                  <th className="text-right px-4 py-2 font-normal">Amount</th>
+                  <th className="text-right px-4 py-2 font-normal">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(allOrders) && allOrders.length > 0 ? allOrders.slice(0, 50).map((o: any) => (
+                  <tr key={o.orderId} className="border-b border-border/50 hover:bg-accent/30">
+                    <td className="px-4 py-2 text-foreground">{o.symbol}</td>
+                    <td className={`px-4 py-2 font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{o.type}</td>
+                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.price).toFixed(4)}</td>
+                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.origQty).toFixed(4)}</td>
+                    <td className="px-4 py-2 text-right text-muted-foreground">{o.status}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={6} className="text-center py-4 text-muted-foreground">No order history</td></tr>
+                )}
+              </tbody>
+            </table>
+          )
+        ) : (
+          <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">Coming soon</div>
+        )}
       </div>
 
       {/* Account section — bottom right */}
