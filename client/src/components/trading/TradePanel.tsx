@@ -8,6 +8,14 @@ import { useToast } from "@/hooks/use-toast";
 
 const orderTypes = ["Market", "Limit", "Stop Limit", "Stop Market", "Maker Only"];
 
+const UI_TO_SPOT_TYPE: Record<string, string> = {
+  "Market":      "MARKET",
+  "Limit":       "LIMIT",
+  "Stop Limit":  "STOP_LOSS_LIMIT",
+  "Stop Market": "STOP_LOSS",
+  "Maker Only":  "LIMIT_MAKER",
+};
+
 interface TradePanelProps {
   symbol?: string;
 }
@@ -17,14 +25,14 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const [orderType, setOrderType] = useState("Market");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [price, setPrice] = useState("0.68570");
+  const [price, setPrice] = useState("");
   const [stopPrice, setStopPrice] = useState("");
   const [totalValue, setTotalValue] = useState("");
   const [sliderValue, setSliderValue] = useState(0);
   const [hiddenOrder, setHiddenOrder] = useState(false);
-  const [amountUnit, setAmountUnit] = useState<"USDT" | "ASTER">("USDT");
-  const [stopPriceUnit, setStopPriceUnit] = useState<"USDT" | "ASTER">("USDT");
-  const [priceUnit, setPriceUnit] = useState<"USDT" | "ASTER">("USDT");
+  const [amountUnit, setAmountUnit] = useState<"USDT" | string>("USDT");
+  const [stopPriceUnit, setStopPriceUnit] = useState<"USDT" | string>("USDT");
+  const [priceUnit, setPriceUnit] = useState<"USDT" | string>("USDT");
   const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
   const [stopUnitDropdownOpen, setStopUnitDropdownOpen] = useState(false);
   const [priceUnitDropdownOpen, setPriceUnitDropdownOpen] = useState(false);
@@ -57,8 +65,8 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
 
   const apiSymbol = symbol.replace("/", "");
   const baseCoin = symbol.split("/")[0];
+  const quoteCoin = symbol.split("/")[1] || "USDT";
 
-  // Fetch spot account balance
   const { data: spotAccount } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
@@ -67,23 +75,52 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
     refetchInterval: 30_000,
   });
 
-  const usdtBalance = spotAccount?.balances?.find((b: any) => b.asset === "USDT")?.free ?? "0.00";
-  const asterBalance = spotAccount?.balances?.find((b: any) => b.asset === baseCoin)?.free ?? "0.00";
-  const avblDisplay = side === "buy"
-    ? `${parseFloat(usdtBalance).toFixed(2)} USDT`
-    : `${parseFloat(asterBalance).toFixed(8)} ${baseCoin}`;
+  const usdtBalance = parseFloat(spotAccount?.balances?.find((b: any) => b.asset === quoteCoin)?.free ?? "0");
+  const baseBalance = parseFloat(spotAccount?.balances?.find((b: any) => b.asset === baseCoin)?.free ?? "0");
 
-  // Place order mutation
+  const avblDisplay = side === "buy"
+    ? `${usdtBalance.toFixed(2)} ${quoteCoin}`
+    : `${baseBalance.toFixed(8)} ${baseCoin}`;
+
+  // Apply slider percentage to set amount
+  const applySlider = (pct: number) => {
+    setSliderValue(pct);
+    if (pct === 0) { setAmount(""); return; }
+    if (side === "buy") {
+      const available = usdtBalance * (pct / 100);
+      const priceNum = parseFloat(price);
+      if (priceNum > 0) {
+        setAmount((available / priceNum).toFixed(6));
+      } else {
+        setAmount(available.toFixed(2));
+      }
+    } else {
+      setAmount((baseBalance * (pct / 100)).toFixed(8));
+    }
+  };
+
+  const asterType = UI_TO_SPOT_TYPE[orderType] as any;
+  const isMarket = orderType === "Market";
+  const isLimit = orderType === "Limit";
+  const isStopLimit = orderType === "Stop Limit";
+  const isStopMarket = orderType === "Stop Market";
+  const isMakerOnly = orderType === "Maker Only";
+  const showPriceField = isLimit || isMakerOnly;
+  const showStopPrice = isStopLimit || isStopMarket;
+  const showAmountField = true;
+  const showHiddenOrder = isLimit;
+  const showTotalValue = isLimit || isStopLimit || isMakerOnly;
+
   const orderMutation = useMutation({
     mutationFn: () => {
-      const isMarket = orderType === "Market";
-      const qty = amount || "0";
       return asterTrading.spotPlaceOrder({
         symbol: apiSymbol,
         side: side.toUpperCase() as "BUY" | "SELL",
-        type: isMarket ? "MARKET" : "LIMIT",
-        quantity: qty,
-        ...((!isMarket) && { price, timeInForce }),
+        type: asterType,
+        quantity: amount || "0",
+        ...(showPriceField && price ? { price } : {}),
+        ...(showStopPrice && stopPrice ? { stopPrice } : {}),
+        ...((isLimit || isStopLimit) ? { timeInForce } : {}),
       });
     },
     onSuccess: (data) => {
@@ -93,22 +130,12 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
       });
       setAmount("");
       setTotalValue("");
+      setSliderValue(0);
     },
     onError: (err: Error) => {
       toast({ title: "Order failed", description: err.message, variant: "destructive" });
     },
   });
-
-  const isMarket = orderType === "Market";
-  const isLimit = orderType === "Limit";
-  const isStopLimit = orderType === "Stop Limit";
-  const isStopMarket = orderType === "Stop Market";
-  const isMakerOnly = orderType === "Maker Only";
-  const showPriceField = isLimit || isMakerOnly;
-  const showStopPrice = isStopLimit || isStopMarket;
-  const showAmountField = isMarket || isLimit;
-  const showHiddenOrder = isLimit;
-  const showTotalValue = !isMarket;
 
   return (
     <div className="flex flex-col w-full bg-background">
@@ -153,10 +180,10 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         {/* Stop Price */}
         {showStopPrice && (
           <div ref={stopUnitRef}>
-            <span className="text-xs text-muted-foreground mb-1 block">{orderType}</span>
+            <span className="text-xs text-muted-foreground mb-1 block">Stop Price</span>
             <div className="relative">
               <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary overflow-hidden">
-                <input type="text" value={stopPrice} onChange={e => setStopPrice(e.target.value)} placeholder="Stop Price"
+                <input type="number" value={stopPrice} onChange={e => setStopPrice(e.target.value)} placeholder="Stop Price"
                   className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground min-w-0" />
                 <button onClick={() => setStopUnitDropdownOpen(!stopUnitDropdownOpen)}
                   className="flex items-center gap-1 text-sm text-foreground ml-2 shrink-0">
@@ -166,8 +193,8 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
               </div>
               {stopUnitDropdownOpen && (
                 <div className="absolute right-0 z-50 mt-1 rounded border border-border bg-secondary shadow-lg min-w-[80px]">
-                  {["USDT", "ASTER"].map(unit => (
-                    <button key={unit} onClick={() => { setStopPriceUnit(unit as any); setStopUnitDropdownOpen(false); }}
+                  {[quoteCoin, baseCoin].map(unit => (
+                    <button key={unit} onClick={() => { setStopPriceUnit(unit); setStopUnitDropdownOpen(false); }}
                       className={`w-full text-left px-3 py-2 text-sm transition-colors ${stopPriceUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
                       {unit}
                     </button>
@@ -184,7 +211,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
             {isMakerOnly && <span className="text-xs text-muted-foreground mb-1 block">Maker Only</span>}
             <div className="relative">
               <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary overflow-hidden">
-                <input type="text" value={price} onChange={e => setPrice(e.target.value)} placeholder="Price"
+                <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="Price"
                   className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground min-w-0" />
                 <button onClick={() => setPriceUnitDropdownOpen(!priceUnitDropdownOpen)}
                   className="flex items-center gap-1 text-sm text-foreground ml-2 shrink-0">
@@ -194,8 +221,8 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
               </div>
               {priceUnitDropdownOpen && (
                 <div className="absolute right-0 z-50 mt-1 rounded border border-border bg-secondary shadow-lg min-w-[80px]">
-                  {["USDT", "ASTER"].map(unit => (
-                    <button key={unit} onClick={() => { setPriceUnit(unit as any); setPriceUnitDropdownOpen(false); }}
+                  {[quoteCoin, baseCoin].map(unit => (
+                    <button key={unit} onClick={() => { setPriceUnit(unit); setPriceUnitDropdownOpen(false); }}
                       className={`w-full text-left px-3 py-2 text-sm transition-colors ${priceUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
                       {unit}
                     </button>
@@ -217,7 +244,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         {showAmountField && (
           <div className="relative" ref={unitDropdownRef}>
             <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary overflow-hidden">
-              <input type="text" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Amount"
+              <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setSliderValue(0); }} placeholder="Amount"
                 className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground min-w-0" />
               {isMarket ? (
                 <button onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
@@ -231,8 +258,8 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
             </div>
             {isMarket && unitDropdownOpen && (
               <div className="absolute right-0 z-50 mt-1 rounded border border-border bg-secondary shadow-lg min-w-[80px]">
-                {["USDT", "ASTER"].map(unit => (
-                  <button key={unit} onClick={() => { setAmountUnit(unit as any); setUnitDropdownOpen(false); }}
+                {[quoteCoin, baseCoin].map(unit => (
+                  <button key={unit} onClick={() => { setAmountUnit(unit); setUnitDropdownOpen(false); }}
                     className={`w-full text-left px-3 py-2 text-sm transition-colors ${amountUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
                     {unit}
                   </button>
@@ -246,7 +273,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         <div className="flex items-center gap-0 w-full">
           <div className="flex-1 h-[3px] bg-secondary relative flex items-center">
             {percentages.map((pct, idx) => (
-              <button key={pct} onClick={() => setSliderValue(pct)}
+              <button key={pct} onClick={() => applySlider(pct)}
                 className="absolute w-2.5 h-2.5 rounded-[2px] border transition-colors"
                 style={{
                   left: `${(idx / (percentages.length - 1)) * 100}%`,
@@ -262,9 +289,9 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         {/* Total Value */}
         {showTotalValue && (
           <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary overflow-hidden">
-            <input type="text" value={totalValue} onChange={e => setTotalValue(e.target.value)} placeholder="Total Value"
+            <input type="number" value={totalValue} onChange={e => setTotalValue(e.target.value)} placeholder="Total Value"
               className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" />
-            <span className="text-sm text-foreground ml-2 shrink-0">USDT</span>
+            <span className="text-sm text-foreground ml-2 shrink-0">{quoteCoin}</span>
           </div>
         )}
 
@@ -273,7 +300,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           <div className="flex justify-between">
             <span className="text-muted-foreground">Avbl</span>
             <div className="flex items-center gap-1">
-              <span className="text-foreground font-mono-num">{user ? avblDisplay : `0.00 ${side === "buy" ? "USDT" : baseCoin}`}</span>
+              <span className="text-foreground font-mono-num">{user ? avblDisplay : `0.00 ${side === "buy" ? quoteCoin : baseCoin}`}</span>
               <PlusCircle className="w-3.5 h-3.5 text-trading-amber" />
             </div>
           </div>
@@ -304,7 +331,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Est. Fee</span>
-            <span className="text-foreground font-mono-num">-- {side === "buy" ? baseCoin : "USDT"}</span>
+            <span className="text-foreground font-mono-num">-- {side === "buy" ? baseCoin : quoteCoin}</span>
           </div>
         </div>
 
