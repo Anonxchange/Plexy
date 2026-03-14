@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { ListFilter, X, ChevronDown, ClipboardList } from "lucide-react";
+import { ListFilter, ChevronDown, ClipboardList } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
-import PerpetualOrderBook from "./PerpetualOrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";
 import PerpetualPairInfo from "./PerpetualPairInfo";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -162,17 +161,14 @@ const DesktopPerpetualLayout = ({
         </div>
       </div>
 
-      {/* Perpetual account sheet modal */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="bg-card border-t border-border rounded-t-2xl px-5 pb-8 pt-5 max-h-[85vh]">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Perpetual Account</SheetTitle>
-          </SheetHeader>
+      {/* Perpetual account modal */}
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-8 pt-5 max-w-md w-full">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Perpetual Account</DialogTitle>
+          </DialogHeader>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-semibold text-foreground">Perpetual Account</h2>
-            <button onClick={() => setSheetOpen(false)} className="text-muted-foreground hover:text-foreground">
-              <X className="h-5 w-5" />
-            </button>
           </div>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-1 text-sm">
@@ -245,8 +241,8 @@ const DesktopPerpetualLayout = ({
               </button>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
