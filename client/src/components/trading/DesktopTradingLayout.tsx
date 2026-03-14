@@ -117,7 +117,7 @@ const DesktopTradingLayout = ({
 
       {/* OrderBook — spans rows 1-2 */}
       <div className="col-start-2 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
-        <DesktopOrderBook />
+        <DesktopOrderBook symbol={pair} />
       </div>
 
       {/* TradePanel — spans rows 1-2 */}
