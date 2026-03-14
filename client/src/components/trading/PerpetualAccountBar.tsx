@@ -123,7 +123,7 @@ const PerpetualAccountBar = () => {
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="bg-card border-t border-border rounded-t-2xl px-5 pb-8 pt-5 max-h-[85vh]">
+        <SheetContent side="bottom" className="bg-card border-t border-border rounded-t-2xl px-5 pb-8 pt-5 max-h-[85vh] overflow-y-auto">
           <SheetHeader className="sr-only">
             <SheetTitle>Perpetual Account</SheetTitle>
           </SheetHeader>
