@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ListFilter, ChevronDown, ClipboardList } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
-import PerpetualOrderBook from "./PerpetualOrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";
 import PerpetualPairInfo from "./PerpetualPairInfo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,7 +29,7 @@ const DesktopPerpetualLayout = ({
   const [, navigate] = useLocation();
 
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetTab, setSheetTab] = useState<"deposit" | "withdraw" | "history">("deposit");
+  const [sheetTab, setSheetTab] = useState<"deposit" | "withdraw" | "transfer">("deposit");
 
   const openSheet = (tab: "deposit" | "withdraw") => {
     if (!user) { navigate("/signin"); return; }
@@ -118,38 +117,69 @@ const DesktopPerpetualLayout = ({
       </div>
 
       {/* Perpetual account section — bottom right */}
-      <div className="col-start-3 row-start-4 border-l border-border">
+      <div className="col-start-3 row-start-4 border-l border-border overflow-y-auto">
         <div className="p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Futures Account</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Account</h3>
           {user ? (
             <>
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  onClick={() => openSheet("deposit")}
-                  className="flex-1 px-3 py-1.5 rounded text-xs text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
-                >
-                  Deposit
-                </button>
-                <button
-                  onClick={() => openSheet("withdraw")}
-                  className="flex-1 px-3 py-1.5 rounded text-xs text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
-                >
-                  Withdraw
-                </button>
+              {/* Deposit / Withdraw / Transfer tabs */}
+              <div className="flex items-center gap-1 mb-4">
+                {(["Deposit", "Withdraw", "Transfer"] as const).map((label) => (
+                  <button
+                    key={label}
+                    onClick={() => openSheet(label.toLowerCase() as "deposit" | "withdraw")}
+                    className="flex-1 py-1.5 rounded text-xs font-medium text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-              <div className="text-xs text-muted-foreground mb-2 font-medium">Perpetual overview</div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-muted-foreground">Margin Balance</span>
-                <span className="text-foreground font-mono-num">
-                  {balanceLoading ? "..." : `${parseFloat(marginBalance).toFixed(2)} USDT`}
-                </span>
+
+              {/* Account Equity */}
+              <div className="mb-3">
+                <div className="text-xs font-semibold text-foreground mb-2">Account Equity</div>
+                <div className="space-y-1.5">
+                  {[
+                    { label: "Spot total value", value: "--" },
+                    { label: "Perp total value", value: "--" },
+                    { label: "Perpetuals unrealized Pnl", value: "--" },
+                    { label: "Shield unrealized Pnl", value: "--" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className="text-foreground font-mono-num">{value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-muted-foreground">Available Margin</span>
-                <span className="text-foreground font-mono-num">
-                  {balanceLoading ? "..." : `${parseFloat(availableMargin).toFixed(2)} USDT`}
-                </span>
+
+              {/* Margin */}
+              <div className="mb-4">
+                <div className="text-xs font-semibold text-foreground mb-2">Margin</div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Account Margin Ratio</span>
+                    <span className="text-trading-green font-mono-num">
+                      {balanceLoading ? "..." : "0.00%"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Account Maintenance Margin</span>
+                    <span className="text-foreground font-mono-num">--</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground flex items-center gap-0.5">
+                      Account Equity
+                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-muted-foreground/50 text-[9px] leading-none">?</span>
+                    </span>
+                    <span className="text-foreground font-mono-num">--</span>
+                  </div>
+                </div>
               </div>
+
+              <button className="w-full py-2 rounded text-xs font-medium border border-border text-foreground hover:bg-accent transition-colors">
+                Multi-Asset Mode
+              </button>
             </>
           ) : (
             <button
@@ -164,81 +194,90 @@ const DesktopPerpetualLayout = ({
 
       {/* Perpetual account modal */}
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
-        <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-8 pt-5 max-w-md w-full">
+        <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-6 pt-5 max-w-md w-full">
           <DialogHeader className="sr-only">
-            <DialogTitle>Perpetual Account</DialogTitle>
+            <DialogTitle>Account</DialogTitle>
           </DialogHeader>
+
+          {/* Title + tabs row */}
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-foreground">Perpetual Account</h2>
+            <h2 className="text-base font-semibold text-foreground">Account</h2>
           </div>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-1 text-sm">
-              {(["deposit", "withdraw", "history"] as const).map((tab, i) => (
+              {(["deposit", "withdraw", "transfer"] as const).map((tab, i) => (
                 <div key={tab} className="flex items-center">
-                  {i > 0 && <span className="text-muted-foreground/40 mx-2">|</span>}
+                  {i > 0 && <span className="text-muted-foreground/30 mx-2">|</span>}
                   <button
                     onClick={() => setSheetTab(tab)}
-                    className={`capitalize font-medium ${sheetTab === tab ? "text-foreground" : "text-muted-foreground"}`}
+                    className={`font-medium capitalize ${sheetTab === tab ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
                   </button>
                 </div>
               ))}
             </div>
-            <ClipboardList className="h-5 w-5 text-muted-foreground" />
+            <ClipboardList className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" />
           </div>
 
-          {sheetTab === "history" ? (
+          {sheetTab === "transfer" ? (
             <div className="flex flex-col items-center py-10">
               <span className="text-sm text-muted-foreground">No transfer history</span>
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 border border-border rounded-lg px-4 py-3">
-                  <div className="text-[10px] text-muted-foreground mb-0.5">{sheetTab === "deposit" ? "From" : "To"}</div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-foreground">Spot account</span>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-                <div className="flex-1 border border-border rounded-lg px-4 py-3">
-                  <div className="text-[10px] text-muted-foreground mb-0.5">{sheetTab === "deposit" ? "To" : "From"}</div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-foreground">Perpetual account</span>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
+              {/* Account type dropdown */}
+              <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                <span className="text-sm text-foreground">Perpetual account</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </div>
-              <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-4">
-                <span className="text-sm text-muted-foreground">Asset</span>
+
+              {/* Chain selector */}
+              <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-3 cursor-pointer hover:bg-accent/50 transition-colors">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-foreground">₮</span>
-                  </div>
-                  <span className="text-sm text-foreground">USDT</span>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-[10px] font-bold text-black">B</div>
+                  <span className="text-sm text-foreground">BNB Chain</span>
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </div>
+
+              {/* Amount + asset */}
+              <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-3">
+                <input
+                  type="text"
+                  placeholder="Amount"
+                  className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                  <div className="w-5 h-5 rounded-full bg-[#26A17B] flex items-center justify-center text-[9px] font-bold text-white">₮</div>
+                  <span className="text-sm text-foreground font-medium">USDT</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
               </div>
-              <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-2">
-                <input type="text" placeholder="Amount" className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" />
-                <button className="text-xs text-trading-amber font-semibold ml-2 shrink-0">MAX</button>
+
+              {/* Balance */}
+              <div className="flex items-center justify-between mb-5 px-1">
+                <span className="text-xs text-muted-foreground">Balance</span>
+                <span className="text-xs text-foreground font-mono-num">--</span>
               </div>
-              <div className="flex items-center justify-between mb-4 px-1">
-                <span className="text-xs text-muted-foreground">Available ({sheetTab === "deposit" ? "Spot" : "Perpetual"})</span>
-                <span className="text-xs text-foreground font-mono-num">0.00 USDT</span>
+
+              {/* Connect wallet CTA */}
+              <button
+                onClick={() => navigate("/signin")}
+                className="w-full py-3 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90 transition-colors mb-3"
+              >
+                Connect wallet
+              </button>
+
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="flex-1 h-px bg-border" />
               </div>
-              <div className="bg-secondary rounded-lg p-3 mb-5">
-                <div className="text-xs text-muted-foreground font-medium mb-2">Perpetual overview</div>
-                <div className="grid grid-cols-2 gap-y-1.5 text-xs">
-                  <span className="text-muted-foreground">Margin Balance</span>
-                  <span className="text-foreground font-mono-num text-right">{balanceLoading ? "..." : `${parseFloat(marginBalance).toFixed(2)} USDT`}</span>
-                  <span className="text-muted-foreground">Available Margin</span>
-                  <span className="text-foreground font-mono-num text-right">{balanceLoading ? "..." : `${parseFloat(availableMargin).toFixed(2)} USDT`}</span>
-                </div>
-              </div>
-              <button className="w-full py-3.5 rounded-lg text-sm font-medium bg-trading-amber text-background hover:bg-trading-amber/90">
-                Confirm
+
+              <button className="w-full py-3 rounded-lg text-sm font-medium border border-border text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-yellow-400 flex items-center justify-center text-[9px] font-bold text-black">B</div>
+                Buy/Deposit with Binance Pay
               </button>
             </>
           )}
