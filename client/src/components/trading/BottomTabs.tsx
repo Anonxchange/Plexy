@@ -36,7 +36,7 @@ const BottomTabs = ({ chartVisible, pair }: BottomTabsProps) => {
               <OrderBook />
             </div>
             <div className="w-[60%] min-w-0 overflow-hidden">
-              <TradePanel />
+              <TradePanel symbol={pair} />
             </div>
           </div>
         </>
