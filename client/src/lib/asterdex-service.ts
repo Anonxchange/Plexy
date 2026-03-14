@@ -278,9 +278,41 @@ export const asterTrading = {
 
 // ── Deposit & Withdraw ─────────────────────────────────
 
+const NETWORK_TO_CHAIN_ID: Record<string, string> = {
+  ETH: '1',
+  BSC: '56',
+  BNB: '56',
+  ARB: '42161',
+  ARBITRUM: '42161',
+  SOL: '101',
+  SOLANA: '101',
+};
+
+export interface DepositInfo {
+  address: string | null;
+  memo: string | null;
+  isOnChain: boolean;
+}
+
+async function fetchDepositInfo(coin: string, network: string): Promise<DepositInfo> {
+  const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
+  const networkType = network.toUpperCase() === 'SOL' ? 'SOL' : 'EVM';
+  const url = `https://www.asterdex.com/bapi/futures/v1/public/future/aster/deposit/assets?chainIds=${chainId}&networks=${networkType}&accountType=spot`;
+  const resp = await fetch(url);
+  const data = await resp.json();
+  if (!data.success || !data.data?.length) throw new Error('No deposit info available');
+  const asset = data.data.find((a: any) => a.name === coin);
+  if (!asset) throw new Error(`${coin} not supported on ${network}`);
+  return {
+    address: asset.tokenVault ?? null,
+    memo: null,
+    isOnChain: !asset.tokenVault,
+  };
+}
+
 export const asterWallet = {
-  depositAddress: (coin: string, network?: string) =>
-    invoke('spot_deposit_address', { coin, ...(network ? { network } : {}) }, true),
+  depositAddress: (coin: string, network: string): Promise<DepositInfo> =>
+    fetchDepositInfo(coin, network),
 
   depositHistory: (coin?: string) =>
     invoke('spot_deposit_history', coin ? { coin } : {}, true),
@@ -288,8 +320,23 @@ export const asterWallet = {
   withdrawHistory: (coin?: string) =>
     invoke('spot_withdraw_history', coin ? { coin } : {}, true),
 
-  withdraw: (coin: string, address: string, amount: string, network?: string) =>
-    invoke('spot_withdraw', { coin, address, amount, ...(network ? { network } : {}) }, true),
+  withdrawFeeEstimate: (coin: string, network: string) => {
+    const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
+    const networkType = network.toUpperCase() === 'SOL' ? 'SOL' : 'EVM';
+    return invoke('spot_withdraw_fee_estimate', { coin, chainId, network: networkType }, false);
+  },
+
+  withdraw: (
+    coin: string,
+    address: string,
+    amount: string,
+    network: string,
+    fee: string,
+  ) => {
+    const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
+    const nonce = String(Date.now() * 1000);
+    return invoke('spot_withdraw', { coin, address, amount, network, chainId, fee, nonce }, true);
+  },
 
   coinInfo: () => invoke('spot_coin_info', {}, true),
 
