@@ -1,9 +1,18 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, PlusCircle, Info } from "lucide-react";
+import { ChevronDown, ChevronUp, PlusCircle, Info, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { asterTrading } from "@/lib/asterdex-service";
+import { useToast } from "@/hooks/use-toast";
 
 const orderTypes = ["Market", "Limit", "Stop Limit", "Stop Market", "Maker Only"];
 
-const FuturesTradePanel = () => {
+interface FuturesTradePanelProps {
+  symbol?: string;
+}
+
+const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) => {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [marginMode, setMarginMode] = useState<"cross" | "isolated">("cross");
   const [leverage, setLeverage] = useState("20");
@@ -34,8 +43,59 @@ const FuturesTradePanel = () => {
   const tifRef = useRef<HTMLDivElement>(null);
   const leverageRef = useRef<HTMLDivElement>(null);
 
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+
+  const apiSymbol = symbol.replace("/", "");
+  const baseCoin = symbol.split("/")[0];
+
   const percentages = [0, 25, 50, 75, 100];
   const leverageOptions = ["1", "2", "3", "5", "10", "20", "50", "75", "100"];
+
+  const { data: futuresBalance } = useQuery({
+    queryKey: ["futures-balance"],
+    queryFn: () => asterTrading.futuresBalance(),
+    enabled: !!user,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+
+  const futuresUsdt = Array.isArray(futuresBalance)
+    ? futuresBalance.find((b: any) => b.asset === "USDT")
+    : null;
+  const availableBalance = futuresUsdt?.availableBalance ?? "0.00";
+
+  const orderMutation = useMutation({
+    mutationFn: async () => {
+      const isMarket = orderType === "Market";
+      // Set leverage and margin type before placing the order
+      await asterTrading.futuresSetLeverage(apiSymbol, leverage);
+      await asterTrading.futuresSetMarginType(
+        apiSymbol,
+        marginMode === "isolated" ? "ISOLATED" : "CROSSED"
+      );
+      return asterTrading.futuresPlaceOrder({
+        symbol: apiSymbol,
+        side: side === "buy" ? "BUY" : "SELL",
+        positionSide: "BOTH",
+        type: isMarket ? "MARKET" : "LIMIT",
+        quantity: size || "0",
+        ...(!isMarket && { price, timeInForce }),
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Order placed",
+        description: `${side === "buy" ? "Long" : "Short"} ${size} ${baseCoin} order submitted (ID: ${data?.orderId ?? "—"})`,
+      });
+      setSize("");
+      setTotalValue("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Order failed", description: err.message, variant: "destructive" });
+    },
+  });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -314,7 +374,9 @@ const FuturesTradePanel = () => {
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Avbl</span>
           <div className="flex items-center gap-1">
-            <span className="text-foreground font-mono-num">0.00 USDT</span>
+            <span className="text-foreground font-mono-num">
+              {user ? `${parseFloat(availableBalance).toFixed(2)} USDT` : "0.00 USDT"}
+            </span>
             <PlusCircle className="w-3.5 h-3.5 text-trading-amber" />
           </div>
         </div>
@@ -401,10 +463,26 @@ const FuturesTradePanel = () => {
           </div>
         </div>
 
-        {/* Connect button only */}
-        <button className="w-full py-3 rounded-lg bg-lime text-black text-sm font-semibold mt-1 hover:opacity-90">
-          Connect
-        </button>
+        {/* CTA button */}
+        {user ? (
+          <button
+            onClick={() => orderMutation.mutate()}
+            disabled={!size || orderMutation.isPending}
+            className={`w-full py-3 rounded-lg text-sm font-semibold mt-1 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 ${
+              side === "buy" ? "bg-trading-green text-background" : "bg-trading-red text-background"
+            }`}
+          >
+            {orderMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {side === "buy" ? `Long ${baseCoin}` : `Short ${baseCoin}`}
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate("/signin")}
+            className="w-full py-3 rounded-lg bg-lime text-black text-sm font-semibold mt-1 hover:opacity-90"
+          >
+            Sign In to Trade
+          </button>
+        )}
       </div>
     </div>
   );
