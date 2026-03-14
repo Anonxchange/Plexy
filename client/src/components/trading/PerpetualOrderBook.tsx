@@ -1,52 +1,102 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronDown, LayoutGrid, Rows3, AlignJustify } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { asterMarket } from "@/lib/asterdex-service";
 
-const generateOrders = (basePrice: number, side: "ask" | "bid", count: number) => {
-  const askSizes = [40770, 69140, 38040, 26240, 34180, 21500, 48200, 17600, 29800, 55100, 12300, 43700];
-  const bidSizes = [2990, 9220, 28300, 46030, 42790, 35600, 18400, 61200, 24500, 37800, 52100, 14800];
-  const sizes = side === "ask" ? askSizes : bidSizes;
+interface OrderRow {
+  price: string;
+  size: string;
+  percent: number;
+}
 
-  let cumulative = 0;
-  const rawOrders = [];
-  for (let i = 0; i < count; i++) {
-    const offset = (i + 1) * 0.0001 * (side === "ask" ? 1 : -1);
-    const price = basePrice + offset;
-    const size = sizes[i % sizes.length];
-    cumulative += size;
-    rawOrders.push({ price, size, cumulative });
-  }
+interface PerpetualOrderBookProps {
+  symbol: string;
+}
 
-  const maxCumulative = cumulative;
-  const formatted = rawOrders.map((o) => ({
-    price: o.price.toFixed(4),
-    size: o.size >= 1000 ? (o.size / 1000).toFixed(2) + "K" : o.size.toFixed(0),
-    percent: Math.min((o.cumulative / maxCumulative) * 100, 100),
-  }));
+const toSymbol = (pair: string) => pair.replace("/", "");
 
-  return side === "ask" ? formatted.reverse() : formatted;
-};
-
-const basePrice = 0.7027;
-
-const PerpetualOrderBook = () => {
+const PerpetualOrderBook = ({ symbol }: PerpetualOrderBookProps) => {
   const isMobile = useIsMobile();
   const count = isMobile ? 5 : 12;
   const [viewMode, setViewMode] = useState<"both" | "bids" | "asks">("both");
   const [sizeUnit, setSizeUnit] = useState<"USDT" | "ASTER">("USDT");
   const [sizeDropOpen, setSizeDropOpen] = useState(false);
-  const asks = generateOrders(basePrice, "ask", count);
-  const bids = generateOrders(basePrice, "bid", count);
+
+  const [asks, setAsks] = useState<OrderRow[]>([]);
+  const [bids, setBids] = useState<OrderRow[]>([]);
+  const [midPrice, setMidPrice] = useState<string>("");
+  const [fundingRate, setFundingRate] = useState<string>("—");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchOrderBook = async () => {
+    try {
+      const data = await asterMarket.futuresOrderBook(toSymbol(symbol), String(count * 2));
+      if (!data?.bids || !data?.asks) return;
+
+      const rawAsks: [string, string][] = data.asks;
+      const rawBids: [string, string][] = data.bids;
+
+      const maxCum = Math.max(
+        rawAsks.slice(0, count).reduce((s: number, [, q]: [string, string]) => s + parseFloat(q), 0),
+        rawBids.slice(0, count).reduce((s: number, [, q]: [string, string]) => s + parseFloat(q), 0),
+      );
+
+      let cumA = 0;
+      const formattedAsks: OrderRow[] = rawAsks.slice(0, count).map(([p, q]: [string, string]) => {
+        const qty = parseFloat(q);
+        cumA += qty;
+        return {
+          price: parseFloat(p).toFixed(4),
+          size: qty >= 1000 ? (qty / 1000).toFixed(2) + "K" : qty.toFixed(0),
+          percent: Math.min((cumA / maxCum) * 100, 100),
+        };
+      }).reverse();
+
+      let cumB = 0;
+      const formattedBids: OrderRow[] = rawBids.slice(0, count).map(([p, q]: [string, string]) => {
+        const qty = parseFloat(q);
+        cumB += qty;
+        return {
+          price: parseFloat(p).toFixed(4),
+          size: qty >= 1000 ? (qty / 1000).toFixed(2) + "K" : qty.toFixed(0),
+          percent: Math.min((cumB / maxCum) * 100, 100),
+        };
+      });
+
+      setAsks(formattedAsks);
+      setBids(formattedBids);
+
+      if (rawAsks[0] && rawBids[0]) {
+        const mid = (parseFloat(rawAsks[0][0]) + parseFloat(rawBids[0][0])) / 2;
+        setMidPrice(mid.toFixed(4));
+      }
+    } catch (_) {}
+  };
+
+  const fetchFundingRate = async () => {
+    try {
+      const data = await asterMarket.futuresFundingRate(toSymbol(symbol));
+      const rate = Array.isArray(data) ? data[0]?.fundingRate : data?.fundingRate;
+      if (rate !== undefined) {
+        setFundingRate((parseFloat(rate) * 100).toFixed(4) + "%");
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchOrderBook();
+    fetchFundingRate();
+    intervalRef.current = setInterval(fetchOrderBook, 2000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [symbol]);
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Funding rate header */}
       <div className="px-3 pt-3 pb-2 border-b border-border">
-        <div className="text-[10px] text-muted-foreground mb-0.5">Funding (4h) / Countdown</div>
+        <div className="text-[10px] text-muted-foreground mb-0.5">Funding Rate</div>
         <div className="font-mono-num text-xs text-foreground">
-          <span className="text-trading-green">0.0008%</span>
-          <span className="text-muted-foreground"> / </span>
-          <span>00:42:17</span>
+          <span className="text-trading-green">{fundingRate}</span>
         </div>
       </div>
 
@@ -85,10 +135,7 @@ const PerpetualOrderBook = () => {
             <div className="flex flex-col mt-auto">
               {asks.map((order, i) => (
                 <div key={`ask-${i}`} className="relative grid grid-cols-2 px-3 py-[3px] text-xs">
-                  <div
-                    className="absolute right-0 top-0 bottom-0 bg-trading-red/15"
-                    style={{ width: `${order.percent}%` }}
-                  />
+                  <div className="absolute right-0 top-0 bottom-0 bg-trading-red/15" style={{ width: `${order.percent}%` }} />
                   <span className="relative font-mono-num text-trading-red">{order.price}</span>
                   <span className="relative font-mono-num text-foreground text-right">{order.size}</span>
                 </div>
@@ -99,8 +146,8 @@ const PerpetualOrderBook = () => {
 
         {/* Current price */}
         <div className="flex flex-col items-center py-2 border-y border-border/50">
-          <span className="font-mono-num text-lg font-bold text-trading-green">{basePrice.toFixed(4)}</span>
-          <span className="text-xs text-muted-foreground">${basePrice.toFixed(4)}</span>
+          <span className="font-mono-num text-lg font-bold text-trading-green">{midPrice || "—"}</span>
+          {midPrice && <span className="text-xs text-muted-foreground">${midPrice}</span>}
         </div>
 
         {/* Bids */}
@@ -108,10 +155,7 @@ const PerpetualOrderBook = () => {
           <div className={`flex flex-col overflow-y-auto ${viewMode === "both" ? "flex-1" : "flex-[2]"}`}>
             {bids.map((order, i) => (
               <div key={`bid-${i}`} className="relative grid grid-cols-2 px-3 py-[3px] text-xs">
-                <div
-                  className="absolute right-0 top-0 bottom-0 bg-trading-green/15"
-                  style={{ width: `${order.percent}%` }}
-                />
+                <div className="absolute right-0 top-0 bottom-0 bg-trading-green/15" style={{ width: `${order.percent}%` }} />
                 <span className="relative font-mono-num text-trading-green">{order.price}</span>
                 <span className="relative font-mono-num text-foreground text-right">{order.size}</span>
               </div>
