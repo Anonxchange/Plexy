@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Star, ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery } from "@tanstack/react-query";
+import { asterMarket } from "@/lib/asterdex-service";
 import SymbolSelector from "./SymbolSelector";
 
 interface PairInfoProps {
@@ -10,9 +12,38 @@ interface PairInfoProps {
   onToggleChart: () => void;
 }
 
+function formatVolume(v: number): string {
+  if (v >= 1_000_000_000) return (v / 1_000_000_000).toFixed(2) + "B";
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
+  if (v >= 1_000) return (v / 1_000).toFixed(1) + "K";
+  return v.toFixed(2);
+}
+
 const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoProps) => {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  const apiSymbol = pair.replace("/", "");
+
+  const { data: ticker } = useQuery({
+    queryKey: ["spot-ticker", apiSymbol],
+    queryFn: () => asterMarket.spotTicker(apiSymbol),
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  });
+
+  const lastPrice = ticker?.lastPrice ? parseFloat(ticker.lastPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) : "—";
+  const priceChangePercent = ticker?.priceChangePercent ? parseFloat(ticker.priceChangePercent) : null;
+  const changeStr = priceChangePercent !== null
+    ? (priceChangePercent >= 0 ? "+" : "") + priceChangePercent.toFixed(2) + "%"
+    : "—";
+  const changeColor = priceChangePercent === null
+    ? "text-muted-foreground"
+    : priceChangePercent >= 0 ? "text-trading-green" : "text-trading-red";
+
+  const high24h = ticker?.highPrice ? parseFloat(ticker.highPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) : "—";
+  const low24h = ticker?.lowPrice ? parseFloat(ticker.lowPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) : "—";
+  const volume24h = ticker?.quoteVolume ? formatVolume(parseFloat(ticker.quoteVolume)) : "—";
 
   return (
     <>
@@ -48,8 +79,8 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
           )}
         </button>
 
-        <span className="font-mono-num text-xs md:text-sm text-trading-amber ml-1 md:ml-3">
-          -1.52%
+        <span className={`font-mono-num text-xs md:text-sm ml-1 md:ml-3 ${changeColor}`}>
+          {changeStr}
         </span>
 
         {/* Desktop stats */}
@@ -57,22 +88,22 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
           <div className="hidden md:flex items-center gap-6 ml-4 text-xs">
             <div>
               <span className="text-muted-foreground">Last Price</span>
-              <div className="font-mono-num text-trading-green">0.68251</div>
+              <div className={`font-mono-num ${priceChangePercent !== null && priceChangePercent >= 0 ? "text-trading-green" : "text-trading-red"}`}>{lastPrice}</div>
             </div>
 
             <div>
               <span className="text-muted-foreground">24h High</span>
-              <div className="font-mono-num text-foreground">0.69546</div>
+              <div className="font-mono-num text-foreground">{high24h}</div>
             </div>
 
             <div>
               <span className="text-muted-foreground">24h Low</span>
-              <div className="font-mono-num text-foreground">0.67759</div>
+              <div className="font-mono-num text-foreground">{low24h}</div>
             </div>
 
             <div>
               <span className="text-muted-foreground">24h Vol</span>
-              <div className="font-mono-num text-foreground">5.71M</div>
+              <div className="font-mono-num text-foreground">{volume24h}</div>
             </div>
           </div>
         )}
