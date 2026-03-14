@@ -5,17 +5,21 @@ import { asterMarket, Ticker24h } from "@/lib/asterdex-service";
 
 const ICON_BASE = "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color";
 
-const SUBTYPE_LABELS: Record<string, string> = {
-  Top:          "⭐ Top",
-  Meme:         "🐸 Meme",
-  AI:           "🤖 AI",
-  STOCK:        "📈 Stocks",
-  RWA:          "🏆 RWA",
-  Commodities:  "🏆 RWA",
-  "pre-launch": "🚀 Pre-launch",
+const NEW_LISTING_DAYS = 60;
+
+const FUTURES_FILTER_LABELS: Record<string, string> = {
+  "All markets": "All markets",
+  Top:           "Top",
+  New:           "New",
+  Meme:          "Meme",
+  AI:            "AI",
+  STOCK:         "Stocks",
+  RWA:           "RWA",
+  "pre-launch":  "Pre-launch",
 };
 
-const FILTER_ORDER = ["All markets", "Rocket Launch", "Top", "Meme", "AI", "STOCK", "RWA", "pre-launch"];
+const FUTURES_FILTER_ORDER = ["All markets", "Top", "New", "Meme", "AI", "STOCK", "RWA", "pre-launch"];
+const SPOT_FILTERS         = ["All markets", "🚀 Rocket Launch", "🐸 Meme"];
 
 const categories = ["Favorites", "Futures", "Spot"];
 
@@ -59,7 +63,8 @@ interface MarketRow {
   change:     string;
   changePct:  number;
   subTypes:   string[];
-  tags:       string[];
+  isNew:      boolean;
+  hotTag:     boolean;
   negative:   boolean;
 }
 
@@ -67,16 +72,15 @@ function buildRows(
   tickers: Ticker24h[],
   tag: "Spot" | "Futures",
   subTypeMap: Record<string, string[]>,
+  newSet: Set<string>,
 ): MarketRow[] {
   return tickers
     .filter(t => !t.symbol.startsWith("TEST"))
     .map(t => {
-      const pct        = parseFloat(t.priceChangePercent);
+      const pct         = parseFloat(t.priceChangePercent);
       const displayPair = toDisplayPair(t.symbol);
       const base        = getBaseSymbol(displayPair);
       const subTypes    = subTypeMap[base] ?? [];
-      const badgeTags: string[] = [];
-      if (Math.abs(pct) > 2) badgeTags.push("Hot");
       return {
         symbol:    displayPair,
         base,
@@ -86,7 +90,8 @@ function buildRows(
         change:    formatChange(t.priceChangePercent),
         changePct: pct,
         subTypes,
-        tags:      [tag, ...badgeTags],
+        isNew:     newSet.has(t.symbol),
+        hotTag:    Math.abs(pct) > 2,
         negative:  pct < 0,
       };
     })
@@ -134,6 +139,13 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
     refetchInterval: 30_000,
   });
 
+  const { data: spotExchangeInfo } = useQuery({
+    queryKey: ["spot-exchange-info"],
+    queryFn:  () => asterMarket.spotExchangeInfo(),
+    enabled:  open,
+    staleTime: 300_000,
+  });
+
   const { data: futuresExchangeInfo } = useQuery({
     queryKey: ["futures-exchange-info"],
     queryFn:  () => asterMarket.futuresExchangeInfo(),
@@ -141,37 +153,73 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
     staleTime: 300_000,
   });
 
-  const subTypeMap: Record<string, string[]> = useMemo(() => {
+  const cutoff = useMemo(() => Date.now() - NEW_LISTING_DAYS * 24 * 60 * 60 * 1000, []);
+
+  const futuresSubTypeMap: Record<string, string[]> = useMemo(() => {
     const symbols: any[] = futuresExchangeInfo?.symbols ?? [];
     const map: Record<string, string[]> = {};
     symbols.forEach(s => {
-      const base: string = s.baseAsset;
-      const sub: string[] = (s.underlyingSubType ?? []).filter(
-        (t: string) => t !== "Commodities"
-      );
-      if (sub.length) map[base] = sub;
+      const sub: string[] = (s.underlyingSubType ?? []).filter((t: string) => t !== "Commodities");
+      if (sub.length) map[s.baseAsset] = sub;
     });
     return map;
   }, [futuresExchangeInfo]);
 
-  const presentSubTypes: string[] = useMemo(() => {
+  const futuresMemeSet: Set<string> = useMemo(() => {
+    const s = new Set<string>();
+    Object.entries(futuresSubTypeMap).forEach(([base, types]) => {
+      if (types.includes("Meme")) s.add(base);
+    });
+    return s;
+  }, [futuresSubTypeMap]);
+
+  const spotMemeSubTypeMap: Record<string, string[]> = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    futuresMemeSet.forEach(base => { map[base] = ["Meme"]; });
+    return map;
+  }, [futuresMemeSet]);
+
+  const futuresNewSet: Set<string> = useMemo(() => {
+    const s = new Set<string>();
+    const symbols: any[] = futuresExchangeInfo?.symbols ?? [];
+    symbols.forEach(sym => {
+      if (sym.onboardDate && sym.onboardDate >= cutoff) s.add(sym.symbol);
+    });
+    return s;
+  }, [futuresExchangeInfo, cutoff]);
+
+  const spotNewSet: Set<string> = useMemo(() => {
+    const s = new Set<string>();
+    const symbols: any[] = spotExchangeInfo?.symbols ?? [];
+    symbols.forEach(sym => {
+      if (sym.listingTime && sym.listingTime >= cutoff) s.add(sym.symbol);
+    });
+    return s;
+  }, [spotExchangeInfo, cutoff]);
+
+  const presentFuturesSubTypes: string[] = useMemo(() => {
     const all = new Set<string>();
-    Object.values(subTypeMap).forEach(arr => arr.forEach(s => all.add(s)));
-    return FILTER_ORDER.filter(f => f !== "All markets" && f !== "Rocket Launch" && all.has(f));
-  }, [subTypeMap]);
+    Object.values(futuresSubTypeMap).forEach(arr => arr.forEach(s => all.add(s)));
+    const hasNew = futuresNewSet.size > 0;
+    return FUTURES_FILTER_ORDER.filter(f => {
+      if (f === "All markets") return true;
+      if (f === "New")         return hasNew;
+      return all.has(f);
+    });
+  }, [futuresSubTypeMap, futuresNewSet]);
 
-  const filters = useMemo(
-    () => ["All markets", "Rocket Launch", ...presentSubTypes],
-    [presentSubTypes],
+  const spotRows: MarketRow[] = useMemo(() =>
+    Array.isArray(spotTickers)
+      ? buildRows(spotTickers, "Spot", spotMemeSubTypeMap, spotNewSet)
+      : [],
+    [spotTickers, spotMemeSubTypeMap, spotNewSet],
   );
 
-  const spotRows:    MarketRow[] = useMemo(() =>
-    Array.isArray(spotTickers)    ? buildRows(spotTickers,    "Spot",    subTypeMap) : [],
-    [spotTickers, subTypeMap],
-  );
   const futuresRows: MarketRow[] = useMemo(() =>
-    Array.isArray(futuresTickers) ? buildRows(futuresTickers, "Futures", subTypeMap) : [],
-    [futuresTickers, subTypeMap],
+    Array.isArray(futuresTickers)
+      ? buildRows(futuresTickers, "Futures", futuresSubTypeMap, futuresNewSet)
+      : [],
+    [futuresTickers, futuresSubTypeMap, futuresNewSet],
   );
 
   const isLoading = (activeCategory === "Spot" && spotLoading) ||
@@ -187,6 +235,8 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
 
   if (!open) return null;
 
+  const currentFilters = activeCategory === "Spot" ? SPOT_FILTERS : presentFuturesSubTypes.map(f => FUTURES_FILTER_LABELS[f] ?? f);
+
   const filtered: MarketRow[] = (() => {
     if (activeCategory === "Favorites") return [];
 
@@ -200,14 +250,15 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
 
     if (activeFilter === "All markets") return base;
 
-    if (activeFilter === "Rocket Launch") {
-      return [...base]
-        .filter(m => m.changePct > 0)
-        .sort((a, b) => b.changePct - a.changePct)
-        .slice(0, 30);
-    }
+    if (activeFilter === "Rocket Launch") return base.filter(m => m.isNew);
 
-    return base.filter(m => m.subTypes.includes(activeFilter));
+    if (activeFilter === "Meme") return base.filter(m => m.subTypes.includes("Meme"));
+
+    if (activeFilter === "New" || activeFilter === FUTURES_FILTER_LABELS["New"])
+      return base.filter(m => m.isNew);
+
+    const rawFilter = Object.entries(FUTURES_FILTER_LABELS).find(([, v]) => v === activeFilter)?.[0] ?? activeFilter;
+    return base.filter(m => m.subTypes.includes(rawFilter));
   })();
 
   return (
@@ -239,7 +290,7 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
         {categories.map(cat => (
           <button
             key={cat}
-            onClick={() => setActiveCategory(cat)}
+            onClick={() => { setActiveCategory(cat); setActiveFilter("All markets"); }}
             className={`text-sm flex items-center gap-1 ${
               activeCategory === cat ? "text-foreground font-semibold" : "text-muted-foreground"
             }`}
@@ -252,7 +303,7 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
 
       {/* Filter pills */}
       <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
-        {filters.map(f => (
+        {currentFilters.map(f => (
           <button
             key={f}
             onClick={() => setActiveFilter(f)}
@@ -262,7 +313,7 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
                 : "border-border text-muted-foreground bg-transparent"
             }`}
           >
-            {f === "Rocket Launch" ? "🚀 Rocket Launch" : (SUBTYPE_LABELS[f] ?? f)}
+            {f}
           </button>
         ))}
       </div>
@@ -284,8 +335,6 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
           <div className="flex justify-center py-12 text-sm text-muted-foreground">
             {activeCategory === "Favorites"
               ? "No favorites yet"
-              : activeFilter === "Rocket Launch"
-              ? "No top gainers right now"
               : `No ${activeFilter} markets found`}
           </div>
         ) : (
@@ -301,19 +350,14 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
                 <div className="flex flex-col items-start">
                   <span className="text-sm text-foreground font-medium">{m.symbol}</span>
                   <div className="flex gap-1 flex-wrap">
-                    {m.tags.filter(t => t !== "Spot" && t !== "Futures").map(tag => (
-                      <span
-                        key={tag}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-trading-amber/20 text-trading-amber"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {m.subTypes.map(st => (
-                      <span
-                        key={st}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground"
-                      >
+                    {m.hotTag && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-trading-amber/20 text-trading-amber">Hot</span>
+                    )}
+                    {m.isNew && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">New</span>
+                    )}
+                    {m.subTypes.filter(t => t !== "Commodities").map(st => (
+                      <span key={st} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
                         {st}
                       </span>
                     ))}
