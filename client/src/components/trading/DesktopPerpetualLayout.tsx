@@ -54,7 +54,7 @@ const DesktopPerpetualLayout = ({
   const availableMargin = futuresUsdt?.availableBalance ?? "0.00";
 
   return (
-    <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_minmax(120px,auto)] h-full min-h-0 overflow-hidden border-t border-border">
+    <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_minmax(100px,auto)] h-full min-h-0 overflow-hidden border-t border-border">
       {/* Pair Info */}
       <div className="col-start-1 row-start-1 border-b border-border min-w-0">
         <PerpetualPairInfo
