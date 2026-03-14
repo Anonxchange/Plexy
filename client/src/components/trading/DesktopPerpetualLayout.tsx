@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ListFilter, ChevronDown, ClipboardList } from "lucide-react";
+import { ListFilter, ChevronDown, ClipboardList, Loader2, XCircle } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
 import PerpetualOrderBook from "./PerpetualOrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";
@@ -8,8 +8,9 @@ import PerpetualPairInfo from "./PerpetualPairInfo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { asterTrading } from "@/lib/asterdex-service";
+import { useToast } from "@/hooks/use-toast";
 
 const orderTabs = ["Open orders", "Positions", "Assets", "TWAP", "Order history", "Position History", "Trade history", "Transaction history"];
 
@@ -29,6 +30,8 @@ const DesktopPerpetualLayout = ({
   const [activeTab, setActiveTab] = useState("Open orders");
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetTab, setSheetTab] = useState<"deposit" | "withdraw" | "transfer">("deposit");
@@ -39,12 +42,42 @@ const DesktopPerpetualLayout = ({
     setSheetOpen(true);
   };
 
+  const apiSymbol = pair.replace("/", "");
+
   const { data: futuresBalance, isLoading: balanceLoading } = useQuery({
     queryKey: ["futures-balance"],
     queryFn: () => asterTrading.futuresBalance(),
     enabled: !!user,
     staleTime: 15_000,
     refetchInterval: 30_000,
+  });
+
+  const { data: openOrders, isLoading: ordersLoading } = useQuery({
+    queryKey: ["futures-open-orders", apiSymbol],
+    queryFn: () => asterTrading.futuresOpenOrders(apiSymbol),
+    enabled: !!user && activeTab === "Open orders",
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+
+  const { data: positions, isLoading: positionsLoading } = useQuery({
+    queryKey: ["futures-positions"],
+    queryFn: () => asterTrading.futuresPositions(),
+    enabled: !!user && (activeTab === "Positions" || activeTab === "Position History"),
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ symbol, orderId }: { symbol: string; orderId: string }) =>
+      asterTrading.futuresCancelOrder(symbol, orderId),
+    onSuccess: () => {
+      toast({ title: "Order cancelled" });
+      queryClient.invalidateQueries({ queryKey: ["futures-open-orders"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Cancel failed", description: err.message, variant: "destructive" });
+    },
   });
 
   const futuresUsdt = Array.isArray(futuresBalance)
@@ -107,12 +140,126 @@ const DesktopPerpetualLayout = ({
       </div>
 
       {/* Tab content */}
-      <div className="col-start-1 col-end-3 row-start-4">
-        <div className="flex flex-col items-center py-4">
-          <span className="text-sm text-muted-foreground">
-            Please connect a wallet first
-          </span>
-        </div>
+      <div className="col-start-1 col-end-3 row-start-4 overflow-auto">
+        {!user ? (
+          <div className="flex items-center justify-center py-4">
+            <button onClick={() => navigate("/signin")} className="text-sm text-trading-amber hover:underline">
+              Sign in to view orders
+            </button>
+          </div>
+        ) : activeTab === "Open orders" ? (
+          ordersLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left px-4 py-2 font-normal">Symbol</th>
+                  <th className="text-left px-4 py-2 font-normal">Side</th>
+                  <th className="text-left px-4 py-2 font-normal">Type</th>
+                  <th className="text-right px-4 py-2 font-normal">Price</th>
+                  <th className="text-right px-4 py-2 font-normal">Size</th>
+                  <th className="text-right px-4 py-2 font-normal">Filled</th>
+                  <th className="text-right px-4 py-2 font-normal">Cancel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(openOrders) && openOrders.length > 0 ? openOrders.map((o: any) => (
+                  <tr key={o.orderId} className="border-b border-border/50 hover:bg-accent/30">
+                    <td className="px-4 py-2 text-foreground">{o.symbol}</td>
+                    <td className={`px-4 py-2 font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{o.type}</td>
+                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.price).toFixed(4)}</td>
+                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.origQty).toFixed(4)}</td>
+                    <td className="px-4 py-2 text-right font-mono-num text-muted-foreground">{parseFloat(o.executedQty).toFixed(4)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <button onClick={() => cancelMutation.mutate({ symbol: o.symbol, orderId: String(o.orderId) })} disabled={cancelMutation.isPending} className="text-trading-red hover:opacity-70">
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">No open orders</td></tr>
+                )}
+              </tbody>
+            </table>
+          )
+        ) : activeTab === "Positions" || activeTab === "Position History" ? (
+          positionsLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left px-4 py-2 font-normal">Symbol</th>
+                  <th className="text-left px-4 py-2 font-normal">Side</th>
+                  <th className="text-right px-4 py-2 font-normal">Size</th>
+                  <th className="text-right px-4 py-2 font-normal">Entry Price</th>
+                  <th className="text-right px-4 py-2 font-normal">Mark Price</th>
+                  <th className="text-right px-4 py-2 font-normal">Liq. Price</th>
+                  <th className="text-right px-4 py-2 font-normal">Unrealized PnL</th>
+                  <th className="text-right px-4 py-2 font-normal">Leverage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(positions) && positions.filter((p: any) => parseFloat(p.positionAmt) !== 0).length > 0
+                  ? positions.filter((p: any) => parseFloat(p.positionAmt) !== 0).map((p: any) => {
+                    const pnl = parseFloat(p.unRealizedProfit);
+                    return (
+                      <tr key={p.symbol + p.positionSide} className="border-b border-border/50 hover:bg-accent/30">
+                        <td className="px-4 py-2 text-foreground">{p.symbol}</td>
+                        <td className={`px-4 py-2 font-medium ${parseFloat(p.positionAmt) > 0 ? "text-trading-green" : "text-trading-red"}`}>
+                          {parseFloat(p.positionAmt) > 0 ? "Long" : "Short"}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono-num">{Math.abs(parseFloat(p.positionAmt)).toFixed(4)}</td>
+                        <td className="px-4 py-2 text-right font-mono-num">{parseFloat(p.entryPrice).toFixed(4)}</td>
+                        <td className="px-4 py-2 text-right font-mono-num">{parseFloat(p.markPrice).toFixed(4)}</td>
+                        <td className="px-4 py-2 text-right font-mono-num text-trading-red">{parseFloat(p.liquidationPrice).toFixed(4)}</td>
+                        <td className={`px-4 py-2 text-right font-mono-num ${pnl >= 0 ? "text-trading-green" : "text-trading-red"}`}>
+                          {pnl >= 0 ? "+" : ""}{pnl.toFixed(4)}
+                        </td>
+                        <td className="px-4 py-2 text-right text-muted-foreground">{p.leverage}x</td>
+                      </tr>
+                    );
+                  })
+                  : <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">No open positions</td></tr>
+                }
+              </tbody>
+            </table>
+          )
+        ) : activeTab === "Assets" ? (
+          balanceLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left px-4 py-2 font-normal">Asset</th>
+                  <th className="text-right px-4 py-2 font-normal">Balance</th>
+                  <th className="text-right px-4 py-2 font-normal">Available</th>
+                  <th className="text-right px-4 py-2 font-normal">Unrealized PnL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(futuresBalance) && futuresBalance.filter((b: any) => parseFloat(b.balance) > 0).length > 0
+                  ? futuresBalance.filter((b: any) => parseFloat(b.balance) > 0).map((b: any) => (
+                    <tr key={b.asset} className="border-b border-border/50 hover:bg-accent/30">
+                      <td className="px-4 py-2 font-medium text-foreground">{b.asset}</td>
+                      <td className="px-4 py-2 text-right font-mono-num">{parseFloat(b.balance).toFixed(4)}</td>
+                      <td className="px-4 py-2 text-right font-mono-num">{parseFloat(b.availableBalance).toFixed(4)}</td>
+                      <td className={`px-4 py-2 text-right font-mono-num ${parseFloat(b.crossUnPnl) >= 0 ? "text-trading-green" : "text-trading-red"}`}>
+                        {parseFloat(b.crossUnPnl) >= 0 ? "+" : ""}{parseFloat(b.crossUnPnl).toFixed(4)}
+                      </td>
+                    </tr>
+                  ))
+                  : <tr><td colSpan={4} className="text-center py-4 text-muted-foreground">No assets</td></tr>
+                }
+              </tbody>
+            </table>
+          )
+        ) : (
+          <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">Coming soon</div>
+        )}
       </div>
 
       {/* Perpetual account section — bottom right */}
