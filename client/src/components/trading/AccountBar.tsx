@@ -52,6 +52,10 @@ const AccountBar = () => {
     ? spotAccount.balances.find((b: any) => b.asset === "USDT")?.free ?? "0.00"
     : null;
 
+  const selectedCoinBalance = spotAccount?.balances
+    ? parseFloat(spotAccount.balances.find((b: any) => b.asset === coin)?.free ?? "0")
+    : 0;
+
   // Fetch deposit address when on deposit tab
   const { data: depositData, isLoading: depositLoading } = useQuery({
     queryKey: ["deposit-address", coin, network],
@@ -296,7 +300,7 @@ const AccountBar = () => {
               <div className="flex items-center justify-between mb-6 px-1">
                 <span className="text-sm text-muted-foreground">Available</span>
                 <span className="text-sm text-foreground font-mono-num">
-                  {balanceLoading ? "..." : `${parseFloat(usdtBalance || "0").toFixed(2)} USDT`}
+                  {balanceLoading ? "..." : `${selectedCoinBalance.toFixed(coin === "BTC" ? 8 : 4)} ${coin}`}
                 </span>
               </div>
 
