@@ -1,292 +1,284 @@
-import { supabase } from "./supabase";
+import { supabase } from "@/lib/supabase";
 
+// ── Types ──────────────────────────────────────────────
 
-// ==================== TYPES ====================
-
-interface TickerData {
+export interface Ticker24h {
   symbol: string;
-  lastPrice: string;
   priceChange: string;
   priceChangePercent: string;
+  lastPrice: string;
   highPrice: string;
   lowPrice: string;
   volume: string;
   quoteVolume: string;
 }
 
-interface TradeQuote {
-  fromSymbol: string;
-  toSymbol: string;
-  fromAmount: number;
-  toAmount: number;
-  price: number;
-  priceImpact: number;
-  fee: number;
-  feeRate: number;
-  expiresAt: number;
-  minReceived: number;
-  route: string[];
-}
-
-interface TradePair {
+export interface TickerPrice {
   symbol: string;
-  name: string;
-  baseSymbol: string;
-  quoteSymbol: string;
-  price: number;
-  change24h: number;
-  volume24h: number;
-  isActive: boolean;
+  price: string;
 }
 
-interface OrderBook {
-  data?: {
-    bids: Array<{ price: number; amount: number; total: number }>;
-    asks: Array<{ price: number; amount: number; total: number }>;
-  };
-  bids: Array<[string, string]> | Array<{ price: number; amount: number; total: number }>;
-  asks: Array<[string, string]> | Array<{ price: number; amount: number; total: number }>;
-}
-
-interface RecentTrade {
-  id: number;
+export interface OrderBookEntry {
   price: string;
   qty: string;
-  quoteQty: string;
-  time: number;
-  isBuyerMaker: boolean;
 }
 
-// ---- Non-Custodial Order Types ----
-
-export interface BuildTransactionRequest {
-  symbol: string;           // e.g. "SOLUSDT"
-  side: 'BUY' | 'SELL';
-  quantity: number;
-  orderType?: 'MARKET' | 'LIMIT';
-  price?: number;           // required for LIMIT
-  timeInForce?: 'GTC' | 'IOC' | 'FOK';
-  walletAddress: string;    // user's wallet address for signing
+export interface OrderBook {
+  bids: [string, string][];
+  asks: [string, string][];
+  lastUpdateId: number;
 }
 
-export interface BuildTransactionResponse {
-  /** The order parameters that were built */
-  orderParams: Record<string, string | number>;
-  /** Deterministic string to sign with ECDSA */
-  messageToSign: string;
-  /** Current market price for user validation */
-  marketPrice: number | null;
-  /** AsterDEX endpoint to submit the signed order */
-  submitEndpoint: string;
-  /** HTTP method for submission */
-  submitMethod: string;
-  timestamp: number;
+export interface Kline {
+  openTime: number;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
+  closeTime: number;
 }
 
-// ==================== HELPER ====================
-
-async function invokeAsterdex<T>(body: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke('asterdex', { body });
-  if (error) throw error;
-  return data?.data ?? data;
+export interface SpotBalance {
+  asset: string;
+  free: string;
+  locked: string;
 }
 
-// ==================== SERVICE ====================
+export interface FuturesPosition {
+  symbol: string;
+  positionAmt: string;
+  entryPrice: string;
+  markPrice: string;
+  unRealizedProfit: string;
+  liquidationPrice: string;
+  leverage: string;
+  marginType: string;
+  positionSide: string;
+  notional: string;
+}
 
-export const asterdexService = {
-  // Get ticker data for a single symbol (e.g. "BTCUSDT")
-  async getTicker(symbol: string): Promise<TickerData> {
-    const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-    return invokeAsterdex<TickerData>({ 
-      action: 'ticker', 
-      symbol: formattedSymbol
-    });
-  },
+export interface FuturesBalance {
+  asset: string;
+  balance: string;
+  availableBalance: string;
+  crossUnPnl: string;
+}
 
-  // Get multiple tickers (optionally filter by symbols array)
-  async getTickers(symbols?: string[]): Promise<TickerData[]> {
-    try {
-      const formattedSymbols = symbols?.map(s => s.includes("USDT") ? s : `${s}USDT`);
-      const response = await invokeAsterdex<any>({ 
-        action: 'tickers', 
-        symbols: formattedSymbols
-      });
-      // Handle both { success: true, data: [...] } and raw array
-      const data = response?.data || (Array.isArray(response) ? response : []);
-      
-      // FALLBACK: If 'tickers' action is missing or empty, use 'pairs' data
-      if (data.length === 0) {
-        const pairsResponse = await invokeAsterdex<any>({ action: 'pairs' });
-        const pairs = pairsResponse?.data?.pairs || pairsResponse?.pairs || [];
-        
-        return pairs.map((p: any) => ({
-          symbol: p.symbol.replace('/', ''),
-          lastPrice: String(p.price),
-          priceChange: "0",
-          priceChangePercent: "0",
-          highPrice: String(p.price * 1.02), // Simulated high
-          lowPrice: String(p.price * 0.98),  // Simulated low
-          volume: "0",
-          quoteVolume: String(p.volume24h || 0)
-        }));
-      }
-      
-      return data;
-    } catch (err) {
-      console.error("Failed to fetch tickers, trying pairs fallback:", err);
-      try {
-        const pairsResponse = await invokeAsterdex<any>({ action: 'pairs' });
-        const pairs = pairsResponse?.data?.pairs || pairsResponse?.pairs || [];
-        return pairs.map((p: any) => ({
-          symbol: p.symbol.replace('/', ''),
-          lastPrice: String(p.price),
-          priceChange: "0",
-          priceChangePercent: "0",
-          highPrice: String(p.price * 1.02),
-          lowPrice: String(p.price * 0.98),
-          volume: "0",
-          quoteVolume: String(p.volume24h || 0)
-        }));
-      } catch (innerErr) {
-        return [];
-      }
-    }
-  },
+export interface OrderResult {
+  orderId: number;
+  symbol: string;
+  status: string;
+  type: string;
+  side: string;
+  price: string;
+  origQty: string;
+  executedQty: string;
+  transactTime: number;
+}
 
-  // Get order book for a symbol
-  async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBook> {
-    try {
-      // Split the symbol into from/to (e.g., BTCUSDT -> BTC, USDT)
-      let fromSymbol = symbol;
-      let toSymbol = 'USDT';
-      
-      if (symbol.endsWith('USDT')) {
-        fromSymbol = symbol.replace('USDT', '');
-      } else if (symbol.includes('/')) {
-        const parts = symbol.split('/');
-        fromSymbol = parts[0];
-        toSymbol = parts[1];
-      }
+export interface FundingRate {
+  symbol: string;
+  fundingRate: string;
+  fundingTime: number;
+  markPrice: string;
+}
 
-      return await invokeAsterdex<OrderBook>({ 
-        action: 'orderbook', 
-        fromSymbol,
-        toSymbol,
-        limit 
-      });
-    } catch (error) {
-      console.error("Failed to fetch order book for %s:", symbol, error);
-      return { bids: [], asks: [] };
-    }
-  },
+export interface DepositAddress {
+  address: string;
+  coin: string;
+  tag: string;
+  url: string;
+  network: string;
+}
 
-  // Get recent trades for a symbol
-  async getRecentTrades(symbol: string, limit: number = 50): Promise<RecentTrade[]> {
-    try {
-      // Split the symbol into from/to (e.g., BTCUSDT -> BTC, USDT)
-      let fromSymbol = symbol;
-      let toSymbol = 'USDT';
-      
-      if (symbol.endsWith('USDT')) {
-        fromSymbol = symbol.replace('USDT', '');
-      } else if (symbol.includes('/')) {
-        const parts = symbol.split('/');
-        fromSymbol = parts[0];
-        toSymbol = parts[1];
-      }
+export interface DepositRecord {
+  amount: string;
+  coin: string;
+  network: string;
+  status: number;
+  txId: string;
+  insertTime: number;
+  confirmTimes: string;
+}
 
-      const response = await invokeAsterdex<any>({ 
-        action: 'trades', 
-        fromSymbol,
-        toSymbol,
-        limit 
-      });
-      // Handle both { success: true, data: [...] } and raw array
-      const data = response?.data || (Array.isArray(response) ? response : []);
-      // Ensure the return type matches RecentTrade[]
-      return data as RecentTrade[];
-    } catch (error) {
-      console.error("Failed to fetch trades for %s:", symbol, error);
-      return [];
-    }
-  },
+export interface WithdrawRecord {
+  id: string;
+  amount: string;
+  coin: string;
+  network: string;
+  status: number;
+  txId: string;
+  applyTime: string;
+}
 
-  // Get klines (candlestick) data
-  async getKlines(symbol: string, interval: string = '1h', limit: number = 100): Promise<any[]> {
-    const formattedSymbol = symbol.includes("USDT") ? symbol : `${symbol}USDT`;
-    return invokeAsterdex<any[]>({ 
-      action: 'klines', 
-      symbol: formattedSymbol,
-      interval, 
-      limit 
-    });
-  },
+export interface CoinInfo {
+  coin: string;
+  name: string;
+  free: string;
+  locked: string;
+  networkList: {
+    network: string;
+    withdrawEnable: boolean;
+    depositEnable: boolean;
+    withdrawFee: string;
+    withdrawMin: string;
+    depositMin: string;
+  }[];
+}
 
-  // Get all supported trading pairs with current prices
-  async getTradingPairs(): Promise<{ pairs: TradePair[]; pricesUpdatedAt: number }> {
-    return invokeAsterdex<{ pairs: TradePair[]; pricesUpdatedAt: number }>({ 
-      action: 'pairs' 
-    });
-  },
+// ── Helper ─────────────────────────────────────────────
 
-  // Get a swap quote (read-only, no execution)
-  async getQuote(
-    fromToken: string,
-    toToken: string,
-    amount: number,
-    slippage: number = 0.005
-  ): Promise<TradeQuote> {
-    const response = await invokeAsterdex<any>({
-      action: 'quote',
-      fromSymbol: fromToken,
-      toSymbol: toToken,
-      amount,
-      tradeType: 'buy', // Match Edge Function's expected tradeType
-      slippage,
-    });
-    return response?.data || response;
-  },
-  // ---- Non-Custodial Trade Flow ----
-  // Step 1: Backend validates price + builds unsigned order payload
-  // Step 2: Frontend signs messageToSign with user's ECDSA key
-  // Step 3: Frontend submits { ...orderParams, signature } to submitEndpoint
+async function invoke(action: string, params: Record<string, string | undefined> = {}, auth = false) {
+  const cleanParams = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+  ) as Record<string, string>;
 
-  async buildTransaction(request: BuildTransactionRequest): Promise<BuildTransactionResponse> {
-    const formattedSymbol = request.symbol.includes("USDT") ? request.symbol : `${request.symbol}USDT`;
-    return invokeAsterdex<BuildTransactionResponse>({
-      action: 'build-transaction',
-      symbol: formattedSymbol,
-      side: request.side,
-      quantity: request.quantity,
-      orderType: request.orderType || 'MARKET',
-      price: request.price,
-      timeInForce: request.timeInForce,
-      walletAddress: request.walletAddress,
-    });
-  },
+  const options: any = { body: { action, params: cleanParams } };
 
-  // Step 3 helper: Submit the signed order directly to AsterDEX
-  async submitSignedOrder(
-    submitEndpoint: string,
-    orderParams: Record<string, string | number>,
-    signature: string
-  ): Promise<unknown> {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(orderParams)) {
-      params.append(key, String(value));
-    }
-    params.append('signature', signature);
+  if (auth) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Authentication required. Please sign in.');
+    options.headers = { Authorization: `Bearer ${session.access_token}` };
+  }
 
-    const response = await fetch(`${submitEndpoint}?${params.toString()}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
+  const { data, error } = await supabase.functions.invoke('asterdex', options);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Order submission failed: ${response.status} - ${errorText}`);
-    }
+  if (error) throw new Error(error.message || 'AsterDEX request failed');
+  if (data?.code && data.code < 0) throw new Error(data.msg || `AsterDEX error ${data.code}`);
+  return data;
+}
 
-    return response.json();
-  },
+// ── Public Market Data ─────────────────────────────────
+
+export const asterMarket = {
+  // Spot
+  spotTicker: (symbol?: string) =>
+    invoke('spot_ticker', symbol ? { symbol } : {}),
+
+  spotTickerPrice: (symbol?: string) =>
+    invoke('spot_ticker_price', symbol ? { symbol } : {}),
+
+  spotOrderBook: (symbol: string, limit = '20') =>
+    invoke('spot_orderbook', { symbol, limit }),
+
+  spotKlines: (symbol: string, interval: string, limit = '100') =>
+    invoke('spot_klines', { symbol, interval, limit }),
+
+  spotTrades: (symbol: string, limit = '20') =>
+    invoke('spot_trades', { symbol, limit }),
+
+  spotExchangeInfo: () => invoke('spot_exchange_info'),
+
+  // Futures
+  futuresTicker: (symbol?: string) =>
+    invoke('futures_ticker', symbol ? { symbol } : {}),
+
+  futuresTickerPrice: (symbol?: string) =>
+    invoke('futures_ticker_price', symbol ? { symbol } : {}),
+
+  futuresOrderBook: (symbol: string, limit = '20') =>
+    invoke('futures_orderbook', { symbol, limit }),
+
+  futuresKlines: (symbol: string, interval: string, limit = '100') =>
+    invoke('futures_klines', { symbol, interval, limit }),
+
+  futuresTrades: (symbol: string, limit = '20') =>
+    invoke('futures_trades', { symbol, limit }),
+
+  futuresExchangeInfo: () => invoke('futures_exchange_info'),
+
+  futuresFundingRate: (symbol?: string) =>
+    invoke('futures_funding_rate', symbol ? { symbol } : {}),
+
+  futuresMarkPrice: (symbol?: string) =>
+    invoke('futures_mark_price', symbol ? { symbol } : {}),
+};
+
+// ── Authenticated Trading ──────────────────────────────
+
+export const asterTrading = {
+  // Spot
+  spotAccount: () => invoke('spot_account', {}, true),
+
+  spotOpenOrders: (symbol?: string) =>
+    invoke('spot_open_orders', symbol ? { symbol } : {}, true),
+
+  spotAllOrders: (symbol: string) =>
+    invoke('spot_all_orders', { symbol }, true),
+
+  spotPlaceOrder: (params: {
+    symbol: string;
+    side: 'BUY' | 'SELL';
+    type: 'LIMIT' | 'MARKET';
+    quantity: string;
+    price?: string;
+    timeInForce?: string;
+  }) => invoke('spot_order', {
+    ...params,
+    timeInForce: params.type === 'LIMIT' ? (params.timeInForce || 'GTC') : undefined,
+  } as any, true),
+
+  spotCancelOrder: (symbol: string, orderId: string) =>
+    invoke('spot_cancel_order', { symbol, orderId }, true),
+
+  spotMyTrades: (symbol: string) =>
+    invoke('spot_my_trades', { symbol }, true),
+
+  // Futures
+  futuresAccount: () => invoke('futures_account', {}, true),
+  futuresBalance: () => invoke('futures_balance', {}, true),
+  futuresPositions: () => invoke('futures_positions', {}, true),
+
+  futuresOpenOrders: (symbol?: string) =>
+    invoke('futures_open_orders', symbol ? { symbol } : {}, true),
+
+  futuresPlaceOrder: (params: {
+    symbol: string;
+    side: 'BUY' | 'SELL';
+    type: 'LIMIT' | 'MARKET';
+    quantity: string;
+    price?: string;
+    timeInForce?: string;
+    positionSide?: 'LONG' | 'SHORT' | 'BOTH';
+  }) => invoke('futures_order', {
+    ...params,
+    timeInForce: params.type === 'LIMIT' ? (params.timeInForce || 'GTC') : undefined,
+  } as any, true),
+
+  futuresCancelOrder: (symbol: string, orderId: string) =>
+    invoke('futures_cancel_order', { symbol, orderId }, true),
+
+  futuresSetLeverage: (symbol: string, leverage: string) =>
+    invoke('futures_leverage', { symbol, leverage }, true),
+
+  futuresSetMarginType: (symbol: string, marginType: 'ISOLATED' | 'CROSSED') =>
+    invoke('futures_margin_type', { symbol, marginType }, true),
+
+  futuresMyTrades: (symbol: string) =>
+    invoke('futures_my_trades', { symbol }, true),
+
+  futuresIncome: (params?: { symbol?: string; incomeType?: string; limit?: string }) =>
+    invoke('futures_income', params as any || {}, true),
+};
+
+// ── Deposit & Withdraw ─────────────────────────────────
+
+export const asterWallet = {
+  depositAddress: (coin: string, network?: string) =>
+    invoke('spot_deposit_address', { coin, ...(network ? { network } : {}) }, true),
+
+  depositHistory: (coin?: string) =>
+    invoke('spot_deposit_history', coin ? { coin } : {}, true),
+
+  withdrawHistory: (coin?: string) =>
+    invoke('spot_withdraw_history', coin ? { coin } : {}, true),
+
+  withdraw: (coin: string, address: string, amount: string, network?: string) =>
+    invoke('spot_withdraw', { coin, address, amount, ...(network ? { network } : {}) }, true),
+
+  coinInfo: () => invoke('spot_coin_info', {}, true),
+
+  transfer: (asset: string, amount: string, type: 'SPOT_TO_FUTURES' | 'FUTURES_TO_SPOT') =>
+    invoke('spot_transfer', { asset, amount, type }, true),
 };
