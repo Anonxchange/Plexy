@@ -144,8 +144,12 @@ async function invoke(action: string, params: Record<string, string | undefined>
 
   const { data, error } = await supabase.functions.invoke('asterdex', options);
 
-  if (error) throw new Error(error.message || 'AsterDEX request failed');
+  if (error) {
+    const message = data?.error || data?.msg || error.message || 'AsterDEX request failed';
+    throw new Error(message);
+  }
   if (data?.code && data.code < 0) throw new Error(data.msg || `AsterDEX error ${data.code}`);
+  if (data?.error) throw new Error(data.error);
   return data;
 }
 
@@ -210,14 +214,18 @@ export const asterTrading = {
   spotPlaceOrder: (params: {
     symbol: string;
     side: 'BUY' | 'SELL';
-    type: 'LIMIT' | 'MARKET';
+    type: 'LIMIT' | 'MARKET' | 'STOP_LOSS' | 'STOP_LOSS_LIMIT' | 'TAKE_PROFIT' | 'TAKE_PROFIT_LIMIT' | 'LIMIT_MAKER';
     quantity: string;
     price?: string;
+    stopPrice?: string;
     timeInForce?: string;
-  }) => invoke('spot_order', {
-    ...params,
-    timeInForce: params.type === 'LIMIT' ? (params.timeInForce || 'GTC') : undefined,
-  } as any, true),
+  }) => {
+    const needsTimeInForce = ['LIMIT', 'STOP_LOSS_LIMIT', 'TAKE_PROFIT_LIMIT'].includes(params.type);
+    return invoke('spot_order', {
+      ...params,
+      timeInForce: needsTimeInForce ? (params.timeInForce || 'GTC') : undefined,
+    } as any, true);
+  },
 
   spotCancelOrder: (symbol: string, orderId: string) =>
     invoke('spot_cancel_order', { symbol, orderId }, true),
@@ -236,15 +244,21 @@ export const asterTrading = {
   futuresPlaceOrder: (params: {
     symbol: string;
     side: 'BUY' | 'SELL';
-    type: 'LIMIT' | 'MARKET';
+    type: 'LIMIT' | 'MARKET' | 'STOP' | 'STOP_MARKET' | 'TAKE_PROFIT' | 'TAKE_PROFIT_MARKET' | 'LIMIT_MAKER';
     quantity: string;
     price?: string;
+    stopPrice?: string;
     timeInForce?: string;
     positionSide?: 'LONG' | 'SHORT' | 'BOTH';
-  }) => invoke('futures_order', {
-    ...params,
-    timeInForce: params.type === 'LIMIT' ? (params.timeInForce || 'GTC') : undefined,
-  } as any, true),
+    reduceOnly?: string;
+  }) => {
+    const needsTimeInForce = ['LIMIT', 'LIMIT_MAKER'].includes(params.type);
+    return invoke('futures_order', {
+      ...params,
+      positionSide: params.positionSide || 'BOTH',
+      timeInForce: needsTimeInForce ? (params.timeInForce || 'GTC') : undefined,
+    } as any, true);
+  },
 
   futuresCancelOrder: (symbol: string, orderId: string) =>
     invoke('futures_cancel_order', { symbol, orderId }, true),
