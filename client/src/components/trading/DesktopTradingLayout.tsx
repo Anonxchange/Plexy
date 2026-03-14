@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { ListFilter, X, ChevronDown, ClipboardList, Copy, Check, Loader2 } from "lucide-react";
+import { ListFilter, ChevronDown, ClipboardList, Copy, Check, Loader2 } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
 import DesktopOrderBook from "./DesktopOrderBook";
 import TradePanel from "./TradePanel";
 import PairInfo from "./PairInfo";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -206,17 +206,14 @@ const DesktopTradingLayout = ({
         </div>
       </div>
 
-      {/* Spot account sheet modal */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="bg-card border-t border-border rounded-t-2xl px-5 pb-8 pt-5 max-h-[85vh]">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Spot Account</SheetTitle>
-          </SheetHeader>
+      {/* Spot account modal */}
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-8 pt-5 max-w-md w-full">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Spot Account</DialogTitle>
+          </DialogHeader>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-semibold text-foreground">Account</h2>
-            <button onClick={() => setSheetOpen(false)} className="text-muted-foreground hover:text-foreground">
-              <X className="h-5 w-5" />
-            </button>
           </div>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-1 text-sm">
@@ -342,8 +339,8 @@ const DesktopTradingLayout = ({
               <span className="text-sm text-muted-foreground">Use the Perpetual account bar to transfer between Spot and Futures.</span>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
