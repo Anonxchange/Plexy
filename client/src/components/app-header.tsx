@@ -491,15 +491,6 @@ export function AppHeader() {
                 </div>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/wallet')}
-                className="hidden sm:flex h-8 text-xs border-trading-amber/40 text-trading-amber bg-trading-amber/10 hover:bg-trading-amber/20 hover:text-trading-amber"
-              >
-                Deposit
-              </Button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
