@@ -1,10 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { X, ChevronDown, ClipboardList, Copy, Check, Loader2, AlertCircle } from "lucide-react";
+import { X, ChevronDown, ClipboardList, Copy, Check, Loader2, AlertCircle, Wallet, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { asterTrading, asterWallet, CoinInfo } from "@/lib/asterdex-service";
+import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, CoinInfo } from "@/lib/asterdex-service";
+import { nonCustodialWalletManager, NonCustodialWallet } from "@/lib/non-custodial-wallet";
+import { signEVMMessage, signEVMTransaction, broadcastEVMTransaction } from "@/lib/evmSigner";
 import { useToast } from "@/hooks/use-toast";
 
 const FALLBACK_COINS: CoinInfo[] = [
@@ -33,6 +35,19 @@ const FALLBACK_COINS: CoinInfo[] = [
   ]},
 ];
 
+const CHAIN_ID_FOR_NETWORK: Record<string, number> = {
+  BSC: 56, ETH: 1, ARB: 42161, SOL: 101,
+};
+
+const EVM_CURRENCY_KEY: Record<string, string> = {
+  "USDT-BSC": "USDT_BSC", "USDT-ETH": "USDT_ETH", "USDT-ARB": "USDT_BSC",
+  "USDC-BSC": "USDC_BSC", "USDC-ETH": "USDC_ETH", "USDC-ARB": "USDC_BSC",
+  "ETH-ETH": "ETH", "ETH-ARB": "ETH", "ETH-BSC": "ETH",
+  "BNB-BSC": "BSC", "BTC-BSC": "BSC",
+};
+
+function asterRegisteredKey(userId: string) { return `aster_reg_${userId}`; }
+
 const AccountBar = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"deposit" | "withdraw" | "transfer">("deposit");
@@ -41,6 +56,17 @@ const AccountBar = () => {
   const [coinOpen, setCoinOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Deposit-specific state
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositStep, setDepositStep] = useState<"idle" | "connect" | "depositing">("idle");
+  const [walletPassword, setWalletPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [userEvmWallet, setUserEvmWallet] = useState<NonCustodialWallet | null>(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [isAsterRegistered, setIsAsterRegistered] = useState(false);
+
+  // Withdraw-specific state
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
 
@@ -53,6 +79,35 @@ const AccountBar = () => {
     setActiveTab(tab);
     setSheetOpen(true);
   };
+
+  // Check AsterDEX registration state
+  useEffect(() => {
+    if (user) {
+      const registered = localStorage.getItem(asterRegisteredKey(user.id)) === "true";
+      setIsAsterRegistered(registered);
+    }
+  }, [user]);
+
+  // Load user's EVM wallet when sheet opens on deposit tab
+  const loadEvmWallet = useCallback(async () => {
+    if (!user || !sheetOpen || activeTab !== "deposit") return;
+    setWalletLoading(true);
+    try {
+      const wallets: NonCustodialWallet[] = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
+      const evmWallet = wallets.find(w =>
+        ["ethereum", "eth", "bsc", "bnb", "binance", "usdt", "usdc", "arb", "arbitrum"].some(k =>
+          w.chainId?.toLowerCase().includes(k)
+        ) && w.address?.startsWith("0x")
+      );
+      setUserEvmWallet(evmWallet ?? null);
+    } catch {
+      setUserEvmWallet(null);
+    } finally {
+      setWalletLoading(false);
+    }
+  }, [user, sheetOpen, activeTab]);
+
+  useEffect(() => { loadEvmWallet(); }, [loadEvmWallet]);
 
   const { data: spotAccount, isLoading: balanceLoading } = useQuery({
     queryKey: ["spot-account"],
@@ -95,11 +150,11 @@ const AccountBar = () => {
     [selectedCoinInfo, network]
   );
 
-  // When switching tabs, ensure the selected network is valid for that tab
   const handleTabChange = (tab: "deposit" | "withdraw" | "transfer") => {
     setActiveTab(tab);
     setCoinOpen(false);
     setNetworkOpen(false);
+    setDepositStep("idle");
     if (tab === "deposit" && !depositNetworks.includes(network)) {
       setNetwork(depositNetworks[0] ?? "BSC");
     } else if (tab === "withdraw" && !withdrawNetworks.includes(network)) {
@@ -116,6 +171,7 @@ const AccountBar = () => {
     setNetwork(nets?.[0] ?? "BSC");
     setCoinOpen(false);
     setWithdrawAmount("");
+    setDepositAmount("");
   };
 
   const usdtBalance = spotAccount?.balances
@@ -126,8 +182,8 @@ const AccountBar = () => {
     ? parseFloat(spotAccount.balances.find((b: any) => b.asset === coin)?.free ?? "0")
     : 0;
 
-  // Deposit address query
-  const { data: depositData, isLoading: depositLoading, error: depositError } = useQuery({
+  // Deposit address — from AsterDEX via Supabase (authenticated private endpoint)
+  const { data: depositData, isLoading: depositLoading, error: depositError, refetch: refetchDeposit } = useQuery({
     queryKey: ["deposit-address", coin, network],
     queryFn: () => asterWallet.depositAddress(coin, network),
     enabled: !!user && sheetOpen && activeTab === "deposit",
@@ -135,11 +191,10 @@ const AccountBar = () => {
     retry: 1,
   });
 
-  const depositAddress = depositData?.address ?? "";
-  const depositMemo = depositData?.memo ?? "";
-  const depositIsOnChain = depositData?.isOnChain ?? false;
+  const depositAddress: string = (depositData as any)?.address ?? "";
+  const depositMemo: string = (depositData as any)?.tag ?? (depositData as any)?.memo ?? "";
 
-  // Fee estimation query — runs whenever coin/network changes in withdraw tab
+  // Fee estimation for withdraw tab
   const { data: feeEstimate, isLoading: feeLoading } = useQuery({
     queryKey: ["withdraw-fee", coin, network],
     queryFn: () => asterWallet.withdrawFeeEstimate(coin, network),
@@ -148,13 +203,11 @@ const AccountBar = () => {
     retry: 1,
   });
 
-  // Resolve fee: prefer live estimate, fall back to static fallback
   const liveFee = feeEstimate?.gasCost ? String(feeEstimate.gasCost) : null;
   const fallbackFee = selectedNetworkInfo?.withdrawFee ?? "0";
   const resolvedFee = liveFee ?? fallbackFee;
   const resolvedFeeNum = parseFloat(resolvedFee);
 
-  // Withdraw amount validation
   const withdrawAmountNum = parseFloat(withdrawAmount) || 0;
   const withdrawMin = parseFloat(selectedNetworkInfo?.withdrawMin ?? "0");
   const youReceive = Math.max(0, withdrawAmountNum - resolvedFeeNum);
@@ -173,13 +226,9 @@ const AccountBar = () => {
     !amountExceedsBalance &&
     !amountTooLow;
 
-  const handleMax = () => {
+  const handleWithdrawMax = () => {
     const maxAfterFee = Math.max(0, selectedCoinBalance - resolvedFeeNum);
-    setWithdrawAmount(
-      coin === "BTC"
-        ? maxAfterFee.toFixed(8)
-        : maxAfterFee.toFixed(6)
-    );
+    setWithdrawAmount(coin === "BTC" ? maxAfterFee.toFixed(8) : maxAfterFee.toFixed(6));
   };
 
   const withdrawMutation = useMutation({
@@ -196,9 +245,66 @@ const AccountBar = () => {
     },
   });
 
-  const handleCopy = () => {
-    if (!depositAddress) return;
-    navigator.clipboard.writeText(depositAddress);
+  // AsterDEX registration — get nonce, sign, create API key
+  const registerMutation = useMutation({
+    mutationFn: async () => {
+      if (!userEvmWallet || !user) throw new Error("No wallet found");
+      if (!walletPassword) throw new Error("Enter your wallet password");
+      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
+      if (!mnemonic) throw new Error("Incorrect password or wallet not found");
+      const nonce = await asterGetNonce(userEvmWallet.address);
+      const message = `You are signing into Astherus ${nonce}`;
+      const signature = await signEVMMessage(mnemonic, message);
+      const chainId = CHAIN_ID_FOR_NETWORK[network] ?? 56;
+      await asterCreateApiKey(userEvmWallet.address, signature, chainId);
+    },
+    onSuccess: () => {
+      if (user) localStorage.setItem(asterRegisteredKey(user.id), "true");
+      setIsAsterRegistered(true);
+      setDepositStep("idle");
+      setWalletPassword("");
+      toast({ title: "Wallet connected", description: "Your wallet is now linked to AsterDEX." });
+      refetchDeposit();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Connection failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // Deposit transaction — sign ERC-20 transfer from user's wallet to deposit address
+  const depositMutation = useMutation({
+    mutationFn: async () => {
+      if (!userEvmWallet || !user) throw new Error("No wallet found");
+      if (!walletPassword) throw new Error("Enter your wallet password");
+      if (!depositAddress) throw new Error("Deposit address not loaded yet");
+      if (!depositAmount || parseFloat(depositAmount) <= 0) throw new Error("Enter an amount");
+      const min = parseFloat(selectedNetworkInfo?.depositMin ?? "0");
+      if (parseFloat(depositAmount) < min) throw new Error(`Minimum deposit is ${min} ${coin}`);
+      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
+      if (!mnemonic) throw new Error("Incorrect password");
+      const currencyKey = EVM_CURRENCY_KEY[`${coin}-${network}`];
+      if (!currencyKey) throw new Error(`${coin} on ${network} not supported for on-chain deposit`);
+      const signed = await signEVMTransaction(mnemonic, {
+        to: depositAddress,
+        amount: depositAmount,
+        currency: currencyKey as any,
+      });
+      await broadcastEVMTransaction(signed.signedTx, network);
+    },
+    onSuccess: () => {
+      toast({ title: "Deposit sent", description: `${depositAmount} ${coin} sent to AsterDEX. It will be credited shortly.` });
+      setDepositAmount("");
+      setWalletPassword("");
+      setDepositStep("idle");
+      setSheetOpen(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Deposit failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleCopyAddress = (addr: string) => {
+    navigator.clipboard.writeText(addr);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -207,9 +313,14 @@ const AccountBar = () => {
     ? balanceLoading ? "..." : `${parseFloat(usdtBalance || "0").toFixed(2)} USDT`
     : "--";
 
-  // Close dropdowns when sheet closes
   useEffect(() => {
-    if (!sheetOpen) { setCoinOpen(false); setNetworkOpen(false); }
+    if (!sheetOpen) {
+      setCoinOpen(false);
+      setNetworkOpen(false);
+      setDepositStep("idle");
+      setWalletPassword("");
+      setDepositAmount("");
+    }
   }, [sheetOpen]);
 
   return (
@@ -222,7 +333,7 @@ const AccountBar = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => openSheet("deposit")}
-            className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
+            className="px-4 py-1.5 rounded text-sm text-trading-green border border-trading-green/40 bg-trading-green/10 hover:bg-trading-green/15"
           >
             Deposit
           </button>
@@ -291,7 +402,7 @@ const AccountBar = () => {
                   <div className="absolute z-50 w-full mt-1 rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
                     {coins.map(c => (
                       <button key={c.coin} onClick={() => handleCoinChange(c.coin, coins)}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-accent transition-colors ${c.coin === coin ? "text-trading-amber" : "text-foreground"}`}>
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-accent transition-colors ${c.coin === coin ? "text-trading-green" : "text-foreground"}`}>
                         {c.coin} <span className="text-muted-foreground text-xs ml-1">{c.name}</span>
                       </button>
                     ))}
@@ -300,7 +411,7 @@ const AccountBar = () => {
               </div>
 
               {/* Network selector */}
-              <div className="relative mb-4">
+              <div className="relative mb-5">
                 <button
                   onClick={() => { setNetworkOpen(!networkOpen); setCoinOpen(false); }}
                   className="border border-border rounded-lg px-4 py-3 flex items-center justify-between w-full"
@@ -311,8 +422,8 @@ const AccountBar = () => {
                 {networkOpen && (
                   <div className="absolute z-50 w-full mt-1 rounded-lg border border-border bg-card shadow-lg">
                     {depositNetworks.map(n => (
-                      <button key={n} onClick={() => { setNetwork(n); setNetworkOpen(false); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-accent transition-colors ${n === network ? "text-trading-amber" : "text-foreground"}`}>
+                      <button key={n} onClick={() => { setNetwork(n); setNetworkOpen(false); setDepositAmount(""); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-accent transition-colors ${n === network ? "text-trading-green" : "text-foreground"}`}>
                         {n}
                       </button>
                     ))}
@@ -320,89 +431,149 @@ const AccountBar = () => {
                 )}
               </div>
 
+              {/* User's wallet address */}
+              {walletLoading ? (
+                <div className="flex items-center gap-2 py-2 mb-4 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Loading wallet…</span>
+                </div>
+              ) : userEvmWallet ? (
+                <div className="border border-border rounded-lg px-4 py-3 mb-4">
+                  <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+                    <Wallet className="h-3 w-3" /> Your Wallet (From)
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-foreground font-mono break-all">{userEvmWallet.address}</span>
+                    <button onClick={() => handleCopyAddress(userEvmWallet.address)} className="shrink-0 text-muted-foreground hover:text-foreground">
+                      {copied ? <Check className="h-3.5 w-3.5 text-trading-green" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-border rounded-lg px-4 py-3 mb-4 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-muted-foreground">No wallet found. Create a wallet in the Wallet section first.</span>
+                </div>
+              )}
+
+              {/* AsterDEX deposit address */}
               {depositLoading ? (
-                <div className="flex items-center gap-2 py-4">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Loading deposit info…</span>
+                <div className="flex items-center gap-2 py-2 mb-4 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Fetching deposit address…</span>
                 </div>
               ) : depositAddress ? (
-                <>
-                  {/* Has a direct vault address (e.g. Solana) */}
-                  <div className="border border-border rounded-lg px-4 py-3 mb-3">
-                    <div className="text-xs text-muted-foreground mb-1">Deposit Address ({network})</div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-foreground font-mono break-all">{depositAddress}</span>
-                      <button onClick={handleCopy} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                        {copied ? <Check className="h-4 w-4 text-trading-green" /> : <Copy className="h-4 w-4" />}
-                      </button>
-                    </div>
+                <div className="border border-trading-green/30 bg-trading-green/5 rounded-lg px-4 py-3 mb-4">
+                  <div className="text-xs text-trading-green mb-1">AsterDEX Deposit Address ({network})</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
+                    <button onClick={() => handleCopyAddress(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground">
+                      {copied ? <Check className="h-3.5 w-3.5 text-trading-green" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
                   </div>
-
                   {depositMemo && (
-                    <div className="border border-trading-amber/30 bg-trading-amber/5 rounded-lg px-4 py-3 mb-3">
-                      <div className="text-xs text-trading-amber mb-1 font-medium">Memo / Tag required</div>
-                      <div className="text-sm text-foreground font-mono break-all">{depositMemo}</div>
-                      <div className="text-xs text-muted-foreground mt-1">You must include this memo when sending. Omitting it may result in permanent loss.</div>
+                    <div className="mt-2 pt-2 border-t border-trading-green/20">
+                      <div className="text-xs text-trading-amber font-medium mb-0.5">Memo required</div>
+                      <div className="text-xs text-foreground font-mono">{depositMemo}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</div>
                     </div>
                   )}
-
-                  {selectedNetworkInfo?.depositMin && (
-                    <div className="text-xs text-muted-foreground mb-2">
-                      Minimum deposit: {selectedNetworkInfo.depositMin} {coin}
+                </div>
+              ) : depositError ? (
+                <div className="border border-border rounded-lg px-4 py-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-xs text-foreground font-medium">Wallet not linked to AsterDEX</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Connect your wallet to generate your deposit address.</p>
                     </div>
-                  )}
+                  </div>
+                </div>
+              ) : null}
 
-                  <p className="text-xs text-muted-foreground mb-6">
-                    Only send {coin} on the {network} network to this address. Sending any other asset may result in permanent loss.
-                  </p>
-
-                  <button
-                    onClick={handleCopy}
-                    className="w-full py-3.5 rounded-lg text-sm font-medium bg-trading-amber text-background hover:bg-trading-amber/90"
-                  >
-                    {copied ? "Copied!" : "Copy Address"}
-                  </button>
-                </>
-              ) : (
+              {/* Amount input */}
+              {depositAddress && (
                 <>
-                  {/* EVM chains: deposit requires smart contract interaction via AsterDEX app */}
-                  <div className="border border-border rounded-lg px-4 py-4 mb-4">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="h-4 w-4 text-trading-amber mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-sm text-foreground font-medium mb-1">
-                          Deposit via AsterDEX
-                        </p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {network} deposits require a smart contract transaction. You must use the AsterDEX app or web interface to deposit — there is no static address to send funds to directly.
-                        </p>
-                      </div>
-                    </div>
+                  <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-1">
+                    <input
+                      type="number"
+                      value={depositAmount}
+                      onChange={e => setDepositAmount(e.target.value)}
+                      placeholder="Amount to deposit"
+                      min="0"
+                      step="any"
+                      className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <span className="text-sm text-muted-foreground ml-2 shrink-0">{coin}</span>
                   </div>
-
-                  <div className="text-xs text-muted-foreground mb-4 space-y-1.5">
-                    <p className="font-medium text-foreground">How to deposit:</p>
-                    <p>1. Open AsterDEX and connect your wallet</p>
-                    <p>2. Go to <span className="text-trading-amber">Account → Deposit</span></p>
-                    <p>3. Select <span className="text-foreground font-medium">{coin}</span> and the <span className="text-foreground font-medium">{network}</span> network</p>
-                    <p>4. Follow the on-screen steps to approve and deposit</p>
-                  </div>
-
                   {selectedNetworkInfo?.depositMin && (
-                    <div className="text-xs text-muted-foreground mb-4">
-                      Minimum deposit: {selectedNetworkInfo.depositMin} {coin}
-                    </div>
+                    <p className="text-xs text-muted-foreground mb-4 px-1">
+                      Minimum: {selectedNetworkInfo.depositMin} {coin} · Only send {coin} on {network}
+                    </p>
                   )}
-
-                  <a
-                    href="https://www.asterdex.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full py-3.5 rounded-lg text-sm font-medium bg-trading-amber text-background hover:bg-trading-amber/90 text-center"
-                  >
-                    Open AsterDEX
-                  </a>
                 </>
+              )}
+
+              {/* Register with AsterDEX OR deposit flow — both need password */}
+              {(!isAsterRegistered || (depositAddress && depositStep !== "idle")) && userEvmWallet && (
+                <div className="mb-4">
+                  {depositStep === "idle" && !isAsterRegistered && (
+                    <p className="text-xs text-muted-foreground mb-3">
+                      First-time setup: connect your wallet to AsterDEX to generate your deposit address.
+                    </p>
+                  )}
+                  <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between mb-3">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={walletPassword}
+                      onChange={e => setWalletPassword(e.target.value)}
+                      placeholder="Wallet password"
+                      className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                    <button onClick={() => setShowPassword(v => !v)} className="text-muted-foreground hover:text-foreground ml-2">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Primary action button */}
+              {!userEvmWallet ? null : !isAsterRegistered ? (
+                <button
+                  onClick={() => registerMutation.mutate()}
+                  disabled={registerMutation.isPending || !walletPassword}
+                  className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-green text-background hover:bg-trading-green/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {registerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
+                  {registerMutation.isPending ? "Connecting…" : "Connect Wallet to AsterDEX"}
+                </button>
+              ) : depositAddress ? (
+                <button
+                  onClick={() => {
+                    if (!walletPassword) { setDepositStep("depositing"); return; }
+                    depositMutation.mutate();
+                  }}
+                  disabled={depositMutation.isPending || !depositAmount || parseFloat(depositAmount) <= 0}
+                  className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-green text-background hover:bg-trading-green/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {depositMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {depositMutation.isPending ? "Signing & Sending…" : `Deposit ${coin}`}
+                </button>
+              ) : (
+                <button
+                  onClick={() => registerMutation.mutate()}
+                  disabled={registerMutation.isPending || !walletPassword}
+                  className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-green text-background hover:bg-trading-green/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {registerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
+                  {registerMutation.isPending ? "Linking Wallet…" : "Link Wallet to Generate Address"}
+                </button>
+              )}
+
+              {isAsterRegistered && depositAddress && (
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  Enter your wallet password to sign and send the deposit transaction
+                </p>
               )}
             </>
           )}
@@ -478,12 +649,7 @@ const AccountBar = () => {
                   className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <div className="flex items-center gap-2 ml-2 shrink-0">
-                  <button
-                    onClick={handleMax}
-                    className="text-xs text-trading-amber font-semibold"
-                  >
-                    MAX
-                  </button>
+                  <button onClick={handleWithdrawMax} className="text-xs text-trading-amber font-semibold">MAX</button>
                   <span className="text-sm text-foreground">{coin}</span>
                 </div>
               </div>
@@ -495,7 +661,6 @@ const AccountBar = () => {
                 </div>
               )}
 
-              {/* Fee row */}
               <div className="flex items-center justify-between mb-1 px-1">
                 <span className="text-xs text-muted-foreground">Network fee</span>
                 <span className="text-xs text-foreground font-mono-num flex items-center gap-1">
@@ -507,19 +672,14 @@ const AccountBar = () => {
               {selectedNetworkInfo && (
                 <div className="flex items-center justify-between mb-1 px-1">
                   <span className="text-xs text-muted-foreground">Min withdrawal</span>
-                  <span className="text-xs text-foreground font-mono-num">
-                    {selectedNetworkInfo.withdrawMin} {coin}
-                  </span>
+                  <span className="text-xs text-foreground font-mono-num">{selectedNetworkInfo.withdrawMin} {coin}</span>
                 </div>
               )}
 
-              {/* You receive */}
               {withdrawAmountNum > 0 && (
                 <div className="flex items-center justify-between mb-1 px-1">
                   <span className="text-xs text-muted-foreground">You receive</span>
-                  <span className="text-xs text-foreground font-mono-num">
-                    ≈ {youReceive.toFixed(coin === "BTC" ? 8 : 4)} {coin}
-                  </span>
+                  <span className="text-xs text-foreground font-mono-num">≈ {youReceive.toFixed(coin === "BTC" ? 8 : 4)} {coin}</span>
                 </div>
               )}
 
