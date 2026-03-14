@@ -27,7 +27,9 @@ const OrderBook = ({ symbol }: OrderBookProps) => {
 
   const fetchOrderBook = async () => {
     try {
-      const data = await asterMarket.spotOrderBook(toSymbol(symbol), String(count * 2));
+      // Valid AsterDEX limits: [5, 10, 20, 50, 100, 500, 1000]
+      const validLimit = count <= 5 ? 10 : 20;
+      const data = await asterMarket.spotOrderBook(toSymbol(symbol), String(validLimit));
       if (!data?.bids || !data?.asks) return;
 
       const rawAsks: [string, string][] = data.asks;
