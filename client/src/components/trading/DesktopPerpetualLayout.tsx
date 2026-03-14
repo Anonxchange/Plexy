@@ -81,12 +81,10 @@ const DesktopPerpetualLayout = ({
         <FuturesTradePanel symbol={pair} />
       </div>
 
-      {/* Full-width border line */}
-      <div className="col-start-1 col-end-4 row-start-3 border-t border-border" />
-
-      {/* Tabs header — spans all 3 columns */}
-      <div className="col-start-1 col-end-4 row-start-3">
-        <div className="flex items-center px-4 h-9">
+      {/* Tabs row — fixed height so it never pushes the chart upward */}
+      <div className="col-start-1 col-end-4 row-start-3 relative h-10">
+        <div className="absolute top-0 left-0 right-0 h-px bg-border" />
+        <div className="flex items-center px-4 h-10">
           <div className="flex items-center gap-4 flex-1 h-full overflow-x-auto">
             {orderTabs.map((tab) => (
               <button
