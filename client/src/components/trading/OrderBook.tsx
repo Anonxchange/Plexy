@@ -1,145 +1,127 @@
-import { useState } from "react";
-import { LayoutList, SlidersVertical, ListFilter } from "lucide-react";
-import CandlestickChart from "./CandlestickChart";
-import OrderBook from "./OrderBook";
-import TradePanel from "./TradePanel";
+import { useState, useEffect, useRef } from "react";
+import { ChevronDown, LayoutGrid } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { asterMarket } from "@/lib/asterdex-service";
 
-const orderTabs = ["Open orders", "Positions", "Assets", "TWAP"];
-const chartTabs = ["Chart", "Order book", "Trades", "Depth", "Info"];
-
-interface BottomTabsProps {
-  chartVisible: boolean;
-  pair: string;
+interface OrderRow {
+  price: string;
+  size: string;
+  total: string;
+  percent: number;
 }
 
-const BottomTabs = ({ chartVisible, pair }: BottomTabsProps) => {
-  const [viewMode, setViewMode] = useState<"list" | "chart">("list");
-  const [activeOrderTab, setActiveOrderTab] = useState("Open orders");
-  const [activeChartTab, setActiveChartTab] = useState("Chart");
+interface OrderBookProps {
+  symbol: string;
+}
 
-  const tabs = viewMode === "list" ? orderTabs : chartTabs;
-  const activeTab = viewMode === "list" ? activeOrderTab : activeChartTab;
-  const setActiveTab = viewMode === "list" ? setActiveOrderTab : setActiveChartTab;
+const toSymbol = (pair: string) => pair.replace("/", "");
+
+const OrderBook = ({ symbol }: OrderBookProps) => {
+  const isMobile = useIsMobile();
+  const count = isMobile ? 6 : 12;
+
+  const [asks, setAsks] = useState<OrderRow[]>([]);
+  const [bids, setBids] = useState<OrderRow[]>([]);
+  const [midPrice, setMidPrice] = useState<string>("");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchOrderBook = async () => {
+    try {
+      // Valid AsterDEX limits: [5, 10, 20, 50, 100, 500, 1000]
+      const validLimit = count <= 5 ? 10 : 20;
+      const data = await asterMarket.spotOrderBook(toSymbol(symbol), String(validLimit));
+      if (!data?.bids || !data?.asks) return;
+
+      const rawAsks: [string, string][] = data.asks;
+      const rawBids: [string, string][] = data.bids;
+
+      const maxCum = Math.max(
+        rawAsks.slice(0, count).reduce((s: number, [, q]: [string, string]) => s + parseFloat(q), 0),
+        rawBids.slice(0, count).reduce((s: number, [, q]: [string, string]) => s + parseFloat(q), 0),
+      );
+
+      let cumA = 0;
+      const formattedAsks: OrderRow[] = rawAsks.slice(0, count).map(([p, q]: [string, string]) => {
+        const qty = parseFloat(q);
+        cumA += qty;
+        return {
+          price: parseFloat(p).toFixed(5),
+          size: qty >= 1000 ? (qty / 1000).toFixed(2) + "K" : qty.toFixed(2),
+          total: cumA >= 1000 ? (cumA / 1000).toFixed(2) + "K" : cumA.toFixed(2),
+          percent: Math.min((cumA / maxCum) * 100, 100),
+        };
+      }).reverse();
+
+      let cumB = 0;
+      const formattedBids: OrderRow[] = rawBids.slice(0, count).map(([p, q]: [string, string]) => {
+        const qty = parseFloat(q);
+        cumB += qty;
+        return {
+          price: parseFloat(p).toFixed(5),
+          size: qty >= 1000 ? (qty / 1000).toFixed(2) + "K" : qty.toFixed(2),
+          total: cumB >= 1000 ? (cumB / 1000).toFixed(2) + "K" : cumB.toFixed(2),
+          percent: Math.min((cumB / maxCum) * 100, 100),
+        };
+      });
+
+      setAsks(formattedAsks);
+      setBids(formattedBids);
+
+      if (rawAsks[0] && rawBids[0]) {
+        const mid = (parseFloat(rawAsks[0][0]) + parseFloat(rawBids[0][0])) / 2;
+        setMidPrice(mid.toFixed(5));
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchOrderBook();
+    intervalRef.current = setInterval(fetchOrderBook, 2000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [symbol]);
 
   return (
-    <div className="flex flex-col border-t border-border bg-background flex-1">
-      {/* List view: chart + order book + trade panel */}
-      {viewMode === "list" && (
-        <>
-          {chartVisible && (
-            <div className="h-[350px] flex-shrink-0">
-              <CandlestickChart pair={pair} />
-            </div>
-          )}
-          <div className="flex border-t border-border flex-shrink-0 w-full min-w-0">
-            <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
-              <OrderBook symbol={pair} />
-            </div>
-            <div className="w-[60%] min-w-0 overflow-hidden">
-              <TradePanel symbol={pair} />
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Chart view: price stats + chart */}
-      {viewMode === "chart" && (
-        <>
-          {/* Price stats bar */}
-          <div className="flex items-start justify-between px-4 py-3 border-b border-border">
-            <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground">Last price</span>
-              <span className="font-mono-num text-2xl font-bold text-trading-green">0.68251</span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono-num text-xs text-muted-foreground">≈$0.6825</span>
-                <span className="font-mono-num text-xs text-trading-red">-1.57%</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-right">
-              <div>
-                <span className="text-muted-foreground">24h High</span>
-                <div className="font-mono-num text-foreground">0.69546</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">24h Vol (ASTER)</span>
-                <div className="font-mono-num text-foreground">8.32M</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">24h Low</span>
-                <div className="font-mono-num text-foreground">0.67759</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">24h Vol (USDT)</span>
-                <div className="font-mono-num text-foreground">5.71M</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-[400px] flex-shrink-0">
-            <CandlestickChart pair={pair} />
-          </div>
-          <div className="flex items-center justify-center gap-3 px-4 py-2 text-xs text-muted-foreground border-t border-border">
-            <span className="font-mono-num">17:14:08 (UTC+1)</span>
-            <span className="text-border">|</span>
-            <span>%</span>
-            <span>log</span>
-            <span>auto</span>
-          </div>
-        </>
-      )}
-
-      {/* Tab headers */}
-      <div className="flex items-center px-4 pt-1 border-t border-border">
-        <div className="flex items-center gap-4 flex-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`py-2 text-sm transition-colors ${
-                activeTab === tab
-                  ? "text-foreground font-semibold"
-                  : "text-muted-foreground"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+    <div className="flex flex-col bg-background">
+      <div className="flex items-center justify-between px-3 py-2">
+        <div className="flex items-center gap-2">
+          <LayoutGrid className="w-4 h-4 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Order Book</span>
         </div>
-        {viewMode === "list" && (
-          <button className="p-1 text-muted-foreground">
-            <ListFilter className="w-5 h-5" />
-          </button>
-        )}
+        <button className="flex items-center gap-1 text-xs text-muted-foreground font-mono-num">
+          0.00001 <ChevronDown className="w-3 h-3" />
+        </button>
       </div>
 
-      {/* Placeholder content */}
-      <div className="flex flex-col items-center py-10 gap-6">
-        <span className="text-sm text-muted-foreground">Please connect a wallet first</span>
+      <div className="grid grid-cols-3 px-3 pb-1 text-[10px] text-muted-foreground">
+        <span>Price (USDT)</span>
+        <span className="text-right">Size</span>
+        <span className="text-right">Total</span>
       </div>
 
-      {/* View mode toggle pill */}
-      <div className="flex justify-center py-4">
-        <div className="flex items-center bg-secondary rounded-full p-1">
-          <button
-            onClick={() => setViewMode("list")}
-            className={`p-2 rounded-full transition-colors ${
-              viewMode === "list" ? "bg-accent text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            <LayoutList className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("chart")}
-            className={`p-2 rounded-full transition-colors ${
-              viewMode === "chart" ? "bg-accent text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            <SlidersVertical className="w-4 h-4" />
-          </button>
+      {asks.map((order, i) => (
+        <div key={`ask-${i}`} className="relative grid grid-cols-3 px-3 py-[2.5px] text-[11px]">
+          <div className="absolute right-0 top-0 bottom-0 bg-trading-red/15" style={{ width: `${order.percent}%` }} />
+          <span className="relative font-mono-num text-trading-red">{order.price}</span>
+          <span className="relative font-mono-num text-foreground text-right">{order.size}</span>
+          <span className="relative font-mono-num text-foreground text-right">{order.total}</span>
         </div>
+      ))}
+
+      <div className="flex items-center gap-2 px-3 py-1.5 border-y border-border/50">
+        <span className="font-mono-num text-sm font-bold text-foreground">{midPrice || "—"}</span>
+        {midPrice && <span className="text-[10px] text-muted-foreground">${midPrice}</span>}
       </div>
+
+      {bids.map((order, i) => (
+        <div key={`bid-${i}`} className="relative grid grid-cols-3 px-3 py-[2.5px] text-[11px]">
+          <div className="absolute right-0 top-0 bottom-0 bg-trading-green/15" style={{ width: `${order.percent}%` }} />
+          <span className="relative font-mono-num text-trading-green">{order.price}</span>
+          <span className="relative font-mono-num text-foreground text-right">{order.size}</span>
+          <span className="relative font-mono-num text-foreground text-right">{order.total}</span>
+        </div>
+      ))}
     </div>
   );
 };
 
-export default BottomTabs;
+export default OrderBook;
