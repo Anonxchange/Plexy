@@ -33,7 +33,7 @@ const BottomTabs = ({ chartVisible, pair }: BottomTabsProps) => {
           )}
           <div className="flex border-t border-border flex-shrink-0 w-full min-w-0">
             <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
-              <OrderBook />
+              <OrderBook symbol={pair} />
             </div>
             <div className="w-[60%] min-w-0 overflow-hidden">
               <TradePanel symbol={pair} />
