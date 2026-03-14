@@ -288,31 +288,47 @@ const NETWORK_TO_CHAIN_ID: Record<string, string> = {
   SOLANA: '101',
 };
 
-export interface DepositInfo {
-  address: string | null;
-  memo: string | null;
-  isOnChain: boolean;
+// ── AsterDEX Wallet Registration ─────────────────────────────────────────────
+
+const ASTER_BAPI = 'https://www.asterdex.com/bapi/futures/v1/public/future/web3';
+
+export async function asterGetNonce(sourceAddr: string): Promise<string> {
+  const res = await fetch(`${ASTER_BAPI}/get-nonce`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sourceAddr, type: 'CREATE_API_KEY' }),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message ?? 'Failed to get nonce');
+  return String(json.data.nonce);
 }
 
-async function fetchDepositInfo(coin: string, network: string): Promise<DepositInfo> {
-  const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
-  const networkType = network.toUpperCase() === 'SOL' ? 'SOL' : 'EVM';
-  const url = `https://www.asterdex.com/bapi/futures/v1/public/future/aster/deposit/assets?chainIds=${chainId}&networks=${networkType}&accountType=spot`;
-  const resp = await fetch(url);
-  const data = await resp.json();
-  if (!data.success || !data.data?.length) throw new Error('No deposit info available');
-  const asset = data.data.find((a: any) => a.name === coin);
-  if (!asset) throw new Error(`${coin} not supported on ${network}`);
-  return {
-    address: asset.tokenVault ?? null,
-    memo: null,
-    isOnChain: !asset.tokenVault,
-  };
+export async function asterCreateApiKey(
+  sourceAddr: string,
+  signature: string,
+  chainId: number,
+): Promise<{ apiKey: string; apiSecret: string }> {
+  const res = await fetch(`${ASTER_BAPI}/broker-create-api-key`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', clientType: 'broker' },
+    body: JSON.stringify({
+      desc: 'pexly-wallet',
+      ip: '',
+      network: String(chainId),
+      signature,
+      sourceAddr,
+      type: 'CREATE_API_KEY',
+      sourceCode: 'broker',
+    }),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message ?? 'Failed to create API key');
+  return json.data;
 }
 
 export const asterWallet = {
-  depositAddress: (coin: string, network: string): Promise<DepositInfo> =>
-    fetchDepositInfo(coin, network),
+  depositAddress: (coin: string, network?: string) =>
+    invoke('spot_deposit_address', { coin, ...(network ? { network } : {}) }, true),
 
   depositHistory: (coin?: string) =>
     invoke('spot_deposit_history', coin ? { coin } : {}, true),
