@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ListFilter, ChevronDown, ClipboardList } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
+import PerpetualOrderBook from "./PerpetualOrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";
 import PerpetualPairInfo from "./PerpetualPairInfo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
