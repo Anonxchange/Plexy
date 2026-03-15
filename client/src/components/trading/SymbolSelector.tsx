@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { X, Search, Star, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { asterMarket, Ticker24h } from "@/lib/asterdex-service";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const ICON_BASE = "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color";
 
@@ -28,6 +29,7 @@ interface SymbolSelectorProps {
   onClose: () => void;
   onSelect: (symbol: string) => void;
   defaultCategory?: "Spot" | "Futures" | "Favorites";
+  variant?: "fullscreen" | "dialog";
 }
 
 function getBaseSymbol(displayPair: string): string {
@@ -118,7 +120,7 @@ function CoinIcon({ symbol }: { symbol: string }) {
   );
 }
 
-const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: SymbolSelectorProps) => {
+const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", variant = "fullscreen" }: SymbolSelectorProps) => {
   const [search,         setSearch]         = useState("");
   const [activeCategory, setActiveCategory] = useState(defaultCategory);
   const [activeFilter,   setActiveFilter]   = useState("All markets");
@@ -233,8 +235,6 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
     }
   }, [open, defaultCategory]);
 
-  if (!open) return null;
-
   const currentFilters = activeCategory === "Spot" ? SPOT_FILTERS : presentFuturesSubTypes.map(f => FUTURES_FILTER_LABELS[f] ?? f);
 
   const filtered: MarketRow[] = (() => {
@@ -261,18 +261,18 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
     return base.filter(m => m.subTypes.includes(rawFilter));
   })();
 
-  return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+  const body = (
+    <>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-6 pb-3">
+      <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
         <h2 className="text-foreground text-xl font-bold">Symbol</h2>
-        <button onClick={onClose} className="text-muted-foreground">
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
           <X className="w-6 h-6" />
         </button>
       </div>
 
       {/* Search */}
-      <div className="px-4 pb-3">
+      <div className="px-4 pb-3 shrink-0">
         <div className="flex items-center gap-2 px-3 py-2.5 rounded border border-border bg-secondary">
           <input
             type="text"
@@ -286,7 +286,7 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
       </div>
 
       {/* Category tabs */}
-      <div className="flex items-center gap-4 px-4 pb-2">
+      <div className="flex items-center gap-4 px-4 pb-2 shrink-0">
         {categories.map(cat => (
           <button
             key={cat}
@@ -302,7 +302,7 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
       </div>
 
       {/* Filter pills */}
-      <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto no-scrollbar shrink-0">
         {currentFilters.map(f => (
           <button
             key={f}
@@ -319,14 +319,14 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
       </div>
 
       {/* Column headers */}
-      <div className="flex items-center px-4 pb-2 text-xs text-muted-foreground">
+      <div className="flex items-center px-4 pb-2 text-xs text-muted-foreground shrink-0">
         <span className="flex-1">Symbols</span>
         <span className="w-28 text-center">Volume</span>
         <span className="w-24 text-right">Price / 24h</span>
       </div>
 
       {/* Market list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -377,6 +377,26 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot" }: S
           ))
         )}
       </div>
+    </>
+  );
+
+  if (variant === "dialog") {
+    return (
+      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+        <DialogContent className="bg-background border-border flex flex-col max-w-2xl h-[80vh] p-0 gap-0 overflow-hidden [&>button]:hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Select Symbol</DialogTitle>
+          </DialogHeader>
+          {body}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      {body}
     </div>
   );
 };
