@@ -9,7 +9,7 @@ import { FaApple, FaFacebook } from "react-icons/fa";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { PhoneVerification } from "@/components/phone-verification";
 import { DeviceOTPVerification } from "@/components/device-otp-verification";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import * as OTPAuth from "otplib";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -39,7 +39,6 @@ export function SignIn() {
   const [tempAccessToken, setTempAccessToken] = useState<string | undefined>(undefined);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const supabase = createClient();
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
@@ -102,7 +101,7 @@ export function SignIn() {
         variant: "destructive",
       });
     }
-  }, [user, setLocation, toast, checking2FA, show2FAInput]);
+  }, [user, setLocation, checking2FA, show2FAInput]);
 
   useEffect(() => {
     const value = inputValue.trim();
@@ -670,7 +669,7 @@ export function SignIn() {
               {/* Sign In Button */}
               <button 
                 type="submit"
-                disabled={loading || (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
+                disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
                 style={{ fontWeight: 500 }}
               >
