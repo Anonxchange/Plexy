@@ -537,8 +537,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                     <div className="flex items-start gap-2">
                       <AlertCircle className="h-4 w-4 text-trading-amber shrink-0 mt-0.5" />
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        One-time wallet verification required to generate your deposit address.
-                        This signs a message — no funds are moved.
+                        A one-time verification is needed to activate your deposit address.
+                        Enter your wallet password below — no funds will be moved.
                       </p>
                     </div>
                     {walletLoading ? (
@@ -551,27 +551,22 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                         No EVM wallet found. Please create one in your Wallet first.
                       </p>
                     ) : (
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          Wallet: <span className="font-mono text-foreground">{userEvmWallet.address.slice(0, 8)}…{userEvmWallet.address.slice(-6)}</span>
-                        </p>
-                        <div className="relative">
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Wallet password"
-                            value={walletPassword}
-                            onChange={e => setWalletPassword(e.target.value)}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-trading-amber/50"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(v => !v)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
-                      </>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Wallet password"
+                          value={walletPassword}
+                          onChange={e => setWalletPassword(e.target.value)}
+                          className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-trading-amber/50"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(v => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     )}
                   </div>
                 ) : null}
@@ -612,39 +607,118 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
               </>
             )}
 
-            {/* Perpetual deposit = transfer from Spot → Perpetual */}
+            {/* Perpetual deposit — same on-chain deposit address as Spot */}
             {!isSpot && (
               <>
-                <CoinAmountRow showMax />
-                <BalanceLine
-                  label="Spot available"
-                  value={`${spotBalanceFor(coin).toFixed(4)} ${coin}`}
-                />
+                <ChainSelector />
+                <CoinAmountRow />
+                <BalanceLine value={`${futuresAvailFor(coin).toFixed(4)} ${coin}`} />
 
-                <button
-                  onClick={() => !user ? requireAuth() : transferMutation.mutate()}
-                  disabled={!user || !amount || amountNum <= 0 || amountNum > spotBalanceFor(coin) || transferMutation.isPending}
-                  className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {transferMutation.isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />Transferring…</>
-                    : !user ? "Sign in to Deposit"
-                    : "Transfer to Perpetual"}
-                </button>
+                {depositLoading ? (
+                  <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Loading deposit address…</span>
+                  </div>
+                ) : depositAddress ? (
+                  <div className="border border-trading-amber/30 bg-trading-amber/5 rounded-lg px-4 py-3 mb-4">
+                    <div className="text-xs text-trading-amber mb-1 font-medium">
+                      Deposit address · {CHAIN_MAP[network]?.name ?? network}
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
+                      <button onClick={() => handleCopy(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground ml-2">
+                        {copied ? <Check className="h-3.5 w-3.5 text-trading-amber" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                    {depositMemo && (
+                      <div className="mt-2 pt-2 border-t border-trading-amber/20">
+                        <p className="text-xs text-trading-amber font-medium">Memo required</p>
+                        <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
+                      </div>
+                    )}
+                    {selectedNetworkInfo?.depositMin && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Min. deposit: {selectedNetworkInfo.depositMin} {coin}
+                      </p>
+                    )}
+                  </div>
+                ) : depositError && user ? (
+                  <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-trading-amber shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        One-time wallet verification required to generate your deposit address.
+                        This signs a message — no funds are moved.
+                      </p>
+                    </div>
+                    {walletLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Loading wallet…</span>
+                      </div>
+                    ) : !userEvmWallet ? (
+                      <p className="text-xs text-destructive">
+                        No EVM wallet found. Please create one in your Wallet first.
+                      </p>
+                    ) : (
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Wallet password"
+                          value={walletPassword}
+                          onChange={e => setWalletPassword(e.target.value)}
+                          className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-trading-amber/50"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(v => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
-                <div className="flex items-center gap-3 my-4">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-muted-foreground">or</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-                <button className="w-full py-3 rounded-lg text-sm font-medium border border-border text-foreground hover:bg-accent flex items-center justify-center gap-2 transition-colors">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#F3BA2F" />
-                    <path d="M2 17l10 5 10-5" stroke="#F3BA2F" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M2 12l10 5 10-5" stroke="#F3BA2F" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                  Buy/Deposit with Binance Pay
-                </button>
+                {!user ? (
+                  <button
+                    onClick={requireAuth}
+                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90"
+                  >
+                    Sign in to Deposit
+                  </button>
+                ) : depositAddress ? (
+                  <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
+                    Send {coin} to the address above
+                  </button>
+                ) : depositError && userEvmWallet ? (
+                  <button
+                    onClick={() => registerMutation.mutate()}
+                    disabled={!walletPassword || registerMutation.isPending}
+                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {registerMutation.isPending
+                      ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
+                      : "Sign & Generate Address"}
+                  </button>
+                ) : depositLoading ? null : (
+                  <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
+                    Loading…
+                  </button>
+                )}
+
+                {/* Hint: use Transfer tab to move funds from Spot */}
+                <p className="text-xs text-center text-muted-foreground mt-3">
+                  Already have funds in Spot?{" "}
+                  <button
+                    onClick={() => setActiveTab("transfer")}
+                    className="text-trading-amber underline-offset-2 hover:underline"
+                  >
+                    Transfer instead
+                  </button>
+                </p>
               </>
             )}
           </>
