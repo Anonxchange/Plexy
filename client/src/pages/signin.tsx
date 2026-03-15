@@ -33,7 +33,7 @@ export function SignIn() {
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [captchaError, setCaptchaError] = useState(false);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [captchaKey, setCaptchaKey] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
@@ -644,15 +644,15 @@ export function SignIn() {
               {/* Cloudflare Turnstile CAPTCHA */}
               {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
                 <div className="mb-6 flex flex-col items-center gap-2">
-                  {captchaError ? (
+                  {captchaError !== null ? (
                     <div className="flex flex-col items-center gap-2">
                       <p className={`text-sm ${isDark ? 'text-red-400' : 'text-red-500'}`}>
-                        Captcha failed to load.
+                        Captcha error: {captchaError}
                       </p>
                       <button
                         type="button"
                         onClick={() => {
-                          setCaptchaError(false);
+                          setCaptchaError(null);
                           setCaptchaToken(null);
                           setCaptchaKey(k => k + 1);
                         }}
@@ -670,15 +670,15 @@ export function SignIn() {
   }}
   onSuccess={(token) => {
     setCaptchaToken(token);
-    setCaptchaError(false);
+    setCaptchaError(null);
   }}
-  onError={() => {
+  onError={(code) => {
     setCaptchaToken(null);
-    setCaptchaError(true);
+    setCaptchaError(code ?? "unknown error");
   }}
   onExpire={() => {
     setCaptchaToken(null);
-    setCaptchaError(false);
+    setCaptchaError(null);
   }}
   options={{
     theme: isDark ? "dark" : "light"
