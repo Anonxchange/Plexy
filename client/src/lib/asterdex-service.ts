@@ -288,9 +288,49 @@ const NETWORK_TO_CHAIN_ID: Record<string, string> = {
   SOLANA: '101',
 };
 
-// ── AsterDEX Wallet Registration ─────────────────────────────────────────────
+// ── AsterDEX Public BAPI ──────────────────────────────────────────────────────
 
-const ASTER_BAPI = 'https://www.asterdex.com/bapi/futures/v1/public/future/web3';
+const ASTER_BAPI_ROOT = 'https://www.asterdex.com/bapi/futures/v1/public/future';
+const ASTER_BAPI      = `${ASTER_BAPI_ROOT}/web3`;
+
+export interface AsterAsset {
+  name: string;
+  displayName: string;
+  contractAddress: string;
+  decimals: number;
+  isNative: boolean;
+  chainId: number;
+  network: string;
+}
+
+// Fetch supported deposit assets for a given chainId from the public BAPI.
+// Maps them to the CoinInfo structure used throughout the modal.
+export async function asterGetChainAssets(chainId: number): Promise<CoinInfo[]> {
+  const res = await fetch(
+    `${ASTER_BAPI_ROOT}/aster/withdraw/assets?chainIds=${chainId}&networks=EVM&accountType=perp`,
+  );
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message ?? 'Failed to fetch chain assets');
+
+  const networkKey = chainId === 1 ? 'ETH' : chainId === 56 ? 'BSC' : chainId === 42161 ? 'ARB' : String(chainId);
+
+  return (json.data as AsterAsset[]).map(a => ({
+    coin: a.name,
+    name: a.displayName || a.name,
+    free: '0',
+    locked: '0',
+    networkList: [{
+      network: networkKey,
+      withdrawEnable: true,
+      depositEnable: true,
+      withdrawFee: '0',
+      withdrawMin: '0',
+      depositMin: '0',
+    }],
+  }));
+}
+
+// ── AsterDEX Wallet Registration ─────────────────────────────────────────────
 
 export async function asterGetNonce(sourceAddr: string): Promise<string> {
   const res = await fetch(`${ASTER_BAPI}/get-nonce`, {
