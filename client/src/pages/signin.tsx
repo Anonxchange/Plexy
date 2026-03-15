@@ -163,7 +163,7 @@ export function SignIn() {
     setLoading(true);
     setChecking2FA(true);
 
-    const authResult = await signIn(inputValue, password);
+    const authResult = await signIn(inputValue, password, captchaToken ?? undefined);
 
     if (authResult.error) {
       setLoading(false);
