@@ -554,7 +554,7 @@ export function SignUp() {
             isDark ? 'bg-gray-800 text-lime-400' : 'bg-gray-100 text-gray-700'
           } transition-colors`}
         >
-          {isDark ? <Moon size={20} /> : <Sun size={20} />}
+          {isDark ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </div>
 
