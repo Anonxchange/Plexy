@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   X, ChevronDown, ClipboardList, Copy, Check, Loader2, AlertCircle, Eye, EyeOff,
 } from "lucide-react";
@@ -97,6 +98,7 @@ interface AccountModalProps {
   onOpenChange: (v: boolean) => void;
   defaultTab: "deposit" | "withdraw" | "transfer";
   defaultAccountType: AccountType;
+  variant?: "sheet" | "dialog";
 }
 
 // ── Chain icon (real image with fallback) ─────────────────
@@ -155,7 +157,7 @@ function CoinIcon({ symbol, size = 22 }: { symbol: string; size?: number }) {
 }
 
 // ── Main component ─────────────────────────────────────────
-export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountType }: AccountModalProps) {
+export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountType, variant = "sheet" }: AccountModalProps) {
   const [activeTab, setActiveTab]         = useState<"deposit" | "withdraw" | "transfer">(defaultTab);
   const [accountType, setAccountType]     = useState<AccountType>(defaultAccountType);
   const [accountTypeOpen, setAccountTypeOpen] = useState(false);
@@ -812,16 +814,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   };
 
   // ── Render ─────────────────────────────────────────────
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="bg-card border-t border-border rounded-t-2xl px-5 pb-10 pt-5 max-h-[90vh] overflow-y-auto"
-      >
-        <SheetHeader className="sr-only">
-          <SheetTitle>Account</SheetTitle>
-        </SheetHeader>
-
+  const modalBody = (
+    <>
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-foreground">Account</h2>
@@ -983,6 +977,32 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
             </button>
           </>
         )}
+    </>
+  );
+
+  if (variant === "dialog") {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-8 pt-5 max-w-md w-full max-h-[90vh] overflow-y-auto [&>button]:hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Account</DialogTitle>
+          </DialogHeader>
+          {modalBody}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="bg-card border-t border-border rounded-t-2xl px-5 pb-10 pt-5 max-h-[90vh] overflow-y-auto"
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>Account</SheetTitle>
+        </SheetHeader>
+        {modalBody}
       </SheetContent>
     </Sheet>
   );
