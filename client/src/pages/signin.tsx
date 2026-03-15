@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized_1773579848381.webp";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Sun, Moon, ShieldCheck, Zap } from "lucide-react";
@@ -494,17 +495,8 @@ export function SignIn() {
 
       {/* Desktop 2-Column Layout */}
       <div className="lg:grid lg:grid-cols-2 lg:min-h-screen">
-        {/* Left Column: Image (Desktop only) */}
-        <div className="hidden lg:flex lg:items-center lg:justify-center lg:p-12 bg-gradient-to-br from-primary/10 to-primary/5">
-          <img 
-            src="https://raw.githubusercontent.com/Anonxchange/Plexy/refs/heads/main/client/src/assets/63b772f751c786e9fabe60f6_mockup-sign-up-finantech-webflow-template.png"
-            alt="Secure Crypto Trading"
-            className="max-w-full max-h-[80vh] object-contain rounded-2xl"
-          />
-        </div>
-
-        {/* Right Column: Form */}
-        <div className="px-6 pt-12 lg:pt-20 max-w-md mx-auto lg:flex lg:flex-col lg:justify-center">
+        {/* Left Column: Form */}
+        <div className="px-6 pt-12 lg:pt-20 max-w-md mx-auto lg:flex lg:flex-col lg:justify-center w-full">
         {showPhoneVerification ? (
           <div className={`rounded-2xl p-6 ${isDark ? 'bg-card border border-card-border' : 'bg-gray-50 border border-gray-200'}`}>
             <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
@@ -759,6 +751,15 @@ export function SignIn() {
             </button>
           </form>
         )}
+        </div>
+
+        {/* Right Column: Portrait Image (Desktop only) */}
+        <div className="hidden lg:block relative overflow-hidden">
+          <img
+            src={portraitImage}
+            alt="Pexly"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
         </div>
       </div>
 
