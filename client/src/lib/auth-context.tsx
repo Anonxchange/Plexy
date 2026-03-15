@@ -261,7 +261,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingOTPVerification, setPendingOTPVerification] = useState<PendingAuth | null>(() => {
     try {
       const saved = sessionStorage.getItem('pendingOTP_data');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      const createdAt = parsed.createdAt || 0;
+      if (Date.now() - createdAt > 10 * 60 * 1000) {
+        sessionStorage.removeItem('pendingOTP_data');
+        sessionStorage.removeItem('pendingOTP_session');
+        return null;
+      }
+      return parsed;
     } catch { return null; }
   });
 
