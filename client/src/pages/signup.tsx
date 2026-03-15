@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
+import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized_1773579848381.webp";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Sun, Moon, Zap, MapPin, Check, X } from "lucide-react";
@@ -559,17 +560,8 @@ export function SignUp() {
 
       {/* Desktop 2-Column Layout */}
       <div className="lg:grid lg:grid-cols-2 lg:min-h-screen">
-        {/* Left Column: Image (Desktop only) */}
-        <div className="hidden lg:flex lg:items-center lg:justify-center lg:p-12 bg-gradient-to-br from-primary/10 to-primary/5">
-          <img 
-            src="/attached_assets/generated_images/Crypto_success_and_growth_d90b6aec.png"
-            alt="Crypto Success and Growth"
-            className="max-w-full max-h-[80vh] object-contain rounded-2xl"
-          />
-        </div>
-
-        {/* Right Column: Form */}
-        <div className="px-6 pt-8 lg:pt-20 max-w-md mx-auto pb-12 lg:flex lg:flex-col lg:justify-center">
+        {/* Left Column: Form */}
+        <div className="px-6 pt-8 lg:pt-20 max-w-md mx-auto pb-12 lg:flex lg:flex-col lg:justify-center w-full">
         {step === "email_verify" ? (
           <div className={`rounded-2xl p-6 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
             <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
@@ -960,6 +952,24 @@ export function SignUp() {
             />
           </div>
         )}
+        </div>
+
+        {/* Right Column: Portrait Image (Desktop only) */}
+        <div className="hidden lg:block relative overflow-hidden">
+          <img
+            src={portraitImage}
+            alt="Pexly"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+          {/* Center tagline overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-8">
+            <p className="text-white text-3xl font-semibold leading-snug drop-shadow-lg text-center">
+              Decentralized all&#8209;in&#8209;one
+            </p>
+            <p className="text-white/70 text-sm mt-2 drop-shadow text-center">
+              Buy, sell & trade crypto across 500+ payment methods
+            </p>
+          </div>
         </div>
       </div>
     </div>
