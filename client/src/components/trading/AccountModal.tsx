@@ -197,16 +197,23 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     }
   }, [open, defaultTab, defaultAccountType]);
 
-  // Load registration state from localStorage
+  // Authoritative connection check: wallet is properly linked when the user has an API key
+  // stored in their Supabase metadata. localStorage is a local cache only.
   useEffect(() => {
     if (user) {
-      setIsAsterRegistered(localStorage.getItem(asterRegKey(user.id)) === "true");
+      const hasApiKey = !!user.user_metadata?.aster_api_key;
+      setIsAsterRegistered(hasApiKey);
+      // Keep localStorage in sync so the deposit address query re-runs when needed
+      if (hasApiKey) {
+        localStorage.setItem(asterRegKey(user.id), "true");
+      }
     }
   }, [user]);
 
-  // Auto-load EVM wallet when registration flow is triggered
+  // Load EVM wallet whenever needed — for registration flow AND for withdraw autoWithdraw address.
+  // Not gated on isAsterRegistered so a connected user can still get their wallet address.
   const loadEvmWallet = useCallback(async () => {
-    if (!user || isAsterRegistered) return;
+    if (!user) return;
     setWalletLoading(true);
     try {
       const wallets: NonCustodialWallet[] = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
@@ -221,7 +228,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     } finally {
       setWalletLoading(false);
     }
-  }, [user, isAsterRegistered]);
+  }, [user]);
 
   // ── Registration mutation ──────────────────────────────
   const registerMutation = useMutation({
@@ -298,22 +305,34 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
 
   const depositBusy = depositLoading || depositFetching;
 
-  // Trigger wallet load when deposit fails for an unregistered user
+  // Load EVM wallet when:
+  // - deposit fails and user isn't registered (registration flow)
+  // - user opens the withdraw tab (need address silently for autoWithdraw)
   useEffect(() => {
-    if (depositError && !isAsterRegistered && user) {
+    if (!user || userEvmWallet || walletLoading) return;
+    if ((depositError && !isAsterRegistered) || activeTab === "withdraw") {
       loadEvmWallet();
     }
-  }, [depositError, isAsterRegistered, user, loadEvmWallet]);
+  }, [depositError, isAsterRegistered, user, loadEvmWallet, activeTab, userEvmWallet, walletLoading]);
+
+  // Silently populate withdrawAddress from the connected wallet (autoWithdraw — no manual input needed)
+  useEffect(() => {
+    if (activeTab === "withdraw" && userEvmWallet?.address) {
+      setWithdrawAddress(userEvmWallet.address);
+    }
+  }, [activeTab, userEvmWallet]);
 
   // Chain assets — fetches coins for the selected chain on both deposit and withdraw tabs.
+  // Spot and Perpetual have different coin lists per chain, so we pass accountType accordingly.
   // SOL uses networks=SOL (handled in asterGetChainAssets), EVM chains use networks=EVM.
+  const chainAccountType = isSpot ? 'spot' : 'perp';
   const {
     data: chainAssetsData,
     isLoading: chainAssetsLoading,
     isFetching: chainAssetsFetching,
   } = useQuery({
-    queryKey: ["aster-chain-assets", network],
-    queryFn: () => asterGetChainAssets(CHAIN_MAP[network]?.chainId ?? 56),
+    queryKey: ["aster-chain-assets", network, chainAccountType],
+    queryFn: () => asterGetChainAssets(CHAIN_MAP[network]?.chainId ?? 56, chainAccountType),
     enabled: open && (activeTab === "deposit" || activeTab === "withdraw") && (DEPOSIT_CHAINS as readonly string[]).includes(network),
     staleTime: 5 * 60_000,
     retry: 1,
@@ -874,16 +893,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
             {/* Same external withdrawal UI for both Spot and Perpetual accounts */}
             <ChainSelector />
 
-            <div className="border border-border rounded-lg px-4 py-3 mb-3 bg-card">
-              <input
-                type="text"
-                value={withdrawAddress}
-                onChange={e => setWithdrawAddress(e.target.value)}
-                placeholder="Withdrawal address"
-                className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-              />
-            </div>
-
             <CoinAmountRow showMax />
 
             {amountNum > currentBalance && (
@@ -920,14 +929,36 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
               )}
             </div>
 
+            {/* No wallet connected — show registration prompt */}
+            {user && !isAsterRegistered && !walletLoading && (
+              <p className="text-xs text-center text-muted-foreground mb-3">
+                Connect your wallet on the{" "}
+                <button onClick={() => handleTabChange("deposit")} className="text-primary hover:underline">
+                  Deposit tab
+                </button>{" "}
+                to enable withdrawals.
+              </p>
+            )}
+
             <button
               onClick={() => !user ? requireAuth() : withdrawMutation.mutate()}
-              disabled={!user || !withdrawAddress || !amount || amountNum <= 0 || amountNum > currentBalance || (amountNum < withdrawMin && amountNum > 0) || withdrawMutation.isPending}
+              disabled={
+                !user ||
+                walletLoading ||
+                !withdrawAddress ||
+                !amount ||
+                amountNum <= 0 ||
+                amountNum > currentBalance ||
+                (amountNum < withdrawMin && amountNum > 0) ||
+                withdrawMutation.isPending
+              }
               className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {withdrawMutation.isPending
                 ? <><Loader2 className="h-4 w-4 animate-spin" />Processing…</>
-                : `Withdraw ${coin}`}
+                : walletLoading
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />Loading wallet…</>
+                  : `Withdraw ${coin}`}
             </button>
           </>
         )}
