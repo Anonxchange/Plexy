@@ -316,20 +316,27 @@ export async function asterGetChainAssets(chainId: number): Promise<CoinInfo[]> 
 
   const networkKey = chainId === 1 ? 'ETH' : chainId === 56 ? 'BSC' : chainId === 42161 ? 'ARB' : chainId === 101 ? 'SOL' : String(chainId);
 
-  return (json.data as AsterAsset[]).map(a => ({
-    coin: a.name,
-    name: a.displayName || a.name,
-    free: '0',
-    locked: '0',
-    networkList: [{
-      network: networkKey,
-      withdrawEnable: true,
-      depositEnable: true,
-      withdrawFee: '0',
-      withdrawMin: '0',
-      depositMin: '0',
-    }],
-  }));
+  const seen = new Set<string>();
+  return (json.data as AsterAsset[])
+    .filter(a => {
+      if (seen.has(a.name)) return false;
+      seen.add(a.name);
+      return true;
+    })
+    .map(a => ({
+      coin: a.name,
+      name: a.displayName || a.name,
+      free: '0',
+      locked: '0',
+      networkList: [{
+        network: networkKey,
+        withdrawEnable: true,
+        depositEnable: true,
+        withdrawFee: '0',
+        withdrawMin: '0',
+        depositMin: '0',
+      }],
+    }));
 }
 
 // ── AsterDEX Wallet Registration ─────────────────────────────────────────────
