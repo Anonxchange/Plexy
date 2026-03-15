@@ -983,7 +983,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   if (variant === "dialog") {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-8 pt-5 max-w-md w-full max-h-[90vh] overflow-y-auto [&>button]:hidden">
+        <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-8 pt-5 max-w-md w-full max-h-[90vh] overflow-y-auto [&>button.absolute]:hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>Account</DialogTitle>
           </DialogHeader>
