@@ -304,12 +304,13 @@ export interface AsterAsset {
 }
 
 // Fetch supported deposit assets for a given chainId from the public BAPI.
+// Spot and Perpetual accounts list different coins per chain — always pass the correct accountType.
 // Maps them to the CoinInfo structure used throughout the modal.
-export async function asterGetChainAssets(chainId: number): Promise<CoinInfo[]> {
+export async function asterGetChainAssets(chainId: number, accountType: 'spot' | 'perp' = 'perp'): Promise<CoinInfo[]> {
   // Solana is not an EVM chain — it needs networks=SOL in the query
   const networkParam = chainId === 101 ? 'SOL' : 'EVM';
   const res = await fetch(
-    `${ASTER_BAPI_ROOT}/aster/withdraw/assets?chainIds=${chainId}&networks=${networkParam}&accountType=perp`,
+    `${ASTER_BAPI_ROOT}/aster/withdraw/assets?chainIds=${chainId}&networks=${networkParam}&accountType=${accountType}`,
   );
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? 'Failed to fetch chain assets');
