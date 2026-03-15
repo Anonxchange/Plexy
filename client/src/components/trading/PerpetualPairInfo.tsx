@@ -117,6 +117,8 @@ const PerpetualPairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: 
           onPairChange(selectedPair);
           setSelectorOpen(false);
         }}
+        defaultCategory="Futures"
+        variant={isMobile ? "fullscreen" : "dialog"}
       />
     </>
   );
