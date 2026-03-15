@@ -305,7 +305,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     }
   }, [depositError, isAsterRegistered, user, loadEvmWallet]);
 
-  // Chain assets — fetches coins for the currently selected deposit chain.
+  // Chain assets — fetches coins for the selected chain on both deposit and withdraw tabs.
   // SOL uses networks=SOL (handled in asterGetChainAssets), EVM chains use networks=EVM.
   const {
     data: chainAssetsData,
@@ -314,7 +314,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   } = useQuery({
     queryKey: ["aster-chain-assets", network],
     queryFn: () => asterGetChainAssets(CHAIN_MAP[network]?.chainId ?? 56),
-    enabled: open && activeTab === "deposit" && (DEPOSIT_CHAINS as readonly string[]).includes(network),
+    enabled: open && (activeTab === "deposit" || activeTab === "withdraw") && (DEPOSIT_CHAINS as readonly string[]).includes(network),
     staleTime: 5 * 60_000,
     retry: 1,
   });
@@ -336,10 +336,10 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     return FALLBACK_COINS;
   }, [coinInfoData]);
 
-  // For deposit: coins for the selected chain (from chain assets API).
+  // For deposit and withdraw: coins for the selected chain (from chain assets API).
   // While transitioning between chains, return [] so we never show the old chain's coins.
   const selectorCoins: CoinInfo[] = useMemo(() => {
-    if (activeTab === "deposit") {
+    if (activeTab === "deposit" || activeTab === "withdraw") {
       if (chainAssetsStale) return [];
       if (Array.isArray(chainAssetsData) && chainAssetsData.length > 0) {
         return chainAssetsData.map(a => {
@@ -351,9 +351,9 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     return coins;
   }, [activeTab, chainAssetsData, chainAssetsStale, coins]);
 
-  // When network changes on deposit tab: reset coin selection to avoid stale picks
+  // When network changes on deposit or withdraw tab: reset coin selection to avoid stale picks
   useEffect(() => {
-    if (activeTab !== "deposit") return;
+    if (activeTab !== "deposit" && activeTab !== "withdraw") return;
     if (prevNetworkRef.current !== network) {
       prevNetworkRef.current = network;
       setCoin("USDT");
@@ -363,7 +363,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
 
   // If the selected coin isn't available on the new chain once it loads, pick the first one
   useEffect(() => {
-    if (activeTab === "deposit" && selectorCoins.length > 0 && !selectorCoins.some(c => c.coin === coin)) {
+    if ((activeTab === "deposit" || activeTab === "withdraw") && selectorCoins.length > 0 && !selectorCoins.some(c => c.coin === coin)) {
       setCoin(selectorCoins[0].coin);
     }
   }, [selectorCoins, coin, activeTab]);
@@ -648,7 +648,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       </div>
       {coinOpen && (
         <div className="absolute z-50 right-0 w-56 mt-1 rounded-lg border border-border bg-card shadow-xl max-h-52 overflow-y-auto">
-          {chainAssetsStale && activeTab === "deposit" ? (
+          {chainAssetsStale && (activeTab === "deposit" || activeTab === "withdraw") ? (
             <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               <span>Loading coins…</span>
@@ -872,7 +872,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
             <AccountTypeSelector />
 
             {/* Same external withdrawal UI for both Spot and Perpetual accounts */}
-            <CoinSelector />
             <ChainSelector />
 
             <div className="border border-border rounded-lg px-4 py-3 mb-3 bg-card">
@@ -885,18 +884,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
               />
             </div>
 
-            <div className={`border rounded-lg px-4 py-3 flex items-center bg-card mb-1 ${amountNum > currentBalance || (amountNum > 0 && amountNum < withdrawMin) ? "border-destructive" : "border-border"}`}>
-              <input
-                type="number"
-                placeholder="Amount"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <button onClick={handleMax} className="text-xs text-primary font-semibold mx-2">MAX</button>
-              <CoinIcon symbol={coin} size={20} />
-              <span className="text-sm text-foreground ml-1.5">{coin}</span>
-            </div>
+            <CoinAmountRow showMax />
 
             {amountNum > currentBalance && (
               <p className="text-xs text-destructive px-1 mb-2">Exceeds available balance</p>
