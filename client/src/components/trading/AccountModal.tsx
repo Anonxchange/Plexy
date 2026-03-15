@@ -6,7 +6,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, asterGetDepositAddress, CoinInfo } from "@/lib/asterdex-service";
+import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, asterGetDepositAddress, asterGetChainAssets, CoinInfo } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import { nonCustodialWalletManager, NonCustodialWallet } from "@/lib/non-custodial-wallet";
 import { signEVMMessage } from "@/lib/evmSigner";
@@ -20,6 +20,9 @@ const CHAINS = [
   { key: "SOL", name: "Solana",         chainId: 101,   color: "#9945FF" },
 ] as const;
 
+// AsterDEX on-chain deposit only supports EVM chains (ETH=1, BSC=56, ARB=42161)
+const EVM_DEPOSIT_CHAINS = new Set(["BSC", "ETH", "ARB"]);
+
 const CHAIN_MAP = Object.fromEntries(CHAINS.map(c => [c.key, c]));
 
 const ACCOUNT_TYPES = ["Spot account", "Perpetual account"] as const;
@@ -30,13 +33,16 @@ const FALLBACK_COINS: CoinInfo[] = [
     { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
     { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
     { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "SOL", withdrawEnable: true, depositEnable: true, withdrawFee: "0.2",    withdrawMin: "2",     depositMin: "2"    },
+    { network: "SOL", withdrawEnable: true, depositEnable: false, withdrawFee: "0.2",   withdrawMin: "2",     depositMin: "2"    },
   ]},
   { coin: "USDC", name: "USD Coin", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
     { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
     { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "SOL", withdrawEnable: true, depositEnable: true, withdrawFee: "0.2",    withdrawMin: "2",     depositMin: "2"    },
+    { network: "SOL", withdrawEnable: true, depositEnable: false, withdrawFee: "0.2",   withdrawMin: "2",     depositMin: "2"    },
+  ]},
+  { coin: "USD1", name: "USD1", free: "0", locked: "0", networkList: [
+    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
+    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
   ]},
   { coin: "ETH",  name: "Ethereum", free: "0", locked: "0", networkList: [
     { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
@@ -48,6 +54,13 @@ const FALLBACK_COINS: CoinInfo[] = [
   ]},
   { coin: "BTC",  name: "Bitcoin", free: "0", locked: "0", networkList: [
     { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.0001", withdrawMin: "0.001", depositMin: "0.001" },
+    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "0.0001", withdrawMin: "0.001", depositMin: "0.001" },
+  ]},
+  { coin: "USDCE", name: "Bridged USDC", free: "0", locked: "0", networkList: [
+    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
+  ]},
+  { coin: "ASTER", name: "Aster", free: "0", locked: "0", networkList: [
+    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "1",      withdrawMin: "10",    depositMin: "10"   },
   ]},
 ];
 
@@ -217,6 +230,16 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     }
   }, [depositError, isAsterRegistered, user, loadEvmWallet]);
 
+  // Fetch supported coins for the selected chain from the AsterDEX public assets endpoint.
+  // Only needed for deposit (withdraw/transfer use the full coinInfoData list).
+  const { data: chainAssetsData } = useQuery({
+    queryKey: ["aster-chain-assets", network],
+    queryFn: () => asterGetChainAssets(CHAIN_MAP[network]?.chainId ?? 56),
+    enabled: open && activeTab === "deposit" && EVM_DEPOSIT_CHAINS.has(network),
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+
   const { data: feeEstimate, isLoading: feeLoading } = useQuery({
     queryKey: ["withdraw-fee", coin, network],
     queryFn: () => asterWallet.withdrawFeeEstimate(coin, network),
@@ -231,12 +254,31 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     return FALLBACK_COINS;
   }, [coinInfoData]);
 
-  const selectedCoinInfo = useMemo(() => coins.find(c => c.coin === coin) ?? coins[0], [coins, coin]);
+  // For deposit: show only the coins actually supported on the selected chain.
+  // Merge live balances from `coins` where available so free/locked values appear.
+  const selectorCoins: CoinInfo[] = useMemo(() => {
+    if (activeTab === "deposit" && Array.isArray(chainAssetsData) && chainAssetsData.length > 0) {
+      return chainAssetsData.map(a => {
+        const withBalance = coins.find(c => c.coin === a.coin);
+        return withBalance ? { ...a, free: withBalance.free, locked: withBalance.locked } : a;
+      });
+    }
+    return coins;
+  }, [activeTab, chainAssetsData, coins]);
+
+  // When chain changes during deposit, reset to the first coin available on that chain.
+  useEffect(() => {
+    if (activeTab === "deposit" && selectorCoins.length > 0 && !selectorCoins.some(c => c.coin === coin)) {
+      setCoin(selectorCoins[0].coin);
+    }
+  }, [selectorCoins, coin, activeTab]);
+
+  const selectedCoinInfo = useMemo(() => selectorCoins.find(c => c.coin === coin) ?? selectorCoins[0], [selectorCoins, coin]);
 
   const availableNetworks = useMemo(() => {
     const list = activeTab === "withdraw"
       ? selectedCoinInfo?.networkList.filter(n => n.withdrawEnable)
-      : selectedCoinInfo?.networkList.filter(n => n.depositEnable);
+      : selectedCoinInfo?.networkList.filter(n => n.depositEnable && EVM_DEPOSIT_CHAINS.has(n.network));
     return list?.map(n => n.network) ?? ["BSC"];
   }, [selectedCoinInfo, activeTab]);
 
@@ -340,13 +382,13 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   };
 
   const handleCoinChange = (c: string) => {
-    const info = coins.find(ci => ci.coin === c);
+    const info = selectorCoins.find(ci => ci.coin === c);
     const nets = (activeTab === "withdraw"
       ? info?.networkList.filter(n => n.withdrawEnable)
       : info?.networkList.filter(n => n.depositEnable)
     )?.map(n => n.network);
     setCoin(c);
-    setNetwork(nets?.[0] ?? "BSC");
+    if (nets && nets.length > 0) setNetwork(nets[0]);
     setCoinOpen(false);
     setAmount("");
   };
@@ -378,7 +420,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         <div className="absolute z-50 w-full mt-1 rounded-lg border border-border bg-card shadow-xl">
           {ACCOUNT_TYPES.map(t => (
             <button key={t} onClick={() => handleAccountTypeChange(t)}
-              className={`w-full text-left px-4 py-3 text-sm hover:bg-accent transition-colors ${t === accountType ? "text-trading-amber" : "text-foreground"}`}>
+              className={`w-full text-left px-4 py-3 text-sm hover:bg-accent transition-colors ${t === accountType ? "text-primary" : "text-foreground"}`}>
               {t}
             </button>
           ))}
@@ -403,7 +445,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         <div className="absolute z-50 w-full mt-1 rounded-lg border border-border bg-card shadow-xl">
           {availableNetworks.map(n => (
             <button key={n} onClick={() => handleNetworkChange(n)}
-              className={`w-full text-left px-4 py-3 flex items-center gap-3 text-sm hover:bg-accent transition-colors ${n === network ? "text-trading-amber" : "text-foreground"}`}>
+              className={`w-full text-left px-4 py-3 flex items-center gap-3 text-sm hover:bg-accent transition-colors ${n === network ? "text-primary" : "text-foreground"}`}>
               <ChainIcon chainKey={n} size={20} />
               {CHAIN_MAP[n]?.name ?? n}
             </button>
@@ -425,14 +467,14 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         />
         <div className="flex items-center gap-1.5 ml-2 shrink-0">
           {showMax && (
-            <button onClick={handleMax} className="text-xs text-trading-amber font-semibold mr-1">MAX</button>
+            <button onClick={handleMax} className="text-xs text-primary font-semibold mr-1">MAX</button>
           )}
           <button
             onClick={() => setCoinOpen(v => !v)}
             className="flex items-center gap-1.5"
           >
-            <div className="w-6 h-6 rounded-full bg-trading-amber/20 flex items-center justify-center shrink-0">
-              <span className="text-[9px] font-bold text-trading-amber">{coin.slice(0, 2)}</span>
+            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+              <span className="text-[9px] font-bold text-primary">{coin.slice(0, 2)}</span>
             </div>
             <span className="text-sm text-foreground font-medium">{coin}</span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -441,9 +483,9 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       </div>
       {coinOpen && (
         <div className="absolute z-50 right-0 w-48 mt-1 rounded-lg border border-border bg-card shadow-xl max-h-48 overflow-y-auto">
-          {coins.map(c => (
+          {selectorCoins.map(c => (
             <button key={c.coin} onClick={() => handleCoinChange(c.coin)}
-              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-accent transition-colors ${c.coin === coin ? "text-trading-amber" : "text-foreground"}`}>
+              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-accent transition-colors ${c.coin === coin ? "text-primary" : "text-foreground"}`}>
               {c.coin} <span className="text-muted-foreground text-xs ml-1">{c.name}</span>
             </button>
           ))}
@@ -526,8 +568,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                       </button>
                     </div>
                     {depositMemo && (
-                      <div className="mt-2 pt-2 border-t border-trading-green/20">
-                        <p className="text-xs text-trading-amber font-medium">Memo required</p>
+                      <div className="mt-2 pt-2 border-t border-primary/20">
+                        <p className="text-xs text-primary font-medium">Memo required</p>
                         <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
                       </div>
@@ -542,7 +584,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                   /* ── One-time wallet sign flow (triggered automatically on error) ── */
                   <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 text-trading-amber shrink-0 mt-0.5" />
+                      <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-xs text-muted-foreground leading-relaxed">
                         A one-time verification is needed to activate your deposit address.
                         Enter your wallet password below — no funds will be moved.
@@ -564,7 +606,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                           placeholder="Wallet password"
                           value={walletPassword}
                           onChange={e => setWalletPassword(e.target.value)}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-trading-amber/50"
+                          className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
                         />
                         <button
                           type="button"
@@ -582,7 +624,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                 {!user ? (
                   <button
                     onClick={requireAuth}
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90"
+                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     Sign in to Deposit
                   </button>
@@ -597,7 +639,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                   <button
                     onClick={() => registerMutation.mutate()}
                     disabled={!walletPassword || registerMutation.isPending}
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {registerMutation.isPending
                       ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
@@ -627,19 +669,19 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                     <span>Loading deposit address…</span>
                   </div>
                 ) : depositAddress ? (
-                  <div className="border border-trading-amber/30 bg-trading-amber/5 rounded-lg px-4 py-3 mb-4">
-                    <div className="text-xs text-trading-amber mb-1 font-medium">
+                  <div className="border border-primary/30 bg-primary/5 rounded-lg px-4 py-3 mb-4">
+                    <div className="text-xs text-primary mb-1 font-medium">
                       Deposit address · {CHAIN_MAP[network]?.name ?? network}
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
                       <button onClick={() => handleCopy(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground ml-2">
-                        {copied ? <Check className="h-3.5 w-3.5 text-trading-amber" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
                       </button>
                     </div>
                     {depositMemo && (
-                      <div className="mt-2 pt-2 border-t border-trading-amber/20">
-                        <p className="text-xs text-trading-amber font-medium">Memo required</p>
+                      <div className="mt-2 pt-2 border-t border-primary/20">
+                        <p className="text-xs text-primary font-medium">Memo required</p>
                         <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
                       </div>
@@ -653,7 +695,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                 ) : depositError && user ? (
                   <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 text-trading-amber shrink-0 mt-0.5" />
+                      <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-xs text-muted-foreground leading-relaxed">
                         One-time wallet verification required to generate your deposit address.
                         This signs a message — no funds are moved.
@@ -675,7 +717,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                           placeholder="Wallet password"
                           value={walletPassword}
                           onChange={e => setWalletPassword(e.target.value)}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-trading-amber/50"
+                          className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
                         />
                         <button
                           type="button"
@@ -692,7 +734,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                 {!user ? (
                   <button
                     onClick={requireAuth}
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90"
+                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     Sign in to Deposit
                   </button>
@@ -704,7 +746,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                   <button
                     onClick={() => registerMutation.mutate()}
                     disabled={!walletPassword || registerMutation.isPending}
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {registerMutation.isPending
                       ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
@@ -721,7 +763,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                   Already have funds in Spot?{" "}
                   <button
                     onClick={() => setActiveTab("transfer")}
-                    className="text-trading-amber underline-offset-2 hover:underline"
+                    className="text-primary underline-offset-2 hover:underline"
                   >
                     Transfer instead
                   </button>
@@ -758,9 +800,9 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                     onChange={e => setAmount(e.target.value)}
                     className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <button onClick={handleMax} className="text-xs text-trading-amber font-semibold mx-2">MAX</button>
-                  <div className="w-5 h-5 rounded-full bg-trading-amber/20 flex items-center justify-center shrink-0">
-                    <span className="text-[8px] font-bold text-trading-amber">{coin.slice(0, 2)}</span>
+                  <button onClick={handleMax} className="text-xs text-primary font-semibold mx-2">MAX</button>
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <span className="text-[8px] font-bold text-primary">{coin.slice(0, 2)}</span>
                   </div>
                   <span className="text-sm text-foreground ml-1">{coin}</span>
                 </div>
@@ -799,7 +841,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                 <button
                   onClick={() => !user ? requireAuth() : withdrawMutation.mutate()}
                   disabled={!user || !withdrawAddress || !amount || amountNum <= 0 || amountNum > currentBalance || (amountNum < withdrawMin && amountNum > 0) || withdrawMutation.isPending}
-                  className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {withdrawMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Processing…</> : `Withdraw ${coin}`}
                 </button>
@@ -814,7 +856,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                 <button
                   onClick={() => !user ? requireAuth() : transferMutation.mutate()}
                   disabled={!user || !amount || amountNum <= 0 || amountNum > futuresAvailFor(coin) || transferMutation.isPending}
-                  className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {transferMutation.isPending
                     ? <><Loader2 className="h-4 w-4 animate-spin" />Transferring…</>
@@ -837,7 +879,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
             <button
               onClick={() => !user ? requireAuth() : transferMutation.mutate()}
               disabled={!user || !amount || amountNum <= 0 || transferMutation.isPending}
-              className="w-full py-3.5 rounded-lg text-sm font-semibold bg-trading-amber text-background hover:bg-trading-amber/90 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {transferMutation.isPending
                 ? <><Loader2 className="h-4 w-4 animate-spin" />Transferring…</>
