@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   X, ChevronDown, ClipboardList, Copy, Check, Loader2, AlertCircle, Eye, EyeOff,
@@ -11,56 +11,54 @@ import { supabase } from "@/lib/supabase";
 import { nonCustodialWalletManager, NonCustodialWallet } from "@/lib/non-custodial-wallet";
 import { signEVMMessage } from "@/lib/evmSigner";
 import { useToast } from "@/hooks/use-toast";
+import { getCryptoIconUrl } from "@/lib/crypto-icons";
 
 // ── Chain config ─────────────────────────────────────────
 const CHAINS = [
-  { key: "BSC", name: "BNB Chain",     chainId: 56,    color: "#F3BA2F" },
-  { key: "ETH", name: "Ethereum",       chainId: 1,     color: "#627EEA" },
-  { key: "ARB", name: "Arbitrum One",  chainId: 42161, color: "#12AAFF" },
-  { key: "SOL", name: "Solana",         chainId: 101,   color: "#9945FF" },
+  { key: "BSC", name: "BNB Chain",    chainId: 56,    color: "#F3BA2F" },
+  { key: "ETH", name: "Ethereum",      chainId: 1,     color: "#627EEA" },
+  { key: "ARB", name: "Arbitrum One", chainId: 42161, color: "#12AAFF" },
+  { key: "SOL", name: "Solana",        chainId: 101,   color: "#9945FF" },
 ] as const;
 
 // AsterDEX on-chain deposit only supports EVM chains (ETH=1, BSC=56, ARB=42161)
-const EVM_DEPOSIT_CHAINS = new Set(["BSC", "ETH", "ARB"]);
+const EVM_DEPOSIT_CHAINS = ["BSC", "ETH", "ARB"] as const;
+type EvmDepositChain = typeof EVM_DEPOSIT_CHAINS[number];
 
 const CHAIN_MAP = Object.fromEntries(CHAINS.map(c => [c.key, c]));
+
+// Real chain logo icons from TrustWallet assets CDN
+const CHAIN_ICONS: Record<string, string> = {
+  BSC: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png",
+  ETH: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
+  ARB: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png",
+  SOL: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png",
+};
+
+// Extra coin icons not already in cryptoIconUrls
+const EXTRA_COIN_ICONS: Record<string, string> = {
+  USDCE:  "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
+  USD1:   "https://assets.coingecko.com/coins/images/31212/small/PYUSD_Logo_%282%29.png",
+  ASTER:  "https://assets.coingecko.com/coins/images/30980/small/token-logo.png",
+};
+
+function getCoinIcon(symbol: string): string {
+  return EXTRA_COIN_ICONS[symbol] ?? getCryptoIconUrl(symbol);
+}
 
 const ACCOUNT_TYPES = ["Spot account", "Perpetual account"] as const;
 type AccountType = typeof ACCOUNT_TYPES[number];
 
+// Minimal fallback if the API is completely unavailable
 const FALLBACK_COINS: CoinInfo[] = [
   { coin: "USDT", name: "Tether", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
-    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "SOL", withdrawEnable: true, depositEnable: false, withdrawFee: "0.2",   withdrawMin: "2",     depositMin: "2"    },
+    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",  withdrawMin: "5",   depositMin: "5"   },
+    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",    withdrawMin: "10",  depositMin: "10"  },
+    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",  withdrawMin: "5",   depositMin: "5"   },
+    { network: "SOL", withdrawEnable: true, depositEnable: false, withdrawFee: "0.2", withdrawMin: "2",   depositMin: "2"   },
   ]},
-  { coin: "USDC", name: "USD Coin", free: "0", locked: "0", networkList: [
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
-    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "SOL", withdrawEnable: true, depositEnable: false, withdrawFee: "0.2",   withdrawMin: "2",     depositMin: "2"    },
-  ]},
-  { coin: "USD1", name: "USD1", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
-  ]},
-  { coin: "ETH",  name: "Ethereum", free: "0", locked: "0", networkList: [
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
-    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
-  ]},
-  { coin: "BNB",  name: "BNB", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
-  ]},
-  { coin: "BTC",  name: "Bitcoin", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.0001", withdrawMin: "0.001", depositMin: "0.001" },
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "0.0001", withdrawMin: "0.001", depositMin: "0.001" },
-  ]},
-  { coin: "USDCE", name: "Bridged USDC", free: "0", locked: "0", networkList: [
-    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-  ]},
-  { coin: "ASTER", name: "Aster", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "1",      withdrawMin: "10",    depositMin: "10"   },
+  { coin: "BNB", name: "BNB", free: "0", locked: "0", networkList: [
+    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001", withdrawMin: "0.01", depositMin: "0.01" },
   ]},
 ];
 
@@ -74,9 +72,24 @@ interface AccountModalProps {
   defaultAccountType: AccountType;
 }
 
-// ── Chain icon ────────────────────────────────────────────
+// ── Chain icon (real image with colored-letter fallback) ──
 function ChainIcon({ chainKey, size = 22 }: { chainKey: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const src = CHAIN_ICONS[chainKey];
   const c = CHAIN_MAP[chainKey];
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={chainKey}
+        width={size}
+        height={size}
+        onError={() => setFailed(true)}
+        className="rounded-full shrink-0 object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
   return (
     <span
       className="rounded-full flex items-center justify-center shrink-0 font-bold text-black"
@@ -87,25 +100,55 @@ function ChainIcon({ chainKey, size = 22 }: { chainKey: string; size?: number })
   );
 }
 
+// ── Coin icon (real image with colored-letter fallback) ───
+function CoinIcon({ symbol, size = 22 }: { symbol: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const src = getCoinIcon(symbol);
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={symbol}
+        width={size}
+        height={size}
+        onError={() => setFailed(true)}
+        className="rounded-full shrink-0 object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <span
+      className="rounded-full flex items-center justify-center shrink-0 font-bold text-primary bg-primary/20"
+      style={{ width: size, height: size, fontSize: size * 0.38 }}
+    >
+      {symbol.slice(0, 2)}
+    </span>
+  );
+}
+
 // ── Main component ────────────────────────────────────────
 export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountType }: AccountModalProps) {
   const [activeTab, setActiveTab]         = useState<"deposit" | "withdraw" | "transfer">(defaultTab);
   const [accountType, setAccountType]     = useState<AccountType>(defaultAccountType);
   const [accountTypeOpen, setAccountTypeOpen] = useState(false);
   const [coin, setCoin]                   = useState("USDT");
-  const [network, setNetwork]             = useState("BSC");
+  const [network, setNetwork]             = useState<string>("BSC");
   const [chainOpen, setChainOpen]         = useState(false);
   const [coinOpen, setCoinOpen]           = useState(false);
   const [amount, setAmount]               = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [copied, setCopied]               = useState(false);
 
-  // Wallet registration state (needed once per user for AsterDEX API access)
+  // Wallet registration state
   const [isAsterRegistered, setIsAsterRegistered] = useState(false);
   const [userEvmWallet, setUserEvmWallet]   = useState<NonCustodialWallet | null>(null);
   const [walletLoading, setWalletLoading]   = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
   const [showPassword, setShowPassword]     = useState(false);
+
+  // Track previous network so we can clear stale state on network change
+  const prevNetworkRef = useRef<string>(network);
 
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -134,7 +177,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     }
   }, [user]);
 
-  // Auto-load EVM wallet when registration is needed (deposit address fetch failed)
+  // Auto-load EVM wallet when registration is needed
   const loadEvmWallet = useCallback(async () => {
     if (!user || isAsterRegistered) return;
     setWalletLoading(true);
@@ -153,9 +196,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     }
   }, [user, isAsterRegistered]);
 
-  // ── Registration mutation ─────────────────────────────
-  // Docs confirm: deposit address is USER_DATA — needs API key created once per user.
-  // This runs automatically when the deposit address fetch fails for unregistered users.
+  // ── Registration mutation ──────────────────────────────
   const registerMutation = useMutation({
     mutationFn: async () => {
       if (!userEvmWallet || !user) throw new Error("No EVM wallet found. Create one in Wallet first.");
@@ -167,7 +208,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       const signature = await signEVMMessage(mnemonic, message);
       const chainId = CHAIN_MAP[network]?.chainId ?? 56;
       const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signature, chainId);
-      // Store credentials in Supabase user metadata so the edge function can use them
       const { error: updateError } = await supabase.auth.updateUser({
         data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
       });
@@ -185,7 +225,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     },
   });
 
-  // ── Queries ───────────────────────────────────────────
+  // ── Queries ──────────────────────────────────────────
   const { data: spotAccount, isLoading: spotLoading } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
@@ -210,9 +250,14 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     retry: 1,
   });
 
-  // Deposit address — uses the public AsterDEX BAPI endpoint (no auth needed).
-  // The address is the same treasury contract for all coins on a given chain.
-  const { data: depositData, isLoading: depositLoading, error: depositError } = useQuery({
+  // Deposit address — keyed by network so each chain has its own cache entry.
+  // Using isFetching (not just isLoading) catches re-fetches after stale time.
+  const {
+    data: depositData,
+    isLoading: depositLoading,
+    isFetching: depositFetching,
+    error: depositError,
+  } = useQuery({
     queryKey: ["deposit-address", network],
     queryFn: () => {
       const chainId = CHAIN_MAP[network]?.chainId ?? 56;
@@ -220,25 +265,34 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     },
     enabled: !!user && open && activeTab === "deposit" && isSpot,
     staleTime: 300_000,
+    // Don't carry over previous network's address while loading the new one
+    placeholderData: undefined,
     retry: 1,
   });
 
-  // Trigger wallet load whenever deposit fails for an unregistered user
+  const depositLoading2 = depositLoading || depositFetching;
+
+  // Trigger wallet load when deposit fails for unregistered user
   useEffect(() => {
     if (depositError && !isAsterRegistered && user) {
       loadEvmWallet();
     }
   }, [depositError, isAsterRegistered, user, loadEvmWallet]);
 
-  // Fetch supported coins for the selected chain from the AsterDEX public assets endpoint.
-  // Only needed for deposit (withdraw/transfer use the full coinInfoData list).
-  const { data: chainAssetsData } = useQuery({
+  // Chain assets — keyed by network; only fetch for EVM deposit chains.
+  const {
+    data: chainAssetsData,
+    isLoading: chainAssetsLoading,
+    isFetching: chainAssetsFetching,
+  } = useQuery({
     queryKey: ["aster-chain-assets", network],
     queryFn: () => asterGetChainAssets(CHAIN_MAP[network]?.chainId ?? 56),
-    enabled: open && activeTab === "deposit" && EVM_DEPOSIT_CHAINS.has(network),
+    enabled: open && activeTab === "deposit" && EVM_DEPOSIT_CHAINS.includes(network as EvmDepositChain),
     staleTime: 5 * 60_000,
     retry: 1,
   });
+
+  const chainAssetsStale = chainAssetsLoading || chainAssetsFetching;
 
   const { data: feeEstimate, isLoading: feeLoading } = useQuery({
     queryKey: ["withdraw-fee", coin, network],
@@ -248,42 +302,70 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     retry: 1,
   });
 
-  // ── Derived data ──────────────────────────────────────
+  // ── Derived data ─────────────────────────────────────
   const coins: CoinInfo[] = useMemo(() => {
     if (Array.isArray(coinInfoData) && coinInfoData.length > 0) return coinInfoData;
     return FALLBACK_COINS;
   }, [coinInfoData]);
 
-  // For deposit: show only the coins actually supported on the selected chain.
-  // Merge live balances from `coins` where available so free/locked values appear.
+  // For deposit: show the coins supported on the currently selected chain.
+  // While the chain-assets query is in-flight (network just changed), return empty
+  // so the UI shows a loading state rather than coins from the previous chain.
   const selectorCoins: CoinInfo[] = useMemo(() => {
-    if (activeTab === "deposit" && Array.isArray(chainAssetsData) && chainAssetsData.length > 0) {
-      return chainAssetsData.map(a => {
-        const withBalance = coins.find(c => c.coin === a.coin);
-        return withBalance ? { ...a, free: withBalance.free, locked: withBalance.locked } : a;
-      });
+    if (activeTab === "deposit") {
+      if (chainAssetsStale) return []; // don't bleed previous chain's coins
+      if (Array.isArray(chainAssetsData) && chainAssetsData.length > 0) {
+        return chainAssetsData.map(a => {
+          const withBalance = coins.find(c => c.coin === a.coin);
+          return withBalance ? { ...a, free: withBalance.free, locked: withBalance.locked } : a;
+        });
+      }
     }
     return coins;
-  }, [activeTab, chainAssetsData, coins]);
+  }, [activeTab, chainAssetsData, chainAssetsStale, coins]);
 
-  // When chain changes during deposit, reset to the first coin available on that chain.
+  // When network changes on deposit tab: detect using prevNetworkRef and reset coin
+  useEffect(() => {
+    if (activeTab !== "deposit") return;
+    if (prevNetworkRef.current !== network) {
+      prevNetworkRef.current = network;
+      // Reset coin to USDT if available, else first available coin once list loads
+      setCoin("USDT");
+      setAmount("");
+    }
+  }, [network, activeTab]);
+
+  // If the selected coin isn't in the new chain's list once loaded, reset to first
   useEffect(() => {
     if (activeTab === "deposit" && selectorCoins.length > 0 && !selectorCoins.some(c => c.coin === coin)) {
       setCoin(selectorCoins[0].coin);
     }
   }, [selectorCoins, coin, activeTab]);
 
-  const selectedCoinInfo = useMemo(() => selectorCoins.find(c => c.coin === coin) ?? selectorCoins[0], [selectorCoins, coin]);
+  const selectedCoinInfo = useMemo(
+    () => selectorCoins.find(c => c.coin === coin) ?? selectorCoins[0],
+    [selectorCoins, coin]
+  );
 
+  // For deposit: always show all EVM chains — the chain drives the coin list, not vice versa.
+  // For withdraw: filter by what the selected coin actually supports.
   const availableNetworks = useMemo(() => {
-    const list = activeTab === "withdraw"
-      ? selectedCoinInfo?.networkList.filter(n => n.withdrawEnable)
-      : selectedCoinInfo?.networkList.filter(n => n.depositEnable && EVM_DEPOSIT_CHAINS.has(n.network));
+    if (activeTab === "deposit") {
+      return [...EVM_DEPOSIT_CHAINS] as string[];
+    }
+    const list = selectedCoinInfo?.networkList.filter(n => n.withdrawEnable);
     return list?.map(n => n.network) ?? ["BSC"];
   }, [selectedCoinInfo, activeTab]);
 
-  const selectedNetworkInfo = useMemo(() =>
-    selectedCoinInfo?.networkList.find(n => n.network === network),
+  // Ensure the current network is valid after switching tabs / coins
+  useEffect(() => {
+    if (availableNetworks.length > 0 && !availableNetworks.includes(network)) {
+      setNetwork(availableNetworks[0]);
+    }
+  }, [availableNetworks, network]);
+
+  const selectedNetworkInfo = useMemo(
+    () => selectedCoinInfo?.networkList.find(n => n.network === network),
     [selectedCoinInfo, network]
   );
 
@@ -304,15 +386,16 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     ? spotLoading ? "..." : `${usdtSpot.toFixed(2)} USDT`
     : futuresLoading ? "..." : `${usdtFutures.toFixed(2)} USDT`;
 
-  // Balance shown under amount input
   const currentBalance = (() => {
-    if (!isSpot && activeTab === "deposit") return spotBalanceFor(coin);   // transferring FROM spot
-    if (!isSpot && activeTab === "withdraw") return futuresAvailFor(coin); // transferring FROM futures
+    if (!isSpot && activeTab === "deposit")  return spotBalanceFor(coin);
+    if (!isSpot && activeTab === "withdraw") return futuresAvailFor(coin);
     return spotBalanceFor(coin);
   })();
 
-  const depositAddress: string = typeof depositData === "string" ? depositData : (depositData as any)?.address ?? "";
-  const depositMemo: string    = (depositData as any)?.tag ?? (depositData as any)?.memo ?? "";
+  const depositAddress: string = typeof depositData === "string"
+    ? depositData
+    : (depositData as any)?.address ?? "";
+  const depositMemo: string = (depositData as any)?.tag ?? (depositData as any)?.memo ?? "";
 
   const liveFee        = feeEstimate?.gasCost ? String(feeEstimate.gasCost) : null;
   const resolvedFee    = liveFee ?? selectedNetworkInfo?.withdrawFee ?? "0";
@@ -321,7 +404,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const withdrawMin    = parseFloat(selectedNetworkInfo?.withdrawMin ?? "0");
   const youReceive     = Math.max(0, amountNum - resolvedFeeNum);
 
-  // ── Mutations ─────────────────────────────────────────
+  // ── Mutations ────────────────────────────────────────
   const withdrawMutation = useMutation({
     mutationFn: () => asterWallet.withdraw(coin, withdrawAddress, amount, network, resolvedFee),
     onSuccess: () => {
@@ -382,13 +465,14 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   };
 
   const handleCoinChange = (c: string) => {
-    const info = selectorCoins.find(ci => ci.coin === c);
-    const nets = (activeTab === "withdraw"
-      ? info?.networkList.filter(n => n.withdrawEnable)
-      : info?.networkList.filter(n => n.depositEnable)
-    )?.map(n => n.network);
     setCoin(c);
-    if (nets && nets.length > 0) setNetwork(nets[0]);
+    // For withdraw only: switch to first valid network for this coin if current isn't supported
+    if (activeTab === "withdraw") {
+      const info = selectorCoins.find(ci => ci.coin === c);
+      const nets = info?.networkList.filter(n => n.withdrawEnable).map(n => n.network) ?? [];
+      if (nets.length > 0 && !nets.includes(network)) setNetwork(nets[0]);
+    }
+    // Deposit: network (chain) is selected first, coin follows — don't reset network
     setCoinOpen(false);
     setAmount("");
   };
@@ -400,12 +484,11 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     setAmount(coin === "BTC" ? max.toFixed(8) : max.toFixed(4));
   };
 
-  // Guard: redirect to sign in if not logged in
   const requireAuth = () => {
     if (!user) { navigate("/signin"); onOpenChange(false); }
   };
 
-  // ── Reusable sub-components ───────────────────────────
+  // ── Sub-components ────────────────────────────────────
 
   const AccountTypeSelector = () => (
     <div className="relative mb-3">
@@ -473,22 +556,31 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
             onClick={() => setCoinOpen(v => !v)}
             className="flex items-center gap-1.5"
           >
-            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <span className="text-[9px] font-bold text-primary">{coin.slice(0, 2)}</span>
-            </div>
+            <CoinIcon symbol={coin} size={22} />
             <span className="text-sm text-foreground font-medium">{coin}</span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
         </div>
       </div>
       {coinOpen && (
-        <div className="absolute z-50 right-0 w-48 mt-1 rounded-lg border border-border bg-card shadow-xl max-h-48 overflow-y-auto">
-          {selectorCoins.map(c => (
-            <button key={c.coin} onClick={() => handleCoinChange(c.coin)}
-              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-accent transition-colors ${c.coin === coin ? "text-primary" : "text-foreground"}`}>
-              {c.coin} <span className="text-muted-foreground text-xs ml-1">{c.name}</span>
-            </button>
-          ))}
+        <div className="absolute z-50 right-0 w-52 mt-1 rounded-lg border border-border bg-card shadow-xl max-h-52 overflow-y-auto">
+          {chainAssetsStale && activeTab === "deposit" ? (
+            <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>Loading coins…</span>
+            </div>
+          ) : selectorCoins.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-muted-foreground">No coins found</div>
+          ) : (
+            selectorCoins.map(c => (
+              <button key={c.coin} onClick={() => handleCoinChange(c.coin)}
+                className={`w-full text-left px-4 py-2.5 flex items-center gap-2.5 text-sm hover:bg-accent transition-colors ${c.coin === coin ? "text-primary" : "text-foreground"}`}>
+                <CoinIcon symbol={c.coin} size={18} />
+                <span className="font-medium">{c.coin}</span>
+                <span className="text-muted-foreground text-xs ml-auto">{c.name}</span>
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>
@@ -500,6 +592,127 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       <span className="text-sm text-foreground font-mono-num">{value}</span>
     </div>
   );
+
+  // Deposit address section (shared between Spot and Perpetual deposit views)
+  const DepositAddressSection = ({ accentClass = "trading-green" }: { accentClass?: string }) => {
+    const greenStyle = accentClass === "trading-green";
+    return (
+      <>
+        {depositLoading2 ? (
+          <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span>Loading deposit address…</span>
+          </div>
+        ) : depositAddress ? (
+          <div className={`border rounded-lg px-4 py-3 mb-4 ${greenStyle ? "border-trading-green/30 bg-trading-green/5" : "border-primary/30 bg-primary/5"}`}>
+            <div className={`text-xs mb-1 font-medium ${greenStyle ? "text-trading-green" : "text-primary"}`}>
+              Deposit address · {CHAIN_MAP[network]?.name ?? network}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
+              <button onClick={() => handleCopy(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground ml-2">
+                {copied
+                  ? <Check className={`h-3.5 w-3.5 ${greenStyle ? "text-trading-green" : "text-primary"}`} />
+                  : <Copy className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            {depositMemo && (
+              <div className="mt-2 pt-2 border-t border-primary/20">
+                <p className="text-xs text-primary font-medium">Memo required</p>
+                <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
+              </div>
+            )}
+            {selectedNetworkInfo?.depositMin && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Min. deposit: {selectedNetworkInfo.depositMin} {coin}
+              </p>
+            )}
+          </div>
+        ) : depositError && user ? (
+          <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                A one-time verification is needed to activate your deposit address.
+                Enter your wallet password below — no funds will be moved.
+              </p>
+            </div>
+            {walletLoading ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Loading wallet…</span>
+              </div>
+            ) : !userEvmWallet ? (
+              <p className="text-xs text-destructive">
+                No EVM wallet found. Please create one in your Wallet first.
+              </p>
+            ) : (
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Wallet password"
+                  value={walletPassword}
+                  onChange={e => setWalletPassword(e.target.value)}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
+  const DepositCTA = () => {
+    if (!user) {
+      return (
+        <button onClick={requireAuth}
+          className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90">
+          Sign in to Deposit
+        </button>
+      );
+    }
+    if (depositLoading2) {
+      return (
+        <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
+          Loading…
+        </button>
+      );
+    }
+    if (depositAddress) {
+      return (
+        <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
+          Send {coin} to the address above
+        </button>
+      );
+    }
+    if (depositError && userEvmWallet) {
+      return (
+        <button
+          onClick={() => registerMutation.mutate()}
+          disabled={!walletPassword || registerMutation.isPending}
+          className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {registerMutation.isPending
+            ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
+            : "Sign & Generate Address"}
+        </button>
+      );
+    }
+    return (
+      <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
+        Loading…
+      </button>
+    );
+  };
 
   // ── Render ────────────────────────────────────────────
   return (
@@ -543,222 +756,23 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
           <>
             <AccountTypeSelector />
 
-            {/* Spot deposit: chain + address auto-loaded from session */}
             {isSpot && (
               <>
                 <ChainSelector />
                 <CoinAmountRow />
                 <BalanceLine value={`${spotBalanceFor(coin).toFixed(4)} ${coin}`} />
-
-                {/* Deposit address — auto-loads when logged in */}
-                {depositLoading ? (
-                  <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Loading deposit address…</span>
-                  </div>
-                ) : depositAddress ? (
-                  <div className="border border-trading-green/30 bg-trading-green/5 rounded-lg px-4 py-3 mb-4">
-                    <div className="text-xs text-trading-green mb-1 font-medium">
-                      Deposit address · {CHAIN_MAP[network]?.name ?? network}
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
-                      <button onClick={() => handleCopy(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground ml-2">
-                        {copied ? <Check className="h-3.5 w-3.5 text-trading-green" /> : <Copy className="h-3.5 w-3.5" />}
-                      </button>
-                    </div>
-                    {depositMemo && (
-                      <div className="mt-2 pt-2 border-t border-primary/20">
-                        <p className="text-xs text-primary font-medium">Memo required</p>
-                        <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
-                      </div>
-                    )}
-                    {selectedNetworkInfo?.depositMin && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Min. deposit: {selectedNetworkInfo.depositMin} {coin}
-                      </p>
-                    )}
-                  </div>
-                ) : depositError && user ? (
-                  /* ── One-time wallet sign flow (triggered automatically on error) ── */
-                  <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        A one-time verification is needed to activate your deposit address.
-                        Enter your wallet password below — no funds will be moved.
-                      </p>
-                    </div>
-                    {walletLoading ? (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span>Loading wallet…</span>
-                      </div>
-                    ) : !userEvmWallet ? (
-                      <p className="text-xs text-destructive">
-                        No EVM wallet found. Please create one in your Wallet first.
-                      </p>
-                    ) : (
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Wallet password"
-                          value={walletPassword}
-                          onChange={e => setWalletPassword(e.target.value)}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(v => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-
-                {/* Deposit CTA */}
-                {!user ? (
-                  <button
-                    onClick={requireAuth}
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    Sign in to Deposit
-                  </button>
-                ) : depositAddress ? (
-                  <button
-                    disabled
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground"
-                  >
-                    Send {coin} to the address above
-                  </button>
-                ) : depositError && userEvmWallet ? (
-                  <button
-                    onClick={() => registerMutation.mutate()}
-                    disabled={!walletPassword || registerMutation.isPending}
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {registerMutation.isPending
-                      ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
-                      : "Sign & Generate Address"}
-                  </button>
-                ) : depositLoading ? null : (
-                  <button
-                    disabled
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground"
-                  >
-                    Loading…
-                  </button>
-                )}
+                <DepositAddressSection accentClass="trading-green" />
+                <DepositCTA />
               </>
             )}
 
-            {/* Perpetual deposit — same on-chain deposit address as Spot */}
             {!isSpot && (
               <>
                 <ChainSelector />
                 <CoinAmountRow />
                 <BalanceLine value={`${futuresAvailFor(coin).toFixed(4)} ${coin}`} />
-
-                {depositLoading ? (
-                  <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Loading deposit address…</span>
-                  </div>
-                ) : depositAddress ? (
-                  <div className="border border-primary/30 bg-primary/5 rounded-lg px-4 py-3 mb-4">
-                    <div className="text-xs text-primary mb-1 font-medium">
-                      Deposit address · {CHAIN_MAP[network]?.name ?? network}
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
-                      <button onClick={() => handleCopy(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground ml-2">
-                        {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
-                      </button>
-                    </div>
-                    {depositMemo && (
-                      <div className="mt-2 pt-2 border-t border-primary/20">
-                        <p className="text-xs text-primary font-medium">Memo required</p>
-                        <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
-                      </div>
-                    )}
-                    {selectedNetworkInfo?.depositMin && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Min. deposit: {selectedNetworkInfo.depositMin} {coin}
-                      </p>
-                    )}
-                  </div>
-                ) : depositError && user ? (
-                  <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        One-time wallet verification required to generate your deposit address.
-                        This signs a message — no funds are moved.
-                      </p>
-                    </div>
-                    {walletLoading ? (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span>Loading wallet…</span>
-                      </div>
-                    ) : !userEvmWallet ? (
-                      <p className="text-xs text-destructive">
-                        No EVM wallet found. Please create one in your Wallet first.
-                      </p>
-                    ) : (
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Wallet password"
-                          value={walletPassword}
-                          onChange={e => setWalletPassword(e.target.value)}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(v => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-
-                {!user ? (
-                  <button
-                    onClick={requireAuth}
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    Sign in to Deposit
-                  </button>
-                ) : depositAddress ? (
-                  <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
-                    Send {coin} to the address above
-                  </button>
-                ) : depositError && userEvmWallet ? (
-                  <button
-                    onClick={() => registerMutation.mutate()}
-                    disabled={!walletPassword || registerMutation.isPending}
-                    className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {registerMutation.isPending
-                      ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
-                      : "Sign & Generate Address"}
-                  </button>
-                ) : depositLoading ? null : (
-                  <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
-                    Loading…
-                  </button>
-                )}
-
-                {/* Hint: use Transfer tab to move funds from Spot */}
+                <DepositAddressSection accentClass="primary" />
+                <DepositCTA />
                 <p className="text-xs text-center text-muted-foreground mt-3">
                   Already have funds in Spot?{" "}
                   <button
@@ -801,10 +815,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                     className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button onClick={handleMax} className="text-xs text-primary font-semibold mx-2">MAX</button>
-                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                    <span className="text-[8px] font-bold text-primary">{coin.slice(0, 2)}</span>
-                  </div>
-                  <span className="text-sm text-foreground ml-1">{coin}</span>
+                  <CoinIcon symbol={coin} size={20} />
+                  <span className="text-sm text-foreground ml-1.5">{coin}</span>
                 </div>
 
                 {amountNum > currentBalance && (
@@ -843,7 +855,9 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                   disabled={!user || !withdrawAddress || !amount || amountNum <= 0 || amountNum > currentBalance || (amountNum < withdrawMin && amountNum > 0) || withdrawMutation.isPending}
                   className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {withdrawMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Processing…</> : `Withdraw ${coin}`}
+                  {withdrawMutation.isPending
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Processing…</>
+                    : `Withdraw ${coin}`}
                 </button>
               </>
             ) : (
