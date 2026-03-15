@@ -314,7 +314,7 @@ export async function asterCreateApiKey(
     body: JSON.stringify({
       desc: 'pexly-wallet',
       ip: '',
-      network: String(chainId),
+      network: chainId,
       signature,
       sourceAddr,
       type: 'CREATE_API_KEY',
@@ -324,6 +324,17 @@ export async function asterCreateApiKey(
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? 'Failed to create API key');
   return json.data;
+}
+
+// Fetch the AsterDEX treasury deposit address for a given chain.
+// This is a public endpoint — no API key needed.
+export async function asterGetDepositAddress(chainId: number): Promise<string> {
+  const res = await fetch(
+    `${ASTER_BAPI}/ae/deposit-address?chainId=${chainId}`,
+  );
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message ?? 'Failed to get deposit address');
+  return String(json.data);
 }
 
 export const asterWallet = {
