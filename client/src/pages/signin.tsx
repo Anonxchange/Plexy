@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized.webp";
+import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized_1773579848381.webp";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Sun, Moon, ShieldCheck, Zap } from "lucide-react";
@@ -760,6 +760,24 @@ export function SignIn() {
             alt="Pexly"
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
+          {/* Top-left branding overlay */}
+          <div className="absolute top-8 left-8 z-10">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-lg">
+                <Zap className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <span className="text-white text-2xl font-extrabold drop-shadow-lg">Pexly</span>
+            </div>
+          </div>
+          {/* Bottom tagline overlay */}
+          <div className="absolute bottom-10 left-8 right-8 z-10">
+            <p className="text-white text-2xl font-semibold leading-snug drop-shadow-lg">
+              Decentralized all&#8209;in&#8209;one
+            </p>
+            <p className="text-white/70 text-sm mt-1 drop-shadow">
+              Buy, sell & trade crypto across 500+ payment methods
+            </p>
+          </div>
         </div>
       </div>
 
