@@ -6,7 +6,8 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, CoinInfo } from "@/lib/asterdex-service";
+import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, asterGetDepositAddress, CoinInfo } from "@/lib/asterdex-service";
+import { supabase } from "@/lib/supabase";
 import { nonCustodialWalletManager, NonCustodialWallet } from "@/lib/non-custodial-wallet";
 import { signEVMMessage } from "@/lib/evmSigner";
 import { useToast } from "@/hooks/use-toast";
@@ -152,7 +153,12 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       const message = `You are signing into Astherus ${nonce}`;
       const signature = await signEVMMessage(mnemonic, message);
       const chainId = CHAIN_MAP[network]?.chainId ?? 56;
-      await asterCreateApiKey(userEvmWallet.address, signature, chainId);
+      const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signature, chainId);
+      // Store credentials in Supabase user metadata so the edge function can use them
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
+      });
+      if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
     },
     onSuccess: () => {
       if (user) localStorage.setItem(asterRegKey(user.id), "true");
@@ -191,16 +197,17 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     retry: 1,
   });
 
-  // Deposit address — auto-fetched when logged in.
-  // If it fails (user not yet registered with AsterDEX), the error triggers the sign flow.
+  // Deposit address — uses the public AsterDEX BAPI endpoint (no auth needed).
+  // The address is the same treasury contract for all coins on a given chain.
   const { data: depositData, isLoading: depositLoading, error: depositError } = useQuery({
-    queryKey: ["deposit-address", coin, network],
-    queryFn: () => asterWallet.depositAddress(coin, network),
+    queryKey: ["deposit-address", network],
+    queryFn: () => {
+      const chainId = CHAIN_MAP[network]?.chainId ?? 56;
+      return asterGetDepositAddress(chainId);
+    },
     enabled: !!user && open && activeTab === "deposit" && isSpot,
     staleTime: 300_000,
-    retry: false,
-    // When it errors, automatically start loading the user's wallet so the sign flow appears
-    meta: { onError: () => loadEvmWallet() },
+    retry: 1,
   });
 
   // Trigger wallet load whenever deposit fails for an unregistered user
@@ -262,7 +269,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     return spotBalanceFor(coin);
   })();
 
-  const depositAddress: string = (depositData as any)?.address ?? "";
+  const depositAddress: string = typeof depositData === "string" ? depositData : (depositData as any)?.address ?? "";
   const depositMemo: string    = (depositData as any)?.tag ?? (depositData as any)?.memo ?? "";
 
   const liveFee        = feeEstimate?.gasCost ? String(feeEstimate.gasCost) : null;
