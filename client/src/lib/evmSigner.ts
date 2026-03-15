@@ -7,9 +7,13 @@ import { bytesToHex } from "@noble/hashes/utils";
 import { hmac } from "@noble/hashes/hmac";
 import { sha256 } from "@noble/hashes/sha256";
 
-// For noble-secp256k1 v1.7.x, etc is not available.
-// We should check version or just use the available API.
-// If etc is missing, it's likely an older version or different export structure.
+// @noble/secp256k1 v1.7.x requires hmacSha256Sync to be configured before
+// signSync can be used. Configure it once at module level.
+secp.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+  const h = hmac.create(sha256, key);
+  for (const msg of msgs) h.update(msg);
+  return h.digest();
+};
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
@@ -196,11 +200,15 @@ export async function signEVMMessage(
   message: string
 ): Promise<string> {
   const priv = await derivePrivateKey(mnemonic);
-  const msgHash = keccak_256(
-    new TextEncoder().encode(`\x19Ethereum Signed Message:\n${message.length}${message}`)
-  );
-  const signature = await secp.sign(msgHash, priv);
-  return "0x" + bytesToHex((signature as any).toCompactRawBytes());
+  const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
+  const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
+  // signSync is safe because hmacSha256Sync is configured at module init above.
+  // der: false → compact 64-byte (r+s) output instead of DER encoding.
+  // recovered: true → returns [Uint8Array, recoveryBit] for the 65-byte
+  // Ethereum personal_sign format (r + s + v where v = 27 + recovery).
+  const [compact, recovery] = secp.signSync(msgHash, priv, { recovered: true, der: false });
+  const v = (27 + recovery).toString(16).padStart(2, "0");
+  return "0x" + bytesToHex(compact) + v;
 }
 
 /* -------------------------------------------------------------------------- */
