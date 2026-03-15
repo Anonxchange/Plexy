@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
-import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized_1773579848381.webp";
+import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized.webp";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Sun, Moon, Zap, MapPin, Check, X } from "lucide-react";
