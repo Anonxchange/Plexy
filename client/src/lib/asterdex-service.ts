@@ -306,13 +306,15 @@ export interface AsterAsset {
 // Fetch supported deposit assets for a given chainId from the public BAPI.
 // Maps them to the CoinInfo structure used throughout the modal.
 export async function asterGetChainAssets(chainId: number): Promise<CoinInfo[]> {
+  // Solana is not an EVM chain — it needs networks=SOL in the query
+  const networkParam = chainId === 101 ? 'SOL' : 'EVM';
   const res = await fetch(
-    `${ASTER_BAPI_ROOT}/aster/withdraw/assets?chainIds=${chainId}&networks=EVM&accountType=perp`,
+    `${ASTER_BAPI_ROOT}/aster/withdraw/assets?chainIds=${chainId}&networks=${networkParam}&accountType=perp`,
   );
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? 'Failed to fetch chain assets');
 
-  const networkKey = chainId === 1 ? 'ETH' : chainId === 56 ? 'BSC' : chainId === 42161 ? 'ARB' : String(chainId);
+  const networkKey = chainId === 1 ? 'ETH' : chainId === 56 ? 'BSC' : chainId === 42161 ? 'ARB' : chainId === 101 ? 'SOL' : String(chainId);
 
   return (json.data as AsterAsset[]).map(a => ({
     coin: a.name,
@@ -378,21 +380,36 @@ export async function asterGetDepositAddress(chainId: number): Promise<string> {
 }
 
 export const asterWallet = {
+  // Spot account deposit address and history
   depositAddress: (coin: string, network?: string) =>
     invoke('spot_deposit_address', { coin, ...(network ? { network } : {}) }, true),
 
   depositHistory: (coin?: string) =>
     invoke('spot_deposit_history', coin ? { coin } : {}, true),
 
+  // Futures/Perpetual account deposit address and history
+  futuresDepositAddress: (coin: string, network?: string) =>
+    invoke('futures_deposit_address', { coin, ...(network ? { network } : {}) }, true),
+
+  futuresDepositHistory: (coin?: string) =>
+    invoke('futures_deposit_history', coin ? { coin } : {}, true),
+
+  // Spot account withdraw history
   withdrawHistory: (coin?: string) =>
     invoke('spot_withdraw_history', coin ? { coin } : {}, true),
 
+  // Futures account withdraw history
+  futuresWithdrawHistory: (coin?: string) =>
+    invoke('futures_withdraw_history', coin ? { coin } : {}, true),
+
+  // Fee estimate is network-based and the same regardless of account type
   withdrawFeeEstimate: (coin: string, network: string) => {
     const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
     const networkType = network.toUpperCase() === 'SOL' ? 'SOL' : 'EVM';
     return invoke('spot_withdraw_fee_estimate', { coin, chainId, network: networkType }, false);
   },
 
+  // Withdraw from Spot account to an external address
   withdraw: (
     coin: string,
     address: string,
@@ -403,6 +420,19 @@ export const asterWallet = {
     const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
     const nonce = String(Date.now() * 1000);
     return invoke('spot_withdraw', { coin, address, amount, network, chainId, fee, nonce }, true);
+  },
+
+  // Withdraw from Futures/Perpetual account to an external address
+  futuresWithdraw: (
+    coin: string,
+    address: string,
+    amount: string,
+    network: string,
+    fee: string,
+  ) => {
+    const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
+    const nonce = String(Date.now() * 1000);
+    return invoke('futures_withdraw', { coin, address, amount, network, chainId, fee, nonce }, true);
   },
 
   coinInfo: () => invoke('spot_coin_info', {}, true),
