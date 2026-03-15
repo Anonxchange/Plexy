@@ -130,6 +130,7 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
           onPairChange(selectedPair);
           setSelectorOpen(false);
         }}
+        variant={isMobile ? "fullscreen" : "dialog"}
       />
     </>
   );
