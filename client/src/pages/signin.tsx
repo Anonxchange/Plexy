@@ -662,16 +662,28 @@ export function SignIn() {
                       </button>
                     </div>
                   ) : (
-                    <Turnstile
-                      key={captchaKey}
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => { setCaptchaToken(token); setCaptchaError(false); }}
-                      onError={() => { setCaptchaToken(null); setCaptchaError(true); }}
-                      onExpire={() => { setCaptchaToken(null); setCaptchaError(false); }}
-                      options={{
-                        theme: isDark ? 'dark' : 'light',
-                      }}
-                    />
+      <Turnstile key={captchaKey} siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+  scriptOptions={{
+    async: true,
+    defer: true,
+    appendTo: "head"
+  }}
+  onSuccess={(token) => {
+    setCaptchaToken(token);
+    setCaptchaError(false);
+  }}
+  onError={() => {
+    setCaptchaToken(null);
+    setCaptchaError(true);
+  }}
+  onExpire={() => {
+    setCaptchaToken(null);
+    setCaptchaError(false);
+  }}
+  options={{
+    theme: isDark ? "dark" : "light"
+  }}
+/>
                   )}
                 </div>
               )}
