@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Star, ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import SymbolSelector from "./SymbolSelector";
+import { CoinIcon } from "./CoinIcon";
 
 interface PerpetualPairInfoProps {
   pair: string;
@@ -23,15 +24,7 @@ const PerpetualPairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: 
           onClick={() => setSelectorOpen(true)}
           className="flex items-center gap-2 md:gap-4 flex-shrink-0"
         >
-          <div className="w-8 md:w-10 h-8 md:h-10 rounded-full bg-trading-green/10 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="3" fill="hsl(var(--trading-green))" />
-              <circle cx="12" cy="4" r="2" fill="hsl(var(--trading-green))" />
-              <circle cx="12" cy="20" r="2" fill="hsl(var(--trading-green))" />
-              <circle cx="4" cy="12" r="2" fill="hsl(var(--trading-green))" />
-              <circle cx="20" cy="12" r="2" fill="hsl(var(--trading-green))" />
-            </svg>
-          </div>
+          <CoinIcon symbol={pair.split("/")[0]} className="w-8 md:w-10 h-8 md:h-10" />
 
           <span className="text-foreground font-bold text-base md:text-xl tracking-tight">
             {pair}
