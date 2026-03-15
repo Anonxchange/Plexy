@@ -7,7 +7,7 @@ import { Eye, EyeOff, Sun, Moon, Zap, MapPin, Check, X } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { useTheme } from "@/components/theme-provider";
 import { amlScreening } from "@/lib/security/aml-screening";
@@ -145,10 +145,9 @@ export function SignUp() {
   const [otpCountdown, setOtpCountdown] = useState(300);
   const [resendCooldown, setResendCooldown] = useState(60);
   const [isResending, setIsResending] = useState(false);
-  const { signUp, signIn, user } = useAuth();
+  const { signUp, signIn, user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const supabase = createClient();
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
@@ -266,10 +265,10 @@ export function SignUp() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       setLocation("/dashboard");
     }
-  }, [user, setLocation]);
+  }, [user, authLoading, setLocation]);
 
   // Countdown timer for OTP expiry and resend cooldown
   useEffect(() => {
@@ -918,7 +917,7 @@ export function SignUp() {
               {/* Create Account Button */}
               <button 
                 type="submit"
-                disabled={loading || (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
+                disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
                 style={{ fontWeight: 500 }}
               >
