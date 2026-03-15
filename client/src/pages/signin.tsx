@@ -14,7 +14,6 @@ import * as OTPAuth from "otplib";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
-import { rateLimiter } from "@/lib/security/rate-limiter";
 
 export function SignIn() {
   const [inputValue, setInputValue] = useState("");
@@ -34,6 +33,8 @@ export function SignIn() {
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState(false);
+  const [captchaKey, setCaptchaKey] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
   const [tempAccessToken, setTempAccessToken] = useState<string | undefined>(undefined);
@@ -111,17 +112,6 @@ export function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Rate limit sign-in attempts (10 attempts per minute per IP)
-    const isAllowed = await rateLimiter.checkLimit('ip_signin', 'signin_attempt', 10, 1);
-    if (!isAllowed) {
-      toast({
-        title: "Too Many Attempts",
-        description: "Please try again in a few minutes.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Phone number → OTP only (no password)
     if (isPhoneNumber) {
@@ -372,7 +362,7 @@ export function SignIn() {
       }
 
       // Use the original inputValue for sign-in, as it could be email or phone number
-      const { error: signInError } = await signIn(inputValue, password);
+      const { error: signInError } = await signIn(inputValue, password, captchaToken ?? undefined);
 
       if (signInError) {
         toast({
@@ -653,23 +643,43 @@ export function SignIn() {
 
               {/* Cloudflare Turnstile CAPTCHA */}
               {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
-                <div className="mb-6 flex justify-center">
-                  <Turnstile
-                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                    onSuccess={(token) => setCaptchaToken(token)}
-                    onError={() => setCaptchaToken(null)}
-                    onExpire={() => setCaptchaToken(null)}
-                    options={{
-                      theme: isDark ? 'dark' : 'light',
-                    }}
-                  />
+                <div className="mb-6 flex flex-col items-center gap-2">
+                  {captchaError ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <p className={`text-sm ${isDark ? 'text-red-400' : 'text-red-500'}`}>
+                        Captcha failed to load.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCaptchaError(false);
+                          setCaptchaToken(null);
+                          setCaptchaKey(k => k + 1);
+                        }}
+                        className={`text-sm underline ${isDark ? 'text-lime-400' : 'text-lime-600'}`}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : (
+                    <Turnstile
+                      key={captchaKey}
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => { setCaptchaToken(token); setCaptchaError(false); }}
+                      onError={() => { setCaptchaToken(null); setCaptchaError(true); }}
+                      onExpire={() => { setCaptchaToken(null); setCaptchaError(false); }}
+                      options={{
+                        theme: isDark ? 'dark' : 'light',
+                      }}
+                    />
+                  )}
                 </div>
               )}
 
               {/* Sign In Button */}
               <button 
                 type="submit"
-                disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
+                disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)}
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
                 style={{ fontWeight: 500 }}
               >
