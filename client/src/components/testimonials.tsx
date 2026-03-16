@@ -155,6 +155,7 @@ export function Testimonials() {
               variant="outline"
               size="icon"
               onClick={handlePrev}
+              aria-label="Previous testimonial"
               className="rounded-full bg-black dark:bg-white text-white dark:text-black border-0 h-14 w-14 hover:bg-black/80 dark:hover:bg-white/80"
             >
               <ChevronLeft className="h-6 w-6" />
@@ -163,6 +164,7 @@ export function Testimonials() {
               variant="outline"
               size="icon"
               onClick={handleNext}
+              aria-label="Next testimonial"
               className="rounded-full bg-black dark:bg-white text-white dark:text-black border-0 h-14 w-14 hover:bg-black/80 dark:hover:bg-white/80"
             >
               <ChevronRight className="h-6 w-6" />
