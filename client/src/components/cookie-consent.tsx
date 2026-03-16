@@ -54,6 +54,7 @@ export function CookieConsent() {
               variant="ghost"
               size="icon"
               onClick={handleClose}
+              aria-label="Close cookie consent"
               className="text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
