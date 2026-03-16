@@ -3,7 +3,7 @@ import { useState } from "react";
 const CDN_BASE = "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color";
 const TW_BASE  = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/assets";
 
-type Source = "trustwallet" | "cdn" | "fallback";
+type Source = "cdn" | "trustwallet" | "fallback";
 
 interface CoinIconProps {
   symbol: string;
@@ -12,12 +12,11 @@ interface CoinIconProps {
 }
 
 export function CoinIcon({ symbol, address, className = "w-8 h-8" }: CoinIconProps) {
-  const initial: Source = address ? "trustwallet" : "cdn";
-  const [source, setSource] = useState<Source>(initial);
+  const [source, setSource] = useState<Source>("cdn");
 
   const advance = () => {
     setSource(prev => {
-      if (prev === "trustwallet") return "cdn";
+      if (prev === "cdn") return address ? "trustwallet" : "fallback";
       return "fallback";
     });
   };
