@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowRight, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import heroImage from "@assets/generated_images/Crypto_P2P_trading_hero_641f4218.png";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 import { currencies } from "@/lib/currencies";
@@ -14,6 +16,8 @@ const cryptoCurrencies = [
   { code: "USDT", name: "Tether" },
   { code: "USDC", name: "USD Coin" },
 ];
+import { paymentMethods } from "@/lib/payment-methods";
+
 const popularPaymentMethods = [
   { id: "all", name: "All Payment Methods" },
   { id: "bank-transfer", name: "Bank Transfer" },
@@ -64,18 +68,10 @@ export function HeroSection() {
   const [openCurrency, setOpenCurrency] = useState(false);
   const [openPayment, setOpenPayment] = useState(false);
   const [openCrypto, setOpenCrypto] = useState(false);
-  const [decorReady, setDecorReady] = useState(false);
 
 
   const hasFetchedRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      setDecorReady(true);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, []);
 
   const fetchPricesDeferred = useCallback(async () => {
     try {
@@ -136,24 +132,18 @@ export function HeroSection() {
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center">
-      {decorReady && <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>}
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
-      {/* Animated Globe Background — deferred after first paint */}
-      {decorReady && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] opacity-40 pointer-events-none z-0" style={{ contain: "strict" }}>
-          <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
-            <Globe />
-          </ErrorBoundary>
-        </div>
-      )}
+      {/* Animated Globe Background */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] opacity-40 pointer-events-none z-0" style={{ contain: "strict", willChange: "transform" }}>
+        <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
+          <Globe />
+        </ErrorBoundary>
+      </div>
 
-      {/* Gradient Orbs — deferred after first paint */}
-      {decorReady && (
-        <>
-          <div className="absolute top-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
-        </>
-      )}
+      {/* Gradient Orbs */}
+      <div className="absolute top-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 relative z-10 w-full">
         {/* Single responsive layout — text stacks above form on mobile, side-by-side on desktop */}
