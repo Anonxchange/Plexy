@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
-import { AppSidebar } from "./app-sidebar";
+const AppSidebar = lazy(() => import("./app-sidebar").then(m => ({ default: m.AppSidebar })));
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
@@ -611,7 +611,9 @@ export function AppHeader() {
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation Menu</SheetTitle>
           </SheetHeader>
-          <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
+          <Suspense fallback={null}>
+            <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
+          </Suspense>
         </SheetContent>
       </Sheet>
     </header>
