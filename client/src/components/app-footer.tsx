@@ -85,22 +85,22 @@ export function AppFooter() {
         </div>
 
         <div className="flex flex-wrap justify-center gap-3 lg:gap-4 mb-6 lg:mb-8">
-          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <a href="#" aria-label="Follow Pexly on X (Twitter)" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
             <SiX className="h-4 w-4 text-black" />
           </a>
-          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <a href="#" aria-label="Follow Pexly on LinkedIn" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
             <SiLinkedin className="h-4 w-4 text-black" />
           </a>
-          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <a href="#" aria-label="Join Pexly on Telegram" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
             <SiTelegram className="h-4 w-4 text-black" />
           </a>
-          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <a href="#" aria-label="Follow Pexly on Instagram" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
             <SiInstagram className="h-4 w-4 text-black" />
           </a>
-          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <a href="#" aria-label="Follow Pexly on Facebook" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
             <SiFacebook className="h-4 w-4 text-black" />
           </a>
-          <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <a href="#" aria-label="Subscribe to Pexly on YouTube" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
             <SiYoutube className="h-4 w-4 text-black" />
           </a>
         </div>
