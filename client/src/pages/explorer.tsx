@@ -778,8 +778,8 @@ const Footer = () => (
       <div className="flex flex-col md:flex-row items-center justify-between mt-12 pt-8 border-t border-border">
         <p className="text-sm text-muted-foreground">© 2025 Pexly Explorer. All rights reserved.</p>
         <div className="flex items-center gap-4 mt-4 md:mt-0">
-          <a href="#" className="text-muted-foreground hover:text-foreground transition-colors"><Twitter className="h-5 w-5" /></a>
-          <a href="#" className="text-muted-foreground hover:text-foreground transition-colors"><Github className="h-5 w-5" /></a>
+          <a href="#" aria-label="Follow Pexly on Twitter" className="text-muted-foreground hover:text-foreground transition-colors"><Twitter className="h-5 w-5" /></a>
+          <a href="#" aria-label="Pexly on GitHub" className="text-muted-foreground hover:text-foreground transition-colors"><Github className="h-5 w-5" /></a>
         </div>
       </div>
     </div>
