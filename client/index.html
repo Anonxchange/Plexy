@@ -12,26 +12,11 @@
     <!-- Preconnect hints for external APIs (improves LCP by establishing early connections) -->
     <link rel="preconnect" href="https://hvpeycnedmzrjshmvgri.supabase.co" crossorigin="anonymous">
     <link rel="dns-prefetch" href="https://hvpeycnedmzrjshmvgri.supabase.co">
-    <link rel="preconnect" href="https://assets.coingecko.com">
-    <link rel="dns-prefetch" href="https://assets.coingecko.com">
-  
     <!-- Modulepreload is injected automatically by Vite for built assets -->
     <link rel="preload" as="image" href="/favicon.svg" type="image/svg+xml">
     <link rel="preload" as="image" href="/icons/step1.svg" type="image/svg+xml">
     <!-- LCP hero image — preloaded so the browser fetches it immediately -->
     <link rel="preload" as="image" href="/hero-app-screens.svg" type="image/svg+xml">
-    
-    <!-- Critical hero section skeleton to prevent layout shift -->
-    <style>
-      .hero-skeleton { 
-        min-height: 85vh; 
-        display: flex; 
-        align-items: center; 
-        background: linear-gradient(to bottom right, hsl(var(--background)), hsl(var(--primary) / 0.05), hsl(var(--background)));
-        contain: layout size;
-      }
-      h1 { contain: layout paint; }
-    </style>
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
