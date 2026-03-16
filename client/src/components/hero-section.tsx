@@ -138,7 +138,7 @@ export function HeroSection() {
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
       {/* Animated Globe Background - Re-added and stabilized */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] opacity-40 pointer-events-none z-0">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] opacity-40 pointer-events-none z-0" style={{ contain: "strict", willChange: "transform" }}>
         <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
           <Globe />
         </ErrorBoundary>
@@ -159,7 +159,7 @@ export function HeroSection() {
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tight" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 80px', contain: 'layout paint' }}>
+            <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tight">
               <span className="block text-foreground">Trade crypto</span>
               <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
                 your way
@@ -394,7 +394,7 @@ export function HeroSection() {
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-6xl xl:text-7xl 2xl:text-8xl font-bold leading-[1.05] tracking-tight" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 100px', contain: 'layout paint' }}>
+            <h1 className="text-6xl xl:text-7xl 2xl:text-8xl font-bold leading-[1.05] tracking-tight">
               <span className="block text-foreground">Trade crypto</span>
               <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
                 your way
