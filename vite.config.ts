@@ -84,6 +84,16 @@ export default defineConfig({
           "vendor-charts": ["recharts"],
           "vendor-canvas": ["html2canvas"],
           "vendor-db": ["@supabase/supabase-js"],
+           "vendor-crypto": [
+            "@scure/bip32",
+            "@scure/bip39",
+            "@scure/btc-signer",
+            "@scure/base",
+            "@noble/curves",
+            "@noble/hashes",
+            "@noble/ed25519",
+            "@noble/secp256k1",
+            ],
           "vendor-utils": [
             "@tanstack/react-query",
             "wouter",
