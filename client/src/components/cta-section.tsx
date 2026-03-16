@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Smartphone } from "lucide-react";
 import { SiApple, SiGoogleplay } from "react-icons/si";
-import mobileAppImage from "@assets/svg-image-1-3.svg";
 
 export function CTASection() {
   return (
@@ -57,10 +56,12 @@ export function CTASection() {
           {/* RIGHT — IMAGE */}
           <div className="flex justify-center lg:justify-end">
             <img
-              src={mobileAppImage}
+              src="/hero-app-screens.svg"
               alt="Pexly Mobile App Screens"
               width={615}
               height={550}
+              fetchPriority="high"
+              decoding="sync"
               className="max-w-full h-auto max-h-[550px] object-contain scale-110"
             />
           </div>
