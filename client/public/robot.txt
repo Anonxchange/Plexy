@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /wallet
+Disallow: /account-settings
+Disallow: /devices
+Disallow: /notification-settings
+Disallow: /verification
+Disallow: /kyc/
+Disallow: /trade/
+Disallow: /merchant-application
+Disallow: /merchant-downgrade
+Disallow: /admin/
+Disallow: /developer
+Disallow: /fund-staging
+Disallow: /submit-idea
+Disallow: /favorite-offers
+Disallow: /trusted-users
+Disallow: /blocked-users
+Disallow: /trade-statistics
+Disallow: /trade-history
+Disallow: /notifications
+Disallow: /referral
+Disallow: /rewards
+
+Sitemap: https://www.pexly.app/sitemap.xml
