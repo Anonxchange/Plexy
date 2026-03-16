@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 const AppSidebar = lazy(() => import("./app-sidebar").then(m => ({ default: m.AppSidebar })));
 import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
 import { useWalletData } from "@/hooks/use-wallet-data";
 import { 
@@ -61,7 +61,6 @@ export function AppHeader() {
   const { user, signOut } = useAuth();
   const [location, navigate] = useLocation();
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
-  const supabase = createClient();
   const { verificationLevel, levelConfig } = useVerificationGuard();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { toast } = useToast();
@@ -81,18 +80,18 @@ export function AppHeader() {
   useEffect(() => {
     if (!user) return;
 
-    const checkCurrency = () => {
-      const stored = localStorage.getItem(`pexly_currency_${user.id}`);
-      if (stored) {
-        const upper = stored.toUpperCase();
-        if (upper !== preferredCurrency) {
-          setPreferredCurrency(upper);
-        }
+    // Use the storage event instead of polling so currency changes from other
+    // tabs are picked up without burning a timer every second on the main thread.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== `pexly_currency_${user.id}` || !e.newValue) return;
+      const upper = e.newValue.toUpperCase();
+      if (upper !== preferredCurrency) {
+        setPreferredCurrency(upper);
       }
     };
 
-    const interval = setInterval(checkCurrency, 1000);
-    return () => clearInterval(interval);
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, [user, preferredCurrency]);
 
   useEffect(() => {
@@ -131,6 +130,7 @@ export function AppHeader() {
       fetchProfileAvatar();
       
       const fetchProfile = async () => {
+        const supabase = await getSupabase();
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('username, preferred_currency')
@@ -147,6 +147,7 @@ export function AppHeader() {
 
   const fetchProfileAvatar = async () => {
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('user_profiles')
         .select('avatar_url, avatar_type')
