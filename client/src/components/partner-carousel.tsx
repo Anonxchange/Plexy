@@ -17,7 +17,7 @@ const partners = [
 
 export function PartnerCarousel() {
   return (
-    <div className="bg-zinc-100 dark:bg-zinc-900/50 py-4 overflow-hidden border-y border-zinc-200 dark:border-zinc-800 backdrop-blur-sm">
+    <div className="bg-zinc-100 dark:bg-zinc-900/50 py-4 overflow-hidden border-y border-zinc-200 dark:border-zinc-800 backdrop-blur-sm" style={{ contain: "content" }}>
       {/*
         will-change:transform promotes this element to its own compositor layer.
         The translateX animation then runs entirely on the GPU thread and cannot
