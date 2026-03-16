@@ -33,6 +33,16 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
     refetchInterval: 10_000,
   });
 
+  const { data: exchangeInfo } = useQuery({
+    queryKey: ["spot-exchange-info"],
+    queryFn: () => asterMarket.spotExchangeInfo(),
+    staleTime: 300_000,
+  });
+
+  const baseAsset = pair.split("/")[0];
+  const baseAddress: string | undefined = (exchangeInfo?.symbols ?? [])
+    .find((s: any) => s.baseAsset === baseAsset)?.baseAssetAddress ?? undefined;
+
   const lastPrice = ticker?.lastPrice ? parseFloat(ticker.lastPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) : "—";
   const priceChangePercent = ticker?.priceChangePercent ? parseFloat(ticker.priceChangePercent) : null;
   const changeStr = priceChangePercent !== null
@@ -55,7 +65,7 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
           onClick={() => setSelectorOpen(true)}
           className="flex items-center gap-2 md:gap-4 flex-shrink-0"
         >
-          <CoinIcon symbol={pair.split("/")[0]} className="w-8 md:w-10 h-8 md:h-10" />
+          <CoinIcon symbol={baseAsset} address={baseAddress} className="w-8 md:w-10 h-8 md:h-10" />
 
           <span className="text-foreground font-bold text-base md:text-xl tracking-tight">
             {pair}
