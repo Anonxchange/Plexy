@@ -18,7 +18,14 @@ const partners = [
 export function PartnerCarousel() {
   return (
     <div className="bg-zinc-100 dark:bg-zinc-900/50 py-4 overflow-hidden border-y border-zinc-200 dark:border-zinc-800 backdrop-blur-sm">
-      <div className="flex gap-16 items-center animate-scroll [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]">
+      {/*
+        will-change:transform promotes this element to its own compositor layer.
+        The translateX animation then runs entirely on the GPU thread and cannot
+        trigger a layout recalculation on the main thread.
+      */}
+      <div
+        className="flex gap-16 items-center animate-scroll [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)] [will-change:transform]"
+      >
         {[...partners, ...partners].map((partner, index) => (
           <div 
             key={`${partner.name}-${index}`} 
