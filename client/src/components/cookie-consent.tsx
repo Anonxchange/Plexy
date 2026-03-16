@@ -36,7 +36,7 @@ export function CookieConsent() {
               This website uses cookies to ensure you get the best experience on our website.{" "}
               <a 
                 href="/privacy" 
-                className="text-primary hover:underline font-medium"
+                className="underline font-medium text-foreground hover:opacity-70"
               >
                 Learn more
               </a>
