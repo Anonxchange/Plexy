@@ -58,6 +58,7 @@ function formatChange(pct: string): string {
 interface MarketRow {
   symbol:     string;
   base:       string;
+  address:    string | undefined;
   volume:     string;
   rawVolume:  number;
   price:      string;
@@ -74,6 +75,7 @@ function buildRows(
   tag: "Spot" | "Futures",
   subTypeMap: Record<string, string[]>,
   newSet: Set<string>,
+  addressMap: Record<string, string> = {},
 ): MarketRow[] {
   return tickers
     .filter(t => !t.symbol.startsWith("TEST"))
@@ -85,6 +87,7 @@ function buildRows(
       return {
         symbol:    displayPair,
         base,
+        address:   addressMap[base],
         volume:    formatVolume(parseFloat(t.quoteVolume)),
         rawVolume: parseFloat(t.quoteVolume),
         price:     parseFloat(t.lastPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }),
@@ -190,18 +193,32 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
     });
   }, [futuresSubTypeMap, futuresNewSet]);
 
+  const spotAddressMap: Record<string, string> = useMemo(() => {
+    const symbols: any[] = spotExchangeInfo?.symbols ?? [];
+    const map: Record<string, string> = {};
+    symbols.forEach(s => { if (s.baseAssetAddress) map[s.baseAsset] = s.baseAssetAddress; });
+    return map;
+  }, [spotExchangeInfo]);
+
+  const futuresAddressMap: Record<string, string> = useMemo(() => {
+    const symbols: any[] = futuresExchangeInfo?.symbols ?? [];
+    const map: Record<string, string> = {};
+    symbols.forEach(s => { if (s.baseAssetAddress) map[s.baseAsset] = s.baseAssetAddress; });
+    return map;
+  }, [futuresExchangeInfo]);
+
   const spotRows: MarketRow[] = useMemo(() =>
     Array.isArray(spotTickers)
-      ? buildRows(spotTickers, "Spot", spotMemeSubTypeMap, spotNewSet)
+      ? buildRows(spotTickers, "Spot", spotMemeSubTypeMap, spotNewSet, spotAddressMap)
       : [],
-    [spotTickers, spotMemeSubTypeMap, spotNewSet],
+    [spotTickers, spotMemeSubTypeMap, spotNewSet, spotAddressMap],
   );
 
   const futuresRows: MarketRow[] = useMemo(() =>
     Array.isArray(futuresTickers)
-      ? buildRows(futuresTickers, "Futures", futuresSubTypeMap, futuresNewSet)
+      ? buildRows(futuresTickers, "Futures", futuresSubTypeMap, futuresNewSet, futuresAddressMap)
       : [],
-    [futuresTickers, futuresSubTypeMap, futuresNewSet],
+    [futuresTickers, futuresSubTypeMap, futuresNewSet, futuresAddressMap],
   );
 
   const isLoading = (activeCategory === "Spot" && spotLoading) ||
@@ -326,7 +343,7 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Star className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <CoinIcon symbol={m.base} />
+                <CoinIcon symbol={m.base} address={m.address} />
                 <div className="flex flex-col items-start">
                   <span className="text-sm text-foreground font-medium">{m.symbol}</span>
                   <div className="flex gap-1 flex-wrap">
