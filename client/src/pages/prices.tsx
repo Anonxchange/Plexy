@@ -210,10 +210,9 @@ export default function Prices() {
     <>
       <style>{`
         /* Explorer Page Custom Styles */
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
         .explorer-wrapper {
-          font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+          font-family: 'Inter', system-ui, sans-serif;
         }
 
         .gradient-text {
