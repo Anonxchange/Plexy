@@ -3,8 +3,6 @@ import { User, Session } from "@supabase/supabase-js";
 import { useLocation } from "wouter";
 import { supabase } from "./supabase";
 import { presenceTracker } from './presence';
-import { nonCustodialWalletManager } from "./non-custodial-wallet";
-import { wipeSecureStorage } from "./secure-storage-wiper";
 
 interface PendingAuth {
   userId: string;
@@ -372,13 +370,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       //    This ensures we never rely solely on potentially stale IDB data.
       let wallets: any[] = [];
       try {
+        const { nonCustodialWalletManager } = await import("./non-custodial-wallet");
         const supabaseWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
         if (supabaseWallets && supabaseWallets.length > 0) {
           wallets = supabaseWallets;
         }
       } catch (err) {
         console.error("Supabase wallet sync failed, falling back to IDB cache:", err);
-        // Fallback: read from IDB cache if Supabase is unreachable
+        const { nonCustodialWalletManager } = await import("./non-custodial-wallet");
         wallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
       }
 
@@ -686,6 +685,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Wipe all browser storage: localStorage, sessionStorage, and IndexedDB.
     // This ensures no decrypted wallet data, cached keys, or session tokens remain.
+    const { wipeSecureStorage } = await import("./secure-storage-wiper");
     await wipeSecureStorage();
   }, [setSessionPassword, setPendingOTPWithTimestamp]);
 
