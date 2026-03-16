@@ -16,14 +16,16 @@ import { CookieConsent } from "@/components/cookie-consent";
 import { WalletSetupDialog } from "@/components/wallet/WalletSetupDialog";
 import { PageSkeleton, ChartPageSkeleton } from "@/components/page-skeleton";
 
-// Core pages - loaded eagerly
+// Core pages - loaded eagerly (only what's needed for first-visit home page)
 import Home from "@/pages/home";
-import Wallet from "@/pages/wallet";
-import { SignUp } from "@/pages/signup";
-import { SignIn } from "@/pages/signin";
-import { Dashboard } from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
 import { VerifyEmail } from "@/pages/verify-email";
+
+// Auth/app pages - lazy loaded since home page is the universal first stop
+const SignIn = lazy(() => import("@/pages/signin").then(m => ({ default: m.SignIn })));
+const SignUp = lazy(() => import("@/pages/signup").then(m => ({ default: m.SignUp })));
+const Dashboard = lazy(() => import("@/pages/dashboard").then(m => ({ default: m.Dashboard })));
+const Wallet = lazy(() => import("@/pages/wallet"));
 
 // Rarely first-visited pages - lazy loaded to reduce initial bundle
 const Developer = lazy(() => import("./pages/developer").then(m => ({ default: m.Developer })));
@@ -137,7 +139,7 @@ function Router() {
       <Route path="/submit-idea">{() => <LazyRoute component={SubmitIdea} />}</Route>
       <Route path="/spot">{() => <LazyRoute component={spot} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/swap">{() => <LazyRoute component={Swap} />}</Route>
-      <Route path="/wallet" component={Wallet} />
+      <Route path="/wallet">{() => <LazyRoute component={Wallet} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/analysis">{() => <LazyRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
       <Route path="/wallet/visa-card/details">{() => <LazyRoute component={VisaCardDetails} />}</Route>
@@ -166,10 +168,10 @@ function Router() {
       <Route path="/admin/blog">{() => <LazyRoute component={AdminBlogLazy} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/admin/gift-cards">{() => <LazyRoute component={adminGiftCards} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/notifications">{() => <LazyRoute component={NotificationsPage} />}</Route>
-      <Route path="/signup" component={SignUp} />
-      <Route path="/signin" component={SignIn} />
+      <Route path="/signup">{() => <LazyRoute component={SignUp} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/signin">{() => <LazyRoute component={SignIn} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/verify-email" component={VerifyEmail} />
-      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/dashboard">{() => <LazyRoute component={Dashboard} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/profile/:userId?">{() => <LazyRoute component={Profile} />}</Route>
       <Route path="/shop">{() => <LazyRoute component={Shop} />}</Route>
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
