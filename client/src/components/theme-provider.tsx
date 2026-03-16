@@ -21,8 +21,17 @@ export function ThemeProvider({ children, defaultTheme = "light" }: ThemeProvide
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
+    const other: Theme = theme === "dark" ? "light" : "dark";
+
+    // The inline script in index.html already sets the correct class before
+    // first paint. Only touch the DOM if the class genuinely needs to change
+    // (i.e. the user is actively switching themes), avoiding a full-document
+    // style recalculation on every initial page load.
+    if (!root.classList.contains(theme) || root.classList.contains(other)) {
+      root.classList.remove("light", "dark");
+      root.classList.add(theme);
+    }
+
     localStorage.setItem("theme", theme);
   }, [theme]);
 
