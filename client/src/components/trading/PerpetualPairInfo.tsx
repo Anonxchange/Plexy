@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Star, ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery } from "@tanstack/react-query";
+import { asterMarket } from "@/lib/asterdex-service";
 import SymbolSelector from "./SymbolSelector";
 import { CoinIcon } from "./CoinIcon";
 
@@ -15,6 +17,16 @@ const PerpetualPairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: 
   const [selectorOpen, setSelectorOpen] = useState(false);
   const isMobile = useIsMobile();
 
+  const { data: exchangeInfo } = useQuery({
+    queryKey: ["futures-exchange-info"],
+    queryFn: () => asterMarket.futuresExchangeInfo(),
+    staleTime: 300_000,
+  });
+
+  const baseAsset = pair.split("/")[0];
+  const baseAddress: string | undefined = (exchangeInfo?.symbols ?? [])
+    .find((s: any) => s.baseAsset === baseAsset)?.baseAssetAddress ?? undefined;
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-2 md:gap-4 px-3 md:px-5 py-3 border-b border-border bg-background">
@@ -24,7 +36,7 @@ const PerpetualPairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: 
           onClick={() => setSelectorOpen(true)}
           className="flex items-center gap-2 md:gap-4 flex-shrink-0"
         >
-          <CoinIcon symbol={pair.split("/")[0]} className="w-8 md:w-10 h-8 md:h-10" />
+          <CoinIcon symbol={baseAsset} address={baseAddress} className="w-8 md:w-10 h-8 md:h-10" />
 
           <span className="text-foreground font-bold text-base md:text-xl tracking-tight">
             {pair}
