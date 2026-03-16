@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowUpRight, ArrowRight, Smartphone, Wifi, ArrowLeftRight, CreditCard, Snowflake, Info, Ban, Lock, Check, Star, Globe, Headphones, ShoppingCart, CheckCircle, PlusCircle } from 'lucide-react';
 import {
@@ -100,20 +100,23 @@ const lifestyleCards = [
 const LifestyleCarousel = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const cachedWidthRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) cachedWidthRef.current = entry.contentRect.width * 0.75;
+    });
+    observer.observe(scrollRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const scrollToNext = () => {
     const nextIndex = (activeIndex + 1) % lifestyleCards.length;
     setActiveIndex(nextIndex);
-    if (scrollRef.current) {
-      // Use clientWidth to avoid forced reflow if possible, or just use constant/calculated value
-      // However, for layout calculation we need to know the width.
-      // To mitigate forced reflow, we can use a ResizeObserver or just assume the width based on CSS
-      // Since this is a small edit, I'll use window.innerWidth or a fixed value for the calculation
-      // but better yet, I'll just use the property and suggest avoiding it if it grows.
-      // Actually, standard mitigation is to cache it or use a more efficient way.
-      // I will replace offsetWidth with a constant if possible, but 75vw is dynamic.
-      const cardWidth = scrollRef.current.getBoundingClientRect().width * 0.75;
-      scrollRef.current.scrollTo({ left: nextIndex * (cardWidth + 16), behavior: 'smooth' });
+    if (scrollRef.current && cachedWidthRef.current > 0) {
+      scrollRef.current.scrollTo({ left: nextIndex * (cachedWidthRef.current + 16), behavior: 'smooth' });
     }
   };
 
