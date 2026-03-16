@@ -9,11 +9,10 @@
     <!-- Preconnect hints for external APIs (improves LCP by establishing early connections) -->
     <link rel="preconnect" href="https://hvpeycnedmzrjshmvgri.supabase.co" crossorigin="anonymous">
     <link rel="dns-prefetch" href="https://hvpeycnedmzrjshmvgri.supabase.co">
-    <link rel="preconnect" href="https://assets.coingecko.com" crossorigin="anonymous">
+    <link rel="preconnect" href="https://assets.coingecko.com">
     <link rel="dns-prefetch" href="https://assets.coingecko.com">
   
-    <!-- Modulepreload only critical entry point (not crypto-prices to avoid blocking) -->
-    <link rel="modulepreload" href="/src/main.tsx">
+    <!-- Modulepreload is injected automatically by Vite for built assets -->
     <link rel="preload" as="image" href="/favicon.svg" type="image/svg+xml">
     <link rel="preload" as="image" href="/icons/step1.svg" type="image/svg+xml">
     <!-- LCP hero image — preloaded so the browser fetches it immediately -->
