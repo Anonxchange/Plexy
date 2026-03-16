@@ -21,9 +21,9 @@ export function CryptoTicker() {
   }
 
   return (
-    <div className="bg-muted border-y border-border py-4 overflow-hidden">
+    <div className="bg-muted border-y border-border py-4 overflow-hidden" style={{ contain: "content" }}>
       <div className="relative">
-        <div className="flex gap-8 animate-scroll">
+        <div className="flex gap-8 animate-scroll" style={{ willChange: "transform" }}>
           {duplicatedPrices.map((crypto, index) => (
             <div key={`${crypto.symbol}-${index}`} className="flex items-center gap-3 min-w-fit whitespace-nowrap">
               <div className="font-mono font-semibold text-foreground">{crypto.symbol}</div>
