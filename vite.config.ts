@@ -49,13 +49,6 @@ export default defineConfig({
   },
 
   optimizeDeps: {
-    include: [
-      "@noble/curves",
-      "@noble/hashes",
-      "@scure/bip32",
-      "@scure/bip39",
-      "@scure/btc-signer",
-    ],
     esbuildOptions: {
       target: "es2020",
     },
@@ -72,20 +65,39 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     reportCompressedSize: false,
 
+    modulePreload: {
+      resolveDependencies: (filename, deps) => {
+        const lazyPrefixes = ["vendor-ui-x", "vendor-charts", "vendor-canvas", "vendor-crypto"];
+        if (lazyPrefixes.some((p) => filename.includes(p))) return [];
+        return deps;
+      },
+    },
+
     rollupOptions: {
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom"],
+
+          // Only the 6 Radix UI packages needed for the initial render
+          // (Button/slot, Sheet/dialog, DropdownMenu, Avatar, Toast, Tooltip)
           "vendor-ui": [
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-toast",
+            "@radix-ui/react-tooltip",
+          ],
+
+          // Extended UI – only used inside lazy-loaded pages/dialogs.
+          // This chunk is never preloaded on the home page.
+          "vendor-ui-x": [
             "@radix-ui/react-accordion",
             "@radix-ui/react-alert-dialog",
             "@radix-ui/react-aspect-ratio",
-            "@radix-ui/react-avatar",
             "@radix-ui/react-checkbox",
             "@radix-ui/react-collapsible",
             "@radix-ui/react-context-menu",
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
             "@radix-ui/react-hover-card",
             "@radix-ui/react-label",
             "@radix-ui/react-menubar",
@@ -97,28 +109,21 @@ export default defineConfig({
             "@radix-ui/react-select",
             "@radix-ui/react-separator",
             "@radix-ui/react-slider",
-            "@radix-ui/react-slot",
             "@radix-ui/react-switch",
             "@radix-ui/react-tabs",
-            "@radix-ui/react-toast",
             "@radix-ui/react-toggle",
             "@radix-ui/react-toggle-group",
-            "@radix-ui/react-tooltip",
           ],
+
           "vendor-icons": ["lucide-react"],
-          "vendor-charts": ["recharts"],
-          "vendor-canvas": ["html2canvas"],
+
+          // vendor-charts, vendor-canvas, vendor-crypto intentionally removed
+          // from manualChunks. Recharts, html2canvas, and the crypto libs are
+          // only imported by lazy-loaded pages so Rollup will co-locate them in
+          // those lazy chunks – they are never fetched on the initial page load.
+
           "vendor-db": ["@supabase/supabase-js"],
-           "vendor-crypto": [
-            "@scure/bip32",
-            "@scure/bip39",
-            "@scure/btc-signer",
-            "@scure/base",
-            "@noble/curves",
-            "@noble/hashes",
-            "@noble/ed25519",
-            "@noble/secp256k1",
-            ],
+
           "vendor-utils": [
             "@tanstack/react-query",
             "wouter",
