@@ -45,6 +45,7 @@ export function WalletHeader({
               <button
                 onClick={() => setShowBalance(v => !v)}
                 className="hover:text-foreground transition-colors"
+                aria-label={showBalance ? "Hide wallet balance" : "Show wallet balance"}
               >
                 {showBalance ? (
                   <Eye className="h-4 w-4" />
