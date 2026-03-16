@@ -195,6 +195,7 @@ export function AppHeader() {
               size="icon" 
               onClick={() => setMobileMenuOpen(true)}
               data-testid="button-sidebar-toggle"
+              aria-label="Open navigation menu"
               className="border-border lg:hidden"
             >
               <Menu className="h-5 w-5" />
@@ -481,6 +482,7 @@ export function AppHeader() {
                   <button 
                     className="inline-flex items-center justify-center h-4 w-4 hover:opacity-70 transition-opacity flex-shrink-0"
                     onClick={() => setBalanceVisible(!balanceVisible)}
+                    aria-label={balanceVisible ? "Hide balance" : "Show balance"}
                   >
                     {balanceVisible ? (
                       <Eye className="h-3 w-3 text-muted-foreground" />
