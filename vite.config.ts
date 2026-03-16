@@ -13,12 +13,26 @@ const deferNonCriticalCss: Plugin = {
   },
 };
 
+const preloadEntryScript: Plugin = {
+  name: "preload-entry-script",
+  apply: "build",
+  transformIndexHtml(html) {
+    const match = html.match(/<script type="module" crossorigin src="([^"]+\.js)">/);
+    if (!match) return html;
+    const entrySrc = match[1];
+    return html.replace(
+      "<head>",
+      `<head>\n  <link rel="modulepreload" crossorigin href="${entrySrc}">`
+    );
+  },
+};
+
 export default defineConfig({
   root: "client",
   envDir: "../",
   base: "/",
 
-  plugins: [react(), deferNonCriticalCss],
+  plugins: [react(), deferNonCriticalCss, preloadEntryScript],
 
   resolve: {
     alias: {
