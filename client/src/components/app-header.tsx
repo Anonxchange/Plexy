@@ -581,6 +581,7 @@ export function AppHeader() {
                 size="icon" 
                 onClick={() => setMobileMenuOpen(true)}
                 data-testid="button-sidebar-toggle"
+                aria-label="Open navigation menu"
                 className="border-border lg:hidden"
               >
                 <Menu className="h-5 w-5" />
