@@ -24,12 +24,13 @@ import { SignIn } from "@/pages/signin";
 import { Dashboard } from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
 import { VerifyEmail } from "@/pages/verify-email";
-import { Developer } from "./pages/developer";
-import { FundStaging } from "@/components/fund-staging";
-import KYCCallback from "@/pages/kyc-callback";
-import AddressDetail from "@/pages/address-detail";
-import BlockDetail from "@/pages/block-detail";
-import DevicesPage from "@/pages/devices";
+
+// Rarely first-visited pages - lazy loaded to reduce initial bundle
+const Developer = lazy(() => import("./pages/developer").then(m => ({ default: m.Developer })));
+const KYCCallback = lazy(() => import("@/pages/kyc-callback"));
+const AddressDetail = lazy(() => import("@/pages/address-detail"));
+const BlockDetail = lazy(() => import("@/pages/block-detail"));
+const DevicesPage = lazy(() => import("@/pages/devices"));
 
 // Lazy loaded pages
 const Swap = lazy(() => import("@/pages/swap").then(m => ({ default: m.Swap })));
@@ -128,9 +129,9 @@ function Router() {
       <Route path="/explorer/prices">{() => <LazyRoute component={Prices} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/blocks">{() => <LazyRoute component={Blocks} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/transactions">{() => <LazyRoute component={Transactions} skeleton={<ChartPageSkeleton />} />}</Route>
-      <Route path="/explorer/address/:address" component={AddressDetail} />
+      <Route path="/explorer/address/:address">{() => <LazyRoute component={AddressDetail} />}</Route>
       <Route path="/explorer/transaction/:hash">{() => <LazyRoute component={TransactionDetail} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/explorer/block/:hash" component={BlockDetail} />
+      <Route path="/explorer/block/:hash">{() => <LazyRoute component={BlockDetail} />}</Route>
       <Route path="/explorer/asset/:symbol">{() => <LazyRoute component={ExplorerAsset} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/markets">{() => <LazyRoute component={marketsPage} />}</Route>
       <Route path="/submit-idea">{() => <LazyRoute component={SubmitIdea} />}</Route>
@@ -151,12 +152,11 @@ function Router() {
       <Route path="/checkout">{() => <LazyRoute component={Checkout} />}</Route>
       <Route path="/trade-history">{() => <LazyRoute component={TradeHistory} />}</Route>
       <Route path="/account-settings">{() => <LazyRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/devices" component={DevicesPage} />
+      <Route path="/devices">{() => <LazyRoute component={DevicesPage} />}</Route>
       <Route path="/notification-settings">{() => <LazyRoute component={NotificationSettings} />}</Route>
-      <Route path="/developer" component={Developer} />
-      <Route path="/fund-staging" component={FundStaging} />
+      <Route path="/developer">{() => <LazyRoute component={Developer} />}</Route>
       <Route path="/verification">{() => <LazyRoute component={VerificationPage} />}</Route>
-      <Route path="/kyc/callback" component={KYCCallback} />
+      <Route path="/kyc/callback">{() => <LazyRoute component={KYCCallback} />}</Route>
       <Route path="/merchant-application">{() => <LazyRoute component={MerchantApplicationPage} />}</Route>
       <Route path="/merchant-downgrade">{() => <LazyRoute component={MerchantDowngradePage} />}</Route>
       <Route path="/admin">{() => <LazyRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
