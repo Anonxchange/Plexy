@@ -222,6 +222,7 @@ export function HeroSection() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCrypto}
+                        aria-label={`Select cryptocurrency, currently ${cryptoCurrencies.find(c => c.code === crypto)?.name ?? crypto}`}
                         className="h-14 w-full justify-between text-base"
                         data-testid="select-crypto"
                       >
@@ -270,6 +271,7 @@ export function HeroSection() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCurrency}
+                        aria-label={`Select currency, currently ${currency ? currencies.find(c => c.code === currency)?.name ?? currency : 'none'}`}
                         className="h-14 w-full justify-between text-base"
                         data-testid="select-currency"
                       >
@@ -330,6 +332,7 @@ export function HeroSection() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openPayment}
+                        aria-label={`Select payment method, currently ${paymentMethod || 'none'}`}
                         className="h-14 w-full justify-between text-base"
                         data-testid="select-payment-method"
                       >
@@ -455,6 +458,7 @@ export function HeroSection() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCryptoDesktop}
+                        aria-label={`Select cryptocurrency, currently ${cryptoCurrencies.find(c => c.code === crypto)?.name ?? crypto}`}
                         className="h-14 w-full justify-between text-base"
                         data-testid="select-crypto-desktop"
                         type="button"
@@ -504,6 +508,7 @@ export function HeroSection() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCurrencyDesktop}
+                        aria-label={`Select currency, currently ${currency ? currencies.find(c => c.code === currency)?.name ?? currency : 'none'}`}
                         className="h-14 w-full justify-between text-base"
                         data-testid="select-currency-desktop"
                         type="button"
@@ -565,6 +570,7 @@ export function HeroSection() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={openPaymentDesktop}
+                      aria-label={`Select payment method, currently ${paymentMethod || 'none'}`}
                       className="h-14 w-full justify-between text-base"
                       data-testid="select-payment-method-desktop"
                       type="button"
