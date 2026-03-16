@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import type { User, Session } from "@supabase/supabase-js";
 import { useLocation } from "wouter";
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 import { presenceTracker } from './presence';
 
 interface PendingAuth {
@@ -200,6 +200,7 @@ function getDeviceInfo() {
 
 async function trackDevice(userId: string) {
   try {
+    const supabase = await getSupabase();
     const deviceInfo = getDeviceInfo();
     let ipAddress = 'Unknown';
     try {
@@ -356,6 +357,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     try {
+      const supabase = await getSupabase();
       checkedUsersRef.current.add(userId);
       
       // DECISION FLOW:
@@ -503,71 +505,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      if (window.location.pathname === '/verify-email') {
-        setSession(null);
-        setUser(null);
-        return;
-      }
+    // Refs so the cleanup function can reach these even though they are
+    // assigned asynchronously inside the getSupabase().then() callback.
+    let subscription: { unsubscribe(): void } | undefined;
+    let healthCheckInterval: ReturnType<typeof setInterval> | undefined;
 
-      // ALWAYS update session for token refresh
-      if (event === 'TOKEN_REFRESHED') {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        return;
-      }
-
-      // Handle logout/session clear
-      if (event === 'SIGNED_OUT' || !currentSession) {
-        setSession(null);
-        setUser(null);
-        setWalletImportState({ required: false, expectedAddress: null });
-        checkedUsersRef.current.clear();
-        isTrackingRef.current = false;
-        presenceTracker.stopTracking();
-        return;
-      }
-
-      // Check sessionStorage directly to avoid stale closure
-      if (!hasPendingOTP()) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-        
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          // Defer async work to avoid blocking the callback
-          setTimeout(() => {
-            trackDevice(currentSession.user.id);
-            checkWalletOnAuthRef.current(currentSession.user.id);
-          }, 0);
+    // Load Supabase asynchronously — vendor-db chunk is NOT part of the
+    // initial bundle; it downloads in the background after first render.
+    getSupabase().then((supabase) => {
+      // Set up auth state listener FIRST
+      const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+        if (window.location.pathname === '/verify-email') {
+          setSession(null);
+          setUser(null);
+          return;
         }
-      }
 
-      if (currentSession.user && !isTrackingRef.current) {
-        isTrackingRef.current = true;
-        presenceTracker.startTracking(currentSession.user.id);
-      }
+        // ALWAYS update session for token refresh
+        if (event === 'TOKEN_REFRESHED') {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          return;
+        }
+
+        // Handle logout/session clear
+        if (event === 'SIGNED_OUT' || !currentSession) {
+          setSession(null);
+          setUser(null);
+          setWalletImportState({ required: false, expectedAddress: null });
+          checkedUsersRef.current.clear();
+          isTrackingRef.current = false;
+          presenceTracker.stopTracking();
+          return;
+        }
+
+        // Check sessionStorage directly to avoid stale closure
+        if (!hasPendingOTP()) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            // Defer async work to avoid blocking the callback
+            setTimeout(() => {
+              trackDevice(currentSession.user.id);
+              checkWalletOnAuthRef.current(currentSession.user.id);
+            }, 0);
+          }
+        }
+
+        if (currentSession.user && !isTrackingRef.current) {
+          isTrackingRef.current = true;
+          presenceTracker.startTracking(currentSession.user.id);
+        }
+      });
+      subscription = sub;
+
+      // Add periodic session health check
+      healthCheckInterval = setInterval(async () => {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (currentSession && sessionTokenRef.current !== currentSession.access_token && !hasPendingOTP()) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+        }
+      }, 60000);
+
+      // Then get initial session
+      supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+        if (!hasPendingOTP()) {
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+        }
+        setLoading(false);
+      });
     });
 
-    // Add periodic session health check
-    const healthCheckInterval = setInterval(async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (currentSession && sessionTokenRef.current !== currentSession.access_token && !hasPendingOTP()) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-      }
-    }, 60000);
-
-    // Then get initial session
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      if (!hasPendingOTP()) {
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-      }
-      setLoading(false);
-    });
-
-    // Force wallet check handler
+    // Force wallet check handler (no supabase needed — delegates to ref)
     const handleForceCheck = (e: CustomEvent<{ userId: string }>) => {
       if (e.detail?.userId) {
         const userId = e.detail.userId;
@@ -581,13 +593,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('force-wallet-check', handleForceCheck as EventListener);
 
     return () => {
-      subscription.unsubscribe();
-      clearInterval(healthCheckInterval);
+      subscription?.unsubscribe();
+      if (healthCheckInterval !== undefined) clearInterval(healthCheckInterval);
       window.removeEventListener('force-wallet-check', handleForceCheck as EventListener);
     };
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, captchaToken?: string) => {
+    const supabase = await getSupabase();
     const baseUrl = window.location.hostname.includes('pexly.app') 
       ? 'https://pexly.app' 
       : window.location.origin;
@@ -610,6 +623,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string, captchaToken?: string) => {
+    const supabase = await getSupabase();
     const { error, data } = await supabase.auth.signInWithPassword({ 
       email, 
       password,
@@ -658,6 +672,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const cancelOTPVerification = useCallback(async () => {
     // Sign out from Supabase to clear the pending session
+    const supabase = await getSupabase();
     await supabase.auth.signOut();
     
     setPendingOTPWithTimestamp(null);
@@ -681,6 +696,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPendingSession(null);
 
     // Sign out from Supabase first so the server-side session is revoked
+    const supabase = await getSupabase();
     await supabase.auth.signOut();
 
     // Wipe all browser storage: localStorage, sessionStorage, and IndexedDB.
