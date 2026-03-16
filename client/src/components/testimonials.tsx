@@ -172,16 +172,18 @@ export function Testimonials() {
           </div>
 
           {/* Dots Indicator */}
-          <div className="flex justify-center gap-2 mt-4">
+          <div className="flex justify-center gap-1 mt-4">
             {testimonials.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentIndex ? "w-8 bg-primary" : "w-2 bg-muted-foreground/30"
-                }`}
+                className="flex items-center justify-center min-w-[44px] min-h-[44px] p-3"
                 aria-label={`Go to testimonial ${index + 1}`}
-              />
+              >
+                <span className={`h-2 rounded-full transition-all duration-300 block ${
+                  index === currentIndex ? "w-8 bg-primary" : "w-2 bg-muted-foreground/30"
+                }`} />
+              </button>
             ))}
           </div>
         </div>
