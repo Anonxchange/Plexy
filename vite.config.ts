@@ -1,13 +1,24 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+
+const deferNonCriticalCss: Plugin = {
+  name: "defer-non-critical-css",
+  apply: "build",
+  transformIndexHtml(html) {
+    return html.replace(
+      /<link rel="stylesheet" crossorigin href="([^"]+\.css)">/g,
+      `<link rel="preload" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" href="$1">\n    <noscript><link rel="stylesheet" crossorigin href="$1"></noscript>`
+    );
+  },
+};
 
 export default defineConfig({
   root: "client",
   envDir: "../",
   base: "/",
 
-  plugins: [react()],
+  plugins: [react(), deferNonCriticalCss],
 
   resolve: {
     alias: {
