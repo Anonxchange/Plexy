@@ -13,7 +13,7 @@ import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
 import { CookieConsent } from "@/components/cookie-consent";
-import { WalletSetupDialog } from "@/components/wallet/WalletSetupDialog";
+const WalletSetupDialog = lazy(() => import("@/components/wallet/WalletSetupDialog").then(m => ({ default: m.WalletSetupDialog })));
 import { PageSkeleton, ChartPageSkeleton } from "@/components/page-skeleton";
 
 // Core pages - loaded eagerly (only what's needed for first-visit home page)
@@ -223,13 +223,15 @@ function AppContent() {
       {!hideAppFooter && <AppFooter />}
       
       {user && (
-        <WalletSetupDialog 
-          open={walletImportState.required} 
-          onOpenChange={(open) => setWalletImportState({ ...walletImportState, required: open })}
-          userId={user.id}
-          onSuccess={() => setWalletImportState({ required: false, expectedAddress: null })}
-          expectedAddress={walletImportState.expectedAddress}
-        />
+        <Suspense fallback={null}>
+          <WalletSetupDialog 
+            open={walletImportState.required} 
+            onOpenChange={(open) => setWalletImportState({ ...walletImportState, required: open })}
+            userId={user.id}
+            onSuccess={() => setWalletImportState({ required: false, expectedAddress: null })}
+            expectedAddress={walletImportState.expectedAddress}
+          />
+        </Suspense>
       )}
 
       <Toaster />
