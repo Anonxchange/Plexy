@@ -3,8 +3,7 @@ import { X, Search, Star, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { asterMarket, Ticker24h } from "@/lib/asterdex-service";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-const ICON_BASE = "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color";
+import { CoinIcon } from "./CoinIcon";
 
 const NEW_LISTING_DAYS = 60;
 
@@ -100,25 +99,6 @@ function buildRows(
     .sort((a, b) => b.rawVolume - a.rawVolume);
 }
 
-function CoinIcon({ symbol }: { symbol: string }) {
-  const [errored, setErrored] = useState(false);
-  const src = `${ICON_BASE}/${symbol.toLowerCase()}.svg`;
-  if (errored) {
-    return (
-      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-        <span className="text-xs font-bold text-muted-foreground">{symbol.slice(0, 2)}</span>
-      </div>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt={symbol}
-      className="w-8 h-8 rounded-full flex-shrink-0 bg-secondary"
-      onError={() => setErrored(true)}
-    />
-  );
-}
 
 const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", variant = "fullscreen" }: SymbolSelectorProps) => {
   const [search,         setSearch]         = useState("");
