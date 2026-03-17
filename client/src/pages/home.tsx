@@ -1,6 +1,8 @@
 import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import { HeroSection } from "@/components/hero-section";
 import { AppFooter } from "@/components/app-footer";
+import { CTASection } from "@/components/cta-section";
+import { TrustStats } from "@/components/trust-stats";
 import { useSchema, homePageSchema } from "@/hooks/use-schema";
 
 const PartnerCarousel = lazy(() =>
@@ -15,14 +17,8 @@ const FeatureCarousel = lazy(() =>
 const PaymentMethods = lazy(() =>
   import("@/components/payment-methods").then(m => ({ default: m.PaymentMethods }))
 );
-const TrustStats = lazy(() =>
-  import("@/components/trust-stats").then(m => ({ default: m.TrustStats }))
-);
 const Testimonials = lazy(() =>
   import("@/components/testimonials").then(m => ({ default: m.Testimonials }))
-);
-const CTASection = lazy(() =>
-  import("@/components/cta-section").then(m => ({ default: m.CTASection }))
 );
 
 /**
@@ -113,17 +109,13 @@ export default function Home() {
         <PaymentMethods />
       </LazyMount>
 
-      <LazyMount height={400}>
-        <TrustStats />
-      </LazyMount>
+      <TrustStats />
 
       <LazyMount height={600}>
         <Testimonials />
       </LazyMount>
 
-      <LazyMount height={400}>
-        <CTASection />
-      </LazyMount>
+      <CTASection />
 
       <AppFooter />
     </div>
