@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import type { User, Session } from "@supabase/supabase-js";
 import { useLocation } from "wouter";
 import { getSupabase } from "./supabase";
-import { presenceTracker } from './presence';
 
 interface PendingAuth {
   userId: string;
@@ -345,7 +344,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isWalletUnlocked, resetInactivityTimer]);
   
   const checkedUsersRef = useRef<Set<string>>(new Set());
-  const isTrackingRef = useRef<boolean>(false);
   const lastForceCheckRef = useRef<number>(0);
   const sessionTokenRef = useRef<string | null>(null);
 
@@ -534,8 +532,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setWalletImportState({ required: false, expectedAddress: null });
           checkedUsersRef.current.clear();
-          isTrackingRef.current = false;
-          presenceTracker.stopTracking();
           return;
         }
 
@@ -553,10 +549,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        if (currentSession.user && !isTrackingRef.current) {
-          isTrackingRef.current = true;
-          presenceTracker.startTracking(currentSession.user.id);
-        }
       });
       subscription = sub;
 
@@ -635,10 +627,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.user && data.session) {
       await trackDevice(data.user.id);
       
-      if (!isTrackingRef.current) {
-        isTrackingRef.current = true;
-        presenceTracker.startTracking(data.user.id);
-      }
     }
 
     return { error, data };
@@ -658,11 +646,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear pending state
     setPendingOTPWithTimestamp(null);
     setPendingSession(null);
-    
-    if (!isTrackingRef.current) {
-      isTrackingRef.current = true;
-      presenceTracker.startTracking(pendingUser.id);
-    }
     
     try {
       sessionStorage.removeItem('pendingOTP_data');
@@ -685,13 +668,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [setPendingOTPWithTimestamp]);
 
   const signOut = useCallback(async () => {
-    presenceTracker.stopTracking();
-
     // Clear sensitive in-memory state immediately
     setSessionPassword(null);
     setWalletImportState({ required: false, expectedAddress: null });
     checkedUsersRef.current.clear();
-    isTrackingRef.current = false;
     setPendingOTPWithTimestamp(null);
     setPendingSession(null);
 
