@@ -1,11 +1,11 @@
 const partners = [
   { name: "AsterDEX", logo: "/logos/IMG_4583.png", invert: false },
-  { name: "RocketX", logo: "/logos/IMG_4589.webp", invert: false },
+  { name: "RocketX", logo: "/logos/IMG_4586.webp", invert: false },
   { name: "Coinbase", logo: "/logos/coinbase-logo.svg", invert: true },
   { name: "Reloadly", logo: "/logos/IMG_4585.png", invert: false },
   { name: "Polymarket", logo: "/logos/IMG_4584.png", invert: false },
   { name: "Shopify", logo: "/logos/shopify-logo.svg", invert: true },
-  { name: "GoPlus Security", logo: "/logos/IMG_4590.webp", invert: false },
+  { name: "GoPlus Security", logo: "/logos/IMG_4588.webp", invert: false },
 ];
 
 export function PartnerCarousel() {
@@ -26,6 +26,7 @@ export function PartnerCarousel() {
           <div
             key={`${partner.name}-${index}`}
             className="flex items-center gap-3 whitespace-nowrap opacity-80 hover:opacity-100 transition-opacity"
+            aria-hidden={index >= partners.length ? true : undefined}
           >
             <img
               src={partner.logo}
