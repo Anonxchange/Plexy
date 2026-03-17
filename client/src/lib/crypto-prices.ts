@@ -1,5 +1,24 @@
 import { supabase } from "./supabase";
 
+const SUPABASE_CONFIGURED =
+  !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const EDGE_TIMEOUT_MS = 5000;
+
+async function invokeWithTimeout(
+  fn: string,
+  body: Record<string, unknown>
+): Promise<{ data: unknown; error: unknown }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EDGE_TIMEOUT_MS);
+  try {
+    const result = await supabase.functions.invoke(fn, { body, signal: controller.signal } as Parameters<typeof supabase.functions.invoke>[1]);
+    return result;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface CryptoPrice {
   symbol: string;
   name: string;
@@ -22,6 +41,12 @@ const PRICES_CACHE_DURATION = 30000; // 30 seconds for general use
 let realtimePricesCache: Record<string, CryptoPrice> | null = null;
 let lastRealtimeFetchTime = 0;
 const REALTIME_CACHE_DURATION = 5000; // 5 seconds for real-time pricing
+
+// In-flight promise deduplication — prevents concurrent callers from each
+// spawning their own network request when the cache is empty/stale.
+let inFlightPrices: Promise<Record<string, CryptoPrice>> | null = null;
+let inFlightRealtime: Promise<Record<string, CryptoPrice>> | null = null;
+let inFlightExchangeRates: Promise<ExchangeRates> | null = null;
 
 export interface HistoricalPrice {
   timestamp: number;
@@ -81,7 +106,7 @@ import { useQuery } from '@tanstack/react-query';
 
 export function useCryptoPrices(symbols: string[]) {
   return useQuery({
-    queryKey: ['crypto-prices', symbols.sort()],
+    queryKey: ['crypto-prices', [...symbols].sort()],
     queryFn: () => getCryptoPrices(symbols),
     staleTime: 60000, // 60 seconds stale time for general prices
     refetchInterval: 120000, // 2 minutes background refresh
@@ -91,7 +116,7 @@ export function useCryptoPrices(symbols: string[]) {
 
 export function useRealtimeCryptoPrices(symbols: string[]) {
   return useQuery({
-    queryKey: ['realtime-prices', symbols.sort()],
+    queryKey: ['realtime-prices', [...symbols].sort()],
     queryFn: () => getRealtimeCryptoPrices(symbols),
     staleTime: 15000, // 15 seconds stale time (Bybit/Standard REST polling)
     refetchInterval: 30000, // 30 seconds background refresh
@@ -108,63 +133,71 @@ export async function getCryptoPrices(symbols: string[]): Promise<Record<string,
       return cryptoPricesCache;
     }
   }
-  
-  try {
-    const { data, error } = await supabase.functions.invoke('crypto-prices', {
-      body: { symbols, type: 'markets' }
-    });
-    
-    if (error) throw error;
-    
-    const pricesMap = (data?.data || data) as Record<string, CryptoPrice>;
-    cryptoPricesCache = pricesMap;
-    lastPricesFetchTime = now;
-    
-    return pricesMap;
-  } catch (error) {
-    console.error('Error fetching crypto prices from Supabase:', error);
-    
-    // Try public API fallback (CoinGecko)
+
+  // Return the in-flight promise if one is already running, so concurrent
+  // callers share a single network request instead of each firing their own.
+  if (inFlightPrices) return inFlightPrices;
+
+  inFlightPrices = (async () => {
     try {
-      const ids = symbols.map(s => {
-        const mapping: Record<string, string> = {
-          BTC: 'bitcoin', ETH: 'ethereum', USDT: 'tether', USDC: 'usd-coin', 
-          SOL: 'solana', TON: 'the-open-network', XMR: 'monero', LTC: 'litecoin',
-          XRP: 'ripple', BNB: 'binancecoin', TRX: 'tron', MATIC: 'matic-network',
-          ARB: 'arbitrum', OP: 'optimism'
-        };
-        return mapping[s] || s.toLowerCase();
-      }).join(',');
-      
-      const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`);
-      if (response.ok) {
-        const data = await response.json();
-        const fallbackMap: Record<string, CryptoPrice> = {};
-        
-        symbols.forEach(s => {
-          const id = Object.keys(data).find(key => key.toLowerCase() === s.toLowerCase() || (s === 'BTC' && key === 'bitcoin') || (s === 'ETH' && key === 'ethereum'));
-          if (id && data[id]) {
-            fallbackMap[s] = {
-              symbol: s,
-              name: s,
-              current_price: data[id].usd,
-              price_change_percentage_24h: data[id].usd_24h_change || 0,
-              market_cap: data[id].usd_market_cap || 0,
-              total_volume: data[id].usd_24h_vol || 0
-            };
-          }
-        });
-        
-        if (Object.keys(fallbackMap).length > 0) {
-          return fallbackMap;
+      if (SUPABASE_CONFIGURED) {
+        try {
+          const { data, error } = await invokeWithTimeout('crypto-prices', { symbols, type: 'markets' });
+          if (error) throw error;
+          const pricesMap = ((data as any)?.data || data) as Record<string, CryptoPrice>;
+          cryptoPricesCache = pricesMap;
+          lastPricesFetchTime = Date.now();
+          return pricesMap;
+        } catch (error) {
+          console.warn('[crypto-prices] Supabase edge function unavailable, using fallback:', (error as Error)?.message ?? error);
         }
       }
-    } catch (e) {
-      console.error('Secondary fallback failed:', e);
-    }
 
-    return cryptoPricesCache || generateFallbackPrices(symbols);
-  }
+      // Try public API fallback (CoinGecko)
+      try {
+        const ids = symbols.map(s => {
+          const mapping: Record<string, string> = {
+            BTC: 'bitcoin', ETH: 'ethereum', USDT: 'tether', USDC: 'usd-coin',
+            SOL: 'solana', TON: 'the-open-network', XMR: 'monero', LTC: 'litecoin',
+            XRP: 'ripple', BNB: 'binancecoin', TRX: 'tron', MATIC: 'matic-network',
+            ARB: 'arbitrum', OP: 'optimism'
+          };
+          return mapping[s] || s.toLowerCase();
+        }).join(',');
+
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`);
+        if (response.ok) {
+          const data = await response.json();
+          const fallbackMap: Record<string, CryptoPrice> = {};
+          symbols.forEach(s => {
+            const id = Object.keys(data).find(key => key.toLowerCase() === s.toLowerCase() || (s === 'BTC' && key === 'bitcoin') || (s === 'ETH' && key === 'ethereum'));
+            if (id && data[id]) {
+              fallbackMap[s] = {
+                symbol: s, name: s,
+                current_price: data[id].usd,
+                price_change_percentage_24h: data[id].usd_24h_change || 0,
+                market_cap: data[id].usd_market_cap || 0,
+                total_volume: data[id].usd_24h_vol || 0
+              };
+            }
+          });
+          if (Object.keys(fallbackMap).length > 0) {
+            cryptoPricesCache = fallbackMap;
+            lastPricesFetchTime = Date.now();
+            return fallbackMap;
+          }
+        }
+      } catch (e) {
+        console.warn('[crypto-prices] CoinGecko fallback failed:', (e as Error)?.message ?? e);
+      }
+
+      return cryptoPricesCache || generateFallbackPrices(symbols);
+    } finally {
+      inFlightPrices = null;
+    }
+  })();
+
+  return inFlightPrices;
 }
 
 export async function getRealtimeCryptoPrices(symbols: string[]): Promise<Record<string, CryptoPrice>> {
@@ -176,91 +209,83 @@ export async function getRealtimeCryptoPrices(symbols: string[]): Promise<Record
       return realtimePricesCache;
     }
   }
-  
-  try {
-    const { data, error } = await supabase.functions.invoke('crypto-prices', {
-      body: { symbols, type: 'simple' }
-    });
-    
-    if (error) throw error;
-    
-    const pricesMap = (data?.data || data) as Record<string, CryptoPrice>;
-    realtimePricesCache = pricesMap;
-    lastRealtimeFetchTime = now;
-    
-    return pricesMap;
-  } catch (error) {
-    console.error('Error fetching realtime crypto prices from Supabase:', error);
-    
-    // Try public API fallback (Binance Public API)
-    try {
-      const results = await Promise.all(symbols.map(async s => {
-        try {
-          // Binance uses SYMBOL+USDT format for most pairs
-          const pair = s === 'USDT' ? 'USDCUSDT' : `${s}USDT`;
-          const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`);
-          if (res.ok) {
-            const data = await res.json();
-            return {
-              symbol: s,
-              price: parseFloat(data.lastPrice),
-              change: parseFloat(data.priceChangePercent),
-              vol: parseFloat(data.quoteVolume)
-            };
-          }
-        } catch (e) { return null; }
-        return null;
-      }));
-      
-      const fallbackMap: Record<string, CryptoPrice> = {};
-      results.forEach(r => {
-        if (r) {
-          fallbackMap[r.symbol] = {
-            symbol: r.symbol,
-            name: r.symbol,
-            current_price: r.price,
-            price_change_percentage_24h: r.change,
-            market_cap: 0,
-            total_volume: r.vol
-          };
-        }
-      });
-      
-      if (Object.keys(fallbackMap).length > 0) {
-        return fallbackMap;
-      }
-    } catch (e) {
-      console.error('Realtime secondary fallback failed:', e);
-    }
 
-    return realtimePricesCache || cryptoPricesCache || generateFallbackPrices(symbols);
-  }
+  if (inFlightRealtime) return inFlightRealtime;
+
+  inFlightRealtime = (async () => {
+    try {
+      if (SUPABASE_CONFIGURED) {
+        try {
+          const { data, error } = await invokeWithTimeout('crypto-prices', { symbols, type: 'simple' });
+          if (error) throw error;
+          const pricesMap = ((data as any)?.data || data) as Record<string, CryptoPrice>;
+          realtimePricesCache = pricesMap;
+          lastRealtimeFetchTime = Date.now();
+          return pricesMap;
+        } catch (error) {
+          console.warn('[crypto-prices] Realtime edge function unavailable, using fallback:', (error as Error)?.message ?? error);
+        }
+      }
+
+      // Try public API fallback (Binance Public API)
+      try {
+        const results = await Promise.all(symbols.map(async s => {
+          try {
+            const pair = s === 'USDT' ? 'USDCUSDT' : `${s}USDT`;
+            const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`);
+            if (res.ok) {
+              const data = await res.json();
+              return { symbol: s, price: parseFloat(data.lastPrice), change: parseFloat(data.priceChangePercent), vol: parseFloat(data.quoteVolume) };
+            }
+          } catch (e) { return null; }
+          return null;
+        }));
+
+        const fallbackMap: Record<string, CryptoPrice> = {};
+        results.forEach(r => {
+          if (r) {
+            fallbackMap[r.symbol] = { symbol: r.symbol, name: r.symbol, current_price: r.price, price_change_percentage_24h: r.change, market_cap: 0, total_volume: r.vol };
+          }
+        });
+
+        if (Object.keys(fallbackMap).length > 0) {
+          realtimePricesCache = fallbackMap;
+          lastRealtimeFetchTime = Date.now();
+          return fallbackMap;
+        }
+      } catch (e) {
+        console.warn('[crypto-prices] Binance fallback failed:', (e as Error)?.message ?? e);
+      }
+
+      return realtimePricesCache || cryptoPricesCache || generateFallbackPrices(symbols);
+    } finally {
+      inFlightRealtime = null;
+    }
+  })();
+
+  return inFlightRealtime;
 }
 
 export async function getHistoricalPrices(symbol: string, days: number = 30): Promise<HistoricalPrice[]> {
+  if (!SUPABASE_CONFIGURED) return [];
   try {
-    const { data, error } = await supabase.functions.invoke('crypto-prices', {
-      body: { symbols: [symbol], days, type: 'historical' }
-    });
-    
+    const { data, error } = await invokeWithTimeout('crypto-prices', { symbols: [symbol], days, type: 'historical' });
     if (error) throw error;
-    return (data?.data || data) as HistoricalPrice[];
+    return ((data as any)?.data || data) as HistoricalPrice[];
   } catch (error) {
-    console.error('Error fetching historical prices from Supabase:', error);
+    console.warn('[crypto-prices] Historical fetch failed:', (error as Error)?.message ?? error);
     return [];
   }
 }
 
 export async function getIntradayPrices(symbol: string): Promise<HistoricalPrice[]> {
+  if (!SUPABASE_CONFIGURED) return [];
   try {
-    const { data, error } = await supabase.functions.invoke('crypto-prices', {
-      body: { symbols: [symbol], days: 1, type: 'historical' }
-    });
-    
+    const { data, error } = await invokeWithTimeout('crypto-prices', { symbols: [symbol], days: 1, type: 'historical' });
     if (error) throw error;
-    return (data?.data || data) as HistoricalPrice[];
+    return ((data as any)?.data || data) as HistoricalPrice[];
   } catch (error) {
-    console.error('Error fetching intraday prices from Supabase:', error);
+    console.warn('[crypto-prices] Intraday fetch failed:', (error as Error)?.message ?? error);
     return [];
   }
 }
@@ -314,38 +339,32 @@ const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 
 export async function getExchangeRates(): Promise<ExchangeRates> {
   const now = Date.now();
-  
-  // Return cached rates if still valid
+
   if (exchangeRatesCache && (now - lastFetchTime) < CACHE_DURATION) {
     return exchangeRatesCache;
   }
-  
-  try {
-    // Using exchangerate-api.com free tier (no API key needed)
-    const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch exchange rates');
+
+  if (inFlightExchangeRates) return inFlightExchangeRates;
+
+  const FALLBACK_RATES: ExchangeRates = { USD: 1, NGN: 1470, EUR: 0.92, GBP: 0.79, GHS: 15.50, KES: 129.50, ZAR: 18.50 };
+
+  inFlightExchangeRates = (async () => {
+    try {
+      const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+      if (!response.ok) throw new Error('Failed to fetch exchange rates');
+      const data = await response.json();
+      exchangeRatesCache = data.rates;
+      lastFetchTime = Date.now();
+      return data.rates as ExchangeRates;
+    } catch (error) {
+      console.warn('[exchange-rates] Fetch failed, using fallback:', (error as Error)?.message ?? error);
+      return exchangeRatesCache ?? FALLBACK_RATES;
+    } finally {
+      inFlightExchangeRates = null;
     }
-    
-    const data = await response.json();
-    exchangeRatesCache = data.rates;
-    lastFetchTime = now;
-    
-    return data.rates;
-  } catch (error) {
-    console.error('Error fetching exchange rates:', error);
-    // Return fallback rates if API fails
-    return {
-      USD: 1,
-      NGN: 1470,
-      EUR: 0.92,
-      GBP: 0.79,
-      GHS: 15.50,
-      KES: 129.50,
-      ZAR: 18.50,
-    };
-  }
+  })();
+
+  return inFlightExchangeRates;
 }
 
 export async function convertCurrency(usdAmount: number, toCurrency: string): Promise<number> {
