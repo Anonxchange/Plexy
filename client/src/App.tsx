@@ -2,13 +2,17 @@ import { Switch, Route, useLocation } from "wouter";
 import { lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { CartProvider } from "@/hooks/use-shopify-cart";
-import { GlobalNotificationListener } from "@/components/global-notification-listener";
+
+// Deferred — invisible until triggered, no need to block initial paint
+const Toaster = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));
+const SonnerToaster = lazy(() => import("sonner").then(m => ({ default: m.Toaster })));
+const GlobalNotificationListener = lazy(() =>
+  import("@/components/global-notification-listener").then(m => ({ default: m.GlobalNotificationListener }))
+);
 import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
@@ -234,8 +238,8 @@ function AppContent() {
         </Suspense>
       )}
 
-      <Toaster />
-      <SonnerToaster position="top-center" richColors />
+      <Suspense fallback={null}><Toaster /></Suspense>
+      <Suspense fallback={null}><SonnerToaster position="top-center" richColors /></Suspense>
       <CookieConsent />
     </div>
   );
@@ -257,7 +261,7 @@ function App() {
                   </Suspense>
                 ) : (
                   <>
-                    <GlobalNotificationListener />
+                    <Suspense fallback={null}><GlobalNotificationListener /></Suspense>
                     <AppContent />
                   </>
                 )}
