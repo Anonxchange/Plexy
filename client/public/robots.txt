@@ -23,35 +23,4 @@ Disallow: /notifications
 Disallow: /referral
 Disallow: /rewards
 
-# Opt out of AI training crawlers
-User-agent: GPTBot
-Disallow: /
-
-User-agent: Google-Extended
-Disallow: /
-
-User-agent: CCBot
-Disallow: /
-
-User-agent: anthropic-ai
-Disallow: /
-
-User-agent: Claude-Web
-Disallow: /
-
-User-agent: PerplexityBot
-Disallow: /
-
-User-agent: Bytespider
-Disallow: /
-
-User-agent: cohere-ai
-Disallow: /
-
-User-agent: YouBot
-Disallow: /
-
-User-agent: DuckAssistBot
-Disallow: /
-
 Sitemap: https://www.pexly.app/sitemap.xml
