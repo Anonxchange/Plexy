@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useLocation } from "wouter";
 
 const DEFAULT_DESCRIPTION =
@@ -95,7 +95,7 @@ function getDescription(pathname: string): string {
 export function RouteMeta() {
   const [location] = useLocation();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const description = getDescription(location);
     let tag = document.querySelector('meta[name="description"]');
     if (!tag) {
