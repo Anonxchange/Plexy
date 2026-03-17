@@ -1,5 +1,4 @@
 import { useLayoutEffect } from "react";
-import { useLocation } from "wouter";
 
 const DEFAULT_DESCRIPTION =
   "Pexly — your all-in-one non-custodial decentralized market for crypto swaps, staking, gift cards, mobile top-ups, utility payments, and blockchain exploration.";
@@ -68,43 +67,64 @@ const ROUTE_DESCRIPTIONS: Record<string, string> = {
   "/vip-terms": "Terms and eligibility requirements for the Pexly VIP program.",
 };
 
+const DYNAMIC_PREFIXES: [string, string][] = [
+  ["/profile/", "This user's activity history, reputation, and platform engagement on Pexly."],
+  ["/explorer/address/", "Transaction history, balance, and on-chain activity for this blockchain address."],
+  ["/explorer/transaction/", "Details for this blockchain transaction including status, amounts, and addresses."],
+  ["/explorer/block/", "Details for this blockchain block including transactions and miner information."],
+  ["/explorer/asset/", "Price history, market data, and on-chain metrics for this crypto asset."],
+  ["/prediction/", "Community forecasts, current odds, and results for this Pexly market prediction."],
+  ["/blog/", "Read this Pexly blog post for insights on cryptocurrency, blockchain, and decentralized finance."],
+  ["/gift-cards/", "View and purchase this digital gift card with cryptocurrency. Instant delivery after payment."],
+  ["/shop/product/", "View this product in the Pexly shop and complete your purchase using cryptocurrency."],
+  ["/academy/", "Read this Pexly Academy article on cryptocurrency and decentralized finance."],
+  ["/admin/", "Pexly administration panel. Restricted to authorized personnel only."],
+];
+
 function getDescription(pathname: string): string {
   if (ROUTE_DESCRIPTIONS[pathname]) return ROUTE_DESCRIPTIONS[pathname];
-
-  const dynamicPrefixes: [string, string][] = [
-    ["/profile/", "This user's activity history, reputation, and platform engagement on Pexly."],
-    ["/explorer/address/", "Transaction history, balance, and on-chain activity for this blockchain address."],
-    ["/explorer/transaction/", "Details for this blockchain transaction including status, amounts, and addresses."],
-    ["/explorer/block/", "Details for this blockchain block including transactions and miner information."],
-    ["/explorer/asset/", "Price history, market data, and on-chain metrics for this crypto asset."],
-    ["/prediction/", "Community forecasts, current odds, and results for this Pexly market prediction."],
-    ["/blog/", "Read this Pexly blog post for insights on cryptocurrency, blockchain, and decentralized finance."],
-    ["/gift-cards/", "View and purchase this digital gift card with cryptocurrency. Instant delivery after payment."],
-    ["/shop/product/", "View this product in the Pexly shop and complete your purchase using cryptocurrency."],
-    ["/academy/", "Read this Pexly Academy article on cryptocurrency and decentralized finance."],
-    ["/admin/", "Pexly administration panel. Restricted to authorized personnel only."],
-  ];
-
-  for (const [prefix, description] of dynamicPrefixes) {
+  for (const [prefix, description] of DYNAMIC_PREFIXES) {
     if (pathname.startsWith(prefix)) return description;
   }
-
   return DEFAULT_DESCRIPTION;
 }
 
-export function RouteMeta() {
-  const [location] = useLocation();
+function applyDescription(pathname: string) {
+  const description = getDescription(pathname);
+  let tag = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.name = "description";
+    document.head.appendChild(tag);
+  }
+  tag.content = description;
+}
 
+export function RouteMeta() {
   useLayoutEffect(() => {
-    const description = getDescription(location);
-    let tag = document.querySelector('meta[name="description"]');
-    if (!tag) {
-      tag = document.createElement("meta");
-      (tag as HTMLMetaElement).name = "description";
-      document.head.appendChild(tag);
-    }
-    (tag as HTMLMetaElement).content = description;
-  }, [location]);
+    applyDescription(window.location.pathname);
+
+    const handlePop = () => applyDescription(window.location.pathname);
+    window.addEventListener("popstate", handlePop);
+
+    const originalPush = history.pushState.bind(history);
+    history.pushState = function (...args: Parameters<typeof history.pushState>) {
+      originalPush(...args);
+      applyDescription(window.location.pathname);
+    };
+
+    const originalReplace = history.replaceState.bind(history);
+    history.replaceState = function (...args: Parameters<typeof history.replaceState>) {
+      originalReplace(...args);
+      applyDescription(window.location.pathname);
+    };
+
+    return () => {
+      window.removeEventListener("popstate", handlePop);
+      history.pushState = originalPush;
+      history.replaceState = originalReplace;
+    };
+  }, []);
 
   return null;
 }
