@@ -93,7 +93,7 @@ export default function WalletPage() {
     <div className="min-h-screen flex flex-col bg-[#F8F9FA] dark:bg-background transition-colors">
       <Helmet>
         <title>My Wallet | Manage Assets | Pexly</title>
-        <meta name="description" content="View and manage your cryptocurrency assets. Securely send, receive, and swap Bitcoin, Ethereum, and more." />
+        <meta name="description" content="Manage your cryptocurrency assets on Pexly. Send, receive, swap tokens, stake for yield, pay bills, and access all your decentralized finance tools in one place." />
       </Helmet>
       <div className="flex-1 w-full mx-auto px-0 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl">
         <h1 className="text-3xl font-bold mb-6 sm:mb-8 px-4 sm:px-0 text-foreground">My assets</h1>
