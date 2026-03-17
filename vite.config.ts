@@ -78,14 +78,15 @@ export default defineConfig({
         manualChunks: {
           "vendor-react": ["react", "react-dom"],
 
-          // Only the 6 Radix UI packages needed for the initial render
-          // (Button/slot, Sheet/dialog, DropdownMenu, Avatar, Toast, Tooltip)
+          // Radix UI packages required for the initial render:
+          // AppHeader needs slot, avatar, dialog, dropdown-menu.
+          // TooltipProvider (context-only, lightweight) needs tooltip.
+          // Toast is excluded — Toaster is now lazy-loaded.
           "vendor-ui": [
             "@radix-ui/react-avatar",
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",
             "@radix-ui/react-slot",
-            "@radix-ui/react-toast",
             "@radix-ui/react-tooltip",
           ],
 
