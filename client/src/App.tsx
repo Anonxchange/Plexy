@@ -1,6 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
 import { lazy, Suspense } from "react";
-import { HelmetProvider } from "react-helmet-async";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -227,8 +226,7 @@ function App() {
   const isHelp = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
 
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
             <GiftCardCartProvider>
@@ -249,8 +247,7 @@ function App() {
             </GiftCardCartProvider>
           </AuthProvider>
         </ThemeProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    </QueryClientProvider>
   );
 }
 
