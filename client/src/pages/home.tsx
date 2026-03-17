@@ -1,8 +1,9 @@
 import { lazy, Suspense } from "react";
 import { HeroSection } from "@/components/hero-section";
-import { PartnerCarousel } from "@/components/partner-carousel";
 import { AppFooter } from "@/components/app-footer";
 import { useSchema, homePageSchema } from "@/hooks/use-schema";
+
+const PartnerCarousel = lazy(() => import("@/components/partner-carousel").then(m => ({ default: m.PartnerCarousel })));
 
 const HowItWorks = lazy(() => import("@/components/how-it-works").then(m => ({ default: m.HowItWorks })));
 const FeatureCarousel = lazy(() => import("@/components/feature-carousel").then(m => ({ default: m.FeatureCarousel })));
@@ -25,7 +26,9 @@ export default function Home() {
   return (
     <div className="min-h-screen relative">
       <HeroSection />
-      <PartnerCarousel />
+      <Suspense fallback={<div style={{ height: 64 }} />}>
+        <PartnerCarousel />
+      </Suspense>
       <Suspense fallback={<div style={{ height: 600 }} />}>
         <SectionShell height={600}>
           <HowItWorks />
