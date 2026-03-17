@@ -1,6 +1,6 @@
 
 import { createClient } from './supabase';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface PresenceState {
   user_id: string;
