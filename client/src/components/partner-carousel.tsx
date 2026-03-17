@@ -2,8 +2,8 @@ const partners = [
   { name: "AsterDEX", logo: "/logos/IMG_4583.png", invert: false },
   { name: "RocketX", logo: "/logos/IMG_4584.png", invert: false },
   { name: "Coinbase", logo: "/logos/coinbase-logo.svg", invert: true },
-  { name: "Reloadly", logo: "/logos/IMG_4585.png", invert: false },
-  { name: "Polymarket", logo: "/logos/IMG_4586.png", invert: false },
+  { name: "Reloadly", logo: "/logos/IMG_4586.png", invert: false },
+  { name: "Polymarket", logo: "/logos/IMG_4585.png", invert: false },
   { name: "Shopify", logo: "/logos/shopify-logo.svg", invert: true },
 ];
 
