@@ -5,6 +5,7 @@ const partners = [
   { name: "Reloadly", logo: "/logos/IMG_4585.png", invert: false },
   { name: "Polymarket", logo: "/logos/IMG_4584.png", invert: false },
   { name: "Shopify", logo: "/logos/shopify-logo.svg", invert: true },
+  { name: "GoPlus Security", logo: "/logos/IMG_4588.png", invert: false },
 ];
 
 export function PartnerCarousel() {
