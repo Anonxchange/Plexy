@@ -60,8 +60,8 @@ export function CTASection() {
               alt="Pexly Mobile App Screens"
               width={615}
               height={550}
-              fetchPriority="high"
-              decoding="sync"
+              loading="lazy"
+              decoding="async"
               className="max-w-full h-auto max-h-[550px] object-contain scale-110"
             />
           </div>
