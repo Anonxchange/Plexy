@@ -133,7 +133,7 @@ export function PaymentMethods() {
                     <PaymentIcon icon={method.icon} color={method.color} />
                   </div>
                   {method.badge && (
-                    <Badge variant="secondary" className="text-[10px] lg:text-xs px-1.5 lg:px-2 py-0.5 bg-primary/20 text-primary backdrop-blur-sm border-primary/30 font-semibold">
+                    <Badge variant="secondary" className="text-[10px] lg:text-xs px-1.5 lg:px-2 py-0.5 bg-primary text-primary-foreground border-primary font-semibold">
                       {method.badge}
                     </Badge>
                   )}
