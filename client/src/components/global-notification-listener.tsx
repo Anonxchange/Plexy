@@ -74,45 +74,6 @@ export function GlobalNotificationListener() {
         )
         .subscribe();
 
-      const tradesChannel = supabase
-        .channel('global-trades')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'p2p_trades',
-          },
-          (payload) => {
-            const oldTrade = payload.old as any;
-            const newTrade = payload.new as any;
-            const tradeId = newTrade.id;
-
-            if (!oldTrade.buyer_paid_at && newTrade.buyer_paid_at) {
-              const paymentKey = `payment-${tradeId}-${newTrade.buyer_paid_at}`;
-              if (!lastProcessedIds.current.has(paymentKey)) {
-                lastProcessedIds.current.add(paymentKey);
-                
-                if (newTrade.seller_id === user.id) {
-                  notificationSounds.play('payment_marked');
-                }
-              }
-            }
-
-            if (!oldTrade.seller_released_at && newTrade.seller_released_at) {
-              const releaseKey = `release-${tradeId}-${newTrade.seller_released_at}`;
-              if (!lastProcessedIds.current.has(releaseKey)) {
-                lastProcessedIds.current.add(releaseKey);
-                
-                if (newTrade.buyer_id === user.id) {
-                  notificationSounds.play('escrow_released');
-                }
-              }
-            }
-          }
-        )
-        .subscribe();
-
       const announcementsChannel = supabase
         .channel('global-announcements')
         .on(
@@ -144,7 +105,6 @@ export function GlobalNotificationListener() {
       cleanupFn = () => {
         clearInterval(unreadCheckInterval);
         supabase.removeChannel(notificationsChannel);
-        supabase.removeChannel(tradesChannel);
         supabase.removeChannel(announcementsChannel);
       };
     });
