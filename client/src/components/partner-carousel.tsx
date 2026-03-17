@@ -1,12 +1,10 @@
 const partners = [
-  { name: "Bitcoin", logo: "/logos/bitcoin-btc-logo.svg" },
-  { name: "Ethereum", logo: "/logos/ethereum-eth-logo.svg" },
-  { name: "Tether", logo: "/logos/tether-usdt-logo.svg" },
-  { name: "Solana", logo: "/logos/solana-sol-logo.svg" },
-  { name: "Binance", logo: "/logos/binance-coin-bnb-logo.svg" },
-  { name: "Polygon", logo: "/logos/polygon-matic-logo.svg" },
-  { name: "Chainlink", logo: "/logos/chainlink-link-logo.svg" },
-  { name: "Arbitrum", logo: "/logos/arbitrum-arb-logo.svg" },
+  { name: "AsterDEX", logo: "https://assets.coingecko.com/coins/images/30980/small/token-logo.png" },
+  { name: "RocketX", logo: "https://cdn.rocketx.exchange/pd135zq/images/exchange/rocketx_pool_10.png" },
+  { name: "Coinbase", logo: "https://logo.clearbit.com/coinbase.com" },
+  { name: "Reloadly", logo: "https://logo.clearbit.com/reloadly.com" },
+  { name: "Polymarket", logo: "https://logo.clearbit.com/polymarket.com" },
+  { name: "Shopify", logo: "https://logo.clearbit.com/shopify.com" },
 ];
 
 export function PartnerCarousel() {
@@ -30,7 +28,7 @@ export function PartnerCarousel() {
                 src={partner.logo} 
                 alt=""
                 role="presentation"
-                className="w-8 h-8 object-contain dark:brightness-0 dark:invert"
+                className="w-8 h-8 object-contain rounded-sm"
                 loading="lazy"
               />
             )}
