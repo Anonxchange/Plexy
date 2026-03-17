@@ -20,7 +20,7 @@ export function FeatureCarousel() {
             <div className="space-y-4">
               <h2 className="text-3xl lg:text-5xl font-bold tracking-tight text-foreground leading-tight">
                 Live Crypto. <br />
-                <span className="text-primary">Pay Anywhere.</span> <br />
+                <span className="text-green-800 dark:text-primary">Pay Anywhere.</span> <br />
                 Get 10% Back.
               </h2>
 
