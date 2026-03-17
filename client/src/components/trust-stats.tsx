@@ -41,6 +41,8 @@ export const TrustStats = () => {
                   alt="True ownership of crypto assets"
                   width={384}
                   height={384}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full max-w-sm lg:max-w-none mx-auto lg:mx-0 object-contain"
                 />
               </div>
@@ -63,6 +65,8 @@ export const TrustStats = () => {
                 alt="True ownership"
                 width={672}
                 height={400}
+                loading="lazy"
+                decoding="async"
                 className="w-full max-w-2xl object-contain"
               />
             </div>
@@ -75,7 +79,7 @@ export const TrustStats = () => {
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Added security with encryption
             </h3>
-            <img src={cloudBackup} alt="Encrypted cloud backup icon" className="w-40 h-40 mx-auto mb-6 object-contain" />
+            <img src={cloudBackup} alt="Encrypted cloud backup icon" loading="lazy" decoding="async" className="w-40 h-40 mx-auto mb-6 object-contain" />
             <p className="text-black/70 dark:text-muted-foreground text-lg">
               Use our Encrypted Cloud Backup for increased wallet security.
             </p>
@@ -85,7 +89,7 @@ export const TrustStats = () => {
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Zero personal tracking
             </h3>
-     <img src={privacyShield} alt="Privacy shield icon" className="w-52 h-52 mx-auto mb-2 object-contain scale-110" />
+     <img src={privacyShield} alt="Privacy shield icon" loading="lazy" decoding="async" className="w-52 h-52 mx-auto mb-2 object-contain scale-110" />
           <p className="text-black/70 dark:text-muted-foreground text-lg">
               We don't track any personal information, including IP or balances.
             </p>
@@ -95,7 +99,7 @@ export const TrustStats = () => {
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Proactive alerts
             </h3>
-            <img src={alertHorn} alt="Proactive alerts icon" className="w-40 h-40 mx-auto mb-6 object-contain" />
+            <img src={alertHorn} alt="Proactive alerts icon" loading="lazy" decoding="async" className="w-40 h-40 mx-auto mb-6 object-contain" />
             <p className="text-black/70 dark:text-muted-foreground text-lg">
               Stay safe with alerts for risky address and dApp connections.
             </p>
