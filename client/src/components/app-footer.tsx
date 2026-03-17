@@ -105,11 +105,11 @@ export function AppFooter() {
           </a>
         </div>
 
-        <div className="text-xs text-gray-500 leading-relaxed mb-4 lg:mb-6 px-2">
+        <div className="text-xs text-gray-400 leading-relaxed mb-4 lg:mb-6 px-2">
           <p className="text-center sm:text-left">"PLEXY" is a registered trademark of Plexy, Inc. Copyright © 2024 Plexy, Inc. All Rights Reserved. Plexy Inc. has no relationship to MoneyGram, Western Union, Payoneer, WorldRemit, Paxum, PayPal, Amazon, OkPay, Payza, Walmart, Reloadit, Perfect Money, WebMoney, Google Wallet, BlueBird, Serve, Square Cash, NetSpend, Chase QuickPay, Skrill, Vanilla, MyVanilla, OneVanilla, Neteller, Venmo, Apple, ChimpChange or any other payment method. We make no claims about being supported by or supporting these services. Their respective wordmarks and trademarks belong to them alone.</p>
         </div>
 
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-gray-400">
           <p>Copyright 2024 Plexy. All rights reserved.</p>
         </div>
       </div>
