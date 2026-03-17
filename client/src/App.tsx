@@ -1,4 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
+import { RouteMeta } from "@/components/route-meta";
 import { lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -46,7 +47,6 @@ const ShopPost = lazy(() => import("@/pages/shop-post").then(m => ({ default: m.
 const ProductDetail = lazy(() => import("@/pages/product-detail").then(m => ({ default: m.ProductDetail })));
 const GiftCards = lazy(() => import("@/pages/gift-cards").then(m => ({ default: m.GiftCards })));
 const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => ({ default: m.GiftCardDetail })));
-const TradeHistory = lazy(() => import("@/pages/trade-history").then(m => ({ default: m.TradeHistory })));
 const Checkout = lazy(() => import("@/pages/checkout").then(m => ({ default: m.Checkout })));
 const VisaCard = lazy(() => import("@/pages/visa-card"));
 const VisaCardDetails = lazy(() => import("@/pages/visa-card-details"));
@@ -55,11 +55,8 @@ const UtilityBill = lazy(() => import("@/pages/utility-bill"));
 const Stake = lazy(() => import("@/pages/stake"));
 const Lightning = lazy(() => import("@/pages/lightning"));
 const BuyCrypto = lazy(() => import("@/pages/buy-crypto"));
-const ActiveTrade = lazy(() => import("@/pages/active-trade"));
 const RewardsPage = lazy(() => import("@/pages/rewards"));
 const ReferralPage = lazy(() => import("@/pages/referral"));
-const MerchantApplicationPage = lazy(() => import("@/pages/merchant-application"));
-const MerchantDowngradePage = lazy(() => import("@/pages/merchant-downgrade"));
 const NotificationsPage = lazy(() => import("@/pages/notifications"));
 const NotificationSettings = lazy(() => import("@/pages/notification-settings"));
 const PexlyAcademy = lazy(() => import("@/pages/pexly-academy"));
@@ -70,16 +67,9 @@ const Contact = lazy(() => import("@/pages/contact"));
 const Terms = lazy(() => import("@/pages/terms"));
 const Privacy = lazy(() => import("@/pages/privacy"));
 const CookiePolicy = lazy(() => import("@/pages/cookie-policy"));
-const AMLPolicy = lazy(() => import("@/pages/aml-policy"));
 const RestrictedCountries = lazy(() => import("@/pages/restricted-countries"));
 const VIPTerms = lazy(() => import("@/pages/vip-terms"));
-const VendorReminder = lazy(() => import("@/pages/vendor-reminder"));
 const SubmitIdea = lazy(() => import("@/pages/submit-idea"));
-const FavoriteOffers = lazy(() => import("@/pages/favorite-offers").then(m => ({ default: m.FavoriteOffers })));
-const TrustedUsers = lazy(() => import("@/pages/trusted-users").then(m => ({ default: m.TrustedUsers })));
-const BlockedUsers = lazy(() => import("@/pages/blocked-users").then(m => ({ default: m.BlockedUsers })));
-const TradeStatistics = lazy(() => import("@/pages/trade-statistics").then(m => ({ default: m.TradeStatistics })));
-const OfferDetail = lazy(() => import("@/pages/offer-detail").then(m => ({ default: m.OfferDetail })));
 const MedalsPage = lazy(() => import("@/pages/medals"));
 
 // Heavy pages - lazy loaded (charts: ~432KB, media: ~203KB)
@@ -142,7 +132,6 @@ function Router() {
       <Route path="/markets">{() => <LazyRoute component={marketsPage} />}</Route>
       <Route path="/submit-idea">{() => <LazyRoute component={SubmitIdea} />}</Route>
       <Route path="/spot">{() => <LazyRoute component={spot} skeleton={<ChartPageSkeleton />} />}</Route>
-      <Route path="/swap">{() => <LazyRoute component={Swap} />}</Route>
       <Route path="/wallet">{() => <LazyRoute component={Wallet} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/analysis">{() => <LazyRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
@@ -156,15 +145,12 @@ function Router() {
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCards} />}</Route>
       <Route path="/gift-cards/:id">{() => <LazyRoute component={GiftCardDetail} />}</Route>
       <Route path="/checkout">{() => <LazyRoute component={Checkout} />}</Route>
-      <Route path="/trade-history">{() => <LazyRoute component={TradeHistory} />}</Route>
       <Route path="/account-settings">{() => <LazyRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/devices">{() => <LazyRoute component={DevicesPage} />}</Route>
       <Route path="/notification-settings">{() => <LazyRoute component={NotificationSettings} />}</Route>
       <Route path="/developer">{() => <LazyRoute component={Developer} />}</Route>
       <Route path="/verification">{() => <LazyRoute component={VerificationPage} />}</Route>
       <Route path="/kyc/callback">{() => <LazyRoute component={KYCCallback} />}</Route>
-      <Route path="/merchant-application">{() => <LazyRoute component={MerchantApplicationPage} />}</Route>
-      <Route path="/merchant-downgrade">{() => <LazyRoute component={MerchantDowngradePage} />}</Route>
       <Route path="/admin">{() => <LazyRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/admin/verifications">{() => <LazyRoute component={adminVerificationsPage} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/admin/merchants">{() => <LazyRoute component={adminMerchantsPage} skeleton={<PageSkeleton />} />}</Route>
@@ -180,12 +166,6 @@ function Router() {
       <Route path="/shop">{() => <LazyRoute component={Shop} />}</Route>
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
       <Route path="/shop/post">{() => <LazyRoute component={ShopPost} />}</Route>
-      <Route path="/favorite-offers">{() => <LazyRoute component={FavoriteOffers} />}</Route>
-      <Route path="/trusted-users">{() => <LazyRoute component={TrustedUsers} />}</Route>
-      <Route path="/blocked-users">{() => <LazyRoute component={BlockedUsers} />}</Route>
-      <Route path="/trade-statistics">{() => <LazyRoute component={TradeStatistics} />}</Route>
-      <Route path="/trade/:tradeId">{() => <LazyRoute component={ActiveTrade} />}</Route>
-      <Route path="/offers/:offerId">{() => <LazyRoute component={OfferDetail} />}</Route>
       <Route path="/medals">{() => <LazyRoute component={MedalsPage} />}</Route>
       <Route path="/rewards">{() => <LazyRoute component={RewardsPage} />}</Route>
       <Route path="/referral">{() => <LazyRoute component={ReferralPage} />}</Route>
@@ -201,10 +181,8 @@ function Router() {
       <Route path="/terms">{() => <LazyRoute component={Terms} />}</Route>
       <Route path="/privacy">{() => <LazyRoute component={Privacy} />}</Route>
       <Route path="/cookie-policy">{() => <LazyRoute component={CookiePolicy} />}</Route>
-      <Route path="/aml-policy">{() => <LazyRoute component={AMLPolicy} />}</Route>
       <Route path="/restricted-countries">{() => <LazyRoute component={RestrictedCountries} />}</Route>
       <Route path="/vip-terms">{() => <LazyRoute component={VIPTerms} />}</Route>
-      <Route path="/vendor-reminder">{() => <LazyRoute component={VendorReminder} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -213,23 +191,24 @@ function Router() {
 function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
-  const hideAppFooter = ["/", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/favorite-offers", "/trusted-users", "/blocked-users", "/trade-statistics", "/trade-history", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/aml-policy", "/restricted-countries", "/vip-terms", "/vendor-reminder", "/submit-idea", "/explorer", "/shop/product"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/trade/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
+  const hideAppFooter = ["/", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/vip-terms", "/submit-idea", "/explorer", "/shop/product"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
   const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
   return (
     <div className={`flex min-h-screen w-full flex-col ${!hideHeaderAndNav ? 'pt-16' : ''}`}>
+      <RouteMeta />
       {!hideHeaderAndNav && <AppHeader />}
       {!hideHeaderAndNav && !hidePageNav && <PageNavigation />}
       <main className="flex-1 flex flex-col">
         <Router />
       </main>
       {!hideAppFooter && <AppFooter />}
-      
+
       {user && (
         <Suspense fallback={null}>
-          <WalletSetupDialog 
-            open={walletImportState.required} 
+          <WalletSetupDialog
+            open={walletImportState.required}
             onOpenChange={(open) => setWalletImportState({ ...walletImportState, required: open })}
             userId={user.id}
             onSuccess={() => setWalletImportState({ required: false, expectedAddress: null })}
@@ -247,7 +226,7 @@ function AppContent() {
 
 function App() {
   const isHelp = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
@@ -275,4 +254,3 @@ function App() {
 }
 
 export default App;
- 
