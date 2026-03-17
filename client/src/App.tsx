@@ -1,5 +1,6 @@
 import { Switch, Route, useLocation } from "wouter";
 import { lazy, Suspense } from "react";
+import { HelmetProvider } from "react-helmet-async";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -226,28 +227,30 @@ function App() {
   const isHelp = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <GiftCardCartProvider>
-            <CartProvider>
-              <TooltipProvider>
-                {isHelp ? (
-                  <Suspense fallback={<PageSkeleton />}>
-                    <Support />
-                  </Suspense>
-                ) : (
-                  <>
-                    <Suspense fallback={null}><GlobalNotificationListener /></Suspense>
-                    <AppContent />
-                  </>
-                )}
-              </TooltipProvider>
-            </CartProvider>
-          </GiftCardCartProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <GiftCardCartProvider>
+              <CartProvider>
+                <TooltipProvider>
+                  {isHelp ? (
+                    <Suspense fallback={<PageSkeleton />}>
+                      <Support />
+                    </Suspense>
+                  ) : (
+                    <>
+                      <Suspense fallback={null}><GlobalNotificationListener /></Suspense>
+                      <AppContent />
+                    </>
+                  )}
+                </TooltipProvider>
+              </CartProvider>
+            </GiftCardCartProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 }
 
