@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,7 +6,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowRight, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import heroImage from "@assets/generated_images/Crypto_P2P_trading_hero_641f4218.png";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 
 import { currencies } from "@/lib/currencies";
@@ -26,7 +25,7 @@ const popularPaymentMethods = [
   { id: "google-pay", name: "Google Pay" },
   { id: "zelle", name: "Zelle" },
 ];
-import { Globe } from "@/components/globe";
+const Globe = lazy(() => import("@/components/globe").then(m => ({ default: m.Globe })));
 
 const FALLBACK_PRICES: Record<string, number> = {
   BTC: 98750.50,
@@ -134,12 +133,14 @@ export function HeroSection() {
     <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
-      {/* Animated Globe Background */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] opacity-40 pointer-events-none z-0" style={{ contain: "strict", willChange: "transform" }}>
-        <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
-          <Globe />
-        </ErrorBoundary>
-      </div>
+      {/* Animated Globe Background — lazy-loaded after first paint */}
+      <Suspense fallback={null}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] opacity-40 pointer-events-none z-0" style={{ contain: "strict", willChange: "transform" }}>
+          <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
+            <Globe />
+          </ErrorBoundary>
+        </div>
+      </Suspense>
 
       {/* Gradient Orbs */}
       <div className="absolute top-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
