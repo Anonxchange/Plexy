@@ -28,7 +28,7 @@ export function useCryptoPrices() {
         if (result.length === 0) throw new Error("No prices returned");
         return result;
       } catch (error) {
-        console.error("Crypto prices fetch failed, using fallback:", error);
+        console.warn("[crypto-prices] Fetch failed, using static fallback:", (error as Error)?.message ?? error);
         return [
           { symbol: "BTC", price: 98750.50, change24h: 2.5 },
           { symbol: "ETH", price: 3420.75, change24h: -1.2 },
