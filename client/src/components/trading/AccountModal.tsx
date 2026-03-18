@@ -297,13 +297,15 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     isFetching: depositFetching,
     error: depositError,
   } = useQuery({
-    queryKey: ["deposit-address", network],
+    queryKey: ["deposit-address", coin, network],
     queryFn: () => {
-      const chainId = CHAIN_MAP[network]?.chainId ?? 56;
-      return asterGetDepositAddress(chainId);
+      // Use the authenticated spot deposit-address endpoint (coin + network specific).
+      // This returns the correct treasury address for the selected coin, including any
+      // required memo/tag for networks that need one (e.g. Solana).
+      return asterWallet.depositAddress(coin, network);
     },
-    // Only fetch after wallet is linked — the public treasury address is meaningless without registration
-    enabled: !!user && open && activeTab === "deposit" && isAsterRegistered,
+    // Only fetch after wallet is linked — deposit address requires API credentials
+    enabled: !!user && open && activeTab === "deposit" && isAsterRegistered && !!coin,
     staleTime: 300_000,
     placeholderData: undefined,
     retry: 1,
