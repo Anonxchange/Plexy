@@ -312,17 +312,17 @@ export async function getRocketxRate(
 
 export const rocketXApi = {
   async getConfiguration() { return callRocketX('configs'); },
-  async getTokens(chainId: string, page = 1, perPage = 100) { 
-    return callRocketX('tokens', { chainId, page, perPage }); 
+  async getTokens(network: string, page = 1, limit = 50) { 
+    return callRocketX('tokens', { network, page, limit }); 
   },
-  async searchTokens(keyword: string, chainId?: string) { 
-    return callRocketX('tokens', { keyword, ...(chainId ? { chainId } : {}), perPage: 100 }); 
+  async searchTokens(keyword: string, network?: string) { 
+    return callRocketX('search_tokens', { keyword, ...(network ? { network } : {}) }); 
   },
   async getQuotation(params: { fromToken: string; fromNetwork: string; toToken?: string; toNetwork?: string; amount: string; slippage?: number; fromAddress?: string; toAddress?: string; }) {
     return callRocketX('quotation', params);
   },
   async executeSwap(params: Record<string, any>) { return callRocketX('swap', params); },
-  async getStatus(requestId?: string, txHash?: string) {
-    return callRocketX('status', { ...(requestId ? { requestId } : {}), ...(txHash ? { txHash } : {}) });
+  async getStatus(requestId?: string, txId?: string) {
+    return callRocketX('status', { ...(requestId ? { requestId } : {}), ...(txId ? { txId } : {}) });
   },
 };
