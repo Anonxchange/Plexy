@@ -7,7 +7,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, asterGetDepositAddress, asterGetChainAssets, CoinInfo } from "@/lib/asterdex-service";
+import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, asterCreateBrokerAccount, asterGetDepositAddress, asterGetChainAssets, CoinInfo } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import { nonCustodialWalletManager, NonCustodialWallet } from "@/lib/non-custodial-wallet";
 import { signEVMMessage } from "@/lib/evmSigner";
@@ -239,11 +239,17 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       if (!walletPassword) throw new Error("Enter your wallet password to sign.");
       const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
       if (!mnemonic) throw new Error("Incorrect password or wallet not found.");
+      const chainId = CHAIN_MAP[network]?.chainId ?? 56;
+      // Step 1: Create broker sub-account on AsterDEX (idempotent — safe if already exists)
+      await asterCreateBrokerAccount(userEvmWallet.address, chainId);
+      // Step 2: Get a one-time signing challenge from AsterDEX
       const nonce = await asterGetNonce(userEvmWallet.address);
       const message = `You are signing into Astherus ${nonce}`;
+      // Step 3: Sign the challenge — proves wallet ownership without exposing the key
       const signature = await signEVMMessage(mnemonic, message);
-      const chainId = CHAIN_MAP[network]?.chainId ?? 56;
+      // Step 4: Exchange signature for an API key tied to this wallet
       const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signature, chainId);
+      // Step 5: Persist API credentials in Supabase profile (used for all future AsterDEX calls)
       const { error: updateError } = await supabase.auth.updateUser({
         data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
       });
