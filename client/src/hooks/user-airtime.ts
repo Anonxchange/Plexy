@@ -15,9 +15,13 @@ async function fetchAirtime(params: Record<string, string>) {
     url.searchParams.set(key, value);
   });
 
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("No active session");
+
   const res = await fetch(url.toString(), {
     headers: {
       apikey: ANON_KEY,
+      Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
     },
   });
