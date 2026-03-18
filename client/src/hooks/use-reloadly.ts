@@ -49,10 +49,11 @@ export function useGiftCardProducts(params: {
       Object.entries(queryParams).forEach(([k, v]) => url.searchParams.set(k, v));
 
       const { data: { session } } = await supabase.auth.getSession();
-      
+      if (!session?.access_token) throw new Error("No active session");
+
       const res = await fetch(url.toString(), {
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           "Content-Type": "application/json",
         },
@@ -70,10 +71,11 @@ export function useGiftCardProduct(productId: string | undefined) {
     enabled: !!productId,
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
+      if (!session?.access_token) throw new Error("No active session");
+
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products?productId=${productId}`, {
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           "Content-Type": "application/json",
         },
@@ -119,12 +121,13 @@ export function useGiftCardCategories() {
     staleTime: 1000 * 60 * 60,
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("No active session");
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-categories`,
         {
           headers: {
-            Authorization: `Bearer ${session?.access_token}`,
+            Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
             "Content-Type": "application/json",
           },
