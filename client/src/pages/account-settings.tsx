@@ -734,11 +734,14 @@ export default function AccountSettings() {
 
       if (updateError) throw updateError;
 
+      const { data: { session: emailSession } } = await supabase.auth.getSession();
+      if (!emailSession?.access_token) throw new Error("No active session");
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${emailSession.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ 
           email: user.email, 
