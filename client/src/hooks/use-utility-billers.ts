@@ -17,10 +17,11 @@ async function fetchBillers(params: Record<string, string>) {
   const url = new URL(`${supabaseUrl}/functions/v1/reloadly-billers`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
+  if (!session?.access_token) throw new Error("No active session");
   const res = await fetch(url.toString(), {
     headers: {
       apikey: anonKey!,
-      Authorization: `Bearer ${session?.access_token || anonKey}`,
+      Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
     },
   });
