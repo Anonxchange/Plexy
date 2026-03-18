@@ -288,8 +288,12 @@ const NETWORK_TO_CHAIN_ID: Record<string, string> = {
   SOLANA: '101',
 };
 
-// ── AsterDEX Public BAPI ──────────────────────────────────────────────────────
+// ── AsterDEX API constants ─────────────────────────────────────────────────────
 
+// Public Spot REST API (official, documented)
+const ASTER_SAPI = 'https://sapi.asterdex.com/api/v1';
+
+// Legacy BAPI root — still used for deposit-address and asset-list endpoints
 const ASTER_BAPI_ROOT = 'https://www.asterdex.com/bapi/futures/v1/public/future';
 const ASTER_BAPI      = `${ASTER_BAPI_ROOT}/web3`;
 
@@ -340,40 +344,51 @@ export async function asterGetChainAssets(chainId: number, accountType: 'spot' |
     }));
 }
 
-// ── AsterDEX Wallet Registration ─────────────────────────────────────────────
+// ── Registration: get nonce → sign → create API key ──────────────────────────
+// Uses the official Spot API (sapi.asterdex.com), not the legacy BAPI.
+// No separate "create broker account" step is needed — the Spot API creates
+// the sub-account implicitly on first createApiKey call.
 
-export async function asterGetNonce(sourceAddr: string): Promise<string> {
-  const res = await fetch(`${ASTER_BAPI}/get-nonce`, {
+export async function asterGetNonce(address: string): Promise<string> {
+  // SAPI requires application/x-www-form-urlencoded (not JSON).
+  // Response is a plain-text integer, e.g. "180433"
+  const body = new URLSearchParams({ address, userOperationType: 'CREATE_API_KEY' });
+  const res = await fetch(`${ASTER_SAPI}/getNonce`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sourceAddr, type: 'CREATE_API_KEY' }),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
   });
-  const json = await res.json();
-  if (!json.success) throw new Error(json.message ?? 'Failed to get nonce');
-  return String(json.data.nonce);
+  const text = await res.text();
+  if (!res.ok) {
+    let msg = 'Failed to get nonce';
+    try { msg = JSON.parse(text).msg ?? msg; } catch {}
+    throw new Error(msg);
+  }
+  return text.trim();
 }
 
 export async function asterCreateApiKey(
-  sourceAddr: string,
+  address: string,
   signature: string,
-  chainId: number,
 ): Promise<{ apiKey: string; apiSecret: string }> {
-  const res = await fetch(`${ASTER_BAPI}/broker-create-api-key`, {
+  // SAPI requires application/x-www-form-urlencoded (not JSON).
+  const body = new URLSearchParams({
+    address,
+    userOperationType: 'CREATE_API_KEY',
+    userSignature: signature,
+    desc: 'pexly-wallet',
+    timestamp: String(Date.now()),
+  });
+  const res = await fetch(`${ASTER_SAPI}/createApiKey`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', clientType: 'broker' },
-    body: JSON.stringify({
-      desc: 'pexly-wallet',
-      ip: '',
-      network: chainId,
-      signature,
-      sourceAddr,
-      type: 'CREATE_API_KEY',
-      sourceCode: 'broker',
-    }),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
   });
   const json = await res.json();
-  if (!json.success) throw new Error(json.message ?? 'Failed to create API key');
-  return json.data;
+  if (!res.ok || (json.code !== undefined && json.code !== 0 && json.code !== 200)) {
+    throw new Error(json.msg ?? 'Failed to create API key');
+  }
+  return json.data ?? json;
 }
 
 // Fetch the AsterDEX treasury deposit address for a given chain.
