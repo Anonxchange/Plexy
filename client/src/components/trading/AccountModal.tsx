@@ -299,7 +299,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       const chainId = CHAIN_MAP[network]?.chainId ?? 56;
       return asterGetDepositAddress(chainId);
     },
-    enabled: !!user && open && activeTab === "deposit",
+    // Only fetch after wallet is linked — the public treasury address is meaningless without registration
+    enabled: !!user && open && activeTab === "deposit" && isAsterRegistered,
     staleTime: 300_000,
     placeholderData: undefined,
     retry: 1,
@@ -308,14 +309,14 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const depositBusy = depositLoading || depositFetching;
 
   // Load EVM wallet when:
-  // - deposit fails and user isn't registered (registration flow)
+  // - user is on deposit tab and not yet registered (registration flow always needs wallet)
   // - user opens the withdraw tab (need address silently for autoWithdraw)
   useEffect(() => {
     if (!user || userEvmWallet || walletLoading) return;
-    if ((depositError && !isAsterRegistered) || activeTab === "withdraw") {
+    if ((activeTab === "deposit" && !isAsterRegistered) || activeTab === "withdraw") {
       loadEvmWallet();
     }
-  }, [depositError, isAsterRegistered, user, loadEvmWallet, activeTab, userEvmWallet, walletLoading]);
+  }, [isAsterRegistered, user, loadEvmWallet, activeTab, userEvmWallet, walletLoading]);
 
   // Silently populate withdrawAddress from the connected wallet (autoWithdraw — no manual input needed)
   useEffect(() => {
@@ -698,8 +699,54 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     </div>
   );
 
-  // Shared deposit address display block
+  // Registration form block — shown whenever the user hasn't linked their wallet yet.
+  // Must appear before the deposit address so an unregistered user can never see the
+  // shared treasury address (which is meaningless without a linked account).
+  const RegistrationBlock = () => (
+    <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
+      <div className="flex items-start gap-2">
+        <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          A one-time verification is needed to activate your personal deposit address.
+          Enter your wallet password below — no funds will be moved.
+        </p>
+      </div>
+      {walletLoading ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>Loading wallet…</span>
+        </div>
+      ) : !userEvmWallet ? (
+        <p className="text-xs text-destructive">
+          No EVM wallet found. Please create one in your Wallet first.
+        </p>
+      ) : (
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Wallet password"
+            value={walletPassword}
+            onChange={e => setWalletPassword(e.target.value)}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Shared deposit address display block — only shown after wallet is linked.
   const DepositAddressBlock = () => {
+    // Always gate on registration — the public treasury address is useless without a linked account.
+    if (!isAsterRegistered && user) {
+      return <RegistrationBlock />;
+    }
     if (depositBusy) {
       return (
         <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
@@ -735,43 +782,11 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         </div>
       );
     }
-    if (depositError && user) {
+    if (depositError) {
       return (
-        <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              A one-time verification is needed to activate your deposit address.
-              Enter your wallet password below — no funds will be moved.
-            </p>
-          </div>
-          {walletLoading ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span>Loading wallet…</span>
-            </div>
-          ) : !userEvmWallet ? (
-            <p className="text-xs text-destructive">
-              No EVM wallet found. Please create one in your Wallet first.
-            </p>
-          ) : (
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Wallet password"
-                value={walletPassword}
-                onChange={e => setWalletPassword(e.target.value)}
-                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          )}
+        <div className="flex items-center gap-2 mb-4 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>Could not load deposit address. Please try again.</span>
         </div>
       );
     }
@@ -785,6 +800,30 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         Sign in to Deposit
       </button>
     );
+    // Registration required before any deposit address can be shown
+    if (!isAsterRegistered) {
+      if (walletLoading) return (
+        <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />Loading wallet…
+        </button>
+      );
+      if (!userEvmWallet) return (
+        <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
+          No EVM wallet found
+        </button>
+      );
+      return (
+        <button
+          onClick={() => registerMutation.mutate()}
+          disabled={!walletPassword || registerMutation.isPending}
+          className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {registerMutation.isPending
+            ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
+            : "Sign & Activate Deposit Address"}
+        </button>
+      );
+    }
     if (depositBusy) return (
       <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
         Loading…
@@ -793,17 +832,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     if (depositAddress) return (
       <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
         Send {coin} to the address above
-      </button>
-    );
-    if (depositError && userEvmWallet) return (
-      <button
-        onClick={() => registerMutation.mutate()}
-        disabled={!walletPassword || registerMutation.isPending}
-        className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {registerMutation.isPending
-          ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
-          : "Sign & Generate Address"}
       </button>
     );
     return (
