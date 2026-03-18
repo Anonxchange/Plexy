@@ -91,9 +91,7 @@ const spot = lazy(() => import("@/pages/spot").then(m => ({ default: m.Spot })))
 const marketsPage = lazy(() => import("@/pages/markets"));
 const adminPage = lazy(() => import("@/pages/admin"));
 const adminVerificationsPage = lazy(() => import("@/pages/admin-verifications"));
-const adminMerchantsPage = lazy(() => import("@/pages/admin-merchants"));
 const adminGiftCards = lazy(() => import("@/pages/admin-gift-cards"));
-const AdminTransferPageLazy = lazy(() => import("@/pages/admin-transfer"));
 const AdminBlogLazy = lazy(() => import("@/pages/admin-blog"));
 const Blog = lazy(() => import("@/pages/blog"));
 
@@ -152,8 +150,6 @@ function Router() {
       <Route path="/kyc/callback">{() => <LazyRoute component={KYCCallback} />}</Route>
       <Route path="/admin">{() => <LazyRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/admin/verifications">{() => <LazyRoute component={adminVerificationsPage} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/admin/merchants">{() => <LazyRoute component={adminMerchantsPage} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/admin/transfer">{() => <LazyRoute component={AdminTransferPageLazy} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/admin/blog">{() => <LazyRoute component={AdminBlogLazy} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/admin/gift-cards">{() => <LazyRoute component={adminGiftCards} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/notifications">{() => <LazyRoute component={NotificationsPage} />}</Route>
