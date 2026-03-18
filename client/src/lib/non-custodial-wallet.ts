@@ -212,7 +212,7 @@ class NonCustodialWalletManager {
       const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword);
       
       const newWallet: NonCustodialWallet = {
-        id: Math.random().toString(36).substring(7),
+        id: crypto.randomUUID(),
         chainId,
         address,
         walletType,
@@ -262,7 +262,7 @@ class NonCustodialWalletManager {
     const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword);
     
     const newWallet: NonCustodialWallet = {
-      id: Math.random().toString(36).substring(7),
+      id: crypto.randomUUID(),
       chainId,
       address,
       walletType,
