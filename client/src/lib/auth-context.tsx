@@ -250,6 +250,45 @@ function hasPendingOTP(): boolean {
   }
 }
 
+// ─── Custom inactivity-based session expiry (no Supabase premium required) ──
+// Supabase silently refreshes the access token, so the JWT timeout setting
+// alone never logs users out. Instead we track the last moment the user was
+// active and expire the session if they've been idle too long. The check runs
+// every time Supabase refreshes the token — no polling needed.
+const SESSION_INACTIVITY_MS = 30 * 60 * 1000; // 30 minutes of inactivity
+const ACTIVITY_THROTTLE_MS  = 60 * 1000;       // write to localStorage at most once per minute
+
+let _lastActivityWrite = 0; // module-level throttle — no React state needed
+
+function getLastActivity(userId: string): number {
+  try {
+    const val = localStorage.getItem(`pexly_last_activity_${userId}`);
+    return val ? parseInt(val, 10) : 0;
+  } catch { return 0; }
+}
+
+function touchLastActivity(userId: string, force = false): void {
+  const now = Date.now();
+  if (!force && now - _lastActivityWrite < ACTIVITY_THROTTLE_MS) return;
+  _lastActivityWrite = now;
+  try {
+    localStorage.setItem(`pexly_last_activity_${userId}`, String(now));
+  } catch { /* silent */ }
+}
+
+function clearLastActivity(userId: string): void {
+  try {
+    localStorage.removeItem(`pexly_last_activity_${userId}`);
+  } catch { /* silent */ }
+}
+
+function isSessionExpired(userId: string): boolean {
+  const last = getLastActivity(userId);
+  if (!last) return false; // no recorded activity → don't expire (backwards-compat)
+  return Date.now() - last > SESSION_INACTIVITY_MS;
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, navigate] = useLocation();
   const [user, setUser] = useState<User | null>(null);
@@ -334,6 +373,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const activityEvents = ['mousedown', 'keydown', 'touchstart', 'mousemove'];
     const handleActivity = () => {
       if (isWalletUnlocked) resetInactivityTimer();
+      // Stamp last activity for session expiry (throttled to 1 write/min)
+      if (activeUserIdRef.current) touchLastActivity(activeUserIdRef.current);
     };
 
     activityEvents.forEach(event => window.addEventListener(event, handleActivity));
@@ -346,6 +387,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkedUsersRef = useRef<Set<string>>(new Set());
   const lastForceCheckRef = useRef<number>(0);
   const sessionTokenRef = useRef<string | null>(null);
+  const isSigningOutRef = useRef(false);
+  const activeUserIdRef = useRef<string | null>(null);
+
+  // Keep activeUserIdRef in sync so the activity handler never has a stale userId
+  useEffect(() => {
+    activeUserIdRef.current = user?.id ?? null;
+  }, [user?.id]);
 
   const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
     if (!userId) return;
@@ -519,8 +567,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // ALWAYS update session for token refresh
-        if (event === 'TOKEN_REFRESHED') {
+        // ALWAYS update session for token refresh — but check custom expiry first
+        if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+          if (
+            currentSession?.user &&
+            !isSigningOutRef.current &&
+            isSessionExpired(currentSession.user.id)
+          ) {
+            // Session exceeded our custom max age — force sign out once
+            isSigningOutRef.current = true;
+            supabase.auth.signOut().finally(() => { isSigningOutRef.current = false; });
+            return;
+          }
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
           return;
@@ -528,6 +586,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Handle logout/session clear
         if (event === 'SIGNED_OUT' || !currentSession) {
+          if (currentSession === null && user?.id) clearLastActivity(user.id);
           setSession(null);
           setUser(null);
           setWalletImportState({ required: false, expectedAddress: null });
@@ -540,7 +599,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(currentSession);
           setUser(currentSession.user);
           
-          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          if (event === 'SIGNED_IN') {
+            // Stamp activity at login so the 30-min inactivity clock starts now
+            touchLastActivity(currentSession.user.id, true);
             // Defer async work to avoid blocking the callback
             setTimeout(() => {
               trackDevice(currentSession.user.id);
@@ -637,6 +698,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const { user: pendingUser, session: pendingSessionData } = pendingSession;
     
+    // Stamp activity at login so the 30-min inactivity clock starts now
+    touchLastActivity(pendingUser.id, true);
+
     // Actually set the session and user state now
     setSession(pendingSessionData);
     setUser(pendingUser);
