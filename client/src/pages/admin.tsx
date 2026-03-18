@@ -3,9 +3,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Shield, Users, FileCheck, Settings, BarChart3, Gift, ArrowRightLeft } from "lucide-react";
+import { Shield, Users, FileCheck, Settings, BarChart3, Gift, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 
@@ -13,30 +11,11 @@ export default function AdminPage() {
   const supabase = createClient();
   const { user } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
     const checkAdminAccess = async () => {
-      // Check if admin session exists in localStorage
-      const adminSession = localStorage.getItem('admin_session');
-      if (adminSession) {
-        try {
-          const session = JSON.parse(adminSession);
-          if (session.expiresAt > Date.now()) {
-            setIsAuthenticated(true);
-            setCheckingSession(false);
-            return;
-          } else {
-            localStorage.removeItem('admin_session');
-          }
-        } catch (e) {
-          localStorage.removeItem('admin_session');
-        }
-      }
-
-      // Check if user has admin role in database
       if (user?.id) {
         const { data: profile } = await supabase
           .from('user_profiles')
@@ -46,29 +25,13 @@ export default function AdminPage() {
 
         if (profile?.is_admin) {
           setIsAuthenticated(true);
-          setCheckingSession(false);
-          return;
         }
       }
-
       setCheckingSession(false);
     };
 
     checkAdminAccess();
   }, [user]);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === "PexlyAdmin2024!") {
-      const session = {
-        expiresAt: Date.now() + (24 * 60 * 60 * 1000)
-      };
-      localStorage.setItem('admin_session', JSON.stringify(session));
-      setIsAuthenticated(true);
-    } else {
-      alert("Incorrect password");
-    }
-  };
 
   if (checkingSession) {
     return (
@@ -88,29 +51,17 @@ export default function AdminPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-6 w-6" />
-              Admin Access
+              <Lock className="h-6 w-6 text-destructive" />
+              Access Denied
             </CardTitle>
             <CardDescription>
-              Enter the admin password to access the admin dashboard
+              You do not have permission to access this page.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Admin Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password"
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Login
-              </Button>
-            </form>
+            <Button variant="outline" className="w-full" onClick={() => setLocation("/")}>
+              Return Home
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -126,13 +77,6 @@ export default function AdminPage() {
       badge: "Active"
     },
     {
-      icon: Shield,
-      title: "Merchant Management",
-      description: "Review and approve merchant applications",
-      href: "/admin/merchants",
-      badge: "Active"
-    },
-    {
       icon: FileCheck,
       title: "Blog Management",
       description: "Create and manage blog posts",
@@ -144,13 +88,6 @@ export default function AdminPage() {
       title: "Gift Card Management",
       description: "Upload and manage gift cards",
       href: "/admin/gift-cards",
-      badge: "Active"
-    },
-    {
-      icon: ArrowRightLeft,
-      title: "Admin Transfer",
-      description: "Move funds from custodian to user wallets",
-      href: "/admin/transfer",
       badge: "Active"
     },
     {
@@ -189,7 +126,7 @@ export default function AdminPage() {
         {adminSections.map((section) => {
           const Icon = section.icon;
           return (
-            <Card 
+            <Card
               key={section.title}
               className="hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => {
