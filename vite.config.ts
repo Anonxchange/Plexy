@@ -2,6 +2,27 @@ import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+const deferNonCriticalCss: Plugin = {
+  name: "defer-non-critical-css",
+  apply: "build",
+  transformIndexHtml(html) {
+    const noscripts: string[] = [];
+    const updated = html.replace(
+      /<link rel="stylesheet" crossorigin href="([^"]+\.css)">/g,
+      (_, href) => {
+        noscripts.push(`<link rel="stylesheet" crossorigin href="${href}">`);
+        return `<link rel="preload" as="style" crossorigin href="${href}">`;
+      }
+    );
+    const noscriptBlock = noscripts.length
+      ? `\n    <noscript>${noscripts.join("\n    ")}</noscript>`
+      : "";
+    return noscriptBlock
+      ? updated.replace("</head>", `${noscriptBlock}\n  </head>`)
+      : updated;
+  },
+};
+
 const preloadEntryScript: Plugin = {
   name: "preload-entry-script",
   apply: "build",
@@ -21,7 +42,7 @@ export default defineConfig({
   envDir: "../",
   base: "/",
 
-  plugins: [react(), preloadEntryScript],
+  plugins: [react(), deferNonCriticalCss, preloadEntryScript],
 
   resolve: {
     alias: {
