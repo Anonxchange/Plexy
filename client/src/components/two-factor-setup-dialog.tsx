@@ -92,9 +92,11 @@ export function TwoFactorSetupDialog({
         const blobUrl = URL.createObjectURL(blob);
         setQrCodeUrl(blobUrl);
 
-        const codes = Array.from({ length: 10 }, () => 
-          Math.random().toString(36).substring(2, 10).toUpperCase()
-        );
+        const codes = Array.from({ length: 10 }, () => {
+          const bytes = new Uint8Array(4);
+          crypto.getRandomValues(bytes);
+          return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+        });
         setBackupCodes(codes);
 
         // Store in sessionStorage
