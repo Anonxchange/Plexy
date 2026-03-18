@@ -560,8 +560,9 @@ export default function AccountSettings() {
 
     setSendingSMS(true);
     try {
-      // Generate a 6-digit code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const arr = new Uint32Array(1);
+      crypto.getRandomValues(arr);
+      const code = (100000 + (arr[0] % 900000)).toString();
 
       // Store code in database with expiry (5 minutes)
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -718,7 +719,9 @@ export default function AccountSettings() {
 
     setSendingEmailCode(true);
     try {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const emailArr = new Uint32Array(1);
+      crypto.getRandomValues(emailArr);
+      const code = (100000 + (emailArr[0] % 900000)).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
       const { error: updateError } = await supabase
