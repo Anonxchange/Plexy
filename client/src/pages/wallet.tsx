@@ -53,6 +53,7 @@ export default function WalletPage() {
   }, [user, isWalletLoading, wallet?.assets.length]);
 
   if (!loading && !user) {
+    setLocation("/signin");
     return null;
   }
 
