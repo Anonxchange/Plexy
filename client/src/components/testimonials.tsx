@@ -1,189 +1,124 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Quote, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import testimonial1 from "@assets/generated_images/IMG_3814.webp";
-import testimonial2 from "@assets/generated_images/IMG_3815.webp";
-import testimonial3 from "@assets/generated_images/IMG_3816.webp";
-import testimonial4 from "@assets/generated_images/IMG_3810.webp";
+import { Star, BadgeCheck } from "lucide-react";
 
-const testimonials = [
+const row1 = [
   {
     name: "Sarah Johnson",
-    role: "Entrepreneur",
-    image: testimonial1,
-    content:
-      "Trading Bitcoin has allowed me to earn an independent income and reach goals in my life. I now own a car, bought a piece of land, and upgraded my business.",
+    rating: 5,
+    content: "Spot trading on Pexly is so clean and fast. I've grown my portfolio significantly just using their trading interface. Best platform I've used.",
   },
   {
     name: "Michael Chen",
-    role: "Trader",
-    image: testimonial2,
-    content:
-      "Before Bitcoin, sending money internationally was almost impossible because of high fees. Now with Pexly I just send Bitcoin instantly and for free.",
+    rating: 5,
+    content: "The perpetual trading features are top-notch. Tight spreads, fast execution, and a great mobile experience. Pexly is my daily trading platform.",
   },
   {
     name: "Maria Rodriguez",
-    role: "Business Owner",
-    image: testimonial3,
-    content:
-      "I store my earnings in BTC because banks are becoming unreliable. It's very safe for me to keep them in this form using online wallets like Pexly.",
+    rating: 5,
+    content: "I love that Pexly is non-custodial. I keep full control of my private keys while still getting a full-featured trading experience. Truly refreshing.",
   },
   {
     name: "Ahmed Hassan",
-    role: "NGO Director",
-    image: testimonial4,
-    content:
-      "Before Bitcoin, we were losing 15-20% of donations to fees. Now we went from losing 15% of all donations to gaining 2% through crypto trading.",
+    rating: 5,
+    content: "Using Pexly to pay utility bills with crypto is a game changer. I top up my mobile and pay bills directly — no bank needed. Absolutely brilliant.",
+  },
+  {
+    name: "James Wilson",
+    rating: 5,
+    content: "The wallet is seamless. Sending and receiving crypto is instant, and the blockchain explorer built right in makes everything transparent.",
   },
 ];
 
+const row2 = [
+  {
+    name: "Olivia Martinez",
+    rating: 5,
+    content: "I use Pexly for spot trading every day. The interface is clean, execution is fast, and I always feel in control of my trades.",
+  },
+  {
+    name: "David Kim",
+    rating: 5,
+    content: "I've tried many crypto platforms but Pexly stands out. The perpetual trading tools are professional-grade without being overwhelming.",
+  },
+  {
+    name: "Amara Osei",
+    rating: 5,
+    content: "Buying gift cards with crypto on Pexly is so convenient. I shop with my crypto earnings and the process takes seconds. Highly recommend.",
+  },
+  {
+    name: "Lena Fischer",
+    rating: 5,
+    content: "Pexly is the first crypto platform I actually found easy. Spot trading, staking, gift cards — everything is in one place. Full control. Love it!",
+  },
+  {
+    name: "Carlos Mendez",
+    rating: 5,
+    content: "The perpetual futures on Pexly give me the leverage and precision I need. Fast fills, competitive fees, and a rock-solid platform. Absolutely recommend.",
+  },
+];
+
+function StarRating({ count }: { count: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {Array.from({ length: count }).map((_, i) => (
+        <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+      ))}
+    </div>
+  );
+}
+
+function TestimonialCard({ name, rating, content }: { name: string; rating: number; content: string }) {
+  return (
+    <div className="flex-shrink-0 w-72 bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 mx-3">
+      <div className="flex items-center justify-between">
+        <StarRating count={rating} />
+        <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground border border-border rounded-full px-2 py-0.5">
+          <BadgeCheck className="h-3.5 w-3.5 text-black dark:text-white" />
+          Verified Review
+        </span>
+      </div>
+      <p className="text-sm text-foreground leading-relaxed flex-1">{content}</p>
+      <p className="text-sm font-semibold text-foreground">{name}</p>
+    </div>
+  );
+}
+
 export function Testimonials() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
-  };
-
-  // Helper to get responsive image paths
-  const getResponsiveSrcSet = (imageName) => {
-    const base = imageName.replace(".webp", "");
-    return `
-      ${base}-276w.webp 276w,
-      ${base}-553w.webp 553w,
-      ${base}-1106w.webp 1106w
-    `;
-  };
+  const doubled1 = [...row1, ...row1];
+  const doubled2 = [...row2, ...row2];
 
   return (
-    <section className="py-20 bg-background relative overflow-hidden">
-      <div className="max-w-6xl mx-auto px-4 lg:px-6">
-        <div className="text-center space-y-4 mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground">
-            Real users. Real stories.
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Learn how Pexly is changing the lives of thousands across the globe
-          </p>
+    <section className="py-20 bg-background overflow-hidden">
+      <div className="max-w-4xl mx-auto px-4 lg:px-6 text-center mb-12">
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <div className="flex gap-0.5">
+            {[1,2,3,4,5].map(i => (
+              <Star key={i} className="h-5 w-5" style={{ fill: "#00B67A", color: "#00B67A" }} />
+            ))}
+          </div>
+          <span className="font-semibold text-foreground">TrustScore</span>
+          <span className="text-muted-foreground text-sm">(107K Reviews)</span>
+        </div>
+        <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+          See what our users say
+        </h2>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          With over 100,000 reviews, Pexly is one of the most reviewed and highest-scoring crypto platforms in the world.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex overflow-hidden">
+          <div className="flex animate-marquee-left">
+            {doubled1.map((t, i) => (
+              <TestimonialCard key={i} {...t} />
+            ))}
+          </div>
         </div>
 
-        {/* Desktop: Horizontal Scroll */}
-        <div className="hidden md:flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 snap-x snap-mandatory">
-          {testimonials.slice(0, 3).map((testimonial, index) => (
-            <div
-              key={index}
-              className="flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] snap-center p-6 rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 hover:bg-white/15 dark:hover:bg-white/10 transition-all duration-300 flex flex-col gap-6"
-            >
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 ring-2 ring-white/20">
-                  <AvatarImage
-                    src={testimonial.image}
-                    srcSet={getResponsiveSrcSet(testimonial.image)}
-                    sizes="(max-width: 600px) 276px, 553px"
-                    alt={testimonial.name}
-                    loading="lazy"
-                  />
-                  <AvatarFallback>
-                    {testimonial.name.split(" ").map((n) => n[0]).join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-semibold text-foreground">{testimonial.name}</div>
-                  <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                </div>
-              </div>
-
-              <div className="flex-1">
-                <Quote className="h-8 w-8 text-primary/40 mb-3" />
-                <p className="text-muted-foreground italic leading-relaxed">
-                  "{testimonial.content}"
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Mobile: Carousel with Navigation */}
-        <div className="md:hidden">
-          <div className="overflow-hidden">
-            <div
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-            >
-              {testimonials.map((testimonial, index) => (
-                <div key={index} className="w-full flex-shrink-0 px-2">
-                  <div className="p-6 rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 flex flex-col gap-6">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12 ring-2 ring-white/20">
-                        <AvatarImage
-                          src={testimonial.image}
-                          srcSet={getResponsiveSrcSet(testimonial.image)}
-                          sizes="(max-width: 600px) 276px, 553px"
-                          alt={testimonial.name}
-                          loading="lazy"
-                        />
-                        <AvatarFallback>
-                          {testimonial.name.split(" ").map((n) => n[0]).join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-semibold text-foreground">{testimonial.name}</div>
-                        <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Quote className="h-8 w-8 text-primary/40 mb-3" />
-                      <p className="text-muted-foreground italic leading-relaxed">
-                        "{testimonial.content}"
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-center gap-4 mt-8">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePrev}
-              aria-label="Previous testimonial"
-              className="rounded-full bg-black dark:bg-white text-white dark:text-black border-0 h-14 w-14 hover:bg-black/80 dark:hover:bg-white/80"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleNext}
-              aria-label="Next testimonial"
-              className="rounded-full bg-black dark:bg-white text-white dark:text-black border-0 h-14 w-14 hover:bg-black/80 dark:hover:bg-white/80"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </Button>
-          </div>
-
-          {/* Dots Indicator */}
-          <div className="flex justify-center gap-1 mt-4">
-            {testimonials.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className="flex items-center justify-center min-w-[44px] min-h-[44px] p-3"
-                aria-label={`Go to testimonial ${index + 1}`}
-              >
-                <span className={`h-2 rounded-full transition-all duration-300 block ${
-                  index === currentIndex ? "w-8 bg-primary" : "w-2 bg-muted-foreground/30"
-                }`} />
-              </button>
+        <div className="flex overflow-hidden">
+          <div className="flex animate-marquee-right">
+            {doubled2.map((t, i) => (
+              <TestimonialCard key={i} {...t} />
             ))}
           </div>
         </div>
