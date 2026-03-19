@@ -269,6 +269,7 @@ export function GiftCards() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All categories");
   const [selectedSidebarCategory, setSelectedSidebarCategory] = useState("All Categories");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [amount, setAmount] = useState("");
@@ -279,6 +280,7 @@ export function GiftCards() {
     productName: searchQuery,
     page: page,
     size: pageSize,
+    categoryId: selectedCategoryId,
   });
 
   const handleSearch = () => {
@@ -310,12 +312,16 @@ export function GiftCards() {
         <aside className="hidden lg:block lg:col-span-1 bg-card rounded-3xl p-6 border border-border/50 h-fit lg:sticky lg:top-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">Categories</h3>
           <div className="space-y-1">
-            {[{ name: "All Categories", icon: LayoutGrid }, ...(reloadlyCategories || []).map(c => ({ name: c.name, icon: getCategoryIcon(c.name) }))].map((category, index) => {
+            {[{ name: "All Categories", id: undefined, icon: LayoutGrid }, ...(reloadlyCategories || []).map(c => ({ name: c.name, id: c.id, icon: getCategoryIcon(c.name) }))].map((category, index) => {
               const IconComponent = category.icon;
               return (
                 <button
                   key={index}
-                  onClick={() => setSelectedSidebarCategory(category.name)}
+                  onClick={() => {
+                    setSelectedSidebarCategory(category.name);
+                    setSelectedCategoryId(category.id);
+                    setPage(1);
+                  }}
                   className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     selectedSidebarCategory === category.name
                       ? "bg-primary text-primary-foreground"
@@ -464,12 +470,16 @@ export function GiftCards() {
 
           <div className="lg:hidden">
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {[{ name: "All Categories", icon: LayoutGrid }, ...(reloadlyCategories || []).map(c => ({ name: c.name, icon: getCategoryIcon(c.name) }))].map((category, index) => {
+              {[{ name: "All Categories", id: undefined, icon: LayoutGrid }, ...(reloadlyCategories || []).map(c => ({ name: c.name, id: c.id, icon: getCategoryIcon(c.name) }))].map((category, index) => {
                 const IconComponent = category.icon;
                 return (
                   <button
                     key={index}
-                    onClick={() => setSelectedSidebarCategory(category.name)}
+                    onClick={() => {
+                      setSelectedSidebarCategory(category.name);
+                      setSelectedCategoryId(category.id);
+                      setPage(1);
+                    }}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors flex-shrink-0 whitespace-nowrap ${
                       selectedSidebarCategory === category.name
                         ? "bg-primary text-primary-foreground"
@@ -485,7 +495,7 @@ export function GiftCards() {
           </div>
 
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">All categories</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{selectedSidebarCategory}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
               {isLoading ? (
                 [...Array(9)].map((_, i) => (
