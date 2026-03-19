@@ -795,7 +795,7 @@ const BuyCryptoPage = () => {
       {/* ── GET THE APP ── */}
       <section className="pb-10 px-5 lg:px-0">
         <div
-          className="relative overflow-hidden rounded-3xl lg:rounded-3xl px-6 lg:px-24 py-12 lg:py-36"
+          className="relative overflow-hidden rounded-3xl lg:rounded-3xl px-6 lg:px-24 py-12 lg:py-56"
           style={{
             backgroundImage: "url('/IMG_4637.webp')",
             backgroundSize: "cover",
@@ -849,14 +849,14 @@ const BuyCryptoPage = () => {
                 value={`faq-${i}`}
                 className="bg-card border border-border rounded-2xl px-5 overflow-hidden data-[state=open]:border-primary/30 transition-all"
               >
-                <AccordionTrigger className="text-base lg:text-lg font-semibold hover:no-underline text-left py-5 group text-foreground">
+                <AccordionTrigger className="text-sm lg:text-base font-semibold hover:no-underline text-left py-4 group text-foreground">
                   <span className="flex items-center gap-3">
                     <Plus className="w-4 h-4 flex-shrink-0 text-muted-foreground group-data-[state=open]:hidden" />
                     <Minus className="w-4 h-4 flex-shrink-0 text-primary hidden group-data-[state=open]:block" />
                     {faq.question}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground text-base lg:text-lg leading-relaxed pl-7 pb-5">
+                <AccordionContent className="text-muted-foreground text-sm lg:text-base leading-relaxed pl-7 pb-4">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>
