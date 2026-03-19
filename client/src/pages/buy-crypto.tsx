@@ -398,16 +398,16 @@ const BuyCryptoPage = () => {
       {/* ═══════════════════════════════════════
           HERO
       ═══════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-background pt-8 pb-10 px-5">
+      <section className="relative overflow-hidden bg-background pt-8 pb-10 px-5 lg:px-16">
 
         {/* Glow blobs */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-6xl mx-auto">
+        <div className="relative max-w-5xl mx-auto">
 
           {/* Main grid: text left, widget right */}
-          <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-12 lg:items-start">
+          <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8 lg:items-start">
 
             {/* Left */}
             <div>
@@ -633,34 +633,35 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* ── GET THE APP ── */}
-      <section className="px-5 pb-10 max-w-6xl mx-auto">
+      <section className="pb-10 px-5 lg:px-0">
         <div
-          className="relative overflow-hidden rounded-3xl px-6 lg:px-12 py-12 lg:py-14"
+          className="relative overflow-hidden rounded-3xl lg:rounded-3xl px-6 lg:px-24 py-12 lg:py-20"
           style={{
             backgroundImage: "url('/IMG_4637.webp')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
         >
-          <div className="absolute inset-0 bg-black/65 rounded-3xl" />
-          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/12 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute inset-0 bg-black/65" />
+          <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative lg:flex lg:items-center lg:justify-between lg:gap-12">
-            <div className="lg:max-w-lg mb-7 lg:mb-0">
-              <h2 className="text-3xl lg:text-4xl font-bold text-white leading-tight mb-3">
+          <div className="relative max-w-6xl mx-auto lg:flex lg:items-center lg:justify-between lg:gap-16">
+            <div className="lg:max-w-xl mb-8 lg:mb-0">
+              <h2 className="text-4xl lg:text-5xl font-bold text-white leading-tight mb-4">
                 Get the Pexly app.<br />
                 <span className="text-primary">Buy anywhere, anytime.</span>
               </h2>
-              <p className="text-white/60 text-base leading-relaxed">
+              <p className="text-white/60 text-base lg:text-lg leading-relaxed">
                 Whether you're a first-time buyer or seasoned trader — the Pexly app gives you everything in one place.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-              <button className="bg-primary hover:bg-primary/90 text-black font-bold px-7 py-3.5 rounded-2xl text-sm transition-all shadow-lg shadow-primary/25">
+              <button className="bg-primary hover:bg-primary/90 text-black font-bold px-8 py-4 rounded-2xl text-sm transition-all shadow-lg shadow-primary/25">
                 Download app
               </button>
               <Link href="/signup">
-                <button className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-7 py-3.5 rounded-2xl text-sm transition-all backdrop-blur-sm">
+                <button className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-8 py-4 rounded-2xl text-sm transition-all backdrop-blur-sm">
                   Sign up free
                 </button>
               </Link>
