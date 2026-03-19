@@ -635,7 +635,7 @@ const BuyCryptoPage = () => {
       {/* ── GET THE APP ── */}
       <section className="pb-10 px-5 lg:px-0">
         <div
-          className="relative overflow-hidden rounded-3xl lg:rounded-3xl px-6 lg:px-24 py-12 lg:py-20"
+          className="relative overflow-hidden rounded-3xl lg:rounded-3xl px-6 lg:px-24 py-12 lg:py-36"
           style={{
             backgroundImage: "url('/IMG_4637.webp')",
             backgroundSize: "cover",
