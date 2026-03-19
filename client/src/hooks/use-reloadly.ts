@@ -32,6 +32,7 @@ export function useGiftCardProducts(params: {
   size?: number;
   countryCode?: string;
   productName?: string;
+  categoryId?: number;
 }) {
   return useQuery<ProductsResponse>({
     queryKey: ["gift-card-products", params],
@@ -42,6 +43,7 @@ export function useGiftCardProducts(params: {
       };
       if (params.countryCode) queryParams.countryCode = params.countryCode;
       if (params.productName) queryParams.productName = params.productName;
+      if (params.categoryId) queryParams.categoryId = String(params.categoryId);
 
       const url = new URL(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products`
