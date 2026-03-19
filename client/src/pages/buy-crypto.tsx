@@ -160,25 +160,43 @@ function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
   const onScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const scrollLeft = el.scrollLeft;
-    const width = el.offsetWidth;
-    const idx = Math.round(scrollLeft / width);
+    const idx = Math.round(el.scrollLeft / el.offsetWidth);
     setActiveIdx(idx);
   };
 
   return (
     <section className="py-6 max-w-6xl mx-auto px-5">
-      <div className="bg-card border border-border rounded-3xl overflow-hidden">
-        <div className="px-5 pt-5 pb-3">
-          <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full mb-3">How it works</span>
-          <h2 className="text-xl lg:text-2xl font-bold text-foreground mb-1">
-            Buy {cryptoName} in 3 steps
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
-            The simplest way to own crypto — no hidden fees, no middlemen, no waiting.
-          </p>
-        </div>
+      {/* Section header */}
+      <div className="mb-8 text-center">
+        <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full mb-3">How it works</span>
+        <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
+          Buy {cryptoName} in 3 steps
+        </h2>
+        <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
+          The simplest way to own crypto — no hidden fees, no middlemen, no waiting.
+        </p>
+      </div>
 
+      {/* ── DESKTOP: 3-column grid (matches home HowItWorks) ── */}
+      <div className="hidden lg:grid lg:grid-cols-3 lg:gap-8">
+        {HOW_TO_STEPS.map((step, i) => (
+          <div key={i} className="relative bg-card border border-border rounded-2xl pt-14 pb-8 px-6 text-center hover:border-primary/30 hover:shadow-lg transition-all">
+            {/* Watermark step number */}
+            <div className="absolute top-3 right-4 text-7xl font-bold text-foreground/5 select-none leading-none">{step.num}</div>
+            {/* Floating icon */}
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2">
+              <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+                <step.icon className="w-5 h-5 text-black" />
+              </div>
+            </div>
+            <h3 className="text-base font-bold text-foreground mb-2">{step.num}. {step.title}</h3>
+            <p className="text-muted-foreground text-sm leading-relaxed">{step.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── MOBILE: swipeable carousel ── */}
+      <div className="lg:hidden bg-card border border-border rounded-3xl overflow-hidden">
         <div
           ref={scrollRef}
           onScroll={onScroll}
@@ -186,7 +204,7 @@ function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {HOW_TO_STEPS.map((step, i) => (
-            <div key={i} className="snap-start flex-shrink-0 w-full px-5">
+            <div key={i} className="snap-start flex-shrink-0 w-full px-5 pt-4">
               <div className="bg-background border border-border rounded-2xl p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0">
@@ -196,14 +214,11 @@ function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
                     {step.num}. {step.title}
                   </h3>
                 </div>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  {step.desc}
-                </p>
+                <p className="text-muted-foreground text-sm leading-relaxed">{step.desc}</p>
               </div>
             </div>
           ))}
         </div>
-
         <div className="flex items-center justify-center gap-2 pb-4">
           {HOW_TO_STEPS.map((_, i) => (
             <button
@@ -398,7 +413,7 @@ const BuyCryptoPage = () => {
       {/* ═══════════════════════════════════════
           HERO
       ═══════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-background pt-8 pb-10 px-5 lg:px-16">
+      <section className="relative overflow-hidden bg-background pt-8 pb-10 px-5 lg:px-10">
 
         {/* Glow blobs */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
@@ -407,14 +422,13 @@ const BuyCryptoPage = () => {
         <div className="relative max-w-5xl mx-auto">
 
           {/* Main grid: text left, widget right */}
-          <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8 lg:items-start">
+          <div className="lg:flex lg:items-start lg:gap-8 lg:justify-center">
 
             {/* Left */}
-            <div>
-              <h1 className="text-4xl lg:text-[52px] font-bold leading-[1.1] tracking-tight mb-4 text-foreground">
+            <div className="lg:w-[520px] lg:flex-shrink-0">
+              <h1 className="text-4xl lg:text-[34px] font-bold leading-[1.1] tracking-tight mb-4 text-foreground">
                 Buy {cryptoName},<br />
-                <span className="text-primary">join the crypto</span><br />
-                revolution!
+                <span className="text-primary">join the crypto</span>{" "}revolution!
               </h1>
 
               <p className="text-muted-foreground text-base leading-relaxed mb-8 max-w-sm">
@@ -475,7 +489,7 @@ const BuyCryptoPage = () => {
             </div>
 
             {/* Right: Widget */}
-            <div className="mt-10 lg:mt-0 lg:sticky lg:top-24">
+            <div className="mt-10 lg:mt-0 lg:sticky lg:top-24 lg:w-[400px] lg:flex-shrink-0">
               {Widget}
 
               {/* ── LOGGED IN: recent activity below widget ── */}
