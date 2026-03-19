@@ -4,7 +4,7 @@ import { SiApple, SiGoogleplay } from "react-icons/si";
 
 export function CTASection() {
   return (
-    <section className="py-12 lg:py-20 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+    <section className="relative z-10 -mt-16 -mb-16 rounded-3xl py-12 lg:py-20 bg-primary text-primary-foreground overflow-hidden">
       <div className="max-w-6xl mx-auto px-4 lg:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-10 lg:gap-16">
           
