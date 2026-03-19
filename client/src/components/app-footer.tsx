@@ -1,28 +1,28 @@
-import { Zap, Apple, Smartphone } from "lucide-react";
-import { SiX, SiTelegram, SiFacebook, SiInstagram, SiLinkedin, SiYoutube } from "react-icons/si";
+import { Zap } from "lucide-react";
+import { SiX, SiTelegram, SiFacebook, SiInstagram, SiLinkedin, SiYoutube, SiApple, SiGoogleplay } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
 export function AppFooter() {
   return (
     <footer className="bg-[#1a1a1a] text-gray-300">
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8 lg:py-12">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8 lg:mb-12 pb-6 lg:pb-8 border-b border-gray-800">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 pt-28 lg:pt-32 pb-8 lg:pb-12">
+        <div className="flex flex-row items-center justify-between gap-4 mb-8 lg:mb-12 pb-6 lg:pb-8 border-b border-gray-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <Zap className="h-6 w-6 text-primary-foreground" />
             </div>
             <span className="text-2xl font-bold text-white">Pexly</span>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <span className="text-sm text-gray-400 sm:mr-2">Download App:</span>
-            <div className="flex gap-3">
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:block text-sm text-gray-400 mr-1">Download App:</span>
+            <div className="flex gap-2">
               <Button variant="outline" size="sm" className="bg-transparent border-gray-700 hover:bg-gray-800">
-                <Apple className="h-4 w-4 mr-1" />
+                <SiApple className="h-4 w-4 mr-1" />
                 iOS
               </Button>
               <Button variant="outline" size="sm" className="bg-transparent border-gray-700 hover:bg-gray-800">
-                <Smartphone className="h-4 w-4 mr-1" />
+                <SiGoogleplay className="h-4 w-4 mr-1" />
                 Android
               </Button>
             </div>
