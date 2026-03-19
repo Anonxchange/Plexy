@@ -11,16 +11,9 @@ import {
   Minus,
   Loader2,
   ChevronRight,
-  TrendingUp,
-  Zap,
   Clock,
-  ShieldCheck,
-  KeyRound,
-  Gauge,
-  BadgePercent,
   ArrowUpRight,
   ArrowDownLeft,
-  User,
   Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -62,16 +55,169 @@ const ALL_ASSETS = [
 ];
 
 const HOW_TO_STEPS = [
-  { num: "1", title: "Create your account", desc: "Sign up in seconds and verify your identity with our quick KYC process.", icon: User },
-  { num: "2", title: "Select your crypto", desc: "Choose from 100+ assets. Enter your spend amount in any local currency.", icon: TrendingUp },
-  { num: "3", title: "Pay & receive instantly", desc: "Use card, bank, Apple Pay, or Google Pay. Crypto lands in your wallet right away.", icon: Zap },
+  {
+    num: "1",
+    title: "Create your account",
+    desc: "Sign up in seconds and verify your identity with our quick KYC process.",
+    svg: (
+      <svg viewBox="0 0 28 28" fill="none" className="w-5 h-5">
+        {/* Head */}
+        <circle cx="14" cy="9" r="4" fill="black" />
+        {/* Shoulders / body arc */}
+        <path d="M6 23c0-4.42 3.58-8 8-8s8 3.58 8 8" fill="black" fillOpacity="0.85" />
+        {/* Badge circle */}
+        <circle cx="21" cy="7" r="4" fill="black" />
+        {/* Plus in badge */}
+        <path d="M19.5 7h3M21 5.5v3" stroke="#B4F22E" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    num: "2",
+    title: "Select your crypto",
+    desc: "Choose from 100+ assets. Enter your spend amount in any local currency.",
+    svg: (
+      <svg viewBox="0 0 28 28" fill="none" className="w-5 h-5">
+        <defs>
+          <clipPath id="coin-clip">
+            <circle cx="12" cy="14" r="9" />
+          </clipPath>
+        </defs>
+        {/* Coin body */}
+        <circle cx="12" cy="14" r="9" fill="black" />
+        {/* Coin inner ring */}
+        <circle cx="12" cy="14" r="6.5" stroke="#B4F22E" strokeWidth="0.8" strokeOpacity="0.5" fill="none" />
+        {/* Currency symbol */}
+        <path d="M12 10v8M10 11.5h3.5a1.5 1.5 0 010 3H10.5a1.5 1.5 0 010 3H14" stroke="#B4F22E" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Magnifying glass */}
+        <circle cx="21.5" cy="8.5" r="4" fill="black" stroke="black" strokeWidth="0.5" />
+        <circle cx="21.5" cy="8.5" r="2.5" stroke="#B4F22E" strokeWidth="1.2" fill="none" />
+        <line x1="23.3" y1="10.3" x2="25.2" y2="12.2" stroke="#B4F22E" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    num: "3",
+    title: "Pay & receive instantly",
+    desc: "Use card, bank, Apple Pay, or Google Pay. Crypto lands in your wallet right away.",
+    svg: (
+      <svg viewBox="0 0 28 28" fill="none" className="w-5 h-5">
+        {/* Card base */}
+        <rect x="2" y="7" width="22" height="15" rx="2.5" fill="black" />
+        {/* Card magnetic stripe */}
+        <rect x="2" y="11" width="22" height="4" fill="black" fillOpacity="0.55" />
+        {/* Card chip */}
+        <rect x="5" y="8.5" width="4" height="3" rx="0.8" fill="#B4F22E" fillOpacity="0.3" stroke="#B4F22E" strokeWidth="0.6" />
+        {/* Lightning bolt over card */}
+        <path d="M17 8L12 15h4l-1.5 5 7-8h-4.5L17 8z" fill="#B4F22E" />
+        {/* Inner shadow on bolt */}
+        <path d="M16 10.5L13.5 15h3l-1 3.5 4.5-5h-3.5L16 10.5z" fill="black" fillOpacity="0.25" />
+      </svg>
+    ),
+  },
 ];
 
 const TRUST_FEATURES = [
-  { title: "Bank-grade security", desc: "AES-256 encryption, PCI-DSS compliant, and ISO 27001 certified.", icon: ShieldCheck },
-  { title: "Self-custody",        desc: "Your keys, your crypto. We deliver directly to your wallet — we never hold funds.", icon: KeyRound },
-  { title: "Instant settlement",  desc: "Trades settle in real time via our partner network across 140+ countries.", icon: Gauge },
-  { title: "Best rates",          desc: "We compare providers automatically so you always get the best exchange rate.", icon: BadgePercent },
+  {
+    title: "Bank-grade security",
+    desc: "AES-256 encryption, PCI-DSS compliant, and ISO 27001 certified.",
+    svg: (
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+        <defs>
+          <linearGradient id="shield-grad" x1="8" y1="2" x2="24" y2="30" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#B4F22E" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#B4F22E" stopOpacity="0.05" />
+          </linearGradient>
+        </defs>
+        {/* Shield body fill */}
+        <path d="M16 2L4 7.5v7C4 21.8 9.2 27.6 16 29.5 22.8 27.6 28 21.8 28 14.5v-7L16 2z" fill="url(#shield-grad)" stroke="#B4F22E" strokeWidth="1.5" strokeLinejoin="round" />
+        {/* Inner shield highlight */}
+        <path d="M16 6L8 10v4.5c0 4.8 3.5 9.1 8 10.7 4.5-1.6 8-5.9 8-10.7V10L16 6z" fill="#B4F22E" fillOpacity="0.12" />
+        {/* Lock body */}
+        <rect x="11" y="15" width="10" height="8" rx="1.5" fill="#B4F22E" />
+        {/* Lock shackle */}
+        <path d="M13 15v-2.5a3 3 0 016 0V15" stroke="#B4F22E" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        {/* Keyhole */}
+        <circle cx="16" cy="18.5" r="1.2" fill="black" />
+        <rect x="15.3" y="18.5" width="1.4" height="2.5" rx="0.5" fill="black" />
+      </svg>
+    ),
+  },
+  {
+    title: "Self-custody",
+    desc: "Your keys, your crypto. We deliver directly to your wallet — we never hold funds.",
+    svg: (
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+        <defs>
+          <linearGradient id="key-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#B4F22E" />
+            <stop offset="100%" stopColor="#7ab820" />
+          </linearGradient>
+        </defs>
+        {/* Key ring - outer */}
+        <circle cx="11" cy="20" r="7.5" stroke="#B4F22E" strokeWidth="1.5" fill="#B4F22E" fillOpacity="0.15" />
+        {/* Key ring - inner hole */}
+        <circle cx="11" cy="20" r="3.5" fill="black" fillOpacity="0.6" stroke="#B4F22E" strokeWidth="1" />
+        {/* Key shaft */}
+        <rect x="16.5" y="18.5" width="11" height="3" rx="1.5" fill="url(#key-grad)" />
+        {/* Key teeth */}
+        <rect x="23" y="21.5" width="2" height="2.5" rx="0.5" fill="#B4F22E" />
+        <rect x="19" y="21.5" width="2" height="2" rx="0.5" fill="#B4F22E" />
+        {/* Shine on ring */}
+        <path d="M7 16.5 Q9 14 12 15" stroke="white" strokeWidth="0.8" strokeLinecap="round" opacity="0.3" />
+      </svg>
+    ),
+  },
+  {
+    title: "Instant settlement",
+    desc: "Trades settle in real time via our partner network across 140+ countries.",
+    svg: (
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+        <defs>
+          <linearGradient id="zap-grad" x1="10" y1="2" x2="22" y2="30" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#B4F22E" />
+            <stop offset="100%" stopColor="#7ab820" />
+          </linearGradient>
+        </defs>
+        {/* Shadow bolt (black, offset) */}
+        <path d="M19 3L8 18h8l-3 11 13-16h-8l3-10z" fill="black" fillOpacity="0.5" transform="translate(2,2)" />
+        {/* Main bolt */}
+        <path d="M19 3L8 18h8l-3 11 13-16h-8l3-10z" fill="url(#zap-grad)" />
+        {/* Inner highlight line */}
+        <path d="M17 8l-5 8h5l-2 6" stroke="black" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+      </svg>
+    ),
+  },
+  {
+    title: "Best rates",
+    desc: "We compare providers automatically so you always get the best exchange rate.",
+    svg: (
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+        <defs>
+          <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#B4F22E" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#B4F22E" stopOpacity="0.04" />
+          </linearGradient>
+          <clipPath id="chart-clip">
+            <rect x="3" y="4" width="26" height="22" />
+          </clipPath>
+        </defs>
+        {/* Grid lines */}
+        <line x1="3" y1="24" x2="29" y2="24" stroke="#B4F22E" strokeWidth="0.6" strokeOpacity="0.3" />
+        <line x1="3" y1="17" x2="29" y2="17" stroke="#B4F22E" strokeWidth="0.6" strokeOpacity="0.2" />
+        <line x1="3" y1="10" x2="29" y2="10" stroke="#B4F22E" strokeWidth="0.6" strokeOpacity="0.1" />
+        {/* Area fill under trend */}
+        <path d="M4 22 L9 18 L14 20 L19 13 L24 9 L28 6 L28 24 L4 24Z" fill="url(#chart-fill)" />
+        {/* Trend line */}
+        <polyline points="4,22 9,18 14,20 19,13 24,9 28,6" stroke="#B4F22E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        {/* Arrow tip */}
+        <circle cx="28" cy="6" r="2.5" fill="#B4F22E" />
+        <circle cx="28" cy="6" r="1.2" fill="black" />
+        {/* Dot on line */}
+        <circle cx="19" cy="13" r="2" fill="black" stroke="#B4F22E" strokeWidth="1.5" />
+      </svg>
+    ),
+  },
 ];
 
 const FAQS = [
@@ -186,7 +332,7 @@ function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
             {/* Floating icon */}
             <div className="absolute -top-6 left-1/2 -translate-x-1/2">
               <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
-                <step.icon className="w-5 h-5 text-black" />
+                {step.svg}
               </div>
             </div>
             <h3 className="text-base font-bold text-foreground mb-2">{step.num}. {step.title}</h3>
@@ -208,7 +354,7 @@ function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
               <div className="bg-background border border-border rounded-2xl p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0">
-                    <step.icon className="w-4.5 h-4.5 text-black" />
+                    {step.svg}
                   </div>
                   <h3 className="text-sm font-bold text-foreground leading-snug">
                     {step.num}. {step.title}
@@ -575,7 +721,7 @@ const BuyCryptoPage = () => {
           {TRUST_FEATURES.map((f, i) => (
             <div key={i} className="flex gap-4 bg-card border border-border rounded-3xl p-6 hover:border-primary/30 transition-all group">
               <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                <f.icon className="w-5 h-5 text-primary" />
+                {f.svg}
               </div>
               <div>
                 <h3 className="font-bold text-base mb-1 text-foreground">{f.title}</h3>
