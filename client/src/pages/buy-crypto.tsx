@@ -559,25 +559,25 @@ const BuyCryptoPage = () => {
       {/* ═══════════════════════════════════════
           HERO
       ═══════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-background pt-8 pb-10 px-5 lg:px-10">
+      <section className="relative overflow-hidden bg-background pt-8 pb-10 px-4 lg:px-8">
 
         {/* Glow blobs */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-5xl mx-auto">
+        <div className="relative max-w-7xl mx-auto">
 
           {/* Main grid: text left, widget right */}
-          <div className="lg:flex lg:items-start lg:gap-8 lg:justify-center">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
 
             {/* Left */}
-            <div className="lg:w-[520px] lg:flex-shrink-0">
-              <h1 className="text-4xl lg:text-[34px] font-bold leading-[1.1] tracking-tight mb-4 text-foreground">
+            <div>
+              <h1 className="text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold leading-[1.1] tracking-tight mb-4 text-foreground">
                 Buy {cryptoName},<br />
                 <span className="text-primary">join the crypto</span>{" "}revolution!
               </h1>
 
-              <p className="text-muted-foreground text-base leading-relaxed mb-8 max-w-sm">
+              <p className="text-muted-foreground text-base lg:text-xl leading-relaxed mb-8 lg:max-w-xl max-w-sm">
                 Pexly offers the fastest way to buy crypto with a credit card, bank transfer, Apple Pay, Google Pay, and more — in 140+ countries.
               </p>
 
@@ -635,7 +635,7 @@ const BuyCryptoPage = () => {
             </div>
 
             {/* Right: Widget */}
-            <div className="mt-10 lg:mt-0 lg:sticky lg:top-24 lg:w-[400px] lg:flex-shrink-0">
+            <div className="mt-10 lg:mt-0 lg:sticky lg:top-24 lg:max-w-[480px] lg:ml-auto w-full">
               {Widget}
 
               {/* ── LOGGED IN: recent activity below widget ── */}
