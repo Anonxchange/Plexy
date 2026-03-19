@@ -34,7 +34,7 @@ import { getCryptoIconUrl } from "@/lib/crypto-icons";
 import { useAuth } from "@/lib/auth-context";
 import { Link, useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { SiApple } from "react-icons/si";
+import { SiApple, SiVisa, SiMastercard, SiPaypal, SiGooglepay, SiApplepay, SiAmericanexpress, SiSepa, SiBitcoin } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
 import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
@@ -83,6 +83,55 @@ const FAQS = [
   { question: "What is the difference between Bitcoin and Bitcoin Cash?", answer: "Bitcoin (BTC) is the original network. Bitcoin Cash (BCH) is a 2017 fork with larger blocks for faster, cheaper everyday transactions." },
 ];
 
+
+const PAYMENT_METHODS = [
+  { label: "Visa",         Icon: SiVisa,            color: "#1a1f71" },
+  { label: "Apple Pay",    Icon: SiApplepay,        color: "#000000" },
+  { label: "Google Pay",   Icon: SiGooglepay,       color: "#4285f4" },
+  { label: "Mastercard",   Icon: SiMastercard,      color: "#eb001b" },
+  { label: "PayPal",       Icon: SiPaypal,          color: "#003087" },
+  { label: "Amex",         Icon: SiAmericanexpress, color: "#007bc1" },
+  { label: "SEPA",         Icon: SiSepa,            color: "#0052b4" },
+  { label: "Crypto",       Icon: SiBitcoin,         color: "#f7931a" },
+];
+
+function PaymentMethodsCarousel() {
+  const track = [...PAYMENT_METHODS, ...PAYMENT_METHODS];
+  return (
+    <section className="py-8">
+      <p className="text-center text-foreground font-bold text-xl mb-6">Payment Methods</p>
+      <div
+        className="overflow-hidden border-y border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/50 py-5"
+        style={{ contain: "content" }}
+      >
+        <div
+          className="animate-scroll [will-change:transform]"
+          style={{
+            display: "flex",
+            gap: "4rem",
+            alignItems: "center",
+            width: "max-content",
+            maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
+          }}
+        >
+          {track.map((m, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 whitespace-nowrap opacity-80 hover:opacity-100 transition-opacity"
+              aria-hidden={i >= PAYMENT_METHODS.length ? true : undefined}
+            >
+              <m.Icon style={{ color: m.color }} className="w-7 h-7 flex-shrink-0" />
+              <span className="font-bold text-zinc-800 dark:text-zinc-200 text-base tracking-tight">
+                {m.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function TrustBadges() {
   return (
@@ -495,6 +544,9 @@ const BuyCryptoPage = () => {
       {/* ═══════════════════════════════════════
           CONTENT — light/dark background
       ═══════════════════════════════════════ */}
+
+      {/* ── PAYMENT METHODS ── */}
+      <PaymentMethodsCarousel />
 
       {/* ── HOW IT WORKS ── */}
       <HowItWorksCarousel cryptoName={cryptoName} />
