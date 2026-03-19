@@ -1,4 +1,7 @@
 import { useState, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/lib/supabase";
 import { useHead } from "@unhead/react";
 import {
   ChevronDown,
@@ -80,23 +83,6 @@ const FAQS = [
   { question: "What is the difference between Bitcoin and Bitcoin Cash?", answer: "Bitcoin (BTC) is the original network. Bitcoin Cash (BCH) is a 2017 fork with larger blocks for faster, cheaper everyday transactions." },
 ];
 
-const MOCK_RECENT = [
-  { type: "buy",  asset: "BTC", amount: "0.00131 BTC", fiat: "$100",  date: "2 days ago" },
-  { type: "buy",  asset: "ETH", amount: "0.0377 ETH",  fiat: "$100",  date: "5 days ago" },
-  { type: "sell", asset: "SOL", amount: "0.724 SOL",    fiat: "$100",  date: "1 week ago" },
-];
-
-function FloatingChip({ label, sub, color }: { label: string; sub: string; color: string }) {
-  return (
-    <div className="flex items-center gap-2 bg-card border border-border rounded-2xl px-3 py-2 shadow-sm">
-      <div className={`w-2 h-2 rounded-full ${color}`} />
-      <div>
-        <div className="text-foreground text-xs font-bold leading-none">{label}</div>
-        <div className="text-muted-foreground text-[10px] leading-none mt-0.5">{sub}</div>
-      </div>
-    </div>
-  );
-}
 
 function TrustBadges() {
   return (
@@ -201,6 +187,23 @@ const BuyCryptoPage = () => {
   const [activeCrypto, setActiveCrypto] = useState("BTC");
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
+
+  const { data: recentTxs = [], isLoading: txLoading } = useQuery<any[]>({
+    queryKey: ["onramp-transactions", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wallet_transactions")
+        .select("id, type, crypto_symbol, amount, status, created_at")
+        .eq("user_id", user!.id)
+        .in("type", ["deposit", "withdrawal", "swap"])
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  });
 
   const cryptoName = crypto === "BTC" ? "Bitcoin" : crypto === "ETH" ? "Ethereum" : crypto === "SOL" ? "Solana" : crypto;
 
@@ -354,27 +357,6 @@ const BuyCryptoPage = () => {
 
         <div className="relative max-w-6xl mx-auto">
 
-          {/* ── LOGGED IN: personalized header bar ── */}
-          {user && (
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                  <User className="w-4.5 h-4.5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs font-medium">Welcome back</p>
-                  <p className="text-foreground font-bold text-sm truncate max-w-[200px]">
-                    {(user as any).email || "Your Account"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <FloatingChip label="Verified" sub="KYC passed" color="bg-primary" />
-                <FloatingChip label="Wallet" sub="Connected" color="bg-blue-400" />
-              </div>
-            </div>
-          )}
-
           {/* Main grid: text left, widget right */}
           <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-12 lg:items-start">
 
@@ -450,31 +432,59 @@ const BuyCryptoPage = () => {
               {/* ── LOGGED IN: recent activity below widget ── */}
               {user && (
                 <div className="mt-4 bg-card border border-border rounded-2xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border">
+                  <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                     <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                       <Clock className="w-3 h-3" /> Recent activity
                     </span>
+                    {recentTxs.length > 0 && (
+                      <Link href="/wallet">
+                        <span className="text-primary text-[11px] font-semibold hover:underline">View all</span>
+                      </Link>
+                    )}
                   </div>
-                  {MOCK_RECENT.map((tx, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors border-b border-border last:border-0">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        tx.type === "buy" ? "bg-primary/15" : "bg-red-500/15"
-                      }`}>
-                        {tx.type === "buy"
-                          ? <ArrowDownLeft className="w-3.5 h-3.5 text-primary" />
-                          : <ArrowUpRight className="w-3.5 h-3.5 text-red-400" />
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-foreground text-xs font-semibold capitalize">{tx.type} {tx.asset}</p>
-                        <p className="text-muted-foreground text-[11px]">{tx.date}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-foreground text-xs font-bold">{tx.fiat}</p>
-                        <p className="text-muted-foreground text-[11px]">{tx.amount}</p>
-                      </div>
+
+                  {txLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                     </div>
-                  ))}
+                  ) : recentTxs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                      <Clock className="w-7 h-7 text-muted-foreground/30 mb-2" />
+                      <p className="text-muted-foreground text-xs">No transactions yet</p>
+                      <p className="text-muted-foreground/60 text-[11px] mt-0.5">Your buy and sell activity will appear here</p>
+                    </div>
+                  ) : (
+                    recentTxs.map((tx) => {
+                      const isBuy = tx.type === "deposit";
+                      const isSell = tx.type === "withdrawal";
+                      const label = isBuy ? "Buy" : isSell ? "Sell" : tx.type.replace(/_/g, " ");
+                      const amountStr = `${Number(tx.amount).toFixed(
+                        Number(tx.amount) < 0.001 ? 8 : Number(tx.amount) < 1 ? 5 : 4
+                      )} ${tx.crypto_symbol}`;
+                      const dateStr = formatDistanceToNow(new Date(tx.created_at), { addSuffix: true });
+
+                      return (
+                        <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors border-b border-border last:border-0">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            isSell ? "bg-red-500/15" : "bg-primary/15"
+                          }`}>
+                            <img src={getCryptoIconUrl(tx.crypto_symbol)} alt={tx.crypto_symbol} className="w-4 h-4 rounded-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-foreground text-xs font-semibold">
+                              {label} <span className="text-primary">{tx.crypto_symbol}</span>
+                            </p>
+                            <p className="text-muted-foreground text-[11px] capitalize">{tx.status} · {dateStr}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-xs font-bold ${isSell ? "text-red-400" : "text-primary"}`}>
+                              {isSell ? "-" : "+"}{amountStr}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               )}
             </div>
