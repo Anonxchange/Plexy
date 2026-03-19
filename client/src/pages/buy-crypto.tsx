@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useHead } from "@unhead/react";
 import {
   ChevronDown,
@@ -7,13 +7,14 @@ import {
   Plus,
   Minus,
   Loader2,
-  Smartphone,
   ChevronRight,
   TrendingUp,
-  Shield,
   Zap,
-  Wallet,
   Clock,
+  ShieldCheck,
+  KeyRound,
+  Gauge,
+  BadgePercent,
   ArrowUpRight,
   ArrowDownLeft,
   User,
@@ -29,7 +30,8 @@ import {
 import { getCryptoIconUrl } from "@/lib/crypto-icons";
 import { useAuth } from "@/lib/auth-context";
 import { Link, useLocation } from "wouter";
-import { AppFooter } from "@/components/app-footer";
+import { PexlyFooter } from "@/components/pexly-footer";
+import { SiApple } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
 import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
@@ -57,16 +59,16 @@ const ALL_ASSETS = [
 ];
 
 const HOW_TO_STEPS = [
-  { num: "01", title: "Create your account", desc: "Sign up in seconds and verify your identity with our quick KYC process.", icon: User },
-  { num: "02", title: "Select your crypto", desc: "Choose from 100+ assets. Enter your spend amount in any local currency.", icon: TrendingUp },
-  { num: "03", title: "Pay & receive instantly", desc: "Use card, bank, Apple Pay, or Google Pay. Crypto lands in your wallet right away.", icon: Zap },
+  { num: "1", title: "Create your account", desc: "Sign up in seconds and verify your identity with our quick KYC process.", icon: User },
+  { num: "2", title: "Select your crypto", desc: "Choose from 100+ assets. Enter your spend amount in any local currency.", icon: TrendingUp },
+  { num: "3", title: "Pay & receive instantly", desc: "Use card, bank, Apple Pay, or Google Pay. Crypto lands in your wallet right away.", icon: Zap },
 ];
 
 const TRUST_FEATURES = [
-  { title: "Bank-grade security", desc: "AES-256 encryption, PCI-DSS compliant, and ISO 27001 certified.", icon: Shield },
-  { title: "Self-custody",        desc: "Your keys, your crypto. We deliver directly to your wallet — we never hold funds.", icon: Wallet },
-  { title: "Instant settlement",  desc: "Trades settle in real time via our partner network across 140+ countries.", icon: Zap },
-  { title: "Best rates",          desc: "We compare providers automatically so you always get the best exchange rate.", icon: TrendingUp },
+  { title: "Bank-grade security", desc: "AES-256 encryption, PCI-DSS compliant, and ISO 27001 certified.", icon: ShieldCheck },
+  { title: "Self-custody",        desc: "Your keys, your crypto. We deliver directly to your wallet — we never hold funds.", icon: KeyRound },
+  { title: "Instant settlement",  desc: "Trades settle in real time via our partner network across 140+ countries.", icon: Gauge },
+  { title: "Best rates",          desc: "We compare providers automatically so you always get the best exchange rate.", icon: BadgePercent },
 ];
 
 const FAQS = [
@@ -86,11 +88,11 @@ const MOCK_RECENT = [
 
 function FloatingChip({ label, sub, color }: { label: string; sub: string; color: string }) {
   return (
-    <div className={`flex items-center gap-2 bg-white/8 backdrop-blur-md border border-white/10 rounded-2xl px-3 py-2 shadow-lg`}>
+    <div className="flex items-center gap-2 bg-card border border-border rounded-2xl px-3 py-2 shadow-sm">
       <div className={`w-2 h-2 rounded-full ${color}`} />
       <div>
-        <div className="text-white text-xs font-bold leading-none">{label}</div>
-        <div className="text-white/50 text-[10px] leading-none mt-0.5">{sub}</div>
+        <div className="text-foreground text-xs font-bold leading-none">{label}</div>
+        <div className="text-muted-foreground text-[10px] leading-none mt-0.5">{sub}</div>
       </div>
     </div>
   );
@@ -100,11 +102,89 @@ function TrustBadges() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {["PCI-DSS", "ISO 27001", "SOC 2", "AES-256"].map((b) => (
-        <span key={b} className="text-[11px] font-semibold text-white/40 border border-white/10 px-2.5 py-1 rounded-full">
+        <span key={b} className="text-[11px] font-semibold text-muted-foreground border border-border px-2.5 py-1 rounded-full">
           {b}
         </span>
       ))}
     </div>
+  );
+}
+
+function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollTo = (idx: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const child = el.children[idx] as HTMLElement;
+    if (child) child.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    setActiveIdx(idx);
+  };
+
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollLeft = el.scrollLeft;
+    const width = el.offsetWidth;
+    const idx = Math.round(scrollLeft / width);
+    setActiveIdx(idx);
+  };
+
+  return (
+    <section className="py-6 max-w-6xl mx-auto px-5">
+      <div className="bg-card border border-border rounded-3xl overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
+          <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full mb-3">How it works</span>
+          <h2 className="text-xl lg:text-2xl font-bold text-foreground mb-1">
+            Buy {cryptoName} in 3 steps
+          </h2>
+          <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
+            The simplest way to own crypto — no hidden fees, no middlemen, no waiting.
+          </p>
+        </div>
+
+        <div
+          ref={scrollRef}
+          onScroll={onScroll}
+          className="flex overflow-x-auto snap-x snap-mandatory pb-4"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {HOW_TO_STEPS.map((step, i) => (
+            <div key={i} className="snap-start flex-shrink-0 w-full px-5">
+              <div className="bg-background border border-border rounded-2xl p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0">
+                    <step.icon className="w-4.5 h-4.5 text-black" />
+                  </div>
+                  <h3 className="text-sm font-bold text-foreground leading-snug">
+                    {step.num}. {step.title}
+                  </h3>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-center gap-2 pb-4">
+          {HOW_TO_STEPS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => scrollTo(i)}
+              aria-label={`Go to step ${i + 1}`}
+              className={`rounded-full transition-all duration-300 ${
+                activeIdx === i
+                  ? "w-6 h-2 bg-foreground"
+                  : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -164,17 +244,17 @@ const BuyCryptoPage = () => {
   const assetsToShow = showAllAssets ? ALL_ASSETS : FEATURED_ASSETS;
 
   const Widget = (
-    <div className="bg-white dark:bg-[#111116] border border-gray-100 dark:border-white/6 rounded-3xl shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden w-full">
+    <div className="bg-card border border-border rounded-3xl shadow-xl overflow-hidden w-full">
       {/* Tab row */}
-      <div className="flex items-center p-1.5 gap-1 border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/3">
+      <div className="flex items-center p-1 gap-1 border-b border-border bg-muted">
         {(["buy", "sell"] as const).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold capitalize transition-all ${
+            className={`flex-1 py-1.5 rounded-lg text-sm font-bold capitalize transition-all ${
               mode === m
-                ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm"
-                : "text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {m}
@@ -183,65 +263,65 @@ const BuyCryptoPage = () => {
       </div>
 
       {/* Selectors */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2 gap-3">
-        <button className="flex items-center gap-1.5 bg-gray-100 dark:bg-white/7 hover:bg-gray-200 dark:hover:bg-white/12 border border-gray-200 dark:border-white/8 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors text-gray-800 dark:text-white">
+      <div className="flex items-center justify-between px-3 pt-3 pb-1 gap-2">
+        <button className="flex items-center gap-1.5 bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1.5 text-sm font-semibold transition-colors text-foreground">
           {fiat} <ChevronDown className="w-3.5 h-3.5 opacity-50" />
         </button>
         <button
           onClick={() => setActiveCrypto(crypto)}
-          className="flex items-center gap-2 bg-gray-100 dark:bg-white/7 hover:bg-gray-200 dark:hover:bg-white/12 border border-gray-200 dark:border-white/8 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors text-gray-800 dark:text-white"
+          className="flex items-center gap-2 bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1.5 text-sm font-semibold transition-colors text-foreground"
         >
           <img src={getCryptoIconUrl(crypto)} alt={crypto} className="w-5 h-5 rounded-full object-cover" />
           {mode === "buy" ? "Buy" : "Sell"} {crypto}
           <ChevronDown className="w-3.5 h-3.5 opacity-50" />
         </button>
-        <button className="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/7 hover:bg-gray-200 dark:hover:bg-white/12 border border-gray-200 dark:border-white/8 flex items-center justify-center transition-colors flex-shrink-0">
-          <Settings className="w-3.5 h-3.5 text-gray-500 dark:text-white/50" />
+        <button className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 border border-border flex items-center justify-center transition-colors flex-shrink-0">
+          <Settings className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>
 
       {/* Amount */}
-      <div className="px-5 pt-3 pb-2 text-center">
+      <div className="px-4 pt-2 pb-1 text-center">
         <div className="flex items-start justify-center gap-0.5">
-          <span className="text-xl font-bold text-gray-300 dark:text-white/30 mt-1.5 select-none">$</span>
+          <span className="text-lg font-bold text-muted-foreground/50 mt-1 select-none">$</span>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="text-5xl font-black w-full text-center outline-none bg-transparent leading-tight text-gray-900 dark:text-white caret-[#B4F22E]"
+            className="text-5xl font-bold w-full text-center outline-none bg-transparent leading-tight text-foreground caret-primary"
             style={{ minWidth: 0 }}
             placeholder="0"
           />
         </div>
-        <div className="flex items-center justify-center gap-1.5 mt-1.5 text-gray-400 dark:text-white/40 text-xs font-medium">
+        <div className="flex items-center justify-center gap-1.5 mt-1 text-muted-foreground text-xs font-medium">
           <ArrowLeftRight className="w-3 h-3" />
           <span>≈ {estimatedCrypto} {crypto}</span>
         </div>
       </div>
 
       {/* Quick amounts */}
-      <div className="flex gap-2 px-4 pb-4 mt-1">
+      <div className="flex gap-1.5 px-3 pb-3 mt-1">
         {QUICK_AMOUNTS.map((q) => (
           <button
             key={q}
             onClick={() => setAmount(q)}
-            className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
+            className={`flex-1 py-1.5 rounded-xl text-sm font-semibold border transition-all ${
               amount === q
-                ? "border-[#B4F22E] bg-[#B4F22E]/10 text-[#7ab81f] dark:text-[#B4F22E]"
-                : "border-gray-150 dark:border-white/7 bg-white dark:bg-transparent text-gray-500 dark:text-white/40 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-700 dark:hover:text-white/70"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
             }`}
           >
-            ${q === "1000" ? "1,000" : q}
+            ${q === "1000" ? "1k" : q}
           </button>
         ))}
       </div>
 
       {/* CTA */}
-      <div className="px-4 pb-5 space-y-3">
+      <div className="px-3 pb-4 space-y-2">
         <Button
           onClick={handleAction}
           disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount}
-          className="w-full h-12 bg-[#B4F22E] hover:bg-[#c8ff40] active:bg-[#9ed428] text-black rounded-2xl text-sm font-bold border-none shadow-md shadow-[#B4F22E]/20 transition-all"
+          className="w-full h-11 bg-primary hover:bg-primary/90 text-black rounded-2xl text-sm font-bold border-none shadow-md shadow-primary/20 transition-all"
         >
           {cdpOnramp.isPending || cdpOfframp.isPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -252,31 +332,25 @@ const BuyCryptoPage = () => {
           )}
         </Button>
         <div className="flex items-center justify-center gap-1.5">
-          <span className="text-[11px] text-gray-400 dark:text-white/25">Powered by</span>
+          <span className="text-[11px] text-muted-foreground/60">Powered by</span>
           <img src="/logos/coinbase-logo.svg" alt="Coinbase" className="h-3.5 w-3.5 rounded" />
-          <span className="text-[11px] font-semibold text-gray-500 dark:text-white/40">Coinbase</span>
+          <span className="text-[11px] font-semibold text-muted-foreground">Coinbase</span>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#08080C] text-black dark:text-white">
+    <div className="min-h-screen bg-background text-foreground">
 
       {/* ═══════════════════════════════════════
-          HERO — dark gradient, always visible
+          HERO
       ═══════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#05050A] via-[#0A0A12] to-[#0D0D18] pt-10 pb-20 px-5">
-
-        {/* Grid overlay */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px)",
-          backgroundSize: "48px 48px",
-        }} />
+      <section className="relative overflow-hidden bg-background pt-8 pb-10 px-5">
 
         {/* Glow blobs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#B4F22E]/8 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-500/6 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-6xl mx-auto">
 
@@ -284,19 +358,18 @@ const BuyCryptoPage = () => {
           {user && (
             <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#B4F22E]/15 border border-[#B4F22E]/20 flex items-center justify-center flex-shrink-0">
-                  <User className="w-4.5 h-4.5 text-[#B4F22E]" />
+                <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                  <User className="w-4.5 h-4.5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-white/50 text-xs font-medium">Welcome back</p>
-                  <p className="text-white font-bold text-sm truncate max-w-[200px]">
+                  <p className="text-muted-foreground text-xs font-medium">Welcome back</p>
+                  <p className="text-foreground font-bold text-sm truncate max-w-[200px]">
                     {(user as any).email || "Your Account"}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* Quick-stat chips */}
-                <FloatingChip label="Verified" sub="KYC passed" color="bg-[#B4F22E]" />
+                <FloatingChip label="Verified" sub="KYC passed" color="bg-primary" />
                 <FloatingChip label="Wallet" sub="Connected" color="bg-blue-400" />
               </div>
             </div>
@@ -307,31 +380,13 @@ const BuyCryptoPage = () => {
 
             {/* Left */}
             <div>
-              {/* ── NOT LOGGED IN: floating market chips ── */}
-              {!user && (
-                <div className="flex flex-wrap gap-2 mb-7">
-                  <FloatingChip label="BTC $76,400" sub="+2.4% today" color="bg-orange-400" />
-                  <FloatingChip label="ETH $2,650" sub="+1.8% today" color="bg-blue-400" />
-                  <FloatingChip label="SOL $138" sub="+5.1% today" color="bg-[#B4F22E]" />
-                </div>
-              )}
-
-              {/* Coin icon */}
-              <div className="mb-5 flex items-center gap-3">
-                <img src={getCryptoIconUrl(crypto)} alt={crypto} className="w-14 h-14 rounded-full shadow-lg ring-2 ring-white/10" />
-                <div className="flex items-center gap-1.5 bg-white/8 backdrop-blur border border-white/10 rounded-full px-3 py-1.5">
-                  <TrendingUp className="w-3 h-3 text-[#B4F22E]" />
-                  <span className="text-[#B4F22E] text-xs font-bold">+2.4% today</span>
-                </div>
-              </div>
-
-              <h1 className="text-4xl lg:text-[52px] font-black leading-[1.1] tracking-tight mb-4 text-white">
+              <h1 className="text-4xl lg:text-[52px] font-bold leading-[1.1] tracking-tight mb-4 text-foreground">
                 Buy {cryptoName},<br />
-                <span className="text-[#B4F22E]">join the crypto</span><br />
+                <span className="text-primary">join the crypto</span><br />
                 revolution!
               </h1>
 
-              <p className="text-white/50 text-base leading-relaxed mb-8 max-w-sm">
+              <p className="text-muted-foreground text-base leading-relaxed mb-8 max-w-sm">
                 Pexly offers the fastest way to buy crypto with a credit card, bank transfer, Apple Pay, Google Pay, and more — in 140+ countries.
               </p>
 
@@ -339,12 +394,12 @@ const BuyCryptoPage = () => {
               {!user && (
                 <div className="flex flex-wrap gap-3 mb-8">
                   <Link href="/signup">
-                    <button className="bg-[#B4F22E] hover:bg-[#c8ff40] text-black font-bold px-6 py-3 rounded-2xl text-sm transition-all shadow-lg shadow-[#B4F22E]/20">
+                    <button className="bg-primary hover:bg-primary/90 text-black font-bold px-6 py-3 rounded-2xl text-sm transition-all shadow-lg shadow-primary/20">
                       Get started free →
                     </button>
                   </Link>
                   <Link href="/signin">
-                    <button className="bg-white/8 hover:bg-white/12 border border-white/10 text-white font-bold px-6 py-3 rounded-2xl text-sm transition-all backdrop-blur">
+                    <button className="bg-muted hover:bg-muted/80 border border-border text-foreground font-bold px-6 py-3 rounded-2xl text-sm transition-all">
                       Sign in
                     </button>
                   </Link>
@@ -362,8 +417,8 @@ const BuyCryptoPage = () => {
                         onClick={() => setCrypto(s)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
                           crypto === s
-                            ? "bg-[#B4F22E]/15 border-[#B4F22E]/30 text-[#B4F22E]"
-                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white/80"
+                            ? "bg-primary/15 border-primary/30 text-primary"
+                            : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                         }`}
                       >
                         <img src={getCryptoIconUrl(s)} alt={s} className="w-3.5 h-3.5 rounded-full" />
@@ -378,12 +433,12 @@ const BuyCryptoPage = () => {
 
               {/* App store badge */}
               <div className="flex items-center gap-2 mt-6">
-                <div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center">
-                  <Smartphone className="w-3.5 h-3.5 text-white" />
+                <div className="w-7 h-7 rounded-lg bg-black flex items-center justify-center">
+                  <SiApple className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex items-center gap-1">
                   {[1,2,3,4,5].map((s) => <Star key={s} className="w-3 h-3 fill-yellow-400 text-yellow-400" />)}
-                  <span className="text-white/40 text-xs ml-1">4.8 on App Store</span>
+                  <span className="text-muted-foreground text-xs ml-1">4.8 on App Store</span>
                 </div>
               </div>
             </div>
@@ -394,29 +449,29 @@ const BuyCryptoPage = () => {
 
               {/* ── LOGGED IN: recent activity below widget ── */}
               {user && (
-                <div className="mt-4 bg-white/5 backdrop-blur border border-white/8 rounded-2xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-white/5">
-                    <span className="text-white/60 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                <div className="mt-4 bg-card border border-border rounded-2xl overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border">
+                    <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                       <Clock className="w-3 h-3" /> Recent activity
                     </span>
                   </div>
                   {MOCK_RECENT.map((tx, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/4 last:border-0">
+                    <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors border-b border-border last:border-0">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        tx.type === "buy" ? "bg-[#B4F22E]/15" : "bg-red-500/15"
+                        tx.type === "buy" ? "bg-primary/15" : "bg-red-500/15"
                       }`}>
                         {tx.type === "buy"
-                          ? <ArrowDownLeft className="w-3.5 h-3.5 text-[#B4F22E]" />
+                          ? <ArrowDownLeft className="w-3.5 h-3.5 text-primary" />
                           : <ArrowUpRight className="w-3.5 h-3.5 text-red-400" />
                         }
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-white text-xs font-semibold capitalize">{tx.type} {tx.asset}</p>
-                        <p className="text-white/40 text-[11px]">{tx.date}</p>
+                        <p className="text-foreground text-xs font-semibold capitalize">{tx.type} {tx.asset}</p>
+                        <p className="text-muted-foreground text-[11px]">{tx.date}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-white text-xs font-bold">{tx.fiat}</p>
-                        <p className="text-white/40 text-[11px]">{tx.amount}</p>
+                        <p className="text-foreground text-xs font-bold">{tx.fiat}</p>
+                        <p className="text-muted-foreground text-[11px]">{tx.amount}</p>
                       </div>
                     </div>
                   ))}
@@ -432,45 +487,23 @@ const BuyCryptoPage = () => {
       ═══════════════════════════════════════ */}
 
       {/* ── HOW IT WORKS ── */}
-      <section className="px-5 py-20 max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <span className="inline-block text-[#B4F22E] text-xs font-bold uppercase tracking-widest bg-[#B4F22E]/10 px-3 py-1.5 rounded-full mb-4">How it works</span>
-          <h2 className="text-3xl lg:text-4xl font-black mb-3">Buy {cryptoName} in 3 steps</h2>
-          <p className="text-gray-500 dark:text-white/40 max-w-md mx-auto text-base">
-            The simplest way to own crypto — no hidden fees, no middlemen, no waiting.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {HOW_TO_STEPS.map((step, i) => (
-            <div key={i} className="relative bg-gray-50 dark:bg-white/3 border border-gray-100 dark:border-white/6 rounded-3xl p-6 group hover:border-[#B4F22E]/30 dark:hover:border-[#B4F22E]/20 transition-all">
-              <div className="flex items-start justify-between mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-[#B4F22E] flex items-center justify-center shadow-md shadow-[#B4F22E]/20">
-                  <step.icon className="w-5 h-5 text-black" />
-                </div>
-                <span className="text-4xl font-black text-gray-100 dark:text-white/5 select-none">{step.num}</span>
-              </div>
-              <h3 className="text-lg font-black mb-2 text-gray-900 dark:text-white">{step.title}</h3>
-              <p className="text-gray-500 dark:text-white/40 text-sm leading-relaxed">{step.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <HowItWorksCarousel cryptoName={cryptoName} />
 
       {/* ── TRUST / FEATURES ── */}
-      <section className="px-5 pb-20 max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <span className="inline-block text-[#B4F22E] text-xs font-bold uppercase tracking-widest bg-[#B4F22E]/10 px-3 py-1.5 rounded-full mb-4">Why Pexly</span>
-          <h2 className="text-3xl lg:text-4xl font-black">Built for the next billion</h2>
+      <section className="px-5 pb-10 max-w-6xl mx-auto">
+        <div className="text-center mb-7">
+          <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full mb-4">Why Pexly</span>
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Built for the next billion</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {TRUST_FEATURES.map((f, i) => (
-            <div key={i} className="flex gap-4 bg-gray-50 dark:bg-white/3 border border-gray-100 dark:border-white/6 rounded-3xl p-6 hover:border-[#B4F22E]/30 dark:hover:border-[#B4F22E]/20 transition-all group">
-              <div className="w-11 h-11 rounded-2xl bg-[#B4F22E]/10 dark:bg-[#B4F22E]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#B4F22E]/20 transition-colors">
-                <f.icon className="w-5 h-5 text-[#B4F22E]" />
+            <div key={i} className="flex gap-4 bg-card border border-border rounded-3xl p-6 hover:border-primary/30 transition-all group">
+              <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                <f.icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-black text-base mb-1 text-gray-900 dark:text-white">{f.title}</h3>
-                <p className="text-gray-500 dark:text-white/40 text-sm leading-relaxed">{f.desc}</p>
+                <h3 className="font-bold text-base mb-1 text-foreground">{f.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
               </div>
             </div>
           ))}
@@ -478,53 +511,51 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* ── LIVE MARKET / ASSETS ── */}
-      <section className="px-5 pb-20 max-w-6xl mx-auto">
-        <div className="flex items-end justify-between mb-6">
+      <section className="px-5 pb-10 max-w-6xl mx-auto">
+        <div className="flex items-end justify-between mb-4">
           <div>
-            <span className="inline-block text-[#B4F22E] text-xs font-bold uppercase tracking-widest bg-[#B4F22E]/10 px-3 py-1.5 rounded-full mb-3">Markets</span>
-            <h2 className="text-2xl lg:text-3xl font-black">Buy {cryptoName} and 100+ assets</h2>
+            <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full mb-2">Markets</span>
+            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">Buy {cryptoName} and 100+ assets</h2>
           </div>
           <button
             onClick={() => setShowAllAssets(!showAllAssets)}
-            className="hidden md:flex items-center gap-1 text-sm font-semibold text-gray-500 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors"
+            className="hidden md:flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
           >
             {showAllAssets ? "Show less" : "All assets"} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="bg-gray-50 dark:bg-white/2 border border-gray-100 dark:border-white/6 rounded-3xl overflow-hidden">
-          {/* Table header */}
-          <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr] px-5 py-3 border-b border-gray-100 dark:border-white/5">
+        <div className="bg-card border border-border rounded-3xl overflow-hidden">
+          <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr] px-5 py-3 border-b border-border">
             {["Asset", "Price", "24h change", "Action"].map((h) => (
-              <span key={h} className="text-xs font-semibold text-gray-400 dark:text-white/25 uppercase tracking-wider">{h}</span>
+              <span key={h} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</span>
             ))}
           </div>
 
           {assetsToShow.map((asset, i) => (
             <div
               key={asset.symbol}
-              className={`flex md:grid md:grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 px-5 py-4 hover:bg-gray-100 dark:hover:bg-white/4 transition-colors cursor-pointer group ${
-                i < assetsToShow.length - 1 ? "border-b border-gray-100 dark:border-white/4" : ""
+              className={`flex md:grid md:grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 px-5 py-4 hover:bg-muted/50 transition-colors cursor-pointer group ${
+                i < assetsToShow.length - 1 ? "border-b border-border" : ""
               }`}
               onClick={() => { setCrypto(asset.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <img src={getCryptoIconUrl(asset.symbol)} alt={asset.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                 <div>
-                  <p className="font-bold text-sm text-gray-900 dark:text-white">{asset.name}</p>
-                  <p className="text-gray-400 dark:text-white/30 text-xs font-medium">{asset.symbol}</p>
+                  <p className="font-bold text-sm text-foreground">{asset.name}</p>
+                  <p className="text-muted-foreground text-xs font-medium">{asset.symbol}</p>
                 </div>
               </div>
-              <p className="font-bold text-sm text-gray-900 dark:text-white hidden md:block">{asset.price}</p>
+              <p className="font-bold text-sm text-foreground hidden md:block">{asset.price}</p>
               <p className={`font-bold text-sm hidden md:block ${asset.up ? "text-emerald-500" : "text-red-400"}`}>{asset.change}</p>
               <div className="hidden md:block">
-                <button className="text-xs font-bold bg-[#B4F22E]/10 hover:bg-[#B4F22E]/20 text-[#7ab81f] dark:text-[#B4F22E] px-3 py-1.5 rounded-xl transition-colors">
+                <button className="text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-xl transition-colors">
                   Buy {asset.symbol}
                 </button>
               </div>
-              {/* Mobile: price + change on right */}
               <div className="md:hidden ml-auto text-right">
-                <p className="font-bold text-sm text-gray-900 dark:text-white">{asset.price}</p>
+                <p className="font-bold text-sm text-foreground">{asset.price}</p>
                 <p className={`text-xs font-semibold ${asset.up ? "text-emerald-500" : "text-red-400"}`}>{asset.change}</p>
               </div>
             </div>
@@ -533,32 +564,41 @@ const BuyCryptoPage = () => {
 
         <button
           onClick={() => setShowAllAssets(!showAllAssets)}
-          className="md:hidden flex items-center gap-1.5 mt-4 text-sm font-semibold text-gray-500 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors mx-auto"
+          className="md:hidden flex items-center gap-1.5 mt-4 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mx-auto"
         >
           {showAllAssets ? "Show less" : "Show all assets"} <ChevronDown className={`w-4 h-4 transition-transform ${showAllAssets ? "rotate-180" : ""}`} />
         </button>
       </section>
 
       {/* ── GET THE APP ── */}
-      <section className="px-5 pb-20 max-w-6xl mx-auto">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0A0A12] to-[#131320] rounded-3xl px-6 lg:px-12 py-12 lg:py-14">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-[#B4F22E]/8 rounded-full blur-3xl pointer-events-none" />
+      <section className="px-5 pb-10 max-w-6xl mx-auto">
+        <div
+          className="relative overflow-hidden rounded-3xl px-6 lg:px-12 py-12 lg:py-14"
+          style={{
+            backgroundImage: "url('/IMG_2657.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-black/65 rounded-3xl" />
+          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/12 rounded-full blur-3xl pointer-events-none" />
+
           <div className="relative lg:flex lg:items-center lg:justify-between lg:gap-12">
             <div className="lg:max-w-lg mb-7 lg:mb-0">
-              <h2 className="text-3xl lg:text-4xl font-black text-white leading-tight mb-3">
+              <h2 className="text-3xl lg:text-4xl font-bold text-white leading-tight mb-3">
                 Get the Pexly app.<br />
-                <span className="text-[#B4F22E]">Buy anywhere, anytime.</span>
+                <span className="text-primary">Buy anywhere, anytime.</span>
               </h2>
-              <p className="text-white/40 text-base leading-relaxed">
+              <p className="text-white/60 text-base leading-relaxed">
                 Whether you're a first-time buyer or seasoned trader — the Pexly app gives you everything in one place.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-              <button className="bg-[#B4F22E] hover:bg-[#c8ff40] text-black font-bold px-7 py-3.5 rounded-2xl text-sm transition-all shadow-lg shadow-[#B4F22E]/20">
+              <button className="bg-primary hover:bg-primary/90 text-black font-bold px-7 py-3.5 rounded-2xl text-sm transition-all shadow-lg shadow-primary/25">
                 Download app
               </button>
               <Link href="/signup">
-                <button className="bg-white/8 hover:bg-white/14 border border-white/10 text-white font-bold px-7 py-3.5 rounded-2xl text-sm transition-all backdrop-blur">
+                <button className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-7 py-3.5 rounded-2xl text-sm transition-all backdrop-blur-sm">
                   Sign up free
                 </button>
               </Link>
@@ -568,14 +608,14 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="px-5 pb-20 max-w-6xl mx-auto">
+      <section className="px-5 pb-10 max-w-6xl mx-auto">
         <div className="lg:grid lg:grid-cols-[300px_1fr] lg:gap-16">
           <div className="mb-8 lg:mb-0">
-            <span className="inline-block text-[#B4F22E] text-xs font-bold uppercase tracking-widest bg-[#B4F22E]/10 px-3 py-1.5 rounded-full mb-4">FAQ</span>
-            <h2 className="text-3xl font-black text-gray-900 dark:text-white">
+            <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full mb-4">FAQ</span>
+            <h2 className="text-3xl font-bold text-foreground">
               Frequently asked<br />questions
             </h2>
-            <p className="text-gray-500 dark:text-white/40 text-sm mt-3 leading-relaxed">
+            <p className="text-muted-foreground text-sm mt-3 leading-relaxed">
               Everything you need to know about buying crypto on Pexly.
             </p>
           </div>
@@ -584,16 +624,16 @@ const BuyCryptoPage = () => {
               <AccordionItem
                 key={i}
                 value={`faq-${i}`}
-                className="bg-gray-50 dark:bg-white/3 border border-gray-100 dark:border-white/6 rounded-2xl px-5 overflow-hidden data-[state=open]:border-[#B4F22E]/30 dark:data-[state=open]:border-[#B4F22E]/20 transition-all"
+                className="bg-card border border-border rounded-2xl px-5 overflow-hidden data-[state=open]:border-primary/30 transition-all"
               >
-                <AccordionTrigger className="text-sm font-semibold hover:no-underline text-left py-4 group text-gray-900 dark:text-white">
+                <AccordionTrigger className="text-sm font-semibold hover:no-underline text-left py-4 group text-foreground">
                   <span className="flex items-center gap-3">
-                    <Plus className="w-4 h-4 flex-shrink-0 text-gray-400 dark:text-white/30 group-data-[state=open]:hidden" />
-                    <Minus className="w-4 h-4 flex-shrink-0 text-[#B4F22E] hidden group-data-[state=open]:block" />
+                    <Plus className="w-4 h-4 flex-shrink-0 text-muted-foreground group-data-[state=open]:hidden" />
+                    <Minus className="w-4 h-4 flex-shrink-0 text-primary hidden group-data-[state=open]:block" />
                     {faq.question}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-gray-500 dark:text-white/40 text-sm leading-relaxed pl-7 pb-4">
+                <AccordionContent className="text-muted-foreground text-sm leading-relaxed pl-7 pb-4">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>
@@ -603,24 +643,24 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* ── NEED HELP ── */}
-      <section className="px-5 pb-16 max-w-6xl mx-auto">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#05050A] to-[#0D0D18] rounded-3xl px-6 lg:px-12 py-10 lg:py-12">
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/6 rounded-full blur-3xl pointer-events-none" />
+      <section className="px-5 pb-10 max-w-6xl mx-auto">
+        <div className="relative overflow-hidden bg-card border border-border rounded-3xl px-6 lg:px-12 py-10 lg:py-12">
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative lg:flex lg:items-center lg:justify-between lg:gap-12">
             <div className="mb-6 lg:mb-0">
-              <h2 className="text-2xl lg:text-3xl font-black text-white mb-2">Need help buying {cryptoName}?</h2>
-              <p className="text-white/40 text-sm leading-relaxed max-w-md">
+              <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">Need help buying {cryptoName}?</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed max-w-md">
                 Our support team and academy are here to guide you every step of the way.
               </p>
             </div>
             <div className="flex gap-3 flex-wrap flex-shrink-0">
               <Link href="/support">
-                <button className="bg-white text-black font-bold px-5 py-3 rounded-2xl text-sm hover:bg-gray-100 transition-colors">
+                <button className="bg-foreground text-background font-bold px-5 py-3 rounded-2xl text-sm hover:opacity-90 transition-opacity">
                   Help Centre
                 </button>
               </Link>
               <Link href="/academy">
-                <button className="bg-white/8 hover:bg-white/14 border border-white/10 text-white font-bold px-5 py-3 rounded-2xl text-sm transition-all backdrop-blur">
+                <button className="bg-muted hover:bg-muted/80 border border-border text-foreground font-bold px-5 py-3 rounded-2xl text-sm transition-all">
                   Pexly Academy
                 </button>
               </Link>
@@ -629,7 +669,7 @@ const BuyCryptoPage = () => {
         </div>
       </section>
 
-      <AppFooter />
+      <PexlyFooter />
     </div>
   );
 };
