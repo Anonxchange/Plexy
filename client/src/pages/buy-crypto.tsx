@@ -311,32 +311,32 @@ function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
   };
 
   return (
-    <section className="py-6 max-w-6xl mx-auto px-5">
+    <section className="py-10 lg:py-14 max-w-6xl mx-auto px-5">
       {/* Section header */}
-      <div className="mb-8 text-center">
-        <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full mb-3">How it works</span>
-        <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
+      <div className="mb-12 text-center space-y-4">
+        <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full">How it works</span>
+        <h2 className="text-4xl lg:text-5xl font-bold text-foreground">
           Buy {cryptoName} in 3 steps
         </h2>
-        <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
+        <p className="text-muted-foreground text-lg lg:text-xl leading-relaxed max-w-3xl mx-auto">
           The simplest way to own crypto — no hidden fees, no middlemen, no waiting.
         </p>
       </div>
 
       {/* ── DESKTOP: 3-column grid (matches home HowItWorks) ── */}
-      <div className="hidden lg:grid lg:grid-cols-3 lg:gap-8">
+      <div className="hidden lg:grid lg:grid-cols-3 lg:gap-12">
         {HOW_TO_STEPS.map((step, i) => (
-          <div key={i} className="relative bg-card border border-border rounded-2xl pt-14 pb-8 px-6 text-center hover:border-primary/30 hover:shadow-lg transition-all">
+          <div key={i} className="relative bg-card border-2 border-border rounded-2xl pt-16 pb-10 px-6 text-center hover:border-primary/30 hover:shadow-xl transition-all">
             {/* Watermark step number */}
-            <div className="absolute top-3 right-4 text-7xl font-bold text-foreground/5 select-none leading-none">{step.num}</div>
+            <div className="absolute top-4 right-4 text-6xl font-bold text-foreground/5 select-none leading-none">{step.num}</div>
             {/* Floating icon */}
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2">
-              <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
-                {step.svg}
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2">
+              <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+                <span className="scale-150">{step.svg}</span>
               </div>
             </div>
-            <h3 className="text-base font-bold text-foreground mb-2">{step.num}. {step.title}</h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">{step.desc}</p>
+            <h3 className="text-2xl font-bold text-foreground mb-3">{step.num}. {step.title}</h3>
+            <p className="text-muted-foreground text-lg leading-relaxed">{step.desc}</p>
           </div>
         ))}
       </div>
@@ -712,20 +712,20 @@ const BuyCryptoPage = () => {
       <HowItWorksCarousel cryptoName={cryptoName} />
 
       {/* ── TRUST / FEATURES ── */}
-      <section className="px-5 pb-10 max-w-6xl mx-auto">
-        <div className="text-center mb-7">
-          <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full mb-4">Why Pexly</span>
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Built for the next billion</h2>
+      <section className="px-5 pb-10 lg:pb-14 max-w-6xl mx-auto">
+        <div className="text-center mb-12 space-y-4">
+          <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full">Why Pexly</span>
+          <h2 className="text-4xl lg:text-5xl font-bold text-foreground">Built for the next billion</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
           {TRUST_FEATURES.map((f, i) => (
-            <div key={i} className="flex gap-4 bg-card border border-border rounded-3xl p-6 hover:border-primary/30 transition-all group">
-              <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                {f.svg}
+            <div key={i} className="flex gap-5 bg-card border border-border rounded-3xl p-6 lg:p-8 hover:border-primary/30 transition-all group">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                <span className="scale-[1.4]">{f.svg}</span>
               </div>
               <div>
-                <h3 className="font-bold text-base mb-1 text-foreground">{f.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
+                <h3 className="font-bold text-xl lg:text-2xl mb-2 text-foreground">{f.title}</h3>
+                <p className="text-muted-foreground text-base lg:text-lg leading-relaxed">{f.desc}</p>
               </div>
             </div>
           ))}
@@ -733,11 +733,11 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* ── LIVE MARKET / ASSETS ── */}
-      <section className="px-5 pb-10 max-w-6xl mx-auto">
-        <div className="flex items-end justify-between mb-4">
-          <div>
-            <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full mb-2">Markets</span>
-            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">Buy {cryptoName} and 100+ assets</h2>
+      <section className="px-5 pb-10 lg:pb-14 max-w-6xl mx-auto">
+        <div className="flex items-end justify-between mb-8">
+          <div className="space-y-2">
+            <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full">Markets</span>
+            <h2 className="text-4xl lg:text-5xl font-bold text-foreground">Buy {cryptoName} and 100+ assets</h2>
           </div>
           <button
             onClick={() => setShowAllAssets(!showAllAssets)}
@@ -757,22 +757,22 @@ const BuyCryptoPage = () => {
           {assetsToShow.map((asset, i) => (
             <div
               key={asset.symbol}
-              className={`flex md:grid md:grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 px-5 py-4 hover:bg-muted/50 transition-colors cursor-pointer group ${
+              className={`flex md:grid md:grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 px-5 py-5 hover:bg-muted/50 transition-colors cursor-pointer group ${
                 i < assetsToShow.length - 1 ? "border-b border-border" : ""
               }`}
               onClick={() => { setCrypto(asset.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <img src={getCryptoIconUrl(asset.symbol)} alt={asset.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                <img src={getCryptoIconUrl(asset.symbol)} alt={asset.name} className="w-10 h-10 lg:w-12 lg:h-12 rounded-full object-cover flex-shrink-0" />
                 <div>
-                  <p className="font-bold text-sm text-foreground">{asset.name}</p>
-                  <p className="text-muted-foreground text-xs font-medium">{asset.symbol}</p>
+                  <p className="font-bold text-sm lg:text-base text-foreground">{asset.name}</p>
+                  <p className="text-muted-foreground text-xs lg:text-sm font-medium">{asset.symbol}</p>
                 </div>
               </div>
-              <p className="font-bold text-sm text-foreground hidden md:block">{asset.price}</p>
-              <p className={`font-bold text-sm hidden md:block ${asset.up ? "text-emerald-500" : "text-red-400"}`}>{asset.change}</p>
+              <p className="font-bold text-sm lg:text-base text-foreground hidden md:block">{asset.price}</p>
+              <p className={`font-bold text-sm lg:text-base hidden md:block ${asset.up ? "text-emerald-500" : "text-red-400"}`}>{asset.change}</p>
               <div className="hidden md:block">
-                <button className="text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-xl transition-colors">
+                <button className="text-sm font-bold bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl transition-colors">
                   Buy {asset.symbol}
                 </button>
               </div>
@@ -831,32 +831,32 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="px-5 pb-10 max-w-6xl mx-auto">
-        <div className="lg:grid lg:grid-cols-[300px_1fr] lg:gap-16">
+      <section className="px-5 pb-10 lg:pb-14 max-w-6xl mx-auto">
+        <div className="lg:grid lg:grid-cols-[340px_1fr] lg:gap-16">
           <div className="mb-8 lg:mb-0">
             <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full mb-4">FAQ</span>
-            <h2 className="text-3xl font-bold text-foreground">
+            <h2 className="text-4xl lg:text-5xl font-bold text-foreground">
               Frequently asked<br />questions
             </h2>
-            <p className="text-muted-foreground text-sm mt-3 leading-relaxed">
+            <p className="text-muted-foreground text-base lg:text-lg mt-4 leading-relaxed">
               Everything you need to know about buying crypto on Pexly.
             </p>
           </div>
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="single" collapsible className="space-y-3">
             {FAQS.map((faq, i) => (
               <AccordionItem
                 key={i}
                 value={`faq-${i}`}
                 className="bg-card border border-border rounded-2xl px-5 overflow-hidden data-[state=open]:border-primary/30 transition-all"
               >
-                <AccordionTrigger className="text-sm font-semibold hover:no-underline text-left py-4 group text-foreground">
+                <AccordionTrigger className="text-base lg:text-lg font-semibold hover:no-underline text-left py-5 group text-foreground">
                   <span className="flex items-center gap-3">
                     <Plus className="w-4 h-4 flex-shrink-0 text-muted-foreground group-data-[state=open]:hidden" />
                     <Minus className="w-4 h-4 flex-shrink-0 text-primary hidden group-data-[state=open]:block" />
                     {faq.question}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground text-sm leading-relaxed pl-7 pb-4">
+                <AccordionContent className="text-muted-foreground text-base lg:text-lg leading-relaxed pl-7 pb-5">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>
@@ -866,13 +866,13 @@ const BuyCryptoPage = () => {
       </section>
 
       {/* ── NEED HELP ── */}
-      <section className="px-5 pb-10 max-w-6xl mx-auto">
-        <div className="relative overflow-hidden bg-card border border-border rounded-3xl px-6 lg:px-12 py-10 lg:py-12">
+      <section className="px-5 pb-10 lg:pb-14 max-w-6xl mx-auto">
+        <div className="relative overflow-hidden bg-card border border-border rounded-3xl px-6 lg:px-12 py-10 lg:py-14">
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative lg:flex lg:items-center lg:justify-between lg:gap-12">
             <div className="mb-6 lg:mb-0">
-              <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">Need help buying {cryptoName}?</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed max-w-md">
+              <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground mb-3">Need help buying {cryptoName}?</h2>
+              <p className="text-muted-foreground text-base lg:text-lg leading-relaxed max-w-md">
                 Our support team and academy are here to guide you every step of the way.
               </p>
             </div>
