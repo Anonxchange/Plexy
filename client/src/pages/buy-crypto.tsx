@@ -637,7 +637,7 @@ const BuyCryptoPage = () => {
         <div
           className="relative overflow-hidden rounded-3xl px-6 lg:px-12 py-12 lg:py-14"
           style={{
-            backgroundImage: "url('/IMG_2657.png')",
+            backgroundImage: "url('/IMG_4637.webp')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
