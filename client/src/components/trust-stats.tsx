@@ -9,7 +9,7 @@ export const TrustStats = () => {
   return (
     <section
       id="features"
-      className="py-20 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground relative overflow-hidden"
+      className="py-20 bg-primary text-primary-foreground relative overflow-hidden rounded-3xl -mt-10 z-10"
     >
       <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
 
