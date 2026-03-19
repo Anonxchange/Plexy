@@ -113,13 +113,17 @@ export default function Home() {
 
       <TrustStats />
 
-      <LazyMount height={600}>
-        <Testimonials />
-      </LazyMount>
+      <div className="pb-16">
+        <LazyMount height={600}>
+          <Testimonials />
+        </LazyMount>
+      </div>
 
       <CTASection />
 
-      <AppFooter />
+      <div className="bg-[#1a1a1a] -mt-16">
+        <AppFooter />
+      </div>
     </div>
   );
 }
