@@ -5,9 +5,27 @@ import { SiApple, SiGoogleplay } from "react-icons/si";
 export function CTASection() {
   return (
     <section className="relative z-10 -mt-16 -mb-16 rounded-3xl py-12 lg:py-20 bg-primary text-primary-foreground overflow-hidden">
-      <div className="max-w-6xl mx-auto px-4 lg:px-6">
+
+      {/* Dot pattern */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.18) 1.5px, transparent 1.5px)",
+          backgroundSize: "22px 22px",
+        }}
+      />
+
+      {/* Centre glow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,255,255,0.12) 0%, transparent 70%)",
+        }}
+      />
+
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
         <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-10 lg:gap-16">
-          
+
           {/* LEFT — TEXT & CTA */}
           <div className="text-center lg:text-left space-y-6">
             <div className="space-y-4">
