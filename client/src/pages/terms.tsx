@@ -2,6 +2,7 @@
 import { useHead } from "@unhead/react";
 import { FileText, Shield, AlertCircle, ChevronDown } from "lucide-react";
 import { AppFooter } from "@/components/app-footer";
+import { LegalPageHero } from "@/components/legal-page-hero";
 import { Link } from "wouter";
 import { useState } from "react";
 import {
@@ -40,25 +41,11 @@ export default function Terms() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-primary pt-20 pb-40 px-4">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-primary-foreground/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary-foreground/5 rounded-full blur-3xl"></div>
-
-        <div className="max-w-4xl mx-auto relative z-10 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="block text-primary-foreground">User Agreement</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-            Please read these terms and conditions carefully before using Pexly services
-          </p>
-
-          <p className="text-sm text-primary-foreground/80">
-            Last Updated: February 26, 2025
-          </p>
-        </div>
-      </section>
+      <LegalPageHero
+        title="User Agreement"
+        subtitle="Please read these terms and conditions carefully before using Pexly services"
+        lastUpdated="February 26, 2025"
+      />
 
       {/* Content — overlaps hero above and footer below */}
       <section className="relative z-10 -mt-20 pb-0">
