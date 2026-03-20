@@ -1,24 +1,32 @@
 import {
   ChevronDown,
   Zap,
-  ArrowRight,
   Globe,
-  Gift,
-  Wallet,
-  TrendingUp,
-  ShoppingCart,
-  Store,
-  HeadphonesIcon,
-  LayoutDashboard,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "./theme-toggle";
 import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+
+const LANGUAGES = [
+  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "es", label: "Español", flag: "🇪🇸" },
+  { code: "fr", label: "Français", flag: "🇫🇷" },
+  { code: "pt", label: "Português", flag: "🇧🇷" },
+  { code: "ar", label: "العربية", flag: "🇸🇦" },
+  { code: "zh", label: "中文", flag: "🇨🇳" },
+  { code: "ru", label: "Русский", flag: "🇷🇺" },
+  { code: "de", label: "Deutsch", flag: "🇩🇪" },
+  { code: "tr", label: "Türkçe", flag: "🇹🇷" },
+  { code: "hi", label: "हिन्दी", flag: "🇮🇳" },
+  { code: "id", label: "Bahasa Indonesia", flag: "🇮🇩" },
+  { code: "vi", label: "Tiếng Việt", flag: "🇻🇳" },
+];
 
 interface AppSidebarProps {
   onNavigate?: () => void;
@@ -143,10 +151,18 @@ function SubItem({ label, href, badge, onClick, active, external }: SubItemProps
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
+  const [language, setLanguage] = useState<string>(
+    () => localStorage.getItem("pexly_lang") || "en"
+  );
 
   const go = (path: string) => {
     navigate(path);
     onNavigate?.();
+  };
+
+  const handleLanguageChange = (code: string) => {
+    setLanguage(code);
+    localStorage.setItem("pexly_lang", code);
   };
 
   return (
@@ -244,43 +260,54 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
       </nav>
 
-      {/* Footer CTAs */}
+      {/* Footer */}
       <div className="border-t border-border/60 p-5 space-y-3">
-        {user ? (
-          <Button
-            className="w-full rounded-xl font-semibold"
-            onClick={() => go("/dashboard")}
-          >
-            <LayoutDashboard className="h-4 w-4 mr-2" />
-            Go to Dashboard
-          </Button>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-2.5">
-              <Button
-                variant="secondary"
-                className="rounded-xl font-semibold"
-                onClick={() => go("/signin")}
-              >
-                Sign In
-              </Button>
-              <Button
-                variant="secondary"
-                className="rounded-xl font-semibold"
-                onClick={() => go("/signup")}
-              >
-                Register
-              </Button>
-            </div>
+        {!user && (
+          <div className="grid grid-cols-2 gap-2.5">
             <Button
-              className="w-full rounded-xl font-semibold gap-2"
+              variant="secondary"
+              className="rounded-xl font-semibold"
+              onClick={() => go("/signin")}
+            >
+              Sign In
+            </Button>
+            <Button
+              variant="secondary"
+              className="rounded-xl font-semibold"
               onClick={() => go("/signup")}
             >
-              Get Started
-              <ArrowRight className="h-4 w-4" />
+              Register
             </Button>
-          </>
+          </div>
         )}
+
+        {/* Language selector */}
+        <Select value={language} onValueChange={handleLanguageChange}>
+          <SelectTrigger className="w-full rounded-xl gap-2">
+            <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <SelectValue>
+              {(() => {
+                const lang = LANGUAGES.find(l => l.code === language);
+                return lang ? (
+                  <span className="flex items-center gap-2">
+                    <span>{lang.flag}</span>
+                    <span>{lang.label}</span>
+                  </span>
+                ) : null;
+              })()}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {LANGUAGES.map(lang => (
+              <SelectItem key={lang.code} value={lang.code}>
+                <span className="flex items-center gap-2">
+                  <span>{lang.flag}</span>
+                  <span>{lang.label}</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
     </div>
