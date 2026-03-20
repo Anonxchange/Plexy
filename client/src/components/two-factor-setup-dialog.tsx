@@ -11,9 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { generateSecret, buildOtpAuthUri, verifyTOTP } from "@/lib/totp";
-import QRCode from "qrcode";
-import { Copy, Check, RefreshCw, Shield } from "lucide-react";
+import { RefreshCw, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
 interface TwoFactorSetupDialogProps {
@@ -32,167 +30,104 @@ export function TwoFactorSetupDialog({
   onSuccess,
 }: TwoFactorSetupDialogProps) {
   const [step, setStep] = useState(1);
-  const [secret, setSecret] = useState("");
-  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [factorId, setFactorId] = useState("");
+  const [qrSvg, setQrSvg] = useState<string>("");
+  const [manualSecret, setManualSecret] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
-  const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [copiedSecret, setCopiedSecret] = useState(false);
-  const [copiedBackup, setCopiedBackup] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
 
-  // Prevents a stale async call from overwriting state after unmount / re-trigger
-  const generationId = useRef(0);
+  const enrollmentId = useRef(0);
 
-  const runGenerate = async (id: number) => {
-    setGenerating(true);
+  const runEnroll = async (id: number) => {
+    setEnrolling(true);
     try {
-      const newSecret = generateSecret();
-      const otpauthUri = buildOtpAuthUri(newSecret, userEmail, "Pexly");
-      // Use base64 data URL directly — no blob conversion needed
-      const dataUrl = await QRCode.toDataURL(otpauthUri, {
-        width: 192,
-        margin: 1,
-        color: { dark: "#000000", light: "#ffffff" },
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+        friendlyName: `Pexly (${userEmail})`,
       });
 
-      // Bail if a newer generation was started while we were awaiting
-      if (id !== generationId.current) return;
+      if (id !== enrollmentId.current) return;
 
-      const codes = Array.from({ length: 10 }, () => {
-        const bytes = crypto.getRandomValues(new Uint8Array(4));
-        return Array.from(bytes)
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("")
-          .toUpperCase();
-      });
+      if (error) throw error;
 
-      setSecret(newSecret);
-      setQrDataUrl(dataUrl);
-      setBackupCodes(codes);
-
-      sessionStorage.setItem(
-        `2fa_setup_${userId}`,
-        JSON.stringify({ secret: newSecret, qrDataUrl: dataUrl, backupCodes: codes })
-      );
-    } catch (err) {
-      if (id !== generationId.current) return;
-      console.error("Error generating 2FA:", err);
+      setFactorId(data.id);
+      setQrSvg(data.totp.qr_code);
+      setManualSecret(data.totp.secret);
+    } catch (err: any) {
+      if (id !== enrollmentId.current) return;
       toast({
         title: "Setup error",
-        description: "Could not generate QR code. Please try again.",
+        description: err?.message || "Could not start 2FA setup. Please try again.",
         variant: "destructive",
       });
     } finally {
-      if (id === generationId.current) setGenerating(false);
+      if (id === enrollmentId.current) setEnrolling(false);
     }
   };
 
-  const triggerGenerate = () => {
-    const id = ++generationId.current;
-    runGenerate(id);
+  const triggerEnroll = () => {
+    const id = ++enrollmentId.current;
+    runEnroll(id);
   };
 
-  // On open: restore from sessionStorage or generate fresh
   useEffect(() => {
     if (!open) return;
-
-    const stored = sessionStorage.getItem(`2fa_setup_${userId}`);
-    if (stored) {
-      try {
-        const { secret: s, qrDataUrl: q, backupCodes: bc } = JSON.parse(stored);
-        if (s && q?.startsWith("data:image/")) {
-          setSecret(s);
-          setQrDataUrl(q);
-          setBackupCodes(bc ?? []);
-          return;
-        }
-      } catch {
-        // fall through
-      }
-    }
-
-    triggerGenerate();
-  // Only run when the dialog opens/closes, not on every render
+    triggerEnroll();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleVerify = async () => {
-    if (!verifyTOTP(verificationCode, secret)) {
-      toast({
-        title: "Invalid code",
-        description: "The code doesn't match. Make sure your device time is synced and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!factorId) return;
     setLoading(true);
     try {
-      const { data: existingProfile, error: checkError } = await supabase
-        .from("user_profiles")
-        .select("id")
-        .eq("id", userId)
-        .single();
+      const { error } = await supabase.auth.mfa.challengeAndVerify({
+        factorId,
+        code: verificationCode,
+      });
 
-      if (checkError || !existingProfile) {
-        throw new Error("User profile not found. Please complete your profile first.");
+      if (error) {
+        toast({
+          title: "Invalid code",
+          description: "The code doesn't match. Make sure your device time is synced and try again.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const { error } = await supabase
-        .from("user_profiles")
-        .update({
-          two_factor_secret: secret,
-          two_factor_enabled: true,
-          two_factor_backup_codes: JSON.stringify(backupCodes),
-        })
-        .eq("id", userId);
-
-      if (error) throw new Error(error.message || "Database update failed");
-
-      setStep(3);
       toast({
         title: "2FA enabled!",
         description: "Your account is now protected with two-factor authentication.",
       });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to enable 2FA. Please try again.";
-      toast({ title: "Setup failed", description: msg, variant: "destructive" });
+
+      reset();
+      onOpenChange(false);
+      onSuccess();
+    } catch (err: any) {
+      toast({
+        title: "Verification failed",
+        description: err?.message || "Failed to verify the code. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const copySecret = () => {
-    navigator.clipboard.writeText(secret);
-    setCopiedSecret(true);
-    setTimeout(() => setCopiedSecret(false), 2000);
-  };
-
-  const copyBackupCodes = () => {
-    navigator.clipboard.writeText(backupCodes.join("\n"));
-    setCopiedBackup(true);
-    setTimeout(() => setCopiedBackup(false), 2000);
-  };
-
   const reset = () => {
-    generationId.current++;            // invalidate any in-flight generation
+    enrollmentId.current++;
     setStep(1);
     setVerificationCode("");
-    setSecret("");
-    setQrDataUrl("");
-    setBackupCodes([]);
-    setCopiedSecret(false);
-    setCopiedBackup(false);
-    setGenerating(false);
-    sessionStorage.removeItem(`2fa_setup_${userId}`);
+    setFactorId("");
+    setQrSvg("");
+    setManualSecret("");
+    setEnrolling(false);
   };
 
   const handleClose = () => {
-    if (step === 2) return;            // block accidental close mid-verify
-    if (step === 3) onSuccess();
+    if (step === 2 && loading) return;
     reset();
     onOpenChange(false);
   };
@@ -205,30 +140,23 @@ export function TwoFactorSetupDialog({
             <Shield className="h-5 w-5 text-primary" />
             {step === 1 && "Set Up Two-Factor Authentication"}
             {step === 2 && "Verify Your Authenticator"}
-            {step === 3 && "Save Your Backup Codes"}
           </DialogTitle>
           <DialogDescription>
             {step === 1 && "Scan the QR code with Google Authenticator, Authy, or any TOTP app."}
             {step === 2 && "Enter the 6-digit code currently shown in your authenticator app."}
-            {step === 3 && "Store these backup codes somewhere safe — each one can only be used once."}
           </DialogDescription>
         </DialogHeader>
 
-        {/* ── Step 1: QR code + secret ──────────────────────────── */}
         {step === 1 && (
           <div className="space-y-4">
             <div className="flex flex-col items-center gap-3">
               <div className="p-3 rounded-xl border border-border bg-white shadow-sm min-h-[192px] min-w-[192px] flex items-center justify-center">
-                {generating ? (
+                {enrolling ? (
                   <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
-                ) : qrDataUrl ? (
-                  <img
-                    src={qrDataUrl}
-                    alt="Scan this QR code with your authenticator app"
-                    width={192}
-                    height={192}
-                    className="block"
-                    draggable={false}
+                ) : qrSvg ? (
+                  <div
+                    className="w-[192px] h-[192px]"
+                    dangerouslySetInnerHTML={{ __html: qrSvg }}
                   />
                 ) : (
                   <span className="text-xs text-muted-foreground">Loading…</span>
@@ -240,38 +168,24 @@ export function TwoFactorSetupDialog({
                 variant="ghost"
                 size="sm"
                 className="gap-1.5 text-muted-foreground text-xs"
-                onClick={triggerGenerate}
-                disabled={generating}
+                onClick={triggerEnroll}
+                disabled={enrolling}
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
+                <RefreshCw className={`h-3.5 w-3.5 ${enrolling ? "animate-spin" : ""}`} />
                 Regenerate
               </Button>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Or enter this key manually</Label>
-              <div className="flex gap-2">
+            {manualSecret && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Or enter this key manually</Label>
                 <Input
-                  value={secret}
+                  value={manualSecret}
                   readOnly
                   className="font-mono text-sm tracking-wider"
-                  placeholder={generating ? "Generating…" : ""}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={copySecret}
-                  disabled={!secret}
-                >
-                  {copiedSecret ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
               </div>
-            </div>
+            )}
 
             <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 leading-relaxed">
               After scanning, your app will start showing a 6-digit code that refreshes every 30 seconds.
@@ -279,7 +193,6 @@ export function TwoFactorSetupDialog({
           </div>
         )}
 
-        {/* ── Step 2: Enter code ────────────────────────────────── */}
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -304,50 +217,11 @@ export function TwoFactorSetupDialog({
           </div>
         )}
 
-        {/* ── Step 3: Backup codes ──────────────────────────────── */}
-        {step === 3 && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-border overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/40">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Backup Codes
-                </Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 h-7 text-xs"
-                  onClick={copyBackupCodes}
-                >
-                  {copiedBackup ? (
-                    <><Check className="h-3.5 w-3.5 text-green-500" /> Copied</>
-                  ) : (
-                    <><Copy className="h-3.5 w-3.5" /> Copy all</>
-                  )}
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-px bg-border">
-                {backupCodes.map((code, i) => (
-                  <div
-                    key={i}
-                    className="bg-background px-4 py-2 font-mono text-sm text-center tracking-widest"
-                  >
-                    {code}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 leading-relaxed border border-amber-200 dark:border-amber-800">
-              Store these in a password manager or print them out. Each code works only once.
-            </p>
-          </div>
-        )}
-
         <DialogFooter>
           {step === 1 && (
             <Button
               onClick={() => setStep(2)}
-              disabled={!secret || generating}
+              disabled={!factorId || enrolling}
               className="w-full sm:w-auto"
             >
               I've scanned the code — Next
@@ -365,11 +239,6 @@ export function TwoFactorSetupDialog({
                 {loading ? "Verifying…" : "Verify & Enable"}
               </Button>
             </div>
-          )}
-          {step === 3 && (
-            <Button onClick={handleClose} className="w-full sm:w-auto">
-              Done — I've saved my codes
-            </Button>
           )}
         </DialogFooter>
       </DialogContent>
