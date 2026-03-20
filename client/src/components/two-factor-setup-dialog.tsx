@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,9 +11,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import * as OTPAuth from "otplib";
+import { generateSecret, buildOtpAuthUri, verifyTOTP } from "@/lib/totp";
 import QRCode from "qrcode";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, RefreshCw, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
 interface TwoFactorSetupDialogProps {
@@ -37,97 +37,93 @@ export function TwoFactorSetupDialog({
   const [verificationCode, setVerificationCode] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [copiedBackup, setCopiedBackup] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
 
+  // Revoke blob URL on unmount
   useEffect(() => {
     return () => {
-      if (qrCodeUrl && qrCodeUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(qrCodeUrl);
-      }
+      if (qrCodeUrl?.startsWith("blob:")) URL.revokeObjectURL(qrCodeUrl);
     };
   }, [qrCodeUrl]);
+
+  const generate = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const newSecret = generateSecret();
+      const otpauthUri = buildOtpAuthUri(newSecret, userEmail, "Pexly");
+
+      // Generate QR code as base64 PNG then convert to Blob URL
+      const base64 = await QRCode.toDataURL(otpauthUri, { width: 200, margin: 1 });
+      const res = await fetch(base64);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const codes = Array.from({ length: 10 }, () => {
+        const bytes = crypto.getRandomValues(new Uint8Array(4));
+        return Array.from(bytes)
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("")
+          .toUpperCase();
+      });
+
+      setSecret(newSecret);
+      if (qrCodeUrl?.startsWith("blob:")) URL.revokeObjectURL(qrCodeUrl);
+      setQrCodeUrl(blobUrl);
+      setBackupCodes(codes);
+
+      // Persist in sessionStorage so reopening the dialog doesn't regenerate
+      sessionStorage.setItem(
+        `2fa_setup_${userId}`,
+        JSON.stringify({ secret: newSecret, qrCodeDataUrl: base64, backupCodes: codes })
+      );
+    } catch (err) {
+      console.error("Error generating 2FA secret:", err);
+      toast({ title: "Setup error", description: "Could not generate QR code. Please try again.", variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  }, [userEmail, userId, qrCodeUrl, toast]);
 
   useEffect(() => {
     if (!open) return;
 
-    const sessionKey = `2fa_setup_${userId}`;
-    const storedData = sessionStorage.getItem(sessionKey);
-    
-    if (storedData) {
+    const stored = sessionStorage.getItem(`2fa_setup_${userId}`);
+    if (stored) {
       try {
-        const { secret: storedSecret, qrCodeUrl: storedQr, backupCodes: storedCodes } = JSON.parse(storedData);
-        // Only restore if it's a data URL or blob (safe for images)
-        if (storedQr && (storedQr.startsWith('data:image/') || storedQr.startsWith('blob:'))) {
-          setSecret(storedSecret);
-          setQrCodeUrl(storedQr);
-          setBackupCodes(storedCodes);
-        } else {
-          generateSecret();
+        const { secret: s, qrCodeDataUrl, backupCodes: bc } = JSON.parse(stored);
+        if (s && qrCodeDataUrl?.startsWith("data:image/png;base64,")) {
+          setSecret(s);
+          setBackupCodes(bc);
+          // Convert stored data URL back to blob
+          fetch(qrCodeDataUrl)
+            .then((r) => r.blob())
+            .then((blob) => setQrCodeUrl(URL.createObjectURL(blob)))
+            .catch(() => generate());
+          return;
         }
-      } catch (e) {
-        generateSecret();
+      } catch {
+        // fall through to generate
       }
-    } else {
-      generateSecret();
     }
-  }, [open, userId]);
-
-  const generateSecret = async () => {
-    // Generate a TOTP instance with a random secret
-    const newSecret = OTPAuth.authenticator.generateSecret();
-    setSecret(newSecret);
-
-    const otpauthUrl = OTPAuth.authenticator.keyuri(userEmail, "Pexly", newSecret);
-
-    try {
-      // Use toDataURL which generates a safe data:image/png;base64,... string
-      const base64Qr = await QRCode.toDataURL(otpauthUrl);
-      if (base64Qr.startsWith('data:image/png;base64,')) {
-        // Convert to Blob URL to completely isolate the data from script execution context
-        const response = await fetch(base64Qr);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        setQrCodeUrl(blobUrl);
-
-        const codes = Array.from({ length: 10 }, () => {
-          const bytes = new Uint8Array(4);
-          crypto.getRandomValues(bytes);
-          return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-        });
-        setBackupCodes(codes);
-
-        // Store in sessionStorage
-        const sessionKey = `2fa_setup_${userId}`;
-        sessionStorage.setItem(sessionKey, JSON.stringify({
-          secret: newSecret,
-          qrCodeUrl: base64Qr, // Store base64, restore as blob or use base64 check
-          backupCodes: codes
-        }));
-      }
-    } catch (error) {
-      console.error("Error generating QR code:", error);
-    }
-  };
+    generate();
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleVerify = async () => {
+    if (!verifyTOTP(verificationCode, secret)) {
+      toast({
+        title: "Invalid code",
+        description: "The code doesn't match. Make sure your device time is correct and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const isValid = OTPAuth.authenticator.check(verificationCode, secret);
-
-      if (!isValid) {
-        toast({
-          title: "Invalid Code",
-          description: "The verification code is incorrect. Please try again.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      // First check if user profile exists
       const { data: existingProfile, error: checkError } = await supabase
         .from("user_profiles")
         .select("id")
@@ -135,11 +131,9 @@ export function TwoFactorSetupDialog({
         .single();
 
       if (checkError || !existingProfile) {
-        console.error("User profile check failed:", checkError);
         throw new Error("User profile not found. Please complete your profile first.");
       }
 
-      // Update the profile with 2FA settings
       const { error } = await supabase
         .from("user_profiles")
         .update({
@@ -149,33 +143,13 @@ export function TwoFactorSetupDialog({
         })
         .eq("id", userId);
 
-      if (error) {
-        console.error("Supabase error enabling 2FA:", error);
-        throw new Error(error.message || error.details || "Database update failed");
-      }
+      if (error) throw new Error(error.message || "Database update failed");
 
       setStep(3);
-      
-      toast({
-        title: "Success!",
-        description: "Two-factor authentication has been enabled.",
-      });
-    } catch (error) {
-      console.error("Error enabling 2FA:", error);
-      let errorMessage = "Failed to enable 2FA. Please try again.";
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        const err = error as any;
-        errorMessage = err.message || err.details || err.hint || JSON.stringify(error);
-      }
-      
-      toast({
-        title: "2FA Enable Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast({ title: "2FA enabled!", description: "Your account is now protected with two-factor authentication." });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to enable 2FA. Please try again.";
+      toast({ title: "Setup failed", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -193,172 +167,171 @@ export function TwoFactorSetupDialog({
     setTimeout(() => setCopiedBackup(false), 2000);
   };
 
+  const reset = () => {
+    setStep(1);
+    setVerificationCode("");
+    setSecret("");
+    if (qrCodeUrl?.startsWith("blob:")) URL.revokeObjectURL(qrCodeUrl);
+    setQrCodeUrl(null);
+    setBackupCodes([]);
+    setCopiedSecret(false);
+    setCopiedBackup(false);
+    sessionStorage.removeItem(`2fa_setup_${userId}`);
+  };
+
   const handleClose = () => {
-    // Prevent closing if still in setup process
-    if (step === 3) {
-      // Only allow closing after backup codes are shown
-      setStep(1);
-      setVerificationCode("");
-      setSecret("");
-      setQrCodeUrl("");
-      setBackupCodes([]);
-      setCopiedSecret(false);
-      setCopiedBackup(false);
-      
-      // Clear sessionStorage
-      const sessionKey = `2fa_setup_${userId}`;
-      sessionStorage.removeItem(sessionKey);
-      
-      onSuccess();
-      onOpenChange(false);
-    } else if (step === 1) {
-      // Allow closing from first step
-      setStep(1);
-      setVerificationCode("");
-      setSecret("");
-      setQrCodeUrl("");
-      setBackupCodes([]);
-      setCopiedSecret(false);
-      setCopiedBackup(false);
-      
-      // Clear sessionStorage
-      const sessionKey = `2fa_setup_${userId}`;
-      sessionStorage.removeItem(sessionKey);
-      
-      onOpenChange(false);
-    }
-    // Prevent closing during verification (step 2)
+    if (step === 2) return; // block close mid-verification
+    if (step === 3) onSuccess();
+    reset();
+    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
             {step === 1 && "Set Up Two-Factor Authentication"}
-            {step === 2 && "Verify Your Code"}
+            {step === 2 && "Verify Your Authenticator"}
             {step === 3 && "Save Your Backup Codes"}
           </DialogTitle>
           <DialogDescription>
-            {step === 1 && "Scan the QR code with your authenticator app"}
-            {step === 2 && "Enter the 6-digit code from your authenticator app"}
-            {step === 3 && "Keep these backup codes in a safe place"}
+            {step === 1 && "Scan the QR code with Google Authenticator, Authy, or any TOTP app."}
+            {step === 2 && "Enter the 6-digit code currently shown in your authenticator app."}
+            {step === 3 && "Store these backup codes somewhere safe — you'll need them if you lose your device."}
           </DialogDescription>
         </DialogHeader>
 
+        {/* ── Step 1: QR code ────────────────────────────────── */}
         {step === 1 && (
           <div className="space-y-4">
-            <div className="flex justify-center">
-              {qrCodeUrl && (qrCodeUrl.startsWith('blob:') || qrCodeUrl.startsWith('data:image/png;base64,')) && (
-                <img
-                  src={qrCodeUrl}
-                  alt="QR Code"
-                  className="w-48 h-48"
-                  style={{ pointerEvents: 'none' }}
-                />
-              )}
+            <div className="flex flex-col items-center gap-3">
+              {generating ? (
+                <div className="w-48 h-48 flex items-center justify-center rounded-lg border border-border bg-muted">
+                  <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
+                </div>
+              ) : qrCodeUrl ? (
+                <div className="p-3 rounded-xl border border-border bg-white shadow-sm">
+                  <img
+                    src={qrCodeUrl}
+                    alt="Scan this QR code with your authenticator app"
+                    className="w-44 h-44 block"
+                    draggable={false}
+                  />
+                </div>
+              ) : null}
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground text-xs"
+                onClick={generate}
+                disabled={generating}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
+                Regenerate
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label>Or enter this code manually:</Label>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Or enter this key manually</Label>
               <div className="flex gap-2">
-                <Input value={secret} readOnly className="font-mono text-sm" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={copySecret}
-                >
-                  {copiedSecret ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
+                <Input
+                  value={secret}
+                  readOnly
+                  className="font-mono text-sm tracking-wider"
+                  placeholder={generating ? "Generating…" : ""}
+                />
+                <Button type="button" variant="outline" size="icon" onClick={copySecret} disabled={!secret}>
+                  {copiedSecret ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Scan this QR code with Google Authenticator, Microsoft Authenticator, or any TOTP-compatible app.
+
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 leading-relaxed">
+              After scanning, your app will start showing a 6-digit code that refreshes every 30 seconds.
             </p>
           </div>
         )}
 
+        {/* ── Step 2: Verify code ────────────────────────────── */}
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="code">Enter 6-digit code</Label>
+              <Label htmlFor="totp-code">6-digit code from your app</Label>
               <Input
-                id="code"
+                id="totp-code"
                 type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
                 placeholder="000000"
                 maxLength={6}
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                className="text-center text-2xl tracking-widest"
+                className="text-center text-3xl tracking-[0.5em] font-mono h-14"
+                autoFocus
               />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Open your authenticator app and enter the 6-digit code for Pexly.
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 leading-relaxed">
+              Open your authenticator app, find the Pexly entry, and enter the 6-digit code shown.
+              The code refreshes every 30 seconds.
             </p>
           </div>
         )}
 
+        {/* ── Step 3: Backup codes ───────────────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
-            <div className="bg-muted p-4 rounded-lg space-y-2">
-              <div className="flex justify-between items-center mb-2">
-                <Label>Backup Codes</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyBackupCodes}
-                >
+            <div className="rounded-xl border border-border overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/40">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Backup Codes</Label>
+                <Button type="button" variant="ghost" size="sm" className="gap-1.5 h-7 text-xs" onClick={copyBackupCodes}>
                   {copiedBackup ? (
-                    <>
-                      <Check className="h-4 w-4 mr-1" />
-                      Copied
-                    </>
+                    <><Check className="h-3.5 w-3.5 text-green-500" /> Copied</>
                   ) : (
-                    <>
-                      <Copy className="h-4 w-4 mr-1" />
-                      Copy All
-                    </>
+                    <><Copy className="h-3.5 w-3.5" /> Copy all</>
                   )}
                 </Button>
               </div>
-              <div className="grid grid-cols-2 gap-2 font-mono text-sm">
-                {backupCodes.map((code, index) => (
-                  <div key={index} className="bg-background p-2 rounded">
+              <div className="grid grid-cols-2 gap-px bg-border">
+                {backupCodes.map((code, i) => (
+                  <div key={i} className="bg-background px-4 py-2 font-mono text-sm text-center tracking-widest">
                     {code}
                   </div>
                 ))}
               </div>
             </div>
-            <p className="text-sm text-yellow-600 dark:text-yellow-500">
-              Save these backup codes in a secure location. You can use them to access your account if you lose your authenticator device.
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 leading-relaxed border border-amber-200 dark:border-amber-800">
+              Each backup code can only be used once. Store them in a password manager or print them out.
             </p>
           </div>
         )}
 
         <DialogFooter>
           {step === 1 && (
-            <Button onClick={() => setStep(2)}>Next</Button>
+            <Button onClick={() => setStep(2)} disabled={!secret || generating} className="w-full sm:w-auto">
+              I've scanned the code — Next
+            </Button>
           )}
           {step === 2 && (
-            <>
-              <Button variant="outline" onClick={() => setStep(1)}>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setStep(1)} disabled={loading}>
                 Back
               </Button>
               <Button
                 onClick={handleVerify}
                 disabled={verificationCode.length !== 6 || loading}
               >
-                {loading ? "Verifying..." : "Verify & Enable"}
+                {loading ? "Verifying…" : "Verify & Enable"}
               </Button>
-            </>
+            </div>
           )}
           {step === 3 && (
-            <Button onClick={handleClose}>Done</Button>
+            <Button onClick={handleClose} className="w-full sm:w-auto">
+              Done — I've saved my codes
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
