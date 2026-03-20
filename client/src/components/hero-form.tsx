@@ -82,13 +82,18 @@ export function HeroForm() {
   };
 
   return (
-    <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
-      <div className="flex gap-2 p-1 bg-muted rounded-xl">
+    <div className="relative bg-white/95 dark:bg-card/90 backdrop-blur-2xl border border-black/[0.07] dark:border-white/10 rounded-3xl shadow-[0_24px_64px_rgba(0,0,0,0.13)] p-6 sm:p-8 space-y-6 overflow-hidden">
+
+      {/* Top accent line */}
+      <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+
+      {/* Buy / Sell toggle */}
+      <div className="flex gap-1 p-1 bg-black/[0.04] dark:bg-white/[0.04] rounded-2xl">
         <button
           onClick={() => setTradeType("buy")}
-          className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+          className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
             tradeType === "buy"
-              ? "bg-primary text-primary-foreground shadow-md"
+              ? "bg-primary text-black shadow-md"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -96,9 +101,9 @@ export function HeroForm() {
         </button>
         <button
           onClick={() => setTradeType("sell")}
-          className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+          className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
             tradeType === "sell"
-              ? "bg-primary text-primary-foreground shadow-md"
+              ? "bg-primary text-black shadow-md"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -106,9 +111,10 @@ export function HeroForm() {
         </button>
       </div>
 
+      {/* Crypto + Currency row */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-foreground">Cryptocurrency</label>
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Cryptocurrency</label>
           <Popover open={openCrypto} onOpenChange={setOpenCrypto}>
             <PopoverTrigger asChild>
               <Button
@@ -116,15 +122,15 @@ export function HeroForm() {
                 role="combobox"
                 aria-expanded={openCrypto}
                 aria-label={`Select cryptocurrency, currently ${cryptoCurrencies.find(c => c.code === crypto)?.name ?? crypto}`}
-                className="h-14 w-full justify-between text-base"
+                className="h-14 w-full justify-between text-base border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.05] rounded-xl font-semibold"
                 data-testid="select-crypto"
                 type="button"
               >
-                <div className="flex items-center">
-                  {crypto && <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-5 h-5 mr-2" fetchPriority="high" />}
-                  {crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}
+                <div className="flex items-center gap-2">
+                  {crypto && <img src={cryptoIconUrls[crypto]} alt={crypto} className="w-6 h-6 rounded-full" fetchPriority="high" />}
+                  <span>{crypto ? cryptoCurrencies.find((c) => c.code === crypto)?.name + ` (${crypto})` : "Select crypto..."}</span>
                 </div>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-40" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[280px] p-0">
@@ -139,7 +145,7 @@ export function HeroForm() {
                       onSelect={() => { setCrypto(c.code.toUpperCase()); setOpenCrypto(false); }}
                     >
                       <Check className={cn("mr-2 h-4 w-4", crypto === c.code ? "opacity-100" : "opacity-0")} />
-                      <img src={cryptoIconUrls[c.code]} alt={c.name} className="w-5 h-5 mr-2" />
+                      <img src={cryptoIconUrls[c.code]} alt={c.name} className="w-5 h-5 mr-2 rounded-full" />
                       {c.name} ({c.code})
                     </CommandItem>
                   ))}
@@ -150,7 +156,7 @@ export function HeroForm() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-foreground">Currency</label>
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Currency</label>
           <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
             <PopoverTrigger asChild>
               <Button
@@ -158,12 +164,12 @@ export function HeroForm() {
                 role="combobox"
                 aria-expanded={openCurrency}
                 aria-label={`Select currency, currently ${currency ? currencies.find(c => c.code === currency)?.name ?? currency : "none"}`}
-                className="h-14 w-full justify-between text-base"
+                className="h-14 w-full justify-between text-base border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.05] rounded-xl font-semibold"
                 data-testid="select-currency"
                 type="button"
               >
-                {currency ? currencies.find((c) => c.code === currency)?.flag + " " + currency : "Select currency..."}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                <span className="text-lg">{currency ? currencies.find((c) => c.code === currency)?.flag + " " + currency : "Select currency..."}</span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-40" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[280px] p-0">
@@ -188,22 +194,46 @@ export function HeroForm() {
         </div>
       </div>
 
-      <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
-        <div className="text-sm text-muted-foreground mb-1">Current Market Price</div>
-        <div className="text-2xl sm:text-3xl font-bold tabular-nums text-foreground">
+      {/* Live price display */}
+      <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/60 bg-muted/20">
+        <div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">
+            {crypto}/{currency} Market Price
+          </div>
           {currentPrice > 0 ? (
-            `1 ${crypto} ≈ $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          ) : (
-            <div className="flex items-center justify-center gap-2">
-              <span>1 {crypto} ≈ </span>
-              <div className="h-8 w-32 bg-primary/20 animate-pulse rounded" />
+            <div className="text-lg font-bold tabular-nums text-foreground tracking-tight">
+              ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-xs font-medium text-muted-foreground ml-1.5">/ 1 {crypto}</span>
             </div>
+          ) : (
+            <div className="h-6 w-36 bg-muted animate-pulse rounded" />
           )}
         </div>
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+          {/* Expanding ring 1 */}
+          <circle cx="18" cy="18" r="6" stroke="#22c55e" strokeWidth="1.2" opacity="0">
+            <animate attributeName="r" values="6;17" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.65;0" dur="2s" repeatCount="indefinite" />
+          </circle>
+          {/* Expanding ring 2 — offset */}
+          <circle cx="18" cy="18" r="6" stroke="#22c55e" strokeWidth="1.2" opacity="0">
+            <animate attributeName="r" values="6;17" dur="2s" begin="0.75s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.65;0" dur="2s" begin="0.75s" repeatCount="indefinite" />
+          </circle>
+          {/* Static mid ring */}
+          <circle cx="18" cy="18" r="10" stroke="#22c55e" strokeWidth="0.75" opacity="0.2" />
+          {/* Outer glow disc */}
+          <circle cx="18" cy="18" r="7" fill="#22c55e" opacity="0.12" />
+          {/* Center solid dot */}
+          <circle cx="18" cy="18" r="4.5" fill="#22c55e" />
+          {/* Inner highlight */}
+          <circle cx="16.5" cy="16.5" r="1.5" fill="white" opacity="0.45" />
+        </svg>
       </div>
 
+      {/* Payment method */}
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-foreground">Payment Method</label>
+        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Payment Method</label>
         <Popover open={openPayment} onOpenChange={setOpenPayment}>
           <PopoverTrigger asChild>
             <Button
@@ -211,12 +241,12 @@ export function HeroForm() {
               role="combobox"
               aria-expanded={openPayment}
               aria-label={`Select payment method, currently ${paymentMethod || "none"}`}
-              className="h-14 w-full justify-between text-base"
+              className="h-14 w-full justify-between text-base border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.05] rounded-xl font-semibold"
               data-testid="select-payment-method"
               type="button"
             >
               {paymentMethod || "Select method..."}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-40" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[280px] p-0">
@@ -240,8 +270,9 @@ export function HeroForm() {
         </Popover>
       </div>
 
+      {/* CTA */}
       <Button
-        className="w-full h-16 text-lg font-bold shadow-xl hover:shadow-2xl transition-all"
+        className="w-full h-16 text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all"
         size="lg"
         onClick={handleFindOffers}
         data-testid="button-find-offers"
