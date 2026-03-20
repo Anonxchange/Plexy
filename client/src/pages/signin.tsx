@@ -11,7 +11,6 @@ import { CountryCodeSelector } from "@/components/country-code-selector";
 import { PhoneVerification } from "@/components/phone-verification";
 import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { supabase } from "@/lib/supabase";
-import { verifyTOTP } from "@/lib/totp";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
@@ -28,10 +27,8 @@ export function SignIn() {
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [showDeviceVerification, setShowDeviceVerification] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [tempUserId, setTempUserId] = useState<string | null>(null);
-  const [tempEmail, setTempEmail] = useState<string>("");
-  const [tempPassword, setTempPassword] = useState<string>("");
-  const [tempInputValue, setTempInputValue] = useState<string>("");
+  const [totpFactorId, setTotpFactorId] = useState<string | null>(null);
+  const [totpChallengeId, setTotpChallengeId] = useState<string | null>(null);
   const [checking2FA, setChecking2FA] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -39,7 +36,6 @@ export function SignIn() {
   const [captchaKey, setCaptchaKey] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
-  const [tempAccessToken, setTempAccessToken] = useState<string | undefined>(undefined);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
@@ -187,66 +183,54 @@ export function SignIn() {
       return;
     }
 
-    const { data: profileData, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('two_factor_enabled, two_factor_secret')
-      .eq('id', userId)
-      .single();
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
-    if (profileError && profileError.code !== 'PGRST116') {
-      console.error('Error checking 2FA status:', profileError);
-    }
+    if (aalData?.nextLevel === 'aal2' && aalData.nextLevel !== aalData.currentLevel) {
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const totpFactor = factorsData?.totp?.[0];
 
-    if (profileData?.two_factor_enabled && profileData?.two_factor_secret) {
-      setTempUserId(userId);
-      setShow2FAInput(true);
-      setLoading(false);
-      await signOut();
-    } else {
-      console.log('[Device Verification] Checking device status for user:', userId);
-      const deviceStatus = await deviceFingerprint.checkDeviceStatus(userId);
-      console.log('[Device Verification] Device status result:', deviceStatus);
-      
-      if (!deviceStatus.exists || !deviceStatus.trusted) {
-        console.log('[Device Verification] Device NOT trusted or does not exist. Triggering OTP verification.');
-        const userEmail = sessionData?.session?.user?.email;
-        const currentAccessToken = sessionData?.session?.access_token;
-        console.log('[Device Verification] User email:', userEmail);
-        
-        if (userEmail && currentAccessToken) {
-          setTempUserId(userId);
-          setTempEmail(userEmail);
-          setTempPassword(password);
-          setTempInputValue(inputValue);
-          setTempAccessToken(currentAccessToken);
-          
-          console.log('[Device Verification] Showing device verification modal. Session remains active for OTP.');
-          setShowDeviceVerification(true);
+      if (totpFactor) {
+        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
+        if (challengeError) {
+          toast({ title: "Error", description: challengeError.message, variant: "destructive" });
           setLoading(false);
           setChecking2FA(false);
           return;
-        } else {
-          console.log('[Device Verification] No email found for user. Skipping verification.');
         }
-      } else {
-        console.log('[Device Verification] Device is already trusted. Skipping OTP verification.');
-      }
-      
-      try {
-        await deviceFingerprint.registerDeviceAsTrusted(userId);
-      } catch (error) {
-        console.error('Error registering device during signin:', error);
-      }
-      setChecking2FA(false);
-      toast({
-        title: "Success!",
-        description: "You have successfully signed in",
-      });
-      setTimeout(() => {
+        setTotpFactorId(totpFactor.id);
+        setTotpChallengeId(challengeData.id);
+        setShow2FAInput(true);
         setLoading(false);
-        setLocation("/dashboard");
-      }, 100);
+        setChecking2FA(false);
+        return;
+      }
     }
+
+    const deviceStatus = await deviceFingerprint.checkDeviceStatus(userId);
+    if (!deviceStatus.exists || !deviceStatus.trusted) {
+      const userEmail = sessionData?.session?.user?.email;
+      if (userEmail) {
+        setShowDeviceVerification(true);
+        setLoading(false);
+        setChecking2FA(false);
+        return;
+      }
+    }
+
+    try {
+      await deviceFingerprint.registerDeviceAsTrusted(userId);
+    } catch (error) {
+      console.error('Error registering device during signin:', error);
+    }
+    setChecking2FA(false);
+    toast({
+      title: "Success!",
+      description: "You have successfully signed in",
+    });
+    setTimeout(() => {
+      setLoading(false);
+      setLocation("/dashboard");
+    }, 100);
   };
 
   const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
@@ -280,13 +264,8 @@ export function SignIn() {
     }
     
     setShowDeviceVerification(false);
-    setTempUserId(null);
-    setTempEmail("");
-    setTempPassword("");
-    setTempInputValue("");
-    setTempAccessToken(undefined);
     setLoading(false);
-    
+
     toast({
       title: "Device Verified!",
       description: "This device is now trusted. Welcome back!",
@@ -297,63 +276,26 @@ export function SignIn() {
   const handleDeviceVerificationCancel = async () => {
     await signOut();
     setShowDeviceVerification(false);
-    setTempUserId(null);
-    setTempEmail("");
-    setTempPassword("");
-    setTempInputValue("");
-    setTempAccessToken(undefined);
   };
 
   const handleVerify2FA = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (!tempUserId) {
-      toast({
-        title: "Error",
-        description: "Invalid session",
-        variant: "destructive",
-      });
+    if (!totpFactorId || !totpChallengeId) {
+      toast({ title: "Error", description: "Invalid session. Please sign in again.", variant: "destructive" });
       setLoading(false);
       return;
     }
 
     try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('two_factor_secret, two_factor_backup_codes')
-        .eq('id', tempUserId)
-        .single();
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: totpFactorId,
+        challengeId: totpChallengeId,
+        code: twoFactorCode,
+      });
 
-      if (profileError) {
-        console.error('Profile fetch error:', profileError);
-        throw new Error(`Failed to fetch profile: ${profileError.message}`);
-      }
-
-      if (!profileData?.two_factor_secret) {
-        throw new Error('Two-factor authentication is not properly configured for this account');
-      }
-
-      const isValidToken = verifyTOTP(twoFactorCode, profileData.two_factor_secret);
-
-      let isBackupCode = false;
-      let updatedBackupCodes = profileData.two_factor_backup_codes;
-
-      if (!isValidToken && profileData.two_factor_backup_codes) {
-        const backupCodes = JSON.parse(profileData.two_factor_backup_codes);
-        if (backupCodes.includes(twoFactorCode)) {
-          isBackupCode = true;
-          const newBackupCodes = backupCodes.filter((code: string) => code !== twoFactorCode);
-          updatedBackupCodes = JSON.stringify(newBackupCodes);
-
-          await supabase
-            .from('user_profiles')
-            .update({ two_factor_backup_codes: updatedBackupCodes })
-            .eq('id', tempUserId);
-        }
-      }
-
-      if (!isValidToken && !isBackupCode) {
+      if (verifyError) {
         toast({
           title: "Invalid Code",
           description: "The verification code is incorrect. Please try again.",
@@ -363,30 +305,21 @@ export function SignIn() {
         return;
       }
 
-      // Use the original inputValue for sign-in, as it could be email or phone number
-      const { error: signInError } = await signIn(inputValue, password, captchaToken ?? undefined);
+      // Session is now AAL2 — Supabase enforces this server-side.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
 
-      if (signInError) {
-        toast({
-          title: "Error",
-          description: signInError.message,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+      if (userId) {
+        try {
+          await deviceFingerprint.registerDeviceAsTrusted(userId);
+        } catch (error) {
+          console.error('Error registering device during 2FA signin:', error);
+        }
       }
 
-      try {
-        await deviceFingerprint.registerDeviceAsTrusted(tempUserId);
-      } catch (error) {
-        console.error('Error registering device during 2FA signin:', error);
-      }
-
+      setShow2FAInput(false);
       setChecking2FA(false);
-      toast({
-        title: "Success!",
-        description: "You have successfully signed in with 2FA",
-      });
+      toast({ title: "Success!", description: "You have successfully signed in with 2FA" });
 
       setTimeout(() => {
         setLoading(false);
@@ -394,11 +327,7 @@ export function SignIn() {
       }, 100);
     } catch (error: any) {
       console.error('2FA verification error:', error);
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to verify 2FA code",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error?.message || "Failed to verify 2FA code", variant: "destructive" });
       setLoading(false);
     }
   };
@@ -437,7 +366,6 @@ export function SignIn() {
       setChecking2FA(false);
 
       if (profile?.two_factor_enabled) {
-        setTempUserId(userData.user.id);
         setShow2FAInput(true);
         setLoading(false);
       } else {
@@ -761,7 +689,8 @@ export function SignIn() {
               onClick={() => {
                 setShow2FAInput(false);
                 setTwoFactorCode("");
-                setTempUserId(null);
+                setTotpFactorId(null);
+                setTotpChallengeId(null);
                 setChecking2FA(false);
               }}
               className={`w-full py-4 rounded-full text-base transition-colors ${
@@ -811,19 +740,19 @@ export function SignIn() {
           }}
           userId={pendingOTPVerification.userId}
           email={pendingOTPVerification.email}
-          accessToken={session?.access_token || tempAccessToken || ''}
+          accessToken={session?.access_token || ''}
           deviceInfo={pendingOTPVerification.deviceInfo}
         />
       )}
 
-      {showDeviceVerification && tempUserId && tempEmail && (session?.access_token || tempAccessToken) && (
+      {showDeviceVerification && session?.user?.id && session?.user?.email && session?.access_token && (
         <DeviceOTPVerification
           isOpen={showDeviceVerification}
           onClose={handleDeviceVerificationCancel}
           onVerified={handleDeviceVerified}
-          userId={tempUserId}
-          email={tempEmail}
-          accessToken={session?.access_token || tempAccessToken || ''}
+          userId={session.user.id}
+          email={session.user.email}
+          accessToken={session.access_token}
         />
       )}
     </div>
