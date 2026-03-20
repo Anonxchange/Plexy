@@ -417,7 +417,7 @@ export default function AccountSettings() {
 
     try {
       const { data: factorsData } = await supabase.auth.mfa.listFactors();
-      const hasTOTP = (factorsData?.totp?.length ?? 0) > 0;
+      const hasTOTP = (factorsData?.totp?.filter(f => f.status === 'verified').length ?? 0) > 0;
       setTwoFactorEnabled(hasTOTP);
       setAppAuth(hasTOTP);
 
