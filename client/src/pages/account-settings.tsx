@@ -87,7 +87,6 @@ import { PasskeySetup } from "@/components/passkey-setup";
 import { WithdrawalWhitelistDialog } from "@/components/withdrawal-whitelist-dialog";
 import { IPWhitelistDialog } from "@/components/ip-whitelist-dialog";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import { verifyTOTP } from "@/lib/totp";
 
 const settingsSections = [
   { id: "profile", label: "Profile", icon: User },
@@ -311,16 +310,6 @@ export default function AccountSettings() {
         setProfileData(data);
         console.log('Profile data loaded:', data);
 
-        // Set 2FA status from profile data
-        const hasSecret = !!data.two_factor_secret;
-        const isAppAuthEnabled = data.two_factor_enabled === true || hasSecret;
-        console.log('2FA from profile data:', {
-          two_factor_enabled: data.two_factor_enabled,
-          hasSecret,
-          isAppAuthEnabled
-        });
-        setTwoFactorEnabled(isAppAuthEnabled);
-        setAppAuth(isAppAuthEnabled);
         setSmsAuth(data.sms_two_factor_enabled === true);
         setEmailAuth(data.email_two_factor_enabled === true);
 
@@ -424,49 +413,23 @@ export default function AccountSettings() {
   
 
   const fetch2FAStatus = async () => {
-    // Must have valid user ID to query
-    if (!user?.id) {
-      console.log('fetch2FAStatus: No user ID available yet');
-      return;
-    }
-    
+    if (!user?.id) return;
+
     try {
-      console.log('fetch2FAStatus: Querying for user ID:', user.id);
-      
-      const { data, error } = await supabase
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const hasTOTP = (factorsData?.totp?.length ?? 0) > 0;
+      setTwoFactorEnabled(hasTOTP);
+      setAppAuth(hasTOTP);
+
+      const { data: profileData } = await supabase
         .from('user_profiles')
-        .select('two_factor_enabled, two_factor_secret, sms_two_factor_enabled, email_two_factor_enabled')
+        .select('sms_two_factor_enabled, email_two_factor_enabled')
         .eq('id', user.id)
         .single();
 
-      console.log('fetch2FAStatus: Query result:', { data, error });
-
-      if (error) {
-        // PGRST116 = no rows found, which is okay for new users
-        if (error.code !== 'PGRST116') {
-          throw error;
-        }
-        console.log('fetch2FAStatus: No profile found (new user)');
-        return;
-      }
-
-      if (data) {
-        // Check both the boolean flag AND if a secret exists (for legacy data)
-        const hasSecret = !!data.two_factor_secret;
-        const isAppAuthEnabled = data.two_factor_enabled === true || hasSecret;
-        
-        console.log('fetch2FAStatus: Setting 2FA state:', {
-          hasSecret,
-          two_factor_enabled: data.two_factor_enabled,
-          isAppAuthEnabled,
-          sms: data.sms_two_factor_enabled,
-          email: data.email_two_factor_enabled
-        });
-        
-        setTwoFactorEnabled(isAppAuthEnabled);
-        setAppAuth(isAppAuthEnabled);
-        setSmsAuth(data.sms_two_factor_enabled === true);
-        setEmailAuth(data.email_two_factor_enabled === true);
+      if (profileData) {
+        setSmsAuth(profileData.sms_two_factor_enabled === true);
+        setEmailAuth(profileData.email_two_factor_enabled === true);
       }
     } catch (error) {
       console.error('Error fetching 2FA status:', error);
@@ -900,20 +863,23 @@ export default function AccountSettings() {
   const handleDisable2FA = async () => {
     setDisabling2FA(true);
     try {
-      // Verify the 2FA code first
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('two_factor_secret')
-        .eq('id', user?.id)
-        .single();
+      const { data: factorsData, error: listError } = await supabase.auth.mfa.listFactors();
+      const totpFactor = factorsData?.totp?.[0];
 
-      if (profileError || !profileData?.two_factor_secret) {
-        throw new Error('Failed to verify 2FA settings');
+      if (listError || !totpFactor) {
+        throw new Error('No authenticator factor found');
       }
 
-      const isValid = verifyTOTP(disable2FACode, profileData.two_factor_secret);
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
+      if (challengeError) throw challengeError;
 
-      if (!isValid) {
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: totpFactor.id,
+        challengeId: challengeData.id,
+        code: disable2FACode,
+      });
+
+      if (verifyError) {
         toast({
           title: "Invalid Code",
           description: "The authenticator code is incorrect. Please try again.",
@@ -923,33 +889,21 @@ export default function AccountSettings() {
         return;
       }
 
-      // Disable 2FA immediately after successful verification
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          two_factor_enabled: false,
-          two_factor_secret: null,
-          two_factor_backup_codes: null,
-        })
-        .eq('id', user?.id);
+      const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: totpFactor.id });
+      if (unenrollError) throw unenrollError;
 
-      if (error) throw error;
-
-      // Update states immediately
       setTwoFactorEnabled(false);
       setAppAuth(false);
       setShowDisable2FADialog(false);
       setDisable2FACode("");
 
-      // Create account change notification
       if (user?.id) {
-        await createAccountChangeNotification(user.id, '2fa_disabled', { 
+        await createAccountChangeNotification(user.id, '2fa_disabled', {
           method: 'App',
           timestamp: new Date().toISOString()
         });
       }
 
-      // Re-fetch to ensure states are in sync with database
       await fetch2FAStatus();
 
       toast({
