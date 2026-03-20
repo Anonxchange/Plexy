@@ -1,116 +1,179 @@
 import { Zap } from "lucide-react";
 import { SiX, SiTelegram, SiFacebook, SiInstagram, SiLinkedin, SiYoutube, SiApple, SiGoogleplay } from "react-icons/si";
-import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+
+const footerColumns = [
+  {
+    heading: "Buy Crypto",
+    links: [
+      { label: "Buy Bitcoin", href: "/p2p?tab=buy&crypto=BTC" },
+      { label: "Buy Ethereum", href: "/p2p?tab=buy&crypto=ETH" },
+      { label: "Buy Tether", href: "/p2p?tab=buy&crypto=USDT" },
+      { label: "Buy USDC", href: "/p2p?tab=buy&crypto=USDC" },
+    ],
+  },
+  {
+    heading: "Sell Crypto",
+    links: [
+      { label: "Sell Bitcoin", href: "/p2p?tab=sell&crypto=BTC" },
+      { label: "Sell Ethereum", href: "/p2p?tab=sell&crypto=ETH" },
+      { label: "Sell Tether", href: "/p2p?tab=sell&crypto=USDT" },
+      { label: "Sell USDC", href: "/p2p?tab=sell&crypto=USDC" },
+    ],
+  },
+  {
+    heading: "About Pexly",
+    links: [
+      { label: "About Us", href: "/about" },
+      { label: "Careers", href: "/careers" },
+      { label: "Blog", href: "/blog" },
+      { label: "Reviews", href: "/reviews" },
+    ],
+  },
+  {
+    heading: "Useful Links",
+    links: [
+      { label: "Wallet", href: "/wallet" },
+      { label: "Support", href: "https://help.pexly.app", external: true },
+      { label: "Bitcoin Calculator", href: "/bitcoin-calculator" },
+      { label: "Market Prices", href: "/markets" },
+    ],
+  },
+  {
+    heading: "Legal",
+    links: [
+      { label: "Terms & Conditions", href: "/terms" },
+      { label: "Vendor Reminder", href: "/vendor-reminder" },
+      { label: "AML Policy", href: "/aml-policy" },
+      { label: "Privacy Notice", href: "/privacy" },
+      { label: "Cookie Policy", href: "/cookie-policy" },
+      { label: "Restricted Countries", href: "/restricted-countries" },
+      { label: "VIP Program T&C", href: "/vip-terms" },
+    ],
+  },
+];
+
+const socials = [
+  { icon: SiX, label: "X (Twitter)", href: "#" },
+  { icon: SiLinkedin, label: "LinkedIn", href: "#" },
+  { icon: SiTelegram, label: "Telegram", href: "#" },
+  { icon: SiInstagram, label: "Instagram", href: "#" },
+  { icon: SiFacebook, label: "Facebook", href: "#" },
+  { icon: SiYoutube, label: "YouTube", href: "#" },
+];
 
 export function AppFooter() {
   return (
-    <footer className="bg-[#1a1a1a] text-gray-300">
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 pt-28 lg:pt-32 pb-8 lg:pb-12">
-        <div className="flex flex-row items-center justify-between gap-4 mb-8 lg:mb-12 pb-6 lg:pb-8 border-b border-gray-800">
+    <footer className="relative overflow-hidden">
+      {/* Frosted glass backdrop */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          background: "linear-gradient(180deg, rgba(20,20,20,0.97) 0%, rgba(14,14,14,0.99) 100%)",
+          backdropFilter: "blur(40px) saturate(150%)",
+          WebkitBackdropFilter: "blur(40px) saturate(150%)",
+        }}
+      />
+
+      {/* Subtle ambient glow at top */}
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-40 w-2/3 rounded-full bg-[#B4F22E]/[0.04] blur-[80px]" />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10 pt-20 pb-12">
+
+        {/* Top: Logo + App downloads */}
+        <div className="flex flex-row items-center justify-between gap-4 mb-16 pb-10 border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <Zap className="h-6 w-6 text-primary-foreground" />
+            <div className="w-9 h-9 rounded-xl bg-[#B4F22E] flex items-center justify-center">
+              <Zap className="h-5 w-5 text-black" />
             </div>
-            <span className="text-2xl font-bold text-white">Pexly</span>
+            <span className="text-xl font-bold text-white tracking-tight">Pexly</span>
           </div>
+
           <div className="flex items-center gap-2">
-            <span className="hidden sm:block text-sm text-gray-400 mr-1">Download App:</span>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="bg-transparent border-gray-700 hover:bg-gray-800">
-                <SiApple className="h-4 w-4 mr-1" />
-                iOS
-              </Button>
-              <Button variant="outline" size="sm" className="bg-transparent border-gray-700 hover:bg-gray-800">
-                <SiGoogleplay className="h-4 w-4 mr-1" />
-                Android
-              </Button>
+            <a
+              href="#"
+              aria-label="Download on the App Store"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
+            >
+              <SiApple className="h-[15px] w-[15px]" />
+              <span>iOS</span>
+            </a>
+            <a
+              href="#"
+              aria-label="Get it on Google Play"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
+            >
+              <SiGoogleplay className="h-[14px] w-[14px]" />
+              <span>Android</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Link columns — open grid, no cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-12 mb-16">
+          {footerColumns.map((col) => (
+            <div key={col.heading}>
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 mb-6">
+                {col.heading}
+              </h3>
+              <ul className="space-y-4">
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[15px] text-white/55 hover:text-white transition-colors duration-150 leading-none"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-[15px] text-white/55 hover:text-white transition-colors duration-150 leading-none"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 lg:gap-8 mb-8 lg:mb-12">
-          <div>
-            <h3 className="font-semibold text-white mb-4">Trade crypto</h3>
-            <ul className="space-y-3">
-              <li><Link href="/p2p?tab=buy&crypto=BTC" className="text-sm hover:text-white transition-colors">Buy Bitcoin</Link></li>
-              <li><Link href="/p2p?tab=buy&crypto=ETH" className="text-sm hover:text-white transition-colors">Buy Ethereum</Link></li>
-              <li><Link href="/p2p?tab=buy&crypto=USDT" className="text-sm hover:text-white transition-colors">Buy Tether</Link></li>
-              <li><Link href="/p2p?tab=buy&crypto=USDC" className="text-sm hover:text-white transition-colors">Buy USDC</Link></li>
-            </ul>
-          </div>
+        {/* Divider */}
+        <div className="h-px w-full bg-white/[0.06] mb-10" />
 
-          <div>
-            <h3 className="font-semibold text-white mb-4">Trade crypto</h3>
-            <ul className="space-y-3">
-              <li><Link href="/p2p?tab=sell&crypto=BTC" className="text-sm hover:text-white transition-colors">Sell Bitcoin</Link></li>
-              <li><Link href="/p2p?tab=sell&crypto=ETH" className="text-sm hover:text-white transition-colors">Sell Ethereum</Link></li>
-              <li><Link href="/p2p?tab=sell&crypto=USDT" className="text-sm hover:text-white transition-colors">Sell Tether</Link></li>
-              <li><Link href="/p2p?tab=sell&crypto=USDC" className="text-sm hover:text-white transition-colors">Sell USDC</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-white mb-4">About Pexly</h3>
-            <ul className="space-y-3">
-              <li><Link href="/about" className="text-sm hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/careers" className="text-sm hover:text-white transition-colors">Careers</Link></li>
-              <li><Link href="/blog" className="text-sm hover:text-white transition-colors">Blog</Link></li>
-              <li><Link href="/reviews" className="text-sm hover:text-white transition-colors">Reviews</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-white mb-4">Useful links</h3>
-            <ul className="space-y-3">
-              <li><a href="wallet" className="text-sm hover:text-white transition-colors">Wallet</a></li>
-              <li><a href="https://help.pexly.app" className="text-sm hover:text-white transition-colors">Support</a></li>
-              <li><Link href="/bitcoin-calculator" className="text-sm hover:text-white transition-colors">Bitcoin Calculator</Link></li>
-              <li><Link href="/markets" className="text-sm hover:text-white transition-colors">Market Prices</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-white mb-4">Legal</h3>
-            <ul className="space-y-3">
-              <li><Link href="/terms" className="text-sm hover:text-white transition-colors">Terms & Conditions</Link></li>
-              <li><Link href="/vendor-reminder" className="text-sm hover:text-white transition-colors">Vendor Reminder</Link></li>
-              <li><Link href="/aml-policy" className="text-sm hover:text-white transition-colors">AML Policy</Link></li>
-              <li><Link href="/privacy" className="text-sm hover:text-white transition-colors">Privacy Notice</Link></li>
-              <li><Link href="/cookie-policy" className="text-sm hover:text-white transition-colors">Cookie Policy</Link></li>
-              <li><Link href="/restricted-countries" className="text-sm hover:text-white transition-colors">Restricted Countries</Link></li>
-              <li><Link href="/vip-terms" className="text-sm hover:text-white transition-colors">VIP Program T&C</Link></li>
-            </ul>
-          </div>
+        {/* Socials */}
+        <div className="flex items-center gap-3 mb-8">
+          {socials.map(({ icon: Icon, label, href }) => (
+            <a
+              key={label}
+              href={href}
+              aria-label={`Follow Pexly on ${label}`}
+              className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white/25 transition-all duration-200"
+            >
+              <Icon className="h-[15px] w-[15px]" />
+            </a>
+          ))}
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3 lg:gap-4 mb-6 lg:mb-8">
-          <a href="#" aria-label="Follow Pexly on X (Twitter)" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <SiX className="h-4 w-4 text-black" />
-          </a>
-          <a href="#" aria-label="Follow Pexly on LinkedIn" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <SiLinkedin className="h-4 w-4 text-black" />
-          </a>
-          <a href="#" aria-label="Join Pexly on Telegram" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <SiTelegram className="h-4 w-4 text-black" />
-          </a>
-          <a href="#" aria-label="Follow Pexly on Instagram" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <SiInstagram className="h-4 w-4 text-black" />
-          </a>
-          <a href="#" aria-label="Follow Pexly on Facebook" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <SiFacebook className="h-4 w-4 text-black" />
-          </a>
-          <a href="#" aria-label="Subscribe to Pexly on YouTube" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <SiYoutube className="h-4 w-4 text-black" />
-          </a>
-        </div>
+        {/* Legal disclaimer */}
+        <p className="text-[11px] text-white/20 leading-relaxed text-center max-w-3xl mx-auto mb-8">
+          "PEXLY" is a registered trademark of Pexly, Inc. Pexly Inc. has no relationship to MoneyGram, Western Union, Payoneer, WorldRemit, PayPal, Skrill, Neteller, Venmo, Apple, or any other payment method. Their respective wordmarks and trademarks belong to them alone.
+        </p>
 
-        <div className="text-xs text-gray-400 leading-relaxed mb-4 lg:mb-6 px-2">
-          <p className="text-center sm:text-left">"PLEXY" is a registered trademark of Plexy, Inc. Copyright © 2024 Plexy, Inc. All Rights Reserved. Plexy Inc. has no relationship to MoneyGram, Western Union, Payoneer, WorldRemit, Paxum, PayPal, Amazon, OkPay, Payza, Walmart, Reloadit, Perfect Money, WebMoney, Google Wallet, BlueBird, Serve, Square Cash, NetSpend, Chase QuickPay, Skrill, Vanilla, MyVanilla, OneVanilla, Neteller, Venmo, Apple, ChimpChange or any other payment method. We make no claims about being supported by or supporting these services. Their respective wordmarks and trademarks belong to them alone.</p>
-        </div>
-
-        <div className="text-center text-sm text-gray-400">
-          <p>Copyright 2024 Plexy. All rights reserved.</p>
+        {/* Bottom bar — very last line */}
+        <div className="h-px w-full bg-white/[0.04] mb-6" />
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/25">
+          <span>© {new Date().getFullYear()} Pexly, Inc. All rights reserved.</span>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#B4F22E] shadow-[0_0_5px_rgba(180,242,46,0.9)]" />
+            <span>All systems operational</span>
+          </div>
         </div>
       </div>
     </footer>
