@@ -1,409 +1,288 @@
 import {
-  Home,
-  ShoppingCart,
-  Store,
-  List,
-  Plus,
+  ChevronDown,
+  Zap,
+  ArrowRight,
+  Globe,
   Gift,
   Wallet,
   TrendingUp,
+  ShoppingCart,
+  Store,
   HeadphonesIcon,
-  ChevronDown,
-  Smartphone,
-  Zap,
-  Bitcoin,
-  ArrowDownToLine,
-  CreditCard,
-  ShoppingBag,
-  Banknote,
-  Globe,
-  Users,
-  Receipt
+  LayoutDashboard,
 } from "lucide-react";
-import { SiApple, SiGoogleplay } from "react-icons/si";
 import { Link, useLocation } from "wouter";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "./theme-toggle";
 import { useAuth } from "@/lib/auth-context";
-import { useState, useEffect } from "react";
-import { ReceiveCryptoDialog } from "./receive-crypto-dialog";
-import { getUserWallets } from "@/lib/wallet-api";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
+interface NavItemProps {
+  label: string;
+  href?: string;
+  badge?: React.ReactNode;
+  onClick?: () => void;
+  active?: boolean;
+}
+
+function NavItem({ label, href, badge, onClick, active }: NavItemProps) {
+  const content = (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex w-full items-center justify-between px-6 py-5 text-left transition-colors",
+        "text-[1.15rem] font-medium tracking-tight",
+        active
+          ? "text-primary"
+          : "text-foreground hover:text-primary"
+      )}
+    >
+      <span className="flex items-center gap-3">
+        {label}
+        {badge}
+      </span>
+    </button>
+  );
+
+  if (href) {
+    return (
+      <div className="border-t border-border/60">
+        <Link href={href} onClick={onClick}>
+          {content}
+        </Link>
+      </div>
+    );
+  }
+
+  return <div className="border-t border-border/60">{content}</div>;
+}
+
+interface NavGroupProps {
+  label: string;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+function NavGroup({ label, badge, children, defaultOpen = false }: NavGroupProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border-t border-border/60">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-6 py-5 text-left transition-colors text-[1.15rem] font-medium tracking-tight text-foreground hover:text-primary">
+          <span className="flex items-center gap-3">
+            {label}
+            {badge}
+          </span>
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 text-muted-foreground transition-transform duration-200",
+              open && "rotate-180"
+            )}
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="bg-muted/40 px-6 pb-3 space-y-1">
+            {children}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
+
+interface SubItemProps {
+  label: string;
+  href?: string;
+  badge?: React.ReactNode;
+  onClick?: () => void;
+  active?: boolean;
+  external?: boolean;
+}
+
+function SubItem({ label, href, badge, onClick, active, external }: SubItemProps) {
+  const cls = cn(
+    "flex w-full items-center justify-between py-2.5 text-sm transition-colors",
+    active ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+  );
+
+  if (external && href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+        {label}
+        {badge}
+      </a>
+    );
+  }
+
+  if (href) {
+    return (
+      <Link href={href} onClick={onClick} className={cls}>
+        {label}
+        {badge}
+      </Link>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className={cls}>
+      {label}
+      {badge}
+    </button>
+  );
+}
+
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
-  const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
-  const [wallets, setWallets] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (user) {
-      getUserWallets(user.id).then(setWallets);
-    }
-  }, [user]);
-
-  const handleLinkClick = () => {
-    if (onNavigate) {
-      onNavigate();
-    }
+  const go = (path: string) => {
+    navigate(path);
+    onNavigate?.();
   };
 
   return (
-    <div className="flex h-full flex-col bg-background">{" "}
-      <div className="border-b border-border px-4 py-6">
-        <Link href="/" className="flex items-center gap-3" onClick={handleLinkClick}>
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Zap className="h-6 w-6 text-primary-foreground" />
+    <div className="flex h-full flex-col bg-background">
+
+      {/* Logo */}
+      <div className="flex items-center justify-between px-6 py-5">
+        <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold">Pexly</span>
+          <span className="text-xl font-extrabold tracking-tight">Pexly</span>
         </Link>
-
-        <div className="mt-6 flex gap-2">
-          <Button className="flex-1 justify-center gap-2" size="sm" variant="outline" data-testid="button-download-android">
-            <SiGoogleplay className="h-4 w-4" />
-            Android
-          </Button>
-          <Button className="flex-1 justify-center gap-2" size="sm" variant="outline" data-testid="button-download-ios">
-            <SiApple className="h-4 w-4" />
-            iOS
-          </Button>
-        </div>
+        <ThemeToggle />
       </div>
 
-      <div className="flex-1 overflow-auto">{" "}
-        <div className="p-2">
-          <nav className="flex flex-col gap-1">
-            <Link href="/" onClick={handleLinkClick}>
-              <Button
-                variant={location === "/" ? "secondary" : "ghost"}
-                className="w-full justify-start gap-2"
-                data-testid="nav-home"
-              >
-                <Home className="h-5 w-5" />
-                <span>Home</span>
-              </Button>
-            </Link>
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto pb-4">
 
-            <Collapsible defaultOpen>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2" data-testid="nav-trade-toggle">
-                  <ShoppingCart className="h-5 w-5" />
-                  <span>Trade</span>
-                  <ChevronDown className="ml-auto h-4 w-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/buy-crypto" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/buy-crypto" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    data-testid="nav-wallet-buy-crypto-trade"
-                  >
-                    Buy Crypto
-                    <Badge variant="secondary" className="ml-auto text-xs">LOW FEES</Badge>
-                  </Button>
-                </Link>
-                <Link href="/spot" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/spot" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    data-testid="nav-spot"
-                  >
-                    Spot Trading
-                  </Button>
-                </Link>
-                <Link href="/perpetual" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/perpetual" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    data-testid="nav-perpetual"
-                  >
-                    Perpetual Trading
-                  </Button>
-                </Link>
-                <Link href="/swap" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/swap" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    data-testid="nav-swap"
-                  >
-                    Swap
-                  </Button>
-                </Link>
-                <Link href="/prediction" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/prediction" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    data-testid="nav-prediction"
-                  >
-                    Predictions
-                  </Button>
-                </Link>
-              </CollapsibleContent>
-            </Collapsible>
+        {user && (
+          <NavItem
+            label="Dashboard"
+            href="/dashboard"
+            active={location === "/dashboard"}
+            onClick={onNavigate}
+          />
+        )}
 
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2" data-testid="nav-shop-toggle">
-                  <Store className="h-5 w-5" />
-                  <span>Shop</span>
-                  <Badge variant="secondary" className="ml-auto">BETA</Badge>
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/shop" onClick={handleLinkClick}>
-                  <Button variant="ghost" className="w-full justify-start gap-2" size="sm" data-testid="nav-listings">
-                    <List className="h-4 w-4" />
-                    Listings
-                  </Button>
-                </Link>
-                <Link href="/shop/post" onClick={handleLinkClick}>
-                  <Button className="w-full justify-start gap-2" size="sm" data-testid="nav-post-ad">
-                    <Plus className="h-4 w-4" />
-                    <span className="font-semibold">Post Ad</span>
-                    <Badge variant="secondary" className="ml-auto bg-background text-foreground">FREE</Badge>
-                  </Button>
-                </Link>
-              </CollapsibleContent>
-            </Collapsible>
+        <NavGroup
+          label="Trade"
+          defaultOpen={
+            ["/buy-crypto", "/spot", "/perpetual", "/swap", "/prediction"].includes(location)
+          }
+        >
+          <SubItem label="Buy Crypto" href="/buy-crypto" active={location === "/buy-crypto"} onClick={onNavigate}
+            badge={<Badge variant="secondary" className="text-[10px] py-0">LOW FEES</Badge>} />
+          <SubItem label="Spot Trading" href="/spot" active={location === "/spot"} onClick={onNavigate} />
+          <SubItem label="Perpetual" href="/perpetual" active={location === "/perpetual"} onClick={onNavigate} />
+          <SubItem label="Swap" href="/swap" active={location === "/swap"} onClick={onNavigate} />
+          <SubItem label="Prediction" href="/prediction" active={location === "/prediction"} onClick={onNavigate} />
+        </NavGroup>
 
-            <Link href="/gift-cards" onClick={handleLinkClick}>
-              <Button
-                variant={location === "/gift-cards" ? "secondary" : "ghost"}
-                className="w-full justify-start gap-2"
-                data-testid="nav-gift-cards"
-              >
-                <Gift className="h-5 w-5" />
-                <span>Gift Cards</span>
-              </Button>
-            </Link>
+        <NavItem
+          label="Gift Cards"
+          href="/gift-cards"
+          active={location.startsWith("/gift-cards")}
+          onClick={onNavigate}
+        />
 
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2" data-testid="nav-wallet-toggle">
-                  <Wallet className="h-5 w-5" />
-                  <span>Wallet</span>
-                  <ChevronDown className="ml-auto h-4 w-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/wallet" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/wallet" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    size="sm"
-                    data-testid="nav-wallet-assets"
-                  >
-                    <Bitcoin className="h-5 w-5 flex-shrink-0" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Assets</span>
-                      <span className="text-xs text-muted-foreground leading-tight">My assets in the Pexly wallet</span>
-                    </div>
-                  </Button>
-                </Link>
-                <button
-                  onClick={() => {
-                    setReceiveDialogOpen(true);
-                    handleLinkClick();
-                  }}
-                  className="w-full"
-                >
-                  <Button
-                    variant={location === "/wallet/receive" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    size="sm"
-                    data-testid="nav-wallet-receive"
-                  >
-                    <ArrowDownToLine className="h-5 w-5 flex-shrink-0" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Receive</span>
-                      <span className="text-xs text-muted-foreground leading-tight">Receive crypto or deposit using fiat</span>
-                    </div>
-                  </Button>
-                </button>
-                <Link href="/wallet/visa-card" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/wallet/visa-card" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    size="sm"
-                    data-testid="nav-wallet-visa-card"
-                  >
-                    <CreditCard className="h-5 w-5 flex-shrink-0" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Visa card</span>
-                      <span className="text-xs text-muted-foreground leading-tight">Spend your crypto</span>
-                    </div>
-                  </Button>
-                </Link>
-                <Link href="/wallet/lightning" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/wallet/lightning" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    size="sm"
-                    data-testid="nav-wallet-lightning"
-                  >
-                    <Zap className="h-5 w-5 flex-shrink-0" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Lightning</span>
-                      <span className="text-xs text-muted-foreground leading-tight">Send Bitcoin ultra fast</span>
-                    </div>
-                  </Button>
-                </Link>
-                <Link href="/wallet/mobile-topup" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/wallet/mobile-topup" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    size="sm"
-                    data-testid="nav-wallet-mobile-topup"
-                  >
-                    <Smartphone className="h-5 w-5 flex-shrink-0" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Mobile top-up</span>
-                      <span className="text-xs text-muted-foreground leading-tight">Recharge your phone using crypto</span>
-                    </div>
-                  </Button>
-                </Link>
-                <Link href="/utility" onClick={handleLinkClick}>
-                  <Button
-                    variant={location === "/utility" ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3 h-auto py-3"
-                    size="sm"
-                    data-testid="nav-utility"
-                  >
-                    <Receipt className="h-5 w-5 flex-shrink-0" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold">Utility</span>
-                      <span className="text-xs text-muted-foreground leading-tight">Pay bills and other services</span>
-                    </div>
-                  </Button>
-                </Link>
-              </CollapsibleContent>
-            </Collapsible>
+        <NavGroup
+          label="Wallet"
+          defaultOpen={location.startsWith("/wallet")}
+        >
+          <SubItem label="Assets" href="/wallet" active={location === "/wallet"} onClick={onNavigate} />
+          <SubItem label="Visa Card" href="/wallet/visa-card" active={location === "/wallet/visa-card"} onClick={onNavigate} />
+          <SubItem label="Lightning" href="/wallet/lightning" active={location === "/wallet/lightning"} onClick={onNavigate} />
+          <SubItem label="Mobile Top-up" href="/wallet/mobile-topup" active={location === "/wallet/mobile-topup"} onClick={onNavigate} />
+          <SubItem label="Utility Bills" href="/utility" active={location === "/utility"} onClick={onNavigate} />
+        </NavGroup>
 
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2" data-testid="nav-earn-toggle">
-                  <TrendingUp className="h-5 w-5" />
-                  <span>Earn with us</span>
-                  <ChevronDown className="ml-auto h-4 w-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <Link href="/wallet/stake" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/wallet/stake" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-2" 
-                    size="sm" 
-                    data-testid="nav-stake"
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    Stake
-                    <Badge variant="secondary" className="ml-auto text-xs bg-red-500 text-white hover:bg-red-600 border-none animate-pulse">HOT</Badge>
-                  </Button>
-                </Link>
-                <Link href="/referral" onClick={handleLinkClick}>
-                  <Button 
-                    variant={location === "/referral" ? "secondary" : "ghost"} 
-                    className="w-full justify-start gap-2" 
-                    size="sm" 
-                    data-testid="nav-referral"
-                  >
-                    <Users className="h-4 w-4" />
-                    Referral Program
-                  </Button>
-                </Link>
-                <Link href="/rewards" onClick={handleLinkClick}>
-                  <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-rewards">
-                    Rewards
-                  </Button>
-                </Link>
-              </CollapsibleContent>
-            </Collapsible>
+        <NavGroup
+          label="Shop"
+          badge={<Badge variant="secondary" className="text-[10px] py-0">BETA</Badge>}
+          defaultOpen={location.startsWith("/shop")}
+        >
+          <SubItem label="Listings" href="/shop" active={location === "/shop"} onClick={onNavigate} />
+          <SubItem label="Post Ad" href="/shop/post" active={location === "/shop/post"} onClick={onNavigate}
+            badge={<Badge variant="secondary" className="text-[10px] py-0">FREE</Badge>} />
+        </NavGroup>
 
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2" data-testid="nav-support-toggle">
-                  <HeadphonesIcon className="h-5 w-5" />
-                  <span>Support</span>
-                  <ChevronDown className="ml-auto h-4 w-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                <a href="https://help.pexly.app" target="_blank" rel="noopener noreferrer">
-                  <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-help-center">
-                    Help Center
-                  </Button>
-                </a>
-                <Link href="/contact" onClick={handleLinkClick}>
-                  <Button variant="ghost" className="w-full justify-start" size="sm" data-testid="nav-contact">
-                    Contact Us
-                  </Button>
-                </Link>
-              </CollapsibleContent>
-            </Collapsible>
-            
-            <Link href="/explorer" onClick={handleLinkClick}>
-              <Button
-                variant={location === "/explorer" ? "secondary" : "ghost"}
-                className="w-full justify-start gap-2"
-                data-testid="nav-medals"
-              >
-                <Globe className="h-5 w-5" />
-                <span>Explorer</span>
-              </Button>
-            </Link>
-          </nav>
-        </div>
-      </div>
+        <NavGroup
+          label="Earn"
+          defaultOpen={["/wallet/stake", "/referral", "/rewards"].includes(location)}
+        >
+          <SubItem label="Stake" href="/wallet/stake" active={location === "/wallet/stake"} onClick={onNavigate}
+            badge={<Badge className="text-[10px] py-0 bg-red-500 hover:bg-red-500 border-none animate-pulse">HOT</Badge>} />
+          <SubItem label="Referral Program" href="/referral" active={location === "/referral"} onClick={onNavigate} />
+          <SubItem label="Rewards" href="/rewards" active={location === "/rewards"} onClick={onNavigate} />
+        </NavGroup>
 
-      <div className="border-t border-border p-4 space-y-2">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium">Theme</span>
-          <ThemeToggle />
-        </div>
-        {!user && (
+        <NavItem
+          label="Explorer"
+          href="/explorer"
+          active={location.startsWith("/explorer")}
+          onClick={onNavigate}
+        />
+
+        <NavGroup
+          label="Support"
+          defaultOpen={["/contact", "/support"].includes(location)}
+        >
+          <SubItem label="Help Center" href="https://help.pexly.app" external />
+          <SubItem label="Contact Us" href="/contact" active={location === "/contact"} onClick={onNavigate} />
+        </NavGroup>
+
+      </nav>
+
+      {/* Footer CTAs */}
+      <div className="border-t border-border/60 p-5 space-y-3">
+        {user ? (
+          <Button
+            className="w-full rounded-xl font-semibold"
+            onClick={() => go("/dashboard")}
+          >
+            <LayoutDashboard className="h-4 w-4 mr-2" />
+            Go to Dashboard
+          </Button>
+        ) : (
           <>
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              data-testid="button-sign-in"
-              onClick={() => {
-                navigate("/signin");
-                handleLinkClick();
-              }}
+            <div className="grid grid-cols-2 gap-2.5">
+              <Button
+                variant="secondary"
+                className="rounded-xl font-semibold"
+                onClick={() => go("/signin")}
+              >
+                Sign In
+              </Button>
+              <Button
+                variant="secondary"
+                className="rounded-xl font-semibold"
+                onClick={() => go("/signup")}
+              >
+                Register
+              </Button>
+            </div>
+            <Button
+              className="w-full rounded-xl font-semibold gap-2"
+              onClick={() => go("/signup")}
             >
-              Sign In
-            </Button>
-            <Button 
-              className="w-full" 
-              data-testid="button-sign-up"
-              onClick={() => {
-                navigate("/signup");
-                handleLinkClick();
-              }}
-            >
-              Sign Up
+              Get Started
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </>
         )}
       </div>
 
-      <ReceiveCryptoDialog
-        open={receiveDialogOpen}
-        onOpenChange={setReceiveDialogOpen}
-        wallets={wallets}
-      />
     </div>
   );
 }
