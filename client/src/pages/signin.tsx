@@ -11,7 +11,7 @@ import { CountryCodeSelector } from "@/components/country-code-selector";
 import { PhoneVerification } from "@/components/phone-verification";
 import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { supabase } from "@/lib/supabase";
-import * as OTPAuth from "otplib";
+import { verifyTOTP } from "@/lib/totp";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
@@ -334,7 +334,7 @@ export function SignIn() {
         throw new Error('Two-factor authentication is not properly configured for this account');
       }
 
-      const isValidToken = OTPAuth.authenticator.check(twoFactorCode, profileData.two_factor_secret);
+      const isValidToken = verifyTOTP(twoFactorCode, profileData.two_factor_secret);
 
       let isBackupCode = false;
       let updatedBackupCodes = profileData.two_factor_backup_codes;
