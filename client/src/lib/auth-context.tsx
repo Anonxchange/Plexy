@@ -333,7 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     required: false, 
     expectedAddress: null 
   });
-  
+
   const [sessionPassword, setSessionPasswordState] = useState<string | null>(null);
   const [isWalletUnlocked, setIsWalletUnlocked] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
