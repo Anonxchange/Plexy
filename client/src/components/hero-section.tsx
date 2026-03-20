@@ -1,6 +1,5 @@
-import React, { lazy, Suspense, useMemo } from "react";
-
-const HeroForm = lazy(() => import("@/components/hero-form").then(m => ({ default: m.HeroForm })));
+import React, { useMemo } from "react";
+import { HeroForm } from "@/components/hero-form";
 
 const R = 42;
 const H = R * Math.sqrt(3);
@@ -131,7 +130,7 @@ function HoneycombGrid() {
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
 
       <HoneycombGrid />
 
@@ -143,8 +142,8 @@ export function HeroSection() {
         }}
       />
 
-      <div className="absolute top-10 right-0 w-[600px] h-[600px] bg-primary/15 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-10 right-0 w-[600px] h-[600px] bg-primary/15 rounded-full blur-[80px] pointer-events-none" style={{ willChange: 'transform', transform: 'translateZ(0)' }} />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[60px] pointer-events-none" style={{ willChange: 'transform', transform: 'translateZ(0)' }} />
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 relative z-10 w-full">
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
@@ -183,11 +182,7 @@ export function HeroSection() {
           </div>
 
           <div className="max-w-3xl mx-auto lg:mx-0 w-full">
-            <Suspense fallback={
-              <div className="h-[450px] bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl animate-pulse" />
-            }>
-              <HeroForm />
-            </Suspense>
+            <HeroForm />
           </div>
 
         </div>
