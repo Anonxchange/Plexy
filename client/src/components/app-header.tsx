@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Smartphone, HelpCircle, MessageSquare, Users, Shield, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Smartphone, HelpCircle, MessageSquare, Users, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { SecurityShieldIcon } from "@/components/ui/security-shield";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -554,7 +555,7 @@ export function AppHeader() {
                               color: securityInfo.color === 'green' ? '#16a34a' : securityInfo.color === 'yellow' ? '#ca8a04' : '#dc2626',
                             }}
                           >
-                            <Shield className="w-2.5 h-2.5" />
+                            <SecurityShieldIcon level={securityInfo.level} size={11} />
                             {securityInfo.label}
                           </span>
                         </div>
@@ -608,7 +609,7 @@ export function AppHeader() {
                   {/* Security Status Section */}
                   <div className="mx-1.5 mb-1.5 rounded-xl border border-border overflow-hidden">
                     <div
-                      className="px-3 pt-3 pb-2"
+                      className="px-3 pt-3 pb-2.5"
                       style={{
                         background: securityInfo.color === 'green'
                           ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)'
@@ -617,69 +618,74 @@ export function AppHeader() {
                           : 'linear-gradient(135deg, #fff1f2, #ffe4e6)',
                       }}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5">
-                          <Shield
-                            className="w-3.5 h-3.5"
-                            style={{ color: securityInfo.color === 'green' ? '#16a34a' : securityInfo.color === 'yellow' ? '#ca8a04' : '#dc2626' }}
-                          />
-                          <span className="text-[11px] font-semibold text-foreground/80 uppercase tracking-wider">Security</span>
-                        </div>
+                      {/* Header row: label + status word */}
+                      <div className="flex items-center justify-between mb-2.5">
+                        <span className="text-[10px] font-semibold text-foreground/60 uppercase tracking-widest">Account Security</span>
                         <span
-                          className="text-[11px] font-bold"
+                          className="text-[11px] font-bold tracking-wide"
                           style={{ color: securityInfo.color === 'green' ? '#16a34a' : securityInfo.color === 'yellow' ? '#ca8a04' : '#dc2626' }}
                         >
                           {securityInfo.label}
                         </span>
                       </div>
 
-                      {/* Bar chart status indicator */}
-                      <div className="flex items-end gap-[2px] h-6 mb-2">
-                        {Array.from({ length: 24 }).map((_, i) => {
-                          const filled = securityInfo.color === 'green'
-                            ? true
-                            : securityInfo.color === 'yellow'
-                            ? i < 16
-                            : i < 8;
-                          const barColor = filled
-                            ? securityInfo.color === 'green' ? '#22c55e' : securityInfo.color === 'yellow' ? '#eab308' : '#ef4444'
-                            : undefined;
-                          const height = `${50 + Math.sin(i * 0.7) * 30 + Math.cos(i * 1.3) * 20}%`;
-                          return (
-                            <div
-                              key={i}
-                              className="flex-1 rounded-[2px] transition-all duration-300"
-                              style={{
-                                height,
-                                backgroundColor: filled ? barColor : 'rgba(0,0,0,0.08)',
-                                minHeight: '4px',
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
+                      {/* Shield + bar chart row */}
+                      <div className="flex items-end gap-3">
+                        {/* Custom SVG shield — the star of the section */}
+                        <div className="flex-shrink-0 drop-shadow-sm">
+                          <SecurityShieldIcon level={securityInfo.level} size={46} />
+                        </div>
 
-                      {/* Security checks */}
-                      <div className="flex flex-col gap-1">
-                        {[
-                          { label: 'Email verified', ok: !!user?.email_confirmed_at },
-                          { label: 'Phone linked', ok: !!user?.phone },
-                          { label: '2FA enabled', ok: !!user?.user_metadata?.two_factor_enabled },
-                        ].map(({ label, ok }) => (
-                          <div key={label} className="flex items-center justify-between">
-                            <span className="text-[10px] text-foreground/70">{label}</span>
-                            {ok
-                              ? <CheckCircle2 className="w-3 h-3 text-green-500" />
-                              : <XCircle className="w-3 h-3 text-red-400" />
-                            }
+                        {/* Bar chart */}
+                        <div className="flex-1 flex flex-col gap-1.5">
+                          <div className="flex items-end gap-[2px] h-7">
+                            {Array.from({ length: 20 }).map((_, i) => {
+                              const filled = securityInfo.color === 'green'
+                                ? true
+                                : securityInfo.color === 'yellow'
+                                ? i < 13
+                                : i < 6;
+                              const barColor = filled
+                                ? securityInfo.color === 'green' ? '#22c55e' : securityInfo.color === 'yellow' ? '#eab308' : '#ef4444'
+                                : 'rgba(0,0,0,0.09)';
+                              const heights = [55,70,62,80,58,75,68,85,60,72,64,78,56,74,66,82,59,71,65,79];
+                              return (
+                                <div
+                                  key={i}
+                                  className="flex-1 rounded-[2px] transition-all duration-500"
+                                  style={{
+                                    height: `${heights[i % heights.length]}%`,
+                                    backgroundColor: barColor,
+                                    minHeight: '4px',
+                                  }}
+                                />
+                              );
+                            })}
                           </div>
-                        ))}
+
+                          {/* Security checks — compact inline */}
+                          <div className="flex flex-col gap-[3px]">
+                            {[
+                              { label: 'Email verified', ok: !!user?.email_confirmed_at },
+                              { label: 'Phone linked',   ok: !!user?.phone },
+                              { label: '2FA enabled',    ok: !!user?.user_metadata?.two_factor_enabled },
+                            ].map(({ label, ok }) => (
+                              <div key={label} className="flex items-center justify-between">
+                                <span className="text-[10px] text-foreground/65 leading-none">{label}</span>
+                                {ok
+                                  ? <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                                  : <XCircle     className="w-3 h-3 text-red-400  flex-shrink-0" />
+                                }
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
 
                       {securityInfo.level !== 'high' && (
                         <button
                           onClick={() => navigate('/account-settings')}
-                          className="mt-2 w-full text-[10px] font-semibold py-1.5 rounded-lg transition-all duration-150 text-white"
+                          className="mt-2.5 w-full text-[10px] font-semibold py-1.5 rounded-lg transition-all duration-150 hover:opacity-90 active:scale-[0.98] text-white"
                           style={{ backgroundColor: securityInfo.color === 'yellow' ? '#ca8a04' : '#dc2626' }}
                         >
                           Improve Security →
