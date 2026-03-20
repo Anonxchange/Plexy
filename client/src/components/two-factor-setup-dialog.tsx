@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,6 +41,17 @@ export function TwoFactorSetupDialog({
   const supabase = createClient();
 
   const enrollmentId = useRef(0);
+
+  const sanitizedQrSvg = useMemo(() => {
+    if (!qrSvg) return "";
+    let svgContent = qrSvg;
+    if (svgContent.startsWith("data:image/svg+xml;utf-8,")) {
+      svgContent = decodeURIComponent(svgContent.slice("data:image/svg+xml;utf-8,".length));
+    } else if (svgContent.startsWith("data:image/svg+xml;base64,")) {
+      svgContent = atob(svgContent.slice("data:image/svg+xml;base64,".length));
+    }
+    return DOMPurify.sanitize(svgContent, { USE_PROFILES: { svg: true, svgFilters: true } });
+  }, [qrSvg]);
 
   const runEnroll = async (id: number) => {
     setEnrolling(true);
@@ -160,10 +172,10 @@ export function TwoFactorSetupDialog({
               <div className="p-3 rounded-xl border border-border bg-white shadow-sm min-h-[192px] min-w-[192px] flex items-center justify-center">
                 {enrolling ? (
                   <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
-                ) : qrSvg ? (
+                ) : sanitizedQrSvg ? (
                   <div
-                    className="w-[192px] h-[192px]"
-                    dangerouslySetInnerHTML={{ __html: qrSvg }}
+                    className="w-[192px] h-[192px] [&>svg]:w-full [&>svg]:h-full"
+                    dangerouslySetInnerHTML={{ __html: sanitizedQrSvg }}
                   />
                 ) : (
                   <span className="text-xs text-muted-foreground">Loading…</span>
