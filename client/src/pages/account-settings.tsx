@@ -87,7 +87,7 @@ import { PasskeySetup } from "@/components/passkey-setup";
 import { WithdrawalWhitelistDialog } from "@/components/withdrawal-whitelist-dialog";
 import { IPWhitelistDialog } from "@/components/ip-whitelist-dialog";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import * as OTPAuth from "otplib";
+import { verifyTOTP } from "@/lib/totp";
 
 const settingsSections = [
   { id: "profile", label: "Profile", icon: User },
@@ -911,7 +911,7 @@ export default function AccountSettings() {
         throw new Error('Failed to verify 2FA settings');
       }
 
-      const isValid = OTPAuth.authenticator.check(disable2FACode, profileData.two_factor_secret);
+      const isValid = verifyTOTP(disable2FACode, profileData.two_factor_secret);
 
       if (!isValid) {
         toast({
