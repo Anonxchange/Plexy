@@ -11,7 +11,22 @@ export const TrustStats = () => {
       id="features"
       className="py-20 bg-primary text-primary-foreground relative overflow-hidden rounded-3xl -mt-10 z-10"
     >
-      <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+      {/* Dot pattern — same as CTA */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.18) 1.5px, transparent 1.5px)",
+          backgroundSize: "22px 22px",
+        }}
+      />
+
+      {/* Centre glow — same as CTA */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,255,255,0.12) 0%, transparent 70%)",
+        }}
+      />
 
       <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
         {/* Header */}
@@ -24,7 +39,15 @@ export const TrustStats = () => {
         </div>
 
         {/* HERO CARD */}
-        <div className="bg-[#fcfcfc] dark:bg-card rounded-[24px] p-8 md:p-12 max-w-6xl mx-auto shadow-sm mb-14">
+        <div
+          className="bg-[#fcfcfc] dark:bg-card rounded-[24px] p-8 md:p-12 max-w-6xl mx-auto mb-14"
+          style={{
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "2px solid rgba(255,255,255,0.80)",
+            boxShadow: "inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.4), 0 16px 48px rgba(0,0,0,0.18)",
+          }}
+        >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
             {/* LEFT CONTENT */}
@@ -75,7 +98,15 @@ export const TrustStats = () => {
 
         {/* FEATURE CARDS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-[#fcfcfc] dark:bg-card rounded-[20px] p-8 shadow-sm text-center">
+          <div
+            className="bg-[#fcfcfc] dark:bg-card rounded-[20px] p-8 text-center"
+            style={{
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "2px solid rgba(255,255,255,0.80)",
+              boxShadow: "inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.4), 0 16px 48px rgba(0,0,0,0.18)",
+            }}
+          >
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Added security with encryption
             </h3>
@@ -85,17 +116,33 @@ export const TrustStats = () => {
             </p>
           </div>
 
-          <div className="bg-[#fcfcfc] dark:bg-card rounded-[20px] p-8 shadow-sm text-center">
+          <div
+            className="bg-[#fcfcfc] dark:bg-card rounded-[20px] p-8 text-center"
+            style={{
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "2px solid rgba(255,255,255,0.80)",
+              boxShadow: "inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.4), 0 16px 48px rgba(0,0,0,0.18)",
+            }}
+          >
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Zero personal tracking
             </h3>
-     <img src={privacyShield} alt="Privacy shield icon" loading="lazy" decoding="async" className="w-52 h-52 mx-auto mb-2 object-contain scale-110" />
-          <p className="text-black/70 dark:text-muted-foreground text-lg">
+            <img src={privacyShield} alt="Privacy shield icon" loading="lazy" decoding="async" className="w-52 h-52 mx-auto mb-2 object-contain scale-110" />
+            <p className="text-black/70 dark:text-muted-foreground text-lg">
               We don't track any personal information, including IP or balances.
             </p>
           </div>
 
-          <div className="bg-[#fcfcfc] dark:bg-card rounded-[20px] p-8 shadow-sm text-center">
+          <div
+            className="bg-[#fcfcfc] dark:bg-card rounded-[20px] p-8 text-center"
+            style={{
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "2px solid rgba(255,255,255,0.80)",
+              boxShadow: "inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.4), 0 16px 48px rgba(0,0,0,0.18)",
+            }}
+          >
             <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
               Proactive alerts
             </h3>
