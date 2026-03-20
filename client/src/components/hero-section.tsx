@@ -1,46 +1,154 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useMemo } from "react";
 
-const Globe = lazy(() => import("@/components/globe").then(m => ({ default: m.Globe })));
 const HeroForm = lazy(() => import("@/components/hero-form").then(m => ({ default: m.HeroForm })));
 
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback: React.ReactNode },
-  { hasError: boolean }
-> {
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError() { return { hasError: true }; }
-  render() {
-    if (this.state.hasError) return this.props.fallback;
-    return this.props.children;
-  }
+const R = 42;
+const H = R * Math.sqrt(3);
+const COL_SPACING = R * 1.5;
+
+function hexPoints(cx: number, cy: number, r = R) {
+  return Array.from({ length: 6 }, (_, i) => {
+    const a = (Math.PI / 3) * i;
+    return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
+  }).join(" ");
+}
+
+const HEX = "#0f172a";
+
+function HoneycombGrid() {
+  const cells = useMemo(() => {
+    const out: { cx: number; cy: number; filled: boolean }[] = [];
+    for (let col = -1; col <= 24; col++) {
+      for (let row = -1; row <= 14; row++) {
+        const cx = col * COL_SPACING;
+        const cy = row * H + (col % 2 !== 0 ? H / 2 : 0);
+        const filled = ((col * 5 + row * 11) % 7 === 0);
+        out.push({ cx, cy, filled });
+      }
+    }
+    return out;
+  }, []);
+
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 1440 860"
+      preserveAspectRatio="xMidYMid slice"
+    >
+      <defs>
+        <radialGradient id="hgFade" cx="20%" cy="30%" r="80%">
+          <stop offset="0%"   stopColor="white" stopOpacity="1" />
+          <stop offset="65%"  stopColor="white" stopOpacity="0.45" />
+          <stop offset="100%" stopColor="white" stopOpacity="0.05" />
+        </radialGradient>
+        <mask id="hgMask">
+          <rect width="1440" height="860" fill="url(#hgFade)" />
+        </mask>
+
+        <filter id="hexGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="8" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {/* Honeycomb grid */}
+      <g mask="url(#hgMask)">
+        {cells.map(({ cx, cy, filled }, i) => (
+          <polygon
+            key={i}
+            points={hexPoints(cx, cy)}
+            fill={filled ? HEX : "none"}
+            fillOpacity={filled ? 0.06 : 0}
+            stroke={HEX}
+            strokeWidth="0.9"
+            strokeOpacity="0.22"
+          />
+        ))}
+      </g>
+
+      {/* Large accent — top-left, partially off-screen */}
+      <polygon
+        points={hexPoints(-60, 80, 200)}
+        fill={HEX}
+        fillOpacity="0.05"
+        stroke={HEX}
+        strokeWidth="2"
+        strokeOpacity="0.30"
+        filter="url(#hexGlow)"
+      />
+      <polygon
+        points={hexPoints(-60, 80, 148)}
+        fill="none"
+        stroke={HEX}
+        strokeWidth="1"
+        strokeOpacity="0.14"
+      />
+
+      {/* Large accent — bottom-right */}
+      <polygon
+        points={hexPoints(1480, 780, 180)}
+        fill={HEX}
+        fillOpacity="0.04"
+        stroke={HEX}
+        strokeWidth="2"
+        strokeOpacity="0.25"
+        filter="url(#hexGlow)"
+      />
+
+      {/* Mid accent — top-right */}
+      <polygon
+        points={hexPoints(1300, 100, 120)}
+        fill={HEX}
+        fillOpacity="0.04"
+        stroke={HEX}
+        strokeWidth="1.5"
+        strokeOpacity="0.25"
+      />
+      <polygon
+        points={hexPoints(1300, 100, 80)}
+        fill="none"
+        stroke={HEX}
+        strokeWidth="0.75"
+        strokeOpacity="0.12"
+      />
+
+      {/* Small floating accent — center-left */}
+      <polygon
+        points={hexPoints(260, 560, 60)}
+        fill={HEX}
+        fillOpacity="0.05"
+        stroke={HEX}
+        strokeWidth="1.2"
+        strokeOpacity="0.28"
+      />
+    </svg>
+  );
 }
 
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center">
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
-      <Suspense fallback={null}>
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] opacity-40 pointer-events-none z-0"
-          style={{ contain: "strict", willChange: "transform" }}
-        >
-          <ErrorBoundary fallback={<div className="w-full h-full bg-primary/5 rounded-full blur-3xl" />}>
-            <Globe />
-          </ErrorBoundary>
-        </div>
-      </Suspense>
+      <HoneycombGrid />
 
-      <div className="absolute top-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+      {/* Gradient wash behind text — fades hex pattern so text reads cleanly */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "linear-gradient(to right, hsl(var(--background) / 0.88) 0%, hsl(var(--background) / 0.72) 35%, hsl(var(--background) / 0.20) 60%, transparent 100%)",
+        }}
+      />
+
+      <div className="absolute top-10 right-0 w-[600px] h-[600px] bg-primary/15 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 relative z-10 w-full">
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
 
-          {/* Text column — renders immediately, no heavy imports */}
           <div className="text-center lg:text-left space-y-6 lg:space-y-8 max-w-4xl mx-auto lg:mx-0 mb-8 lg:mb-0">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 backdrop-blur-xl shadow-lg">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
@@ -74,7 +182,6 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Form column — lazy-loaded, does not block LCP text above */}
           <div className="max-w-3xl mx-auto lg:mx-0 w-full">
             <Suspense fallback={
               <div className="h-[450px] bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl animate-pulse" />
