@@ -44,6 +44,13 @@ export function TwoFactorSetupDialog({
   const runEnroll = async (id: number) => {
     setEnrolling(true);
     try {
+      // Clean up any stale unverified factors from a previous incomplete setup
+      const { data: existingFactors } = await supabase.auth.mfa.listFactors();
+      const staleFactors = existingFactors?.totp?.filter(f => f.status === 'unverified') ?? [];
+      for (const factor of staleFactors) {
+        await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      }
+
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
         friendlyName: `Pexly (${userEmail})`,
