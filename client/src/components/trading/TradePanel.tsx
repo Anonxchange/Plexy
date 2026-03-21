@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, PlusCircle, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, PlusCircle, Loader2, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -16,26 +16,23 @@ const UI_TO_SPOT_TYPE: Record<string, string> = {
   "Maker Only":  "LIMIT_MAKER",
 };
 
+const PCT_STEPS = [0, 25, 50, 75, 100];
+
 interface TradePanelProps {
   symbol?: string;
 }
 
 const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [orderType, setOrderType] = useState("Market");
+  const [orderType, setOrderType] = useState("Limit");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
   const [stopPrice, setStopPrice] = useState("");
   const [totalValue, setTotalValue] = useState("");
-  const [sliderValue, setSliderValue] = useState(0);
+  const [sliderPct, setSliderPct] = useState(0);
   const [hiddenOrder, setHiddenOrder] = useState(false);
   const [amountUnit, setAmountUnit] = useState<"USDT" | string>("USDT");
-  const [stopPriceUnit, setStopPriceUnit] = useState<"USDT" | string>("USDT");
-  const [priceUnit, setPriceUnit] = useState<"USDT" | string>("USDT");
-  const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
-  const [stopUnitDropdownOpen, setStopUnitDropdownOpen] = useState(false);
-  const [priceUnitDropdownOpen, setPriceUnitDropdownOpen] = useState(false);
   const [timeInForce, setTimeInForce] = useState("GTC");
   const [tifDropdownOpen, setTifDropdownOpen] = useState(false);
 
@@ -44,19 +41,12 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const { toast } = useToast();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const unitDropdownRef = useRef<HTMLDivElement>(null);
-  const stopUnitRef = useRef<HTMLDivElement>(null);
-  const priceUnitRef = useRef<HTMLDivElement>(null);
   const tifRef = useRef<HTMLDivElement>(null);
-
-  const percentages = [0, 25, 50, 75, 100];
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
-      if (unitDropdownRef.current && !unitDropdownRef.current.contains(e.target as Node)) setUnitDropdownOpen(false);
-      if (stopUnitRef.current && !stopUnitRef.current.contains(e.target as Node)) setStopUnitDropdownOpen(false);
-      if (priceUnitRef.current && !priceUnitRef.current.contains(e.target as Node)) setPriceUnitDropdownOpen(false);
       if (tifRef.current && !tifRef.current.contains(e.target as Node)) setTifDropdownOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -80,23 +70,32 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
 
   const avblDisplay = side === "buy"
     ? `${usdtBalance.toFixed(2)} ${quoteCoin}`
-    : `${baseBalance.toFixed(8)} ${baseCoin}`;
+    : `${baseBalance.toFixed(4)} ${baseCoin}`;
 
-  // Apply slider percentage to set amount
   const applySlider = (pct: number) => {
-    setSliderValue(pct);
-    if (pct === 0) { setAmount(""); return; }
+    setSliderPct(pct);
+    if (pct === 0) { setAmount(""); setTotalValue(""); return; }
     if (side === "buy") {
       const available = usdtBalance * (pct / 100);
       const priceNum = parseFloat(price);
       if (priceNum > 0) {
         setAmount((available / priceNum).toFixed(6));
+        setTotalValue(available.toFixed(2));
       } else {
-        setAmount(available.toFixed(2));
+        setTotalValue(available.toFixed(2));
       }
     } else {
       setAmount((baseBalance * (pct / 100)).toFixed(8));
     }
+  };
+
+  // Slider drag
+  const handleSliderClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!sliderRef.current) return;
+    const rect = sliderRef.current.getBoundingClientRect();
+    const pct = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    const snapped = PCT_STEPS.reduce((a, b) => Math.abs(b - pct) < Math.abs(a - pct) ? b : a);
+    applySlider(snapped);
   };
 
   const asterType = UI_TO_SPOT_TYPE[orderType] as any;
@@ -107,8 +106,6 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const isMakerOnly = orderType === "Maker Only";
   const showPriceField = isLimit || isMakerOnly;
   const showStopPrice = isStopLimit || isStopMarket;
-  const showAmountField = true;
-  const showHiddenOrder = isLimit;
   const showTotalValue = isLimit || isStopLimit || isMakerOnly;
 
   const orderMutation = useMutation({
@@ -126,50 +123,63 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
     onSuccess: (data) => {
       toast({
         title: "Order placed",
-        description: `${side === "buy" ? "Buy" : "Sell"} ${amount} ${baseCoin} order submitted (ID: ${data?.orderId ?? "—"})`,
+        description: `${side === "buy" ? "Buy" : "Sell"} ${amount} ${baseCoin} submitted (ID: ${data?.orderId ?? "—"})`,
       });
-      setAmount("");
-      setTotalValue("");
-      setSliderValue(0);
+      setAmount(""); setTotalValue(""); setSliderPct(0);
     },
     onError: (err: Error) => {
       toast({ title: "Order failed", description: err.message, variant: "destructive" });
     },
   });
 
+  const accentColor = side === "buy" ? "trading-green" : "trading-red";
+
   return (
-    <div className="flex flex-col w-full bg-background">
-      {/* Buy/Sell toggle */}
-      <div className="flex">
+    <div className="flex flex-col w-full bg-background h-full">
+
+      {/* ── Buy / Sell buttons ── */}
+      <div className="flex gap-2 p-3 flex-shrink-0">
         <button
-          onClick={() => setSide("buy")}
-          className={`flex-1 py-3 text-sm font-semibold rounded-none ${side === "buy" ? "bg-trading-green text-foreground" : "bg-secondary text-muted-foreground"}`}
+          onClick={() => { setSide("buy"); setSliderPct(0); }}
+          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+            side === "buy" ? "bg-trading-green text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
         >
           Buy
         </button>
         <button
-          onClick={() => setSide("sell")}
-          className={`flex-1 py-3 text-sm font-semibold rounded-none ${side === "sell" ? "bg-trading-red text-foreground" : "bg-secondary text-muted-foreground"}`}
+          onClick={() => { setSide("sell"); setSliderPct(0); }}
+          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+            side === "sell" ? "bg-trading-red text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
         >
           Sell
         </button>
       </div>
 
-      <div className="flex flex-col gap-3 p-4">
-        {/* Order type dropdown */}
+      <div className="flex flex-col gap-2.5 p-3 flex-1 overflow-y-auto">
+
+        {/* ── Order type ── */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center justify-between w-full px-3 py-3 rounded border border-border bg-secondary text-sm text-foreground"
+            className="flex items-center justify-between w-full px-3 py-2 rounded-md border border-border bg-transparent text-xs text-foreground hover:border-muted-foreground transition-colors"
           >
             <span>{orderType}</span>
-            {dropdownOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
           </button>
           {dropdownOpen && (
-            <div className="absolute z-50 w-full mt-1 rounded border border-border bg-secondary shadow-lg">
+            <div className="absolute z-50 w-full mt-1 rounded-md border border-border bg-popover shadow-lg overflow-hidden">
               {orderTypes.map((type) => (
-                <button key={type} onClick={() => { setOrderType(type); setDropdownOpen(false); }}
-                  className={`w-full text-left px-3 py-3 text-sm transition-colors ${orderType === type ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
+                <button
+                  key={type}
+                  onClick={() => { setOrderType(type); setDropdownOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                    orderType === type
+                      ? "text-trading-green bg-trading-green/5"
+                      : "text-foreground hover:bg-accent"
+                  }`}
+                >
                   {type}
                 </button>
               ))}
@@ -177,183 +187,233 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           )}
         </div>
 
-        {/* Stop Price */}
-        {showStopPrice && (
-          <div ref={stopUnitRef}>
-            <span className="text-xs text-muted-foreground mb-1 block">Stop Price</span>
-            <div className="relative">
-              <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary overflow-hidden">
-                <input type="number" value={stopPrice} onChange={e => setStopPrice(e.target.value)} placeholder="Stop Price"
-                  className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground min-w-0" />
-                <button onClick={() => setStopUnitDropdownOpen(!stopUnitDropdownOpen)}
-                  className="flex items-center gap-1 text-sm text-foreground ml-2 shrink-0">
-                  {stopPriceUnit}
-                  {stopUnitDropdownOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
-                </button>
-              </div>
-              {stopUnitDropdownOpen && (
-                <div className="absolute right-0 z-50 mt-1 rounded border border-border bg-secondary shadow-lg min-w-[80px]">
-                  {[quoteCoin, baseCoin].map(unit => (
-                    <button key={unit} onClick={() => { setStopPriceUnit(unit); setStopUnitDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${stopPriceUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
-                      {unit}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Price field */}
-        {showPriceField && (
-          <div ref={priceUnitRef}>
-            {isMakerOnly && <span className="text-xs text-muted-foreground mb-1 block">Maker Only</span>}
-            <div className="relative">
-              <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary overflow-hidden">
-                <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="Price"
-                  className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground min-w-0" />
-                <button onClick={() => setPriceUnitDropdownOpen(!priceUnitDropdownOpen)}
-                  className="flex items-center gap-1 text-sm text-foreground ml-2 shrink-0">
-                  {priceUnit}
-                  {priceUnitDropdownOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
-                </button>
-              </div>
-              {priceUnitDropdownOpen && (
-                <div className="absolute right-0 z-50 mt-1 rounded border border-border bg-secondary shadow-lg min-w-[80px]">
-                  {[quoteCoin, baseCoin].map(unit => (
-                    <button key={unit} onClick={() => { setPriceUnit(unit); setPriceUnitDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${priceUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
-                      {unit}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Market Price disabled */}
-        {isMarket && (
-          <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary">
-            <input type="text" value="Market Price" disabled className="flex-1 bg-transparent text-sm text-muted-foreground outline-none" />
-          </div>
-        )}
-
-        {/* Amount input */}
-        {showAmountField && (
-          <div className="relative" ref={unitDropdownRef}>
-            <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary overflow-hidden">
-              <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setSliderValue(0); }} placeholder="Amount"
-                className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground min-w-0" />
-              {isMarket ? (
-                <button onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
-                  className="flex items-center gap-1 text-sm text-foreground ml-2 shrink-0">
-                  {amountUnit}
-                  {unitDropdownOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
-                </button>
-              ) : (
-                <span className="text-sm text-foreground ml-2 shrink-0">{baseCoin}</span>
-              )}
-            </div>
-            {isMarket && unitDropdownOpen && (
-              <div className="absolute right-0 z-50 mt-1 rounded border border-border bg-secondary shadow-lg min-w-[80px]">
-                {[quoteCoin, baseCoin].map(unit => (
-                  <button key={unit} onClick={() => { setAmountUnit(unit); setUnitDropdownOpen(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${amountUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
-                    {unit}
-                  </button>
-                ))}
-              </div>
+        {/* ── Available balance ── */}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-muted-foreground">Available</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] font-mono-num text-foreground">
+              {user ? avblDisplay : `0.00 ${side === "buy" ? quoteCoin : baseCoin}`}
+            </span>
+            {user && (
+              <button className="text-primary hover:opacity-70">
+                <PlusCircle className="w-3 h-3" />
+              </button>
             )}
           </div>
+        </div>
+
+        {/* ── Stop Price ── */}
+        {showStopPrice && (
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1 block">Stop Price</label>
+            <div className="flex items-center rounded-md border border-border bg-transparent px-3 py-2 focus-within:border-muted-foreground transition-colors">
+              <input
+                type="number"
+                value={stopPrice}
+                onChange={e => setStopPrice(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+              />
+              <span className="text-xs text-muted-foreground ml-2 shrink-0">{quoteCoin}</span>
+            </div>
+          </div>
         )}
 
-        {/* Percentage slider */}
-        <div className="flex items-center gap-0 w-full">
-          <div className="flex-1 h-[3px] bg-secondary relative flex items-center">
-            {percentages.map((pct, idx) => (
-              <button key={pct} onClick={() => applySlider(pct)}
-                className="absolute w-2.5 h-2.5 rounded-[2px] border transition-colors"
-                style={{
-                  left: `${(idx / (percentages.length - 1)) * 100}%`,
-                  transform: "translateX(-50%)",
-                  backgroundColor: sliderValue >= pct ? side === "buy" ? "hsl(var(--trading-green))" : "hsl(var(--trading-red))" : "hsl(0, 0%, 14%)",
-                  borderColor: sliderValue >= pct ? side === "buy" ? "hsl(var(--trading-green))" : "hsl(var(--trading-red))" : "hsl(0, 0%, 20%)",
-                }}
+        {/* ── Price ── */}
+        {showPriceField && (
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1 block">
+              {isMakerOnly ? "Maker Price" : "Price"}
+            </label>
+            <div className="flex items-center rounded-md border border-border bg-transparent px-3 py-2 focus-within:border-muted-foreground transition-colors">
+              <input
+                type="number"
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
               />
+              <span className="text-xs text-muted-foreground ml-2 shrink-0">{quoteCoin}</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── Market price placeholder ── */}
+        {isMarket && (
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1 block">Price</label>
+            <div className="flex items-center rounded-md border border-border bg-accent/30 px-3 py-2">
+              <span className="flex-1 text-xs text-muted-foreground">Market Price</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── Amount ── */}
+        <div>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1 block">Amount</label>
+          <div className="flex items-center rounded-md border border-border bg-transparent px-3 py-2 focus-within:border-muted-foreground transition-colors">
+            <input
+              type="number"
+              value={amount}
+              onChange={e => { setAmount(e.target.value); setSliderPct(0); }}
+              placeholder="0.00"
+              className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+            />
+            <span className="text-xs text-muted-foreground ml-2 shrink-0">
+              {isMarket ? amountUnit : baseCoin}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Percentage slider ── */}
+        <div className="px-1">
+          <div
+            ref={sliderRef}
+            onClick={handleSliderClick}
+            className="relative h-1 rounded-full bg-border cursor-pointer"
+          >
+            {/* Fill */}
+            <div
+              className={`absolute left-0 top-0 h-full rounded-full transition-all duration-150 ${
+                side === "buy" ? "bg-trading-green" : "bg-trading-red"
+              }`}
+              style={{ width: `${sliderPct}%` }}
+            />
+            {/* Dots */}
+            {PCT_STEPS.map((pct) => (
+              <button
+                key={pct}
+                onClick={(e) => { e.stopPropagation(); applySlider(pct); }}
+                className={`absolute w-3 h-3 rounded-full border-2 -translate-y-1/2 top-1/2 -translate-x-1/2 transition-all duration-150 ${
+                  sliderPct >= pct
+                    ? side === "buy"
+                      ? "bg-trading-green border-trading-green"
+                      : "bg-trading-red border-trading-red"
+                    : "bg-background border-border hover:border-muted-foreground"
+                }`}
+                style={{ left: `${pct}%` }}
+              />
+            ))}
+          </div>
+          {/* Percentage labels */}
+          <div className="flex justify-between mt-2">
+            {PCT_STEPS.map((pct) => (
+              <button
+                key={pct}
+                onClick={() => applySlider(pct)}
+                className={`text-[10px] transition-colors ${
+                  sliderPct === pct
+                    ? side === "buy" ? "text-trading-green font-semibold" : "text-trading-red font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {pct}%
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Total Value */}
+        {/* ── Total Value ── */}
         {showTotalValue && (
-          <div className="flex items-center w-full px-3 py-3 rounded border border-border bg-secondary overflow-hidden">
-            <input type="number" value={totalValue} onChange={e => setTotalValue(e.target.value)} placeholder="Total Value"
-              className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" />
-            <span className="text-sm text-foreground ml-2 shrink-0">{quoteCoin}</span>
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1 block">Total</label>
+            <div className="flex items-center rounded-md border border-border bg-transparent px-3 py-2 focus-within:border-muted-foreground transition-colors">
+              <input
+                type="number"
+                value={totalValue}
+                onChange={e => setTotalValue(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+              />
+              <span className="text-xs text-muted-foreground ml-2 shrink-0">{quoteCoin}</span>
+            </div>
           </div>
         )}
 
-        {/* Info rows */}
-        <div className="flex flex-col gap-2 text-xs mt-1">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Avbl</span>
-            <div className="flex items-center gap-1">
-              <span className="text-foreground font-mono-num">{user ? avblDisplay : `0.00 ${side === "buy" ? quoteCoin : baseCoin}`}</span>
-              <PlusCircle className="w-3.5 h-3.5 text-trading-amber" />
+        {/* ── Limit options row ── */}
+        {isLimit && (
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={hiddenOrder}
+                onChange={e => setHiddenOrder(e.target.checked)}
+                className="w-3 h-3 rounded accent-primary"
+              />
+              Hidden
+            </label>
+            <div className="relative" ref={tifRef}>
+              <button
+                onClick={() => setTifDropdownOpen(!tifDropdownOpen)}
+                className="flex items-center gap-1 text-[11px] text-foreground"
+              >
+                {timeInForce}
+                <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${tifDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {tifDropdownOpen && (
+                <div className="absolute right-0 bottom-full mb-1 z-50 rounded-md border border-border bg-popover shadow-lg min-w-[210px] overflow-hidden">
+                  {[
+                    { value: "GTC", label: "GTC — Good Till Canceled" },
+                    { value: "FOK", label: "FOK — Fill or Kill" },
+                    { value: "IOC", label: "IOC — Immediate or Cancel" },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setTimeInForce(opt.value); setTifDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                        timeInForce === opt.value
+                          ? "text-trading-green bg-trading-green/5"
+                          : "text-foreground hover:bg-accent"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          {showHiddenOrder && (
-            <div className="flex justify-between items-center">
-              <label className="flex items-center gap-2 text-muted-foreground">
-                <input type="checkbox" checked={hiddenOrder} onChange={e => setHiddenOrder(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded border-border bg-secondary accent-trading-green" />
-                Hidden Order
-              </label>
-              <div className="relative" ref={tifRef}>
-                <button onClick={() => setTifDropdownOpen(!tifDropdownOpen)} className="flex items-center gap-1 text-foreground text-xs">
-                  {timeInForce}
-                  {tifDropdownOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
-                </button>
-                {tifDropdownOpen && (
-                  <div className="absolute right-0 bottom-full mb-1 z-50 rounded border border-border bg-secondary shadow-lg min-w-[220px]">
-                    {[{ value: "GTC", label: "GTC (Good till canceled)" }, { value: "FOK", label: "FOK (Fill or Kill)" }, { value: "IOC", label: "IOC (Immediate or canceled)" }].map(opt => (
-                      <button key={opt.value} onClick={() => { setTimeInForce(opt.value); setTifDropdownOpen(false); }}
-                        className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${timeInForce === opt.value ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Est. Fee</span>
-            <span className="text-foreground font-mono-num">-- {side === "buy" ? baseCoin : quoteCoin}</span>
-          </div>
+        )}
+
+        {/* ── Fee estimate ── */}
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            Est. Fee <Info className="w-3 h-3" />
+          </span>
+          <span className="text-[11px] font-mono-num text-muted-foreground">
+            — {side === "buy" ? baseCoin : quoteCoin}
+          </span>
         </div>
 
-        {/* CTA button */}
+        {/* ── CTA ── */}
         {user ? (
           <button
             onClick={() => orderMutation.mutate()}
             disabled={!amount || orderMutation.isPending}
-            className={`w-full py-3 rounded-lg text-sm font-semibold mt-2 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 ${
-              side === "buy" ? "bg-trading-green text-background" : "bg-trading-red text-background"
+            className={`w-full py-2.5 rounded-md text-xs font-bold mt-1 flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 ${
+              side === "buy"
+                ? "bg-trading-green text-black hover:opacity-90"
+                : "bg-trading-red text-white hover:opacity-90"
             }`}
           >
-            {orderMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {orderMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {side === "buy" ? `Buy ${baseCoin}` : `Sell ${baseCoin}`}
           </button>
         ) : (
-          <button
-            onClick={() => navigate("/signin")}
-            className="w-full py-3 rounded-lg bg-lime text-black text-sm font-semibold mt-2 hover:opacity-90"
-          >
-            Sign In to Trade
-          </button>
+          <div className="flex flex-col gap-2 mt-1">
+            <button
+              onClick={() => navigate("/signin")}
+              className="w-full py-2.5 rounded-md text-xs font-semibold border border-border hover:bg-accent transition-colors"
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => navigate("/signup")}
+              className="w-full py-2.5 rounded-md text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            >
+              Register
+            </button>
+          </div>
         )}
       </div>
     </div>
