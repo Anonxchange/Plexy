@@ -29,6 +29,12 @@
   animation-play-state: paused;
 }
 
+/* ── Dark theme: panel separator lines → 4px ── */
+.dark .border-t-\[3px\].border-panel-border { border-top-width: 4px; }
+.dark .border-b-\[3px\].border-panel-border { border-bottom-width: 4px; }
+.dark .border-l-\[3px\].border-panel-border { border-left-width: 4px; }
+.dark .h-\[3px\].bg-panel-border            { height: 4px; }
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
