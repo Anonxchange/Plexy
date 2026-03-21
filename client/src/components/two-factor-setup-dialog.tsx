@@ -153,112 +153,114 @@ export function TwoFactorSetupDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent
+        className="sm:max-w-[480px]"
+        onInteractOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            {step === 1 && "Set Up Two-Factor Authentication"}
-            {step === 2 && "Verify Your Authenticator"}
+            {step === 1 ? "Set Up Two-Factor Authentication" : "Verify Your Authenticator"}
           </DialogTitle>
           <DialogDescription>
-            {step === 1 && "Scan the QR code with Google Authenticator, Authy, or any TOTP app."}
-            {step === 2 && "Enter the 6-digit code currently shown in your authenticator app."}
+            {step === 1
+              ? "Scan the QR code with Google Authenticator, Authy, or any TOTP app."
+              : "Enter the 6-digit code currently shown in your authenticator app."}
           </DialogDescription>
         </DialogHeader>
 
-        {step === 1 && (
-          <div className="space-y-4">
-            <div className="flex flex-col items-center gap-3">
-              <div className="p-3 rounded-xl border border-border bg-white shadow-sm min-h-[192px] min-w-[192px] flex items-center justify-center">
-                {enrolling ? (
-                  <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
-                ) : sanitizedQrSvg ? (
-                  <div
-                    className="w-[192px] h-[192px] [&>svg]:w-full [&>svg]:h-full"
-                    dangerouslySetInnerHTML={{ __html: sanitizedQrSvg }}
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">Loading…</span>
-                )}
-              </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 text-muted-foreground text-xs"
-                onClick={triggerEnroll}
-                disabled={enrolling}
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${enrolling ? "animate-spin" : ""}`} />
-                Regenerate
-              </Button>
+        <div className={step === 1 ? "space-y-4" : "hidden"} aria-hidden={step !== 1}>
+          <div className="flex flex-col items-center gap-3">
+            <div className="p-3 rounded-xl border border-border bg-white shadow-sm min-h-[192px] min-w-[192px] flex items-center justify-center">
+              {enrolling ? (
+                <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
+              ) : sanitizedQrSvg ? (
+                <div
+                  className="w-[192px] h-[192px] [&>svg]:w-full [&>svg]:h-full"
+                  dangerouslySetInnerHTML={{ __html: sanitizedQrSvg }}
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground">Loading…</span>
+              )}
             </div>
 
-            {manualSecret && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Or enter this key manually</Label>
-                <Input
-                  value={manualSecret}
-                  readOnly
-                  className="font-mono text-sm tracking-wider"
-                />
-              </div>
-            )}
-
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 leading-relaxed">
-              After scanning, your app will start showing a 6-digit code that refreshes every 30 seconds.
-            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground text-xs"
+              onClick={triggerEnroll}
+              disabled={enrolling}
+              tabIndex={step !== 1 ? -1 : undefined}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${enrolling ? "animate-spin" : ""}`} />
+              Regenerate
+            </Button>
           </div>
-        )}
 
-        {step === 2 && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="totp-code">6-digit code from your app</Label>
+          {manualSecret && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Or enter this key manually</Label>
               <Input
-                id="totp-code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                maxLength={6}
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                className="text-center text-3xl tracking-[0.5em] font-mono h-14"
-                autoFocus
+                value={manualSecret}
+                readOnly
+                className="font-mono text-sm tracking-wider"
+                tabIndex={step !== 1 ? -1 : undefined}
               />
             </div>
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 leading-relaxed">
-              Open your authenticator app, find the Pexly entry, and enter the 6-digit code shown.
-              Codes refresh every 30 seconds.
-            </p>
+          )}
+
+          <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 leading-relaxed">
+            After scanning, your app will start showing a 6-digit code that refreshes every 30 seconds.
+          </p>
+        </div>
+
+        <div className={step === 2 ? "space-y-4" : "hidden"} aria-hidden={step !== 2}>
+          <div className="space-y-2">
+            <Label htmlFor="totp-code">6-digit code from your app</Label>
+            <Input
+              id="totp-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              maxLength={6}
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
+              className="text-center text-3xl tracking-[0.5em] font-mono h-14"
+              tabIndex={step !== 2 ? -1 : undefined}
+            />
           </div>
-        )}
+          <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 leading-relaxed">
+            Open your authenticator app, find the Pexly entry, and enter the 6-digit code shown.
+            Codes refresh every 30 seconds.
+          </p>
+        </div>
 
         <DialogFooter>
-          {step === 1 && (
+          <div className={step === 1 ? "w-full sm:w-auto" : "hidden"}>
             <Button
               onClick={() => setStep(2)}
               disabled={!factorId || enrolling}
               className="w-full sm:w-auto"
+              tabIndex={step !== 1 ? -1 : undefined}
             >
               I've scanned the code — Next
             </Button>
-          )}
-          {step === 2 && (
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setStep(1)} disabled={loading}>
-                Back
-              </Button>
-              <Button
-                onClick={handleVerify}
-                disabled={verificationCode.length !== 6 || loading}
-              >
-                {loading ? "Verifying…" : "Verify & Enable"}
-              </Button>
-            </div>
-          )}
+          </div>
+          <div className={step === 2 ? "flex gap-2 w-full sm:w-auto" : "hidden"}>
+            <Button variant="outline" onClick={() => setStep(1)} disabled={loading} tabIndex={step !== 2 ? -1 : undefined}>
+              Back
+            </Button>
+            <Button
+              onClick={handleVerify}
+              disabled={verificationCode.length !== 6 || loading}
+              tabIndex={step !== 2 ? -1 : undefined}
+            >
+              {loading ? "Verifying…" : "Verify & Enable"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
