@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, LayoutGrid, Rows3, AlignJustify } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { asterMarket } from "@/lib/asterdex-service";
 
 interface OrderRow {
@@ -9,20 +9,62 @@ interface OrderRow {
   percent: number;
 }
 
+interface RecentTrade {
+  price: string;
+  qty: string;
+  time: string;
+  isBuy: boolean;
+}
+
 interface DesktopOrderBookProps {
   symbol: string;
 }
 
 const toSymbol = (pair: string) => pair.replace("/", "");
 
+const ViewBothIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <rect x="1" y="2" width="6" height="5" rx="1" fill="currentColor" opacity="0.35" className="text-trading-red" style={{fill:"#ef4444",opacity:0.5}}/>
+    <rect x="1" y="9" width="6" height="5" rx="1" fill="currentColor" opacity="0.35" className="text-trading-green" style={{fill:"#22c55e",opacity:0.5}}/>
+    <rect x="9" y="2" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="5.5" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="9" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="12.5" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+  </svg>
+);
+
+const ViewBuysIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <rect x="1" y="2" width="6" height="12" rx="1" style={{fill:"#22c55e",opacity:0.5}}/>
+    <rect x="9" y="2" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="5.5" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="9" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="12.5" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+  </svg>
+);
+
+const ViewSellsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <rect x="1" y="2" width="6" height="12" rx="1" style={{fill:"#ef4444",opacity:0.5}}/>
+    <rect x="9" y="2" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="5.5" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="9" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+    <rect x="9" y="12.5" width="6" height="2" rx="0.5" fill="currentColor" opacity="0.4"/>
+  </svg>
+);
+
 const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
-  const count = 12;
+  const count = 14;
   const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook");
   const [viewMode, setViewMode] = useState<"both" | "bids" | "asks">("both");
   const [asks, setAsks] = useState<OrderRow[]>([]);
   const [bids, setBids] = useState<OrderRow[]>([]);
   const [midPrice, setMidPrice] = useState<string>("");
+  const [midChange, setMidChange] = useState<"up" | "down" | null>(null);
+  const [spread, setSpread] = useState<string>("");
+  const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevMidRef = useRef<number>(0);
 
   const fetchOrderBook = async () => {
     try {
@@ -65,9 +107,33 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
       setBids(formattedBids);
 
       if (rawAsks[0] && rawBids[0]) {
-        const mid = (parseFloat(rawAsks[0][0]) + parseFloat(rawBids[0][0])) / 2;
+        const bestAsk = parseFloat(rawAsks[0][0]);
+        const bestBid = parseFloat(rawBids[0][0]);
+        const mid = (bestAsk + bestBid) / 2;
+        const spreadVal = bestAsk - bestBid;
+        const spreadPct = ((spreadVal / bestAsk) * 100).toFixed(3);
+        setSpread(`${spreadVal.toFixed(5)} (${spreadPct}%)`);
+
+        setMidChange(mid > prevMidRef.current ? "up" : mid < prevMidRef.current ? "down" : null);
+        prevMidRef.current = mid;
         setMidPrice(mid.toFixed(5));
       }
+    } catch (_) {}
+  };
+
+  const fetchTrades = async () => {
+    try {
+      const data = await asterMarket.spotTrades(toSymbol(symbol), "20");
+      if (!Array.isArray(data)) return;
+      const trades: RecentTrade[] = data.map((t: any) => ({
+        price: parseFloat(t.price).toFixed(5),
+        qty: parseFloat(t.qty) >= 1000
+          ? (parseFloat(t.qty) / 1000).toFixed(2) + "K"
+          : parseFloat(t.qty).toFixed(2),
+        time: new Date(t.time).toLocaleTimeString("en-US", { hour12: false }),
+        isBuy: t.isBuyerMaker === false,
+      }));
+      setRecentTrades(trades);
     } catch (_) {}
   };
 
@@ -77,21 +143,38 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [symbol]);
 
+  useEffect(() => {
+    if (activeTab === "trades") {
+      fetchTrades();
+      const t = setInterval(fetchTrades, 3000);
+      return () => clearInterval(t);
+    }
+  }, [activeTab, symbol]);
+
+  const quote = symbol.split("/")[1] || "USDT";
+  const base = symbol.split("/")[0];
+
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
-      <div className="flex items-center gap-4 px-3 pt-3 pb-2">
+
+      {/* Tab header */}
+      <div className="flex items-center gap-4 px-3 pt-2.5 pb-0 border-b border-border flex-shrink-0">
         <button
           onClick={() => setActiveTab("orderbook")}
-          className={`text-sm font-medium transition-colors ${
-            activeTab === "orderbook" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+          className={`pb-2 text-xs font-medium transition-colors border-b-2 ${
+            activeTab === "orderbook"
+              ? "text-foreground border-primary"
+              : "text-muted-foreground border-transparent hover:text-foreground"
           }`}
         >
-          Order book
+          Order Book
         </button>
         <button
           onClick={() => setActiveTab("trades")}
-          className={`text-sm font-medium transition-colors ${
-            activeTab === "trades" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+          className={`pb-2 text-xs font-medium transition-colors border-b-2 ${
+            activeTab === "trades"
+              ? "text-foreground border-primary"
+              : "text-muted-foreground border-transparent hover:text-foreground"
           }`}
         >
           Trades
@@ -100,72 +183,87 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
 
       {activeTab === "orderbook" ? (
         <>
-          <div className="flex items-center justify-between px-3 pb-2">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode("both")}
-                className={`p-1 rounded transition-colors ${viewMode === "both" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("bids")}
-                className={`p-1 rounded transition-colors ${viewMode === "bids" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                <Rows3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("asks")}
-                className={`p-1 rounded transition-colors ${viewMode === "asks" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                <AlignJustify className="w-4 h-4" />
-              </button>
+          {/* Controls */}
+          <div className="flex items-center justify-between px-2.5 py-1.5 flex-shrink-0">
+            <div className="flex items-center gap-0.5">
+              {([
+                ["both", <ViewBothIcon />],
+                ["bids", <ViewBuysIcon />],
+                ["asks", <ViewSellsIcon />],
+              ] as const).map(([mode, icon]) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode as "both" | "bids" | "asks")}
+                  className={`p-1 rounded transition-colors ${viewMode === mode ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {icon}
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              <button className="flex items-center gap-1 text-xs text-foreground font-mono-num">
-                0.00001 <ChevronDown className="w-3 h-3" />
-              </button>
-              <button className="flex items-center gap-1 text-xs text-foreground font-mono-num">
-                USDT <ChevronDown className="w-3 h-3" />
-              </button>
-            </div>
+            <button className="flex items-center gap-0.5 text-[11px] text-muted-foreground font-mono-num hover:text-foreground transition-colors">
+              0.00001 <ChevronDown className="w-2.5 h-2.5" />
+            </button>
           </div>
 
-          <div className="grid grid-cols-3 px-3 py-1.5 text-[11px] text-muted-foreground">
-            <span>Price (USDT)</span>
-            <span className="text-right">Size (USDT)</span>
-            <span className="text-right">Total (USDT)</span>
+          {/* Column headers */}
+          <div className="grid grid-cols-3 px-2.5 py-1 flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground">Price ({quote})</span>
+            <span className="text-[10px] text-muted-foreground text-right">Qty ({base})</span>
+            <span className="text-[10px] text-muted-foreground text-right">Total ({base})</span>
           </div>
 
+          {/* Order rows */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+            {/* Asks */}
             {viewMode !== "bids" && (
-              <div className={`flex flex-col overflow-y-auto ${viewMode === "both" ? "flex-1" : "flex-[2]"}`}>
-                <div className="flex flex-col mt-auto">
+              <div className={`flex flex-col overflow-hidden ${viewMode === "both" ? "flex-1" : "flex-[2]"}`}>
+                <div className="flex flex-col justify-end h-full">
                   {asks.map((order, i) => (
-                    <div key={`ask-${i}`} className="relative grid grid-cols-3 px-3 py-[2.5px] text-xs">
-                      <div className="absolute right-0 top-0 bottom-0 bg-trading-red/15" style={{ width: `${order.percent}%` }} />
-                      <span className="relative font-mono-num text-trading-red">{order.price}</span>
-                      <span className="relative font-mono-num text-foreground text-right">{order.size}</span>
-                      <span className="relative font-mono-num text-foreground text-right">{order.total}</span>
+                    <div key={`ask-${i}`} className="relative grid grid-cols-3 px-2.5 py-[2px] hover:bg-accent/20 transition-colors cursor-pointer">
+                      <div
+                        className="absolute left-0 top-0 bottom-0 bg-trading-red/12"
+                        style={{ width: `${order.percent}%` }}
+                      />
+                      <span className="relative font-mono-num text-[11px] text-trading-red">{order.price}</span>
+                      <span className="relative font-mono-num text-[11px] text-foreground text-right">{order.size}</span>
+                      <span className="relative font-mono-num text-[11px] text-muted-foreground text-right">{order.total}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="flex items-center gap-3 px-3 py-2 border-y border-border/50">
-              <span className="font-mono-num text-lg font-bold text-foreground">{midPrice || "—"}</span>
-              {midPrice && <span className="text-xs text-muted-foreground">${midPrice}</span>}
+            {/* Mid price + spread */}
+            <div className="flex items-center justify-between px-2.5 py-1.5 border-y border-border/40 flex-shrink-0 bg-accent/10">
+              <div className="flex items-center gap-1.5">
+                <span className={`font-mono-num text-sm font-bold transition-colors ${
+                  midChange === "up" ? "text-trading-green" : midChange === "down" ? "text-trading-red" : "text-foreground"
+                }`}>
+                  {midPrice || "—"}
+                </span>
+                {midChange === "up" && <span className="text-trading-green text-xs">▲</span>}
+                {midChange === "down" && <span className="text-trading-red text-xs">▼</span>}
+              </div>
+              {spread && (
+                <span className="text-[10px] text-muted-foreground font-mono-num">
+                  {spread}
+                </span>
+              )}
             </div>
 
+            {/* Bids */}
             {viewMode !== "asks" && (
-              <div className={`flex flex-col overflow-y-auto ${viewMode === "both" ? "flex-1" : "flex-[2]"}`}>
+              <div className={`flex flex-col overflow-hidden ${viewMode === "both" ? "flex-1" : "flex-[2]"}`}>
                 {bids.map((order, i) => (
-                  <div key={`bid-${i}`} className="relative grid grid-cols-3 px-3 py-[2.5px] text-xs">
-                    <div className="absolute right-0 top-0 bottom-0 bg-trading-green/15" style={{ width: `${order.percent}%` }} />
-                    <span className="relative font-mono-num text-trading-green">{order.price}</span>
-                    <span className="relative font-mono-num text-foreground text-right">{order.size}</span>
-                    <span className="relative font-mono-num text-foreground text-right">{order.total}</span>
+                  <div key={`bid-${i}`} className="relative grid grid-cols-3 px-2.5 py-[2px] hover:bg-accent/20 transition-colors cursor-pointer">
+                    <div
+                      className="absolute left-0 top-0 bottom-0 bg-trading-green/12"
+                      style={{ width: `${order.percent}%` }}
+                    />
+                    <span className="relative font-mono-num text-[11px] text-trading-green">{order.price}</span>
+                    <span className="relative font-mono-num text-[11px] text-foreground text-right">{order.size}</span>
+                    <span className="relative font-mono-num text-[11px] text-muted-foreground text-right">{order.total}</span>
                   </div>
                 ))}
               </div>
@@ -173,9 +271,31 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
           </div>
         </>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <span className="text-sm text-muted-foreground">Recent trades</span>
-        </div>
+        <>
+          {/* Recent trades header */}
+          <div className="grid grid-cols-3 px-2.5 py-2 flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground">Price ({quote})</span>
+            <span className="text-[10px] text-muted-foreground text-right">Qty ({base})</span>
+            <span className="text-[10px] text-muted-foreground text-right">Time</span>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {recentTrades.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
+                Loading trades…
+              </div>
+            ) : (
+              recentTrades.map((trade, i) => (
+                <div key={i} className="grid grid-cols-3 px-2.5 py-[2.5px] hover:bg-accent/20 transition-colors">
+                  <span className={`font-mono-num text-[11px] ${trade.isBuy ? "text-trading-green" : "text-trading-red"}`}>
+                    {trade.price}
+                  </span>
+                  <span className="font-mono-num text-[11px] text-foreground text-right">{trade.qty}</span>
+                  <span className="font-mono-num text-[10px] text-muted-foreground text-right">{trade.time}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );
