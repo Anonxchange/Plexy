@@ -271,12 +271,14 @@ const Careers = () => {
 
         {/* ── DESKTOP: sticky left heading + right stacked values ── */}
         <div className="hidden lg:grid grid-cols-2 gap-16 xl:gap-24 w-full">
-          {/* Left — pinned heading */}
-          <div className="pt-2">
-            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">Our Values</p>
-            <h2 className="text-5xl xl:text-6xl font-extrabold leading-tight tracking-tight text-foreground sticky top-24">
-              What we believe in
-            </h2>
+          {/* Left — pinned heading; outer div stretches to row height, inner div sticks */}
+          <div>
+            <div className="sticky top-24 pt-2">
+              <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">Our Values</p>
+              <h2 className="text-5xl xl:text-6xl font-extrabold leading-tight tracking-tight text-foreground">
+                What we believe in
+              </h2>
+            </div>
           </div>
 
           {/* Right — values stacked vertically */}
