@@ -128,6 +128,7 @@ const AccountBar = ({ variant = "bar", pair }: AccountBarProps) => {
         onOpenChange={setModalOpen}
         defaultTab={defaultTab}
         defaultAccountType="Spot account"
+        variant="dialog"
       />
     </>
   );
