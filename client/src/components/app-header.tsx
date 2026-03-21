@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Smartphone, HelpCircle, MessageSquare, Users, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Smartphone, HelpCircle, MessageSquare, Users, CheckCircle2, XCircle, AlertCircle, Globe } from "lucide-react";
 import { SecurityShieldIcon } from "@/components/ui/security-shield";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -178,6 +178,7 @@ export function AppHeader() {
   };
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [selectedLang, setSelectedLang] = useState("EN");
 
   const securityInfo = useMemo(() => {
     if (!user) return { level: 'low' as const, score: 0, label: 'At Risk', color: 'red' };
@@ -740,6 +741,45 @@ export function AppHeader() {
               </Button>
             </div>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden lg:flex items-center gap-1.5 px-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                <Globe className="h-4 w-4" />
+                <span>{selectedLang}</span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Language</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {[
+                { code: "EN", label: "English" },
+                { code: "ES", label: "Español" },
+                { code: "FR", label: "Français" },
+                { code: "DE", label: "Deutsch" },
+                { code: "ZH", label: "中文" },
+                { code: "AR", label: "العربية" },
+                { code: "PT", label: "Português" },
+                { code: "RU", label: "Русский" },
+              ].map((lang) => (
+                <DropdownMenuItem
+                  key={lang.code}
+                  onClick={() => setSelectedLang(lang.code)}
+                  className="cursor-pointer flex items-center justify-between"
+                >
+                  <span>{lang.label}</span>
+                  {selectedLang === lang.code && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <div className="hidden lg:block ml-2">
             <ThemeToggle />
           </div>
