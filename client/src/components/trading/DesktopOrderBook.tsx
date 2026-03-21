@@ -74,9 +74,9 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
       const rawAsks: [string, string][] = data.asks;
       const rawBids: [string, string][] = data.bids;
 
-      const maxCum = Math.max(
-        rawAsks.slice(0, count).reduce((s: number, [, q]: [string, string]) => s + parseFloat(q), 0),
-        rawBids.slice(0, count).reduce((s: number, [, q]: [string, string]) => s + parseFloat(q), 0),
+      const maxQty = Math.max(
+        ...rawAsks.slice(0, count).map(([, q]: [string, string]) => parseFloat(q)),
+        ...rawBids.slice(0, count).map(([, q]: [string, string]) => parseFloat(q)),
       );
 
       let cumA = 0;
@@ -87,7 +87,7 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
           price: parseFloat(p).toFixed(5),
           size: qty >= 1000 ? (qty / 1000).toFixed(2) + "K" : qty.toFixed(2),
           total: cumA >= 1000 ? (cumA / 1000).toFixed(2) + "K" : cumA.toFixed(2),
-          percent: Math.min((cumA / maxCum) * 100, 100),
+          percent: Math.min((qty / maxQty) * 100, 100),
         };
       }).reverse();
 
@@ -99,7 +99,7 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
           price: parseFloat(p).toFixed(5),
           size: qty >= 1000 ? (qty / 1000).toFixed(2) + "K" : qty.toFixed(2),
           total: cumB >= 1000 ? (cumB / 1000).toFixed(2) + "K" : cumB.toFixed(2),
-          percent: Math.min((cumB / maxCum) * 100, 100),
+          percent: Math.min((qty / maxQty) * 100, 100),
         };
       });
 
@@ -222,7 +222,7 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
                   {asks.map((order, i) => (
                     <div key={`ask-${i}`} className="relative grid grid-cols-3 px-2.5 py-[2px] hover:bg-accent/20 transition-colors cursor-pointer">
                       <div
-                        className="absolute left-0 top-0 bottom-0 bg-trading-red/12"
+                        className="absolute right-0 top-0 bottom-0 bg-trading-red/15"
                         style={{ width: `${order.percent}%` }}
                       />
                       <span className="relative font-mono-num text-[11px] text-trading-red">{order.price}</span>
@@ -258,7 +258,7 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
                 {bids.map((order, i) => (
                   <div key={`bid-${i}`} className="relative grid grid-cols-3 px-2.5 py-[2px] hover:bg-accent/20 transition-colors cursor-pointer">
                     <div
-                      className="absolute left-0 top-0 bottom-0 bg-trading-green/12"
+                      className="absolute left-0 top-0 bottom-0 bg-trading-green/15"
                       style={{ width: `${order.percent}%` }}
                     />
                     <span className="relative font-mono-num text-[11px] text-trading-green">{order.price}</span>
