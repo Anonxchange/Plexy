@@ -217,7 +217,7 @@ export function AppHeader() {
           </Link>
         </div>
 
-        <nav className="hidden lg:flex items-center gap-0.5 flex-1 ml-4">
+        <nav className="hidden lg:flex items-center gap-0.5 ml-4">
           <DropdownMenu open={activeDropdown === 'trade'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
             <div 
               className="relative flex items-center h-full"
@@ -463,7 +463,7 @@ export function AppHeader() {
           </DropdownMenu>
         </nav>
 
-        <div className="flex items-center gap-2 justify-end">
+        <div className="flex items-center gap-2 ml-auto">
           {user ? (
             <>
               <div className="text-center relative max-w-[120px] sm:max-w-[150px] hidden sm:block">
