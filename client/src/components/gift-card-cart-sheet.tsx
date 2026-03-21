@@ -6,11 +6,24 @@ import { X, Minus, Plus, Trash2, Lock, Star, ShoppingBag } from "lucide-react";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { useLocation } from "wouter";
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'CA$', AUD: 'A$',
+  CHF: 'CHF ', CNY: '¥', INR: '₹', BRL: 'R$', MXN: 'MX$', KRW: '₩',
+  SGD: 'S$', HKD: 'HK$', NOK: 'kr ', SEK: 'kr ', DKK: 'kr ',
+  PLN: 'zł ', CZK: 'Kč ', HUF: 'Ft ', TRY: '₺', ZAR: 'R ', NGN: '₦',
+  AED: 'AED ', SAR: '﷼', QAR: 'QR ',
+};
+function getCurrencySymbol(code: string) {
+  return CURRENCY_SYMBOLS[code] ?? `${code} `;
+}
+
 export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const { items, updateQuantity, removeItem } = useGiftCardCart();
-
-  const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const [, setLocation] = useLocation();
+
+  const currencies = [...new Set(items.map(i => i.currency))];
+  const singleCurrency = currencies.length === 1 ? currencies[0] : null;
+  const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -67,7 +80,7 @@ export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpe
                         <Trash2 className="h-4 w-4" />
                       </button>
                       <span className="text-sm font-bold">
-                        {item.quantity} x ${item.price.toFixed(2)}
+                        {item.quantity} x {getCurrencySymbol(item.currency)}{item.price.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -112,7 +125,22 @@ export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpe
         <div className="p-6 bg-background border-t space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold">Total</span>
-            <span className="text-xl font-bold">${total.toFixed(2)}</span>
+            {singleCurrency ? (
+              <span className="text-xl font-bold">
+                {getCurrencySymbol(singleCurrency)}{total.toFixed(2)}
+              </span>
+            ) : (
+              <div className="text-right space-y-0.5">
+                {currencies.map(cur => {
+                  const subtotal = items.filter(i => i.currency === cur).reduce((acc, i) => acc + i.price * i.quantity, 0);
+                  return (
+                    <div key={cur} className="text-sm font-bold">
+                      {getCurrencySymbol(cur)}{subtotal.toFixed(2)}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <Button 
