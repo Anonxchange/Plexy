@@ -12,11 +12,12 @@ interface OrderRow {
 
 interface OrderBookProps {
   symbol: string;
+  mode?: "spot" | "futures";
 }
 
 const toSymbol = (pair: string) => pair.replace("/", "");
 
-const OrderBook = ({ symbol }: OrderBookProps) => {
+const OrderBook = ({ symbol, mode = "spot" }: OrderBookProps) => {
   const isMobile = useIsMobile();
   const count = isMobile ? 6 : 12;
 
@@ -29,7 +30,9 @@ const OrderBook = ({ symbol }: OrderBookProps) => {
     try {
       // Valid AsterDEX limits: [5, 10, 20, 50, 100, 500, 1000]
       const validLimit = count <= 5 ? 10 : 20;
-      const data = await asterMarket.spotOrderBook(toSymbol(symbol), String(validLimit));
+      const data = mode === "futures"
+        ? await asterMarket.futuresOrderBook(toSymbol(symbol), String(validLimit))
+        : await asterMarket.spotOrderBook(toSymbol(symbol), String(validLimit));
       if (!data?.bids || !data?.asks) return;
 
       const rawAsks: [string, string][] = data.asks;
@@ -78,7 +81,7 @@ const OrderBook = ({ symbol }: OrderBookProps) => {
     fetchOrderBook();
     intervalRef.current = setInterval(fetchOrderBook, 2000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [symbol]);
+  }, [symbol, mode]);
 
   return (
     <div className="flex flex-col bg-background">
