@@ -54,7 +54,7 @@ const ViewSellsIcon = () => (
 );
 
 const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
-  const count = 14;
+  const count = 11;
   const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook");
   const [viewMode, setViewMode] = useState<"both" | "bids" | "asks">("both");
   const [asks, setAsks] = useState<OrderRow[]>([]);
