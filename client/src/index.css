@@ -83,6 +83,8 @@
 
   --border: 214 32% 91%;
 
+  --panel-border: 214 32% 78%;
+
   --card: 0 0% 99%;
 
   --card-foreground: 222 47% 11%;
@@ -203,6 +205,8 @@
   --foreground: 0 0% 95%;
 
   --border: 222 13% 18%;
+
+  --panel-border: 222 14% 5%;
 
   --card: 222 13% 14%;
 
