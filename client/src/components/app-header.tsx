@@ -706,7 +706,7 @@ export function AppHeader() {
               <NotificationIcon count={unreadCount} onClick={() => navigate('/notifications')} />
             </>
           ) : (
-            <div className="flex items-center gap-2">
+            <>
               <Button 
                 variant="outline" 
                 size="icon" 
@@ -732,7 +732,7 @@ export function AppHeader() {
               >
                 Get Started
               </Button>
-            </div>
+            </>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
