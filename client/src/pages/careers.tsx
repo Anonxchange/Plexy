@@ -98,214 +98,208 @@ const Careers = () => {
     <main className="overflow-x-hidden font-sans">
 
       {/* ══ 1. HERO ═════════════════════════════════════════════════════════ */}
-      <section className="bg-background pt-12 pb-24 px-4 lg:px-8 overflow-hidden">
+      <section className="bg-background pt-12 pb-24 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
 
-        {/* ── MOBILE: stack heading then photos ── */}
-        <div className="lg:hidden">
-          <div className="max-w-2xl mx-auto text-center mb-10">
-            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">We're hiring</p>
-            <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-foreground mb-5">
-              Elevate your <span className="text-primary">crypto</span> career
-            </h1>
-            <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-lg mx-auto">
-              Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people. Come join us.
-            </p>
-            <Button size="lg" className="rounded-full px-10 text-base font-semibold">
-              <a href="#positions">View open positions</a>
-            </Button>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {teamPhotos.slice(0, 3).map((p, i) => (
-              <div key={i} className="relative overflow-hidden rounded-2xl border border-border" style={{ height: 160 }}>
-                <img src={p.img} alt="Team member" className="w-full h-full object-cover object-top" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── DESKTOP: floating photos + centered text ── */}
-        <div className="hidden lg:block relative w-full" style={{ minHeight: 560 }}>
-
-          {/* Center text — absolutely centered */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 px-8">
-            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">We're hiring</p>
-            <h1 className="text-6xl xl:text-7xl font-extrabold leading-tight tracking-tight text-foreground mb-5 max-w-xl">
-              Elevate your <span className="text-primary">crypto</span> career
-            </h1>
-            <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-md">
-              Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people.
-            </p>
-            <Button size="lg" className="rounded-full px-10 text-base font-semibold">
-              <a href="#positions">View open positions</a>
-            </Button>
+          {/* ── MOBILE: stack heading then photos ── */}
+          <div className="lg:hidden">
+            <div className="max-w-2xl mx-auto text-center mb-10">
+              <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">We're hiring</p>
+              <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-foreground mb-5">
+                Elevate your <span className="text-primary">crypto</span> career
+              </h1>
+              <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-lg mx-auto">
+                Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people. Come join us.
+              </p>
+              <Button size="lg" className="rounded-full px-10 text-base font-semibold">
+                <a href="#positions">View open positions</a>
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {teamPhotos.slice(0, 3).map((p, i) => (
+                <div key={i} className="relative overflow-hidden rounded-2xl border border-border" style={{ height: 160 }}>
+                  <img src={p.img} alt="Team member" className="w-full h-full object-cover object-top" />
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Floating photos — scattered at corners */}
-          {/* Top-left large */}
-          <div className="absolute top-0 left-0 w-44 xl:w-52 rounded-2xl overflow-hidden border border-border shadow-lg"
-               style={{ height: 220 }}>
-            <img src={teamPhotos[0].img} alt="" className="w-full h-full object-cover object-top" />
-          </div>
+          {/* ── DESKTOP: floating photos + centered text ── */}
+          <div className="hidden lg:block relative w-full" style={{ minHeight: 560 }}>
 
-          {/* Mid-left small — offset down */}
-          <div className="absolute top-52 left-8 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md"
-               style={{ height: 140 }}>
-            <img src={teamPhotos[1].img} alt="" className="w-full h-full object-cover object-top" />
-          </div>
+            {/* Center text — absolutely centered */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 px-8">
+              <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">We're hiring</p>
+              <h1 className="text-6xl xl:text-7xl font-extrabold leading-tight tracking-tight text-foreground mb-5 max-w-xl">
+                Elevate your <span className="text-primary">crypto</span> career
+              </h1>
+              <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-md">
+                Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people.
+              </p>
+              <Button size="lg" className="rounded-full px-10 text-base font-semibold">
+                <a href="#positions">View open positions</a>
+              </Button>
+            </div>
 
-          {/* Top-right large */}
-          <div className="absolute top-0 right-0 w-52 xl:w-60 rounded-2xl overflow-hidden border border-border shadow-lg"
-               style={{ height: 260 }}>
-            <img src={teamPhotos[3].img} alt="" className="w-full h-full object-cover object-top" />
-          </div>
+            {/* Top-left large */}
+            <div className="absolute top-0 left-0 w-44 xl:w-52 rounded-2xl overflow-hidden border border-border shadow-lg" style={{ height: 220 }}>
+              <img src={teamPhotos[0].img} alt="" className="w-full h-full object-cover object-top" />
+            </div>
 
-          {/* Bottom-right-inner small */}
-          <div className="absolute bottom-0 right-48 xl:right-64 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md"
-               style={{ height: 130 }}>
-            <img src={teamPhotos[2].img} alt="" className="w-full h-full object-cover object-center" />
-          </div>
+            {/* Mid-left small */}
+            <div className="absolute top-52 left-8 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md" style={{ height: 140 }}>
+              <img src={teamPhotos[1].img} alt="" className="w-full h-full object-cover object-top" />
+            </div>
 
-          {/* Bottom-center small */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-x-28 xl:translate-x-36 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md"
-               style={{ height: 120 }}>
-            <img src={teamPhotos[4].img} alt="" className="w-full h-full object-cover object-top" />
+            {/* Top-right large */}
+            <div className="absolute top-0 right-0 w-52 xl:w-60 rounded-2xl overflow-hidden border border-border shadow-lg" style={{ height: 260 }}>
+              <img src={teamPhotos[3].img} alt="" className="w-full h-full object-cover object-top" />
+            </div>
+
+            {/* Bottom-right-inner small */}
+            <div className="absolute bottom-0 right-48 xl:right-64 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md" style={{ height: 130 }}>
+              <img src={teamPhotos[2].img} alt="" className="w-full h-full object-cover object-center" />
+            </div>
+
+            {/* Bottom-center small */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-x-28 xl:translate-x-36 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md" style={{ height: 120 }}>
+              <img src={teamPhotos[4].img} alt="" className="w-full h-full object-cover object-top" />
+            </div>
           </div>
         </div>
       </section>
 
       {/* ══ 2. CULTURE — dark, rounded top ═════════════════════════════════ */}
       <section
-        className="relative z-10 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] px-4 lg:px-8 pt-16 pb-24"
+        className="relative z-10 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] pt-16 pb-24"
         style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       >
-        {/* ── MOBILE: centered ── */}
-        <div className="lg:hidden max-w-2xl mx-auto text-center mb-10">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Culture</p>
-          <h2 className="text-4xl font-extrabold leading-tight tracking-tight text-white mb-5">
-            What it's like to work at Pexly
-          </h2>
-          <p className="text-white/50 text-base leading-relaxed mb-2">
-            Together, we are building a culture that nurtures high performance, aids accelerated development and is rich in diversity.
-          </p>
-          <p className="text-white/50 text-base leading-relaxed">
-            We take our culture incredibly seriously and only hire people who share and embody our core values.
-          </p>
-        </div>
-        <div className="lg:hidden max-w-5xl mx-auto grid grid-cols-1 gap-4">
-          {culturePhotos.slice(0, 2).map((c, i) => (
-            <div key={i} className="relative overflow-hidden rounded-3xl border border-white/10" style={{ height: 260 }}>
-              <img src={c.img} alt={c.label} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="absolute bottom-5 left-5">
-                <span className="text-white text-base font-semibold block">{c.label}</span>
-                <span className="text-white/60 text-sm">{c.sub}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
 
-        {/* ── DESKTOP: left text + right image collage ── */}
-        <div className="hidden lg:grid grid-cols-2 gap-12 xl:gap-20 items-center w-full">
-          {/* Left text */}
-          <div>
-            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">Our Culture</p>
-            <h2 className="text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight text-white mb-6">
+          {/* ── MOBILE: centered ── */}
+          <div className="lg:hidden max-w-2xl mx-auto text-center mb-10">
+            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Culture</p>
+            <h2 className="text-4xl font-extrabold leading-tight tracking-tight text-white mb-5">
               What it's like to work at Pexly
             </h2>
-            <p className="text-white/50 text-base leading-relaxed mb-4">
+            <p className="text-white/50 text-base leading-relaxed mb-2">
               Together, we are building a culture that nurtures high performance, aids accelerated development and is rich in diversity.
             </p>
             <p className="text-white/50 text-base leading-relaxed">
               We take our culture incredibly seriously and only hire people who share and embody our core values.
             </p>
           </div>
-
-          {/* Right collage */}
-          <div className="relative" style={{ height: 400 }}>
-            {/* Main large photo */}
-            <div className="absolute top-0 left-0 right-32 bottom-0 rounded-2xl overflow-hidden border border-white/10">
-              <img src={culturePhotos[0].img} alt={culturePhotos[0].label} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-4">
-                <span className="text-white text-sm font-semibold block">{culturePhotos[0].label}</span>
-                <span className="text-white/60 text-xs">{culturePhotos[0].sub}</span>
+          <div className="lg:hidden grid grid-cols-1 gap-4">
+            {culturePhotos.slice(0, 2).map((c, i) => (
+              <div key={i} className="relative overflow-hidden rounded-3xl border border-white/10" style={{ height: 260 }}>
+                <img src={c.img} alt={c.label} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute bottom-5 left-5">
+                  <span className="text-white text-base font-semibold block">{c.label}</span>
+                  <span className="text-white/60 text-sm">{c.sub}</span>
+                </div>
               </div>
+            ))}
+          </div>
+
+          {/* ── DESKTOP: left text + right image collage ── */}
+          <div className="hidden lg:grid grid-cols-2 gap-12 xl:gap-20 items-center">
+            <div>
+              <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">Our Culture</p>
+              <h2 className="text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight text-white mb-6">
+                What it's like to work at Pexly
+              </h2>
+              <p className="text-white/50 text-base leading-relaxed mb-4">
+                Together, we are building a culture that nurtures high performance, aids accelerated development and is rich in diversity.
+              </p>
+              <p className="text-white/50 text-base leading-relaxed">
+                We take our culture incredibly seriously and only hire people who share and embody our core values.
+              </p>
             </div>
-            {/* Small top-right */}
-            <div className="absolute top-0 right-0 w-28 rounded-2xl overflow-hidden border border-white/10" style={{ height: 180 }}>
-              <img src={culturePhotos[1].img} alt={culturePhotos[1].label} className="w-full h-full object-cover" />
-            </div>
-            {/* Small bottom-right */}
-            <div className="absolute bottom-0 right-0 w-28 rounded-2xl overflow-hidden border border-white/10" style={{ height: 170 }}>
-              <img src={culturePhotos[2].img} alt={culturePhotos[2].label} className="w-full h-full object-cover" />
+
+            <div className="relative" style={{ height: 400 }}>
+              <div className="absolute top-0 left-0 right-32 bottom-0 rounded-2xl overflow-hidden border border-white/10">
+                <img src={culturePhotos[0].img} alt={culturePhotos[0].label} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-4">
+                  <span className="text-white text-sm font-semibold block">{culturePhotos[0].label}</span>
+                  <span className="text-white/60 text-xs">{culturePhotos[0].sub}</span>
+                </div>
+              </div>
+              <div className="absolute top-0 right-0 w-28 rounded-2xl overflow-hidden border border-white/10" style={{ height: 180 }}>
+                <img src={culturePhotos[1].img} alt={culturePhotos[1].label} className="w-full h-full object-cover" />
+              </div>
+              <div className="absolute bottom-0 right-0 w-28 rounded-2xl overflow-hidden border border-white/10" style={{ height: 170 }}>
+                <img src={culturePhotos[2].img} alt={culturePhotos[2].label} className="w-full h-full object-cover" />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ══ 3. VALUES ════════════════════════════════════════════════════════ */}
-      <section className="relative z-20 -mt-10 rounded-3xl bg-background px-4 lg:px-8 pt-16 pb-24">
+      <section className="relative z-20 -mt-10 rounded-3xl bg-background pt-16 pb-24">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
 
-        {/* ── MOBILE: centered heading + 2-col grid ── */}
-        <div className="lg:hidden">
-          <div className="max-w-2xl mx-auto text-center mb-14">
-            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Values</p>
-            <h2 className="text-4xl font-extrabold leading-tight tracking-tight text-foreground">What we believe in</h2>
-          </div>
-          <div className="max-w-4xl mx-auto grid grid-cols-1 gap-y-12">
-            {values.map((v, i) => (
-              <div key={i} className="flex flex-col items-start text-left">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-border text-foreground mb-5">
-                  {v.icon}
+          {/* ── MOBILE: centered heading + stacked list ── */}
+          <div className="lg:hidden">
+            <div className="max-w-2xl mx-auto text-center mb-14">
+              <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Values</p>
+              <h2 className="text-4xl font-extrabold leading-tight tracking-tight text-foreground">What we believe in</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-y-12">
+              {values.map((v, i) => (
+                <div key={i} className="flex flex-col items-start text-left">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-border text-foreground mb-5">
+                    {v.icon}
+                  </div>
+                  <h3 className="text-xl font-extrabold tracking-tight text-foreground mb-3">{v.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-2">{v.body1}</p>
+                  <p className="text-foreground/70 text-sm leading-relaxed">{v.body2}</p>
                 </div>
-                <h3 className="text-xl font-extrabold tracking-tight text-foreground mb-3">{v.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-2">{v.body1}</p>
-                <p className="text-foreground/70 text-sm leading-relaxed">{v.body2}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── DESKTOP: sticky left heading + right stacked values ── */}
-        <div className="hidden lg:grid grid-cols-2 gap-16 xl:gap-24 w-full">
-          {/* Left — pinned heading; outer div stretches to row height, inner div sticks */}
-          <div>
-            <div className="sticky top-24 pt-2">
-              <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">Our Values</p>
-              <h2 className="text-5xl xl:text-6xl font-extrabold leading-tight tracking-tight text-foreground">
-                What we believe in
-              </h2>
+              ))}
             </div>
           </div>
 
-          {/* Right — values stacked vertically */}
-          <div className="flex flex-col gap-14">
-            {values.map((v, i) => (
-              <div key={i} className="flex flex-col items-start">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-border text-foreground mb-5">
-                  {v.icon}
-                </div>
-                <h3 className="text-xl font-extrabold tracking-tight text-foreground mb-3">{v.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-2">{v.body1}</p>
-                <p className="text-foreground/70 text-sm leading-relaxed">{v.body2}</p>
+          {/* ── DESKTOP: sticky left heading + right stacked values ── */}
+          <div className="hidden lg:grid grid-cols-2 gap-16 xl:gap-24">
+            <div>
+              <div className="sticky top-24 pt-2">
+                <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">Our Values</p>
+                <h2 className="text-5xl xl:text-6xl font-extrabold leading-tight tracking-tight text-foreground">
+                  What we believe in
+                </h2>
               </div>
-            ))}
+            </div>
+
+            <div className="flex flex-col gap-14">
+              {values.map((v, i) => (
+                <div key={i} className="flex flex-col items-start">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-border text-foreground mb-5">
+                    {v.icon}
+                  </div>
+                  <h3 className="text-xl font-extrabold tracking-tight text-foreground mb-3">{v.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-2">{v.body1}</p>
+                  <p className="text-foreground/70 text-sm leading-relaxed">{v.body2}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* ══ 4. BENEFITS ══════════════════════════════════════════════════════ */}
       <section
-        className="relative z-30 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] px-4 lg:px-8 pt-16 pb-24"
+        className="relative z-30 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] pt-16 pb-24"
         style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       >
-        <div className="w-full">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="text-center mb-12">
             <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Benefits</p>
             <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-white">
@@ -313,7 +307,6 @@ const Careers = () => {
             </h2>
           </div>
 
-          {/* mobile: list · desktop: 4-col cards */}
           <div className="flex flex-col divide-y divide-white/[0.08] lg:grid lg:grid-cols-4 lg:divide-y-0 lg:gap-3">
             {benefits.map((b, i) => (
               <div
@@ -335,64 +328,66 @@ const Careers = () => {
       {/* ══ 5. JOIN CTA ══════════════════════════════════════════════════════ */}
       <section
         id="positions"
-        className="relative z-40 -mt-10 rounded-3xl bg-primary px-4 lg:px-8 pt-16 pb-28 overflow-hidden"
+        className="relative z-40 -mt-10 rounded-3xl bg-primary pt-16 pb-28 overflow-hidden"
         style={{
           backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.12) 1.5px, transparent 1.5px)",
           backgroundSize: "22px 22px",
         }}
       >
-        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-primary-foreground mb-4">
-              Join our team
-            </h2>
-            <p className="text-primary-foreground/70 text-base mb-8 max-w-sm">
-              Check out our open positions and elevate your blockchain career now.
-            </p>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="rounded-full px-8 font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90 mb-10"
-            >
-              View open positions
-            </Button>
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-primary-foreground mb-4">
+                Join our team
+              </h2>
+              <p className="text-primary-foreground/70 text-base mb-8 max-w-sm">
+                Check out our open positions and elevate your blockchain career now.
+              </p>
+              <Button
+                size="lg"
+                variant="secondary"
+                className="rounded-full px-8 font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90 mb-10"
+              >
+                View open positions
+              </Button>
 
-            <div className="flex flex-wrap gap-6">
-              {[
-                { region: "North America", cities: "New York, Miami" },
-                { region: "Europe",        cities: "London, Amsterdam" },
-                { region: "Remote",        cities: "Worldwide" },
-              ].map((loc, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="mt-1.5 w-2 h-2 rounded-full border-2 border-primary-foreground/40 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">{loc.region}</p>
-                    <p className="text-sm font-medium text-primary-foreground/80">{loc.cities}</p>
+              <div className="flex flex-wrap gap-6">
+                {[
+                  { region: "North America", cities: "New York, Miami" },
+                  { region: "Europe",        cities: "London, Amsterdam" },
+                  { region: "Remote",        cities: "Worldwide" },
+                ].map((loc, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="mt-1.5 w-2 h-2 rounded-full border-2 border-primary-foreground/40 flex-shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">{loc.region}</p>
+                      <p className="text-sm font-medium text-primary-foreground/80">{loc.cities}</p>
+                    </div>
                   </div>
-                </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl overflow-hidden bg-black/10">
+              {positions.map((pos, i) => (
+                <a
+                  key={i}
+                  href="#"
+                  className="flex items-center justify-between px-5 py-4 border-b border-black/10 last:border-0 hover:bg-black/10 transition-colors group"
+                >
+                  <div>
+                    <p className="font-bold text-primary-foreground text-sm leading-snug group-hover:underline">{pos.title}</p>
+                    <p className="text-primary-foreground/60 text-xs flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3" />
+                      {pos.location}
+                      <span className="mx-1">·</span>
+                      {pos.type}
+                    </p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-primary-foreground/50 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                </a>
               ))}
             </div>
-          </div>
-
-          <div className="rounded-2xl overflow-hidden bg-black/10">
-            {positions.map((pos, i) => (
-              <a
-                key={i}
-                href="#"
-                className="flex items-center justify-between px-5 py-4 border-b border-black/10 last:border-0 hover:bg-black/10 transition-colors group"
-              >
-                <div>
-                  <p className="font-bold text-primary-foreground text-sm leading-snug group-hover:underline">{pos.title}</p>
-                  <p className="text-primary-foreground/60 text-xs flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3" />
-                    {pos.location}
-                    <span className="mx-1">·</span>
-                    {pos.type}
-                  </p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-primary-foreground/50 group-hover:translate-x-1 transition-transform flex-shrink-0" />
-              </a>
-            ))}
           </div>
         </div>
       </section>
