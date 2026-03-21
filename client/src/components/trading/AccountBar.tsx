@@ -5,12 +5,20 @@ import { useQuery } from "@tanstack/react-query";
 import { asterTrading } from "@/lib/asterdex-service";
 import { AccountModal } from "./AccountModal";
 
-const AccountBar = () => {
+interface AccountBarProps {
+  variant?: "bar" | "panel";
+  pair?: string;
+}
+
+const AccountBar = ({ variant = "bar", pair }: AccountBarProps) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState<"deposit" | "withdraw" | "transfer">("deposit");
 
   const { user } = useAuth();
   const [, navigate] = useLocation();
+
+  const baseAsset = pair ? pair.split("/")[0] : null;
+  const quoteAsset = pair ? (pair.split("/")[1] || "USDT") : "USDT";
 
   const { data: spotAccount, isLoading } = useQuery({
     queryKey: ["spot-account"],
@@ -19,6 +27,12 @@ const AccountBar = () => {
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
+
+  const getBalance = (asset: string) => {
+    if (!spotAccount?.balances) return "—";
+    const bal = spotAccount.balances.find((b: any) => b.asset === asset);
+    return bal ? parseFloat(bal.free).toFixed(8) : "0.00000000";
+  };
 
   const usdtBalance = spotAccount?.balances
     ? parseFloat(spotAccount.balances.find((b: any) => b.asset === "USDT")?.free ?? "0").toFixed(2)
@@ -34,28 +48,80 @@ const AccountBar = () => {
     setModalOpen(true);
   };
 
+  const actionBtnClass = "flex-1 py-1.5 rounded text-xs font-medium border transition-colors";
+  const primaryAction = "text-foreground border-border bg-accent/40 hover:bg-accent";
+
   return (
     <>
-      <div className="flex items-center justify-between h-12 px-4 border-y border-border bg-card">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Spot Acct.</span>
-          <span className="text-foreground font-mono-num">{displayBalance}</span>
+      {variant === "panel" ? (
+        <div className="flex flex-col p-3 gap-3">
+          <span className="text-xs font-semibold text-foreground">Account</span>
+
+          {user ? (
+            <>
+              <div className="flex items-center gap-1.5">
+                {(["Deposit", "Withdraw", "Transfer"] as const).map((label) => (
+                  <button
+                    key={label}
+                    onClick={() => openModal(label.toLowerCase() as "deposit" | "withdraw" | "transfer")}
+                    className={`${actionBtnClass} ${primaryAction}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+                  Spot overview
+                </span>
+                {baseAsset && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{baseAsset} Available</span>
+                    <span className="text-xs font-mono-num text-foreground">
+                      {isLoading ? "..." : getBalance(baseAsset)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{quoteAsset} Available</span>
+                  <span className="text-xs font-mono-num text-foreground">
+                    {isLoading ? "..." : getBalance(quoteAsset)}
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={() => navigate("/signin")}
+              className="w-full py-2 rounded text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            >
+              Connect Wallet
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => openModal("deposit")}
-            className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
-          >
-            Deposit
-          </button>
-          <button
-            onClick={() => openModal("transfer")}
-            className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
-          >
-            Transfer
-          </button>
+      ) : (
+        <div className="flex items-center justify-between h-12 px-4 border-y border-border bg-card">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Spot Acct.</span>
+            <span className="text-foreground font-mono-num">{displayBalance}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => openModal("deposit")}
+              className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15 transition-colors"
+            >
+              Deposit
+            </button>
+            <button
+              onClick={() => openModal("transfer")}
+              className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15 transition-colors"
+            >
+              Transfer
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <AccountModal
         open={modalOpen}
