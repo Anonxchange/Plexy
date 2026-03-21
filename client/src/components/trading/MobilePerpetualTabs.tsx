@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LayoutList, SlidersVertical, ListFilter, Loader2, XCircle } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
-import PerpetualOrderBook from "./PerpetualOrderBook";
+import OrderBook from "./OrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -217,7 +217,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair }: MobilePerpetualTabsProps) =
           )}
           <div className="flex border-t border-border flex-shrink-0 w-full min-w-0 h-[380px]">
             <div className="w-[40%] min-w-0 border-r border-border overflow-hidden h-full">
-              <PerpetualOrderBook symbol={pair} />
+              <OrderBook symbol={pair} />
             </div>
             <div className="w-[60%] min-w-0 overflow-y-auto h-full">
               <FuturesTradePanel symbol={pair} />
