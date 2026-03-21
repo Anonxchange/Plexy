@@ -4,7 +4,7 @@ import CandlestickChart from "./CandlestickChart";
 import DesktopOrderBook from "./DesktopOrderBook";
 import TradePanel from "./TradePanel";
 import PairInfo from "./PairInfo";
-import { AccountModal } from "./AccountModal";
+import AccountBar from "./AccountBar";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,15 +31,6 @@ const DesktopTradingLayout = ({
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [defaultTab, setDefaultTab] = useState<"deposit" | "withdraw" | "transfer">("deposit");
-
-  const openModal = (tab: "deposit" | "withdraw" | "transfer") => {
-    if (!user) { navigate("/signin"); return; }
-    setDefaultTab(tab);
-    setModalOpen(true);
-  };
 
   const apiSymbol = pair.replace("/", "");
 
@@ -93,10 +84,10 @@ const DesktopTradingLayout = ({
      *  │  Tab content [row 4, col 1–2]        │ Account panel │
      *  └──────────────────────────────────────┴───────────────┘
      */
-    <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_140px] flex-1 min-h-0 overflow-hidden border-t border-border">
+    <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_140px] flex-1 min-h-0 overflow-hidden border-t border-panel-border">
 
       {/* ── PairInfo — col 1, row 1 only ── */}
-      <div className="col-start-1 row-start-1 border-b border-border min-w-0">
+      <div className="col-start-1 row-start-1 border-b border-panel-border min-w-0">
         <PairInfo
           pair={pair}
           onPairChange={onPairChange}
@@ -113,18 +104,18 @@ const DesktopTradingLayout = ({
       )}
 
       {/* ── Order Book — col 2, spans rows 1–2 ── */}
-      <div className="col-start-2 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
+      <div className="col-start-2 row-start-1 row-end-3 border-l border-panel-border overflow-y-auto min-h-0">
         <DesktopOrderBook symbol={pair} />
       </div>
 
       {/* ── Trade Panel — col 3, spans rows 1–2 ── */}
-      <div className="col-start-3 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
+      <div className="col-start-3 row-start-1 row-end-3 border-l border-panel-border overflow-y-auto min-h-0">
         <TradePanel symbol={pair} />
       </div>
 
-      {/* ── Tab bar — row 3, all columns ── */}
-      <div className="col-start-1 col-end-4 row-start-3 relative h-10">
-        <div className="absolute top-0 left-0 right-0 h-px bg-border" />
+      {/* ── Tab bar — row 3, cols 1–2 only (does not cross into trade panel) ── */}
+      <div className="col-start-1 col-end-3 row-start-3 relative h-10">
+        <div className="absolute top-0 left-0 right-0 h-px bg-panel-border" />
         <div className="flex items-center px-4 h-10">
           <div className="flex items-center gap-4 flex-1 h-full overflow-x-auto scrollbar-none">
             {orderTabs.map((tab) => (
@@ -252,52 +243,11 @@ const DesktopTradingLayout = ({
         )}
       </div>
 
-      {/* ── Account panel — row 4, col 3 ── */}
-      <div className="col-start-3 row-start-4 border-l border-border overflow-y-auto">
-        <div className="p-3">
-          {user ? (
-            <>
-              <div className="flex items-center gap-1 mb-3">
-                {(["Deposit", "Withdraw", "Transfer"] as const).map((label) => (
-                  <button
-                    key={label}
-                    onClick={() => openModal(label.toLowerCase() as "deposit" | "withdraw" | "transfer")}
-                    className="flex-1 py-1.5 rounded text-xs font-medium text-primary border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="space-y-1.5 text-xs">
-                {[
-                  { label: "USDT Balance", value: spotAccount?.balances?.find((b: any) => b.asset === "USDT")?.free ?? "—" },
-                  { label: "In Orders", value: spotAccount?.balances?.find((b: any) => b.asset === "USDT")?.locked ?? "—" },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex justify-between">
-                    <span className="text-muted-foreground">{label}</span>
-                    <span className="font-mono-num text-foreground">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <button
-              onClick={() => navigate("/signin")}
-              className="w-full py-2 rounded text-xs font-medium bg-primary text-primary-foreground hover:opacity-90"
-            >
-              Sign In to Trade
-            </button>
-          )}
-        </div>
+      {/* ── Account panel — rows 3–4, col 3 (below trade panel, separated by top border) ── */}
+      <div className="col-start-3 row-start-3 row-end-5 border-l border-t border-panel-border flex flex-col">
+        <AccountBar variant="panel" pair={pair} />
       </div>
 
-      <AccountModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        defaultTab={defaultTab}
-        defaultAccountType="Spot account"
-        variant="dialog"
-      />
     </div>
   );
 };
