@@ -103,6 +103,21 @@ export function TwoFactorSetupDialog({
     saveEnrollment(userId, data);
   }, [userId]);
 
+  /** Unenroll all unverified TOTP factors, ignoring "not found" errors only */
+  const purgeUnverified = useCallback(async (id: number) => {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (id !== enrollmentId.current) return;
+    if (error) throw error;
+
+    const unverified = data?.totp?.filter((f) => f.status === "unverified") ?? [];
+    for (const factor of unverified) {
+      const { error: ue } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      if (id !== enrollmentId.current) return;
+      // Swallow "not found" — a concurrent call already removed it. Re-throw anything else.
+      if (ue && !ue.message?.toLowerCase().includes("not found")) throw ue;
+    }
+  }, [supabase]);
+
   const runEnroll = useCallback(async (id: number) => {
     setEnrolling(true);
     try {
@@ -112,35 +127,46 @@ export function TwoFactorSetupDialog({
       if (listError) throw listError;
 
       // 2. Check if a saved enrollment from a previous run is still valid on Supabase.
-      //    This is the key recovery path for when mobile resumes after discarding JS memory.
+      //    Key recovery path: mobile OS discarded JS memory while user was in authenticator app.
       const saved = loadEnrollment(userId);
       if (saved) {
         const stillExists = existingFactors?.totp?.some(
           (f) => f.id === saved.factorId && f.status === "unverified"
         );
         if (stillExists) {
-          // Supabase still has the factor — reuse it, skip re-enrollment entirely
           if (id !== enrollmentId.current) return;
           applyEnrollment(saved);
           return;
         }
-        // Factor no longer exists — clear stale cache and fall through to fresh enrollment
         clearEnrollment(userId);
       }
 
-      // 3. Clean up any other stale unverified factors
-      const staleFactors = existingFactors?.totp?.filter((f) => f.status === "unverified") ?? [];
-      for (const factor of staleFactors) {
-        await supabase.auth.mfa.unenroll({ factorId: factor.id }).catch(() => {});
-        if (id !== enrollmentId.current) return;
-      }
+      // 3. Remove all stale unverified factors before enrolling
+      await purgeUnverified(id);
+      if (id !== enrollmentId.current) return;
 
-      // 4. Enroll fresh TOTP factor
-      const { data, error } = await supabase.auth.mfa.enroll({
+      // 4. Enroll a fresh TOTP factor
+      let { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
         friendlyName: `Pexly (${userEmail})`,
       });
       if (id !== enrollmentId.current) return;
+
+      // 5. If Supabase says the name already exists, a stale unenroll silently failed.
+      //    Do a targeted second purge and retry once.
+      if (error?.message?.toLowerCase().includes("already exists")) {
+        await purgeUnverified(id);
+        if (id !== enrollmentId.current) return;
+
+        const retry = await supabase.auth.mfa.enroll({
+          factorType: "totp",
+          friendlyName: `Pexly (${userEmail})`,
+        });
+        if (id !== enrollmentId.current) return;
+        data = retry.data;
+        error = retry.error;
+      }
+
       if (error) throw error;
 
       applyEnrollment({ factorId: data.id, qrSvg: data.totp.qr_code, secret: data.totp.secret });
@@ -154,7 +180,7 @@ export function TwoFactorSetupDialog({
     } finally {
       if (id === enrollmentId.current) setEnrolling(false);
     }
-  }, [userId, userEmail, applyEnrollment, supabase, toast]);
+  }, [userId, userEmail, applyEnrollment, purgeUnverified, supabase, toast]);
 
   const triggerEnroll = useCallback(() => {
     const id = ++enrollmentId.current;
