@@ -19,6 +19,7 @@ export default {
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
         border: "hsl(var(--border) / <alpha-value>)",
+        "panel-border": "hsl(var(--panel-border) / <alpha-value>)",
         input: "hsl(var(--input) / <alpha-value>)",
         hero: "hsl(var(--hero) / <alpha-value>)",
         card: {
