@@ -222,11 +222,14 @@ const Careers = () => {
           </h2>
         </div>
 
-        {/* 2-col mobile → 4-col desktop grid */}
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* plain list on mobile → 4-col card grid on desktop */}
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-0 md:gap-4">
           {benefits.map((b, i) => (
-            <div key={i} className="bg-white/5 border border-white/8 rounded-2xl p-6 flex flex-col items-center text-center gap-3">
-              <div className="text-primary">{b.icon}</div>
+            <div
+              key={i}
+              className="flex flex-row items-center gap-4 py-4 border-b border-white/8 last:border-0 md:flex-col md:items-center md:text-center md:gap-3 md:py-0 md:p-6 md:border md:border-white/8 md:rounded-2xl md:bg-white/5 md:last:border"
+            >
+              <div className="text-primary flex-shrink-0">{b.icon}</div>
               <p className="text-white font-semibold text-sm leading-snug">{b.label}</p>
             </div>
           ))}
