@@ -76,23 +76,36 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
       <div className="flex items-center h-12 px-3 gap-0 bg-background overflow-x-auto scrollbar-none">
 
         {/* ── Pair selector ── */}
-        <button
-          onClick={() => setSelectorOpen(true)}
-          className="flex items-center gap-2 flex-shrink-0 pr-4 border-r border-border h-full group"
-        >
-          <CoinIcon symbol={baseAsset} address={baseAddress} className="w-7 h-7" />
-          <div className="flex flex-col items-start">
-            <div className="flex items-center gap-1">
-              <span className="text-foreground font-bold text-sm leading-none tracking-tight">{baseAsset}</span>
-              <span className="text-muted-foreground text-xs leading-none">/{quoteAsset}</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
+        <div className="flex items-center gap-1.5 flex-shrink-0 pr-4 border-r border-panel-border h-full">
+          {!isMobile && (
+            <button
+              onClick={() => setStarred(s => !s)}
+              className="p-1 rounded hover:bg-accent transition-colors flex-shrink-0"
+              aria-label="Favourite"
+            >
+              <Star
+                className={`w-3.5 h-3.5 transition-colors ${starred ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`}
+              />
+            </button>
+          )}
+          <button
+            onClick={() => setSelectorOpen(true)}
+            className="flex items-center gap-2 group"
+          >
+            <CoinIcon symbol={baseAsset} address={baseAddress} className="w-7 h-7" />
+            <div className="flex flex-col items-start">
+              <div className="flex items-center gap-1">
+                <span className="text-foreground font-bold text-sm leading-none tracking-tight">{baseAsset}</span>
+                <span className="text-muted-foreground text-xs leading-none">/{quoteAsset}</span>
+                <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </div>
+              <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Spot</span>
             </div>
-            <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Spot</span>
-          </div>
-        </button>
+          </button>
+        </div>
 
         {/* ── Price + 24h change ── */}
-        <div className="flex items-center gap-3 px-4 border-r border-border h-full flex-shrink-0">
+        <div className="flex items-center gap-3 px-4 border-r border-panel-border h-full flex-shrink-0">
           <div>
             <div className={`text-lg font-bold font-mono-num leading-none ${changeColor}`}>
               {lastPrice}
@@ -143,22 +156,26 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
 
         {/* ── Right actions ── */}
         <div className="flex items-center gap-2 ml-auto flex-shrink-0 pl-3">
-          <button
-            onClick={() => setStarred(s => !s)}
-            className="p-1.5 rounded hover:bg-accent transition-colors"
-            aria-label="Favourite"
-          >
-            <Star
-              className={`w-4 h-4 transition-colors ${starred ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`}
-            />
-          </button>
-          <button
-            onClick={onToggleChart}
-            className="p-1.5 rounded hover:bg-accent transition-colors"
-            aria-label="Toggle chart"
-          >
-            <BarChart3 className={`w-4 h-4 ${chartVisible ? "text-foreground" : "text-muted-foreground"}`} />
-          </button>
+          {isMobile && (
+            <button
+              onClick={() => setStarred(s => !s)}
+              className="p-1.5 rounded hover:bg-accent transition-colors"
+              aria-label="Favourite"
+            >
+              <Star
+                className={`w-4 h-4 transition-colors ${starred ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`}
+              />
+            </button>
+          )}
+          {isMobile && (
+            <button
+              onClick={onToggleChart}
+              className="p-1.5 rounded hover:bg-accent transition-colors"
+              aria-label="Toggle chart"
+            >
+              <BarChart3 className={`w-4 h-4 ${chartVisible ? "text-foreground" : "text-muted-foreground"}`} />
+            </button>
+          )}
         </div>
 
       </div>
