@@ -232,7 +232,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair }: MobilePerpetualTabsProps) =
         </div>
       )}
 
-      <div className="flex items-center px-4 pt-1 border-t-[3px] border-panel-border">
+      <div className="flex items-center px-4 pt-1 border-t-2 border-border">
         <div className="flex items-center gap-4 flex-1">
           {tabs.map((tab) => (
             <button
