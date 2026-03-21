@@ -217,7 +217,7 @@ export function AppHeader() {
           </Link>
         </div>
 
-        <nav className="hidden lg:flex items-center gap-1 flex-1 ml-8">
+        <nav className="hidden lg:flex items-center gap-0.5 flex-1 ml-4">
           <DropdownMenu open={activeDropdown === 'trade'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
             <div 
               className="relative flex items-center h-full"
@@ -228,11 +228,10 @@ export function AppHeader() {
                 <Button
                   variant={location === "/spot" || location === "/swap" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group text-sm font-medium"
+                  className="gap-1 group text-sm font-medium px-3"
                 >
-                  <ShoppingCart className="h-4 w-4" />
                   Trade
-                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
@@ -266,9 +265,8 @@ export function AppHeader() {
             <Button
               variant={location === "/gift-cards" ? "secondary" : "ghost"}
               size="sm"
-              className="gap-2 text-sm font-medium"
+              className="text-sm font-medium px-3"
             >
-              <Gift className="h-4 w-4" />
               Gift Cards
             </Button>
           </Link>
@@ -277,10 +275,9 @@ export function AppHeader() {
             <Button
               variant={location.startsWith("/explorer") ? "secondary" : "ghost"}
               size="sm"
-              className="gap-2 text-sm font-medium"
+              className="text-sm font-medium px-3"
             >
-              <Lightbulb className="h-4 w-4" />
-              Pexly Explorer
+              Explorer
             </Button>
           </Link>
 
@@ -294,11 +291,10 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/wallet") ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group text-sm font-medium"
+                  className="gap-1 group text-sm font-medium px-3"
                 >
-                  <Wallet className="h-4 w-4" />
                   Wallet
-                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
@@ -362,12 +358,11 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/shop") ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group text-sm font-medium"
+                  className="gap-1 group text-sm font-medium px-3"
                 >
-                  <Store className="h-4 w-4" />
                   Shop
-                  <Badge variant="secondary" className="ml-1 text-[10px] px-1">BETA</Badge>
-                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                  <Badge variant="secondary" className="text-[10px] px-1">BETA</Badge>
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
@@ -402,11 +397,10 @@ export function AppHeader() {
                 <Button
                   variant={location === "/wallet/stake" || location === "/referral" || location === "/rewards" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group text-sm font-medium"
+                  className="gap-1 group text-sm font-medium px-3"
                 >
-                  <TrendingUp className="h-4 w-4" />
                   Earn
-                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
@@ -445,11 +439,10 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/support") || location === "/contact" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2 group text-sm font-medium"
+                  className="gap-1 group text-sm font-medium px-3"
                 >
-                  <HelpCircle className="h-4 w-4" />
                   Support
-                  <ChevronDown className="h-3 w-3 ml-1 transition-transform group-data-[state=open]:rotate-180" />
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
@@ -745,12 +738,11 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                size="sm"
-                className="hidden lg:flex items-center gap-1.5 px-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+                size="icon"
+                className="hidden lg:flex h-9 w-9 text-muted-foreground hover:text-foreground"
+                title={selectedLang}
               >
                 <Globe className="h-4 w-4" />
-                <span>{selectedLang}</span>
-                <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
@@ -780,7 +772,7 @@ export function AppHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="hidden lg:block ml-2">
+          <div className="hidden lg:block">
             <ThemeToggle />
           </div>
         </div>
