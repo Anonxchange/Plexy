@@ -72,15 +72,18 @@ const positions = [
   { title: "Customer Support Agent",     location: "Remote",            type: "Part time" },
 ];
 
-const heroPhotos = [
-  { label: "Engineering", img: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=600&q=80" },
-  { label: "Design",      img: "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=600&q=80" },
-  { label: "Product",     img: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=600&q=80" },
+const teamPhotos = [
+  { img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80", size: "lg", pos: "top-left" },
+  { img: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=300&q=80", size: "sm", pos: "mid-left" },
+  { img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=300&q=80", size: "sm", pos: "bottom-right-inner" },
+  { img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80", size: "lg", pos: "top-right" },
+  { img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", size: "sm", pos: "bottom-center" },
 ];
 
 const culturePhotos = [
-  { label: "Team sessions", sub: "Collaborative by design",   img: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=700&q=80" },
-  { label: "Our offices",   sub: "London · New York · Remote", img: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=700&q=80" },
+  { label: "Team sessions", sub: "Collaborative by design",   img: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80" },
+  { label: "Our offices",   sub: "London · New York · Remote", img: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80" },
+  { label: "Team lunch",    sub: "We eat together",            img: "https://images.unsplash.com/photo-1543269664-56d93c216abd?auto=format&fit=crop&w=400&q=80" },
 ];
 
 /* ─────────────────────────────────── component ── */
@@ -95,59 +98,93 @@ const Careers = () => {
     <main className="overflow-x-hidden font-sans">
 
       {/* ══ 1. HERO ═════════════════════════════════════════════════════════ */}
-      <section className="bg-background pt-12 pb-24 px-6 lg:px-12">
-        {/* Heading block — centered, max readable width */}
-        <div className="max-w-2xl mx-auto text-center mb-12">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">
-            We're hiring
-          </p>
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight text-foreground mb-5">
-            Elevate your{" "}
-            <span className="text-primary">crypto</span>{" "}
-            career
-          </h1>
-          <p className="text-muted-foreground text-lg md:text-xl leading-relaxed mb-10 max-w-lg mx-auto">
-            Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people. Come join us.
-          </p>
-          <Button size="lg" className="rounded-full px-10 text-base font-semibold">
-            <a href="#positions">View open positions</a>
-          </Button>
+      <section className="bg-background pt-12 pb-24 px-4 lg:px-8 overflow-hidden">
+
+        {/* ── MOBILE: stack heading then photos ── */}
+        <div className="lg:hidden">
+          <div className="max-w-2xl mx-auto text-center mb-10">
+            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">We're hiring</p>
+            <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-foreground mb-5">
+              Elevate your <span className="text-primary">crypto</span> career
+            </h1>
+            <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-lg mx-auto">
+              Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people. Come join us.
+            </p>
+            <Button size="lg" className="rounded-full px-10 text-base font-semibold">
+              <a href="#positions">View open positions</a>
+            </Button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {teamPhotos.slice(0, 3).map((p, i) => (
+              <div key={i} className="relative overflow-hidden rounded-2xl border border-border" style={{ height: 160 }}>
+                <img src={p.img} alt="Team member" className="w-full h-full object-cover object-top" />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Photo grid — 1 col on mobile, 3 cols on desktop */}
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
-          {heroPhotos.map((c, i) => (
-            <div
-              key={i}
-              className={`relative overflow-hidden rounded-3xl border border-border ${
-                i === 1 ? "md:mt-8" : ""
-              }`}
-              style={{ height: 280 }}
-            >
-              <img src={c.img} alt={c.label} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <span className="absolute bottom-4 left-4 text-white text-sm font-semibold tracking-wide">
-                {c.label}
-              </span>
-            </div>
-          ))}
+        {/* ── DESKTOP: floating photos + centered text ── */}
+        <div className="hidden lg:block relative w-full" style={{ minHeight: 560 }}>
+
+          {/* Center text — absolutely centered */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 px-8">
+            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">We're hiring</p>
+            <h1 className="text-6xl xl:text-7xl font-extrabold leading-tight tracking-tight text-foreground mb-5 max-w-xl">
+              Elevate your <span className="text-primary">crypto</span> career
+            </h1>
+            <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-md">
+              Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people.
+            </p>
+            <Button size="lg" className="rounded-full px-10 text-base font-semibold">
+              <a href="#positions">View open positions</a>
+            </Button>
+          </div>
+
+          {/* Floating photos — scattered at corners */}
+          {/* Top-left large */}
+          <div className="absolute top-0 left-0 w-44 xl:w-52 rounded-2xl overflow-hidden border border-border shadow-lg"
+               style={{ height: 220 }}>
+            <img src={teamPhotos[0].img} alt="" className="w-full h-full object-cover object-top" />
+          </div>
+
+          {/* Mid-left small — offset down */}
+          <div className="absolute top-52 left-8 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md"
+               style={{ height: 140 }}>
+            <img src={teamPhotos[1].img} alt="" className="w-full h-full object-cover object-top" />
+          </div>
+
+          {/* Top-right large */}
+          <div className="absolute top-0 right-0 w-52 xl:w-60 rounded-2xl overflow-hidden border border-border shadow-lg"
+               style={{ height: 260 }}>
+            <img src={teamPhotos[3].img} alt="" className="w-full h-full object-cover object-top" />
+          </div>
+
+          {/* Bottom-right-inner small */}
+          <div className="absolute bottom-0 right-48 xl:right-64 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md"
+               style={{ height: 130 }}>
+            <img src={teamPhotos[2].img} alt="" className="w-full h-full object-cover object-center" />
+          </div>
+
+          {/* Bottom-center small */}
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-x-28 xl:translate-x-36 w-28 xl:w-32 rounded-2xl overflow-hidden border border-border shadow-md"
+               style={{ height: 120 }}>
+            <img src={teamPhotos[4].img} alt="" className="w-full h-full object-cover object-top" />
+          </div>
         </div>
       </section>
 
-      {/* ══ 2. CULTURE — dark, rounded top, flat bottom ══════════════════ */}
+      {/* ══ 2. CULTURE — dark, rounded top ═════════════════════════════════ */}
       <section
-        className="relative z-10 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] px-6 lg:px-12 pt-16 pb-24"
+        className="relative z-10 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] px-4 lg:px-8 pt-16 pb-24"
         style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       >
-        {/* Heading */}
-        <div className="max-w-2xl mx-auto text-center mb-12">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">
-            Our Culture
-          </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-white mb-5">
+        {/* ── MOBILE: centered ── */}
+        <div className="lg:hidden max-w-2xl mx-auto text-center mb-10">
+          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Culture</p>
+          <h2 className="text-4xl font-extrabold leading-tight tracking-tight text-white mb-5">
             What it's like to work at Pexly
           </h2>
           <p className="text-white/50 text-base leading-relaxed mb-2">
@@ -157,98 +194,152 @@ const Careers = () => {
             We take our culture incredibly seriously and only hire people who share and embody our core values.
           </p>
         </div>
-
-        {/* Culture photos — side-by-side on desktop */}
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-          {culturePhotos.map((c, i) => (
-            <div
-              key={i}
-              className={`relative overflow-hidden rounded-3xl border border-white/10 ${
-                i === 1 ? "md:mt-8" : ""
-              }`}
-              style={{ height: 320 }}
-            >
+        <div className="lg:hidden max-w-5xl mx-auto grid grid-cols-1 gap-4">
+          {culturePhotos.slice(0, 2).map((c, i) => (
+            <div key={i} className="relative overflow-hidden rounded-3xl border border-white/10" style={{ height: 260 }}>
               <img src={c.img} alt={c.label} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute bottom-5 left-5">
-                <span className="text-white text-base font-semibold tracking-wide block">{c.label}</span>
+                <span className="text-white text-base font-semibold block">{c.label}</span>
                 <span className="text-white/60 text-sm">{c.sub}</span>
               </div>
             </div>
           ))}
         </div>
-      </section>
 
-      {/* ══ 3. VALUES — light, overlapping culture ════════════════════════ */}
-      <section className="relative z-20 -mt-10 rounded-3xl bg-background px-6 lg:px-12 pt-16 pb-24">
-        <div className="max-w-2xl mx-auto text-center mb-14">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">
-            Our Values
-          </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-foreground">
-            What we believe in
-          </h2>
-        </div>
+        {/* ── DESKTOP: left text + right image collage ── */}
+        <div className="hidden lg:grid grid-cols-2 gap-12 xl:gap-20 items-center w-full">
+          {/* Left text */}
+          <div>
+            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">Our Culture</p>
+            <h2 className="text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight text-white mb-6">
+              What it's like to work at Pexly
+            </h2>
+            <p className="text-white/50 text-base leading-relaxed mb-4">
+              Together, we are building a culture that nurtures high performance, aids accelerated development and is rich in diversity.
+            </p>
+            <p className="text-white/50 text-base leading-relaxed">
+              We take our culture incredibly seriously and only hire people who share and embody our core values.
+            </p>
+          </div>
 
-        {/* 2-column grid on desktop */}
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-14">
-          {values.map((v, i) => (
-            <div key={i} className="flex flex-col md:items-start text-center md:text-left">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-border text-foreground mb-5 self-center md:self-start">
-                {v.icon}
+          {/* Right collage */}
+          <div className="relative" style={{ height: 400 }}>
+            {/* Main large photo */}
+            <div className="absolute top-0 left-0 right-32 bottom-0 rounded-2xl overflow-hidden border border-white/10">
+              <img src={culturePhotos[0].img} alt={culturePhotos[0].label} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4">
+                <span className="text-white text-sm font-semibold block">{culturePhotos[0].label}</span>
+                <span className="text-white/60 text-xs">{culturePhotos[0].sub}</span>
               </div>
-              <h3 className="text-xl font-extrabold tracking-tight text-foreground mb-3">{v.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-2">{v.body1}</p>
-              <p className="text-foreground/70 text-sm leading-relaxed">{v.body2}</p>
             </div>
-          ))}
+            {/* Small top-right */}
+            <div className="absolute top-0 right-0 w-28 rounded-2xl overflow-hidden border border-white/10" style={{ height: 180 }}>
+              <img src={culturePhotos[1].img} alt={culturePhotos[1].label} className="w-full h-full object-cover" />
+            </div>
+            {/* Small bottom-right */}
+            <div className="absolute bottom-0 right-0 w-28 rounded-2xl overflow-hidden border border-white/10" style={{ height: 170 }}>
+              <img src={culturePhotos[2].img} alt={culturePhotos[2].label} className="w-full h-full object-cover" />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ══ 4. BENEFITS — dark, rounded top, flat bottom ══════════════════ */}
+      {/* ══ 3. VALUES ════════════════════════════════════════════════════════ */}
+      <section className="relative z-20 -mt-10 rounded-3xl bg-background px-4 lg:px-8 pt-16 pb-24">
+
+        {/* ── MOBILE: centered heading + 2-col grid ── */}
+        <div className="lg:hidden">
+          <div className="max-w-2xl mx-auto text-center mb-14">
+            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Values</p>
+            <h2 className="text-4xl font-extrabold leading-tight tracking-tight text-foreground">What we believe in</h2>
+          </div>
+          <div className="max-w-4xl mx-auto grid grid-cols-1 gap-y-12">
+            {values.map((v, i) => (
+              <div key={i} className="flex flex-col items-start text-left">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-border text-foreground mb-5">
+                  {v.icon}
+                </div>
+                <h3 className="text-xl font-extrabold tracking-tight text-foreground mb-3">{v.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-2">{v.body1}</p>
+                <p className="text-foreground/70 text-sm leading-relaxed">{v.body2}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── DESKTOP: sticky left heading + right stacked values ── */}
+        <div className="hidden lg:grid grid-cols-2 gap-16 xl:gap-24 w-full">
+          {/* Left — pinned heading */}
+          <div className="pt-2">
+            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">Our Values</p>
+            <h2 className="text-5xl xl:text-6xl font-extrabold leading-tight tracking-tight text-foreground sticky top-24">
+              What we believe in
+            </h2>
+          </div>
+
+          {/* Right — values stacked vertically */}
+          <div className="flex flex-col gap-14">
+            {values.map((v, i) => (
+              <div key={i} className="flex flex-col items-start">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-border text-foreground mb-5">
+                  {v.icon}
+                </div>
+                <h3 className="text-xl font-extrabold tracking-tight text-foreground mb-3">{v.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-2">{v.body1}</p>
+                <p className="text-foreground/70 text-sm leading-relaxed">{v.body2}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 4. BENEFITS ══════════════════════════════════════════════════════ */}
       <section
-        className="relative z-30 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] px-6 lg:px-12 pt-16 pb-24"
+        className="relative z-30 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] px-4 lg:px-8 pt-16 pb-24"
         style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       >
-        <div className="max-w-2xl mx-auto text-center mb-12">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">
-            Our Benefits
-          </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-white">
-            Why work with us
-          </h2>
-        </div>
+        <div className="w-full">
+          <div className="text-center mb-12">
+            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Benefits</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-white">
+              Why work with us
+            </h2>
+          </div>
 
-        {/* plain list on mobile → 4-col card grid on desktop */}
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-0 md:gap-4">
-          {benefits.map((b, i) => (
-            <div
-              key={i}
-              className="flex flex-row items-center gap-4 py-4 border-b border-white/8 last:border-0 md:flex-col md:items-center md:text-center md:gap-3 md:py-0 md:p-6 md:border md:border-white/8 md:rounded-2xl md:bg-white/5 md:last:border"
-            >
-              <div className="text-primary flex-shrink-0">{b.icon}</div>
-              <p className="text-white font-semibold text-sm leading-snug">{b.label}</p>
-            </div>
-          ))}
+          {/* mobile: list · desktop: 4-col cards */}
+          <div className="flex flex-col divide-y divide-white/[0.08] lg:grid lg:grid-cols-4 lg:divide-y-0 lg:gap-3">
+            {benefits.map((b, i) => (
+              <div
+                key={i}
+                className="flex flex-row items-center gap-4 py-4 last:border-0
+                           lg:flex-col lg:items-center lg:justify-start lg:text-center lg:gap-0
+                           lg:py-8 lg:px-4 lg:rounded-2xl lg:border lg:border-white/[0.08] lg:bg-white/[0.04]"
+              >
+                <div className="text-primary flex-shrink-0 [&>svg]:w-10 [&>svg]:h-10 lg:[&>svg]:w-12 lg:[&>svg]:h-12 lg:mb-5">
+                  {b.icon}
+                </div>
+                <p className="text-white font-semibold text-sm leading-snug">{b.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ══ 5. JOIN CTA — lime green pill, overlapping benefits ═══════════ */}
+      {/* ══ 5. JOIN CTA ══════════════════════════════════════════════════════ */}
       <section
         id="positions"
-        className="relative z-40 -mt-10 rounded-3xl bg-primary px-6 lg:px-12 pt-16 pb-28 overflow-hidden"
+        className="relative z-40 -mt-10 rounded-3xl bg-primary px-4 lg:px-8 pt-16 pb-28 overflow-hidden"
         style={{
           backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.12) 1.5px, transparent 1.5px)",
           backgroundSize: "22px 22px",
         }}
       >
-        {/* 2-column layout on desktop */}
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-
-          {/* Left — heading + button + locations */}
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
           <div>
             <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-primary-foreground mb-4">
               Join our team
@@ -264,7 +355,6 @@ const Careers = () => {
               View open positions
             </Button>
 
-            {/* Locations */}
             <div className="flex flex-wrap gap-6">
               {[
                 { region: "North America", cities: "New York, Miami" },
@@ -282,7 +372,6 @@ const Careers = () => {
             </div>
           </div>
 
-          {/* Right — positions list */}
           <div className="rounded-2xl overflow-hidden bg-black/10">
             {positions.map((pos, i) => (
               <a
@@ -291,9 +380,7 @@ const Careers = () => {
                 className="flex items-center justify-between px-5 py-4 border-b border-black/10 last:border-0 hover:bg-black/10 transition-colors group"
               >
                 <div>
-                  <p className="font-bold text-primary-foreground text-sm leading-snug group-hover:underline">
-                    {pos.title}
-                  </p>
+                  <p className="font-bold text-primary-foreground text-sm leading-snug group-hover:underline">{pos.title}</p>
                   <p className="text-primary-foreground/60 text-xs flex items-center gap-1 mt-0.5">
                     <MapPin className="w-3 h-3" />
                     {pos.location}
@@ -308,7 +395,7 @@ const Careers = () => {
         </div>
       </section>
 
-      {/* ══ 6. FOOTER — peeking below the CTA pill ════════════════════════ */}
+      {/* ══ 6. FOOTER ════════════════════════════════════════════════════════ */}
       <div className="relative z-30 -mt-16">
         <AppFooter />
       </div>
