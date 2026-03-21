@@ -288,21 +288,38 @@ export function GiftCards() {
     setPage(1);
   };
 
-  const giftCards = data?.content?.map((card: any) => ({
-    id: card.productId,
-    name: card.productName,
-    brand: card.brand?.brandName || "",
-    priceRange: card.denominationType === "FIXED" 
-      ? `$${card.fixedRecipientDenominations ? Math.min(...card.fixedRecipientDenominations) : 0} - $${card.fixedRecipientDenominations ? Math.max(...card.fixedRecipientDenominations) : 0}`
-      : `$${card.minRecipientDenomination || 0} - $${card.maxRecipientDenomination || 0}`,
-    cryptoRange: `${(card.minRecipientDenomination * 0.99 || 0).toFixed(2)} USDT - ${(card.maxRecipientDenomination * 0.99 || 0).toFixed(2)} USDT`,
-    discount: `${card.discountPercentage || 0}%`,
-    image: (card.logoUrls && card.logoUrls[0]) || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
-    gradient: "from-gray-100 to-white",
-    description: card.redeemInstruction?.concise || "",
-    minValue: card.minRecipientDenomination || 0,
-    maxValue: card.maxRecipientDenomination || 0,
-  })) || [];
+  const CURRENCY_SYMBOLS: Record<string, string> = {
+    USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'CA$', AUD: 'A$',
+    CHF: 'CHF ', CNY: '¥', INR: '₹', BRL: 'R$', MXN: 'MX$', KRW: '₩',
+    SGD: 'S$', HKD: 'HK$', NOK: 'kr ', SEK: 'kr ', DKK: 'kr ',
+    PLN: 'zł ', CZK: 'Kč ', HUF: 'Ft ', TRY: '₺', ZAR: 'R ',
+    NGN: '₦', AED: 'AED ', SAR: '﷼', QAR: 'QR ', SEA: 'SEA ',
+  };
+  const getCurrencySymbol = (code: string) => CURRENCY_SYMBOLS[code] ?? `${code} `;
+
+  const giftCards = data?.content?.map((card: any) => {
+    const currencyCode: string = card.recipientCurrencyCode || "USD";
+    const sym = getCurrencySymbol(currencyCode);
+    const minVal = card.denominationType === "FIXED"
+      ? (card.fixedRecipientDenominations ? Math.min(...card.fixedRecipientDenominations) : 0)
+      : (card.minRecipientDenomination || 0);
+    const maxVal = card.denominationType === "FIXED"
+      ? (card.fixedRecipientDenominations ? Math.max(...card.fixedRecipientDenominations) : 0)
+      : (card.maxRecipientDenomination || 0);
+    return {
+      id: card.productId,
+      name: card.productName,
+      brand: card.brand?.brandName || "",
+      priceRange: `${sym}${minVal} - ${sym}${maxVal}`,
+      cryptoRange: currencyCode !== "USD" ? `${currencyCode} · ${card.country?.name || ""}`.trim().replace(/·\s*$/, "") : "",
+      discount: `${card.discountPercentage || 0}%`,
+      image: (card.logoUrls && card.logoUrls[0]) || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
+      gradient: "from-gray-100 to-white",
+      description: card.redeemInstruction?.concise || "",
+      minValue: minVal,
+      maxValue: maxVal,
+    };
+  }) || [];
 
   const selectedCurrency = currencies.find((c) => c.code === currency);
 
