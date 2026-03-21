@@ -12,7 +12,9 @@ const CandlestickChart = ({ pair = "BTC/USDT", className }: CandlestickChartProp
   const { theme } = useTheme();
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [toolsVisible, setToolsVisible] = useState(false);
+  const [toolsVisible, setToolsVisible] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 768 : false
+  );
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
