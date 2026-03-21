@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,9 +38,22 @@ export function TwoFactorSetupDialog({
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const { toast } = useToast();
-  const supabase = createClient();
 
+  // Stable client — never recreated across renders
+  const supabase = useRef(createClient()).current;
+
+  // Monotonic counter: each new runEnroll call gets a unique id.
+  // Any older in-flight call that sees a mismatched id aborts immediately.
   const enrollmentId = useRef(0);
+
+  // Refs that mirror state so visibilitychange handler always sees fresh values
+  // without needing to re-register the event listener.
+  const stepRef = useRef(step);
+  const enrollingRef = useRef(enrolling);
+  const factorIdRef = useRef(factorId);
+  useEffect(() => { stepRef.current = step; }, [step]);
+  useEffect(() => { enrollingRef.current = enrolling; }, [enrolling]);
+  useEffect(() => { factorIdRef.current = factorId; }, [factorId]);
 
   const sanitizedQrSvg = useMemo(() => {
     if (!qrSvg) return "";
@@ -53,23 +66,34 @@ export function TwoFactorSetupDialog({
     return DOMPurify.sanitize(svgContent, { USE_PROFILES: { svg: true, svgFilters: true } });
   }, [qrSvg]);
 
-  const runEnroll = async (id: number) => {
+  const runEnroll = useCallback(async (id: number) => {
     setEnrolling(true);
     try {
-      // Clean up any stale unverified factors from a previous incomplete setup
-      const { data: existingFactors } = await supabase.auth.mfa.listFactors();
-      const staleFactors = existingFactors?.totp?.filter(f => f.status === 'unverified') ?? [];
+      // --- Step 1: list existing factors ---
+      const { data: existingFactors, error: listError } = await supabase.auth.mfa.listFactors();
+
+      // Bail if superseded by a newer call
+      if (id !== enrollmentId.current) return;
+      if (listError) throw listError;
+
+      // --- Step 2: clean up stale unverified factors one by one ---
+      const staleFactors = existingFactors?.totp?.filter(f => f.status === "unverified") ?? [];
       for (const factor of staleFactors) {
-        await supabase.auth.mfa.unenroll({ factorId: factor.id });
+        // Ignore individual unenroll errors — the factor may already be gone
+        await supabase.auth.mfa.unenroll({ factorId: factor.id }).catch(() => {});
+
+        // Bail between each unenroll if superseded
+        if (id !== enrollmentId.current) return;
       }
 
+      // --- Step 3: enroll a fresh TOTP factor ---
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
         friendlyName: `Pexly (${userEmail})`,
       });
 
+      // Bail after enroll if superseded
       if (id !== enrollmentId.current) return;
-
       if (error) throw error;
 
       setFactorId(data.id);
@@ -83,20 +107,43 @@ export function TwoFactorSetupDialog({
         variant: "destructive",
       });
     } finally {
+      // Always release the spinner for the current call, regardless of error.
+      // Superseded calls must NOT touch enrolling — they already returned early.
       if (id === enrollmentId.current) setEnrolling(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmail]);
 
-  const triggerEnroll = () => {
+  const triggerEnroll = useCallback(() => {
     const id = ++enrollmentId.current;
     runEnroll(id);
-  };
+  }, [runEnroll]);
 
+  // Start enrollment when the dialog opens
   useEffect(() => {
     if (!open) return;
     triggerEnroll();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, triggerEnroll]);
+
+  // Recovery: if the user switches apps and comes back while on step 1
+  // without a factorId, silently re-trigger enrollment.
+  useEffect(() => {
+    if (!open) return;
+
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        stepRef.current === 1 &&
+        !enrollingRef.current &&
+        !factorIdRef.current
+      ) {
+        triggerEnroll();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [open, triggerEnroll]);
 
   const handleVerify = async () => {
     if (!factorId) return;
@@ -136,6 +183,7 @@ export function TwoFactorSetupDialog({
   };
 
   const reset = () => {
+    // Increment so any in-flight runEnroll aborts without touching state
     enrollmentId.current++;
     setStep(1);
     setVerificationCode("");
@@ -250,7 +298,12 @@ export function TwoFactorSetupDialog({
             </Button>
           </div>
           <div className={step === 2 ? "flex gap-2 w-full sm:w-auto" : "hidden"}>
-            <Button variant="outline" onClick={() => setStep(1)} disabled={loading} tabIndex={step !== 2 ? -1 : undefined}>
+            <Button
+              variant="outline"
+              onClick={() => setStep(1)}
+              disabled={loading}
+              tabIndex={step !== 2 ? -1 : undefined}
+            >
               Back
             </Button>
             <Button
