@@ -217,7 +217,7 @@ export function AppHeader() {
           </Link>
         </div>
 
-        <nav className="hidden lg:flex items-center gap-0.5 ml-6">
+        <nav className="hidden lg:flex items-center gap-0 ml-4 xl:ml-6">
           <DropdownMenu open={activeDropdown === 'trade'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
             <div 
               className="relative flex items-center h-full"
@@ -228,7 +228,7 @@ export function AppHeader() {
                 <Button
                   variant={location === "/spot" || location === "/swap" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-1 group text-sm font-medium px-3"
+                  className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
                   Trade
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
@@ -265,7 +265,7 @@ export function AppHeader() {
             <Button
               variant={location === "/gift-cards" ? "secondary" : "ghost"}
               size="sm"
-              className="text-sm font-medium px-3"
+              className="text-sm font-medium px-2 xl:px-3"
             >
               Gift Cards
             </Button>
@@ -275,7 +275,7 @@ export function AppHeader() {
             <Button
               variant={location.startsWith("/explorer") ? "secondary" : "ghost"}
               size="sm"
-              className="text-sm font-medium px-3"
+              className="text-sm font-medium px-2 xl:px-3"
             >
               Explorer
             </Button>
@@ -291,7 +291,7 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/wallet") ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-1 group text-sm font-medium px-3"
+                  className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
                   Wallet
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
@@ -348,6 +348,16 @@ export function AppHeader() {
             </div>
           </DropdownMenu>
 
+          <Link href="/market">
+            <Button
+              variant={location.startsWith("/market") ? "secondary" : "ghost"}
+              size="sm"
+              className="text-sm font-medium px-2 xl:px-3"
+            >
+              Market
+            </Button>
+          </Link>
+
           <DropdownMenu open={activeDropdown === 'shop'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
             <div 
               className="relative flex items-center h-full"
@@ -358,7 +368,7 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/shop") ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-1 group text-sm font-medium px-3"
+                  className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
                   Shop
                   <Badge variant="secondary" className="text-[10px] px-1">BETA</Badge>
@@ -397,7 +407,7 @@ export function AppHeader() {
                 <Button
                   variant={location === "/wallet/stake" || location === "/referral" || location === "/rewards" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-1 group text-sm font-medium px-3"
+                  className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
                   Earn
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
@@ -439,7 +449,7 @@ export function AppHeader() {
                 <Button
                   variant={location.startsWith("/support") || location === "/contact" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-1 group text-sm font-medium px-3"
+                  className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
                   Support
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
