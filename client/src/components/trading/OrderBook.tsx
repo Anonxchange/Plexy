@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { asterMarket } from "@/lib/asterdex-service";
+import { useQuery } from "@tanstack/react-query";
 
 const TICK_OPTIONS = ["0.01", "0.1", "1", "10"];
 
@@ -31,6 +32,15 @@ const fmtPrice = (n: number): string => {
 const fmtSize = (qty: number): string =>
   qty >= 1000 ? (qty / 1000).toFixed(2) + "K" : qty.toFixed(2);
 
+const fmtCountdown = (ms: number): string => {
+  if (ms <= 0) return "00:00:00";
+  const totalSecs = Math.floor(ms / 1000);
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+};
+
 const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) => {
   const isMobile = useIsMobile();
   const count = countProp ?? (isMobile ? 6 : 12);
@@ -41,8 +51,34 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   const [midRaw, setMidRaw] = useState<number>(0);
   const [tickSize, setTickSize] = useState("0.1");
   const [tickOpen, setTickOpen] = useState(false);
+  const [countdown, setCountdown] = useState<string>("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<HTMLDivElement>(null);
+
+  const apiSymbol = toSymbol(symbol);
+
+  const { data: fundingData } = useQuery({
+    queryKey: ["funding-rate", apiSymbol],
+    queryFn: () => asterMarket.futuresFundingRate(apiSymbol),
+    enabled: mode === "futures" && isMobile,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const fundingEntry = Array.isArray(fundingData) ? fundingData[0] : fundingData;
+  const fundingRate = fundingEntry?.fundingRate
+    ? (parseFloat(fundingEntry.fundingRate) * 100).toFixed(4) + "%"
+    : "—";
+  const fundingTime: number = fundingEntry?.fundingTime ?? 0;
+
+  useEffect(() => {
+    if (!fundingTime || mode !== "futures" || !isMobile) return;
+    const tick = () => setCountdown(fmtCountdown(fundingTime - Date.now()));
+    tick();
+    countdownRef.current = setInterval(tick, 1000);
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [fundingTime, mode, isMobile]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -115,6 +151,16 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
 
   return (
     <div className="flex flex-col bg-background h-full select-none">
+
+      {/* Funding / Countdown — futures mobile only */}
+      {mode === "futures" && isMobile && (
+        <div className="px-2 pt-2 pb-1 flex-shrink-0">
+          <span className="text-[9px] text-muted-foreground leading-none block">Funding (8h) / Countdown</span>
+          <span className="text-[11px] font-mono-num text-foreground leading-none font-medium">
+            {fundingRate} / {countdown || "—"}
+          </span>
+        </div>
+      )}
 
       {/* Column headers */}
       <div className="flex items-center justify-between px-2 pt-2 pb-1 flex-shrink-0">
