@@ -148,7 +148,6 @@ export function GiftCardDetail() {
   const value = parseFloat(cardValue) || 0;
   const discountAmount = value * (discountPercentage / 100);
   const finalPrice = value - discountAmount;
-  const priceInCrypto = (finalPrice * 1.00).toFixed(4);
 
   const handleAddToCart = async () => {
     if (!card) return;
@@ -252,19 +251,12 @@ export function GiftCardDetail() {
                 )}
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={cryptoIconUrls.USDT}
-                    alt="USDT"
-                    className="h-6 w-6 rounded-full"
-                  />
-                  <span className="text-2xl font-bold text-foreground">
-                    {(finalPrice * (parseInt(numberOfCards) || 1)).toFixed(4)} USDT
-                  </span>
-                </div>
+                <span className="text-2xl font-bold text-foreground">
+                  {(finalPrice * (parseInt(numberOfCards) || 1)).toFixed(2)} {card.recipientCurrencyCode}
+                </span>
                 {discountPercentage > 0 && (
                   <span className="text-sm text-muted-foreground line-through opacity-50">
-                    {(value * (parseInt(numberOfCards) || 1)).toFixed(2)} USDT
+                    {(value * (parseInt(numberOfCards) || 1)).toFixed(2)} {card.recipientCurrencyCode}
                   </span>
                 )}
               </div>
@@ -390,7 +382,7 @@ export function GiftCardDetail() {
           <SheetHeader>
             <SheetTitle className="text-2xl">Email & network</SheetTitle>
             <SheetDescription>
-              Please enter your email below to proceed with purchasing ${cardValue} {card?.productName} for {priceInCrypto} USDT
+              Please enter your email below to proceed with purchasing {cardValue} {card?.recipientCurrencyCode} {card?.productName}
             </SheetDescription>
           </SheetHeader>
           <div className="space-y-4 mt-6">
