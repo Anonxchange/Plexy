@@ -217,7 +217,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair }: MobilePerpetualTabsProps) =
           )}
           <div className="flex border-t border-border flex-shrink-0 w-full min-w-0 h-[380px]">
             <div className="w-[40%] min-w-0 border-r border-border overflow-hidden h-full">
-              <OrderBook symbol={pair} />
+              <OrderBook symbol={pair} mode="futures" />
             </div>
             <div className="w-[60%] min-w-0 overflow-y-auto h-full">
               <FuturesTradePanel symbol={pair} />
