@@ -71,23 +71,78 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
     ? formatVolume(parseFloat(ticker.volume))
     : "—";
 
+  if (isMobile) {
+    return (
+      <>
+        <div className="flex items-center h-12 px-3 bg-background">
+
+          {/* ── Pair selector ── */}
+          <button
+            onClick={() => setSelectorOpen(true)}
+            className="flex items-center gap-2 group flex-shrink-0"
+          >
+            <CoinIcon symbol={baseAsset} address={baseAddress} className="w-7 h-7" />
+            <span className="text-foreground font-bold text-sm leading-none tracking-tight">{baseAsset}/{quoteAsset}</span>
+            <span className="text-[11px] font-medium text-muted-foreground bg-accent px-1.5 py-0.5 rounded leading-none">Spot</span>
+            {/* filled triangle dropdown */}
+            <span className="text-muted-foreground text-[10px] leading-none">▼</span>
+          </button>
+
+          {/* ── % change ── */}
+          <span className={`ml-2 text-sm font-semibold font-mono-num leading-none ${changeColor}`}>
+            {changeStr}
+          </span>
+
+          {/* ── Right actions ── */}
+          <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+            <button
+              onClick={() => setStarred(s => !s)}
+              className="p-1.5 rounded hover:bg-accent transition-colors"
+              aria-label="Favourite"
+            >
+              <Star
+                className={`w-[18px] h-[18px] transition-colors ${starred ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`}
+              />
+            </button>
+            <button
+              onClick={onToggleChart}
+              className="p-1.5 rounded hover:bg-accent transition-colors"
+              aria-label="Toggle chart"
+            >
+              <BarChart3 className={`w-[18px] h-[18px] ${chartVisible ? "text-foreground" : "text-muted-foreground"}`} />
+            </button>
+          </div>
+
+        </div>
+
+        <SymbolSelector
+          open={selectorOpen}
+          onClose={() => setSelectorOpen(false)}
+          onSelect={(selectedPair) => {
+            onPairChange(selectedPair);
+            setSelectorOpen(false);
+          }}
+          variant="fullscreen"
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <div className="flex items-center h-12 px-3 gap-0 bg-background overflow-x-auto scrollbar-none">
 
         {/* ── Pair selector ── */}
         <div className="flex items-center gap-1.5 flex-shrink-0 pr-4 border-r border-panel-border h-full">
-          {!isMobile && (
-            <button
-              onClick={() => setStarred(s => !s)}
-              className="p-1 rounded hover:bg-accent transition-colors flex-shrink-0"
-              aria-label="Favourite"
-            >
-              <Star
-                className={`w-3.5 h-3.5 transition-colors ${starred ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`}
-              />
-            </button>
-          )}
+          <button
+            onClick={() => setStarred(s => !s)}
+            className="p-1 rounded hover:bg-accent transition-colors flex-shrink-0"
+            aria-label="Favourite"
+          >
+            <Star
+              className={`w-3.5 h-3.5 transition-colors ${starred ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`}
+            />
+          </button>
           <button
             onClick={() => setSelectorOpen(true)}
             className="flex items-center gap-2 group"
@@ -129,53 +184,27 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart }: PairInfoP
         </div>
 
         {/* ── Stats strip ── */}
-        {!isMobile && (
-          <div className="flex items-center gap-5 px-4 overflow-x-auto scrollbar-none flex-1">
-            <div className="flex flex-col flex-shrink-0">
-              <span className="text-[10px] text-muted-foreground leading-none">24h Change</span>
-              <span className={`text-xs font-mono-num font-semibold leading-none mt-1 ${changeColor}`}>{changeStr}</span>
-            </div>
-            <div className="flex flex-col flex-shrink-0">
-              <span className="text-[10px] text-muted-foreground leading-none">24h High</span>
-              <span className="text-xs font-mono-num text-foreground leading-none mt-1">{high24h}</span>
-            </div>
-            <div className="flex flex-col flex-shrink-0">
-              <span className="text-[10px] text-muted-foreground leading-none">24h Low</span>
-              <span className="text-xs font-mono-num text-foreground leading-none mt-1">{low24h}</span>
-            </div>
-            <div className="flex flex-col flex-shrink-0">
-              <span className="text-[10px] text-muted-foreground leading-none">24h Vol ({baseAsset})</span>
-              <span className="text-xs font-mono-num text-foreground leading-none mt-1">{baseVolume}</span>
-            </div>
-            <div className="flex flex-col flex-shrink-0">
-              <span className="text-[10px] text-muted-foreground leading-none">24h Vol ({quoteAsset})</span>
-              <span className="text-xs font-mono-num text-foreground leading-none mt-1">{volume24h}</span>
-            </div>
+        <div className="flex items-center gap-5 px-4 overflow-x-auto scrollbar-none flex-1">
+          <div className="flex flex-col flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground leading-none">24h Change</span>
+            <span className={`text-xs font-mono-num font-semibold leading-none mt-1 ${changeColor}`}>{changeStr}</span>
           </div>
-        )}
-
-        {/* ── Right actions ── */}
-        <div className="flex items-center gap-2 ml-auto flex-shrink-0 pl-3">
-          {isMobile && (
-            <button
-              onClick={() => setStarred(s => !s)}
-              className="p-1.5 rounded hover:bg-accent transition-colors"
-              aria-label="Favourite"
-            >
-              <Star
-                className={`w-4 h-4 transition-colors ${starred ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`}
-              />
-            </button>
-          )}
-          {isMobile && (
-            <button
-              onClick={onToggleChart}
-              className="p-1.5 rounded hover:bg-accent transition-colors"
-              aria-label="Toggle chart"
-            >
-              <BarChart3 className={`w-4 h-4 ${chartVisible ? "text-foreground" : "text-muted-foreground"}`} />
-            </button>
-          )}
+          <div className="flex flex-col flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground leading-none">24h High</span>
+            <span className="text-xs font-mono-num text-foreground leading-none mt-1">{high24h}</span>
+          </div>
+          <div className="flex flex-col flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground leading-none">24h Low</span>
+            <span className="text-xs font-mono-num text-foreground leading-none mt-1">{low24h}</span>
+          </div>
+          <div className="flex flex-col flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground leading-none">24h Vol ({baseAsset})</span>
+            <span className="text-xs font-mono-num text-foreground leading-none mt-1">{baseVolume}</span>
+          </div>
+          <div className="flex flex-col flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground leading-none">24h Vol ({quoteAsset})</span>
+            <span className="text-xs font-mono-num text-foreground leading-none mt-1">{volume24h}</span>
+          </div>
         </div>
 
       </div>
