@@ -84,10 +84,10 @@ const DesktopTradingLayout = ({
      *  │  Tab content [row 4, col 1–2]        │ Account panel │
      *  └──────────────────────────────────────┴───────────────┘
      */
-    <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_140px] flex-1 min-h-0 overflow-hidden border-t border-panel-border">
+    <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_140px] flex-1 min-h-0 overflow-hidden border-t-2 border-panel-border">
 
       {/* ── PairInfo — col 1, row 1 only ── */}
-      <div className="col-start-1 row-start-1 border-b border-panel-border min-w-0">
+      <div className="col-start-1 row-start-1 border-b-2 border-panel-border min-w-0">
         <PairInfo
           pair={pair}
           onPairChange={onPairChange}
@@ -104,18 +104,18 @@ const DesktopTradingLayout = ({
       )}
 
       {/* ── Order Book — col 2, spans rows 1–2 ── */}
-      <div className="col-start-2 row-start-1 row-end-3 border-l border-panel-border overflow-y-auto min-h-0">
+      <div className="col-start-2 row-start-1 row-end-3 border-l-2 border-panel-border overflow-y-auto min-h-0">
         <DesktopOrderBook symbol={pair} />
       </div>
 
       {/* ── Trade Panel — col 3, spans rows 1–2 ── */}
-      <div className="col-start-3 row-start-1 row-end-3 border-l border-panel-border overflow-y-auto min-h-0">
+      <div className="col-start-3 row-start-1 row-end-3 border-l-2 border-panel-border overflow-y-auto min-h-0">
         <TradePanel symbol={pair} />
       </div>
 
       {/* ── Tab bar — row 3, cols 1–2 only (does not cross into trade panel) ── */}
       <div className="col-start-1 col-end-3 row-start-3 relative h-10">
-        <div className="absolute top-0 left-0 right-0 h-px bg-panel-border" />
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-panel-border" />
         <div className="flex items-center px-4 h-10">
           <div className="flex items-center gap-4 flex-1 h-full overflow-x-auto scrollbar-none">
             {orderTabs.map((tab) => (
@@ -244,7 +244,7 @@ const DesktopTradingLayout = ({
       </div>
 
       {/* ── Account panel — rows 3–4, col 3 (below trade panel, separated by top border) ── */}
-      <div className="col-start-3 row-start-3 row-end-5 border-l border-t border-panel-border flex flex-col">
+      <div className="col-start-3 row-start-3 row-end-5 border-l-2 border-t-2 border-panel-border flex flex-col">
         <AccountBar variant="panel" pair={pair} />
       </div>
 
