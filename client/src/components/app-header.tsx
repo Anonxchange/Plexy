@@ -217,7 +217,7 @@ export function AppHeader() {
           </Link>
         </div>
 
-        <nav className="hidden lg:flex items-center gap-0.5 ml-4">
+        <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
           <DropdownMenu open={activeDropdown === 'trade'} onOpenChange={(open) => !open && setActiveDropdown(null)}>
             <div 
               className="relative flex items-center h-full"
