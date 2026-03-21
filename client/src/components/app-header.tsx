@@ -348,7 +348,7 @@ export function AppHeader() {
             </div>
           </DropdownMenu>
 
-          <Link href="/market">
+          <Link href="/market" className="hidden xl:block">
             <Button
               variant={location.startsWith("/market") ? "secondary" : "ghost"}
               size="sm"
