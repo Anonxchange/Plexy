@@ -15,6 +15,36 @@ import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
+// sessionStorage key — scoped per user so multi-account scenarios don't cross
+const enrollmentKey = (userId: string) => `pexly_mfa_enrollment_${userId}`;
+
+interface SavedEnrollment {
+  factorId: string;
+  qrSvg: string;
+  secret: string;
+}
+
+function saveEnrollment(userId: string, data: SavedEnrollment) {
+  try {
+    sessionStorage.setItem(enrollmentKey(userId), JSON.stringify(data));
+  } catch {}
+}
+
+function loadEnrollment(userId: string): SavedEnrollment | null {
+  try {
+    const raw = sessionStorage.getItem(enrollmentKey(userId));
+    return raw ? (JSON.parse(raw) as SavedEnrollment) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearEnrollment(userId: string) {
+  try {
+    sessionStorage.removeItem(enrollmentKey(userId));
+  } catch {}
+}
+
 interface TwoFactorSetupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,15 +69,14 @@ export function TwoFactorSetupDialog({
   const [enrolling, setEnrolling] = useState(false);
   const { toast } = useToast();
 
-  // Stable client — never recreated across renders
+  // Stable Supabase client — never recreated across renders
   const supabase = useRef(createClient()).current;
 
-  // Monotonic counter: each new runEnroll call gets a unique id.
-  // Any older in-flight call that sees a mismatched id aborts immediately.
+  // Monotonic counter: newer calls supersede older in-flight ones
   const enrollmentId = useRef(0);
 
-  // Refs that mirror state so visibilitychange handler always sees fresh values
-  // without needing to re-register the event listener.
+  // Refs that mirror volatile state — used inside event listeners
+  // so we never need to re-register them on every state change
   const stepRef = useRef(step);
   const enrollingRef = useRef(enrolling);
   const factorIdRef = useRef(factorId);
@@ -57,48 +86,64 @@ export function TwoFactorSetupDialog({
 
   const sanitizedQrSvg = useMemo(() => {
     if (!qrSvg) return "";
-    let svgContent = qrSvg;
-    if (svgContent.startsWith("data:image/svg+xml;utf-8,")) {
-      svgContent = decodeURIComponent(svgContent.slice("data:image/svg+xml;utf-8,".length));
-    } else if (svgContent.startsWith("data:image/svg+xml;base64,")) {
-      svgContent = atob(svgContent.slice("data:image/svg+xml;base64,".length));
+    let svg = qrSvg;
+    if (svg.startsWith("data:image/svg+xml;utf-8,")) {
+      svg = decodeURIComponent(svg.slice("data:image/svg+xml;utf-8,".length));
+    } else if (svg.startsWith("data:image/svg+xml;base64,")) {
+      svg = atob(svg.slice("data:image/svg+xml;base64,".length));
     }
-    return DOMPurify.sanitize(svgContent, { USE_PROFILES: { svg: true, svgFilters: true } });
+    return DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
   }, [qrSvg]);
+
+  /** Apply enrollment data to state and persist it so mobile tab resumes work */
+  const applyEnrollment = useCallback((data: SavedEnrollment) => {
+    setFactorId(data.factorId);
+    setQrSvg(data.qrSvg);
+    setManualSecret(data.secret);
+    saveEnrollment(userId, data);
+  }, [userId]);
 
   const runEnroll = useCallback(async (id: number) => {
     setEnrolling(true);
     try {
-      // --- Step 1: list existing factors ---
+      // 1. List existing factors
       const { data: existingFactors, error: listError } = await supabase.auth.mfa.listFactors();
-
-      // Bail if superseded by a newer call
       if (id !== enrollmentId.current) return;
       if (listError) throw listError;
 
-      // --- Step 2: clean up stale unverified factors one by one ---
-      const staleFactors = existingFactors?.totp?.filter(f => f.status === "unverified") ?? [];
-      for (const factor of staleFactors) {
-        // Ignore individual unenroll errors — the factor may already be gone
-        await supabase.auth.mfa.unenroll({ factorId: factor.id }).catch(() => {});
+      // 2. Check if a saved enrollment from a previous run is still valid on Supabase.
+      //    This is the key recovery path for when mobile resumes after discarding JS memory.
+      const saved = loadEnrollment(userId);
+      if (saved) {
+        const stillExists = existingFactors?.totp?.some(
+          (f) => f.id === saved.factorId && f.status === "unverified"
+        );
+        if (stillExists) {
+          // Supabase still has the factor — reuse it, skip re-enrollment entirely
+          if (id !== enrollmentId.current) return;
+          applyEnrollment(saved);
+          return;
+        }
+        // Factor no longer exists — clear stale cache and fall through to fresh enrollment
+        clearEnrollment(userId);
+      }
 
-        // Bail between each unenroll if superseded
+      // 3. Clean up any other stale unverified factors
+      const staleFactors = existingFactors?.totp?.filter((f) => f.status === "unverified") ?? [];
+      for (const factor of staleFactors) {
+        await supabase.auth.mfa.unenroll({ factorId: factor.id }).catch(() => {});
         if (id !== enrollmentId.current) return;
       }
 
-      // --- Step 3: enroll a fresh TOTP factor ---
+      // 4. Enroll fresh TOTP factor
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
         friendlyName: `Pexly (${userEmail})`,
       });
-
-      // Bail after enroll if superseded
       if (id !== enrollmentId.current) return;
       if (error) throw error;
 
-      setFactorId(data.id);
-      setQrSvg(data.totp.qr_code);
-      setManualSecret(data.totp.secret);
+      applyEnrollment({ factorId: data.id, qrSvg: data.totp.qr_code, secret: data.totp.secret });
     } catch (err: any) {
       if (id !== enrollmentId.current) return;
       toast({
@@ -107,43 +152,43 @@ export function TwoFactorSetupDialog({
         variant: "destructive",
       });
     } finally {
-      // Always release the spinner for the current call, regardless of error.
-      // Superseded calls must NOT touch enrolling — they already returned early.
       if (id === enrollmentId.current) setEnrolling(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userEmail]);
+  }, [userId, userEmail, applyEnrollment, supabase, toast]);
 
   const triggerEnroll = useCallback(() => {
     const id = ++enrollmentId.current;
     runEnroll(id);
   }, [runEnroll]);
 
-  // Start enrollment when the dialog opens
+  // Start enrollment when dialog opens
   useEffect(() => {
     if (!open) return;
     triggerEnroll();
   }, [open, triggerEnroll]);
 
-  // Recovery: if the user switches apps and comes back while on step 1
-  // without a factorId, silently re-trigger enrollment.
+  // When the user switches to their authenticator app and comes back:
+  // 1. Refresh the Supabase session so the access token isn't stale
+  // 2. If state was lost (mobile tab reload), re-trigger enrollment —
+  //    which will recover from sessionStorage if the factor still exists
   useEffect(() => {
     if (!open) return;
 
-    const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === "visible" &&
-        stepRef.current === 1 &&
-        !enrollingRef.current &&
-        !factorIdRef.current
-      ) {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== "visible") return;
+
+      // Always refresh the session — the token may have gone stale
+      await supabase.auth.refreshSession().catch(() => {});
+
+      // Only re-trigger if on step 1 and the enrollment state was lost
+      if (stepRef.current === 1 && !enrollingRef.current && !factorIdRef.current) {
         triggerEnroll();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [open, triggerEnroll]);
+  }, [open, triggerEnroll, supabase]);
 
   const handleVerify = async () => {
     if (!factorId) return;
@@ -163,6 +208,7 @@ export function TwoFactorSetupDialog({
         return;
       }
 
+      clearEnrollment(userId);
       toast({
         title: "2FA enabled!",
         description: "Your account is now protected with two-factor authentication.",
@@ -183,8 +229,8 @@ export function TwoFactorSetupDialog({
   };
 
   const reset = () => {
-    // Increment so any in-flight runEnroll aborts without touching state
     enrollmentId.current++;
+    clearEnrollment(userId);
     setStep(1);
     setVerificationCode("");
     setFactorId("");
