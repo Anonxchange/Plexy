@@ -215,12 +215,12 @@ const MobilePerpetualTabs = ({ chartVisible, pair }: MobilePerpetualTabsProps) =
               <CandlestickChart pair={pair} />
             </div>
           )}
-          <div className="flex border-t border-border flex-shrink-0 w-full min-w-0 h-[380px]">
-            <div className="w-[40%] min-w-0 border-r border-border overflow-hidden h-full">
-              <OrderBook symbol={pair} mode="futures" />
+          <div className="flex border-t border-border flex-shrink-0 w-full min-w-0">
+            <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
+              <OrderBook symbol={pair} mode="futures" count={7} />
             </div>
-            <div className="w-[60%] min-w-0 overflow-y-auto h-full">
-              <FuturesTradePanel symbol={pair} />
+            <div className="w-[60%] min-w-0">
+              <FuturesTradePanel symbol={pair} compact />
             </div>
           </div>
         </>
@@ -232,7 +232,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair }: MobilePerpetualTabsProps) =
         </div>
       )}
 
-      <div className="flex items-center px-4 pt-1 border-t border-border">
+      <div className="flex items-center px-4 pt-1 border-t-[3px] border-panel-border">
         <div className="flex items-center gap-4 flex-1">
           {tabs.map((tab) => (
             <button
