@@ -18,6 +18,7 @@ interface RecentTrade {
 
 interface DesktopOrderBookProps {
   symbol: string;
+  mode?: "spot" | "futures";
 }
 
 const toSymbol = (pair: string) => pair.replace("/", "");
@@ -53,7 +54,7 @@ const ViewSellsIcon = () => (
   </svg>
 );
 
-const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
+const DesktopOrderBook = ({ symbol, mode = "spot" }: DesktopOrderBookProps) => {
   const count = 11;
   const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook");
   const [viewMode, setViewMode] = useState<"both" | "bids" | "asks">("both");
@@ -68,7 +69,9 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
 
   const fetchOrderBook = async () => {
     try {
-      const data = await asterMarket.spotOrderBook(toSymbol(symbol), "20");
+      const data = mode === "futures"
+        ? await asterMarket.futuresOrderBook(toSymbol(symbol), "20")
+        : await asterMarket.spotOrderBook(toSymbol(symbol), "20");
       if (!data?.bids || !data?.asks) return;
 
       const rawAsks: [string, string][] = data.asks;
@@ -123,7 +126,9 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
 
   const fetchTrades = async () => {
     try {
-      const data = await asterMarket.spotTrades(toSymbol(symbol), "20");
+      const data = mode === "futures"
+        ? await asterMarket.futuresTrades(toSymbol(symbol), "20")
+        : await asterMarket.spotTrades(toSymbol(symbol), "20");
       if (!Array.isArray(data)) return;
       const trades: RecentTrade[] = data.map((t: any) => ({
         price: parseFloat(t.price).toFixed(5),
@@ -141,7 +146,7 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
     fetchOrderBook();
     intervalRef.current = setInterval(fetchOrderBook, 2000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [symbol]);
+  }, [symbol, mode]);
 
   useEffect(() => {
     if (activeTab === "trades") {
@@ -149,7 +154,7 @@ const DesktopOrderBook = ({ symbol }: DesktopOrderBookProps) => {
       const t = setInterval(fetchTrades, 3000);
       return () => clearInterval(t);
     }
-  }, [activeTab, symbol]);
+  }, [activeTab, symbol, mode]);
 
   const quote = symbol.split("/")[1] || "USDT";
   const base = symbol.split("/")[0];
