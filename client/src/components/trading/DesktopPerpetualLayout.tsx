@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ListFilter, Loader2, XCircle } from "lucide-react";
 import CandlestickChart from "./CandlestickChart";
-import PerpetualOrderBook from "./PerpetualOrderBook";
+import DesktopOrderBook from "./DesktopOrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";
 import PerpetualPairInfo from "./PerpetualPairInfo";
 import { AccountModal } from "./AccountModal";
@@ -80,15 +80,25 @@ const DesktopPerpetualLayout = ({
     },
   });
 
-  const futuresUsdt = Array.isArray(futuresBalance)
-    ? futuresBalance.find((b: any) => b.asset === "USDT")
-    : null;
-  const marginBalance   = futuresUsdt?.balance ?? "0.00";
-  const availableMargin = futuresUsdt?.availableBalance ?? "0.00";
-
   return (
-   <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_140px] h-full min-h-0 overflow-hidden border-t border-border"> {/* Pair Info */}
-      <div className="col-start-1 row-start-1 border-b border-border min-w-0">
+    /*
+     * Grid mirrors the spot page exactly:
+     *
+     *  col 1 (1.8fr)         col 2 (0.6fr)    col 3 (0.6fr)
+     *  ┌──────────────────────┐                 ┌─────────────┐
+     *  │  PairInfo  [row 1]   │  OrderBook      │ TradePanel  │
+     *  ├──────────────────────┤  (row 1–2,      │ (row 1–2,   │
+     *  │  Chart     [row 2]   │  full height)   │ full height)│
+     *  ├──────────────────────┴─────────────────┤             │
+     *  │  Tab bar  [row 3, col 1–2 only]        │ Account     │
+     *  ├──────────────────────────────────────  │ panel       │
+     *  │  Tab content [row 4, col 1–2]          │ (rows 3–4)  │
+     *  └──────────────────────────────────────  ┴─────────────┘
+     */
+    <div className="grid grid-cols-[1.8fr_0.6fr_0.6fr] grid-rows-[auto_1fr_auto_140px] flex-1 min-h-0 overflow-hidden border-t-[3px] border-panel-border">
+
+      {/* ── PairInfo — col 1, row 1 only ── */}
+      <div className="col-start-1 row-start-1 border-b-[3px] border-panel-border min-w-0">
         <PerpetualPairInfo
           pair={pair}
           onPairChange={onPairChange}
@@ -97,33 +107,33 @@ const DesktopPerpetualLayout = ({
         />
       </div>
 
-      {/* Chart */}
+      {/* ── Chart — col 1, row 2 ── */}
       {chartVisible && (
         <div className="col-start-1 row-start-2 min-h-0 min-w-0 h-full">
           <CandlestickChart pair={pair} className="h-full w-full" />
         </div>
       )}
 
-      {/* OrderBook — spans rows 1-2 */}
-      <div className="col-start-2 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
-        <PerpetualOrderBook symbol={pair} />
+      {/* ── Order Book — col 2, spans rows 1–2 ── */}
+      <div className="col-start-2 row-start-1 row-end-3 border-l-[3px] border-panel-border overflow-y-auto min-h-0">
+        <DesktopOrderBook symbol={pair} />
       </div>
 
-      {/* FuturesTradePanel — spans rows 1-2 */}
-      <div className="col-start-3 row-start-1 row-end-3 border-l border-border overflow-y-auto min-h-0">
+      {/* ── Trade Panel — col 3, spans rows 1–2 ── */}
+      <div className="col-start-3 row-start-1 row-end-3 border-l-[3px] border-panel-border overflow-y-auto min-h-0">
         <FuturesTradePanel symbol={pair} />
       </div>
 
-      {/* Tabs row — fixed height so it never pushes the chart upward */}
-      <div className="col-start-1 col-end-4 row-start-3 relative h-10">
-        <div className="absolute top-0 left-0 right-0 h-px bg-border" />
+      {/* ── Tab bar — row 3, cols 1–2 only (does not cross into trade panel) ── */}
+      <div className="col-start-1 col-end-3 row-start-3 relative h-10">
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-panel-border" />
         <div className="flex items-center px-4 h-10">
-          <div className="flex items-center gap-4 flex-1 h-full overflow-x-auto">
+          <div className="flex items-center gap-4 flex-1 h-full overflow-x-auto scrollbar-none">
             {orderTabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`h-full text-sm transition-colors border-b-2 px-1 whitespace-nowrap ${
+                className={`h-full text-xs transition-colors border-b-2 px-1 whitespace-nowrap ${
                   activeTab === tab
                     ? "text-foreground font-semibold border-primary"
                     : "text-muted-foreground border-transparent hover:text-foreground"
@@ -133,19 +143,20 @@ const DesktopPerpetualLayout = ({
               </button>
             ))}
           </div>
-          <button className="p-1 text-muted-foreground ml-2">
-            <ListFilter className="w-5 h-5" />
+          <button className="p-1 text-muted-foreground ml-2 flex-shrink-0">
+            <ListFilter className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Tab content */}
+      {/* ── Tab content — row 4, cols 1–2 ── */}
       <div className="col-start-1 col-end-3 row-start-4 overflow-auto">
         {!user ? (
-          <div className="flex items-center justify-center py-4">
-            <button onClick={() => navigate("/signin")} className="text-sm text-trading-amber hover:underline">
-              Sign in to view orders
-            </button>
+          <div className="flex items-center gap-2 justify-center py-4 text-xs text-muted-foreground">
+            <button onClick={() => navigate("/signin")} className="text-primary hover:underline font-medium">Log In</button>
+            <span>or</span>
+            <button onClick={() => navigate("/signup")} className="text-primary hover:underline font-medium">Register</button>
+            <span>to view your orders</span>
           </div>
         ) : activeTab === "Open orders" ? (
           ordersLoading ? (
@@ -258,38 +269,34 @@ const DesktopPerpetualLayout = ({
             </table>
           )
         ) : (
-          <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">Coming soon</div>
+          <div className="flex items-center justify-center py-4 text-xs text-muted-foreground">No data yet</div>
         )}
       </div>
 
-      {/* Perpetual account section — bottom right */}
-      <div className="col-start-3 row-start-4 border-l border-border overflow-y-auto">
-        <div className="p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Account</h3>
+      {/* ── Account panel — col 3, rows 3–4 (mirrors spot's AccountBar panel position) ── */}
+      <div className="col-start-3 row-start-3 row-end-5 border-l-[3px] border-t-[3px] border-panel-border flex flex-col overflow-y-auto">
+        <div className="p-3">
           {user ? (
             <>
-              {/* Deposit / Withdraw / Transfer buttons */}
-              <div className="flex items-center gap-1 mb-4">
+              <div className="flex items-center gap-1 mb-3">
                 {(["Deposit", "Withdraw", "Transfer"] as const).map((label) => (
                   <button
                     key={label}
                     onClick={() => openModal(label.toLowerCase() as "deposit" | "withdraw" | "transfer")}
-                    className="flex-1 py-1.5 rounded text-xs font-medium text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15"
+                    className="flex-1 py-1.5 rounded text-xs font-medium text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15 transition-colors"
                   >
                     {label}
                   </button>
                 ))}
               </div>
 
-              {/* Account Equity */}
-              <div className="mb-3">
-                <div className="text-xs font-semibold text-foreground mb-2">Account Equity</div>
-                <div className="space-y-1.5">
+              <div className="mb-2.5">
+                <div className="text-xs font-semibold text-foreground mb-1.5">Account Equity</div>
+                <div className="space-y-1">
                   {[
                     { label: "Spot total value", value: "--" },
                     { label: "Perp total value", value: "--" },
-                    { label: "Perpetuals unrealized Pnl", value: "--" },
-                    { label: "Shield unrealized Pnl", value: "--" },
+                    { label: "Perp unrealized PnL", value: "--" },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{label}</span>
@@ -299,10 +306,9 @@ const DesktopPerpetualLayout = ({
                 </div>
               </div>
 
-              {/* Margin */}
-              <div className="mb-4">
-                <div className="text-xs font-semibold text-foreground mb-2">Margin</div>
-                <div className="space-y-1.5">
+              <div className="mb-2.5">
+                <div className="text-xs font-semibold text-foreground mb-1.5">Margin</div>
+                <div className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Account Margin Ratio</span>
                     <span className="text-trading-green font-mono-num">
@@ -310,30 +316,29 @@ const DesktopPerpetualLayout = ({
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Account Maintenance Margin</span>
+                    <span className="text-muted-foreground">Maintenance Margin</span>
                     <span className="text-foreground font-mono-num">--</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground flex items-center gap-0.5">
-                      Account Equity
-                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-muted-foreground/50 text-[9px] leading-none">?</span>
-                    </span>
+                    <span className="text-muted-foreground">Account Equity</span>
                     <span className="text-foreground font-mono-num">--</span>
                   </div>
                 </div>
               </div>
 
-              <button className="w-full py-2 rounded text-xs font-medium border border-border text-foreground hover:bg-accent transition-colors">
+              <button className="w-full py-1.5 rounded text-xs font-medium border border-panel-border text-foreground hover:bg-accent transition-colors">
                 Multi-Asset Mode
               </button>
             </>
           ) : (
-            <button
-              onClick={() => navigate("/signin")}
-              className="w-full py-2.5 rounded-lg text-xs font-medium bg-trading-amber text-background hover:bg-trading-amber/90"
-            >
-              Sign In to Trade
-            </button>
+            <div className="flex flex-col items-center gap-2 pt-2">
+              <div className="text-xs text-muted-foreground text-center mb-1">Connect to view your account</div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <button onClick={() => navigate("/signin")} className="text-primary hover:underline font-medium">Log In</button>
+                <span>or</span>
+                <button onClick={() => navigate("/signup")} className="text-primary hover:underline font-medium">Register</button>
+              </div>
+            </div>
           )}
         </div>
       </div>
