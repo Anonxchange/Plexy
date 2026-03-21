@@ -1,5 +1,5 @@
-import { Switch, Route, useLocation } from "wouter";
-import { lazy, Suspense } from "react";
+import { Switch, Route, useLocation, Redirect } from "wouter";
+import { lazy, Suspense, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -95,7 +95,24 @@ const adminGiftCards = lazy(() => import("@/pages/admin-gift-cards"));
 const AdminBlogLazy = lazy(() => import("@/pages/admin-blog"));
 const Blog = lazy(() => import("@/pages/blog"));
 
-function LazyRoute({ component: Component, skeleton = <PageSkeleton /> }: { component: React.LazyExoticComponent<React.ComponentType<any>>, skeleton?: React.ReactNode }) {
+const Prediction = lazy(() => import("@/pages/prediction"));
+const Perpetual = lazy(() => import("@/pages/perpetual"));
+const PredictionDetail = lazy(() => import("@/pages/prediction-detail"));
+
+import { GiftCardCartProvider } from "@/hooks/use-gift-card-cart";
+
+// ─── Route guard helpers ──────────────────────────────────────────────────────
+
+type LazyComponent = React.LazyExoticComponent<React.ComponentType<any>>;
+
+/** Renders a lazy component with a skeleton fallback — no auth check. */
+function LazyRoute({
+  component: Component,
+  skeleton = <PageSkeleton />,
+}: {
+  component: LazyComponent;
+  skeleton?: React.ReactNode;
+}) {
   return (
     <Suspense fallback={skeleton}>
       <Component />
@@ -103,15 +120,73 @@ function LazyRoute({ component: Component, skeleton = <PageSkeleton /> }: { comp
   );
 }
 
-const Prediction = lazy(() => import("@/pages/prediction"));
-const Perpetual = lazy(() => import("@/pages/perpetual"));
-const PredictionDetail = lazy(() => import("@/pages/prediction-detail"));
+/**
+ * Requires an authenticated session.
+ * - While auth is resolving → shows skeleton.
+ * - Unauthenticated → redirects to /signin preserving the return URL.
+ * - Authenticated → renders the page.
+ */
+function ProtectedRoute({
+  component: Component,
+  skeleton = <PageSkeleton />,
+}: {
+  component: LazyComponent;
+  skeleton?: React.ReactNode;
+}) {
+  const { user, loading } = useAuth();
+  const [location] = useLocation();
 
-import { GiftCardCartProvider } from "@/hooks/use-gift-card-cart";
+  if (loading) return <>{skeleton}</>;
+
+  if (!user) {
+    const returnTo = encodeURIComponent(location);
+    return <Redirect to={`/signin?redirect=${returnTo}`} />;
+  }
+
+  return (
+    <Suspense fallback={skeleton}>
+      <Component />
+    </Suspense>
+  );
+}
+
+/**
+ * Redirects already-authenticated users away from auth pages (signin / signup).
+ * - While loading → shows skeleton so there's no flash of the auth form.
+ * - Authenticated → redirects to /dashboard (or the ?redirect param).
+ * - Unauthenticated → renders the auth page.
+ */
+function AuthRoute({
+  component: Component,
+  skeleton = <PageSkeleton />,
+}: {
+  component: LazyComponent;
+  skeleton?: React.ReactNode;
+}) {
+  const { user, loading } = useAuth();
+  const [location] = useLocation();
+
+  if (loading) return <>{skeleton}</>;
+
+  if (user) {
+    const params = new URLSearchParams(location.split("?")[1] ?? "");
+    const redirect = params.get("redirect") ?? "/dashboard";
+    return <Redirect to={redirect} />;
+  }
+
+  return (
+    <Suspense fallback={skeleton}>
+      <Component />
+    </Suspense>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function Router() {
   return (
     <Switch>
+      {/* ── Public pages ── */}
       <Route path="/" component={Home} />
       <Route path="/perpetual">{() => <LazyRoute component={Perpetual} />}</Route>
       <Route path="/swap">{() => <LazyRoute component={Swap} />}</Route>
@@ -129,41 +204,12 @@ function Router() {
       <Route path="/markets">{() => <LazyRoute component={marketsPage} />}</Route>
       <Route path="/submit-idea">{() => <LazyRoute component={SubmitIdea} />}</Route>
       <Route path="/spot">{() => <LazyRoute component={spot} skeleton={<ChartPageSkeleton />} />}</Route>
-      <Route path="/wallet">{() => <LazyRoute component={Wallet} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/analysis">{() => <LazyRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
-      <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
-      <Route path="/wallet/visa-card/details">{() => <LazyRoute component={VisaCardDetails} />}</Route>
-      <Route path="/wallet/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
-      <Route path="/utility">{() => <LazyRoute component={UtilityBill} />}</Route>
-      <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
-      <Route path="/wallet/stake">{() => <LazyRoute component={Stake} />}</Route>
-      <Route path="/wallet/lightning">{() => <LazyRoute component={Lightning} />}</Route>
       <Route path="/buy-crypto">{() => <LazyRoute component={BuyCrypto} />}</Route>
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCards} />}</Route>
       <Route path="/gift-cards/:id">{() => <LazyRoute component={GiftCardDetail} />}</Route>
-      <Route path="/checkout">{() => <LazyRoute component={Checkout} />}</Route>
-      <Route path="/account-settings">{() => <LazyRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/devices">{() => <LazyRoute component={DevicesPage} />}</Route>
-      <Route path="/notification-settings">{() => <LazyRoute component={NotificationSettings} />}</Route>
-      <Route path="/developer">{() => <LazyRoute component={Developer} />}</Route>
-      <Route path="/verification">{() => <LazyRoute component={VerificationPage} />}</Route>
-      <Route path="/kyc/callback">{() => <LazyRoute component={KYCCallback} />}</Route>
-      <Route path="/admin">{() => <LazyRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/admin/verifications">{() => <LazyRoute component={adminVerificationsPage} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/admin/blog">{() => <LazyRoute component={AdminBlogLazy} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/admin/gift-cards">{() => <LazyRoute component={adminGiftCards} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/notifications">{() => <LazyRoute component={NotificationsPage} />}</Route>
-      <Route path="/signup">{() => <LazyRoute component={SignUp} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/signin">{() => <LazyRoute component={SignIn} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/verify-email" component={VerifyEmail} />
-      <Route path="/dashboard">{() => <LazyRoute component={Dashboard} skeleton={<PageSkeleton />} />}</Route>
-      <Route path="/profile/:userId?">{() => <LazyRoute component={Profile} />}</Route>
       <Route path="/shop">{() => <LazyRoute component={Shop} />}</Route>
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
       <Route path="/shop/post">{() => <LazyRoute component={ShopPost} />}</Route>
-      <Route path="/medals">{() => <LazyRoute component={MedalsPage} />}</Route>
-      <Route path="/rewards">{() => <LazyRoute component={RewardsPage} />}</Route>
-      <Route path="/referral">{() => <LazyRoute component={ReferralPage} />}</Route>
       <Route path="/bitcoin-calculator">{() => <LazyRoute component={BitcoinCalculator} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/academy">{() => <LazyRoute component={PexlyAcademy} />}</Route>
       <Route path="/academy/:articleId">{() => <LazyRoute component={AcademyArticle} />}</Route>
@@ -178,6 +224,42 @@ function Router() {
       <Route path="/cookie-policy">{() => <LazyRoute component={CookiePolicy} />}</Route>
       <Route path="/restricted-countries">{() => <LazyRoute component={RestrictedCountries} />}</Route>
       <Route path="/vip-terms">{() => <LazyRoute component={VIPTerms} />}</Route>
+      <Route path="/profile/:userId?">{() => <LazyRoute component={Profile} />}</Route>
+      <Route path="/verify-email" component={VerifyEmail} />
+
+      {/* ── Auth pages (redirect away if already signed in) ── */}
+      <Route path="/signin">{() => <AuthRoute component={SignIn} />}</Route>
+      <Route path="/signup">{() => <AuthRoute component={SignUp} />}</Route>
+
+      {/* ── Protected pages (require a valid session) ── */}
+      <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
+      <Route path="/wallet">{() => <ProtectedRoute component={Wallet} />}</Route>
+      <Route path="/wallet/visa-card">{() => <ProtectedRoute component={VisaCard} />}</Route>
+      <Route path="/wallet/visa-card/details">{() => <ProtectedRoute component={VisaCardDetails} />}</Route>
+      <Route path="/wallet/mobile-topup">{() => <ProtectedRoute component={MobileTopup} />}</Route>
+      <Route path="/utility">{() => <ProtectedRoute component={UtilityBill} />}</Route>
+      <Route path="/wallet/utility-bill">{() => <ProtectedRoute component={UtilityBill} />}</Route>
+      <Route path="/wallet/stake">{() => <ProtectedRoute component={Stake} />}</Route>
+      <Route path="/wallet/lightning">{() => <ProtectedRoute component={Lightning} />}</Route>
+      <Route path="/account-settings">{() => <ProtectedRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/devices">{() => <ProtectedRoute component={DevicesPage} />}</Route>
+      <Route path="/notification-settings">{() => <ProtectedRoute component={NotificationSettings} />}</Route>
+      <Route path="/notifications">{() => <ProtectedRoute component={NotificationsPage} />}</Route>
+      <Route path="/verification">{() => <ProtectedRoute component={VerificationPage} />}</Route>
+      <Route path="/kyc/callback">{() => <ProtectedRoute component={KYCCallback} />}</Route>
+      <Route path="/referral">{() => <ProtectedRoute component={ReferralPage} />}</Route>
+      <Route path="/rewards">{() => <ProtectedRoute component={RewardsPage} />}</Route>
+      <Route path="/medals">{() => <ProtectedRoute component={MedalsPage} />}</Route>
+      <Route path="/analysis">{() => <ProtectedRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
+      <Route path="/checkout">{() => <ProtectedRoute component={Checkout} />}</Route>
+
+      {/* ── Admin pages (require session; pages enforce is_admin internally) ── */}
+      <Route path="/admin">{() => <ProtectedRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/admin/verifications">{() => <ProtectedRoute component={adminVerificationsPage} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/admin/blog">{() => <ProtectedRoute component={AdminBlogLazy} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/admin/gift-cards">{() => <ProtectedRoute component={adminGiftCards} skeleton={<PageSkeleton />} />}</Route>
+      <Route path="/developer">{() => <ProtectedRoute component={Developer} />}</Route>
+
       <Route component={NotFound} />
     </Switch>
   );
