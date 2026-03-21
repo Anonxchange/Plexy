@@ -83,6 +83,31 @@ const press = [
     outletStyle: "font-bold",
     quote: "Pexly's compliance-first approach puts it in a strong position as regulators tighten the screws on crypto.",
   },
+  {
+    outlet: "Bloomberg",
+    outletStyle: "font-bold tracking-tight",
+    quote: "In a crowded market, Pexly stands out by offering a genuinely unified experience from trading to custody.",
+  },
+  {
+    outlet: "Forbes",
+    outletStyle: "font-bold",
+    quote: "Pexly's P2P model has unlocked crypto access for users in markets where traditional exchanges simply don't operate.",
+  },
+  {
+    outlet: "Wired",
+    outletStyle: "font-black uppercase tracking-widest text-sm",
+    quote: "A rare crypto platform that takes both user experience and regulatory compliance seriously from day one.",
+  },
+  {
+    outlet: "The Block",
+    outletStyle: "font-bold tracking-wide",
+    quote: "With over 500 payment methods and 180 countries supported, Pexly is quietly becoming the infrastructure of global P2P trading.",
+  },
+  {
+    outlet: "Decrypt",
+    outletStyle: "font-bold",
+    quote: "Pexly's non-custodial wallet combined with its P2P marketplace is exactly the kind of product the next wave of crypto users needs.",
+  },
 ];
 
 const positions = [
@@ -357,8 +382,8 @@ const About = () => {
             Pexly in the media
           </h2>
 
-          {/* Mobile: stacked, Desktop: 3-col */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Mobile: stacked, 2-col on sm, Desktop: 4-col */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {press.map((p, i) => (
               <div key={i} className="bg-white/5 border border-white/8 rounded-2xl px-6 py-6 flex flex-col justify-between">
                 <div>
