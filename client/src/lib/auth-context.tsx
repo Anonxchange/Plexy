@@ -629,7 +629,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(initialSession?.user ?? null);
         }
         setLoading(false);
+      }).catch(() => {
+        setLoading(false);
       });
+    }).catch(() => {
+      setLoading(false);
     });
 
     // Force wallet check handler (no supabase needed — delegates to ref)
