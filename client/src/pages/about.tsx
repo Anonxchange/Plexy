@@ -1,14 +1,15 @@
 import { useHead } from "@unhead/react";
 import { Link } from "wouter";
-import { ArrowRight, Linkedin, Twitter } from "lucide-react";
+import { ArrowRight, Linkedin, MapPin, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AppFooter } from "@/components/app-footer";
 
 /* ─────────────────────────────────────── data ── */
 
 const stats = [
   { value: "180+",  label: "Countries supported" },
   { value: "120+",  label: "Cryptoassets listed" },
-  { value: "$2.4B+",label: "Peer trading volume" },
+  { value: "$2.4B+",label: "Trading volume" },
   { value: "850K+", label: "Verified users" },
 ];
 
@@ -47,7 +48,7 @@ const values = [
   },
   {
     title: "Innovative",
-    body: "To push the boundaries of peer-to-peer finance — always building for what comes next.",
+    body: "To push the boundaries of what a digital asset platform can be — always building for what comes next.",
     icon: (
       <svg viewBox="0 0 32 32" fill="none" className="w-7 h-7 text-white">
         <path d="M16 4a8 8 0 00-3 15.4V22h6v-2.6A8 8 0 0016 4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
@@ -58,7 +59,7 @@ const values = [
 ];
 
 const team = [
-  { name: "Alex Carter",     role: "CEO & Co-Founder",    img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80" },
+  { name: "Oluwole Olamide", role: "CEO & Co-Founder",    img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80" },
   { name: "Priya Nair",      role: "CTO & Co-Founder",    img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80" },
   { name: "James Whitfield", role: "Chief Risk Officer",  img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80" },
   { name: "Sofia Mendes",    role: "VP of Product",       img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80" },
@@ -70,12 +71,12 @@ const press = [
   {
     outlet: "FINANCIAL TIMES",
     outletStyle: "font-serif italic",
-    quote: "Pexly is redefining what peer-to-peer crypto trading looks like for the next generation of retail investors.",
+    quote: "Pexly is redefining what a digital asset platform looks like for the next generation of crypto users.",
   },
   {
     outlet: "CoinDesk",
     outletStyle: "font-bold tracking-wide",
-    quote: "The platform has grown 300% year-over-year, making it one of the fastest-growing P2P exchanges in Europe.",
+    quote: "The platform has grown 300% year-over-year, making it one of the fastest-growing digital asset platforms in Europe.",
   },
   {
     outlet: "TechCrunch",
@@ -84,10 +85,18 @@ const press = [
   },
 ];
 
+const positions = [
+  { title: "Junior Frontend Developer",  location: "San Francisco, CA", type: "Part time" },
+  { title: "UI/UX and Product Designer", location: "London, UK",        type: "Full time" },
+  { title: "Head of Branding",           location: "Remote",            type: "Full time" },
+  { title: "Senior Backend Developer",   location: "San Francisco, CA", type: "Full time" },
+  { title: "Customer Support Agent",     location: "Remote",            type: "Part time" },
+];
+
 const officePhotos = [
-  "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=900&q=80",
 ];
 
 /* ──────────────────────────────────── component ── */
@@ -102,113 +111,118 @@ const About = () => {
     <main className="overflow-x-hidden font-sans">
 
       {/* ══ 1. HERO ═══════════════════════════════════════════════════════ */}
-      <section className="bg-background px-6 lg:px-12 pt-14 pb-20">
+      <section className="bg-background px-6 lg:px-12 pt-10 pb-12">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.08] tracking-tight text-foreground mb-8">
-            Our mission is to bring{" "}
-            <span className="text-primary">crypto</span>{" "}
-            to everyone
+
+          {/* Label pill */}
+          <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-5">
+            <span className="w-5 h-px bg-primary" />
+            Pexly — Est. 2021
+          </span>
+
+          <h1 className="text-5xl md:text-6xl lg:text-[80px] font-extrabold leading-[1.04] tracking-tight text-foreground mb-4">
+            One platform.<br />
+            Every <span className="text-primary">crypto</span> service.
           </h1>
-          <p className="text-foreground/60 text-lg md:text-xl leading-relaxed max-w-xl">
-            Pexly is a peer-to-peer marketplace that gives anyone — from first-time buyers to seasoned traders — a fast, secure, and compliant way to buy and sell crypto with real people.
+
+          <p className="text-foreground/50 text-lg md:text-xl leading-relaxed max-w-lg">
+            Spot trading, perpetual futures, swaps, staking, gift cards, and a non-custodial wallet — all in one platform available across 180+ countries.
           </p>
         </div>
 
-        {/* Stats 2×2 grid inside a bordered rounded box */}
-        <div className="max-w-3xl mx-auto mt-14 grid grid-cols-2 border border-border rounded-3xl overflow-hidden">
+        {/* Stats — editorial 2×2, no box */}
+        <div className="max-w-3xl mx-auto mt-10 grid grid-cols-2 gap-x-8 gap-y-7">
           {stats.map((s, i) => (
-            <div
-              key={i}
-              className={`px-8 py-8 ${i % 2 === 0 ? "border-r border-border" : ""} ${i < 2 ? "border-b border-border" : ""}`}
-            >
-              <p className="text-primary text-4xl md:text-5xl font-extrabold tracking-tight leading-none mb-2">
+            <div key={i}>
+              <p className="text-5xl md:text-6xl font-light tracking-tight text-foreground leading-none">
                 {s.value}
               </p>
-              <p className="text-foreground/50 text-sm leading-snug">{s.label}</p>
+              <div className="w-8 h-px bg-primary mt-3 mb-2" />
+              <p className="text-foreground/40 text-xs uppercase tracking-[0.15em]">{s.label}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ══ 2. WHO WE ARE ════════════════════════════════════════════════ */}
-      <section className="bg-background px-6 lg:px-12 py-16">
+      <section className="bg-background px-6 lg:px-12 py-10">
         <div className="max-w-3xl mx-auto">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">
+          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">
             Our Company
           </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-10">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-6">
             Who we are
           </h2>
-          <div className="space-y-5 text-foreground/60 text-base md:text-lg leading-relaxed max-w-2xl">
+          <div className="space-y-4 text-foreground/60 text-base md:text-lg leading-relaxed max-w-2xl">
             <p>
-              Pexly is a global fintech company building the infrastructure that connects people who want to buy crypto with people who want to sell it — securely, compliantly, and at fair prices.
+              Pexly is a multi-product digital asset platform that brings together spot trading, perpetual futures, crypto swaps, staking, gift cards, airtime top-ups, and a self-custody wallet — all in one place.
             </p>
             <p>
-              Founded in 2021, we've grown from a small team of blockchain enthusiasts into a platform trusted by hundreds of thousands of users across more than 180 countries.
+              Founded in 2021, we've grown from a focused team of crypto-native builders into a platform trusted by hundreds of thousands of users across more than 180 countries.
             </p>
             <p>
-              With offices in London, New York, and a fully distributed remote team, Pexly brings together the best talent in fintech, compliance, and product design.
+              We operate as a technology and services provider — not as a financial institution or custodian. Your assets remain under your control at all times.
             </p>
             <p>
-              We're backed by leading technology investors and guided by an experienced board committed to building something that actually lasts — not just something that moves fast.
+              With offices in London, New York, and a fully distributed remote team, Pexly brings together the best talent in fintech, compliance, and product design. We're backed by leading technology investors committed to building something that lasts.
             </p>
           </div>
         </div>
       </section>
 
       {/* ══ 3. OFFICE PHOTOS ═════════════════════════════════════════════ */}
-      <section className="bg-background px-6 lg:px-12 pb-16">
-        <div className="max-w-3xl mx-auto flex flex-col gap-4">
+      <section className="bg-background px-6 lg:px-12 pb-10">
+        <div className="max-w-3xl mx-auto flex flex-col gap-3">
           {officePhotos.map((src, i) => (
-            <div key={i} className="w-full rounded-3xl overflow-hidden" style={{ height: 280 }}>
+            <div key={i} className="w-full rounded-3xl overflow-hidden" style={{ height: 220 }}>
               <img src={src} alt="Pexly office" className="w-full h-full object-cover" />
             </div>
           ))}
         </div>
       </section>
 
-      {/* ══ 4. OUR VISION ════════════════════════════════════════════════ */}
-      <section className="bg-background px-6 lg:px-12 py-16">
+      {/* ══ 4. OUR VISION — curved bottom, overlays Values dark section ══ */}
+      <section className="relative z-30 rounded-b-3xl bg-background px-6 lg:px-12 pt-10 pb-24">
         <div className="max-w-3xl mx-auto">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">
+          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">
             Our Vision
           </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-8">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-5">
             Building the new economy
           </h2>
-          <div className="space-y-5 text-foreground/60 text-base md:text-lg leading-relaxed max-w-2xl">
+          <div className="space-y-4 text-foreground/60 text-base md:text-lg leading-relaxed max-w-2xl">
             <p>
-              Blockchain and tokenization aren't just transforming finance — they're changing the way value is created, transferred, and owned.
+              Digital assets and blockchain technology aren't just transforming finance — they're changing how value is created, stored, and moved across the world.
             </p>
             <p>
-              We're harnessing this technology to shape a more open, efficient, and equitable financial system — one that works for the many, not just the few with access to traditional banking.
+              We're building the infrastructure that makes these tools accessible and practical for everyone — from first-time users to experienced traders — through a single, intuitive, and compliant platform.
             </p>
           </div>
         </div>
       </section>
 
-      {/* ══ 5. VALUES — dark, rounded top ════════════════════════════════ */}
+      {/* ══ 5. VALUES — dark, tucked under Vision, curved bottom, overlays team ══ */}
       <section
-        className="rounded-t-3xl bg-[hsl(222_14%_10%)] px-6 lg:px-12 pt-16 pb-24"
+        className="relative z-20 -mt-20 rounded-b-3xl bg-[hsl(222_14%_10%)] px-6 lg:px-12 pt-28 pb-24"
         style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       >
         <div className="max-w-3xl mx-auto">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">
+          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">
             Our Values
           </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-14">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-10">
             What we believe in
           </h2>
-          <div className="flex flex-col items-center gap-16">
+          <div className="flex flex-col items-center gap-10">
             {values.map((v, i) => (
               <div key={i} className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-4">
                   {v.icon}
                 </div>
-                <h3 className="text-2xl font-extrabold text-white mb-3">{v.title}</h3>
+                <h3 className="text-2xl font-extrabold text-white mb-2">{v.title}</h3>
                 <p className="text-white/50 text-base leading-relaxed max-w-xs">{v.body}</p>
               </div>
             ))}
@@ -216,27 +230,27 @@ const About = () => {
         </div>
       </section>
 
-      {/* ══ 6. TEAM — light, overlapping dark ════════════════════════════ */}
-      <section className="relative z-10 -mt-10 rounded-3xl bg-background px-6 lg:px-12 pt-16 pb-20">
+      {/* ══ 6. TEAM — light, tucked under Values curve ═══════════════════ */}
+      <section className="relative z-10 -mt-20 pt-24 bg-background px-6 lg:px-12 pb-12">
         <div className="max-w-3xl mx-auto">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">
+          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">
             Our People
           </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-3">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-2">
             Senior management
           </h2>
-          <p className="text-foreground/50 text-base leading-relaxed mb-12 max-w-lg">
+          <p className="text-foreground/50 text-base leading-relaxed mb-8 max-w-lg">
             Our leadership team is comprised of seasoned executives with years of experience across fintech, compliance, and crypto.
           </p>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-10">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-8">
             {team.map((person, i) => (
               <div key={i}>
-                <div className="w-full aspect-square rounded-2xl overflow-hidden bg-muted mb-4">
+                <div className="w-full aspect-square rounded-2xl overflow-hidden bg-muted mb-3">
                   <img src={person.img} alt={person.name} className="w-full h-full object-cover object-top" />
                 </div>
                 <p className="font-bold text-foreground text-base leading-snug">{person.name}</p>
-                <p className="text-foreground/50 text-sm mt-0.5 mb-3">{person.role}</p>
+                <p className="text-foreground/50 text-sm mt-0.5 mb-2">{person.role}</p>
                 <div className="flex items-center gap-2">
                   <a href="#" className="text-foreground/30 hover:text-foreground/70 transition-colors">
                     <Twitter className="w-4 h-4" />
@@ -251,20 +265,20 @@ const About = () => {
         </div>
       </section>
 
-      {/* ══ 7. IN THE MEDIA — dark, overlapping team ═════════════════════ */}
-      <section className="relative z-10 -mt-10 rounded-t-3xl bg-[hsl(222_14%_8%)] px-6 lg:px-12 pt-16 pb-24">
+      {/* ══ 7. IN THE MEDIA — dark, curved bottom, overlays careers ══════ */}
+      <section className="relative z-30 rounded-b-3xl bg-[hsl(222_14%_8%)] px-6 lg:px-12 pt-12 pb-24">
         <div className="max-w-3xl mx-auto">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">
+          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">
             Featured On
           </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-12">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-8">
             Pexly in the media
           </h2>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {press.map((p, i) => (
-              <div key={i} className="bg-white/5 border border-white/8 rounded-2xl px-7 py-7">
-                <p className={`text-white/40 text-lg mb-5 ${p.outletStyle}`}>{p.outlet}</p>
-                <p className="text-white text-lg leading-relaxed mb-5">"{p.quote}"</p>
+              <div key={i} className="bg-white/5 border border-white/8 rounded-2xl px-5 py-5">
+                <p className={`text-white/40 text-base mb-3 ${p.outletStyle}`}>{p.outlet}</p>
+                <p className="text-white text-base leading-relaxed mb-3">"{p.quote}"</p>
                 <a href="#" className="inline-flex items-center gap-1.5 text-primary text-sm font-semibold hover:underline">
                   Read full article <ArrowRight className="w-3.5 h-3.5" />
                 </a>
@@ -274,17 +288,17 @@ const About = () => {
         </div>
       </section>
 
-      {/* ══ 8. CAREERS CTA — light, overlapping dark ═════════════════════ */}
-      <section className="relative z-20 -mt-10 rounded-3xl bg-background px-6 lg:px-12 pt-16 pb-24">
+      {/* ══ 8. CAREERS CTA — light, tucked under Media curve ════════════ */}
+      <section className="relative z-20 -mt-20 pt-24 bg-background px-6 lg:px-12 pb-14">
         <div className="max-w-3xl mx-auto">
-          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-5">
+          <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">
             Careers
           </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-3">
             Elevate your career
           </h2>
-          <p className="text-foreground/50 text-base leading-relaxed mb-8 max-w-md">
-            We're looking for exceptionally talented people to join our team and help us bring peer-to-peer crypto to the world.
+          <p className="text-foreground/50 text-base leading-relaxed mb-6 max-w-md">
+            We're looking for exceptionally talented people to join our team and help shape the future of digital asset services.
           </p>
           <Link href="/careers">
             <Button size="lg" className="rounded-full px-10 font-semibold">
@@ -292,15 +306,110 @@ const About = () => {
             </Button>
           </Link>
 
-          <div className="mt-12 w-full rounded-3xl overflow-hidden" style={{ height: 260 }}>
+          {/* Full-width image */}
+          <div className="mt-8 w-full rounded-3xl overflow-hidden" style={{ height: 200 }}>
             <img
               src="https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=900&q=80"
               alt="Pexly team"
               className="w-full h-full object-cover"
             />
           </div>
+
+          {/* Two extra images side by side */}
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-3xl overflow-hidden" style={{ height: 170 }}>
+              <img
+                src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80"
+                alt="Pexly office culture"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="rounded-3xl overflow-hidden" style={{ height: 170 }}>
+              <img
+                src="https://images.unsplash.com/photo-1573167507387-6b4b98cb7c13?auto=format&fit=crop&w=600&q=80"
+                alt="Pexly team collaboration"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
         </div>
       </section>
+
+      {/* ══ 9. JOIN OUR TEAM — green CTA overlaying footer ══════════════ */}
+      <section
+        className="relative z-40 -mt-10 rounded-3xl bg-primary px-6 lg:px-12 pt-14 pb-28 overflow-hidden"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.12) 1.5px, transparent 1.5px)",
+          backgroundSize: "22px 22px",
+        }}
+      >
+        <div className="max-w-3xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+
+          {/* Left — heading + CTA + locations */}
+          <div>
+            <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-primary-foreground mb-3">
+              Join our team
+            </h2>
+            <p className="text-primary-foreground/70 text-base mb-7 max-w-sm">
+              Check out our open positions and elevate your career in digital assets.
+            </p>
+            <Link href="/careers">
+              <Button
+                size="lg"
+                variant="secondary"
+                className="rounded-full px-8 font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90 mb-9"
+              >
+                View open positions
+              </Button>
+            </Link>
+
+            <div className="flex flex-wrap gap-6">
+              {[
+                { region: "North America", cities: "New York, Miami" },
+                { region: "Europe",        cities: "London, Amsterdam" },
+                { region: "Remote",        cities: "Worldwide" },
+              ].map((loc, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="mt-1.5 w-2 h-2 rounded-full border-2 border-primary-foreground/40 flex-shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">{loc.region}</p>
+                    <p className="text-sm font-medium text-primary-foreground/80">{loc.cities}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right — open positions list */}
+          <div className="rounded-2xl overflow-hidden bg-black/10">
+            {positions.map((pos, i) => (
+              <a
+                key={i}
+                href="#"
+                className="flex items-center justify-between px-5 py-4 border-b border-black/10 last:border-0 hover:bg-black/10 transition-colors group"
+              >
+                <div>
+                  <p className="font-bold text-primary-foreground text-sm leading-snug group-hover:underline">
+                    {pos.title}
+                  </p>
+                  <p className="text-primary-foreground/60 text-xs flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3" />
+                    {pos.location}
+                    <span className="mx-1">·</span>
+                    {pos.type}
+                  </p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-primary-foreground/50 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ FOOTER — slides under the green CTA ══════════════════════════ */}
+      <div className="relative z-30 -mt-16">
+        <AppFooter />
+      </div>
 
     </main>
   );
