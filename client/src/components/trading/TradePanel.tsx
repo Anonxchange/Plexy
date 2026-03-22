@@ -403,15 +403,9 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           <div className="flex flex-col gap-2 mt-1">
             <button
               onClick={() => navigate("/signin")}
-              className="w-full py-2.5 rounded-md text-xs font-semibold border border-border hover:bg-accent transition-colors"
+              className="w-full py-2.5 rounded-md text-sm font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
             >
-              Log In
-            </button>
-            <button
-              onClick={() => navigate("/signup")}
-              className="w-full py-2.5 rounded-md text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-            >
-              Register
+              Connect
             </button>
           </div>
         )}
